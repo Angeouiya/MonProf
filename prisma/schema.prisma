@@ -1,0 +1,419 @@
+// MonProf CI - Plateforme de réservation de cours à domicile et en ligne
+// Côte d'Ivoire
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// UTILISATEURS (Client + Admin seulement — pas de compte prof)
+// ============================================================
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  phone         String?
+  passwordHash  String
+  role          UserRole @default(CLIENT)
+  commune       String?
+  quartier      String?
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  bookings      Booking[]
+  reviews       Review[]
+  disputes      Dispute[]      @relation("DisputeOpener")
+  notifications Notification[]
+  handledMessages ContactMessage[] @relation("HandledBy")
+
+  @@index([role])
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+}
+
+// ============================================================
+// RÉFÉRENTIELS
+// ============================================================
+model Subject {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String?
+  createdAt DateTime @default(now())
+
+  teachers TeacherSubject[]
+}
+
+model Level {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  teachers TeacherLevel[]
+}
+
+model Commune {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  zone      String?  // Abidjan, Bingerville, etc.
+  createdAt DateTime @default(now())
+
+  teachers TeacherZone[]
+}
+
+// ============================================================
+// PROFESSEUR (fiche interne gérée par l'admin)
+// ============================================================
+model Teacher {
+  id              String         @id @default(cuid())
+  // Identité
+  fullName        String
+  professionalName String?
+  photoUrl        String?
+  phone           String
+  email           String?
+  commune         String?
+  quartier        String?
+  addressHint     String?
+  // Pédagogie
+  jobTitle        String
+  bio             String
+  experienceYears Int            @default(0)
+  diploma         String?
+  cvUrl           String?
+  profileType     TeacherProfileType @default(ENSEIGNANT)
+  // Statut & visibilité
+  status          TeacherStatus  @default(PENDING)
+  featured        Boolean        @default(false)
+  // Évaluation interne (gérée par admin)
+  rating          Float          @default(0) // 0..5
+  ratingCount     Int            @default(0)
+  // Badges
+  badgeVerified   Boolean        @default(true)
+  badgeRecommended Boolean       @default(false)
+  badgeNew        Boolean        @default(true)
+  badgePopular    Boolean        @default(false)
+  badgePremium    Boolean        @default(false)
+  internalNote    String?
+  // Format
+  offersHome      Boolean        @default(true)
+  offersOnline    Boolean        @default(true)
+  offersGroup     Boolean        @default(false)
+  // Tarification (FCFA)
+  pricePerHour    Int            @default(10000)
+  pricePerSession Int            @default(10000)
+  pricePack4      Int            @default(38000)
+  pricePack8      Int            @default(72000)
+  commissionRate  Int            @default(20) // %
+  pricingTier     PricingTier    @default(STANDARD)
+  // Disponibilités (JSON: {mon:{morning,afternoon,evening}, ...})
+  availability    String?
+  // Métadonnées
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  subjects        TeacherSubject[]
+  levels          TeacherLevel[]
+  zones           TeacherZone[]
+  bookings        Booking[]
+  reviews         Review[]
+  transactions    Transaction[]
+  notifications   TeacherNotification[]
+
+  @@index([status])
+  @@index([featured])
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum TeacherProfileType {
+  ENSEIGNANT
+  ETUDIANT
+  REPETITEUR
+  FORMATEUR
+  PROFESSIONNEL
+}
+
+enum PricingTier {
+  STANDARD
+  RECOMMENDED
+  PREMIUM
+  PROMOTIONAL
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+  isPrimary Boolean @default(false)
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  @@id([teacherId, subjectId])
+}
+
+model TeacherLevel {
+  teacherId String
+  levelId   String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  level     Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  @@id([teacherId, levelId])
+}
+
+model TeacherZone {
+  teacherId String
+  communeId String
+  teacher   Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
+  commune   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  @@id([teacherId, communeId])
+}
+
+// ============================================================
+// RÉSERVATION (Booking)
+// ============================================================
+model Booking {
+  id              String         @id @default(cuid())
+  reference       String         @unique // MP-XXXX
+  clientId        String
+  teacherId       String
+  // Détails cours
+  subjectName     String
+  levelName       String
+  objective       String?
+  courseFormat    CourseFormat
+  groupType       GroupType      @default(INDIVIDUAL)
+  commune         String?
+  quartier        String?
+  addressHint     String?
+  onlineLink      String?
+  // Créneau
+  preferredDays   String         // JSON: ["samedi","dimanche"]
+  preferredTime   String         // "15h-17h"
+  scheduledDate   DateTime?
+  scheduledTime   String?
+  sessionsCount   Int            @default(1)
+  packType        PackType       @default(SINGLE)
+  message         String?
+  // Montants (FCFA)
+  unitPrice       Int
+  totalPrice      Int
+  commissionRate  Int            @default(20)
+  commissionAmount Int           @default(0)
+  teacherNetAmount Int           @default(0)
+  // Statuts
+  status          BookingStatus  @default(PENDING_PAYMENT)
+  paymentStatus   PaymentStatus  @default(FAILED)
+  paymentMethod   PaymentMethod?
+  // Méta
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  confirmedAt     DateTime?
+  assignedAt      DateTime?
+  courseDoneAt    DateTime?
+  clientValidatedAt DateTime?
+  teacherPaidAt   DateTime?
+
+  client          User           @relation(fields: [clientId], references: [id])
+  teacher         Teacher        @relation(fields: [teacherId], references: [id])
+  transactions    Transaction[]
+  reviews         Review[]
+  disputes        Dispute[]
+
+  @@index([clientId])
+  @@index([teacherId])
+  @@index([status])
+}
+
+enum CourseFormat {
+  HOME
+  ONLINE
+}
+
+enum GroupType {
+  INDIVIDUAL
+  SMALL_GROUP
+}
+
+enum PackType {
+  SINGLE
+  PACK_4
+  PACK_8
+  PACK_12
+  EXAM_PREP
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PAID
+  PENDING_ADMIN_VALIDATION
+  CONFIRMED
+  ASSIGNED
+  IN_PROGRESS
+  COURSE_DONE
+  PENDING_CLIENT_VALIDATION
+  VALIDATED_BY_CLIENT
+  PAYMENT_TO_RELEASE
+  TEACHER_PAID
+  DISPUTED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  FAILED
+  RECEIVED
+  BLOCKED
+  VALIDATED
+  TO_PAY_TEACHER
+  TEACHER_PAID
+  DISPUTED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  WAVE
+  ORANGE_MONEY
+  MTN_MONEY
+  MOOV_MONEY
+  CARD
+}
+
+// ============================================================
+// TRANSACTION (historique financier)
+// ============================================================
+model Transaction {
+  id            String        @id @default(cuid())
+  reference     String        @unique // TX-XXXX
+  bookingId     String
+  teacherId     String
+  amount        Int           // montant total concerné
+  commission    Int
+  teacherNet    Int
+  type          TransactionType
+  status        PaymentStatus @default(BLOCKED)
+  method        PaymentMethod?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+
+  booking       Booking       @relation(fields: [bookingId], references: [id])
+  teacher       Teacher       @relation(fields: [teacherId], references: [id])
+}
+
+enum TransactionType {
+  CLIENT_PAYMENT
+  TEACHER_PAYOUT
+  REFUND
+  COMMISSION
+}
+
+// ============================================================
+// AVIS & LITIGES
+// ============================================================
+model Review {
+  id        String   @id @default(cuid())
+  clientId  String
+  teacherId String
+  bookingId String
+  rating    Int      // 1..5
+  comment   String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  client    User     @relation(fields: [clientId], references: [id])
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+}
+
+model Dispute {
+  id          String       @id @default(cuid())
+  bookingId   String
+  openedById  String
+  reason      String
+  description String
+  status      DisputeStatus @default(OPEN)
+  resolution  String?
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+
+  booking     Booking      @relation(fields: [bookingId], references: [id])
+  openedBy    User         @relation("DisputeOpener", fields: [openedById], references: [id])
+}
+
+enum DisputeStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  REFUNDED
+  REJECTED
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?  // admin = null (broadcast admin)
+  title     String
+  message   String
+  type      String   // NEW_BOOKING, PAYMENT_RECEIVED, etc.
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+}
+
+model TeacherNotification {
+  id        String   @id @default(cuid())
+  teacherId String
+  bookingId String?
+  title     String
+  message   String
+  channel   String   // SMS, WHATSAPP, EMAIL
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+}
+
+// ============================================================
+// CONTACT (page publique)
+// ============================================================
+model ContactMessage {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  subject    String
+  message    String
+  handled    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  handledBy    User?    @relation("HandledBy", fields: [handledById], references: [id])
+  handledById  String?
+}
+
+// ============================================================
+// PARAMÈTRES PLATEFORME
+// ============================================================
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

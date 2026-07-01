@@ -1,0 +1,8 @@
+<svg width="160" height="32" viewBox="0 0 160 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="#10A37F"/>
+  <path d="M9 11.5C9 10.1193 10.1193 9 11.5 9H15.5C16.8807 9 18 10.1193 18 11.5V20.5C18 21.8807 16.8807 23 15.5 23H11.5C10.1193 23 9 21.8807 9 20.5V11.5Z" fill="white"/>
+  <circle cx="13.5" cy="13" r="1.5" fill="#10A37F"/>
+  <path d="M21 9L24 13L27 9" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="42" y="22" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" fill="#111827">MonProf</text>
+  <text x="124" y="22" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" fill="#10A37F">CI</text>
+</svg>
