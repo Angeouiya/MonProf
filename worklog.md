@@ -156,3 +156,39 @@ Stage Summary:
 - Style OpenAI premium respecté (palette vert #10A37F, fond #F7F7F8, bordures fines, mobile-first).
 - 2 espaces : client (8 pages) + admin (22 pages) + 6 pages publiques + auth.
 - Aucune erreur de lint, aucune erreur runtime.
+
+---
+Task ID: 6
+Agent: main
+Task: Mise à jour selon cahier des charges détaillé (données démo, sections accueil, champs formulaire, KPI admin, action change teacher)
+
+Work Log:
+- Schéma Prisma : ajout champs `schoolProgram`, `needDescription`, `startDate` sur Booking + db:push
+- Seed mis à jour avec les 5 professeurs EXACTS du cahier des charges :
+  * M. Kouamé Jean — Mathématiques — Lycée — Cocody — 15 000 FCFA
+  * Mme Traoré Aïcha — Français — Collège — Yopougon — 10 000 FCFA
+  * M. Koné Ibrahim — Physique-Chimie — Terminale — Angré — 15 000 FCFA
+  * Mme Diabaté Sarah — Anglais — Primaire/Collège — Marcory — 10 000 FCFA
+  * M. N'Guessan Paul — Informatique — Adultes/Université — Cocody — 20 000 FCFA
+  + 3 professeurs supplémentaires (Christelle/SVT, Brou/Éco-Compta, Yéo/Primaire)
+- 4 clients de démo : Mme Amon, M. Kouassi, Mme Koné, M. Traoré
+- Page d'accueil : passage de 3 à 4 étapes "Comment ça marche" (Recherchez → Réservez → Payez → Confirmez)
+- Page d'accueil : ajout section "Toutes les matières sont couvertes" (9 matières populaires cliquables)
+- Page d'accueil : ajout section "Confiance" avec texte exact du cahier des charges
+- Formulaire réservation étape 1 : ajout champs "Programme scolaire" + "Description du besoin"
+- Formulaire réservation étape 3 : ajout champ "Date de début souhaitée"
+- API /api/bookings POST : accepte et sauvegarde les 3 nouveaux champs
+- Dashboard admin : ajout 13e KPI "Versé aux professeurs" (somme teacherNetAmount où TEACHER_PAID)
+- API /api/admin/bookings/[id] PATCH : ajout action "change_teacher" (recalcule commission/net selon nouveau prof)
+- Page détail réservation admin : ajout bouton "Changer de professeur" + dialog avec select des profs actifs
+- Page connexion : mise à jour compte démo client (amon@demo.ci)
+- Lint ESLint : PASS (0 erreur)
+- Tests E2E curl : tous validés (6/6)
+
+Stage Summary:
+- Toutes les exigences spécifiques du cahier des charges détaillé sont maintenant couvertes.
+- Données de démo conformes (5 professeurs + 4 clients exacts).
+- 13 KPIs admin au lieu de 12.
+- Formulaire de réservation enrichi (programme scolaire, description besoin, date de début).
+- Action "Changer de professeur" opérationnelle côté admin.
+- Sections accueil "Matières populaires" et "Confiance" ajoutées.

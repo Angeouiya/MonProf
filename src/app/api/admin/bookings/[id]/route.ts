@@ -85,6 +85,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         });
         return NextResponse.json({ ok: true });
       }
+      case "change_teacher": {
+        const newTeacherId = body.newTeacherId;
+        if (!newTeacherId) {
+          return NextResponse.json({ error: "Nouveau professeur requis" }, { status: 400 });
+        }
+        const newTeacher = await db.teacher.findUnique({ where: { id: newTeacherId } });
+        if (!newTeacher || newTeacher.status !== "ACTIVE") {
+          return NextResponse.json({ error: "Professeur introuvable ou inactif" }, { status: 400 });
+        }
+        const oldTeacherName = booking.teacher.professionalName || booking.teacher.fullName;
+        const newTeacherName = newTeacher.professionalName || newTeacher.fullName;
+        await db.booking.update({
+          where: { id },
+          data: {
+            teacherId: newTeacherId,
+            // Recalcul des montants selon le nouveau prof
+            commissionRate: newTeacher.commissionRate,
+            commissionAmount: Math.round((booking.totalPrice * newTeacher.commissionRate) / 100),
+            teacherNetAmount: booking.totalPrice - Math.round((booking.totalPrice * newTeacher.commissionRate) / 100),
+          },
+        });
+        await db.notification.create({
+          data: {
+            userId: null,
+            title: "Professeur changé",
+            message: `Le professeur de la réservation ${booking.reference} a été changé de ${oldTeacherName} vers ${newTeacherName}.`,
+            type: "TEACHER_CHANGED",
+            link: `/admin/reservations/${booking.id}`,
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
       case "mark_done": {
         if (booking.status !== "ASSIGNED" && booking.status !== "IN_PROGRESS" && booking.status !== "CONFIRMED") {
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });

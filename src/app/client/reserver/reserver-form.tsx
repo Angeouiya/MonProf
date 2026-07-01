@@ -100,6 +100,8 @@ export function ReserverForm({
     levelName: teacher.levels[0] ?? "",
     subjectName: teacher.subjects[0]?.name ?? "",
     objective: OBJECTIVES[0].value,
+    schoolProgram: "",
+    needDescription: "",
     courseFormat: teacher.offersHome ? "HOME" : (teacher.offersOnline ? "ONLINE" : "HOME"),
     groupType: "INDIVIDUAL",
     commune: "",
@@ -108,6 +110,7 @@ export function ReserverForm({
     onlineLink: "",
     preferredDays: [] as string[],
     preferredTime: "",
+    startDate: "",
     packType: "SINGLE" as PackType,
     message: "",
     paymentMethod: "WAVE",
@@ -178,6 +181,8 @@ export function ReserverForm({
           subjectName: form.subjectName,
           levelName: form.levelName,
           objective: form.objective,
+          schoolProgram: form.schoolProgram || undefined,
+          needDescription: form.needDescription || undefined,
           courseFormat: form.courseFormat,
           groupType: form.groupType,
           commune: form.commune,
@@ -186,6 +191,7 @@ export function ReserverForm({
           onlineLink: form.onlineLink,
           preferredDays: form.preferredDays,
           preferredTime: form.preferredTime,
+          startDate: form.startDate || undefined,
           sessionsCount: 1,
           packType: form.packType,
           message: form.message,
@@ -299,10 +305,32 @@ export function ReserverForm({
                   ))}
                 </RadioGroup>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="schoolProgram">Programme scolaire (optionnel)</Label>
+                  <Input
+                    id="schoolProgram"
+                    value={form.schoolProgram}
+                    onChange={(e) => update("schoolProgram", e.target.value)}
+                    placeholder="Ex : Programme officiel CI, Edexcel, Cambridre..."
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Indiquez le programme suivi par l'élève.</p>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="needDescription">Description du besoin (optionnel)</Label>
+                <Textarea
+                  id="needDescription"
+                  value={form.needDescription}
+                  onChange={(e) => update("needDescription", e.target.value)}
+                  placeholder="Décrivez le besoin de l'élève : chapitres à revoir, difficultés rencontrées, objectif précis..."
+                  rows={3}
+                  className="mt-1.5"
+                />
+              </div>
             </div>
           )}
-
-          {/* Step 2 — Format */}
           {step === 1 && (
             <div className="space-y-5">
               <div>
@@ -513,6 +541,20 @@ export function ReserverForm({
                     );
                   })}
                 </RadioGroup>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="startDate">Date de début souhaitée (optionnel)</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => update("startDate", e.target.value)}
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Indiquez quand vous souhaitez débuter les cours.</p>
+                </div>
               </div>
 
               <div>

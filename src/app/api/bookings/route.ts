@@ -96,9 +96,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
-    teacherId, subjectName, levelName, objective,
+    teacherId, subjectName, levelName, objective, schoolProgram, needDescription,
     courseFormat, groupType, commune, quartier, addressHint, onlineLink,
-    preferredDays, preferredTime, sessionsCount, packType, message,
+    preferredDays, preferredTime, startDate, sessionsCount, packType, message,
     paymentMethod,
   } = body;
 
@@ -131,6 +131,8 @@ export async function POST(req: NextRequest) {
       subjectName,
       levelName,
       objective: objective || null,
+      schoolProgram: schoolProgram || null,
+      needDescription: needDescription || null,
       courseFormat: courseFormat as CourseFormat,
       groupType: (groupType as GroupType) || "INDIVIDUAL",
       commune: courseFormat === "HOME" ? (commune || null) : null,
@@ -139,6 +141,7 @@ export async function POST(req: NextRequest) {
       onlineLink: courseFormat === "ONLINE" ? (onlineLink || null) : null,
       preferredDays: JSON.stringify(preferredDays || []),
       preferredTime: preferredTime || "",
+      startDate: startDate ? new Date(startDate) : null,
       sessionsCount: pack === "SINGLE" ? Math.max(1, Number(sessionsCount) || 1) : 1,
       packType: pack,
       message: message || null,

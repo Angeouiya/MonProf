@@ -2,6 +2,15 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
+  Calculator,
+  BookOpen,
+  Languages,
+  Atom,
+  Leaf,
+  Brain,
+  Laptop,
+  Coins,
+  TrendingUp,
   CalendarCheck,
   CheckCircle2,
   CreditCard,
@@ -27,21 +36,38 @@ const PRICING = [
   { level: "Université", price: 20000 },
 ];
 
+const POPULAR_SUBJECTS = [
+  { name: "Mathématiques", slug: "mathematiques", desc: "Primaire à université", icon: Calculator },
+  { name: "Français", slug: "francais", desc: "BEPC, BAC, expression", icon: BookOpen },
+  { name: "Anglais", slug: "anglais", desc: "Scolaire et professionnel", icon: Languages },
+  { name: "Physique-Chimie", slug: "physique-chimie", desc: "BAC C, D, E", icon: Atom },
+  { name: "SVT", slug: "svt", desc: "BEPC, BAC D", icon: Leaf },
+  { name: "Philosophie", slug: "philosophie", desc: "Terminale, BAC", icon: Brain },
+  { name: "Informatique", slug: "informatique", desc: "Code, bureautique", icon: Laptop },
+  { name: "Comptabilité", slug: "comptabilite", desc: "BAC D2, BTS", icon: Coins },
+  { name: "Économie", slug: "economie", desc: "Lycée, université", icon: TrendingUp },
+];
+
 const STEPS = [
   {
     icon: BadgeCheck,
-    title: "1. Choisissez un professeur vérifié",
-    text: "Parcourez les profils vérifiés par notre équipe et choisissez celui qui correspond à vos besoins (matière, niveau, commune, format).",
+    title: "1. Recherchez un professeur",
+    text: "Parcourez les profils vérifiés par notre équipe et choisissez selon la matière, le niveau, la commune et le format (domicile ou en ligne).",
+  },
+  {
+    icon: CalendarCheck,
+    title: "2. Réservez votre cours",
+    text: "Indiquez vos préférences : jours, horaires, objectif pédagogique et nombre de séances. Choisissez un cours à la séance ou un pack.",
   },
   {
     icon: CreditCard,
-    title: "2. Réservez et payez en ligne",
-    text: "Indiquez vos préférences (jours, horaires, objectifs) et payez par Wave, Orange Money, MTN, Moov ou carte bancaire. Les fonds sont bloqués en sécurité.",
+    title: "3. Payez en sécurité",
+    text: "Réglez par Wave, Orange Money, MTN Money, Moov Money ou carte bancaire. Vos fonds sont bloqués jusqu'à la confirmation du cours.",
   },
   {
     icon: Wallet,
-    title: "3. Le professeur est payé après le cours",
-    text: "Une fois le cours effectué et validé par vos soins, nous libérons le paiement au professeur (déduction faite de la commission de 20%).",
+    title: "4. Confirmez après le cours",
+    text: "Une fois le cours dispensé, confirmez sa réalisation. Le professeur est alors payé après déduction de la commission de 20%.",
   },
 ];
 
@@ -160,10 +186,10 @@ export default async function HomePage() {
               Simple, sécurisé, transparent
             </h2>
             <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              Trois étapes seulement entre vous et le professeur de vos enfants.
+              Quatre étapes simples entre vous et le professeur de vos enfants.
             </p>
           </div>
-          <div className="mt-10 grid gap-5 sm:gap-6 md:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <div
                 key={s.title}
@@ -243,6 +269,38 @@ export default async function HomePage() {
                   {a.text}
                 </p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MATIÈRES POPULAIRES */}
+      <section className="border-b border-border bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Toutes les matières sont couvertes
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground sm:text-base">
+              Du primaire à l'université, trouvez un professeur vérifié pour chaque matière.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+            {POPULAR_SUBJECTS.map((s) => (
+              <Link
+                key={s.slug}
+                href={`/professeurs?subject=${s.slug}`}
+                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <s.icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{s.name}</p>
+                  <p className="text-xs text-muted-foreground">{s.desc}</p>
+                </div>
+                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+              </Link>
             ))}
           </div>
         </div>
@@ -346,6 +404,27 @@ export default async function HomePage() {
                 <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION CONFIANCE */}
+      <section className="border-b border-border bg-primary/5">
+        <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8 lg:py-16">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Tous les professeurs sont enregistrés, vérifiés et suivis par notre administration.
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Chaque professeur est sélectionné, contrôlé et noté par notre équipe. Nous vérifions les diplômes, l'identité et l'expérience avant toute publication. Le paiement n'est libéré qu'après votre confirmation du cours.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium text-foreground">
+            <span className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-primary" /> Identité vérifiée</span>
+            <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /> Paiement sécurisé</span>
+            <span className="flex items-center gap-2"><CalendarCheck className="h-4 w-4 text-primary" /> Suivi administratif</span>
+            <span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Remboursement en cas de litige</span>
           </div>
         </div>
       </section>

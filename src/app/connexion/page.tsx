@@ -84,7 +84,7 @@ function ConnexionContent() {
       setEmail("admin@monprof.ci");
       setPassword("admin123");
     } else {
-      setEmail("client@demo.ci");
+      setEmail("amon@demo.ci");
       setPassword("client123");
     }
     setError(null);
@@ -201,7 +201,7 @@ function ConnexionContent() {
               >
                 <div>
                   <p className="font-semibold text-foreground">Compte client</p>
-                  <p className="text-muted-foreground">client@demo.ci · client123</p>
+                  <p className="text-muted-foreground">amon@demo.ci · client123</p>
                 </div>
                 <span className="text-primary">Utiliser →</span>
               </button>

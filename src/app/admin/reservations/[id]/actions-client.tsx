@@ -18,7 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  CheckCircle2, UserCheck, ClipboardCheck, Banknote, Ban, RefreshCw, ShieldAlert, Loader2, Bell, MessageSquare,
+  CheckCircle2, UserCheck, ClipboardCheck, Banknote, Ban, RefreshCw, ShieldAlert, Loader2, Bell, MessageSquare, UserCog,
 } from "lucide-react";
 import { formatFCFA } from "@/lib/format";
 
@@ -43,6 +43,9 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [assignOpen, setAssignOpen] = useState(false);
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [changeTeacherOpen, setChangeTeacherOpen] = useState(false);
+  const [newTeacherId, setNewTeacherId] = useState("");
+  const [availableTeachers, setAvailableTeachers] = useState<{ id: string; professionalName: string | null; fullName: string; jobTitle: string }[]>([]);
   const [channel, setChannel] = useState("SMS");
   const [message, setMessage] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
@@ -117,6 +120,11 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       <Button key="done" variant="outline" onClick={() => doAction("mark_done")} disabled={!!loading}>
         {loading === "mark_done" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ClipboardCheck className="mr-1.5 h-4 w-4" />}
         Marquer cours effectué
+      </Button>
+    );
+    actions.push(
+      <Button key="change_teacher" variant="outline" onClick={() => setChangeTeacherOpen(true)} disabled={!!loading}>
+        <UserCog className="mr-1.5 h-4 w-4" /> Changer de professeur
       </Button>
     );
   }
@@ -312,6 +320,68 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
             <Button onClick={openDispute} disabled={loading === "dispute"} className="bg-amber-600 hover:bg-amber-700">
               {loading === "dispute" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ShieldAlert className="mr-1.5 h-4 w-4" />}
               Ouvrir le litige
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog : Changer de professeur */}
+      <Dialog open={changeTeacherOpen} onOpenChange={(o) => {
+        setChangeTeacherOpen(o);
+        if (o && availableTeachers.length === 0) {
+          fetch("/api/teachers?pageSize=50").then(r => r.json()).then(data => {
+            setAvailableTeachers(data.items.filter((t: any) => t.id !== booking.teacher.id));
+          });
+        }
+        if (!o) setNewTeacherId("");
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Changer de professeur</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un nouveau professeur pour la réservation {booking.reference}. Les montants seront recalculés selon la commission du nouveau professeur.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Professeur actuel</Label>
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              {booking.teacher.professionalName || booking.teacher.fullName}
+            </div>
+            <Label htmlFor="newTeacher">Nouveau professeur *</Label>
+            <Select value={newTeacherId} onValueChange={setNewTeacherId}>
+              <SelectTrigger id="newTeacher"><SelectValue placeholder="Sélectionner un professeur..." /></SelectTrigger>
+              <SelectContent className="max-h-60">
+                {availableTeachers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.professionalName || t.fullName} — {t.jobTitle}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setChangeTeacherOpen(false)}>Annuler</Button>
+            <Button
+              onClick={async () => {
+                if (!newTeacherId) { toast.error("Sélectionnez un professeur"); return; }
+                setLoading("change_teacher");
+                try {
+                  const res = await fetch(`/api/admin/bookings/${booking.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "change_teacher", newTeacherId }),
+                  });
+                  if (!res.ok) { const d = await res.json(); toast.error(d.error || "Erreur"); return; }
+                  toast.success("Professeur changé avec succès");
+                  setChangeTeacherOpen(false);
+                  router.refresh();
+                } catch { toast.error("Erreur réseau"); }
+                finally { setLoading(null); }
+              }}
+              disabled={!newTeacherId || loading === "change_teacher"}
+            >
+              {loading === "change_teacher" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <UserCog className="mr-1.5 h-4 w-4" />}
+              Confirmer le changement
             </Button>
           </DialogFooter>
         </DialogContent>

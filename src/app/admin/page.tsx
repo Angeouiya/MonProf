@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, GraduationCap, CalendarRange, CheckCircle2, Lock, Banknote,
-  ShieldAlert, TrendingUp, CalendarDays, Star, Bell, ArrowRight,
+  ShieldAlert, TrendingUp, CalendarDays, Star, Bell, ArrowRight, Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
@@ -29,7 +29,7 @@ export default async function AdminDashboard() {
   const [
     totalClients, totalTeachers, activeTeachers, newBookings7d, paidBookings,
     todayBookings, blockedFundsAgg, toReleaseAgg, teachersToPayAgg,
-    openDisputes, allTimeCommissionAgg, monthCommissionAgg,
+    openDisputes, allTimeCommissionAgg, monthCommissionAgg, totalPaidToTeachersAgg,
     recentPaidBookings, pendingReleaseBookings, openDisputeList, adminNotifications,
   ] = await Promise.all([
     db.user.count({ where: { role: "CLIENT" } }),
@@ -44,6 +44,7 @@ export default async function AdminDashboard() {
     db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
     db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }, _sum: { commissionAmount: true } }),
     db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }, _sum: { commissionAmount: true } }),
+    db.booking.aggregate({ where: { paymentStatus: "TEACHER_PAID" }, _sum: { teacherNetAmount: true } }),
     db.booking.findMany({
       where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } },
       include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } } },
@@ -82,6 +83,7 @@ export default async function AdminDashboard() {
   const toRelease = toReleaseAgg._sum.teacherNetAmount ?? 0;
   const totalCommission = allTimeCommissionAgg._sum.commissionAmount ?? 0;
   const monthCommission = monthCommissionAgg._sum.commissionAmount ?? 0;
+  const totalPaidToTeachers = totalPaidToTeachersAgg._sum.teacherNetAmount ?? 0;
 
   return (
     <div className="space-y-6">
@@ -110,6 +112,7 @@ export default async function AdminDashboard() {
         <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
         <StatCard label="CA commission (total)" value={formatFCFA(totalCommission)} icon={TrendingUp} tone="success" />
         <StatCard label="Commission (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
+        <StatCard label="Versé aux professeurs" value={formatFCFA(totalPaidToTeachers)} icon={Wallet} tone="success" />
       </div>
 
       {/* Chart */}
