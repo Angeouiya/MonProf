@@ -12,8 +12,8 @@ export function RevenueAreaChart({ data }: { data: { date: string; value: number
       <AreaChart data={data} margin={{ top: 10, right: 16, left: -8, bottom: 0 }}>
         <defs>
           <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10A37F" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#10A37F" stopOpacity={0} />
+            <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.38} />
+            <stop offset="100%" stopColor="#1E2A78" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
@@ -24,7 +24,7 @@ export function RevenueAreaChart({ data }: { data: { date: string; value: number
           labelFormatter={(l) => `Date: ${fmtDate(String(l))}`}
           formatter={(v: any) => [`${Number(v).toLocaleString("fr-FR")} FCFA`, "Commission"]}
         />
-        <Area type="monotone" dataKey="value" stroke="#10A37F" strokeWidth={2} fill="url(#revGrad)" />
+        <Area type="monotone" dataKey="value" stroke="#1E2A78" strokeWidth={2.5} fill="url(#revGrad)" />
       </AreaChart>
     </ResponsiveContainer>
   );

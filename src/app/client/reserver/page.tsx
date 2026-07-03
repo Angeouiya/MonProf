@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
-import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -13,33 +12,29 @@ export default async function ReserverPage({
   const { teacherId } = await searchParams;
   if (!teacherId) notFound();
 
-  const teacher = await db.teacher.findUnique({
-    where: { id: teacherId, status: "ACTIVE" },
+  const teacher = await db.teacher.findFirst({
+    where: { id: teacherId, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true } },
+      zones: { include: { commune: true } },
     },
   });
   if (!teacher) notFound();
 
-  const [subjects, levels, communes] = await Promise.all([
-    db.subject.findMany({ orderBy: { name: "asc" } }),
-    db.level.findMany({ orderBy: { order: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  const communes = await db.commune.findMany({ orderBy: { name: "asc" } });
 
   const teacherSubjects = teacher.subjects.map((s) => ({
+    id: s.subject.id,
     name: s.subject.name,
+    slug: s.subject.slug,
     isPrimary: s.isPrimary,
   }));
-  const teacherLevels = teacher.levels.map((l) => l.level.name);
+  const teacherLevels = teacher.levels.map((l) => ({ id: l.level.id, name: l.level.name, slug: l.level.slug }));
+  const teacherZones = teacher.zones.map((zone) => zone.commune.name);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Réserver un cours"
-        description={`Avec ${teacher.professionalName || teacher.fullName} — ${teacher.jobTitle}`}
-      />
+    <div>
       <ReserverForm
         teacher={{
           id: teacher.id,
@@ -51,16 +46,21 @@ export default async function ReserverPage({
           rating: teacher.rating,
           ratingCount: teacher.ratingCount,
           pricePerSession: teacher.pricePerSession,
-          pricePack4: teacher.pricePack4,
-          pricePack8: teacher.pricePack8,
-          commissionRate: teacher.commissionRate,
+          badgeVerified: teacher.badgeVerified,
+          badgeRecommended: teacher.badgeRecommended,
+          badgePremium: teacher.badgePremium,
+          badgePopular: teacher.badgePopular,
+          badgeNew: teacher.badgeNew,
           offersHome: teacher.offersHome,
           offersOnline: teacher.offersOnline,
+          offersGroup: teacher.offersGroup,
+          availability: teacher.availability,
+          zones: teacherZones,
           subjects: teacherSubjects,
-          levels: teacherLevels,
+          levels: teacherLevels.map((level) => level.name),
         }}
-        subjects={subjects.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))}
-        levels={levels.map((l) => ({ id: l.id, name: l.name, slug: l.slug }))}
+        subjects={teacherSubjects.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))}
+        levels={teacherLevels.map((l) => ({ id: l.id, name: l.name, slug: l.slug }))}
         communes={communes.map((c) => ({ id: c.id, name: c.name }))}
       />
     </div>

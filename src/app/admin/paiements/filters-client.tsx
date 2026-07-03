@@ -26,7 +26,7 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
   const reset = () => router.push("/admin/paiements");
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
       <CardContent className="p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
@@ -39,7 +39,6 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
                 <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
                 <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
                 <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
-                <SelectItem value="CARD">Carte</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -57,6 +56,8 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
                 <SelectItem value="TEACHER_PAID">Prof payé</SelectItem>
                 <SelectItem value="DISPUTED">Litige</SelectItem>
                 <SelectItem value="REFUNDED">Remboursé</SelectItem>
+                <SelectItem value="PARTIALLY_REFUNDED">Remboursé partiel</SelectItem>
+                <SelectItem value="RETAINED">Frais retenus</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -69,7 +70,7 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
             <Input type="date" className="mt-1" value={filters.to} onChange={(e) => apply({ to: e.target.value })} />
           </div>
           <div className="flex items-end">
-            <Button variant="ghost" size="sm" onClick={reset}><X className="mr-1 h-4 w-4" /> Réinitialiser</Button>
+            <Button variant="outline" size="sm" onClick={reset}><X className="mr-1 h-4 w-4" /> Réinitialiser</Button>
           </div>
         </div>
       </CardContent>

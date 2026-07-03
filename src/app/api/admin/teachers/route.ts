@@ -2,10 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
+import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
   return !!session?.user && (session.user as any).role === "ADMIN";
+}
+
+function validateTeacherRelations(subjects: unknown, levels: unknown) {
+  if (!Array.isArray(subjects) || subjects.length === 0) {
+    return "Sélectionnez au moins une matière pour ce professeur.";
+  }
+  if (!subjects.some((subject: any) => Boolean(subject?.isPrimary))) {
+    return "Définissez une matière principale pour ce professeur.";
+  }
+  if (!Array.isArray(levels) || levels.length === 0) {
+    return "Sélectionnez au moins un niveau enseigné par ce professeur.";
+  }
+  return null;
+}
+
+const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
+
+function isPublicVisibleTeacherStatus(status: string) {
+  return PUBLIC_VISIBLE_TEACHER_STATUSES.includes(status as (typeof PUBLIC_VISIBLE_TEACHER_STATUSES)[number]);
 }
 
 export async function POST(req: NextRequest) {
@@ -17,7 +38,6 @@ export async function POST(req: NextRequest) {
     const {
       fullName, professionalName, photoUrl, phone, email, commune, quartier, addressHint,
       jobTitle, bio, experienceYears, diploma, cvUrl, profileType, status, featured,
-      rating, ratingCount,
       badgeVerified, badgeRecommended, badgeNew, badgePopular, badgePremium,
       internalNote,
       offersHome, offersOnline, offersGroup,
@@ -30,12 +50,30 @@ export async function POST(req: NextRequest) {
     if (!fullName || !phone || !jobTitle || !bio) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
+    const nextStatus = status || "ACTIVE";
+    const rawPhotoUrl = typeof photoUrl === "string" ? photoUrl.trim() : "";
+    let storedPhotoUrl: string | null = null;
+    if (isPublicVisibleTeacherStatus(nextStatus) || rawPhotoUrl) {
+      const photoValidation = await validateTeacherPhotoUrlForStorage(rawPhotoUrl);
+      if (!photoValidation.ok) {
+        return NextResponse.json({
+          error: isPublicVisibleTeacherStatus(nextStatus)
+            ? `Impossible de créer un professeur actif sans vraie photo validée. ${photoValidation.error}`
+            : photoValidation.error,
+        }, { status: 400 });
+      }
+      storedPhotoUrl = photoValidation.photoUrl;
+    }
+    const relationError = validateTeacherRelations(subjects, levels);
+    if (relationError) {
+      return NextResponse.json({ error: relationError }, { status: 400 });
+    }
 
     const teacher = await db.teacher.create({
       data: {
         fullName,
         professionalName: professionalName || null,
-        photoUrl: photoUrl || null,
+        photoUrl: storedPhotoUrl,
         phone,
         email: email || null,
         commune: commune || null,
@@ -47,10 +85,10 @@ export async function POST(req: NextRequest) {
         diploma: diploma || null,
         cvUrl: cvUrl || null,
         profileType: profileType || "ENSEIGNANT",
-        status: status || "ACTIVE",
+        status: nextStatus,
         featured: !!featured,
-        rating: Number(rating) || 0,
-        ratingCount: Number(ratingCount) || 0,
+        rating: 0,
+        ratingCount: 0,
         badgeVerified: badgeVerified ?? true,
         badgeRecommended: !!badgeRecommended,
         badgeNew: badgeNew ?? true,
@@ -64,7 +102,7 @@ export async function POST(req: NextRequest) {
         pricePerSession: Number(pricePerSession) || 10000,
         pricePack4: Number(pricePack4) || 38000,
         pricePack8: Number(pricePack8) || 72000,
-        commissionRate: typeof commissionRate === "number" ? commissionRate : (Number(commissionRate) || 20),
+        commissionRate: typeof commissionRate === "number" ? commissionRate : (Number(commissionRate) || PLATFORM_COMMISSION_PERCENT),
         pricingTier: pricingTier || "STANDARD",
         availability: availability ? (typeof availability === "string" ? availability : JSON.stringify(availability)) : null,
       },

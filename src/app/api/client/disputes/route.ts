@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { DisputeStatus } from "@prisma/client";
+import { hasVerifiedClientFunds, hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -39,13 +40,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
   }
 
-  const booking = await db.booking.findUnique({ where: { id: bookingId } });
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    include: { transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } } },
+  });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
   if (booking.clientId !== userId) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
   if (booking.status === "DISPUTED") {
     return NextResponse.json({ error: "Un litige est déjà ouvert sur cette réservation" }, { status: 400 });
+  }
+  if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
+    return NextResponse.json({
+      error: "Un litige financier ne peut être ouvert qu'après un paiement PayDunya vérifié.",
+    }, { status: 409 });
   }
 
   const dispute = await db.dispute.create({

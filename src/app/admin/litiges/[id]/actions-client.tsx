@@ -69,9 +69,9 @@ export function DisputeActionsClient({ disputeId, status }: { disputeId: string;
           {actions.map((a) => {
             const toneCls = {
               amber: "border-amber-200 text-amber-700 hover:bg-amber-50",
-              primary: "border-primary/30 text-primary hover:bg-primary/5",
+              primary: "border-violet-200 text-violet-700 hover:bg-violet-50",
               red: "border-red-200 text-red-700 hover:bg-red-50",
-              gray: "border-gray-200 text-gray-700 hover:bg-muted",
+              gray: "border-slate-200 text-slate-700 hover:bg-slate-50",
             }[a.tone];
             const needRes = a.needResolution && !resolution.trim();
             return (
@@ -87,7 +87,7 @@ export function DisputeActionsClient({ disputeId, status }: { disputeId: string;
                     <AlertDialogTitle>{a.label} ?</AlertDialogTitle>
                     <AlertDialogDescription>
                       {a.key === "resolve" && "Le litige sera résolu, le paiement sera libéré au professeur."}
-                      {a.key === "refund" && "Le client sera remboursé. La réservation passera en REFUNDED."}
+                      {a.key === "refund" && "Le client sera remboursé. La réservation passera au statut Remboursée."}
                       {a.key === "reject" && "Le litige sera rejeté. Le paiement retourne en attente de libération au professeur."}
                       {a.key === "investigate" && "Le litige passe en cours d'investigation."}
                     </AlertDialogDescription>

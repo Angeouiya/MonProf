@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Money } from "@/components/shared/money";
 import { PaymentStatusBadge, BookingStatusBadge } from "@/components/shared/status-badge";
+import { ProfessorImage } from "@/components/shared/professor-image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,15 +13,16 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Phone, Mail, MessageSquare } from "lucide-react";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import { DisputeActionsClient } from "./actions-client";
+import { DisputeOperationalActionsClient } from "./dispute-operational-actions-client";
 
 export const dynamic = "force-dynamic";
 
 const BADGE_CLS: Record<string, string> = {
   OPEN: "border-red-200 bg-red-50 text-red-700",
   INVESTIGATING: "border-amber-200 bg-amber-50 text-amber-700",
-  RESOLVED: "border-green-200 bg-green-50 text-green-700",
+  RESOLVED: "border-blue-200 bg-blue-50 text-blue-700",
   REFUNDED: "border-blue-200 bg-blue-50 text-blue-700",
-  REJECTED: "border-gray-200 bg-gray-50 text-gray-700",
+  REJECTED: "border-slate-200 bg-slate-50 text-slate-700",
 };
 const LABELS: Record<string, string> = {
   OPEN: "Ouvert", INVESTIGATING: "Investigation", RESOLVED: "Résolu", REFUNDED: "Remboursé", REJECTED: "Rejeté",
@@ -35,7 +37,7 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
     include: {
       booking: {
         include: {
-          teacher: { select: { id: true, fullName: true, professionalName: true, phone: true, email: true } },
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, email: true, badgeVerified: true } },
           client: { select: { id: true, name: true, phone: true, email: true } },
           transactions: { orderBy: { createdAt: "desc" } },
         },
@@ -94,7 +96,7 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
             {dispute.resolution && (
               <>
                 <Separator />
-                <div className="rounded-md bg-muted/50 p-3">
+                <div className="rounded-2xl border border-violet-100 bg-white/75 p-3 shadow-sm">
                   <p className="text-xs font-medium text-muted-foreground">Résolution</p>
                   <p className="mt-1 text-sm">{dispute.resolution}</p>
                 </div>
@@ -115,7 +117,16 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
             <Separator />
             <div>
               <p className="text-xs font-medium text-muted-foreground">Professeur</p>
-              <Link href={`/admin/professeurs/${dispute.booking.teacher.id}`} className="font-medium hover:text-primary">{dispute.booking.teacher.professionalName || dispute.booking.teacher.fullName}</Link>
+              <div className="mt-1 flex items-center gap-2">
+                <ProfessorImage
+                  photoUrl={dispute.booking.teacher.photoUrl}
+                  name={dispute.booking.teacher.professionalName || dispute.booking.teacher.fullName}
+                  size="sm"
+                  shape="circle"
+                  verified={dispute.booking.teacher.badgeVerified}
+                />
+                <Link href={`/admin/professeurs/${dispute.booking.teacher.id}?tab=cours&bookingId=${dispute.booking.id}`} className="font-medium hover:text-primary">{dispute.booking.teacher.professionalName || dispute.booking.teacher.fullName}</Link>
+              </div>
               <p className="flex items-center gap-2 mt-1 text-xs"><Phone className="h-3.5 w-3.5" /> {dispute.booking.teacher.phone}</p>
               <p className="flex items-center gap-2 text-xs"><Mail className="h-3.5 w-3.5" /> {dispute.booking.teacher.email ?? "—"}</p>
             </div>
@@ -137,6 +148,32 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
       </div>
+
+      <DisputeOperationalActionsClient
+        disputeId={dispute.id}
+        reason={dispute.reason}
+        description={dispute.description}
+        booking={{
+          id: dispute.booking.id,
+          reference: dispute.booking.reference,
+          subjectName: dispute.booking.subjectName,
+          levelName: dispute.booking.levelName,
+          totalPrice: dispute.booking.totalPrice,
+          teacherNetAmount: dispute.booking.teacherNetAmount,
+          paymentStatus: dispute.booking.paymentStatus,
+          teacher: {
+            id: dispute.booking.teacher.id,
+            fullName: dispute.booking.teacher.fullName,
+            professionalName: dispute.booking.teacher.professionalName,
+            phone: dispute.booking.teacher.phone,
+          },
+          client: {
+            id: dispute.booking.client.id,
+            name: dispute.booking.client.name,
+            phone: dispute.booking.client.phone,
+          },
+        }}
+      />
 
       <DisputeActionsClient disputeId={dispute.id} status={dispute.status} />
     </div>

@@ -1,15 +1,19 @@
 import Link from "next/link";
-import Image from "next/image";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { PageHeader, EmptyState } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
-import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
+import { EmptyState } from "@/components/shared/page-header";
+import { ClientMetricStrip, ClientPageHeader } from "@/components/shared/client-page-primitives";
+import { BookingStatusBadge } from "@/components/shared/status-badge";
 import { Money } from "@/components/shared/money";
+import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatFCFA, formatDate, formatDateTime, avatarFromName } from "@/lib/format";
-import { CalendarCheck, Clock, Wallet, CheckCircle2, ArrowRight, AlertTriangle, Sparkles, Search } from "lucide-react";
+import { formatDate } from "@/lib/format";
+import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import {
+  CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle,
+  Search, ShieldCheck, BookOpen, Bell,
+} from "lucide-react";
 import { BookingStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +27,7 @@ export default async function ClientDashboardPage() {
   const [
     totalBookings,
     upcomingBookings,
-    blockedFundsAgg,
+    blockedFundTransactions,
     completedBookings,
     pendingValidation,
     nextCourse,
@@ -36,9 +40,28 @@ export default async function ClientDashboardPage() {
         status: { in: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"] },
       },
     }),
-    db.transaction.aggregate({
-      where: { booking: { clientId: user.id }, status: "BLOCKED", type: "CLIENT_PAYMENT" },
-      _sum: { amount: true },
+    db.transaction.findMany({
+      where: {
+        booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
+        status: "BLOCKED",
+        type: "CLIENT_PAYMENT",
+      },
+      select: {
+        amount: true,
+        booking: {
+          select: {
+            paymentStatus: true,
+            totalClientPays: true,
+            totalPrice: true,
+            paydunyaStatus: true,
+            paydunyaVerifiedAt: true,
+            transactions: {
+              where: { type: "CLIENT_PAYMENT" },
+              select: { type: true, status: true, amount: true },
+            },
+          },
+        },
+      },
     }),
     db.booking.count({
       where: { clientId: user.id, status: { in: ["TEACHER_PAID", "VALIDATED_BY_CLIENT"] } },
@@ -48,22 +71,25 @@ export default async function ClientDashboardPage() {
       orderBy: { courseDoneAt: "desc" },
       take: 5,
       include: {
-        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true } },
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, badgeVerified: true } },
       },
     }),
     db.booking.findFirst({
       where: {
         clientId: user.id,
-        status: { in: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS"] },
-        scheduledDate: { gte: now },
+        status: { in: ["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] },
+        OR: [
+          { scheduledDate: { gte: now } },
+          { scheduledDate: null, startDate: { gte: now } },
+        ],
       },
-      orderBy: { scheduledDate: "asc" },
+      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }],
       include: {
-        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true } },
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true } },
       },
     }),
     db.teacher.findMany({
-      where: { status: "ACTIVE", featured: true },
+      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
       take: 3,
       orderBy: { rating: "desc" },
       include: {
@@ -72,33 +98,53 @@ export default async function ClientDashboardPage() {
       },
     }),
   ]);
+  const nextCourseDate = nextCourse
+    ? nextCourse.scheduledDate
+      ? formatDate(nextCourse.scheduledDate)
+      : nextCourse.startDate
+        ? formatDate(nextCourse.startDate)
+        : "Date à confirmer"
+    : null;
+  const blockedFundsAmount = blockedFundTransactions
+    .filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking))
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`Bonjour ${user.name?.split(" ")[0] ?? ""}`}
-        description="Bienvenue dans votre espace client MonProf CI."
+    <div className="space-y-5">
+      <ClientPageHeader
+        showBack={false}
+        eyebrow="Tableau de bord client"
+        title={nextCourse ? "Prochain cours à suivre" : "Votre espace cours est prêt"}
+        description={nextCourse
+          ? `${nextCourse.subjectName} avec ${nextCourse.teacher.professionalName || nextCourse.teacher.fullName} · ${nextCourseDate} · ${nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer"}`
+          : "Trouvez un professeur, réservez et suivez vos paiements dans un parcours clair, simple et sécurisé."}
       >
-        <Button asChild>
-          <Link href="/client/reserver">
-            <Sparkles className="mr-2 h-4 w-4" />
-            Réserver un cours
+        <Button asChild className="min-h-11 rounded-2xl">
+          <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : "/client/rechercher"}>
+            {nextCourse ? "Ouvrir le dossier" : "Trouver un professeur"}
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
-      </PageHeader>
+        <Button asChild variant="outline" className="min-h-11 rounded-2xl">
+          <Link href="/client/reservations">Mes réservations</Link>
+        </Button>
+      </ClientPageHeader>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Réservations" value={totalBookings} icon={CalendarCheck} tone="primary" />
-        <StatCard label="Cours à venir" value={upcomingBookings} icon={Clock} />
-        <StatCard label="Fonds bloqués" value={formatFCFA(blockedFundsAgg._sum.amount ?? 0)} icon={Wallet} tone="warning" />
-        <StatCard label="Cours terminés" value={completedBookings} icon={CheckCircle2} tone="success" />
-      </div>
+      <ClientMetricStrip
+        metrics={[
+          { icon: ShieldCheck, label: "Sécurisés", value: <Money amount={blockedFundsAmount} /> },
+          { icon: BookOpen, label: "Cours", value: `${upcomingBookings} à venir` },
+          { icon: Bell, label: "Action", value: pendingValidation.length ? formatCount(pendingValidation.length, "attente") : "À jour", attention: pendingValidation.length > 0 },
+          { icon: CalendarCheck, label: "Demandes", value: totalBookings },
+          { icon: CheckCircle2, label: "Terminés", value: completedBookings },
+        ]}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* Prochain cours */}
-        <Card className="lg:col-span-2">
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-base font-semibold">Prochain cours</CardTitle>
+            <CardTitle className="text-base font-black tracking-tight text-[#111827]">Prochain cours</CardTitle>
             <Button asChild variant="ghost" size="sm">
               <Link href="/client/cours">Tous mes cours <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
@@ -106,49 +152,49 @@ export default async function ClientDashboardPage() {
           <CardContent>
             {nextCourse ? (
               <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-muted">
-                    {nextCourse.teacher.photoUrl ? (
-                      <Image src={nextCourse.teacher.photoUrl} alt={nextCourse.teacher.fullName} fill className="object-cover" />
-                    ) : (
-                      <img src={avatarFromName(nextCourse.teacher.fullName)} alt={nextCourse.teacher.fullName} className="h-full w-full object-cover" />
-                    )}
-                  </div>
+                <div className="flex items-start gap-4 rounded-[1.35rem] border border-[#E3E8F2] bg-white p-3">
+                  <ProfessorImage
+                    photoUrl={nextCourse.teacher.photoUrl}
+                    name={nextCourse.teacher.professionalName || nextCourse.teacher.fullName}
+                    size="md"
+                    shape="circle"
+                    verified={nextCourse.teacher.badgeVerified}
+                  />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">
+                    <p className="font-black text-[#111827]">
                       {nextCourse.teacher.professionalName || nextCourse.teacher.fullName}
                     </p>
-                    <p className="text-sm text-muted-foreground">{nextCourse.teacher.jobTitle}</p>
-                    <p className="mt-1 text-sm font-medium text-foreground">
+                    <p className="text-sm text-[#64748B]">{nextCourse.teacher.jobTitle}</p>
+                    <p className="mt-1 text-sm font-bold text-[#111827]">
                       {nextCourse.subjectName} • {nextCourse.levelName}
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/50 p-3 text-sm">
+                <div className="grid gap-3 rounded-[1.35rem] border border-[#E3E8F2] bg-white p-3 text-sm sm:grid-cols-2 sm:p-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Date prévue</p>
-                    <p className="font-medium text-foreground">
-                      {nextCourse.scheduledDate ? formatDate(nextCourse.scheduledDate) : "À planifier"}
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{nextCourse.scheduledDate ? "Date prévue" : "Date souhaitée"}</p>
+                    <p className="mt-1 font-bold text-[#111827]">
+                      {nextCourse.scheduledDate ? formatDate(nextCourse.scheduledDate) : nextCourse.startDate ? formatDate(nextCourse.startDate) : "À planifier"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Créneau</p>
-                    <p className="font-medium text-foreground">{nextCourse.scheduledTime || nextCourse.preferredTime || "—"}</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Créneau</p>
+                    <p className="mt-1 font-bold text-[#111827]">{nextCourse.scheduledTime || nextCourse.preferredTime || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Format</p>
-                    <p className="font-medium text-foreground">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Format</p>
+                    <p className="mt-1 font-bold text-[#111827]">
                       {nextCourse.courseFormat === "HOME" ? "À domicile" : "En ligne"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Montant</p>
-                    <p className="font-medium text-foreground"><Money amount={nextCourse.totalPrice} /></p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Montant</p>
+                    <p className="mt-1 font-bold text-[#111827]"><Money amount={nextCourse.totalPrice} /></p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <BookingStatusBadge status={nextCourse.status as BookingStatus} />
-                  <Button asChild variant="outline" size="sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <BookingStatusBadge status={nextCourse.status as BookingStatus} audience="client" />
+                  <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                     <Link href={`/client/reservations/${nextCourse.id}`}>Voir détails</Link>
                   </Button>
                 </div>
@@ -171,33 +217,42 @@ export default async function ClientDashboardPage() {
         {/* Actions requises */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-accent" />
+            <CardTitle className="flex items-center gap-2 text-base font-black tracking-tight text-[#111827]">
+              <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
               Actions requises
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {pendingValidation.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune action requise pour le moment.</p>
+              <p className="text-sm text-[#64748B]">Aucune action requise pour le moment.</p>
             ) : (
               pendingValidation.map((b) => (
-                <div key={b.id} className="rounded-lg border border-border p-3">
+                <div key={b.id} className="rounded-[1.1rem] border border-[#E3E8F2] bg-white p-3 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{b.subjectName} • {b.levelName}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {b.teacher.professionalName || b.teacher.fullName}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ProfessorImage
+                        photoUrl={b.teacher.photoUrl}
+                        name={b.teacher.professionalName || b.teacher.fullName}
+                        size="sm"
+                        shape="circle"
+                        verified={b.teacher.badgeVerified}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-[#111827]">{b.subjectName} • {b.levelName}</p>
+                        <p className="truncate text-xs text-[#64748B]">
+                          {b.teacher.professionalName || b.teacher.fullName}
+                        </p>
+                      </div>
                     </div>
-                    <span className="shrink-0 rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                    <span className="shrink-0 rounded-full bg-white px-2 py-1 text-xs font-semibold text-[#111B4D]">
                       À confirmer
                     </span>
                   </div>
-                  <div className="mt-2 flex gap-1.5">
-                    <Button asChild size="sm" className="h-7 flex-1 text-xs">
+                  <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+                    <Button asChild size="sm" className="min-h-11 rounded-2xl text-xs">
                       <Link href={`/client/reservations/${b.id}?action=confirm`}>Confirmer</Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="h-7 flex-1 text-xs">
+                    <Button asChild size="sm" variant="outline" className="min-h-11 rounded-2xl text-xs">
                       <Link href={`/client/reservations/${b.id}?action=report`}>Signaler</Link>
                     </Button>
                   </div>
@@ -210,9 +265,9 @@ export default async function ClientDashboardPage() {
 
       {/* Recommandés */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-base font-semibold">Recommandés pour vous</CardTitle>
-          <Button asChild variant="ghost" size="sm">
+        <CardHeader className="flex flex-col items-start gap-3 space-y-0 pb-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
+          <CardTitle className="text-base font-black tracking-tight text-[#111827]">Recommandés pour vous</CardTitle>
+          <Button asChild variant="ghost" size="sm" className="min-h-11 w-full justify-center rounded-2xl min-[520px]:w-auto">
             <Link href="/client/rechercher">Plus de professeurs <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
           </Button>
         </CardHeader>
@@ -220,31 +275,25 @@ export default async function ClientDashboardPage() {
           {recommended.length === 0 ? (
             <EmptyState icon={Search} title="Aucun professeur recommandé" />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {recommended.map((t) => {
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {recommended.map((t, index) => {
                 const displayName = t.professionalName || t.fullName;
                 const primarySubject = t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name;
                 return (
                   <Link
-                    key={t.id}
+                    key={`${t.id}-${index}`}
                     href={`/client/reserver?teacherId=${t.id}`}
-                    className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:shadow-sm"
+                    className="group flex min-w-0 items-center gap-3 rounded-[1.2rem] border border-[#E3E8F2] bg-white p-3 shadow-sm transition-all hover:border-[#111B4D]"
                   >
-                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
-                      {t.photoUrl ? (
-                        <Image src={t.photoUrl} alt={displayName} fill className="object-cover" />
-                      ) : (
-                        <img src={avatarFromName(displayName)} alt={displayName} className="h-full w-full object-cover" />
-                      )}
-                    </div>
+                    <ProfessorImage photoUrl={t.photoUrl} name={displayName} size={48} shape="circle" verified={t.badgeVerified} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
-                      <p className="truncate text-xs text-muted-foreground">{primarySubject} • {t.commune}</p>
-                      <p className="mt-0.5 text-xs font-medium text-foreground">
-                        {formatFCFA(t.pricePerSession)} <span className="text-muted-foreground">/séance</span>
+                      <p className="truncate text-sm font-black text-[#111827]">{displayName}</p>
+                      <p className="truncate text-xs text-[#64748B]">{primarySubject} • {t.commune}</p>
+                      <p className="mt-0.5 text-xs font-bold text-[#111B4D]">
+                        Tarif calculé à la réservation
                       </p>
                     </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
                   </Link>
                 );
               })}
@@ -254,4 +303,8 @@ export default async function ClientDashboardPage() {
       </Card>
     </div>
   );
+}
+
+function formatCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }

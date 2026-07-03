@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const teacher = await db.teacher.findUnique({
-    where: { id },
+  const teacher = await db.teacher.findFirst({
+    where: { id, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true } },
@@ -54,14 +54,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     pricePerSession: teacher.pricePerSession,
     pricePack4: teacher.pricePack4,
     pricePack8: teacher.pricePack8,
-    commissionRate: teacher.commissionRate,
     primarySubject: teacher.subjects.find((s) => s.isPrimary)?.subject.name ?? teacher.subjects[0]?.subject.name,
     subjects: teacher.subjects.map((s) => ({
       name: s.subject.name,
       isPrimary: s.isPrimary,
     })),
     levels: teacher.levels.map((l) => l.level.name),
-    zones: teacher.zones.map((z) => z.commune.name),
+    zones: teacher.zones.map((z) => (z.commune as any).name),
     availability: teacher.availability ? JSON.parse(teacher.availability) : null,
     reviews: teacher.reviews.map((r) => ({
       id: r.id,

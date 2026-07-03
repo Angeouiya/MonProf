@@ -14,7 +14,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, PackagePlus } from "lucide-react";
 
 type Subject = { id: string; name: string; slug: string; icon: string | null };
 
@@ -26,6 +26,7 @@ export function MatieresClient({ subject }: { subject?: Subject }) {
   const [icon, setIcon] = useState(subject?.icon ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const save = async () => {
     if (!name.trim()) { toast.error("Nom requis"); return; }
@@ -68,36 +69,59 @@ export function MatieresClient({ subject }: { subject?: Subject }) {
   };
 
   if (!subject) {
-    // Create button
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button><Plus className="mr-2 h-4 w-4" /> Ajouter une matière</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nouvelle matière</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Nom</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Sciences" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={async () => {
+            setImporting(true);
+            try {
+              const res = await fetch("/api/admin/subjects/presets", { method: "POST" });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Import impossible");
+              toast.success(`${data.imported} matière(s) importée(s), ${data.skipped} déjà présente(s).`);
+              router.refresh();
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Import impossible");
+            } finally {
+              setImporting(false);
+            }
+          }}
+          disabled={importing}
+        >
+          {importing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PackagePlus className="mr-2 h-4 w-4" />}
+          Importer catalogue ouvert
+        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button><Plus className="mr-2 h-4 w-4" /> Ajouter une matière</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Nouvelle matière</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>Nom</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Sciences" />
+              </div>
+              <div>
+                <Label>Slug (optionnel)</Label>
+                <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="auto-généré" />
+              </div>
+              <div>
+                <Label>Icône (Lucide, optionnel)</Label>
+                <Input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="Ex: Atom" />
+              </div>
             </div>
-            <div>
-              <Label>Slug (optionnel)</Label>
-              <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="auto-généré" />
-            </div>
-            <div>
-              <Label>Icône (Lucide, optionnel)</Label>
-              <Input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="Ex: Atom" />
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="ghost">Annuler</Button></DialogClose>
-            <Button onClick={save} disabled={saving}>
-              {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="ghost">Annuler</Button></DialogClose>
+              <Button onClick={save} disabled={saving}>
+                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Créer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
 

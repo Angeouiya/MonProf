@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
+  CalendarCheck,
   Mail,
   MapPin,
   MessageSquare,
@@ -10,6 +12,7 @@ import {
   Send,
   Clock,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PublicLayout } from "@/components/layouts/public-layout";
@@ -29,10 +32,34 @@ const SUBJECTS = [
   "Question générale",
   "Aide pour réserver un cours",
   "Problème avec une réservation",
-  "Devenir professeur partenaire",
+  "Proposer un professeur à l'administration",
   "Partenariat école / entreprise",
   "Facturation",
   "Autre",
+];
+
+const CONTACT_PATHS = [
+  {
+    icon: CalendarCheck,
+    title: "Réserver plus vite",
+    text: "Trouvez un professeur vérifié et lancez directement une réservation guidée.",
+    href: "/professeurs",
+    action: "Voir les professeurs",
+  },
+  {
+    icon: Phone,
+    title: "Besoin urgent",
+    text: "Appelez le support si une réservation du jour, une adresse ou un paiement bloque.",
+    href: "tel:+2252722000000",
+    action: "Appeler le support",
+  },
+  {
+    icon: Mail,
+    title: "Dossier détaillé",
+    text: "Envoyez une demande structurée pour partenariat, facturation ou situation spécifique.",
+    href: "mailto:support@monprof.ci",
+    action: "Écrire un email",
+  },
 ];
 
 export default function ContactPage() {
@@ -84,33 +111,65 @@ export default function ContactPage() {
 
   return (
     <PublicLayout>
-      <section className="border-b border-border bg-white">
+      <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-3 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">Accueil</Link>
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-muted-foreground shadow-sm">
+            <Link href="/" className="inline-flex min-h-11 items-center rounded-full px-1 hover:text-foreground">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-foreground">Contact</span>
           </nav>
+          <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
           <div className="max-w-3xl">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Support humain et suivi administratif
+            </span>
+            <h1 className="mt-5 text-3xl font-black tracking-tight text-foreground sm:text-5xl text-balance">
               Contactez-nous
             </h1>
             <p className="mt-4 text-base text-muted-foreground sm:text-lg">
               Une question, un problème, une demande de partenariat ? Notre
               équipe vous répond sous 48h ouvrées.
             </p>
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+              <HeroMetric label="Réponse" value="24-48h" />
+              <HeroMetric label="Support" value="Lun-Sam" />
+              <HeroMetric label="Zone" value="Abidjan" />
+            </div>
+          </div>
+          <div className="rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Paiement et litiges protégés</p>
+                <p className="text-xs text-muted-foreground">Notre équipe garde une trace de chaque demande.</p>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-background">
+      <section className="border-b border-[#E3E8F2] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="grid gap-3 md:grid-cols-3">
+            {CONTACT_PATHS.map((item) => (
+              <ContactPathCard key={item.title} {...item} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
             {/* FORMULAIRE */}
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+            <div className="rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
               {success ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                     <CheckCircle2 className="h-7 w-7" />
                   </div>
                   <h2 className="mt-4 text-lg font-semibold text-foreground">
@@ -130,6 +189,13 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="rounded-3xl border border-[#DDE6F7] bg-white p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Message structuré</p>
+                    <h2 className="mt-1 text-lg font-black tracking-tight text-[#111827]">Décrivez votre besoin, nous orientons le dossier.</h2>
+                    <p className="mt-1 text-sm leading-6 text-[#394568]">
+                      Plus votre demande est précise, plus notre équipe peut vous répondre vite : réservation concernée, professeur, matière, date ou moyen de paiement.
+                    </p>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="name">
@@ -222,7 +288,7 @@ export default function ContactPage() {
                   >
                     {submitting ? (
                       <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#CAD7F2] border-t-white" />
                         Envoi en cours...
                       </>
                     ) : (
@@ -238,14 +304,14 @@ export default function ContactPage() {
 
             {/* INFOS CONTACT */}
             <aside className="space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <MessageSquare className="h-4 w-4 text-primary" />
+                  <MessageSquare className="h-4 w-4 text-[#111B4D]" />
                   Coordonnées
                 </h2>
                 <ul className="mt-4 space-y-4 text-sm">
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Phone className="h-4 w-4" />
                     </div>
                     <div>
@@ -259,7 +325,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Mail className="h-4 w-4" />
                     </div>
                     <div>
@@ -273,7 +339,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <div>
@@ -287,7 +353,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div>
@@ -303,7 +369,7 @@ export default function ContactPage() {
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+              <div className="rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-foreground">
                   Besoin d'aide rapide ?
                 </h3>
@@ -313,9 +379,10 @@ export default function ContactPage() {
                 </p>
                 <Link
                   href="/comment-ca-marche"
-                  className="mt-3 inline-flex text-xs font-medium text-primary hover:underline"
+                  className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-bold text-[#111B4D] hover:border-[#111B4D]"
                 >
-                  Voir comment ça marche →
+                  Voir comment ça marche
+                  <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </aside>
@@ -324,4 +391,49 @@ export default function ContactPage() {
       </section>
     </PublicLayout>
   );
+}
+
+function HeroMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 shadow-sm">
+      <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-1 text-base font-black text-[#111827]">{value}</p>
+    </div>
+  );
+}
+
+function ContactPathCard({
+  icon: Icon,
+  title,
+  text,
+  href,
+  action,
+}: {
+  icon: typeof Phone;
+  title: string;
+  text: string;
+  href: string;
+  action: string;
+}) {
+  const external = href.startsWith("tel:") || href.startsWith("mailto:");
+
+  const content = (
+    <article className="group h-full rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D]">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h2 className="mt-4 text-base font-black text-[#111827]">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+      <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#111B4D]">
+        {action}
+        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+      </p>
+    </article>
+  );
+
+  if (external) {
+    return <a href={href}>{content}</a>;
+  }
+
+  return <Link href={href}>{content}</Link>;
 }

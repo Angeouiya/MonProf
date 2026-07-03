@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -19,22 +20,26 @@ export async function GET() {
   const start7d = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
   const start30d = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const paidOperationalStatuses = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID", "DISPUTED"] as const;
+  const financialStatuses = ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] as const;
+  const paymentProofInclude = {
+    transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
+  };
 
   const [
     totalClients,
     totalTeachers,
     activeTeachers,
     newBookings7d,
-    paidBookings,
     todayBookings,
-    blockedFundsAgg,
-    toReleaseAgg,
-    teachersToPayAgg,
+    paidBookingRows,
+    blockedFundRows,
+    toReleaseRows,
+    allTimeCommissionRows,
+    monthCommissionRows,
     openDisputes,
-    allTimeCommissionAgg,
-    monthCommissionAgg,
-    recentPaidBookings,
-    pendingReleaseBookings,
+    rawRecentPaidBookings,
+    rawPendingReleaseBookings,
     openDisputeList,
     adminNotifications,
   ] = await Promise.all([
@@ -42,23 +47,37 @@ export async function GET() {
     db.teacher.count(),
     db.teacher.count({ where: { status: "ACTIVE" } }),
     db.booking.count({ where: { createdAt: { gte: start7d } } }),
-    db.booking.count({ where: { status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID", "DISPUTED"] } } }),
     db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) } } }),
-    db.transaction.aggregate({ where: { type: "CLIENT_PAYMENT", status: "BLOCKED" }, _sum: { amount: true } }),
-    db.booking.aggregate({ where: { paymentStatus: "TO_PAY_TEACHER" }, _sum: { teacherNetAmount: true } }),
-    db.booking.findMany({ where: { paymentStatus: "TO_PAY_TEACHER" }, select: { teacherId: true }, distinct: ["teacherId"] }),
-    db.dispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
-    db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] } }, _sum: { commissionAmount: true } }),
-    db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }, _sum: { commissionAmount: true } }),
     db.booking.findMany({
-      where: { paymentStatus: { in: ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] } },
-      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } } },
+      where: verifiedPayDunyaBookingWhere({ status: { in: [...paidOperationalStatuses] as any } }),
+      include: paymentProofInclude,
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }),
+      include: paymentProofInclude,
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+      include: paymentProofInclude,
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: [...financialStatuses] as any } }),
+      include: paymentProofInclude,
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: [...financialStatuses] as any }, createdAt: { gte: startOfMonth } }),
+      include: paymentProofInclude,
+    }),
+    db.dispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: [...financialStatuses] as any } }),
+      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } }, ...paymentProofInclude },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
     db.booking.findMany({
-      where: { paymentStatus: "TO_PAY_TEACHER" },
-      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } } },
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } }, ...paymentProofInclude },
       orderBy: { clientValidatedAt: "desc" },
       take: 5,
     }),
@@ -70,6 +89,15 @@ export async function GET() {
     }),
     db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
+  const paidBookings = paidBookingRows.filter(hasVerifiedPayDunyaClientPayment).length;
+  const blockedFunds = blockedFundRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.totalClientPays, 0);
+  const strictToReleaseRows = toReleaseRows.filter(hasVerifiedPayDunyaClientPayment);
+  const toRelease = strictToReleaseRows.reduce((sum, booking) => sum + booking.teacherNetAmount, 0);
+  const teachersToPay = new Set(strictToReleaseRows.map((booking) => booking.teacherId)).size;
+  const totalCommission = allTimeCommissionRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.commissionAmount, 0);
+  const monthCommission = monthCommissionRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.commissionAmount, 0);
+  const recentPaidBookings = rawRecentPaidBookings.filter(hasVerifiedPayDunyaClientPayment);
+  const pendingReleaseBookings = rawPendingReleaseBookings.filter(hasVerifiedPayDunyaClientPayment);
 
   // Build daily commission series (last 30 days)
   const dailyMap: Record<string, number> = {};
@@ -79,10 +107,10 @@ export async function GET() {
     dailyMap[key] = 0;
   }
   const commissionTx = await db.booking.findMany({
-    where: { createdAt: { gte: start30d }, paymentStatus: { in: ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] } },
-    select: { commissionAmount: true, createdAt: true },
+    where: verifiedPayDunyaBookingWhere({ createdAt: { gte: start30d }, paymentStatus: { in: [...financialStatuses] as any } }),
+    include: paymentProofInclude,
   });
-  for (const t of commissionTx) {
+  for (const t of commissionTx.filter(hasVerifiedPayDunyaClientPayment)) {
     const key = t.createdAt.toISOString().slice(0, 10);
     if (dailyMap[key] !== undefined) dailyMap[key] += t.commissionAmount;
   }
@@ -96,12 +124,12 @@ export async function GET() {
       newBookings7d,
       paidBookings,
       todayBookings,
-      blockedFunds: blockedFundsAgg._sum.amount ?? 0,
-      toRelease: toReleaseAgg._sum.teacherNetAmount ?? 0,
-      teachersToPay: teachersToPayAgg.length,
+      blockedFunds,
+      toRelease,
+      teachersToPay,
       openDisputes,
-      totalCommission: allTimeCommissionAgg._sum.commissionAmount ?? 0,
-      monthCommission: monthCommissionAgg._sum.commissionAmount ?? 0,
+      totalCommission,
+      monthCommission,
     },
     series,
     recent: {

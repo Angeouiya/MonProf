@@ -14,23 +14,33 @@ datasource db {
 // UTILISATEURS (Client + Admin seulement — pas de compte prof)
 // ============================================================
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  phone         String?
-  passwordHash  String
-  role          UserRole @default(CLIENT)
-  commune       String?
-  quartier      String?
-  avatarUrl     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  phone        String?
+  passwordHash String
+  role         UserRole @default(CLIENT)
+  commune      String?
+  quartier     String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  bookings      Booking[]
-  reviews       Review[]
-  disputes      Dispute[]      @relation("DisputeOpener")
-  notifications Notification[]
-  handledMessages ContactMessage[] @relation("HandledBy")
+  bookings                   Booking[]
+  reviews                    Review[]
+  disputes                   Dispute[]             @relation("DisputeOpener")
+  notifications              Notification[]
+  adminNotificationsSent     Notification[]        @relation("NotificationAdminSender")
+  handledMessages            ContactMessage[]      @relation("HandledBy")
+  teacherTasksCreated        TeacherTask[]         @relation("TeacherTaskCreator")
+  teacherWarningsCreated     TeacherWarning[]      @relation("TeacherWarningCreator")
+  teacherSanctionsCreated    TeacherSanction[]     @relation("TeacherSanctionCreator")
+  teacherReplacementsCreated TeacherReplacement[]  @relation("TeacherReplacementCreator")
+  reviewsHandled             Review[]              @relation("ReviewAdminReviewer")
+  actionLogs                 AdminActionLog[]      @relation("AdminActionActor")
+  clientCommunications       ClientCommunication[] @relation("ClientCommunicationClient")
+  clientCommunicationsSent   ClientCommunication[] @relation("ClientCommunicationSender")
+  teacherPayoutsCreated      TeacherPayoutRecord[] @relation("TeacherPayoutCreator")
 
   @@index([role])
 }
@@ -66,7 +76,7 @@ model Level {
 model Commune {
   id        String   @id @default(cuid())
   name      String   @unique
-  zone      String?  // Abidjan, Bingerville, etc.
+  zone      String? // Abidjan, Bingerville, etc.
   createdAt DateTime @default(now())
 
   teachers TeacherZone[]
@@ -76,60 +86,71 @@ model Commune {
 // PROFESSEUR (fiche interne gérée par l'admin)
 // ============================================================
 model Teacher {
-  id              String         @id @default(cuid())
+  id                 String             @id @default(cuid())
   // Identité
-  fullName        String
-  professionalName String?
-  photoUrl        String?
-  phone           String
-  email           String?
-  commune         String?
-  quartier        String?
-  addressHint     String?
+  fullName           String
+  professionalName   String?
+  photoUrl           String?
+  phone              String
+  email              String?
+  commune            String?
+  quartier           String?
+  addressHint        String?
   // Pédagogie
-  jobTitle        String
-  bio             String
-  experienceYears Int            @default(0)
-  diploma         String?
-  cvUrl           String?
-  profileType     TeacherProfileType @default(ENSEIGNANT)
+  jobTitle           String
+  bio                String
+  experienceYears    Int                @default(0)
+  diploma            String?
+  cvUrl              String?
+  profileType        TeacherProfileType @default(ENSEIGNANT)
   // Statut & visibilité
-  status          TeacherStatus  @default(PENDING)
-  featured        Boolean        @default(false)
+  status             TeacherStatus      @default(PENDING)
+  featured           Boolean            @default(false)
+  qualityScore       Int                @default(85)
+  lastActivityAt     DateTime?
+  operationalComment String?
   // Évaluation interne (gérée par admin)
-  rating          Float          @default(0) // 0..5
-  ratingCount     Int            @default(0)
+  rating             Float              @default(0) // 0..5
+  ratingCount        Int                @default(0)
   // Badges
-  badgeVerified   Boolean        @default(true)
-  badgeRecommended Boolean       @default(false)
-  badgeNew        Boolean        @default(true)
-  badgePopular    Boolean        @default(false)
-  badgePremium    Boolean        @default(false)
-  internalNote    String?
+  badgeVerified      Boolean            @default(true)
+  badgeRecommended   Boolean            @default(false)
+  badgeNew           Boolean            @default(true)
+  badgePopular       Boolean            @default(false)
+  badgePremium       Boolean            @default(false)
+  internalNote       String?
   // Format
-  offersHome      Boolean        @default(true)
-  offersOnline    Boolean        @default(true)
-  offersGroup     Boolean        @default(false)
+  offersHome         Boolean            @default(true)
+  offersOnline       Boolean            @default(true)
+  offersGroup        Boolean            @default(false)
   // Tarification (FCFA)
-  pricePerHour    Int            @default(10000)
-  pricePerSession Int            @default(10000)
-  pricePack4      Int            @default(38000)
-  pricePack8      Int            @default(72000)
-  commissionRate  Int            @default(20) // %
-  pricingTier     PricingTier    @default(STANDARD)
+  pricePerHour       Int                @default(10000)
+  pricePerSession    Int                @default(10000)
+  pricePack4         Int                @default(38000)
+  pricePack8         Int                @default(72000)
+  commissionRate     Int                @default(30) // %
+  pricingTier        PricingTier        @default(STANDARD)
   // Disponibilités (JSON: {mon:{morning,afternoon,evening}, ...})
-  availability    String?
+  availability       String?
   // Métadonnées
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  subjects        TeacherSubject[]
-  levels          TeacherLevel[]
-  zones           TeacherZone[]
-  bookings        Booking[]
-  reviews         Review[]
-  transactions    Transaction[]
-  notifications   TeacherNotification[]
+  subjects           TeacherSubject[]
+  levels             TeacherLevel[]
+  zones              TeacherZone[]
+  bookings           Booking[]
+  reviews            Review[]
+  transactions       Transaction[]
+  notifications      TeacherNotification[]
+  missionLinks       TeacherMissionLink[]
+  tasks              TeacherTask[]
+  warnings           TeacherWarning[]
+  sanctions          TeacherSanction[]
+  oldReplacements    TeacherReplacement[]       @relation("OldTeacherReplacement")
+  newReplacements    TeacherReplacement[]       @relation("NewTeacherReplacement")
+  paymentAdjustments TeacherPaymentAdjustment[]
+  payoutRecords      TeacherPayoutRecord[]
 
   @@index([status])
   @@index([featured])
@@ -140,6 +161,12 @@ enum TeacherStatus {
   INACTIVE
   SUSPENDED
   PENDING
+  TEMPORARILY_SUSPENDED
+  PERMANENTLY_SUSPENDED
+  OBSERVATION
+  REPLACEABLE
+  PRIORITY
+  BLACKLISTED
 }
 
 enum TeacherProfileType {
@@ -163,6 +190,7 @@ model TeacherSubject {
   isPrimary Boolean @default(false)
   teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
   @@id([teacherId, subjectId])
 }
 
@@ -171,14 +199,16 @@ model TeacherLevel {
   levelId   String
   teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   level     Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
   @@id([teacherId, levelId])
 }
 
 model TeacherZone {
   teacherId String
   communeId String
-  teacher   Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
-  commune   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  commune   Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
+
   @@id([teacherId, communeId])
 }
 
@@ -186,55 +216,100 @@ model TeacherZone {
 // RÉSERVATION (Booking)
 // ============================================================
 model Booking {
-  id              String         @id @default(cuid())
-  reference       String         @unique // MP-XXXX
-  clientId        String
-  teacherId       String
+  id                       String         @id @default(cuid())
+  reference                String         @unique // MP-XXXX
+  clientId                 String
+  teacherId                String
   // Détails cours
-  subjectName     String
-  levelName       String
-  objective       String?
-  schoolProgram   String?        // Programme scolaire (ex: "Programme officiel CI", "Edexcel", etc.)
-  needDescription String?        // Description du besoin
-  courseFormat    CourseFormat
-  groupType       GroupType      @default(INDIVIDUAL)
-  commune         String?
-  quartier        String?
-  addressHint     String?
-  onlineLink      String?
+  subjectName              String
+  levelName                String
+  objective                String?
+  clientType               String?
+  courseCategory           String?
+  schoolSystem             String?
+  preciseLevel             String?
+  courseCatalogId          String?
+  courseCatalogName        String?
+  schoolProgram            String? // Programme scolaire (ex: "Programme officiel CI", "Edexcel", etc.)
+  needDescription          String? // Description du besoin
+  courseFormat             CourseFormat
+  groupType                GroupType      @default(INDIVIDUAL)
+  participantsCount        Int            @default(1)
+  commune                  String?
+  quartier                 String?
+  addressHint              String?
+  onlineLink               String?
   // Créneau
-  preferredDays   String         // JSON: ["samedi","dimanche"]
-  preferredTime   String         // "15h-17h"
-  startDate       DateTime?      // Date de début souhaitée
-  scheduledDate   DateTime?
-  scheduledTime   String?
-  sessionsCount   Int            @default(1)
-  packType        PackType       @default(SINGLE)
-  message         String?
+  preferredDays            String // JSON: ["samedi","dimanche"]
+  preferredTime            String // "15h-17h"
+  startDate                DateTime? // Date de début souhaitée
+  scheduledDate            DateTime?
+  scheduledTime            String?
+  sessionsCount            Int            @default(1)
+  packType                 PackType       @default(SINGLE)
+  message                  String?
   // Montants (FCFA)
-  unitPrice       Int
-  totalPrice      Int
-  commissionRate  Int            @default(20)
-  commissionAmount Int           @default(0)
-  teacherNetAmount Int           @default(0)
+  unitPrice                Int
+  totalPrice               Int
+  priceTierKey             String?
+  courseAmount             Int            @default(0)
+  commissionRate           Int            @default(30)
+  commissionAmount         Int            @default(0)
+  teacherRate              Int            @default(70)
+  teacherPayoutAmount      Int            @default(0)
+  transportFee             Int            @default(0)
+  transportFeeKey          String?
+  materialFee              Int            @default(0)
+  discountAmount           Int            @default(0)
+  totalClientPays          Int            @default(0)
+  totalTeacherReceives     Int            @default(0)
+  isQuoteOnly              Boolean        @default(false)
+  pricingSnapshot          String?
+  teacherNetAmount         Int            @default(0)
+  teacherPaidAmount        Int            @default(0)
   // Statuts
-  status          BookingStatus  @default(PENDING_PAYMENT)
-  paymentStatus   PaymentStatus  @default(FAILED)
-  paymentMethod   PaymentMethod?
+  status                   BookingStatus  @default(PENDING_PAYMENT)
+  paymentStatus            PaymentStatus  @default(FAILED)
+  paymentMethod            PaymentMethod?
+  // PayDunya anti-fraude et rapprochement serveur-à-serveur
+  paydunyaToken            String?        @unique
+  paydunyaCheckoutUrl      String?
+  paydunyaStatus           String?
+  paydunyaReceiptUrl       String?
+  paydunyaVerifiedAt       DateTime?
+  paydunyaLastCheckedAt    DateTime?
+  paydunyaFailureReason    String?
+  paydunyaLastPayload      String?
   // Méta
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  confirmedAt     DateTime?
-  assignedAt      DateTime?
-  courseDoneAt    DateTime?
-  clientValidatedAt DateTime?
-  teacherPaidAt   DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  confirmedAt              DateTime?
+  assignedAt               DateTime?
+  courseDoneAt             DateTime?
+  clientValidatedAt        DateTime?
+  teacherPaidAt            DateTime?
+  cancelledAt              DateTime?
+  cancelledBy              String?
+  cancellationReason       String?
+  cancellationDetail       String?
+  cancellationWindow       String?
+  cancellationFeeRate      Int            @default(0)
+  cancellationFeeAmount    Int            @default(0)
+  cancellationRefundAmount Int            @default(0)
 
-  client          User           @relation(fields: [clientId], references: [id])
-  teacher         Teacher        @relation(fields: [teacherId], references: [id])
-  transactions    Transaction[]
-  reviews         Review[]
-  disputes        Dispute[]
+  client                    User                       @relation(fields: [clientId], references: [id])
+  teacher                   Teacher                    @relation(fields: [teacherId], references: [id])
+  transactions              Transaction[]
+  reviews                   Review[]
+  disputes                  Dispute[]
+  teacherTasks              TeacherTask[]
+  teacherWarnings           TeacherWarning[]
+  teacherSanctions          TeacherSanction[]
+  replacements              TeacherReplacement[]
+  clientCommunications      ClientCommunication[]
+  teacherPaymentAdjustments TeacherPaymentAdjustment[]
+  teacherPayoutAllocations  TeacherPayoutAllocation[]
+  missionLinks              TeacherMissionLink[]
 
   @@index([clientId])
   @@index([teacherId])
@@ -257,6 +332,7 @@ enum PackType {
   PACK_8
   PACK_12
   EXAM_PREP
+  CUSTOM
 }
 
 enum BookingStatus {
@@ -285,6 +361,8 @@ enum PaymentStatus {
   TEACHER_PAID
   DISPUTED
   REFUNDED
+  PARTIALLY_REFUNDED
+  RETAINED
 }
 
 enum PaymentMethod {
@@ -299,21 +377,21 @@ enum PaymentMethod {
 // TRANSACTION (historique financier)
 // ============================================================
 model Transaction {
-  id            String        @id @default(cuid())
-  reference     String        @unique // TX-XXXX
-  bookingId     String
-  teacherId     String
-  amount        Int           // montant total concerné
-  commission    Int
-  teacherNet    Int
-  type          TransactionType
-  status        PaymentStatus @default(BLOCKED)
-  method        PaymentMethod?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
+  id         String          @id @default(cuid())
+  reference  String          @unique // TX-XXXX
+  bookingId  String
+  teacherId  String
+  amount     Int // montant total concerné
+  commission Int
+  teacherNet Int
+  type       TransactionType
+  status     PaymentStatus   @default(BLOCKED)
+  method     PaymentMethod?
+  paidAt     DateTime?
+  createdAt  DateTime        @default(now())
 
-  booking       Booking       @relation(fields: [bookingId], references: [id])
-  teacher       Teacher       @relation(fields: [teacherId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
+  teacher Teacher @relation(fields: [teacherId], references: [id])
 }
 
 enum TransactionType {
@@ -327,33 +405,52 @@ enum TransactionType {
 // AVIS & LITIGES
 // ============================================================
 model Review {
-  id        String   @id @default(cuid())
-  clientId  String
-  teacherId String
-  bookingId String
-  rating    Int      // 1..5
-  comment   String?
-  published Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id           String            @id @default(cuid())
+  clientId     String
+  teacherId    String
+  bookingId    String
+  rating       Int // 1..5
+  comment      String?
+  published    Boolean           @default(true)
+  adminStatus  ReviewAdminStatus @default(NEW)
+  adminNote    String?
+  reviewedAt   DateTime?
+  reviewedById String?
+  createdAt    DateTime          @default(now())
 
-  client    User     @relation(fields: [clientId], references: [id])
-  teacher   Teacher  @relation(fields: [teacherId], references: [id])
-  booking   Booking  @relation(fields: [bookingId], references: [id])
+  client     User     @relation(fields: [clientId], references: [id])
+  teacher    Teacher  @relation(fields: [teacherId], references: [id])
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  reviewedBy User?    @relation("ReviewAdminReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([adminStatus])
+  @@index([teacherId, adminStatus])
+}
+
+enum ReviewAdminStatus {
+  NEW
+  TO_REVIEW
+  CONTACT_CLIENT
+  CONTACT_TEACHER
+  WARNING_SENT
+  RESOLVED
+  ESCALATED
+  DISMISSED
 }
 
 model Dispute {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   bookingId   String
   openedById  String
   reason      String
   description String
   status      DisputeStatus @default(OPEN)
   resolution  String?
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime      @default(now())
   resolvedAt  DateTime?
 
-  booking     Booking      @relation(fields: [bookingId], references: [id])
-  openedBy    User         @relation("DisputeOpener", fields: [openedById], references: [id])
+  booking  Booking @relation(fields: [bookingId], references: [id])
+  openedBy User    @relation("DisputeOpener", fields: [openedById], references: [id])
 }
 
 enum DisputeStatus {
@@ -368,48 +465,454 @@ enum DisputeStatus {
 // NOTIFICATIONS
 // ============================================================
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String?  // admin = null (broadcast admin)
-  title     String
-  message   String
-  type      String   // NEW_BOOKING, PAYMENT_RECEIVED, etc.
-  read      Boolean  @default(false)
-  link      String?
-  createdAt DateTime @default(now())
+  id            String                    @id @default(cuid())
+  userId        String? // client ciblé, admin = null si broadcast admin
+  title         String
+  message       String
+  type          String // NEW_BOOKING, PAYMENT_RECEIVED, etc.
+  recipientType NotificationRecipientType @default(ADMIN)
+  recipientName String?
+  channel       NotificationChannel       @default(INTERNAL)
+  status        NotificationStatus        @default(CREATED)
+  priority      NotificationPriority      @default(NORMAL)
+  read          Boolean                   @default(false)
+  link          String?
+  actionLabel   String?
+  actionType    String?
+  bookingId     String?
+  teacherId     String?
+  clientId      String?
+  adminId       String?
+  sentAt        DateTime?
+  readAt        DateTime?
+  confirmedAt   DateTime?
+  expiresAt     DateTime?
+  response      String?
+  createdAt     DateTime                  @default(now())
 
-  user      User?    @relation(fields: [userId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
+  admin User? @relation("NotificationAdminSender", fields: [adminId], references: [id], onDelete: SetNull)
 
   @@index([userId, read])
+  @@index([recipientType, status, priority])
+  @@index([bookingId])
+  @@index([teacherId])
+  @@index([clientId])
+}
+
+enum NotificationRecipientType {
+  CLIENT
+  TEACHER
+  ADMIN
+}
+
+enum NotificationChannel {
+  INTERNAL
+  SMS
+  WHATSAPP
+  EMAIL
+  BROWSER
+  PWA
+  MANUAL_CALL
+  PRIVATE_LINK
+}
+
+enum NotificationStatus {
+  CREATED
+  SENT
+  FAILED
+  SEEN
+  CONFIRMED
+  EXPIRED
+  RELAUNCHED
+}
+
+enum NotificationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+  CRITICAL
 }
 
 model TeacherNotification {
-  id        String   @id @default(cuid())
+  id        String                     @id @default(cuid())
   teacherId String
   bookingId String?
   title     String
   message   String
-  channel   String   // SMS, WHATSAPP, EMAIL
-  sent      Boolean  @default(false)
+  channel   String // SMS, WHATSAPP, EMAIL
+  sent      Boolean                    @default(false)
+  status    NotificationDeliveryStatus @default(SENT)
+  sentById  String?
+  readAt    DateTime?
+  createdAt DateTime                   @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, createdAt])
+  @@index([bookingId])
+}
+
+enum NotificationDeliveryStatus {
+  DRAFT
+  PENDING
+  SENT
+  FAILED
+  READ
+  CONFIRMED
+}
+
+model TeacherMissionLink {
+  id           String               @id @default(cuid())
+  token        String               @unique
+  teacherId    String
+  bookingId    String
+  title        String
+  instructions String?
+  status       TeacherMissionStatus @default(PENDING_CONFIRMATION)
+  expiresAt    DateTime
+  confirmedAt  DateTime?
+  declinedAt   DateTime?
+  problemAt    DateTime?
+  response     String?
+  createdById  String?
+  createdAt    DateTime             @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, status])
+  @@index([bookingId])
+  @@index([expiresAt])
+}
+
+enum TeacherMissionStatus {
+  PENDING_CONFIRMATION
+  RELAUNCHED
+  CONFIRMED
+  UNAVAILABLE
+  PROBLEM_REPORTED
+  EXPIRED
+  REPLACEMENT_RECOMMENDED
+}
+
+// ============================================================
+// MODULE OPÉRATIONNEL PROFESSEUR
+// ============================================================
+model TeacherTask {
+  id          String              @id @default(cuid())
+  teacherId   String
+  bookingId   String?
+  type        TeacherTaskType
+  title       String
+  description String
+  priority    TeacherTaskPriority @default(NORMAL)
+  status      TeacherTaskStatus   @default(TODO)
+  dueAt       DateTime?
+  completedAt DateTime?
+  createdById String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("TeacherTaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, status])
+  @@index([bookingId])
+  @@index([priority, status])
+}
+
+enum TeacherTaskType {
+  CONTACT_CLIENT
+  CONFIRM_AVAILABILITY
+  GO_TO_COURSE
+  SEND_ONLINE_LINK
+  TEACH_COURSE
+  REPORT_COURSE_DONE
+  JUSTIFY_DELAY
+  ANSWER_DISPUTE
+  SEND_DOCUMENT
+  CONFIRM_RESCHEDULE
+  CONTACT_ADMIN
+  ADMIN_ACTION
+}
+
+enum TeacherTaskStatus {
+  TODO
+  SENT_TO_TEACHER
+  SEEN_BY_TEACHER
+  CONFIRMED
+  IN_PROGRESS
+  DONE
+  LATE
+  NOT_DONE
+  CANCELLED
+}
+
+enum TeacherTaskPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+  CRITICAL
+}
+
+model TeacherWarning {
+  id              String               @id @default(cuid())
+  teacherId       String
+  bookingId       String?
+  level           TeacherWarningLevel
+  reason          TeacherWarningReason
+  description     String
+  evidenceUrl     String?
+  requestedAction String?
+  responseDueAt   DateTime?
+  adminOnly       Boolean              @default(false)
+  sentToTeacher   Boolean              @default(true)
+  qualityImpact   Int                  @default(0)
+  createdById     String?
+  createdAt       DateTime             @default(now())
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("TeacherWarningCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, level])
+  @@index([bookingId])
+}
+
+enum TeacherWarningLevel {
+  SIMPLE_REMINDER
+  OFFICIAL_WARNING
+  FINAL_WARNING
+  SUSPENSION_WARNING
+}
+
+enum TeacherWarningReason {
+  LATE_TO_COURSE
+  UNJUSTIFIED_ABSENCE
+  POOR_COURSE_QUALITY
+  BAD_CLIENT_COMMUNICATION
+  SCHEDULE_NOT_RESPECTED
+  REPEATED_CANCELLATION
+  DIRECT_CONTACT_OUTSIDE_PLATFORM
+  UNPROFESSIONAL_BEHAVIOR
+  CLIENT_COMPLAINT
+  UNJUSTIFIED_REFUSAL
+  LACK_OF_AVAILABILITY
+  ADMIN_INSTRUCTIONS_NOT_RESPECTED
+  OTHER
+}
+
+model TeacherSanction {
+  id            String                @id @default(cuid())
+  teacherId     String
+  bookingId     String?
+  type          TeacherSanctionType
+  reason        String
+  description   String?
+  financial     Boolean               @default(false)
+  amount        Int                   @default(0)
+  status        TeacherSanctionStatus @default(PENDING_VALIDATION)
+  qualityImpact Int                   @default(0)
+  createdById   String?
+  validatedAt   DateTime?
+  createdAt     DateTime              @default(now())
+
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("TeacherSanctionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, status])
+  @@index([bookingId])
+}
+
+enum TeacherSanctionType {
+  LIGHT
+  MEDIUM
+  FINANCIAL
+  STRONG
+}
+
+enum TeacherSanctionStatus {
+  PENDING_VALIDATION
+  APPLIED
+  CANCELLED
+}
+
+model TeacherReplacement {
+  id                String                   @id @default(cuid())
+  bookingId         String
+  oldTeacherId      String
+  newTeacherId      String
+  reason            TeacherReplacementReason
+  details           String?
+  financialImpact   Int                      @default(0)
+  clientMessage     String?
+  oldTeacherMessage String?
+  newTeacherMessage String?
+  status            TeacherReplacementStatus @default(APPLIED)
+  createdById       String?
+  createdAt         DateTime                 @default(now())
+  appliedAt         DateTime?
+
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  oldTeacher Teacher @relation("OldTeacherReplacement", fields: [oldTeacherId], references: [id], onDelete: Restrict)
+  newTeacher Teacher @relation("NewTeacherReplacement", fields: [newTeacherId], references: [id], onDelete: Restrict)
+  createdBy  User?   @relation("TeacherReplacementCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@index([oldTeacherId])
+  @@index([newTeacherId])
+}
+
+enum TeacherReplacementReason {
+  UNAVAILABLE
+  LATE
+  ABSENT
+  CLIENT_REQUEST
+  QUALITY_ISSUE
+  ASSIGNMENT_ERROR
+  TEACHER_SUSPENDED
+  BETTER_MATCH
+  OTHER
+}
+
+enum TeacherReplacementStatus {
+  DRAFT
+  APPLIED
+  CANCELLED
+  CLIENT_NOTIFIED
+  TEACHERS_NOTIFIED
+}
+
+model ClientCommunication {
+  id        String                     @id @default(cuid())
+  clientId  String
+  bookingId String?
+  type      ClientCommunicationType
+  channel   String
+  subject   String
+  content   String
+  priority  TeacherTaskPriority        @default(NORMAL)
+  status    NotificationDeliveryStatus @default(SENT)
+  sentById  String?
+  createdAt DateTime                   @default(now())
+
+  client  User     @relation("ClientCommunicationClient", fields: [clientId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  sentBy  User?    @relation("ClientCommunicationSender", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([clientId, createdAt])
+  @@index([bookingId])
+}
+
+enum ClientCommunicationType {
+  INFORMATION
+  REMINDER
+  WARNING
+  TEACHER_CHANGE
+  RESCHEDULE
+  PAYMENT
+  DISPUTE
+  COURSE_CONFIRMATION
+}
+
+model TeacherPaymentAdjustment {
+  id        String                         @id @default(cuid())
+  teacherId String
+  bookingId String?
+  amount    Int
+  reason    String
+  decision  String
+  status    TeacherPaymentAdjustmentStatus @default(PENDING)
+  createdAt DateTime                       @default(now())
+
+  teacher Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, status])
+  @@index([bookingId])
+}
+
+enum TeacherPaymentAdjustmentStatus {
+  PENDING
+  APPLIED
+  CANCELLED
+}
+
+model TeacherPayoutRecord {
+  id          String                    @id @default(cuid())
+  reference   String                    @unique
+  teacherId   String
+  amount      Int
+  method      PaymentMethod?
+  note        String?
+  status      TeacherPayoutRecordStatus @default(PAID)
+  paidAt      DateTime                  @default(now())
+  createdAt   DateTime                  @default(now())
+  createdById String?
+
+  teacher     Teacher                   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  createdBy   User?                     @relation("TeacherPayoutCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  allocations TeacherPayoutAllocation[]
+
+  @@index([teacherId, paidAt])
+  @@index([createdById])
+}
+
+model TeacherPayoutAllocation {
+  id        String   @id @default(cuid())
+  payoutId  String
+  bookingId String
+  amount    Int
   createdAt DateTime @default(now())
 
-  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  payout  TeacherPayoutRecord @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  booking Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([payoutId])
+  @@index([bookingId])
+}
+
+enum TeacherPayoutRecordStatus {
+  DRAFT
+  PAID
+  CANCELLED
+}
+
+model AdminActionLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  action     String
+  entityType String
+  entityId   String
+  detail     String
+  oldStatus  String?
+  newStatus  String?
+  createdAt  DateTime @default(now())
+
+  admin User? @relation("AdminActionActor", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([adminId])
 }
 
 // ============================================================
 // CONTACT (page publique)
 // ============================================================
 model ContactMessage {
-  id         String   @id @default(cuid())
-  name       String
-  email      String
-  phone      String?
-  subject    String
-  message    String
-  handled    Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-  handledBy    User?    @relation("HandledBy", fields: [handledById], references: [id])
-  handledById  String?
+  handledBy   User?   @relation("HandledBy", fields: [handledById], references: [id])
+  handledById String?
 }
 
 // ============================================================

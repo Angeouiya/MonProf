@@ -3,13 +3,22 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GraduationCap, Lock, Mail, Eye, EyeOff, ArrowRight, Info } from "lucide-react";
+import { GraduationCap, Lock, Mail, Eye, EyeOff, ArrowRight, Info, ShieldCheck, WalletCards, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const ACCOUNT_BENEFITS = [
+  { icon: CalendarCheck, title: "Réservations suivies", text: "Dates, créneaux, professeur choisi et statut restent centralisés." },
+  { icon: WalletCards, title: "Paiements protégés", text: "Vos fonds restent sécurisés jusqu'à confirmation du cours." },
+  { icon: ShieldCheck, title: "Support traçable", text: "Avis, litiges et messages sont reliés à votre historique client." },
+];
+
+const FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
 
 function ConnexionContent() {
   const router = useRouter();
@@ -79,36 +88,60 @@ function ConnexionContent() {
     }
   }
 
-  function fillDemo(type: "admin" | "client") {
-    if (type === "admin") {
-      setEmail("admin@monprof.ci");
-      setPassword("admin123");
-    } else {
-      setEmail("amon@demo.ci");
-      setPassword("client123");
-    }
+  function fillDemoClient() {
+    setEmail("amon@demo.ci");
+    setPassword("client123");
     setError(null);
   }
 
   return (
     <PublicLayout>
-      <section className="bg-background">
-        <div className="mx-auto flex max-w-md flex-col px-4 py-12 sm:px-6 lg:py-20">
-          <div className="mb-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <GraduationCap className="h-6 w-6" />
+      <section className="bg-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_440px] lg:items-center lg:py-20">
+          <div className="hidden lg:block">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Espace sécurisé MonProf CI
+              </span>
+              <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground text-balance">
+                Reprenez votre suivi de cours en toute confiance.
+              </h1>
+              <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">
+                Réservations, confirmations, paiements bloqués et suivi administratif restent centralisés dans un espace clair et protégé.
+              </p>
+              <div className="mt-8 grid gap-3">
+                {ACCOUNT_BENEFITS.map((item) => (
+                  <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Connexion
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Accédez à votre espace client ou administrateur.
-            </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="mx-auto w-full max-w-md">
+            <div className="mb-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2A78] text-white shadow-lg">
+                <GraduationCap className="h-6 w-6" />
+              </div>
+              <h1 className="mt-4 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+                Connexion client
+              </h1>
+              <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+                Accédez à vos réservations, paiements, cours et notifications.
+              </p>
+            </div>
+
+          <div className="rounded-3xl border border-[#E3E8F2] bg-white p-6 shadow-xl">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700 shadow-sm">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -127,7 +160,7 @@ function ConnexionContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="vous@exemple.ci"
-                    className="pl-9"
+                    className={FIELD_CLASS}
                   />
                 </div>
               </div>
@@ -144,12 +177,12 @@ function ConnexionContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-9 pr-9"
+                    className={PASSWORD_FIELD_CLASS}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-white hover:text-[#111B4D]"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -160,12 +193,12 @@ function ConnexionContent() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full"
+                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white shadow-sm hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#CAD7F2] border-t-white" />
                     Connexion...
                   </>
                 ) : (
@@ -177,50 +210,45 @@ function ConnexionContent() {
               </Button>
             </form>
 
-            <p className="mt-5 text-center text-sm text-muted-foreground">
-              Pas encore de compte ?{" "}
+            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground min-[420px]:flex-row">
+              <span>Pas encore de compte ?</span>
               <Link
                 href="/inscription"
-                className="font-medium text-primary hover:underline"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white px-4 font-black text-[#111B4D] transition hover:bg-white"
               >
                 Créer un compte
               </Link>
             </p>
+            <div className="mt-5 grid gap-2 rounded-2xl border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
+              <p className="font-black uppercase tracking-wide text-[#111B4D]">Après connexion</p>
+              <p>Vous retrouvez vos réservations, cours, paiements, notifications et demandes support dans un seul espace.</p>
+            </div>
           </div>
 
-          {/* Comptes démo */}
-          <div className="mt-6 rounded-2xl border border-dashed border-border bg-card/60 p-4">
+          {/* Compte démo client */}
+          <div className="mt-6 rounded-3xl border border-dashed border-[#DDE6F7] bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Comptes de démonstration
+              Démonstration client
             </p>
             <div className="mt-3 grid gap-2">
               <button
                 type="button"
-                onClick={() => fillDemo("client")}
-                className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2.5 text-left text-xs transition hover:border-primary/40 hover:bg-primary/5"
+                onClick={fillDemoClient}
+                className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
               >
                 <div>
                   <p className="font-semibold text-foreground">Compte client</p>
                   <p className="text-muted-foreground">amon@demo.ci · client123</p>
                 </div>
-                <span className="text-primary">Utiliser →</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemo("admin")}
-                className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2.5 text-left text-xs transition hover:border-primary/40 hover:bg-primary/5"
-              >
-                <div>
-                  <p className="font-semibold text-foreground">Compte admin</p>
-                  <p className="text-muted-foreground">admin@monprof.ci · admin123</p>
-                </div>
-                <span className="text-primary">Utiliser →</span>
+                <span className="inline-flex items-center gap-1 font-black text-[#111B4D]">
+                  Utiliser <ArrowRight className="h-3.5 w-3.5" />
+                </span>
               </button>
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-              Cliquez sur un compte pour pré-remplir le formulaire. Ces comptes
-              servent uniquement à la démonstration.
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client.
             </p>
+          </div>
           </div>
         </div>
       </section>

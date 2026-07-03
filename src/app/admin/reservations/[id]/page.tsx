@@ -5,6 +5,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Money } from "@/components/shared/money";
 import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
+import { ProfessorImage } from "@/components/shared/professor-image";
+import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-breakdown";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +20,24 @@ import {
   Video, Home, Users, CheckCircle2, XCircle,
 } from "lucide-react";
 import { BookingActionsClient } from "./actions-client";
+import { ClientCommunicationClient } from "./client-communication-client";
+import { ReplacementHistoryTable } from "@/components/admin/teacher-operational-components";
 import { formatFCFA, formatDateTime, formatDate, initials } from "@/lib/format";
+import { getTeacherFinancialSettlement } from "@/lib/teacher-payments";
+import { disputeStatusLabel, packTypeLabel, paymentMethodLabel, transactionTypeLabel } from "@/lib/platform-labels";
+import { cancellationActorLabel, cancellationWindowLabel } from "@/lib/cancellation-policy";
+import { COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
+import { parsePricingSnapshot } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
+
+function categoryLabel(value?: string | null) {
+  return COURSE_CATEGORIES.find((category) => category.code === value)?.label ?? value ?? "—";
+}
+
+function schoolSystemLabel(value?: string | null) {
+  return SCHOOL_SYSTEMS.find((system) => system.value === value)?.label ?? value ?? "—";
+}
 
 export default async function ReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -32,17 +49,46 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       client: { select: { id: true, name: true, email: true, phone: true, commune: true, quartier: true } },
       teacher: {
         select: {
-          id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, email: true,
+          id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, email: true, badgeVerified: true,
           commune: true, quartier: true, addressHint: true, commissionRate: true,
         },
       },
       transactions: { orderBy: { createdAt: "desc" } },
       reviews: { include: { client: { select: { name: true } } } },
       disputes: { include: { openedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      replacements: {
+        include: {
+          booking: { select: { reference: true, client: { select: { name: true, phone: true } } } },
+          oldTeacher: { select: { fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true } },
+          newTeacher: { select: { fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      teacherPaymentAdjustments: { orderBy: { createdAt: "desc" } },
+      clientCommunications: {
+        include: { sentBy: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      },
     },
   });
 
   if (!booking) notFound();
+  const teacherSettlement = getTeacherFinancialSettlement(booking, booking.teacherPaymentAdjustments);
+  const teacherPaidAmount = teacherSettlement.paid;
+  const teacherRemainingAmount = teacherSettlement.remaining;
+  const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
+  const displayUnitPrice = pricingSnapshot?.unitSessionAmount ?? booking.unitPrice;
+  const displayCourseAmount = pricingSnapshot?.courseAmount ?? booking.courseAmount;
+  const displayTransportFee = pricingSnapshot?.transportFee ?? booking.transportFee;
+  const displayMaterialFee = pricingSnapshot?.materialFee ?? booking.materialFee;
+  const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
+  const displayTotalPrice = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
+  const displaySessionsCount = pricingSnapshot?.numberOfSessions ?? booking.sessionsCount;
+  const displayParticipantsCount = pricingSnapshot?.participantsCount ?? booking.participantsCount;
+  const displayCommissionAmount = pricingSnapshot?.platformCommissionAmount ?? booking.commissionAmount;
+  const displayTeacherCoursePayout = pricingSnapshot?.teacherPayoutAmount ?? booking.teacherPayoutAmount;
+  const displayTeacherTotalReceives = pricingSnapshot?.totalTeacherReceives ?? booking.totalTeacherReceives;
 
   const timeline = [
     { label: "Créée", date: booking.createdAt },
@@ -66,25 +112,74 @@ export default async function ReservationDetailPage({ params }: { params: Promis
         <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <BookingStatusBadge status={booking.status} />
-            <PaymentStatusBadge status={booking.paymentStatus} />
-            {booking.paymentMethod && <Badge variant="outline">{booking.paymentMethod.replace("_", " ")}</Badge>}
+            <PaymentStatusBadge status={booking.paymentStatus} quoteOnly={booking.isQuoteOnly} />
+            {booking.paymentMethod && <Badge variant="outline">{paymentMethodLabel(booking.paymentMethod)}</Badge>}
           </div>
           <div className="text-sm text-muted-foreground">
-            {booking.scheduledDate ? (
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" /> {formatDate(booking.scheduledDate)} à {booking.scheduledTime || "—"}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" /> Créneau souhaité: {booking.preferredTime}
-              </span>
-            )}
+            <span className="flex items-center gap-1.5">
+              {booking.scheduledDate ? <Calendar className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+              {booking.scheduledDate
+                ? `${formatDate(booking.scheduledDate)} à ${booking.scheduledTime || booking.preferredTime || "—"}`
+                : `Date souhaitée: ${booking.startDate ? formatDate(booking.startDate) : "—"} · Créneau: ${booking.preferredTime}`}
+            </span>
           </div>
         </CardContent>
       </Card>
 
       {/* Actions contextuelles */}
       <BookingActionsClient booking={JSON.parse(JSON.stringify(booking))} />
+
+      <ClientCommunicationClient
+        booking={JSON.parse(JSON.stringify({
+          id: booking.id,
+          reference: booking.reference,
+          subjectName: booking.subjectName,
+          levelName: booking.levelName,
+          courseFormat: booking.courseFormat,
+          totalPrice: booking.totalPrice,
+          paymentStatus: booking.paymentStatus,
+          status: booking.status,
+          preferredTime: booking.preferredTime,
+          startDate: booking.startDate,
+          scheduledDate: booking.scheduledDate,
+          scheduledTime: booking.scheduledTime,
+          client: {
+            id: booking.client.id,
+            name: booking.client.name,
+            phone: booking.client.phone,
+            email: booking.client.email,
+          },
+          teacher: {
+            id: booking.teacher.id,
+            fullName: booking.teacher.fullName,
+            professionalName: booking.teacher.professionalName,
+            photoUrl: booking.teacher.photoUrl,
+            phone: booking.teacher.phone,
+            badgeVerified: booking.teacher.badgeVerified,
+          },
+        }))}
+        communications={JSON.parse(JSON.stringify(booking.clientCommunications))}
+      />
+
+      {booking.cancelledAt && (
+        <Card className="border-orange-200 bg-orange-50/40">
+          <CardHeader><CardTitle className="text-base">Annulation et remboursement</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <Detail icon={XCircle} label="Annulée par" value={cancellationActorLabel(booking.cancelledBy)} />
+            <Detail icon={Calendar} label="Date d'annulation" value={formatDateTime(booking.cancelledAt)} />
+            <Detail icon={Clock} label="Fenêtre appliquée" value={cancellationWindowLabel(booking.cancellationWindow)} />
+            <Detail icon={CheckCircle2} label="Motif" value={booking.cancellationReason ?? "—"} />
+            <AmountBox label="Frais retenus" value={booking.cancellationFeeAmount} tone="warning" sub={`${booking.cancellationFeeRate}%`} />
+            <AmountBox label="Remboursement client" value={booking.cancellationRefundAmount} tone="primary" />
+            {booking.cancellationDetail && (
+              <div className="rounded-2xl border border-orange-100 bg-white/80 p-3 shadow-sm sm:col-span-2">
+                <p className="text-xs text-muted-foreground">Détail</p>
+                <p className="mt-1 text-sm text-foreground">{booking.cancellationDetail}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Client card */}
@@ -93,7 +188,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-muted text-foreground">{initials(booking.client.name)}</AvatarFallback>
+                <AvatarFallback className="bg-violet-50 text-violet-700">{initials(booking.client.name)}</AvatarFallback>
               </Avatar>
               <div>
                 <Link href={`/admin/clients/${booking.client.id}`} className="font-medium text-foreground hover:text-primary">{booking.client.name}</Link>
@@ -112,11 +207,15 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Professeur</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">{initials(booking.teacher.fullName)}</AvatarFallback>
-              </Avatar>
+              <ProfessorImage
+                photoUrl={booking.teacher.photoUrl}
+                name={booking.teacher.professionalName || booking.teacher.fullName}
+                size="sm"
+                shape="circle"
+                verified={booking.teacher.badgeVerified}
+              />
               <div>
-                <Link href={`/admin/professeurs/${booking.teacher.id}`} className="font-medium text-foreground hover:text-primary">{booking.teacher.professionalName || booking.teacher.fullName}</Link>
+                <Link href={`/admin/professeurs/${booking.teacher.id}?tab=cours&bookingId=${booking.id}`} className="font-medium text-foreground hover:text-primary">{booking.teacher.professionalName || booking.teacher.fullName}</Link>
                 <p className="text-xs text-muted-foreground">Professeur</p>
               </div>
             </div>
@@ -137,11 +236,17 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <Detail icon={User} label="Niveau" value={booking.levelName} />
           <Detail icon={booking.courseFormat === "HOME" ? Home : Video} label="Format" value={booking.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
           <Detail icon={Users} label="Type" value={booking.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"} />
-          <Detail icon={Calendar} label="Pack" value={booking.packType.replace("_", " ")} />
+          <Detail icon={Calendar} label="Pack" value={packTypeLabel(booking.packType)} />
           <Detail icon={Clock} label="Séances" value={`${booking.sessionsCount}`} />
           <Detail icon={Calendar} label="Jours souhaités" value={(() => { try { return JSON.parse(booking.preferredDays).join(", "); } catch { return booking.preferredDays; } })()} />
+          <Detail icon={Calendar} label="Date souhaitée client" value={booking.startDate ? formatDate(booking.startDate) : "—"} />
           <Detail icon={Clock} label="Horaire souhaité" value={booking.preferredTime} />
-          <Detail icon={Calendar} label="Date planifiée" value={booking.scheduledDate ? `${formatDate(booking.scheduledDate)} à ${booking.scheduledTime ?? "—"}` : "Non planifiée"} />
+          <Detail icon={Calendar} label="Date planifiée" value={booking.scheduledDate ? `${formatDate(booking.scheduledDate)} à ${booking.scheduledTime ?? booking.preferredTime ?? "—"}` : booking.startDate ? `${formatDate(booking.startDate)} (souhaitée)` : "Non planifiée"} />
+          <Detail icon={Users} label="Type client" value={booking.clientType ?? "—"} />
+          <Detail icon={GraduationCap} label="Catégorie" value={categoryLabel(booking.courseCategory)} />
+          <Detail icon={GraduationCap} label="Système scolaire" value={schoolSystemLabel(booking.schoolSystem)} />
+          <Detail icon={User} label="Niveau précis" value={booking.preciseLevel ?? "—"} />
+          <Detail icon={GraduationCap} label="Cours catalogue" value={booking.courseCatalogName ?? "—"} />
           {booking.commune && <Detail icon={MapPin} label="Commune" value={booking.commune} />}
           {booking.quartier && <Detail icon={MapPin} label="Quartier" value={booking.quartier} />}
           {booking.onlineLink && <Detail icon={Video} label="Lien en ligne" value={booking.onlineLink} />}
@@ -149,6 +254,18 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             <div className="sm:col-span-2 lg:col-span-3">
               <p className="text-xs text-muted-foreground">Objectif</p>
               <p className="mt-1 text-sm">{booking.objective}</p>
+            </div>
+          )}
+          {booking.schoolProgram && (
+            <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-violet-100 bg-violet-50/45 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-900/65">Programme / contexte scolaire</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-violet-950/85">{booking.schoolProgram}</p>
+            </div>
+          )}
+          {booking.needDescription && (
+            <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-amber-100 bg-amber-50/65 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/70">Besoin précis du client</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-amber-950/85">{booking.needDescription}</p>
             </div>
           )}
           {booking.message && (
@@ -169,15 +286,57 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       {/* Montants */}
       <Card>
         <CardHeader><CardTitle className="text-base">Montants</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <AmountBox label="Total payé par le client" value={booking.totalPrice} />
-            <AmountBox label="Commission plateforme" value={booking.commissionAmount} sub={`${booking.commissionRate}%`} tone="warning" />
-            <AmountBox label="Net professeur" value={booking.teacherNetAmount} tone="primary" />
-            <AmountBox label="Prix unitaire" value={booking.unitPrice} sub={`× ${booking.sessionsCount} séance(s)`} />
+        <CardContent className="space-y-4">
+          <BookingPricingBreakdown
+            unitPrice={displayUnitPrice}
+            totalPrice={displayTotalPrice}
+            sessionsCount={displaySessionsCount}
+            participantsCount={displayParticipantsCount}
+            groupType={booking.groupType}
+            packType={booking.packType}
+            audience="admin"
+            priceTierKey={booking.priceTierKey}
+            courseAmount={displayCourseAmount}
+            transportFee={displayTransportFee}
+            transportFeeLabel={pricingSnapshot?.transportFeeLabel}
+            transportRouteLabel={pricingSnapshot?.transportRouteLabel}
+            transportRuleLabel={pricingSnapshot?.transportRuleLabel}
+            materialFee={displayMaterialFee}
+            discountAmount={displayDiscountAmount}
+            isQuoteOnly={booking.isQuoteOnly}
+            teacherNetAmount={booking.teacherNetAmount}
+            teacherPayoutAmount={displayTeacherCoursePayout}
+            totalTeacherReceives={displayTeacherTotalReceives}
+            commissionAmount={displayCommissionAmount}
+            commissionRate={booking.commissionRate}
+          />
+          {booking.isQuoteOnly && (
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
+              <p className="font-black">Dossier sur devis</p>
+              <p className="mt-1 text-amber-950/75">
+                Aucun paiement client n'est encore encaissé. L'administration doit valider le prix du cours, le déplacement et les frais éventuels avant paiement.
+              </p>
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <AmountBox label="Prix séance" value={displayUnitPrice} sub="2h" />
+            <AmountBox label="Prix du cours" value={displayCourseAmount || displayUnitPrice} />
+            <AmountBox label="Déplacement" value={displayTransportFee} sub={pricingSnapshot?.transportRouteLabel ?? undefined} tone={displayTransportFee > 0 ? "primary" : "success"} />
+            <AmountBox label="Total client" value={displayTotalPrice} />
+            <AmountBox label="Commission plateforme" value={displayCommissionAmount} sub={`${booking.commissionRate}%`} tone="warning" />
+            <AmountBox label="Part prof cours" value={displayTeacherCoursePayout || booking.teacherNetAmount} tone="primary" />
+            <AmountBox label="Total professeur" value={displayTeacherTotalReceives || booking.teacherNetAmount} tone="primary" />
+            <AmountBox label="Déjà payé prof" value={teacherPaidAmount} tone="success" />
+            <AmountBox label="Retenues validées" value={teacherSettlement.retained} tone={teacherSettlement.retained > 0 ? "danger" : "success"} />
+            <AmountBox label="Reste dû prof" value={teacherRemainingAmount} tone={teacherRemainingAmount > 0 ? "danger" : "success"} />
           </div>
         </CardContent>
       </Card>
+
+      {/* Timeline */}
+      {booking.replacements.length > 0 && (
+        <ReplacementHistoryTable replacements={booking.replacements} />
+      )}
 
       {/* Timeline */}
       <Card>
@@ -204,7 +363,47 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       {/* Transactions */}
       <Card>
         <CardHeader><CardTitle className="text-base">Transactions</CardTitle></CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
+          <div className="grid gap-3 p-4 md:hidden">
+            {booking.transactions.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
+                Aucune transaction.
+              </p>
+            ) : (
+              booking.transactions.map((t) => (
+                <div key={t.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs font-bold text-primary">{t.reference}</p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{transactionTypeLabel(t.type)}</p>
+                    </div>
+                    <PaymentStatusBadge status={t.status} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
+                      <Money amount={t.amount} className="mt-1 text-xs font-black" />
+                    </div>
+                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Net professeur</p>
+                      <Money amount={t.teacherNet} className="mt-1 text-xs font-black" />
+                    </div>
+                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Commission</p>
+                      <Money amount={t.commission} className="mt-1 text-xs font-black" />
+                    </div>
+                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Date</p>
+                      <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(t.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -224,7 +423,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               {booking.transactions.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-mono text-xs">{t.reference}</TableCell>
-                  <TableCell className="hidden md:table-cell text-sm">{t.type}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{transactionTypeLabel(t.type)}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDate(t.createdAt)}</TableCell>
                   <TableCell className="text-right"><Money amount={t.amount} className="text-sm" /></TableCell>
                   <TableCell className="text-right hidden md:table-cell"><Money amount={t.commission} className="text-sm" muted /></TableCell>
@@ -234,6 +433,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -243,15 +443,15 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Litiges</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {booking.disputes.map((d) => (
-              <div key={d.id} className="rounded-lg border border-border p-3">
+              <div key={d.id} className="rounded-2xl border border-violet-100 bg-white/80 p-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground">{d.reason}</p>
-                  <Badge variant="outline">{d.status}</Badge>
+                  <Badge variant="outline">{disputeStatusLabel(d.status)}</Badge>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{d.description}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Ouvert par {d.openedBy.name} • {formatDateTime(d.createdAt)}</p>
                 {d.resolution && (
-                  <p className="mt-2 rounded-md bg-muted/50 p-2 text-sm">Résolution: {d.resolution}</p>
+                  <p className="mt-2 rounded-2xl border border-violet-100 bg-white/75 p-3 text-sm shadow-sm">Résolution: {d.resolution}</p>
                 )}
                 <Button asChild size="sm" variant="ghost" className="mt-2">
                   <Link href={`/admin/litiges/${d.id}`}>Voir le litige</Link>
@@ -268,7 +468,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Avis client</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {booking.reviews.map((r) => (
-              <div key={r.id} className="rounded-lg border border-border p-3">
+              <div key={r.id} className="rounded-2xl border border-violet-100 bg-white/80 p-3 shadow-sm">
                 <p className="text-sm font-medium">{r.client.name} — Note: {r.rating}/5</p>
                 {r.comment && <p className="mt-1 text-sm">{r.comment}</p>}
               </div>
@@ -291,14 +491,16 @@ function Detail({ icon: Icon, label, value }: { icon: any; label: string; value:
   );
 }
 
-function AmountBox({ label, value, sub, tone = "default" }: { label: string; value: number; sub?: string; tone?: "default" | "warning" | "primary" }) {
+function AmountBox({ label, value, sub, tone = "default" }: { label: string; value: number; sub?: string; tone?: "default" | "warning" | "primary" | "success" | "danger" }) {
   const cls = {
-    default: "border-border",
+    default: "border-violet-100 bg-white/80",
     warning: "border-amber-200 bg-amber-50/50",
-    primary: "border-primary/20 bg-primary/5",
+    primary: "border-violet-200 bg-violet-50/70",
+    success: "border-blue-200 bg-blue-50/70",
+    danger: "border-red-200 bg-red-50/60",
   }[tone];
   return (
-    <div className={`rounded-lg border ${cls} p-3`}>
+    <div className={`rounded-2xl border ${cls} p-3 shadow-sm`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-lg font-semibold text-foreground"><Money amount={value} /></p>
       {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}

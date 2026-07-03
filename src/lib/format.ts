@@ -74,7 +74,13 @@ export function initials(name: string): string {
 /** Avatar URL basé sur initiales */
 export function avatarFromName(name: string): string {
   const i = initials(name) || "?";
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    i
-  )}&background=10A37F&color=fff&bold=true&size=128`;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+      <rect width="128" height="128" rx="64" fill="#F3E8FF"/>
+      <circle cx="100" cy="28" r="22" fill="#FFF7E6" opacity="0.95"/>
+      <text x="50%" y="53%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#1E2A78">${i}</text>
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

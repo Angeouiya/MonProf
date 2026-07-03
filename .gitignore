@@ -12,6 +12,8 @@ node_modules
 
 # testing
 /coverage
+/output/
+/.playwright-cli/
 
 # next.js
 /.next/
@@ -41,6 +43,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 local-*
+db/*.db
+db/*.db-*
+db/*.sqlite
+db/*.sqlite-*
 .claude
 .z-ai-config
 *.log

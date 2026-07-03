@@ -4,18 +4,38 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Money } from "@/components/shared/money";
 import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
+import { ProfessorImage } from "@/components/shared/professor-image";
 import { RevenueAreaChart } from "@/components/admin/charts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, GraduationCap, CalendarRange, CheckCircle2, Lock, Banknote,
-  ShieldAlert, TrendingUp, CalendarDays, Star, Bell, ArrowRight, Wallet,
+  ShieldAlert, TrendingUp, CalendarDays, Bell, ArrowRight, Wallet,
+  ExternalLink, UserCog,
 } from "lucide-react";
 import Link from "next/link";
 import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
+import { getTeacherRemainingAmount } from "@/lib/teacher-payments";
+import { disputeStatusLabel } from "@/lib/platform-labels";
+import { verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 
 export const dynamic = "force-dynamic";
+
+type NotificationTeacherLite = {
+  id: string;
+  fullName: string;
+  professionalName: string | null;
+  photoUrl: string | null;
+  badgeVerified: boolean;
+};
+
+type NotificationBookingLite = {
+  id: string;
+  reference: string;
+  subjectName: string;
+  teacher: NotificationTeacherLite;
+};
 
 export default async function AdminDashboard() {
   const user = await requireAdmin();
@@ -36,23 +56,37 @@ export default async function AdminDashboard() {
     db.teacher.count(),
     db.teacher.count({ where: { status: "ACTIVE" } }),
     db.booking.count({ where: { createdAt: { gte: start7d } } }),
-    db.booking.count({ where: { status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } } }),
+    db.booking.count({ where: verifiedPayDunyaBookingWhere({ status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } }) }),
     db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24*60*60*1000) } } }),
-    db.transaction.aggregate({ where: { type: "CLIENT_PAYMENT", status: "BLOCKED" }, _sum: { amount: true } }),
-    db.booking.aggregate({ where: { paymentStatus: "TO_PAY_TEACHER" }, _sum: { teacherNetAmount: true } }),
-    db.booking.findMany({ where: { paymentStatus: "TO_PAY_TEACHER" }, select: { teacherId: true }, distinct: ["teacherId"] }),
-    db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
-    db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }, _sum: { commissionAmount: true } }),
-    db.booking.aggregate({ where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }, _sum: { commissionAmount: true } }),
-    db.booking.aggregate({ where: { paymentStatus: "TEACHER_PAID" }, _sum: { teacherNetAmount: true } }),
+    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } }),
     db.booking.findMany({
-      where: { paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } },
-      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } } },
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+      select: {
+        id: true,
+        teacherId: true,
+        teacherNetAmount: true,
+        teacherPaidAmount: true,
+        paymentStatus: true,
+        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+      },
+    }),
+    db.booking.findMany({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }), select: { teacherId: true }, distinct: ["teacherId"] }),
+    db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
+    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }), _sum: { commissionAmount: true } }),
+    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }), _sum: { commissionAmount: true } }),
+    db.teacherPayoutRecord.aggregate({ where: { status: "PAID" }, _sum: { amount: true } }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
+      include: { client: { select: { name: true } }, teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } } },
       orderBy: { createdAt: "desc" }, take: 5,
     }),
     db.booking.findMany({
-      where: { paymentStatus: "TO_PAY_TEACHER" },
-      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } } },
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+      include: {
+        client: { select: { name: true } },
+        teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } },
+        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+      },
       orderBy: { clientValidatedAt: "desc" }, take: 5,
     }),
     db.dispute.findMany({
@@ -63,6 +97,36 @@ export default async function AdminDashboard() {
     db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
 
+  const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
+  const notificationBookingIds = Array.from(new Set(adminNotifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
+  const [notificationTeachers, notificationBookings] = await Promise.all([
+    notificationTeacherIds.length
+      ? db.teacher.findMany({
+          where: { id: { in: notificationTeacherIds } },
+          select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
+        })
+      : [],
+    notificationBookingIds.length
+      ? db.booking.findMany({
+          where: { id: { in: notificationBookingIds } },
+          select: {
+            id: true,
+            reference: true,
+            subjectName: true,
+            teacherId: true,
+            client: { select: { name: true } },
+            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+          },
+        })
+      : [],
+  ]);
+  const notificationTeachersById = new Map<string, NotificationTeacherLite>(
+    notificationTeachers.map((teacher) => [teacher.id, teacher] as const),
+  );
+  const notificationBookingsById = new Map<string, NotificationBookingLite>(
+    notificationBookings.map((booking) => [booking.id, booking] as const),
+  );
+
   // Daily series (based on bookings)
   const dailyMap: Record<string, number> = {};
   for (let i = 29; i >= 0; i--) {
@@ -70,7 +134,7 @@ export default async function AdminDashboard() {
     dailyMap[d.toISOString().slice(0,10)] = 0;
   }
   const commissionBookings = await db.booking.findMany({
-    where: { createdAt: { gte: start30d }, paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } },
+    where: verifiedPayDunyaBookingWhere({ createdAt: { gte: start30d }, paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
     select: { commissionAmount: true, createdAt: true },
   });
   for (const b of commissionBookings) {
@@ -79,11 +143,17 @@ export default async function AdminDashboard() {
   }
   const series = Object.entries(dailyMap).map(([date, value]) => ({ date, value }));
 
-  const blockedFunds = blockedFundsAgg._sum.amount ?? 0;
-  const toRelease = toReleaseAgg._sum.teacherNetAmount ?? 0;
+  const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
+  const toRelease = toReleaseAgg.reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments), 0);
+  const teachersToPay = new Set(
+    toReleaseAgg.filter((booking) => getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0).map((booking) => booking.teacherId)
+  ).size;
   const totalCommission = allTimeCommissionAgg._sum.commissionAmount ?? 0;
   const monthCommission = monthCommissionAgg._sum.commissionAmount ?? 0;
-  const totalPaidToTeachers = totalPaidToTeachersAgg._sum.teacherNetAmount ?? 0;
+  const totalPaidToTeachers = totalPaidToTeachersAgg._sum.amount ?? 0;
+  const pendingReleaseRows = pendingReleaseBookings
+    .map((booking) => ({ booking, remaining: getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) }))
+    .filter((row) => row.remaining > 0);
 
   return (
     <div className="space-y-6">
@@ -108,7 +178,7 @@ export default async function AdminDashboard() {
         <StatCard label="Cours du jour" value={todayBookings} icon={CalendarDays} tone="default" />
         <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
         <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
-        <StatCard label="Profs à payer" value={teachersToPayAgg.length} icon={Banknote} tone="warning" />
+        <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
         <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
         <StatCard label="CA commission (total)" value={formatFCFA(totalCommission)} icon={TrendingUp} tone="success" />
         <StatCard label="Commission (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
@@ -146,17 +216,42 @@ export default async function AdminDashboard() {
               )}
               {recentPaidBookings.map((b) => (
                 <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
-                      {b.reference}
-                    </Link>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {b.client.name} • {b.teacher.professionalName || b.teacher.fullName}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ProfessorImage
+                      photoUrl={b.teacher.photoUrl}
+                      name={b.teacher.professionalName || b.teacher.fullName}
+                      size="sm"
+                      shape="circle"
+                      verified={b.teacher.badgeVerified}
+                    />
+                    <div className="min-w-0">
+                      <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
+                        {b.reference}
+                      </Link>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {b.client.name} • {b.teacher.professionalName || b.teacher.fullName}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <PaymentStatusBadge status={b.paymentStatus} />
+                        {b.teacher.badgeVerified && <Badge className="bg-[#1E2A78] text-white">Certifié</Badge>}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex shrink-0 flex-col items-end gap-2">
                     <Money amount={b.totalPrice} className="text-sm font-semibold" />
                     <BookingStatusBadge status={b.status} />
+                    <div className="flex gap-1.5">
+                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
+                        <Link href={`/admin/reservations/${b.id}`}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
+                        <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`}>
+                          <GraduationCap className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -174,24 +269,41 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <ul className="divide-y divide-border">
-              {pendingReleaseBookings.length === 0 && (
+              {pendingReleaseRows.length === 0 && (
                 <li className="px-4 py-6 text-sm text-muted-foreground">Aucun paiement en attente de libération.</li>
               )}
-              {pendingReleaseBookings.map((b) => (
+              {pendingReleaseRows.map(({ booking: b, remaining }) => (
                 <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
-                      {b.reference}
-                    </Link>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {b.teacher.professionalName || b.teacher.fullName} • validé {b.clientValidatedAt ? timeAgo(b.clientValidatedAt) : "—"}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ProfessorImage
+                      photoUrl={b.teacher.photoUrl}
+                      name={b.teacher.professionalName || b.teacher.fullName}
+                      size="sm"
+                      shape="circle"
+                      verified={b.teacher.badgeVerified}
+                    />
+                    <div className="min-w-0">
+                      <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
+                        {b.reference}
+                      </Link>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {b.teacher.professionalName || b.teacher.fullName} • validé {b.clientValidatedAt ? timeAgo(b.clientValidatedAt) : "—"}
+                      </p>
+                      <p className="mt-1 truncate text-xs font-medium text-foreground">{b.client.name} • {b.subjectName}</p>
+                    </div>
                   </div>
-                  <Button asChild size="sm" className="shrink-0">
-                    <Link href={`/admin/reservations/${b.id}?action=pay`}>
-                      Payer <Money amount={b.teacherNetAmount} className="ml-1" />
-                    </Link>
-                  </Button>
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                    <Button asChild size="sm">
+                      <Link href={`/admin/reservations/${b.id}?action=pay`}>
+                        Payer <Money amount={remaining} className="ml-1" />
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/admin/professeurs/${b.teacher.id}?tab=paiements&bookingId=${b.id}`}>
+                        Comptabilité
+                      </Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -221,7 +333,7 @@ export default async function AdminDashboard() {
                       {d.booking.reference} • par {d.openedBy.name} • {timeAgo(d.createdAt)}
                     </p>
                   </div>
-                  <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">{d.status}</Badge>
+                  <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">{disputeStatusLabel(d.status)}</Badge>
                 </li>
               ))}
             </ul>
@@ -243,12 +355,46 @@ export default async function AdminDashboard() {
               )}
               {adminNotifications.map((n) => (
                 <li key={n.id} className="px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{n.title}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      {getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById) ? (
+                        <ProfessorImage
+                          photoUrl={getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)?.photoUrl ?? null}
+                          name={getNotificationTeacherName(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)}
+                          size="sm"
+                          shape="circle"
+                          verified={!!getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)?.badgeVerified}
+                        />
+                      ) : (
+                        <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground">{n.title}</p>
+                          <Badge variant="outline" className={getPriorityClass(n.priority)}>{n.priority.toLowerCase()}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                        {n.bookingId && notificationBookingsById.get(n.bookingId) && (
+                          <p className="mt-1 text-[11px] font-medium text-foreground">
+                            {notificationBookingsById.get(n.bookingId)?.reference} • {notificationBookingsById.get(n.bookingId)?.subjectName}
+                          </p>
+                        )}
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
+                        <Link href={getNotificationHref(n.link, n.bookingId, n.teacherId)}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                      {n.bookingId && (
+                        <Button asChild size="sm" variant="outline" className="h-8 px-2">
+                          <Link href={`/admin/reservations/${n.bookingId}?action=replace`}>
+                            <UserCog className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -259,4 +405,39 @@ export default async function AdminDashboard() {
       </div>
     </div>
   );
+}
+
+function getPriorityClass(priority: string) {
+  if (priority === "CRITICAL") return "border-red-200 bg-red-50 text-red-700";
+  if (priority === "URGENT") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (priority === "IMPORTANT") return "border-violet-200 bg-violet-50 text-violet-700";
+  return "border-blue-200 bg-blue-50 text-blue-700";
+}
+
+function getNotificationHref(link: string | null, bookingId: string | null, teacherId: string | null) {
+  if (link) return link;
+  if (bookingId) return `/admin/reservations/${bookingId}`;
+  if (teacherId) return `/admin/professeurs/${teacherId}?tab=operationnel`;
+  return "/admin/notifications";
+}
+
+function getNotificationTeacher(
+  teacherId: string | null,
+  bookingId: string | null,
+  teachers: Map<string, NotificationTeacherLite>,
+  bookings: Map<string, NotificationBookingLite>,
+) {
+  if (teacherId && teachers.has(teacherId)) return teachers.get(teacherId);
+  if (bookingId && bookings.has(bookingId)) return bookings.get(bookingId)?.teacher;
+  return null;
+}
+
+function getNotificationTeacherName(
+  teacherId: string | null,
+  bookingId: string | null,
+  teachers: Map<string, NotificationTeacherLite>,
+  bookings: Map<string, NotificationBookingLite>,
+) {
+  const teacher = getNotificationTeacher(teacherId, bookingId, teachers, bookings);
+  return teacher?.professionalName || teacher?.fullName || "Notification admin";
 }

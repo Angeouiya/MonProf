@@ -15,6 +15,16 @@ export default async function ClientRootLayout({ children }: { children: React.R
     where: { id: (session.user as any).id },
     select: { name: true, email: true, phone: true, commune: true, quartier: true, avatarUrl: true },
   });
+  const notificationCount = await db.notification.count({
+    where: {
+      read: false,
+      recipientType: "CLIENT",
+      OR: [
+        { userId: (session.user as any).id },
+        { clientId: (session.user as any).id },
+      ],
+    },
+  });
 
-  return <ClientLayout userName={user?.name ?? session.user.name}>{children}</ClientLayout>;
+  return <ClientLayout userName={user?.name ?? session.user.name} notificationCount={notificationCount}>{children}</ClientLayout>;
 }

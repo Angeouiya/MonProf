@@ -31,7 +31,7 @@ export function MessagesClient({ filter, message }: { filter?: string; message?:
       router.push(`/admin/messages?${params.toString()}`);
     };
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>

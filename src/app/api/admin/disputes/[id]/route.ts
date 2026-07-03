@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { generateReference } from "@/lib/format";
-
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
+import { requireAdminApi } from "@/lib/admin-api";
+import {
+  hasRefundableClientFunds,
+  hasVerifiedPayDunyaClientPayment,
+} from "@/lib/payment-security";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const admin = await requireAdminApi();
+  if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   const { id } = await params;
   const dispute = await db.dispute.findUnique({
     where: { id },
@@ -32,18 +29,90 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const admin = await requireAdminApi();
+  if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   const { id } = await params;
   const body = await req.json();
   const action: string = body.action;
   const resolution: string | undefined = body.resolution;
 
-  const dispute = await db.dispute.findUnique({ where: { id }, include: { booking: true } });
+  const dispute = await db.dispute.findUnique({
+    where: { id },
+    include: {
+      booking: {
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true } },
+          client: { select: { id: true, name: true } },
+          transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
+        },
+      },
+    },
+  });
   if (!dispute) return NextResponse.json({ error: "Litige introuvable" }, { status: 404 });
 
+  const adminUser = admin;
+  const activeDispute = dispute;
   const now = new Date();
+  const teacherName = activeDispute.booking.teacher.professionalName || activeDispute.booking.teacher.fullName;
+  const decisionText = resolution?.trim() || activeDispute.resolution || "Décision enregistrée par l'administration.";
+  const verifiedClientPaymentExists = hasVerifiedPayDunyaClientPayment(activeDispute.booking);
+
+  async function recordDecision(label: string, status: string, clientMessage: string) {
+    await db.adminActionLog.create({
+      data: {
+        adminId: adminUser.id,
+        action: label,
+        entityType: "Dispute",
+        entityId: activeDispute.id,
+        detail: `${adminUser.name} a traité le litige ${activeDispute.booking.reference} (${activeDispute.reason}) concernant ${teacherName}. Décision : ${decisionText}`,
+        oldStatus: activeDispute.status,
+        newStatus: status,
+      },
+    });
+    await db.notification.create({
+      data: {
+        userId: activeDispute.booking.client.id,
+        title: label,
+        message: clientMessage,
+        type: "DISPUTE_DECISION",
+        recipientType: "CLIENT",
+        recipientName: activeDispute.booking.client.name,
+        channel: "INTERNAL",
+        status: "SENT",
+        priority: status === "REFUNDED" ? "IMPORTANT" : "NORMAL",
+        bookingId: activeDispute.bookingId,
+        teacherId: activeDispute.booking.teacherId,
+        clientId: activeDispute.booking.client.id,
+        adminId: adminUser.id,
+        sentAt: now,
+        link: `/client/reservations/${activeDispute.bookingId}`,
+        actionLabel: "Voir la réservation",
+      },
+    });
+    await db.notification.create({
+      data: {
+        userId: null,
+        title: label,
+        message: `${label} pour ${activeDispute.booking.reference}. Professeur : ${teacherName}.`,
+        type: "DISPUTE_DECISION",
+        recipientType: "ADMIN",
+        channel: "INTERNAL",
+        status: "CONFIRMED",
+        priority: "NORMAL",
+        bookingId: activeDispute.bookingId,
+        teacherId: activeDispute.booking.teacherId,
+        clientId: activeDispute.booking.client.id,
+        adminId: adminUser.id,
+        sentAt: now,
+        confirmedAt: now,
+        read: true,
+        readAt: now,
+        link: `/admin/litiges/${activeDispute.id}`,
+        actionLabel: "Voir litige",
+      },
+    });
+  }
+
   try {
     switch (action) {
       case "investigate":
@@ -51,8 +120,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { id },
           data: { status: "INVESTIGATING", resolution: resolution ?? dispute.resolution },
         });
+        await recordDecision(
+          "Litige en investigation",
+          "INVESTIGATING",
+          `Bonjour ${dispute.booking.client.name}, votre litige sur la réservation ${dispute.booking.reference} est en cours d'investigation. Votre paiement reste sécurisé pendant le traitement.`
+        );
         return NextResponse.json({ ok: true });
       case "resolve":
+        if (!verifiedClientPaymentExists) {
+          return NextResponse.json({
+            error: "Impossible de libérer un paiement: aucun paiement client PayDunya vérifié n'existe pour cette réservation.",
+          }, { status: 409 });
+        }
         await db.dispute.update({
           where: { id },
           data: { status: "RESOLVED", resolution: resolution ?? dispute.resolution, resolvedAt: now },
@@ -66,8 +145,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { bookingId: dispute.bookingId, type: "CLIENT_PAYMENT" },
           data: { status: "TO_PAY_TEACHER" },
         });
+        await recordDecision(
+          "Litige résolu - paiement à libérer",
+          "RESOLVED",
+          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} est clôturé. L'administration a validé la suite du traitement selon la décision enregistrée.`
+        );
         return NextResponse.json({ ok: true });
       case "refund": {
+        if (!verifiedClientPaymentExists || !hasRefundableClientFunds(activeDispute.booking.paymentStatus)) {
+          return NextResponse.json({
+            error: "Impossible de rembourser: aucun paiement PayDunya remboursable n'est vérifié sur cette réservation.",
+          }, { status: 409 });
+        }
         await db.dispute.update({
           where: { id },
           data: { status: "REFUNDED", resolution: resolution ?? dispute.resolution, resolvedAt: now },
@@ -97,9 +186,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             },
           });
         }
+        await recordDecision(
+          "Litige remboursé",
+          "REFUNDED",
+          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} a été traité avec remboursement. La décision est enregistrée dans votre réservation.`
+        );
         return NextResponse.json({ ok: true });
       }
       case "reject":
+        if (!verifiedClientPaymentExists) {
+          return NextResponse.json({
+            error: "Impossible de libérer un paiement: aucun paiement client PayDunya vérifié n'existe pour cette réservation.",
+          }, { status: 409 });
+        }
         await db.dispute.update({
           where: { id },
           data: { status: "REJECTED", resolution: resolution ?? dispute.resolution, resolvedAt: now },
@@ -113,6 +212,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { bookingId: dispute.bookingId, type: "CLIENT_PAYMENT" },
           data: { status: "TO_PAY_TEACHER" },
         });
+        await recordDecision(
+          "Litige rejeté",
+          "REJECTED",
+          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} a été examiné et rejeté par l'administration. La décision est disponible dans votre réservation.`
+        );
         return NextResponse.json({ ok: true });
       default:
         return NextResponse.json({ error: "Action inconnue" }, { status: 400 });

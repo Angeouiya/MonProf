@@ -3,6 +3,110 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { DisputeStatus } from "@prisma/client";
+import { generateReference } from "@/lib/format";
+import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPolicy } from "@/lib/cancellation-policy";
+import { parsePricingSnapshot } from "@/lib/pricing";
+import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
+import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import {
+  hasVerifiedClientFunds,
+  hasVerifiedPayDunyaClientPayment,
+  isPaymentReadyForCourseProgressWithProof,
+} from "@/lib/payment-security";
+
+function parsePreferredDays(value?: string | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function publicBookingDetailPayload(booking: any) {
+  const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
+  const unitSessionAmount = pricingSnapshot?.unitSessionAmount ?? booking.unitPrice;
+  const courseAmount = pricingSnapshot?.courseAmount ?? booking.courseAmount;
+  const totalClientPays = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
+  const verifiedClientPayment = hasVerifiedPayDunyaClientPayment(booking);
+  return {
+    id: booking.id,
+    reference: booking.reference,
+    clientId: booking.clientId,
+    teacherId: booking.teacherId,
+    subjectName: booking.subjectName,
+    levelName: booking.levelName,
+    objective: booking.objective,
+    schoolProgram: booking.schoolProgram,
+    needDescription: booking.needDescription,
+    courseFormat: booking.courseFormat,
+    groupType: booking.groupType,
+    participantsCount: booking.participantsCount,
+    commune: booking.commune,
+    quartier: booking.quartier,
+    addressHint: booking.addressHint,
+    onlineLink: booking.onlineLink,
+    preferredDays: parsePreferredDays(booking.preferredDays),
+    preferredTime: booking.preferredTime,
+    startDate: booking.startDate,
+    scheduledDate: booking.scheduledDate,
+    scheduledTime: booking.scheduledTime,
+    sessionsCount: booking.sessionsCount,
+    packType: booking.packType,
+    message: booking.message,
+    unitPrice: unitSessionAmount,
+    totalPrice: totalClientPays,
+    priceTierKey: booking.priceTierKey,
+    courseAmount,
+    transportFee: pricingSnapshot?.transportFee ?? booking.transportFee,
+    transportFeeKey: booking.transportFeeKey,
+    transportFeeLabel: pricingSnapshot?.transportFeeLabel ?? null,
+    transportRouteLabel: pricingSnapshot?.transportRouteLabel ?? null,
+    transportRuleLabel: pricingSnapshot?.transportRuleLabel ?? null,
+    materialFee: pricingSnapshot?.materialFee ?? booking.materialFee,
+    discountAmount: pricingSnapshot?.discountAmount ?? booking.discountAmount,
+    totalClientPays,
+    isQuoteOnly: booking.isQuoteOnly,
+    status: booking.status,
+    paymentStatus: booking.paymentStatus,
+    paymentMethod: booking.paymentMethod,
+    cancellationWindow: booking.cancellationWindow,
+    cancellationFeeRate: booking.cancellationFeeRate,
+    cancellationFeeAmount: booking.cancellationFeeAmount,
+    cancellationRefundAmount: booking.cancellationRefundAmount,
+    cancellationReason: booking.cancellationReason,
+    cancellationDetail: booking.cancellationDetail,
+    cancelledAt: booking.cancelledAt,
+    createdAt: booking.createdAt,
+    confirmedAt: booking.confirmedAt,
+    assignedAt: booking.assignedAt,
+    courseDoneAt: booking.courseDoneAt,
+    clientValidatedAt: booking.clientValidatedAt,
+    teacherPaidAt: booking.teacherPaidAt,
+    teacher: booking.teacher,
+    client: booking.client,
+    reviews: booking.reviews,
+    disputes: booking.disputes,
+    transactions: Array.isArray(booking.transactions)
+      ? booking.transactions
+          .filter((transaction: any) => (
+            transaction.type === "REFUND"
+            || (transaction.type === "CLIENT_PAYMENT" && verifiedClientPayment)
+          ))
+          .map((transaction: any) => ({
+            id: transaction.id,
+            reference: transaction.reference,
+            amount: transaction.amount,
+            type: transaction.type,
+            status: transaction.status,
+            method: transaction.method,
+            paidAt: transaction.paidAt,
+            createdAt: transaction.createdAt,
+          }))
+      : [],
+  };
+}
 
 export async function GET(
   req: NextRequest,
@@ -36,10 +140,14 @@ export async function GET(
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  return NextResponse.json({
-    ...booking,
-    preferredDays: booking.preferredDays ? JSON.parse(booking.preferredDays) : [],
-  });
+  if (role === "ADMIN") {
+    return NextResponse.json({
+      ...booking,
+      preferredDays: parsePreferredDays(booking.preferredDays),
+    });
+  }
+
+  return NextResponse.json(publicBookingDetailPayload(booking));
 }
 
 export async function PATCH(
@@ -51,7 +159,10 @@ export async function PATCH(
   const userId = (session.user as any).id;
   const { id } = await params;
 
-  const booking = await db.booking.findUnique({ where: { id } });
+  const booking = await db.booking.findUnique({
+    where: { id },
+    include: { transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } } },
+  });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
   if (booking.clientId !== userId) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -63,9 +174,157 @@ export async function PATCH(
   const now = new Date();
 
   switch (action) {
+    case "paydunya_checkout": {
+      if (booking.isQuoteOnly) {
+        return NextResponse.json({ error: "Cette réservation est sur devis. Le paiement sera disponible après validation admin." }, { status: 400 });
+      }
+      if (booking.status !== "PENDING_PAYMENT" || booking.paymentStatus !== "FAILED") {
+        return NextResponse.json({ error: "Cette réservation n'est pas en attente de paiement PayDunya." }, { status: 400 });
+      }
+
+      const reusablePayDunyaStatus = (booking.paydunyaStatus ?? "").toUpperCase();
+      const canReusePayDunyaCheckout = Boolean(
+        booking.paydunyaCheckoutUrl
+        && !["COMPLETED", "FAILED", "CANCELLED", "CANCELED", "REJECTED", "CREATE_FAILED"].includes(reusablePayDunyaStatus)
+      );
+      if (canReusePayDunyaCheckout) {
+        return NextResponse.json({
+          payment: {
+            provider: "PAYDUNYA",
+            configured: true,
+            checkoutUrl: booking.paydunyaCheckoutUrl,
+            status: booking.paydunyaStatus ?? "PENDING",
+            message: "Lien PayDunya existant réutilisé.",
+          },
+        });
+      }
+
+      const detailedBooking = await db.booking.findUnique({
+        where: { id },
+        include: {
+          client: { select: { id: true, name: true, email: true } },
+          teacher: { select: { id: true, fullName: true, professionalName: true } },
+        },
+      });
+      if (!detailedBooking) {
+        return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+      }
+
+      const pricingSnapshot = parsePricingSnapshot(detailedBooking.pricingSnapshot);
+      const payment = await createPayDunyaCheckoutInvoice({
+        origin: getPayDunyaPublicBaseUrl(req),
+        booking: {
+          id: detailedBooking.id,
+          reference: detailedBooking.reference,
+          subjectName: detailedBooking.subjectName,
+          levelName: detailedBooking.levelName,
+          sessionsCount: pricingSnapshot?.numberOfSessions ?? detailedBooking.sessionsCount,
+          totalClientPays: pricingSnapshot?.totalClientPays ?? detailedBooking.totalClientPays ?? detailedBooking.totalPrice,
+          courseAmount: pricingSnapshot?.courseAmount ?? detailedBooking.courseAmount,
+          transportFee: pricingSnapshot?.transportFee ?? detailedBooking.transportFee,
+        },
+        client: {
+          id: detailedBooking.client.id,
+          name: detailedBooking.client.name,
+          email: detailedBooking.client.email,
+        },
+        teacher: {
+          id: detailedBooking.teacher.id,
+          name: detailedBooking.teacher.professionalName || detailedBooking.teacher.fullName,
+        },
+      });
+
+      if (!payment.configured || !payment.checkoutUrl) {
+        await db.booking.update({
+          where: { id: booking.id },
+          data: {
+            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
+            paydunyaFailureReason: payment.configured
+              ? "PayDunya n'a pas retourné de lien de paiement."
+              : "PayDunya n'est pas encore configuré sur cette installation.",
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: payment.responseText ?? null,
+          },
+        });
+        return NextResponse.json({
+          error: payment.configured
+            ? "PayDunya n'a pas retourné de lien de paiement."
+            : "PayDunya n'est pas encore configuré sur cette installation.",
+          payment: {
+            provider: "PAYDUNYA",
+            configured: payment.configured,
+            checkoutUrl: payment.checkoutUrl,
+          },
+        }, { status: 503 });
+      }
+
+      await db.booking.update({
+        where: { id: booking.id },
+        data: {
+          paydunyaToken: payment.token,
+          paydunyaCheckoutUrl: payment.checkoutUrl,
+          paydunyaStatus: "PENDING",
+          paydunyaFailureReason: null,
+          paydunyaLastCheckedAt: new Date(),
+          paydunyaLastPayload: payment.responseText ?? null,
+        },
+      });
+
+      await db.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Relance paiement PayDunya",
+          entityType: "Booking",
+          entityId: booking.id,
+          detail: `Le client a demandé un nouveau lien PayDunya pour ${booking.reference}. Token: ${payment.token || "non fourni"}.`,
+          oldStatus: booking.paymentStatus,
+          newStatus: "PAYDUNYA_CHECKOUT_CREATED",
+        },
+      });
+
+      return NextResponse.json({
+        payment: {
+          provider: "PAYDUNYA",
+          configured: payment.configured,
+          checkoutUrl: payment.checkoutUrl,
+        },
+      });
+    }
+
+    case "paydunya_verify": {
+      if (booking.isQuoteOnly) {
+        return NextResponse.json({ error: "Cette réservation est sur devis et ne possède pas de paiement PayDunya à vérifier." }, { status: 400 });
+      }
+      const result = await reconcilePayDunyaBookingPayment({
+        bookingId: booking.id,
+        expectedClientId: userId,
+        source: "client_manual",
+      });
+      const statusCode = result.action === "not_configured"
+        ? 503
+        : result.action === "rejected"
+          ? 409
+          : 200;
+      return NextResponse.json({
+        payment: {
+          provider: "PAYDUNYA",
+          verified: result.verified,
+          status: result.status,
+          action: result.action,
+          message: result.message,
+          checkoutUrl: result.verified ? null : result.checkoutUrl,
+        },
+      }, { status: statusCode });
+    }
+
     case "confirm": {
       if (booking.status !== "PENDING_CLIENT_VALIDATION") {
         return NextResponse.json({ error: "Action non autorisée pour ce statut" }, { status: 400 });
+      }
+      if (!isPaymentReadyForCourseProgressWithProof(booking)) {
+        return NextResponse.json({
+          error: "Impossible de confirmer ce cours: le paiement PayDunya n'est pas vérifié et bloqué.",
+        }, { status: 409 });
       }
       const updated = await db.booking.update({
         where: { id },
@@ -81,14 +340,28 @@ export async function PATCH(
           title: "Paiement à libérer",
           message: `Le client a confirmé le cours ${booking.reference}. Paiement de ${booking.teacherNetAmount.toLocaleString("fr-FR")} FCFA net à libérer au professeur.`,
           type: "PAYMENT_TO_RELEASE",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
           link: "/admin/paiements-a-liberer",
+          actionLabel: "Libérer paiement",
         },
       });
-      return NextResponse.json({ booking: updated });
+      return NextResponse.json({ booking: publicBookingDetailPayload(updated) });
     }
 
     case "report":
     case "open_dispute": {
+      if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
+        return NextResponse.json({
+          error: "Un litige financier ne peut être ouvert qu'après un paiement PayDunya vérifié.",
+        }, { status: 409 });
+      }
       const r = reason || "Problème signalé par le client";
       const d = description || (action === "report" ? "Le client signale un problème sur ce cours." : "Litige ouvert par le client.");
       const dispute = await db.dispute.create({
@@ -110,10 +383,19 @@ export async function PATCH(
           title: "Litige ouvert",
           message: `Litige ouvert sur ${booking.reference}. Raison: ${r}. Paiement bloqué en attente de résolution.`,
           type: "DISPUTE_OPENED",
-          link: "/admin/litiges",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "CRITICAL",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/admin/litiges/${dispute.id}`,
+          actionLabel: "Traiter litige",
         },
       });
-      return NextResponse.json({ booking: updated, dispute });
+      return NextResponse.json({ booking: publicBookingDetailPayload(updated), dispute });
     }
 
     case "reschedule": {
@@ -132,30 +414,72 @@ export async function PATCH(
           title: "Report demandé",
           message: `Le client demande un report pour ${booking.reference}.${rescheduleMessage ? ` Motif: ${rescheduleMessage}` : ""}`,
           type: "RESCHEDULE_REQUEST",
-          link: "/admin/reservations",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${booking.id}`,
+          actionLabel: "Replanifier",
         },
       });
-      return NextResponse.json({ booking: updated });
+      return NextResponse.json({ booking: publicBookingDetailPayload(updated) });
     }
 
     case "cancel": {
       const wasPaid = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "PENDING_CLIENT_VALIDATION"].includes(
         booking.status
-      );
+      ) && hasVerifiedClientFunds(booking.paymentStatus) && hasVerifiedPayDunyaClientPayment(booking);
+      const paidAggregate = wasPaid
+        ? await db.transaction.aggregate({
+            where: {
+              bookingId: booking.id,
+              type: "CLIENT_PAYMENT",
+              status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
+            },
+            _sum: { amount: true },
+          })
+        : null;
+      const paidAmount = paidAggregate?._sum.amount ?? 0;
+      const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, "CLIENT");
+      const paymentStatus = !wasPaid
+        ? booking.paymentStatus
+        : policy.refundAmount === policy.baseAmount
+          ? "REFUNDED"
+          : policy.refundAmount > 0
+            ? "PARTIALLY_REFUNDED"
+            : "RETAINED";
       const updated = await db.booking.update({
         where: { id },
         data: {
           status: "CANCELLED",
-          paymentStatus: wasPaid ? "REFUNDED" : booking.paymentStatus,
+          paymentStatus,
+          cancelledAt: now,
+          cancelledBy: "CLIENT",
+          cancellationReason: reason || "Annulation demandée par le client",
+          cancellationDetail: description || null,
+          cancellationWindow: policy.code,
+          cancellationFeeRate: policy.feeRate,
+          cancellationFeeAmount: policy.feeAmount,
+          cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
         },
       });
       if (wasPaid) {
+        await db.transaction.updateMany({
+          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
+          data: { status: paymentStatus },
+        });
+      }
+      if (wasPaid && policy.refundAmount > 0) {
         await db.transaction.create({
           data: {
-            reference: `TX-REF-${Math.floor(1000 + Math.random() * 9000)}`,
+            reference: generateReference("TX-REF"),
             bookingId: id,
             teacherId: booking.teacherId,
-            amount: booking.totalPrice,
+            amount: policy.refundAmount,
             commission: 0,
             teacherNet: 0,
             type: "REFUND",
@@ -169,12 +493,100 @@ export async function PATCH(
         data: {
           userId: null,
           title: "Réservation annulée",
-          message: `Le client a annulé la réservation ${booking.reference}.${wasPaid ? " Remboursement à traiter." : ""}`,
+          message: `Le client a annulé la réservation ${booking.reference}. ${cancellationPolicySummary(policy)}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
           type: "BOOKING_CANCELLED",
-          link: "/admin/reservations",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: policy.feeRate > 0 ? "URGENT" : wasPaid ? "IMPORTANT" : "NORMAL",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${booking.id}`,
+          actionLabel: wasPaid ? "Traiter remboursement" : "Voir annulation",
         },
       });
-      return NextResponse.json({ booking: updated });
+      await db.notification.create({
+        data: {
+          userId: booking.clientId,
+          title: "Réservation annulée",
+          message: wasPaid
+            ? `Votre réservation ${booking.reference} est annulée. ${cancellationPolicySummary(policy)}. Frais retenus: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Remboursement estimé: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`
+            : `Votre réservation ${booking.reference} est annulée. Aucun paiement n'était à rembourser.`,
+          type: "BOOKING_CANCELLED",
+          recipientType: "CLIENT",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: policy.feeRate > 0 ? "IMPORTANT" : "NORMAL",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/client/reservations/${booking.id}`,
+          actionLabel: "Voir le détail",
+        },
+      });
+      await db.clientCommunication.create({
+        data: {
+          clientId: booking.clientId,
+          bookingId: booking.id,
+          type: "INFORMATION",
+          channel: "INTERNAL",
+          subject: `Annulation réservation ${booking.reference}`,
+          content: wasPaid
+            ? `Votre réservation est annulée.\n\n${policy.label}\n${policy.description}\n\nFrais retenus : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA\nRemboursement estimé : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA`
+            : "Votre réservation est annulée. Aucun paiement n'était à rembourser.",
+          priority: policy.feeRate > 0 ? "IMPORTANT" : "NORMAL",
+          status: "SENT",
+        },
+      });
+      await db.teacherNotification.create({
+        data: {
+          teacherId: booking.teacherId,
+          bookingId: booking.id,
+          title: "Réservation annulée par le client",
+          message: [
+            `La réservation ${booking.reference} a été annulée par le client.`,
+            `Cours : ${booking.subjectName}`,
+            `Niveau : ${booking.levelName}`,
+            `Motif : ${reason || "Annulation demandée par le client"}`,
+            `Frais retenus côté client : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA`,
+            "Ne vous présentez pas au cours sans nouvelle instruction de l'administration.",
+          ].join("\n"),
+          channel: "WHATSAPP",
+          sent: false,
+          status: "PENDING",
+        },
+      });
+      await db.teacherTask.create({
+        data: {
+          teacherId: booking.teacherId,
+          bookingId: booking.id,
+          type: "ADMIN_ACTION",
+          title: `Informer professeur - annulation ${booking.reference}`,
+          description: `Le client a annulé la réservation. Motif: ${reason || "Non renseigné"}. ${cancellationPolicySummary(policy)}. Vérifier si le professeur doit être prévenu par WhatsApp/SMS/appel.`,
+          priority: policy.feeRate > 0 ? "URGENT" : "IMPORTANT",
+          status: "TODO",
+          dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        },
+      });
+      await db.teacher.update({
+        where: { id: booking.teacherId },
+        data: { lastActivityAt: now },
+      });
+      await db.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Annulation client réservation",
+          entityType: "Booking",
+          entityId: booking.id,
+          detail: `Client a annulé ${booking.reference}. Motif: ${reason || "Non renseigné"}. Frais: ${policy.feeAmount} FCFA. Remboursement: ${wasPaid ? policy.refundAmount : 0} FCFA. Tâche professeur créée pour information.`,
+          oldStatus: booking.status,
+          newStatus: "CANCELLED",
+        },
+      });
+      return NextResponse.json({ booking: publicBookingDetailPayload(updated) });
     }
 
     default:

@@ -4,14 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "next build && node scripts/copy-standalone-assets.mjs",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
-    "db:seed": "bun run prisma/seed.ts"
+    "db:seed": "bun run prisma/seed.ts",
+    "payment:audit": "node scripts/audit-payment-integrity.mjs",
+    "payment:quarantine": "node scripts/quarantine-unverified-payments.mjs --apply",
+    "payment:quarantine:dry": "node scripts/quarantine-unverified-payments.mjs --dry-run"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"
@@ -76,6 +79,8 @@
     "react-syntax-highlighter": "^15.6.1",
     "recharts": "^2.15.4",
     "sharp": "^0.34.3",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",

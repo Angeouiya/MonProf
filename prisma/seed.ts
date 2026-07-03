@@ -1,34 +1,106 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { OPEN_SUBJECT_PRESETS } from "../src/lib/open-subject-catalog";
 
 const prisma = new PrismaClient();
 
 const SUBJECTS = [
+  { name: "Aide aux devoirs", slug: "aide-aux-devoirs", icon: "BookOpen" },
+  { name: "Algèbre", slug: "algebre", icon: "Calculator" },
+  { name: "Allemand", slug: "allemand", icon: "Languages" },
+  { name: "Analyse mathématique", slug: "analyse-mathematique", icon: "Calculator" },
   { name: "Mathématiques", slug: "mathematiques", icon: "Calculator" },
   { name: "Français", slug: "francais", icon: "BookOpen" },
   { name: "Anglais", slug: "anglais", icon: "Languages" },
+  { name: "Anglais professionnel", slug: "anglais-professionnel", icon: "BriefcaseBusiness" },
+  { name: "Arabe", slug: "arabe", icon: "Languages" },
+  { name: "Architecture", slug: "architecture", icon: "DraftingCompass" },
+  { name: "Arts plastiques", slug: "arts-plastiques", icon: "Palette" },
+  { name: "Bases de données", slug: "bases-de-donnees", icon: "Database" },
+  { name: "Bureautique", slug: "bureautique", icon: "Laptop" },
+  { name: "Chant", slug: "chant", icon: "Music" },
+  { name: "Coiffure", slug: "coiffure", icon: "Scissors" },
+  { name: "Communication", slug: "communication", icon: "Megaphone" },
+  { name: "Couture", slug: "couture", icon: "Scissors" },
+  { name: "Cuisine", slug: "cuisine", icon: "CookingPot" },
+  { name: "Culture générale", slug: "culture-generale", icon: "Brain" },
+  { name: "Cybersécurité", slug: "cybersecurite", icon: "ShieldCheck" },
+  { name: "Data analyse", slug: "data-analyse", icon: "BarChart3" },
+  { name: "Développement web", slug: "developpement-web", icon: "Code2" },
+  { name: "Design graphique", slug: "design-graphique", icon: "Palette" },
+  { name: "Dessin technique", slug: "dessin-technique", icon: "DraftingCompass" },
+  { name: "Droit", slug: "droit", icon: "Scale" },
+  { name: "Électronique", slug: "electronique", icon: "Cpu" },
+  { name: "Entrepreneuriat", slug: "entrepreneuriat", icon: "BriefcaseBusiness" },
+  { name: "Espagnol", slug: "espagnol", icon: "Languages" },
   { name: "Physique-Chimie", slug: "physique-chimie", icon: "Atom" },
   { name: "SVT", slug: "svt", icon: "Leaf" },
   { name: "Philosophie", slug: "philosophie", icon: "Brain" },
   { name: "Histoire-Géographie", slug: "histoire-geographie", icon: "Globe" },
   { name: "Informatique", slug: "informatique", icon: "Laptop" },
+  { name: "Intelligence artificielle", slug: "intelligence-artificielle", icon: "Bot" },
+  { name: "Finance", slug: "finance", icon: "Wallet" },
+  { name: "Fiscalité", slug: "fiscalite", icon: "ReceiptText" },
+  { name: "Gestion", slug: "gestion", icon: "BriefcaseBusiness" },
+  { name: "Gestion de projet", slug: "gestion-de-projet", icon: "ClipboardList" },
+  { name: "Guitare", slug: "guitare", icon: "Music" },
   { name: "Comptabilité", slug: "comptabilite", icon: "Coins" },
   { name: "Économie", slug: "economie", icon: "TrendingUp" },
-  { name: "Allemand", slug: "allemand", icon: "Languages" },
-  { name: "Espagnol", slug: "espagnol", icon: "Languages" },
+  { name: "Lecture et écriture", slug: "lecture-ecriture", icon: "BookOpen" },
+  { name: "Logistique", slug: "logistique", icon: "Truck" },
+  { name: "Mandarin", slug: "mandarin", icon: "Languages" },
+  { name: "Marketing digital", slug: "marketing-digital", icon: "Megaphone" },
+  { name: "Mécanique", slug: "mecanique", icon: "Wrench" },
+  { name: "Méthodologie", slug: "methodologie", icon: "ClipboardList" },
+  { name: "Montage vidéo", slug: "montage-video", icon: "Video" },
+  { name: "Photographie", slug: "photographie", icon: "Camera" },
+  { name: "Piano", slug: "piano", icon: "Music" },
+  { name: "Préparation concours", slug: "preparation-concours", icon: "BadgeCheck" },
+  { name: "Probabilités", slug: "probabilites", icon: "Calculator" },
+  { name: "Programmation", slug: "programmation", icon: "Code2" },
+  { name: "Réseaux informatiques", slug: "reseaux-informatiques", icon: "Network" },
+  { name: "Ressources humaines", slug: "ressources-humaines", icon: "Users" },
+  { name: "Statistiques", slug: "statistiques", icon: "BarChart3" },
+  { name: "Tests psychotechniques", slug: "tests-psychotechniques", icon: "Brain" },
+  { name: "TOEIC / TOEFL", slug: "toeic-toefl", icon: "Languages" },
+  { name: "Autre matière / besoin spécifique", slug: "autre-matiere", icon: "PlusCircle" },
+  ...OPEN_SUBJECT_PRESETS,
 ];
 
+const UNIQUE_SUBJECTS = SUBJECTS.filter((subject, index, subjects) => (
+  subjects.findIndex((candidate) => candidate.name === subject.name || candidate.slug === subject.slug) === index
+));
+
 const LEVELS = [
-  { name: "Primaire", slug: "primaire", order: 1 },
-  { name: "Collège", slug: "college", order: 2 },
-  { name: "CEPE", slug: "cepe", order: 3 },
-  { name: "Lycée", slug: "lycee", order: 4 },
-  { name: "BEPC", slug: "bepc", order: 5 },
-  { name: "Terminale", slug: "terminale", order: 6 },
-  { name: "BAC", slug: "bac", order: 7 },
-  { name: "Université", slug: "universite", order: 8 },
-  { name: "Concours", slug: "concours", order: 9 },
-  { name: "Adultes", slug: "adultes", order: 10 },
+  { name: "Maternelle", slug: "maternelle", order: 1 },
+  { name: "CP - CE1", slug: "cp-ce1", order: 2 },
+  { name: "CE2 - CM2", slug: "ce2-cm2", order: 3 },
+  { name: "Primaire", slug: "primaire", order: 4 },
+  { name: "CEPE", slug: "cepe", order: 5 },
+  { name: "Collège", slug: "college", order: 6 },
+  { name: "6e", slug: "6e", order: 7 },
+  { name: "5e", slug: "5e", order: 8 },
+  { name: "4e", slug: "4e", order: 9 },
+  { name: "3e", slug: "3e", order: 10 },
+  { name: "BEPC", slug: "bepc", order: 11 },
+  { name: "Lycée", slug: "lycee", order: 12 },
+  { name: "Seconde", slug: "seconde", order: 13 },
+  { name: "Première", slug: "premiere", order: 14 },
+  { name: "Terminale", slug: "terminale", order: 15 },
+  { name: "BAC", slug: "bac", order: 16 },
+  { name: "BTS", slug: "bts", order: 17 },
+  { name: "Licence", slug: "licence", order: 18 },
+  { name: "Master", slug: "master", order: 19 },
+  { name: "Université", slug: "universite", order: 20 },
+  { name: "Formation professionnelle", slug: "formation-professionnelle", order: 21 },
+  { name: "Adultes", slug: "adultes", order: 22 },
+  { name: "Alphabétisation", slug: "alphabetisation", order: 23 },
+  { name: "Concours", slug: "concours", order: 24 },
+  { name: "Concours administratifs", slug: "concours-administratifs", order: 25 },
+  { name: "Concours grandes écoles", slug: "concours-grandes-ecoles", order: 26 },
+  { name: "Concours santé", slug: "concours-sante", order: 27 },
+  { name: "Concours enseignants", slug: "concours-enseignants", order: 28 },
+  { name: "Tests internationaux", slug: "tests-internationaux", order: 29 },
 ];
 
 const COMMUNES = [
@@ -50,13 +122,13 @@ const COMMUNES = [
 ];
 
 const AVAILABILITY = JSON.stringify({
-  mon: { morning: false, afternoon: true, evening: true },
-  tue: { morning: false, afternoon: true, evening: true },
-  wed: { morning: false, afternoon: true, evening: true },
-  thu: { morning: false, afternoon: true, evening: true },
-  fri: { morning: false, afternoon: true, evening: true },
-  sat: { morning: true, afternoon: true, evening: false },
-  sun: { morning: true, afternoon: true, evening: false },
+  mon: { "08-10": false, "10-12": false, "12-14": true, "14-16": true, "16-18": true, "18-20": true, "20-22": false },
+  tue: { "08-10": false, "10-12": true, "12-14": true, "14-16": false, "16-18": true, "18-20": true, "20-22": false },
+  wed: { "08-10": false, "10-12": false, "12-14": true, "14-16": true, "16-18": true, "18-20": false, "20-22": false },
+  thu: { "08-10": false, "10-12": true, "12-14": false, "14-16": true, "16-18": true, "18-20": true, "20-22": false },
+  fri: { "08-10": false, "10-12": false, "12-14": true, "14-16": true, "16-18": true, "18-20": true, "20-22": false },
+  sat: { "08-10": true, "10-12": true, "12-14": true, "14-16": true, "16-18": false, "18-20": false, "20-22": false },
+  sun: { "08-10": true, "10-12": true, "12-14": true, "14-16": false, "16-18": false, "18-20": false, "20-22": false },
 });
 
 const TEACHERS = [
@@ -64,6 +136,7 @@ const TEACHERS = [
   {
     fullName: "Kouamé Jean",
     professionalName: "M. Kouamé",
+    photoUrl: "/images/teachers/kouame-jean.webp",
     jobTitle: "Professeur de Mathématiques",
     bio: "Professeur de mathématiques certifié, 12 ans d'expérience dans l'enseignement secondaire et supérieur. Spécialiste de la préparation au BAC séries C et D. Méthode pédagogique interactive orientée pratique et exercices types du programme ivoirien.",
     phone: "+225 07 01 02 03 04",
@@ -73,8 +146,16 @@ const TEACHERS = [
     experienceYears: 12,
     diploma: "Master Mathématiques - Université Félix Houphouët-Boigny",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "Mathématiques", primary: true }, { name: "Physique-Chimie", primary: false }],
-    levels: ["Lycée", "Terminale", "BAC", "Université", "Concours"],
+    subjects: [
+      { name: "Mathématiques", primary: true },
+      { name: "Physique-Chimie", primary: false },
+      { name: "Algèbre", primary: false },
+      { name: "Analyse mathématique", primary: false },
+      { name: "Statistiques", primary: false },
+      { name: "Probabilités", primary: false },
+      { name: "Préparation concours", primary: false },
+    ],
+    levels: ["Lycée", "Seconde", "Première", "Terminale", "BAC", "BTS", "Licence", "Université", "Concours", "Concours grandes écoles"],
     zones: ["Cocody", "Riviera", "Deux Plateaux", "Angré"],
     pricePerHour: 15000,
     pricePerSession: 15000,
@@ -91,6 +172,7 @@ const TEACHERS = [
   {
     fullName: "Traoré Aïcha",
     professionalName: "Mme Traoré",
+    photoUrl: "/images/teachers/traore-aicha.webp",
     jobTitle: "Professeure de Français",
     bio: "Agrégée de lettres modernes, j'accompagne les élèves du collège au lycée en français, expression écrite et orale. Spécialiste de la préparation au BEPC et au BAC série A. Pédagogie bienveillante et structurée.",
     phone: "+225 05 11 22 33 44",
@@ -100,8 +182,15 @@ const TEACHERS = [
     experienceYears: 8,
     diploma: "Agrégation Lettres Modernes",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "Français", primary: true }, { name: "Philosophie", primary: false }],
-    levels: ["Collège", "Lycée", "BEPC", "BAC"],
+    subjects: [
+      { name: "Français", primary: true },
+      { name: "Philosophie", primary: false },
+      { name: "Méthodologie", primary: false },
+      { name: "Communication", primary: false },
+      { name: "Lecture et écriture", primary: false },
+      { name: "Culture générale", primary: false },
+    ],
+    levels: ["Collège", "3e", "Lycée", "Première", "Terminale", "BEPC", "BAC", "Adultes", "Concours administratifs"],
     zones: ["Yopougon", "Abobo", "Marcory"],
     pricePerHour: 10000,
     pricePerSession: 10000,
@@ -117,6 +206,7 @@ const TEACHERS = [
   {
     fullName: "Koné Ibrahim",
     professionalName: "M. Koné",
+    photoUrl: "/images/teachers/kone-ibrahim.webp",
     jobTitle: "Professeur de Physique-Chimie",
     bio: "Docteur en chimie, j'enseigne la physique-chimie du lycée à l'université. Préparation BAC séries C, D, E et concours d'entrée en école d'ingénieur. Approche méthodique avec focus sur les exercices type et la compréhension des concepts.",
     phone: "+225 01 23 45 67 89",
@@ -126,8 +216,14 @@ const TEACHERS = [
     experienceYears: 10,
     diploma: "Doctorat Chimie - Université Nangui Abrogoua",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "Physique-Chimie", primary: true }, { name: "Mathématiques", primary: false }],
-    levels: ["Lycée", "Terminale", "BAC", "Université", "Concours"],
+    subjects: [
+      { name: "Physique-Chimie", primary: true },
+      { name: "Mathématiques", primary: false },
+      { name: "Électronique", primary: false },
+      { name: "Mécanique", primary: false },
+      { name: "Préparation concours", primary: false },
+    ],
+    levels: ["Lycée", "Première", "Terminale", "BAC", "BTS", "Licence", "Université", "Concours", "Concours grandes écoles"],
     zones: ["Angré", "Cocody", "Riviera"],
     pricePerHour: 15000,
     pricePerSession: 15000,
@@ -142,6 +238,7 @@ const TEACHERS = [
   {
     fullName: "Diabaté Sarah",
     professionalName: "Mme Diabaté",
+    photoUrl: "/images/teachers/diabate-sarah.webp",
     jobTitle: "Professeure d'Anglais",
     bio: "Bilingue anglais-français, j'enseigne l'anglais du primaire à l'université. Spécialiste de l'anglais scolaire, de la conversation et de la préparation aux examens. Cours à domicile et en ligne, pédagogie ludique pour les plus jeunes.",
     phone: "+225 07 88 99 00 11",
@@ -151,8 +248,13 @@ const TEACHERS = [
     experienceYears: 6,
     diploma: "Master Anglais - Université Alassane Ouattara",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "Anglais", primary: true }],
-    levels: ["Primaire", "Collège", "CEPE", "BEPC", "Lycée"],
+    subjects: [
+      { name: "Anglais", primary: true },
+      { name: "Anglais professionnel", primary: false },
+      { name: "TOEIC / TOEFL", primary: false },
+      { name: "Communication", primary: false },
+    ],
+    levels: ["Primaire", "Collège", "CEPE", "BEPC", "Lycée", "Université", "Adultes", "Tests internationaux"],
     zones: ["Marcory", "Koumassi", "Treichville", "Plateau"],
     pricePerHour: 10000,
     pricePerSession: 10000,
@@ -168,6 +270,7 @@ const TEACHERS = [
   {
     fullName: "N'Guessan Paul",
     professionalName: "M. N'Guessan",
+    photoUrl: "/images/teachers/nguessan-paul.webp",
     jobTitle: "Professeur d'Informatique",
     bio: "Ingénieur informatique senior, j'enseigne la programmation (Python, JavaScript, Java), la bureautique, les bases de données et prépare aux concours d'écoles informatiques. J'accompagne aussi les adultes en reconversion professionnelle.",
     phone: "+225 05 66 77 88 99",
@@ -177,8 +280,19 @@ const TEACHERS = [
     experienceYears: 9,
     diploma: "Diplôme d'Ingénieur Informatique - INPHB Yamoussoukro",
     profileType: "PROFESSIONNEL",
-    subjects: [{ name: "Informatique", primary: true }, { name: "Mathématiques", primary: false }],
-    levels: ["Lycée", "Université", "Adultes", "Concours"],
+    subjects: [
+      { name: "Informatique", primary: true },
+      { name: "Programmation", primary: false },
+      { name: "Développement web", primary: false },
+      { name: "Bureautique", primary: false },
+      { name: "Bases de données", primary: false },
+      { name: "Data analyse", primary: false },
+      { name: "Intelligence artificielle", primary: false },
+      { name: "Cybersécurité", primary: false },
+      { name: "Réseaux informatiques", primary: false },
+      { name: "Mathématiques", primary: false },
+    ],
+    levels: ["Lycée", "BTS", "Licence", "Master", "Université", "Formation professionnelle", "Adultes", "Concours"],
     zones: ["Cocody", "Deux Plateaux", "Riviera", "Plateau"],
     pricePerHour: 20000,
     pricePerSession: 20000,
@@ -194,20 +308,25 @@ const TEACHERS = [
   },
   // === Professeurs supplémentaires pour enrichir la démonstration ===
   {
-    fullName: "Affoué Christelle",
-    professionalName: "Mme Christelle",
+    fullName: "Bamba Mariam",
+    professionalName: "Mme Bamba",
+    photoUrl: "/images/teachers/bamba-mariam.webp",
     jobTitle: "Professeure de SVT",
     bio: "Professeure de SVT, je prépare les élèves aux épreuves de SVT du BEPC et du BAC séries D et C. Approche pédagogique basée sur la compréhension et la mémorisation active avec schémas et fiches.",
     phone: "+225 01 44 55 66 77",
-    email: "affoue.christelle@monprof.ci",
-    commune: "Abobo",
-    quartier: "Avocatier",
+    email: "bamba.mariam@monprof.ci",
+    commune: "Bingerville",
+    quartier: "Centre",
     experienceYears: 7,
     diploma: "Master Biologie Végétale - Université Nangui Abrogoua",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "SVT", primary: true }],
-    levels: ["Collège", "Lycée", "BEPC", "BAC"],
-    zones: ["Abobo", "Yopougon", "Cocody"],
+    subjects: [
+      { name: "SVT", primary: true },
+      { name: "Méthodologie", primary: false },
+      { name: "Préparation concours", primary: false },
+    ],
+    levels: ["Collège", "3e", "Lycée", "Première", "Terminale", "BEPC", "BAC", "Concours santé"],
+    zones: ["Bingerville", "Cocody", "Angré"],
     pricePerHour: 10000,
     pricePerSession: 10000,
     pricePack4: 38000,
@@ -218,20 +337,28 @@ const TEACHERS = [
     pricingTier: "STANDARD",
   },
   {
-    fullName: "Brou Éric",
-    professionalName: "M. Brou",
-    jobTitle: "Professeur d'Économie et Comptabilité",
-    bio: "Expert-comptable et enseignant, j'accompagne les étudiants en économie, comptabilité et gestion. Préparation BAC série D2 et concours d'écoles de commerce.",
+    fullName: "Yao Stéphane",
+    professionalName: "M. Yao",
+    photoUrl: "/images/teachers/yao-stephane.webp",
+    jobTitle: "Professeur de Philosophie",
+    bio: "Professeur de philosophie, j'aide les élèves de Terminale à structurer dissertation, commentaire de texte et culture générale. Travail méthodique sur les sujets du BAC ivoirien et la prise de parole.",
     phone: "+225 07 22 33 44 55",
-    email: "brou.eric@monprof.ci",
-    commune: "Plateau",
-    quartier: "Centre des affaires",
+    email: "yao.stephane@monprof.ci",
+    commune: "Abobo",
+    quartier: "Avocatier",
     experienceYears: 11,
-    diploma: "DEC - Diplôme d'Expert-Comptable",
-    profileType: "PROFESSIONNEL",
-    subjects: [{ name: "Comptabilité", primary: true }, { name: "Économie", primary: false }],
-    levels: ["Lycée", "Terminale", "BAC", "Université", "Concours", "Adultes"],
-    zones: ["Plateau", "Cocody", "Marcory"],
+    diploma: "Master Philosophie - Université Félix Houphouët-Boigny",
+    profileType: "ENSEIGNANT",
+    subjects: [
+      { name: "Philosophie", primary: true },
+      { name: "Français", primary: false },
+      { name: "Culture générale", primary: false },
+      { name: "Méthodologie", primary: false },
+      { name: "Préparation concours", primary: false },
+      { name: "Tests psychotechniques", primary: false },
+    ],
+    levels: ["Lycée", "Terminale", "BAC", "Université", "Concours", "Concours administratifs"],
+    zones: ["Abobo", "Yopougon", "Cocody"],
     pricePerHour: 15000,
     pricePerSession: 15000,
     pricePack4: 57000,
@@ -245,6 +372,7 @@ const TEACHERS = [
   {
     fullName: "Yéo Fatim",
     professionalName: "Mme Yéo",
+    photoUrl: "/images/teachers/yeo-fatim.webp",
     jobTitle: "Professeure de Primaire",
     bio: "Institutrice diplômée, j'accompagne les enfants du CP au CM2 en français, mathématiques et éveil. Préparation au CEPE. Pédagogie bienveillante et patiente, idéale pour les jeunes élèves.",
     phone: "+225 05 99 88 77 66",
@@ -254,8 +382,13 @@ const TEACHERS = [
     experienceYears: 4,
     diploma: "Diplôme d'Instituteur - ENS Abidjan",
     profileType: "ENSEIGNANT",
-    subjects: [{ name: "Mathématiques", primary: true }, { name: "Français", primary: false }],
-    levels: ["Primaire", "CEPE"],
+    subjects: [
+      { name: "Aide aux devoirs", primary: true },
+      { name: "Mathématiques", primary: false },
+      { name: "Français", primary: false },
+      { name: "Lecture et écriture", primary: false },
+    ],
+    levels: ["Maternelle", "CP - CE1", "CE2 - CM2", "Primaire", "CEPE"],
     zones: ["Bingerville", "Cocody", "Angré"],
     pricePerHour: 7500,
     pricePerSession: 7500,
@@ -272,6 +405,8 @@ const TEACHERS = [
 
 async function main() {
   console.log("🧹 Nettoyage...");
+  await prisma.teacherPayoutAllocation.deleteMany();
+  await prisma.teacherPayoutRecord.deleteMany();
   await prisma.teacherNotification.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.dispute.deleteMany();
@@ -291,7 +426,7 @@ async function main() {
 
   console.log("📚 Création des matières...");
   const subjectMap = new Map();
-  for (const s of SUBJECTS) {
+  for (const s of UNIQUE_SUBJECTS) {
     const created = await prisma.subject.create({ data: s });
     subjectMap.set(s.name, created);
   }
@@ -476,6 +611,7 @@ async function main() {
       commissionRate: 20,
       commissionAmount: 7600,
       teacherNetAmount: 30400,
+      teacherPaidAmount: 30400,
       status: "TEACHER_PAID",
       paymentStatus: "TEACHER_PAID",
       paymentMethod: "WAVE",
@@ -498,6 +634,21 @@ async function main() {
       status: "TEACHER_PAID",
       method: "WAVE",
       paidAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+    },
+  });
+  await prisma.teacherPayoutRecord.create({
+    data: {
+      reference: "PAY-PROF-4981",
+      teacherId: t2.id,
+      amount: 30400,
+      method: "WAVE",
+      note: "Versement complet démonstration - réservation MP-1015",
+      status: "PAID",
+      paidAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      createdById: admin.id,
+      allocations: {
+        create: [{ bookingId: b2.id, amount: 30400 }],
+      },
     },
   });
   await prisma.transaction.create({
@@ -564,6 +715,132 @@ async function main() {
     },
   });
 
+  // Booking 4 - cours validé par le client, paiement prêt à libérer au professeur
+  const b4 = await prisma.booking.create({
+    data: {
+      reference: "MP-1042",
+      clientId: client3.id,
+      teacherId: t1.id,
+      subjectName: "Mathématiques",
+      levelName: "Première",
+      objective: "Remise à niveau fonctions et suites",
+      courseFormat: "HOME",
+      groupType: "INDIVIDUAL",
+      commune: "Cocody",
+      quartier: "Deux Plateaux",
+      addressHint: "Non loin du commissariat du 12e arrondissement",
+      preferredDays: JSON.stringify(["mercredi"]),
+      preferredTime: "17h-19h",
+      scheduledDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      scheduledTime: "17:00",
+      sessionsCount: 1,
+      packType: "SINGLE",
+      unitPrice: 15000,
+      totalPrice: 15000,
+      commissionRate: 20,
+      commissionAmount: 3000,
+      teacherNetAmount: 12000,
+      teacherPaidAmount: 0,
+      status: "PAYMENT_TO_RELEASE",
+      paymentStatus: "TO_PAY_TEACHER",
+      paymentMethod: "WAVE",
+      confirmedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      assignedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      courseDoneAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      clientValidatedAt: new Date(Date.now() - 18 * 60 * 60 * 1000),
+    },
+  });
+  await prisma.transaction.create({
+    data: {
+      reference: "TX-5020",
+      bookingId: b4.id,
+      teacherId: t1.id,
+      amount: 15000,
+      commission: 3000,
+      teacherNet: 12000,
+      type: "CLIENT_PAYMENT",
+      status: "TO_PAY_TEACHER",
+      method: "WAVE",
+    },
+  });
+
+  // Booking 5 - paiement professeur partiel, reste dû visible dans l'admin
+  const b5 = await prisma.booking.create({
+    data: {
+      reference: "MP-1048",
+      clientId: client4.id,
+      teacherId: t3.id,
+      subjectName: "Anglais",
+      levelName: "Adultes",
+      objective: "Conversation professionnelle et préparation entretien",
+      courseFormat: "ONLINE",
+      groupType: "SMALL_GROUP",
+      participantsCount: 2,
+      onlineLink: "https://meet.google.com/monprof-demo",
+      preferredDays: JSON.stringify(["lundi", "mercredi"]),
+      preferredTime: "19h-21h",
+      scheduledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      scheduledTime: "19:00",
+      sessionsCount: 4,
+      packType: "PACK_4",
+      unitPrice: 12500,
+      totalPrice: 50000,
+      commissionRate: 20,
+      commissionAmount: 10000,
+      teacherNetAmount: 40000,
+      teacherPaidAmount: 20000,
+      status: "PAYMENT_TO_RELEASE",
+      paymentStatus: "TO_PAY_TEACHER",
+      paymentMethod: "MOOV_MONEY",
+      confirmedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      assignedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      courseDoneAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      clientValidatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+  });
+  await prisma.transaction.create({
+    data: {
+      reference: "TX-5030",
+      bookingId: b5.id,
+      teacherId: t3.id,
+      amount: 50000,
+      commission: 10000,
+      teacherNet: 40000,
+      type: "CLIENT_PAYMENT",
+      status: "TO_PAY_TEACHER",
+      method: "MOOV_MONEY",
+    },
+  });
+  await prisma.transaction.create({
+    data: {
+      reference: "TX-PROF-5031",
+      bookingId: b5.id,
+      teacherId: t3.id,
+      amount: 20000,
+      commission: 0,
+      teacherNet: 20000,
+      type: "TEACHER_PAYOUT",
+      status: "TO_PAY_TEACHER",
+      method: "MOOV_MONEY",
+      paidAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+  });
+  await prisma.teacherPayoutRecord.create({
+    data: {
+      reference: "PAY-PROF-5031",
+      teacherId: t3.id,
+      amount: 20000,
+      method: "MOOV_MONEY",
+      note: "Acompte professeur démonstration - reste dû conservé en comptabilité interne",
+      status: "PAID",
+      paidAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      createdById: admin.id,
+      allocations: {
+        create: [{ bookingId: b5.id, amount: 20000 }],
+      },
+    },
+  });
+
   console.log("🔔 Création des notifications admin...");
   await prisma.notification.create({
     data: {
@@ -587,7 +864,7 @@ async function main() {
     data: {
       userId: null,
       title: "Paiement à libérer",
-      message: "1 paiement est prêt à être libéré au professeur (12 000 FCFA net).",
+      message: "2 réservations ont un reste dû professeur à libérer (32 000 FCFA net restant).",
       type: "PAYMENT_TO_RELEASE",
       link: "/admin/paiements-a-liberer",
       read: true,

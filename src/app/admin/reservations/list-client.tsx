@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, X } from "lucide-react";
+import { CLIENT_TYPES, COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 
 const STATUSES = [
   { v: "PENDING_PAYMENT", l: "En attente paiement" },
@@ -36,13 +37,24 @@ const PAYMENTS = [
   { v: "TEACHER_PAID", l: "Prof payé" },
   { v: "DISPUTED", l: "Litige" },
   { v: "REFUNDED", l: "Remboursé" },
+  { v: "PARTIALLY_REFUNDED", l: "Remboursé partiel" },
+  { v: "RETAINED", l: "Frais retenus" },
 ];
 
 export function ReservationsListClient({
   filters,
   teachers,
 }: {
-  filters: { q: string; status: string; payment: string; teacherId: string; clientId: string };
+  filters: {
+    q: string;
+    status: string;
+    payment: string;
+    teacherId: string;
+    clientId: string;
+    clientType: string;
+    courseCategory: string;
+    schoolSystem: string;
+  };
   teachers: { id: string; name: string }[];
 }) {
   const router = useRouter();
@@ -62,10 +74,10 @@ export function ReservationsListClient({
   const reset = () => router.push("/admin/reservations");
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
       <CardContent className="p-4">
-        <form onSubmit={applyQ} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-1">
+        <form onSubmit={applyQ} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="sm:col-span-2 lg:col-span-2 xl:col-span-2">
             <Label className="sr-only" htmlFor="q">Recherche</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -93,9 +105,30 @@ export function ReservationsListClient({
               {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={filters.clientType || "all"} onValueChange={(v) => apply({ clientType: v === "all" ? "" : v })}>
+            <SelectTrigger><SelectValue placeholder="Type client" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous clients</SelectItem>
+              {CLIENT_TYPES.map((clientType) => <SelectItem key={clientType} value={clientType}>{clientType}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filters.courseCategory || "all"} onValueChange={(v) => apply({ courseCategory: v === "all" ? "" : v })}>
+            <SelectTrigger><SelectValue placeholder="Catégorie" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes catégories</SelectItem>
+              {COURSE_CATEGORIES.map((category) => <SelectItem key={category.code} value={category.code}>{category.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filters.schoolSystem || "all"} onValueChange={(v) => apply({ schoolSystem: v === "all" ? "" : v })}>
+            <SelectTrigger><SelectValue placeholder="Système" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous systèmes</SelectItem>
+              {SCHOOL_SYSTEMS.map((system) => <SelectItem key={system.value} value={system.value}>{system.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">Filtrer</Button>
-            <Button type="button" variant="ghost" size="icon" onClick={reset}><X className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" onClick={reset} title="Réinitialiser"><X className="h-4 w-4" /></Button>
           </div>
         </form>
       </CardContent>

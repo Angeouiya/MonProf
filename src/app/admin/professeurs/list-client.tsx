@@ -9,14 +9,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, X } from "lucide-react";
+import { ImageIcon, Search, X } from "lucide-react";
 
 export function ProfesseursListClient({
   filters,
   subjects,
   communes,
 }: {
-  filters: { q: string; status: string; subject: string; commune: string; badge: string };
+  filters: { q: string; status: string; subject: string; commune: string; badge: string; photo: string };
   subjects: { id: string; name: string; slug: string }[];
   communes: { id: string; name: string }[];
 }) {
@@ -41,12 +41,15 @@ export function ProfesseursListClient({
 
   const reset = () => router.push("/admin/professeurs");
 
-  const hasFilters = useMemo(() => filters.q || filters.status || filters.subject || filters.commune || filters.badge, [filters]);
+  const hasFilters = useMemo(
+    () => filters.q || filters.status || filters.subject || filters.commune || filters.badge || filters.photo,
+    [filters],
+  );
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
       <CardContent className="p-4">
-        <form onSubmit={applyQ} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <form onSubmit={applyQ} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
           <div className="lg:col-span-2">
             <Label htmlFor="q" className="sr-only">Recherche</Label>
             <div className="relative">
@@ -69,6 +72,12 @@ export function ProfesseursListClient({
               <SelectItem value="INACTIVE">Inactif</SelectItem>
               <SelectItem value="SUSPENDED">Suspendu</SelectItem>
               <SelectItem value="PENDING">En attente</SelectItem>
+              <SelectItem value="TEMPORARILY_SUSPENDED">Suspendu temporairement</SelectItem>
+              <SelectItem value="PERMANENTLY_SUSPENDED">Suspendu définitivement</SelectItem>
+              <SelectItem value="OBSERVATION">En observation</SelectItem>
+              <SelectItem value="REPLACEABLE">Remplaçable</SelectItem>
+              <SelectItem value="PRIORITY">Prioritaire</SelectItem>
+              <SelectItem value="BLACKLISTED">Blacklisté</SelectItem>
             </SelectContent>
           </Select>
 
@@ -104,11 +113,23 @@ export function ProfesseursListClient({
               <SelectItem value="featured">Mis en avant</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={filters.photo || "all"} onValueChange={(v) => apply({ photo: v === "all" ? "" : v })}>
+            <SelectTrigger>
+              <ImageIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Photo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes photos</SelectItem>
+              <SelectItem value="with-photo">Avec vraie photo</SelectItem>
+              <SelectItem value="missing">Sans photo exploitable</SelectItem>
+            </SelectContent>
+          </Select>
         </form>
 
         {hasFilters && (
           <div className="mt-3 flex items-center justify-end">
-            <Button type="button" variant="ghost" size="sm" onClick={reset}>
+            <Button type="button" variant="outline" size="sm" onClick={reset}>
               <X className="mr-1.5 h-4 w-4" /> Réinitialiser
             </Button>
           </div>

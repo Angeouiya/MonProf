@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -7,6 +7,12 @@ import { Providers } from "@/components/providers";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -25,6 +31,10 @@ export const metadata: Metadata = {
     "MonProf CI",
   ],
   authors: [{ name: "MonProf CI" }],
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+  },
   openGraph: {
     title: "MonProf CI — Professeurs vérifiés en Côte d'Ivoire",
     description:
@@ -41,9 +51,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" className={`${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body
-        className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
+        className="font-sans antialiased bg-background text-foreground"
       >
         <Providers>
           {children}

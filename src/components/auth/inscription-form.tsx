@@ -11,10 +11,14 @@ import {
   Lock,
   Mail,
   MapPin,
+  MessageSquareText,
   Phone,
   User,
   GraduationCap,
   CheckCircle2,
+  ShieldCheck,
+  CalendarCheck,
+  WalletCards,
 } from "lucide-react";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
@@ -31,6 +35,34 @@ import {
 } from "@/components/ui/select";
 
 type Commune = { id: string; name: string };
+
+const ACCOUNT_BENEFITS = [
+  {
+    icon: CalendarCheck,
+    title: "Réservation suivie",
+    text: "Date, professeur, matière et statut restent centralisés dans votre espace.",
+  },
+  {
+    icon: WalletCards,
+    title: "Paiement protégé",
+    text: "Le montant payé reste relié à la réservation et consultable à tout moment.",
+  },
+  {
+    icon: MessageSquareText,
+    title: "Support traçable",
+    text: "Notifications, confirmations, avis et litiges gardent un historique clair.",
+  },
+];
+
+const TRUST_POINTS = [
+  "Professeurs vérifiés par l'administration",
+  "Paiement bloqué jusqu'à confirmation",
+  "Historique complet des cours et avis",
+];
+
+const FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 text-sm shadow-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-2xl border-[#E3E8F2] bg-white shadow-sm focus:border-[#111B4D] focus:ring-[#111B4D]";
 
 export function InscriptionForm({ communes }: { communes: Commune[] }) {
   const router = useRouter();
@@ -98,7 +130,6 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
         throw new Error(data?.error || "Inscription impossible");
       }
 
-      // Auto-login
       const signed = await signIn("credentials", {
         email: form.email.toLowerCase().trim(),
         password: form.password,
@@ -122,23 +153,69 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
   return (
     <PublicLayout>
-      <section className="bg-background">
-        <div className="mx-auto flex max-w-xl flex-col px-4 py-12 sm:px-6 lg:py-16">
-          <div className="mb-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <GraduationCap className="h-6 w-6" />
-            </div>
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Créer un compte
+      <section className="bg-white">
+        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(320px,430px)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-14">
+          <aside className="overflow-hidden rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6 lg:sticky lg:top-24">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#111B4D] bg-white px-3 py-1 text-xs font-black text-[#111B4D]">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Nouveau compte client
+            </span>
+            <h1 className="mt-5 text-3xl font-black tracking-tight text-[#111827] text-balance sm:text-4xl">
+              Créez votre espace et réservez sans perdre le fil.
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Réservez vos professeurs en quelques clics. C'est gratuit.
+            <p className="mt-3 text-sm font-medium leading-7 text-[#475569]">
+              Votre compte client garde vos réservations, confirmations, paiements et avis dans un espace simple, lisible et sécurisé.
             </p>
-          </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              <Signal value="2h" label="par séance" />
+              <Signal value="CI" label="local" />
+              <Signal value="24/7" label="suivi" />
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {TRUST_POINTS.map((item) => (
+                <div key={item} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111B4D] text-white">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">{item}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-[#E3E8F2] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Après création</p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-[#111827]">
+                Vous arrivez directement dans votre dashboard client pour retrouver vos réservations, cours, paiements et notifications.
+              </p>
+            </div>
+          </aside>
+
+          <div className="w-full">
+            <div className="mb-5 rounded-[1.6rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#111B4D] px-3 py-1 text-xs font-black text-white">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    Inscription gratuite
+                  </div>
+                  <h2 className="mt-3 text-2xl font-black tracking-tight text-[#111827] sm:text-3xl">
+                    Créer un compte client
+                  </h2>
+                  <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
+                    Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
+                  </p>
+                </div>
+                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-black text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white">
+                  Déjà inscrit
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B] shadow-sm">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -146,29 +223,29 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">
+                <Label htmlFor="name" className="font-bold text-[#111827]">
                   Nom complet <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="name"
                     required
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
                     placeholder="Ex. Kouassi Aya"
-                    className="pl-9"
+                    className={FIELD_CLASS}
                   />
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">
+                  <Label htmlFor="email" className="font-bold text-[#111827]">
                     Email <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
                       id="email"
                       type="email"
@@ -177,21 +254,21 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
                       placeholder="vous@exemple.ci"
-                      className="pl-9"
+                      className={FIELD_CLASS}
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone">Téléphone</Label>
+                  <Label htmlFor="phone" className="font-bold text-[#111827]">Téléphone</Label>
                   <div className="relative">
-                    <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
                       id="phone"
                       type="tel"
                       value={form.phone}
                       onChange={(e) => update("phone", e.target.value)}
                       placeholder="+225 07 00 00 00 00"
-                      className="pl-9"
+                      className={FIELD_CLASS}
                     />
                   </div>
                 </div>
@@ -199,9 +276,9 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="commune">Commune</Label>
+                  <Label htmlFor="commune" className="font-bold text-[#111827]">Commune</Label>
                   <Select value={commune} onValueChange={setCommune}>
-                    <SelectTrigger id="commune" className="w-full">
+                    <SelectTrigger id="commune" className={SELECT_CLASS}>
                       <SelectValue placeholder="Choisir une commune" />
                     </SelectTrigger>
                     <SelectContent>
@@ -214,26 +291,26 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="quartier">Quartier</Label>
+                  <Label htmlFor="quartier" className="font-bold text-[#111827]">Quartier</Label>
                   <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
                       id="quartier"
                       value={form.quartier}
                       onChange={(e) => update("quartier", e.target.value)}
                       placeholder="Ex. Riviera Palmeraie"
-                      className="pl-9"
+                      className={FIELD_CLASS}
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">
+                <Label htmlFor="password" className="font-bold text-[#111827]">
                   Mot de passe <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="password"
                     type={showPwd ? "text" : "password"}
@@ -242,12 +319,12 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     value={form.password}
                     onChange={(e) => update("password", e.target.value)}
                     placeholder="Minimum 6 caractères"
-                    className="pl-9 pr-9"
+                    className={PASSWORD_FIELD_CLASS}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -256,11 +333,11 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">
+                <Label htmlFor="confirmPassword" className="font-bold text-[#111827]">
                   Confirmer le mot de passe <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="confirmPassword"
                     type={showPwdConfirm ? "text" : "password"}
@@ -269,12 +346,12 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     value={form.confirmPassword}
                     onChange={(e) => update("confirmPassword", e.target.value)}
                     placeholder="Ressaisissez votre mot de passe"
-                    className="pl-9 pr-9"
+                    className={PASSWORD_FIELD_CLASS}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwdConfirm((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -285,12 +362,12 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full"
+                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white shadow-sm hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#64748B]" />
                     Création du compte...
                   </>
                 ) : (
@@ -301,34 +378,53 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                 )}
               </Button>
 
-              <ul className="space-y-1.5 rounded-lg bg-muted/40 px-3.5 py-3 text-xs text-muted-foreground">
-                <li className="flex items-start gap-1.5">
-                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  Réservez des professeurs vérifiés à domicile ou en ligne.
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  Paiement sécurisé — fonds bloqués jusqu'à la fin du cours.
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                  Suivi de vos réservations et historique en temps réel.
-                </li>
+              <div className="grid gap-2 md:grid-cols-3">
+                {ACCOUNT_BENEFITS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.title} className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111B4D] text-white">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <p className="mt-2 text-sm font-black text-[#111827]">{item.title}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{item.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <ul className="space-y-1.5 rounded-2xl border border-[#E3E8F2] bg-white px-3.5 py-3 text-xs font-semibold text-[#111B4D]">
+                {TRUST_POINTS.map((point) => (
+                  <li key={point} className="flex items-start gap-1.5">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
+                    {point}
+                  </li>
+                ))}
               </ul>
             </form>
 
-            <p className="mt-5 text-center text-sm text-muted-foreground">
-              Vous avez déjà un compte ?{" "}
+            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground min-[420px]:flex-row">
+              <span>Vous avez déjà un compte ?</span>
               <Link
                 href="/connexion"
-                className="font-medium text-primary hover:underline"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 font-black text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
               >
                 Connectez-vous
               </Link>
             </p>
+            </div>
           </div>
         </div>
       </section>
     </PublicLayout>
+  );
+}
+
+function Signal({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 text-center">
+      <p className="text-lg font-black leading-none text-[#111B4D]">{value}</p>
+      <p className="mt-1 text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+    </div>
   );
 }

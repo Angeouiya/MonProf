@@ -26,9 +26,9 @@ export function ClientsListClient({ q }: { q: string }) {
   };
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
       <CardContent className="p-4">
-        <form onSubmit={apply} className="flex gap-2">
+        <form onSubmit={apply} className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -39,7 +39,7 @@ export function ClientsListClient({ q }: { q: string }) {
             />
           </div>
           <Button type="submit">Rechercher</Button>
-          {q && <Button type="button" variant="ghost" onClick={reset}><X className="mr-1 h-4 w-4" /></Button>}
+          {q && <Button type="button" variant="outline" onClick={reset}><X className="mr-1 h-4 w-4" /> Reset</Button>}
         </form>
       </CardContent>
     </Card>

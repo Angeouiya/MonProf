@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import {
   ArrowLeft,
   Award,
@@ -14,36 +13,20 @@ import {
   Luggage,
   MapPin,
   ShieldCheck,
-  Sparkles,
-  Star,
-  TrendingUp,
   Video,
   Wallet,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { Money } from "@/components/shared/money";
+import { ProfessorImage } from "@/components/shared/professor-image";
+import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { db } from "@/lib/db";
-import { formatFCFA, formatDate, avatarFromName } from "@/lib/format";
+import { formatFCFA, formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 
 export const dynamic = "force-dynamic";
-
-const DAYS = [
-  { key: "mon", label: "Lundi" },
-  { key: "tue", label: "Mardi" },
-  { key: "wed", label: "Mercredi" },
-  { key: "thu", label: "Jeudi" },
-  { key: "fri", label: "Vendredi" },
-  { key: "sat", label: "Samedi" },
-  { key: "sun", label: "Dimanche" },
-];
-
-const SLOTS = [
-  { key: "morning", label: "Matin", time: "08h – 12h" },
-  { key: "afternoon", label: "Après-midi", time: "12h – 17h" },
-  { key: "evening", label: "Soir", time: "17h – 21h" },
-];
 
 export default async function TeacherDetailPage({
   params,
@@ -53,8 +36,8 @@ export default async function TeacherDetailPage({
   const { id } = await params;
   const session = await getServerSession(authOptions);
 
-  const teacher = await db.teacher.findUnique({
-    where: { id },
+  const teacher = await db.teacher.findFirst({
+    where: { id, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true }, orderBy: { level: { order: "asc" } } },
@@ -69,7 +52,7 @@ export default async function TeacherDetailPage({
     },
   });
 
-  if (!teacher || teacher.status !== "ACTIVE") {
+  if (!teacher) {
     notFound();
   }
 
@@ -79,22 +62,27 @@ export default async function TeacherDetailPage({
     teacher.subjects[0]?.subject.name ??
     "—";
 
-  // Parse availability
-  let availability: Record<string, Record<string, boolean>> | null = null;
-  if (teacher.availability) {
-    try {
-      availability = JSON.parse(teacher.availability);
-    } catch {
-      availability = null;
-    }
-  }
+  const availability = parseAvailability(teacher.availability);
 
-  // Compute rating distribution
-  const ratingBuckets = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    count: teacher.reviews.filter((r) => r.rating === star).length,
+  // Compute numeric review distribution.
+  const ratingBuckets = [5, 4, 3, 2, 1].map((rating) => ({
+    rating,
+    count: teacher.reviews.filter((r) => r.rating === rating).length,
   }));
   const totalReviews = teacher.reviews.length || teacher.ratingCount;
+  const availableSlotCount = WEEK_DAYS.reduce(
+    (total, day) => total + TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]).length,
+    0,
+  );
+  const availableDayCount = WEEK_DAYS.filter((day) =>
+    TWO_HOUR_SLOTS.some((slot) => availability?.[day.key]?.[slot.key]),
+  ).length;
+  const availabilitySummary = availableSlotCount > 0
+    ? `${availableDayCount} jour${availableDayCount > 1 ? "s" : ""} · ${availableSlotCount} créneau${availableSlotCount > 1 ? "x" : ""} de 2h`
+    : "Disponibilités à confirmer";
+  const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
+  const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
+  const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
 
   const reserveHref = session?.user
     ? `/client/reserver?teacherId=${teacher.id}`
@@ -103,12 +91,12 @@ export default async function TeacherDetailPage({
   return (
     <PublicLayout>
       {/* Breadcrumb */}
-      <div className="border-b border-border bg-white">
+      <div className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">Accueil</Link>
+          <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <Link href="/" className="inline-flex min-h-10 items-center rounded-full px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
-            <Link href="/professeurs" className="hover:text-foreground">Professeurs</Link>
+            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-full px-1 hover:text-[#111B4D]">Professeurs</Link>
             <span>/</span>
             <span className="text-foreground">{displayName}</span>
           </nav>
@@ -116,68 +104,45 @@ export default async function TeacherDetailPage({
       </div>
 
       {/* HEADER */}
-      <section className="border-b border-border bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
+        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
           <Link
             href="/professeurs"
-            className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
+            className="mb-6 inline-flex min-h-11 items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] shadow-sm transition hover:border-[#111B4D] hover:text-[#111B4D]"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour à la liste
           </Link>
 
+          <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-muted sm:h-32 sm:w-32">
-              {teacher.photoUrl ? (
-                <Image
-                  src={teacher.photoUrl}
-                  alt={displayName}
-                  fill
-                  className="object-cover"
-                  sizes="128px"
-                />
-              ) : (
-                <img
-                  src={avatarFromName(displayName)}
-                  alt={displayName}
-                  className="h-full w-full object-cover"
-                />
-              )}
-              {teacher.badgeVerified && (
-                <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white ring-4 ring-white">
-                  <BadgeCheck className="h-5 w-5" />
-                </span>
-              )}
-            </div>
+            <ProfessorImage
+              photoUrl={teacher.photoUrl}
+              name={displayName}
+              size={190}
+              shape="rounded"
+              priority
+              verified={teacher.badgeVerified}
+            />
 
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              <div className="flex flex-col gap-3">
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
                   {displayName}
                 </h1>
-                {teacher.badgeRecommended && (
-                  <Badge icon={<Sparkles className="h-3 w-3" />} color="primary">
-                    Recommandé
-                  </Badge>
-                )}
-                {teacher.badgePopular && (
-                  <Badge icon={<TrendingUp className="h-3 w-3" />} color="accent">
-                    Très demandé
-                  </Badge>
-                )}
-                {teacher.badgePremium && (
-                  <Badge icon={<Award className="h-3 w-3" />} color="primary">
-                    Premium
-                  </Badge>
-                )}
-                {teacher.badgeNew && (
-                  <Badge color="muted">Nouveau</Badge>
-                )}
+                <ProfessorTrustBadges
+                  verified={teacher.badgeVerified}
+                  recommended={teacher.badgeRecommended}
+                  premium={teacher.badgePremium}
+                  popular={teacher.badgePopular}
+                  isNew={teacher.badgeNew}
+                  size="lg"
+                />
               </div>
-              <p className="mt-1.5 text-sm font-medium text-foreground sm:text-base">
+              <p className="mt-2 text-sm font-semibold text-[#111B4D] sm:text-base">
                 {teacher.jobTitle}
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-4 w-4" />
                   {primarySubject}
@@ -192,60 +157,110 @@ export default async function TeacherDetailPage({
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i <= Math.round(teacher.rating)
-                            ? "fill-amber-400 text-amber-400"
-                            : "fill-muted text-muted"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">
-                    {teacher.rating.toFixed(1)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    ({teacher.ratingCount} avis)
-                  </span>
-                </div>
-                <span className="text-muted-foreground">·</span>
+                <span className="rounded-full border border-[#111B4D] bg-white px-3 py-1 text-sm font-bold text-[#111B4D]">
+                  Note {teacher.rating.toFixed(1)}/5
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {teacher.ratingCount} avis
+                </span>
+                <span className="hidden text-muted-foreground sm:inline">·</span>
                 <span className="text-sm text-muted-foreground">
                   {teacher._count.bookings} réservations effectuées
                 </span>
               </div>
-              <div className="mt-4 flex flex-wrap gap-1.5">
+              <div className="mt-5 flex flex-wrap gap-2">
                 {teacher.offersHome && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground/70">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D]">
                     <HomeIcon className="h-3 w-3" /> Cours à domicile
                   </span>
                 )}
                 {teacher.offersOnline && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground/70">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D]">
                     <Video className="h-3 w-3" /> Cours en ligne
                   </span>
                 )}
               </div>
             </div>
           </div>
+          <div className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
+            <MiniStat label="Cours attribués" value={teacher._count.bookings} />
+            <MiniStat label="Avis vérifiés" value={totalReviews} />
+            <MiniStat label="Tarif" value="Selon besoin" />
+          </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+            <div className="rounded-[1.75rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
+                  <h2 className="mt-1 text-xl font-black tracking-tight text-[#111827]">
+                    Réserver {displayName} sans zone d'ombre.
+                  </h2>
+                </div>
+                <span className="inline-flex w-fit items-center rounded-full border border-[#111B4D] bg-white px-3 py-1 text-xs font-bold text-[#111B4D]">
+                  Professeur suivi par l'administration
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <DecisionPoint
+                  icon={<BookOpen className="h-4 w-4" />}
+                  label="Matières"
+                  value={subjectsPreview || primarySubject}
+                />
+                <DecisionPoint
+                  icon={<GraduationCap className="h-4 w-4" />}
+                  label="Niveaux"
+                  value={levelsPreview || "À confirmer"}
+                />
+                <DecisionPoint
+                  icon={<Calendar className="h-4 w-4" />}
+                  label="Disponibilités"
+                  value={availabilitySummary}
+                />
+                <DecisionPoint
+                  icon={<MapPin className="h-4 w-4" />}
+                  label="Zone"
+                  value={zonesPreview || teacher.commune || "Abidjan"}
+                />
+              </div>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                Le client choisit une date, un créneau de 2h et son besoin. Le prix final est affiché avant paiement, puis la réservation est rattachée à ce professeur dans le suivi client et admin.
+              </p>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-[#111B4D] bg-white p-4 shadow-sm sm:p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Action recommandée</p>
+              <h2 className="mt-1 text-xl font-black text-[#111B4D]">Démarrer la réservation guidée</h2>
+              <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
+                <TrustLine icon={<ShieldCheck className="h-4 w-4" />} text="Paiement sécurisé, fonds bloqués jusqu'à confirmation." />
+                <TrustLine icon={<Wallet className="h-4 w-4" />} text="Montant total affiché avant paiement, sans information interne." />
+                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation et support encadrés par l'administration." />
+              </div>
+              <Link
+                href={reserveHref}
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78]"
+              >
+                <Calendar className="h-4 w-4" />
+                Réserver ce professeur
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* CONTENU */}
-      <section className="bg-background">
+      <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             {/* COLONNE PRINCIPALE */}
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {/* À propos */}
               <Card>
                 <CardTitle icon={<BookOpen className="h-4 w-4" />}>
                   À propos de {displayName}
                 </CardTitle>
-                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
+                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[#111827]">
                   {teacher.bio}
                 </p>
               </Card>
@@ -300,15 +315,15 @@ export default async function TeacherDetailPage({
                   {teacher.subjects.map((s) => (
                     <span
                       key={s.subject.id}
-                      className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold shadow-sm ${
                         s.isPrimary
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-muted text-foreground/80"
+                          ? "border-[#111B4D] bg-white text-[#111B4D]"
+                          : "border-[#E3E8F2] bg-white text-[#111827]"
                       }`}
                     >
                       {s.subject.name}
                       {s.isPrimary && (
-                        <span className="text-[10px] uppercase tracking-wide">Principale</span>
+                        <span className="rounded-full border border-[#E3E8F2] bg-white px-2 py-0.5 text-xs uppercase tracking-wide">Principale</span>
                       )}
                     </span>
                   ))}
@@ -320,7 +335,7 @@ export default async function TeacherDetailPage({
                   {teacher.levels.map((l) => (
                     <span
                       key={l.level.id}
-                      className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground/80"
+                      className="inline-flex items-center rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
                     >
                       {l.level.name}
                     </span>
@@ -340,18 +355,20 @@ export default async function TeacherDetailPage({
                 </p>
                 {teacher.zones.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {teacher.zones.map((z) => (
+                    {teacher.zones.map((z) => {
+                      const commune = z.commune as any;
+                      return (
                       <span
-                        key={z.commune.id}
-                        className="inline-flex items-center gap-1 rounded-md border border-border bg-white px-2.5 py-1 text-xs font-medium text-foreground/80"
+                        key={commune.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] shadow-sm"
                       >
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {z.commune.name}
-                        {z.commune.zone && (
-                          <span className="text-muted-foreground">· {z.commune.zone}</span>
+                        {commune.name}
+                        {commune.zone && (
+                          <span className="text-muted-foreground">· {commune.zone}</span>
                         )}
                       </span>
-                    ))}
+                    )})}
                   </div>
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">
@@ -366,62 +383,82 @@ export default async function TeacherDetailPage({
                   Disponibilités
                 </CardTitle>
                 {availability ? (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full min-w-[520px] border-separate border-spacing-1 text-sm">
-                      <thead>
-                        <tr>
-                          <th className="w-32 text-left text-xs font-medium text-muted-foreground">
-                            Créneau
-                          </th>
-                          {DAYS.map((d) => (
-                            <th
-                              key={d.key}
-                              className="px-1 py-1.5 text-center text-xs font-medium text-muted-foreground"
-                            >
-                              {d.label.slice(0, 3)}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {SLOTS.map((slot) => (
-                          <tr key={slot.key}>
-                            <td className="py-1.5">
-                              <div className="text-xs font-medium text-foreground">
-                                {slot.label}
+                  <div className="mt-4">
+                    <div className="space-y-3 xl:hidden">
+                      {WEEK_DAYS.map((day) => {
+                        const availableSlots = TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]);
+                        return (
+                          <div key={day.key} className="rounded-3xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-foreground">{day.label}</p>
+                                <p className="text-xs text-muted-foreground">Séances de 2 heures</p>
                               </div>
-                              <div className="text-[10px] text-muted-foreground">
-                                {slot.time}
-                              </div>
-                            </td>
-                            {DAYS.map((d) => {
-                              const available = availability?.[d.key]?.[slot.key];
-                              return (
-                                <td key={d.key} className="text-center">
-                                  <div
-                                    className={`mx-auto h-7 w-7 rounded-md ${
-                                      available
-                                        ? "bg-primary/15 text-primary"
-                                        : "bg-muted text-muted-foreground/40"
-                                    }`}
-                                    title={`${d.label} ${slot.label} — ${available ? "Disponible" : "Indisponible"}`}
+                              <span className="rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-[11px] font-bold text-[#111B4D]">
+                                {availableSlots.length} dispo.
+                              </span>
+                            </div>
+                            {availableSlots.length > 0 ? (
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                {availableSlots.map((slot) => (
+                                  <span
+                                    key={slot.key}
+                                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#111B4D] bg-white px-2 py-2 text-center text-xs font-bold text-[#111B4D]"
                                   >
-                                    {available ? (
-                                      <CheckCircle2 className="mx-auto h-7 w-7 p-1.5" />
-                                    ) : (
-                                      <span className="block pt-1.5 text-xs">—</span>
-                                    )}
-                                  </div>
-                                </td>
+                                    {slot.label}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
+                                Aucun créneau enregistré ce jour.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden xl:grid xl:gap-2">
+                      <div className="grid grid-cols-[112px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs">
+                        <div className="flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 font-bold text-[#64748B]">
+                          Jour
+                        </div>
+                        {TWO_HOUR_SLOTS.map((slot) => (
+                          <div
+                            key={slot.key}
+                             className="flex min-h-10 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-1 text-center font-bold text-[#64748B]"
+                          >
+                            {slot.shortLabel}
+                          </div>
+                        ))}
+                        {WEEK_DAYS.map((day) => (
+                          <div key={day.key} className="contents">
+                            <div className="flex min-h-11 items-center rounded-2xl border border-[#111B4D] bg-white px-3 text-sm font-black text-[#111B4D]">
+                              {day.label}
+                            </div>
+                            {TWO_HOUR_SLOTS.map((slot) => {
+                              const available = availability?.[day.key]?.[slot.key];
+                              return (
+                                <div
+                                  key={slot.key}
+                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-black shadow-sm ${
+                                    available
+                                      ? "border-[#111B4D] bg-white text-[#111B4D]"
+                                      : "border-[#E3E8F2] bg-white text-[#94A3B8]"
+                                  }`}
+                                  title={`${day.label} ${slot.label} - ${available ? "Disponible" : "Indisponible"}`}
+                                >
+                                  {available ? "Dispo." : "—"}
+                                </div>
                               );
                             })}
-                          </tr>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
                     <p className="mt-3 text-xs text-muted-foreground">
-                      Ces disponibilités sont indicatives. Les créneaux exacts
-                      sont confirmés lors de la réservation.
+                      Les créneaux affichés sont des séances de 2 heures. La réservation est rattachée directement à ce professeur.
                     </p>
                   </div>
                 ) : (
@@ -438,53 +475,43 @@ export default async function TeacherDetailPage({
                 </CardTitle>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <PriceTile
-                    label="1 séance"
-                    price={teacher.pricePerSession}
-                    sub="Plein tarif"
+                    label="Prix"
+                    value="Selon besoin"
+                    sub="Catégorie, niveau, système scolaire"
                     highlight
                   />
                   <PriceTile
-                    label="Pack 4 séances"
-                    price={teacher.pricePack4}
-                    sub={`${formatFCFA(Math.round(teacher.pricePack4 / 4))} / séance`}
+                    label="Packs"
+                    value="4, 8 ou 12"
+                    sub="Séances de 2h"
                   />
                   <PriceTile
-                    label="Pack 8 séances"
-                    price={teacher.pricePack8}
-                    sub={`${formatFCFA(Math.round(teacher.pricePack8 / 8))} / séance`}
+                    label="Déplacement"
+                    value="Séparé"
+                    sub="À domicile uniquement"
                   />
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Les packs permettent un suivi régulier à prix réduit. La
-                  commission de la plateforme (20%) est incluse dans le prix
-                  affiché.
+                  Le tarif final est calculé pendant la réservation selon la grille officielle MonProf CI.
+                  Le client voit le prix du cours, les frais de déplacement et le total avant paiement.
                 </p>
               </Card>
 
               {/* Avis clients */}
               <Card>
-                <CardTitle icon={<Star className="h-4 w-4" />}>
+                <CardTitle icon={<BadgeCheck className="h-4 w-4" />}>
                   Avis clients ({teacher.reviews.length})
                 </CardTitle>
 
                 {/* Répartition des notes */}
                 {totalReviews > 0 && (
                   <div className="mt-4 grid gap-4 sm:grid-cols-[200px_1fr]">
-                    <div className="flex flex-col items-center justify-center rounded-xl bg-muted/50 p-4 text-center">
+                    <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E3E8F2] bg-white p-4 text-center shadow-sm">
                       <div className="text-4xl font-bold text-foreground">
                         {teacher.rating.toFixed(1)}
                       </div>
-                      <div className="mt-1 flex items-center">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i <= Math.round(teacher.rating)
-                                ? "fill-amber-400 text-amber-400"
-                                : "fill-muted text-muted"
-                            }`}
-                          />
-                        ))}
+                      <div className="mt-1 rounded-full border border-[#111B4D] bg-white px-3 py-1 text-sm font-bold text-[#111B4D]">
+                        Note moyenne
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {totalReviews} avis vérifiés
@@ -494,14 +521,11 @@ export default async function TeacherDetailPage({
                       {ratingBuckets.map((b) => {
                         const pct = totalReviews > 0 ? (b.count / totalReviews) * 100 : 0;
                         return (
-                          <div key={b.star} className="flex items-center gap-2 text-xs">
-                            <span className="flex w-12 items-center gap-0.5 text-muted-foreground">
-                              {b.star}
-                              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            </span>
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div key={b.rating} className="flex items-center gap-2 text-xs">
+                            <span className="w-16 text-muted-foreground">Note {b.rating}</span>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E5E7EB]">
                               <div
-                                className="h-full rounded-full bg-amber-400"
+                                className="h-full rounded-full bg-[#111B4D]"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
@@ -522,7 +546,7 @@ export default async function TeacherDetailPage({
                       <li key={r.id} className="py-4 first:pt-2 last:pb-0">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
                               {(r.client.name || "?")
                                 .split(" ")
                                 .slice(0, 2)
@@ -538,21 +562,12 @@ export default async function TeacherDetailPage({
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                              <Star
-                                key={i}
-                                className={`h-3.5 w-3.5 ${
-                                  i <= r.rating
-                                    ? "fill-amber-400 text-amber-400"
-                                    : "fill-muted text-muted"
-                                }`}
-                              />
-                            ))}
-                          </div>
+                          <span className="rounded-full border border-[#111B4D] bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+                            Note {r.rating}/5
+                          </span>
                         </div>
                         {r.comment && (
-                          <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+                          <p className="mt-2 text-sm leading-relaxed text-[#111827]">
                             {r.comment}
                           </p>
                         )}
@@ -560,7 +575,7 @@ export default async function TeacherDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 rounded-lg bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm text-muted-foreground shadow-sm">
                     Ce professeur n'a pas encore d'avis publié. Soyez le
                     premier à réserver et à laisser un avis après votre cours.
                   </p>
@@ -569,21 +584,17 @@ export default async function TeacherDetailPage({
             </div>
 
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
-            <aside className="lg:sticky lg:top-20 lg:h-fit">
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Tarif à partir de
-                </p>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold tracking-tight text-foreground">
-                    <Money amount={teacher.pricePerSession} />
-                  </span>
-                  <span className="text-sm text-muted-foreground">/ séance</span>
+            <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
+              <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Tarif</p>
+                <div className="mt-1">
+                  <span className="text-2xl font-bold tracking-tight text-foreground">Calculé selon le besoin</span>
+                  <p className="mt-1 text-sm text-muted-foreground">Prix du cours + déplacement éventuel avant paiement.</p>
                 </div>
 
                 <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
-                  <Row label="Pack 4 séances" value={<Money amount={teacher.pricePack4} />} />
-                  <Row label="Pack 8 séances" value={<Money amount={teacher.pricePack8} />} />
+                  <Row label="Packs" value="1, 4, 8 ou 12 séances" />
+                  <Row label="Devis" value="Cas spéciaux" />
                   <Row
                     label="Format"
                     value={
@@ -595,7 +606,7 @@ export default async function TeacherDetailPage({
                         )}
                         {teacher.offersOnline && (
                           <span className="inline-flex items-center gap-1 text-xs">
-                            <Video className="h-3 w-3" /> Ligne
+                            <Video className="h-3 w-3" /> En ligne
                           </span>
                         )}
                       </span>
@@ -606,7 +617,7 @@ export default async function TeacherDetailPage({
 
                 <Link
                   href={reserveHref}
-                  className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E2A78]"
                 >
                   <Calendar className="h-4 w-4" />
                   Réserver ce professeur
@@ -621,28 +632,28 @@ export default async function TeacherDetailPage({
 
                 <div className="mt-5 space-y-2.5 border-t border-border pt-4">
                   <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
                       <strong className="text-foreground">Paiement sécurisé.</strong>{" "}
                       Fonds bloqués jusqu'à confirmation du cours.
                     </span>
                   </div>
                   <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
                       <strong className="text-foreground">Professeur vérifié</strong> par
                       notre équipe (identité, diplômes).
                     </span>
                   </div>
                   <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
                       <strong className="text-foreground">Annulation</strong> possible
                       jusqu'à 24h avant le cours.
                     </span>
                   </div>
                   <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Luggage className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <Luggage className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
                       <strong className="text-foreground">Litige</strong> traité par notre
                       support sous 48h.
@@ -660,7 +671,7 @@ export default async function TeacherDetailPage({
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="min-w-0 rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
       {children}
     </div>
   );
@@ -675,9 +686,47 @@ function CardTitle({
 }) {
   return (
     <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-      <span className="text-primary">{icon}</span>
+      <span className="text-[#111B4D]">{icon}</span>
       {children}
     </h2>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-extrabold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function DecisionPoint({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#64748B]">
+        <span className="text-[#111B4D]">{icon}</span>
+        {label}
+      </div>
+      <p className="mt-1.5 line-clamp-2 text-sm font-extrabold leading-5 text-[#111827]">{value}</p>
+    </div>
+  );
+}
+
+function TrustLine({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
+      <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
+      <span className="leading-5">{text}</span>
+    </div>
   );
 }
 
@@ -692,12 +741,12 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function PriceTile({
   label,
-  price,
+  value,
   sub,
   highlight,
 }: {
   label: string;
-  price: number;
+  value: React.ReactNode;
   sub: string;
   highlight?: boolean;
 }) {
@@ -705,43 +754,18 @@ function PriceTile({
     <div
       className={`rounded-xl border p-4 text-center ${
         highlight
-          ? "border-primary bg-primary/5"
-          : "border-border bg-muted/40"
+          ? "border-[#111B4D] bg-white"
+          : "border-[#E3E8F2] bg-white"
       }`}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       <p className="mt-1 text-lg font-bold text-foreground">
-        <Money amount={price} />
+        {value}
       </p>
       <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
     </div>
-  );
-}
-
-function Badge({
-  icon,
-  children,
-  color,
-}: {
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  color: "primary" | "accent" | "muted";
-}) {
-  const cls =
-    color === "primary"
-      ? "bg-primary/10 text-primary"
-      : color === "accent"
-      ? "bg-orange-50 text-orange-700"
-      : "bg-muted text-foreground/70";
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}
-    >
-      {icon}
-      {children}
-    </span>
   );
 }
 

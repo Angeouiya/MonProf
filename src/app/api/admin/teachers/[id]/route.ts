@@ -2,6 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api";
+import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
+import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+
+const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
+const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
+const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
+
+function isRestrictiveTeacherStatus(status: string) {
+  return RESTRICTIVE_TEACHER_STATUSES.includes(status as (typeof RESTRICTIVE_TEACHER_STATUSES)[number]);
+}
+
+function isPublicVisibleTeacherStatus(status: string) {
+  return PUBLIC_VISIBLE_TEACHER_STATUSES.includes(status as (typeof PUBLIC_VISIBLE_TEACHER_STATUSES)[number]);
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    ACTIVE: "Actif",
+    INACTIVE: "Inactif",
+    SUSPENDED: "Suspendu",
+    PENDING: "En attente",
+    TEMPORARILY_SUSPENDED: "Suspendu temporairement",
+    PERMANENTLY_SUSPENDED: "Suspendu définitivement",
+    OBSERVATION: "En observation",
+    REPLACEABLE: "Remplaçable",
+    PRIORITY: "Prioritaire",
+    BLACKLISTED: "Blacklisté",
+  };
+  return labels[status] ?? status;
+}
+
+function validateTeacherRelationPatch(subjects: unknown, levels: unknown) {
+  if (subjects !== undefined) {
+    if (!Array.isArray(subjects) || subjects.length === 0) {
+      return "Sélectionnez au moins une matière pour ce professeur.";
+    }
+    if (!subjects.some((subject: any) => Boolean(subject?.isPrimary))) {
+      return "Définissez une matière principale pour ce professeur.";
+    }
+  }
+  if (levels !== undefined && (!Array.isArray(levels) || levels.length === 0)) {
+    return "Sélectionnez au moins un niveau enseigné par ce professeur.";
+  }
+  return null;
+}
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -21,7 +67,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       zones: { include: { commune: true } },
       bookings: {
         orderBy: { createdAt: "desc" },
-        include: { client: { select: { name: true, email: true, phone: true } } },
+        include: {
+          client: { select: { name: true, email: true, phone: true } },
+          transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+        },
         take: 50,
       },
       transactions: { orderBy: { createdAt: "desc" }, take: 50 },
@@ -44,13 +93,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     uniqueClients: new Set(bookings.map((b) => b.clientId)).size,
   };
   const finance = {
-    totalGenerated: bookings.filter((b) => b.paymentStatus !== "FAILED").reduce((s, b) => s + b.totalPrice, 0),
-    totalCommission: bookings.filter((b) => b.paymentStatus !== "FAILED").reduce((s, b) => s + b.commissionAmount, 0),
-    totalNet: bookings.filter((b) => b.paymentStatus !== "FAILED").reduce((s, b) => s + b.teacherNetAmount, 0),
-    blockedFunds: bookings.filter((b) => b.paymentStatus === "BLOCKED").reduce((s, b) => s + b.teacherNetAmount, 0),
-    validatedFunds: bookings.filter((b) => b.paymentStatus === "VALIDATED").reduce((s, b) => s + b.teacherNetAmount, 0),
-    toPay: bookings.filter((b) => b.paymentStatus === "TO_PAY_TEACHER").reduce((s, b) => s + b.teacherNetAmount, 0),
-    alreadyPaid: bookings.filter((b) => b.paymentStatus === "TEACHER_PAID").reduce((s, b) => s + b.teacherNetAmount, 0),
+    totalGenerated: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.totalPrice, 0),
+    totalCommission: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.commissionAmount, 0),
+    totalNet: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.teacherNetAmount, 0),
+    blockedFunds: bookings.filter((b) => b.paymentStatus === "BLOCKED" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
+    validatedFunds: bookings.filter((b) => b.paymentStatus === "VALIDATED" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
+    toPay: bookings.filter((b) => b.paymentStatus === "TO_PAY_TEACHER" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
+    alreadyPaid: bookings.filter((b) => b.paymentStatus === "TEACHER_PAID" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
   };
 
   return NextResponse.json({
@@ -64,19 +113,50 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  const admin = await requireAdminApi();
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;
   const body = await req.json();
-  const { subjects, levels, zones, availability, ...rest } = body;
+  const {
+    subjects,
+    levels,
+    zones,
+    availability,
+    statusChangeReason,
+    notifyTeacherOnStatusChange,
+    ...rest
+  } = body;
 
   try {
+    const relationError = validateTeacherRelationPatch(subjects, levels);
+    if (relationError) {
+      return NextResponse.json({ error: relationError }, { status: 400 });
+    }
+
+    const existingTeacher = await db.teacher.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        professionalName: true,
+        photoUrl: true,
+        status: true,
+        bookings: {
+          where: { status: { in: [...ACTIVE_BOOKING_STATUSES] as any } },
+          select: { id: true, reference: true, subjectName: true, levelName: true, scheduledDate: true, scheduledTime: true },
+          take: 50,
+        },
+      },
+    });
+    if (!existingTeacher) return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
+
     const data: any = {};
     const allowed = [
       "fullName","professionalName","photoUrl","phone","email","commune","quartier","addressHint",
-      "jobTitle","bio","experienceYears","diploma","cvUrl","profileType","status","featured",
-      "rating","ratingCount","badgeVerified","badgeRecommended","badgeNew","badgePopular","badgePremium",
+      "jobTitle","bio","experienceYears","diploma","cvUrl","profileType","status","featured","qualityScore","operationalComment",
+      "badgeVerified","badgeRecommended","badgeNew","badgePopular","badgePremium",
       "internalNote","offersHome","offersOnline","offersGroup",
       "pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate","pricingTier",
     ];
@@ -84,14 +164,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (k in rest) data[k] = rest[k];
     }
     if ("experienceYears" in data) data.experienceYears = Number(data.experienceYears) || 0;
-    if ("rating" in data) data.rating = Number(data.rating) || 0;
-    if ("ratingCount" in data) data.ratingCount = Number(data.ratingCount) || 0;
+    if ("qualityScore" in data) data.qualityScore = Math.max(0, Math.min(100, Number(data.qualityScore) || 0));
     for (const k of ["pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate"]) {
       if (k in data) data[k] = Number(data[k]) || 0;
     }
     if (availability !== undefined) {
       data.availability = availability ? (typeof availability === "string" ? availability : JSON.stringify(availability)) : null;
     }
+
+    const nextStatus = String(data.status ?? existingTeacher.status);
+    const statusChanged = "status" in data && nextStatus !== existingTeacher.status;
+    const effectivePhotoUrl = "photoUrl" in data ? data.photoUrl : existingTeacher.photoUrl;
+    if (isPublicVisibleTeacherStatus(nextStatus)) {
+      const effectivePhotoValidation = await validateTeacherPhotoUrlForStorage(effectivePhotoUrl);
+      if (!effectivePhotoValidation.ok) {
+        return NextResponse.json({
+          error: `Impossible d'activer ce professeur sans vraie photo validée. ${effectivePhotoValidation.error}`,
+        }, { status: 400 });
+      }
+      data.photoUrl = effectivePhotoValidation.photoUrl;
+    } else if ("photoUrl" in data) {
+      const rawPhotoUrl = typeof data.photoUrl === "string" ? data.photoUrl.trim() : "";
+      if (rawPhotoUrl) {
+        const photoValidation = await validateTeacherPhotoUrlForStorage(rawPhotoUrl);
+        if (!photoValidation.ok) {
+          return NextResponse.json({ error: photoValidation.error }, { status: 400 });
+        }
+        data.photoUrl = photoValidation.photoUrl;
+      } else {
+        data.photoUrl = null;
+      }
+    }
+    if (statusChanged) data.lastActivityAt = new Date();
 
     await db.teacher.update({ where: { id }, data });
 
@@ -125,6 +229,73 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    if (statusChanged) {
+      const teacherName = existingTeacher.professionalName || existingTeacher.fullName;
+      const reason = typeof statusChangeReason === "string" && statusChangeReason.trim()
+        ? statusChangeReason.trim()
+        : "Changement de statut effectué par l'administration.";
+      const detail = `${admin.name} a changé le statut de ${teacherName} : ${statusLabel(existingTeacher.status)} → ${statusLabel(nextStatus)}. Motif : ${reason}`;
+      const restrictive = isRestrictiveTeacherStatus(nextStatus);
+      const taskCreates = restrictive
+        ? existingTeacher.bookings.map((booking) => ({
+            teacherId: id,
+            bookingId: booking.id,
+            type: "ADMIN_ACTION" as const,
+            title: `Vérifier/remplacer ${teacherName} sur ${booking.reference}`,
+            description: `Le professeur est maintenant "${statusLabel(nextStatus)}". Vérifiez la réservation ${booking.reference} (${booking.subjectName} - ${booking.levelName}) et préparez un remplacement si nécessaire. Motif : ${reason}`,
+            priority: "CRITICAL" as const,
+            status: "TODO" as const,
+            createdById: admin.id,
+          }))
+        : [];
+
+      await db.$transaction([
+        db.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Statut professeur modifié",
+            entityType: "Teacher",
+            entityId: id,
+            detail,
+            oldStatus: existingTeacher.status,
+            newStatus: nextStatus,
+          },
+        }),
+        db.notification.create({
+          data: {
+            userId: null,
+            title: restrictive ? "Professeur à vérifier/remplacer" : "Statut professeur modifié",
+            message: restrictive
+              ? `${teacherName} est maintenant ${statusLabel(nextStatus)}. ${existingTeacher.bookings.length} réservation(s) active(s) à vérifier.`
+              : detail,
+            type: restrictive ? "TEACHER_STATUS_RESTRICTED" : "TEACHER_STATUS_CHANGED",
+            recipientType: "ADMIN",
+            priority: restrictive ? "CRITICAL" : nextStatus === "OBSERVATION" ? "IMPORTANT" : "NORMAL",
+            status: "CREATED",
+            teacherId: id,
+            adminId: admin.id,
+            link: `/admin/professeurs/${id}?tab=operationnel`,
+            actionLabel: restrictive ? "Vérifier le professeur" : "Voir la fiche",
+            actionType: restrictive ? "CHECK_TEACHER_BOOKINGS" : "VIEW_TEACHER",
+          },
+        }),
+        ...(notifyTeacherOnStatusChange !== false ? [
+          db.teacherNotification.create({
+            data: {
+              teacherId: id,
+              title: "Mise à jour de votre statut",
+              message: `Bonjour ${teacherName}, votre statut opérationnel est maintenant : ${statusLabel(nextStatus)}. Motif : ${reason}. Merci de contacter l'administration si nécessaire.`,
+              channel: "INTERNAL",
+              sent: true,
+              status: "SENT",
+              sentById: admin.id,
+            },
+          }),
+        ] : []),
+        ...taskCreates.map((task) => db.teacherTask.create({ data: task })),
+      ]);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     console.error("admin/teachers PATCH error", e);
@@ -133,11 +304,79 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  const admin = await requireAdminApi();
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;
-  // Suspendre au lieu de supprimer
-  await db.teacher.update({ where: { id }, data: { status: "SUSPENDED" } });
+  const teacher = await db.teacher.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      fullName: true,
+      professionalName: true,
+      status: true,
+      bookings: {
+        where: { status: { in: [...ACTIVE_BOOKING_STATUSES] as any } },
+        select: { id: true, reference: true, subjectName: true, levelName: true },
+        take: 50,
+      },
+    },
+  });
+  if (!teacher) return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
+  const teacherName = teacher.professionalName || teacher.fullName;
+  const nextStatus = "SUSPENDED";
+  await db.$transaction([
+    db.teacher.update({ where: { id }, data: { status: nextStatus, lastActivityAt: new Date() } }),
+    db.adminActionLog.create({
+      data: {
+        adminId: admin.id,
+        action: "Professeur suspendu",
+        entityType: "Teacher",
+        entityId: id,
+        detail: `${admin.name} a suspendu ${teacherName}. Suspension via endpoint de désactivation.`,
+        oldStatus: teacher.status,
+        newStatus: nextStatus,
+      },
+    }),
+    db.notification.create({
+      data: {
+        userId: null,
+        title: "Professeur suspendu",
+        message: `${teacherName} est suspendu. ${teacher.bookings.length} réservation(s) active(s) à vérifier.`,
+        type: "TEACHER_STATUS_RESTRICTED",
+        recipientType: "ADMIN",
+        priority: "CRITICAL",
+        status: "CREATED",
+        teacherId: id,
+        adminId: admin.id,
+        link: `/admin/professeurs/${id}?tab=operationnel`,
+        actionLabel: "Vérifier les réservations",
+      },
+    }),
+    db.teacherNotification.create({
+      data: {
+        teacherId: id,
+        title: "Suspension de votre profil",
+        message: `Bonjour ${teacherName}, votre profil professeur est suspendu. Merci de contacter l'administration si nécessaire.`,
+        channel: "INTERNAL",
+        sent: true,
+        status: "SENT",
+        sentById: admin.id,
+      },
+    }),
+    ...teacher.bookings.map((booking) => db.teacherTask.create({
+      data: {
+        teacherId: id,
+        bookingId: booking.id,
+        type: "ADMIN_ACTION",
+        title: `Vérifier/remplacer ${teacherName} sur ${booking.reference}`,
+        description: `Le professeur est suspendu. Vérifiez la réservation ${booking.reference} (${booking.subjectName} - ${booking.levelName}) et préparez un remplacement si nécessaire.`,
+        priority: "CRITICAL",
+        status: "TODO",
+        createdById: admin.id,
+      },
+    })),
+  ]);
   return NextResponse.json({ ok: true });
 }

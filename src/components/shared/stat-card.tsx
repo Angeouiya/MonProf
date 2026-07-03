@@ -17,29 +17,29 @@ export function StatCard({
   className?: string;
 }) {
   const toneClasses = {
-    default: "bg-white",
-    success: "bg-green-50/50 border-green-100",
-    warning: "bg-amber-50/50 border-amber-100",
-    danger: "bg-red-50/50 border-red-100",
-    primary: "bg-primary/5 border-primary/20",
+    default: "border-[#E3E8F2] bg-white",
+    success: "border-[#E3E8F2] bg-white",
+    warning: "border-[#E3E8F2] bg-white",
+    danger: "border-[#E3E8F2] bg-white",
+    primary: "border-[#111B4D] bg-white",
   };
   const iconClasses = {
-    default: "bg-muted text-foreground",
-    success: "bg-green-100 text-green-700",
-    warning: "bg-amber-100 text-amber-700",
-    danger: "bg-red-100 text-red-700",
-    primary: "bg-primary/10 text-primary",
+    default: "bg-[#111B4D] text-white",
+    success: "bg-[#111B4D] text-white",
+    warning: "bg-[#111B4D] text-white",
+    danger: "bg-[#111B4D] text-white",
+    primary: "bg-[#111B4D] text-white shadow-sm",
   };
   return (
-    <div className={cn("rounded-xl border border-border p-4 sm:p-5", toneClasses[tone], className)}>
+    <div className={cn("premium-hover rounded-[1.35rem] border p-4 shadow-sm sm:p-5", toneClasses[tone], className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="mt-1.5 text-2xl font-semibold text-foreground truncate">{value}</p>
-          {trend && <p className={cn("mt-1 text-xs", trend.positive ? "text-green-600" : "text-red-600")}>{trend.value}</p>}
+          <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+          <p className="mt-1.5 break-words text-xl font-black leading-tight tracking-tight text-[#111827] sm:text-2xl">{value}</p>
+          {trend && <p className="mt-1 text-xs font-semibold text-[#111B4D]">{trend.value}</p>}
         </div>
         {Icon && (
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", iconClasses[tone])}>
+          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", iconClasses[tone])}>
             <Icon className="h-5 w-5" />
           </div>
         )}

@@ -12,8 +12,6 @@ import {
   Receipt,
   Search,
   ShieldCheck,
-  Sparkles,
-  Star,
   UserCheck,
   Wallet,
 } from "lucide-react";
@@ -42,7 +40,7 @@ const STEPS = [
     n: 4,
     icon: CreditCard,
     title: "Payez en ligne en toute sécurité",
-    text: "Réglez par Wave, Orange Money, MTN Money, Moov Money ou carte bancaire. Les fonds sont immédiatement bloqués sur le compte de la plateforme.",
+    text: "Réglez par Wave, Orange Money, MTN Money ou Moov Money. Les fonds sont immédiatement bloqués sur le compte de la plateforme.",
   },
   {
     n: 5,
@@ -58,7 +56,7 @@ const STEPS = [
   },
   {
     n: 7,
-    icon: Sparkles,
+    icon: ShieldCheck,
     title: "Le cours a lieu",
     text: "Le professeur dispense le cours à domicile ou en ligne selon le format choisi. Les fonds restent bloqués pendant toute la durée du cours.",
   },
@@ -72,7 +70,7 @@ const STEPS = [
     n: 9,
     icon: HandCoins,
     title: "Le professeur est payé",
-    text: "L'administrateur libère le paiement au professeur, déduction faite de la commission de 20%. Le professeur reçoit son paiement par mobile money ou virement.",
+    text: "L'administration clôture le cours et traite le paiement du professeur selon le processus interne de la plateforme.",
   },
 ];
 
@@ -122,19 +120,50 @@ const TRUST = [
   },
 ];
 
+const JOURNEY_SIGNALS = [
+  {
+    icon: Search,
+    label: "Vous choisissez",
+    title: "Un professeur précis",
+    text: "Photo réelle, badges, matières, niveaux, disponibilités et avis.",
+  },
+  {
+    icon: CalendarCheck,
+    label: "Vous planifiez",
+    title: "Date et créneau de 2h",
+    text: "La réservation reste attachée au professeur sélectionné.",
+  },
+  {
+    icon: Wallet,
+    label: "Vous payez",
+    title: "Total affiché avant validation",
+    text: "Cours, déplacement éventuel et mode de paiement sont clairs.",
+  },
+  {
+    icon: Headphones,
+    label: "Nous suivons",
+    title: "Admin, notification et support",
+    text: "Le professeur est confirmé, le client est protégé, l'historique reste traçable.",
+  },
+];
+
 export default function CommentCaMarchePage() {
   return (
     <PublicLayout>
       {/* HEADER */}
-      <section className="border-b border-border bg-white">
+      <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-3 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground">Accueil</Link>
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-muted-foreground shadow-sm">
+            <Link href="/" className="inline-flex min-h-11 items-center rounded-full px-1 hover:text-foreground">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-foreground">Comment ça marche</span>
           </nav>
           <div className="max-w-3xl">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Réservation encadrée de bout en bout
+            </span>
+            <h1 className="mt-5 text-3xl font-black tracking-tight text-foreground sm:text-5xl text-balance">
               Comment ça marche
             </h1>
             <p className="mt-4 text-base text-muted-foreground sm:text-lg">
@@ -142,28 +171,67 @@ export default function CommentCaMarchePage() {
               parcours complet en 9 étapes. Simple, transparent et sécurisé
               pour les parents comme pour les professeurs.
             </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/professeurs"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78]"
+              >
+                Trouver un professeur
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/tarifs"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-5 text-sm font-bold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white"
+              >
+                Comprendre les tarifs
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RÉSUMÉ OPÉRATIONNEL */}
+      <section className="border-b border-[#E3E8F2] bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Parcours client sécurisé</p>
+                <h2 className="mt-1 text-xl font-black tracking-tight text-[#111827]">
+                  Une réservation claire avant, pendant et après le cours.
+                </h2>
+              </div>
+              <span className="inline-flex w-fit rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D]">
+                Sans paiement direct au professeur
+              </span>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {JOURNEY_SIGNALS.map((item) => (
+                <JourneySignal key={item.title} {...item} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* 9 ÉTAPES */}
-      <section className="bg-background">
+      <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
           <ol className="relative space-y-4 sm:space-y-5">
             {STEPS.map((s) => (
               <li
                 key={s.n}
-                className="group relative rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/30 sm:p-6"
+                className="group relative rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D] sm:p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:gap-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground text-base font-bold">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-base font-bold text-white shadow-sm">
                       {s.n}
                     </div>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <s.icon className="h-5 w-5 text-primary" />
+                      <s.icon className="h-5 w-5 text-[#111B4D]" />
                       <h2 className="text-base font-semibold text-foreground sm:text-lg">
                         {s.title}
                       </h2>
@@ -180,11 +248,11 @@ export default function CommentCaMarchePage() {
       </section>
 
       {/* POUR LES PARENTS */}
-      <section className="border-t border-border bg-white">
+      <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-              <UserCheck className="h-3.5 w-3.5 text-primary" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-muted-foreground">
+              <UserCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Conseils pratiques
             </span>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -199,9 +267,9 @@ export default function CommentCaMarchePage() {
             {PARENT_TIPS.map((t) => (
               <div
                 key={t.title}
-                className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+                className="rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D] sm:p-6"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <t.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-foreground sm:text-base">
@@ -217,11 +285,11 @@ export default function CommentCaMarchePage() {
       </section>
 
       {/* POURQUOI NOUS FAIRE CONFIANCE */}
-      <section className="border-t border-border bg-background">
+      <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              <ShieldCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Nos garanties
             </span>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -236,9 +304,9 @@ export default function CommentCaMarchePage() {
             {TRUST.map((t) => (
               <div
                 key={t.title}
-                className="rounded-2xl border border-border bg-card p-5 text-center shadow-sm"
+                className="rounded-3xl border border-[#E3E8F2] bg-white p-5 text-center shadow-sm transition hover:border-[#111B4D]"
               >
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <t.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-foreground">
@@ -254,7 +322,7 @@ export default function CommentCaMarchePage() {
       </section>
 
       {/* STATS */}
-      <section className="border-t border-border bg-white">
+      <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
           <div className="grid gap-5 sm:grid-cols-3">
             {[
@@ -264,9 +332,9 @@ export default function CommentCaMarchePage() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm"
+                className="rounded-3xl border border-[#E3E8F2] bg-white p-6 text-center shadow-sm"
               >
-                <s.icon className="mx-auto h-6 w-6 text-primary" />
+                <s.icon className="mx-auto h-6 w-6 text-[#111B4D]" />
                 <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">
                   {s.kpi}
                 </div>
@@ -278,10 +346,10 @@ export default function CommentCaMarchePage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-background">
+      <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-border bg-white p-8 text-center shadow-sm sm:p-12">
-            <Star className="mx-auto h-7 w-7 text-amber-400" />
+          <div className="rounded-3xl border border-[#E3E8F2] bg-white p-8 text-center shadow-sm sm:p-12">
+            <BadgeCheck className="mx-auto h-7 w-7 text-[#111B4D]" />
             <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               Prêt à commencer ?
             </h2>
@@ -292,14 +360,14 @@ export default function CommentCaMarchePage() {
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-6 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78] sm:w-auto"
               >
                 Trouver un professeur
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/tarifs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-white px-6 text-sm font-medium text-foreground transition hover:bg-muted sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-6 text-sm font-bold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white sm:w-auto"
               >
                 Voir les tarifs
               </Link>
@@ -308,5 +376,28 @@ export default function CommentCaMarchePage() {
         </div>
       </section>
     </PublicLayout>
+  );
+}
+
+function JourneySignal({
+  icon: Icon,
+  label,
+  title,
+  text,
+}: {
+  icon: typeof Search;
+  label: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <article className="min-w-0 rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#64748B]">{label}</p>
+      <h3 className="mt-1 text-base font-black text-[#111827]">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+    </article>
   );
 }
