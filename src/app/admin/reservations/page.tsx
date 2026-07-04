@@ -24,7 +24,7 @@ const VALID_BOOKING_STATUSES = [
   "COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE",
   "TEACHER_PAID","DISPUTED","CANCELLED","REFUNDED",
 ];
-const VALID_PAYMENT_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
+const VALID_PAYMENT_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUND_PENDING","PARTIAL_REFUND_PENDING","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
 
 function categoryLabel(value?: string | null) {
   return COURSE_CATEGORIES.find((category) => category.code === value)?.label ?? value ?? "";
@@ -89,7 +89,7 @@ export default async function AdminReservationsPage({
   ]);
   const now = new Date();
   const verifiedPaymentBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
-  const paidOrBlocked = verifiedPaymentBookings.filter((booking) => ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(booking.paymentStatus));
+  const paidOrBlocked = verifiedPaymentBookings.filter((booking) => ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "PARTIALLY_REFUNDED", "REFUNDED", "RETAINED"].includes(booking.paymentStatus));
   const blockedCount = verifiedPaymentBookings.filter((booking) => booking.paymentStatus === "BLOCKED").length;
   const toPayCount = verifiedPaymentBookings.filter((booking) => booking.paymentStatus === "TO_PAY_TEACHER").length;
   const disputedCount = bookings.filter((booking) => booking.status === "DISPUTED" || booking.paymentStatus === "DISPUTED").length;
@@ -163,7 +163,7 @@ export default async function AdminReservationsPage({
                         </div>
                         <p className="text-xs text-muted-foreground">{b.scheduledDate ? "Planifiée" : "Souhaitée"} : {formatDate(displayDate)}</p>
                       </div>
-                      <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalPrice} />}</p>
+                      <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalClientPays || b.totalPrice} />}</p>
                     </div>
 
                     <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
@@ -184,7 +184,7 @@ export default async function AdminReservationsPage({
                             {b.teacher.phone}
                           </p>
                         )}
-                        <Link href={`/admin/clients/${b.client.id}`} className="block truncate text-xs text-muted-foreground">
+                        <Link href={`/admin/clients/${b.client.id}`} className="inline-flex min-h-10 max-w-full items-center truncate text-xs text-muted-foreground">
                           Client : {b.client.name}
                         </Link>
                       </div>
@@ -237,11 +237,11 @@ export default async function AdminReservationsPage({
                   return (
                     <TableRow key={b.id}>
                       <TableCell>
-                        <Link href={`/admin/reservations/${b.id}`} className="text-sm font-mono font-medium text-primary hover:underline">{b.reference}</Link>
+                        <Link href={`/admin/reservations/${b.id}`} className="inline-flex min-h-10 items-center font-mono text-sm font-medium text-primary hover:underline">{b.reference}</Link>
                         <p className="mt-1 text-[11px] font-medium text-muted-foreground">Créée {timeAgo(b.createdAt)}</p>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/admin/clients/${b.client.id}`} className="text-sm hover:text-primary">{b.client.name}</Link>
+                        <Link href={`/admin/clients/${b.client.id}`} className="inline-flex min-h-10 items-center text-sm hover:text-primary">{b.client.name}</Link>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export default async function AdminReservationsPage({
                             shape="circle"
                             verified={b.teacher.badgeVerified}
                           />
-                          <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`} className="text-sm hover:text-primary">
+                          <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`} className="inline-flex min-h-10 items-center text-sm hover:text-primary">
                             {b.teacher.professionalName || b.teacher.fullName}
                           </Link>
                         </div>
@@ -278,7 +278,7 @@ export default async function AdminReservationsPage({
                         <p>{formatDate(displayDate)}</p>
                         {!b.scheduledDate && b.startDate && <p className="text-[11px]">Date souhaitée</p>}
                       </TableCell>
-                      <TableCell className="text-right text-sm font-medium">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalPrice} />}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalClientPays || b.totalPrice} />}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <BookingStatusBadge status={b.status} />
@@ -313,7 +313,7 @@ function getReservationRisk(status: string, paymentStatus: string, scheduledDate
   const startsSoon = scheduledDate
     ? scheduledDate.getTime() >= now.getTime() && scheduledDate.getTime() - now.getTime() <= 2 * 60 * 60 * 1000
     : false;
-  const claimsPaid = ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID", "DISPUTED", "PARTIALLY_REFUNDED", "REFUNDED", "RETAINED"].includes(paymentStatus);
+  const claimsPaid = ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID", "DISPUTED", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "PARTIALLY_REFUNDED", "REFUNDED", "RETAINED"].includes(paymentStatus);
 
   if (claimsPaid && !paymentVerified) {
     return {

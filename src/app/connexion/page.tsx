@@ -3,9 +3,9 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GraduationCap, Lock, Mail, Eye, EyeOff, ArrowRight, Info, ShieldCheck, WalletCards, CalendarCheck } from "lucide-react";
+import { GraduationCap, Lock, Mail, Eye, EyeOff, ArrowRight, Info, ShieldCheck, WalletCards, CalendarCheck, Users, ClipboardCheck, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,12 @@ const ACCOUNT_BENEFITS = [
   { icon: ShieldCheck, title: "Support traçable", text: "Avis, litiges et messages sont reliés à votre historique client." },
 ];
 
+const ADMIN_BENEFITS = [
+  { icon: ClipboardCheck, title: "Pilotage opérationnel", text: "Réservations, remplacements, urgences et tâches professeurs sont centralisés." },
+  { icon: Users, title: "Contrôle professeurs", text: "Fiches internes, statuts, sanctions, paiements et historiques restent sous contrôle admin." },
+  { icon: Bell, title: "Notifications critiques", text: "Alertes, relances PayDunya, litiges et actions à traiter sont visibles dès l'entrée." },
+];
+
 const FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
 
@@ -24,6 +30,7 @@ function ConnexionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
+  const isAdminAuth = from?.startsWith("/admin") ?? false;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,10 +44,11 @@ function ConnexionContent() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user?.role === "ADMIN") router.replace("/admin");
-        else if (data?.user?.role === "CLIENT") router.replace("/client");
+        else if (data?.user?.role === "TEACHER") router.replace("/professeur");
+        else if (!isAdminAuth && data?.user?.role === "CLIENT") router.replace("/client");
       })
       .catch(() => {});
-  }, [router]);
+  }, [isAdminAuth, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,12 +80,21 @@ function ConnexionContent() {
 
       toast.success("Connexion réussie. Redirection...");
       const role = me?.user?.role;
+      if (isAdminAuth && role !== "ADMIN") {
+        await signOut({ redirect: false });
+        setError("Accès administrateur refusé. Utilisez un compte administrateur.");
+        setLoading(false);
+        return;
+      }
+
       if (from) {
         router.push(from);
       } else if (role === "ADMIN") {
         router.push("/admin");
       } else if (role === "CLIENT") {
         router.push("/client");
+      } else if (role === "TEACHER") {
+        router.push("/professeur");
       } else {
         router.push("/");
       }
@@ -94,31 +111,50 @@ function ConnexionContent() {
     setError(null);
   }
 
+  function fillDemoAdmin() {
+    setEmail("admin@monprof.ci");
+    setPassword("admin123");
+    setError(null);
+  }
+
+  const benefits = isAdminAuth ? ADMIN_BENEFITS : ACCOUNT_BENEFITS;
+  const heroBadge = isAdminAuth ? "Accès administrateur sécurisé" : "Espace sécurisé Compétence";
+  const heroTitle = isAdminAuth
+    ? "Connectez-vous à la console administrateur."
+    : "Reprenez votre suivi de cours en toute confiance.";
+  const heroDescription = isAdminAuth
+    ? "Supervisez les professeurs, réservations, notifications, paiements bloqués, litiges et actions critiques depuis un espace de contrôle protégé."
+    : "Réservations, confirmations, paiements bloqués et suivi administratif restent centralisés dans un espace clair et protégé.";
+  const formTitle = isAdminAuth ? "Connexion administrateur" : "Connexion client";
+  const formDescription = isAdminAuth
+    ? "Accédez au dashboard admin, au centre opérationnel et à la comptabilité interne."
+    : "Accédez à vos réservations, paiements, cours et notifications.";
+
   return (
     <PublicLayout>
       <section className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1fr_440px] lg:items-center lg:py-20">
           <div className="hidden lg:block">
             <div className="max-w-xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Espace sécurisé MonProf CI
+                {heroBadge}
               </span>
-              <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground text-balance">
-                Reprenez votre suivi de cours en toute confiance.
+              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-[#111827] text-balance">
+                {heroTitle}
               </h1>
-              <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">
-                Réservations, confirmations, paiements bloqués et suivi administratif restent centralisés dans un espace clair et protégé.
+              <p className="mt-4 max-w-lg text-base font-medium leading-7 text-[#64748B]">
+                {heroDescription}
               </p>
               <div className="mt-8 grid gap-3">
-                {ACCOUNT_BENEFITS.map((item) => (
+                {benefits.map((item) => (
                   <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <item.icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-foreground">{item.title}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.text}</p>
+                      <p className="text-sm font-semibold text-[#111827]">{item.title}</p>
+                      <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748B]">{item.text}</p>
                     </div>
                   </div>
                 ))}
@@ -129,17 +165,17 @@ function ConnexionContent() {
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2A78] text-white shadow-lg">
-                <GraduationCap className="h-6 w-6" />
+                {isAdminAuth ? <ShieldCheck className="h-6 w-6" /> : <GraduationCap className="h-6 w-6" />}
               </div>
-              <h1 className="mt-4 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                Connexion client
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+                {formTitle}
               </h1>
-              <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
-                Accédez à vos réservations, paiements, cours et notifications.
+              <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
+                {formDescription}
               </p>
             </div>
 
-          <div className="rounded-3xl border border-[#E3E8F2] bg-white p-6 shadow-xl">
+          <div className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-6 shadow-sm">
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700 shadow-sm">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -151,7 +187,7 @@ function ConnexionContent() {
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="email"
                     type="email"
@@ -166,9 +202,16 @@ function ConnexionContent() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">Mot de passe</Label>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="password">Mot de passe</Label>
+                  {!isAdminAuth && (
+                    <Link href="/mot-de-passe-oublie" className="text-xs font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                      Mot de passe oublié ?
+                    </Link>
+                  )}
+                </div>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -182,7 +225,7 @@ function ConnexionContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -210,43 +253,51 @@ function ConnexionContent() {
               </Button>
             </form>
 
-            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground min-[420px]:flex-row">
-              <span>Pas encore de compte ?</span>
-              <Link
-                href="/inscription"
-                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white px-4 font-black text-[#111B4D] transition hover:bg-white"
-              >
-                Créer un compte
-              </Link>
-            </p>
+            {!isAdminAuth && (
+              <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm font-medium text-[#64748B] min-[420px]:flex-row">
+                <span>Pas encore de compte ?</span>
+                <Link
+                  href="/inscription"
+                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white px-4 font-semibold text-[#111B4D] transition hover:bg-white"
+                >
+                  Créer un compte
+                </Link>
+              </p>
+            )}
             <div className="mt-5 grid gap-2 rounded-2xl border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
-              <p className="font-black uppercase tracking-wide text-[#111B4D]">Après connexion</p>
-              <p>Vous retrouvez vos réservations, cours, paiements, notifications et demandes support dans un seul espace.</p>
+              <p className="font-semibold uppercase tracking-wide text-[#111B4D]">Après connexion</p>
+              <p>
+                {isAdminAuth
+                  ? "Vous arrivez directement sur le dashboard administrateur avec le contrôle des professeurs, paiements, litiges et notifications."
+                  : "Vous retrouvez vos réservations, cours, paiements, notifications et demandes support dans un seul espace."}
+              </p>
             </div>
           </div>
 
-          {/* Compte démo client */}
-          <div className="mt-6 rounded-3xl border border-dashed border-[#DDE6F7] bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Démonstration client
+          {/* Compte démo */}
+          <div className="mt-6 rounded-[1.25rem] border border-dashed border-[#DDE6F7] bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+              {isAdminAuth ? "Démonstration administrateur" : "Démonstration client"}
             </p>
             <div className="mt-3 grid gap-2">
               <button
                 type="button"
-                onClick={fillDemoClient}
+                onClick={isAdminAuth ? fillDemoAdmin : fillDemoClient}
                 className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
               >
                 <div>
-                  <p className="font-semibold text-foreground">Compte client</p>
-                  <p className="text-muted-foreground">amon@demo.ci · client123</p>
+                  <p className="font-semibold text-[#111827]">{isAdminAuth ? "Compte administrateur" : "Compte client"}</p>
+                  <p className="font-medium text-[#64748B]">{isAdminAuth ? "admin@monprof.ci · admin123" : "amon@demo.ci · client123"}</p>
                 </div>
-                <span className="inline-flex items-center gap-1 font-black text-[#111B4D]">
+                <span className="inline-flex items-center gap-1 font-semibold text-[#111B4D]">
                   Utiliser <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </button>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client.
+            <p className="mt-3 text-xs font-medium leading-relaxed text-[#64748B]">
+              {isAdminAuth
+                ? "Cliquez pour pré-remplir le formulaire administrateur. Un compte client ne peut pas accéder au dashboard admin."
+                : "Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client."}
             </p>
           </div>
           </div>

@@ -7,6 +7,9 @@ import bcrypt from "bcryptjs";
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if ((session.user as any).role !== "CLIENT") {
+    return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
+  }
   const userId = (session.user as any).id;
 
   const user = await db.user.findUnique({
@@ -23,6 +26,9 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if ((session.user as any).role !== "CLIENT") {
+    return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
+  }
   const userId = (session.user as any).id;
 
   const body = await req.json();

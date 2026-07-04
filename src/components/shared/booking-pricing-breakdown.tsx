@@ -18,6 +18,9 @@ type BookingPricingBreakdownBaseProps = {
   transportRuleLabel?: string | null;
   materialFee?: number | null;
   discountAmount?: number | null;
+  paymentServiceFeeAmount?: number | null;
+  paymentServiceFeeLabel?: string | null;
+  totalBeforePaymentServiceFee?: number | null;
   isQuoteOnly?: boolean | null;
 };
 
@@ -52,11 +55,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const safeSessionsCount = Math.max(1, Math.round(Number(sessionsCount) || 1));
   const safeParticipantsCount = Math.max(1, Math.round(Number(participantsCount) || 1));
   const extraParticipants = Math.max(0, safeParticipantsCount - 1);
-  const multiplier = 1 + extraParticipants * 0.5;
   const transportFee = props.transportFee ?? 0;
   const transportRouteLabel = props.transportRouteLabel;
   const transportRuleLabel = props.transportRuleLabel;
   const discountAmount = props.discountAmount ?? 0;
+  const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
+  const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service paiement";
+  const totalBeforePaymentServiceFee = props.totalBeforePaymentServiceFee ?? Math.max(0, totalPrice - paymentServiceFeeAmount);
   const indicativeSessionAmount = Math.max(0, Math.round(Number(unitPrice) || 0));
   const persistedCourseAmount = props.courseAmount ?? indicativeSessionAmount;
   const courseAmount = persistedCourseAmount > 0
@@ -71,84 +76,123 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const adminProps = props as BookingPricingBreakdownAdminProps;
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-[1.35rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-black text-[#111827]">
-            <Calculator className="h-4 w-4 shrink-0 text-[#111B4D]" />
-            Coût de la réservation
-          </p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
-            {isQuoteOnly ? "Chiffrage manuel avant paiement." : "Séances de 2h, groupe et déplacement inclus si applicable."}
-          </p>
+    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 shadow-sm sm:p-4">
+      <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(12rem,auto)] min-[560px]:items-start">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+            <Calculator className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#111827]">Coût de la réservation</p>
+            <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block">
+              {isQuoteOnly
+                ? "Chiffrage manuel avant paiement. Aucun montant n'est encaissé avant validation admin."
+                : audience === "client"
+                  ? "Le client voit uniquement le prix du cours, les frais utiles et le total PayDunya."
+                  : "Vue admin avec les éléments comptables internes."}
+            </p>
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[11px] font-black uppercase tracking-wide text-[#64748B]">Total</p>
-          <p className="mt-0.5 text-lg font-black leading-tight text-[#111B4D]">
+
+        <div className="rounded-lg border border-[#111B4D] bg-[#111B4D] px-4 py-3 text-white">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white">
+            {isQuoteOnly ? "Montant" : "Total client"}
+          </p>
+          <p className="mt-1 text-2xl font-semibold leading-tight">
             {isQuoteOnly ? "Sur devis" : <Money amount={totalPrice} />}
           </p>
+          {!isQuoteOnly && (
+            <p className="mt-1 text-xs font-semibold leading-5 text-white">
+              PayDunya uniquement
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[520px]:grid-cols-3">
         <PricingFact
-          icon={<Clock className="h-3.5 w-3.5" />}
-          label="Séances"
-          value={`${safeSessionsCount}`}
-          detail={`${totalHours}h`}
+          icon={<Clock className="h-4 w-4" />}
+          label="Formule"
+          value={packTypeLabel(packType)}
+          detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""} de 2h`}
         />
         <PricingFact
-          icon={<Users className="h-3.5 w-3.5" />}
+          icon={<Users className="h-4 w-4" />}
           label="Apprenants"
-          value={`${safeParticipantsCount}`}
-          detail={isGroup ? "+50%" : "Indiv."}
+          value={`${safeParticipantsCount} ${safeParticipantsCount > 1 ? "participants" : "participant"}`}
+          detail={isGroup ? `+50% x ${extraParticipants}` : "Individuel"}
         />
         <PricingFact
-          label="Prix 2h"
+          label="Prix / séance"
           value={isQuoteOnly ? "Devis" : <Money amount={indicativeSessionAmount} />}
-          detail="indicatif"
+          detail={`${totalHours}h au total`}
         />
       </div>
 
-      <div className="mt-3 min-w-0 space-y-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm shadow-sm">
-        {isQuoteOnly ? (
-          <PricingLine label="Montant" value="Sur devis" strong />
-        ) : (
-          <>
-            {isGroup ? (
-              <>
-                <PricingLine label="Base séances" value={<Money amount={baseFormulaAmount} />} />
-                <PricingLine label={`Majoration groupe (${extraParticipants})`} value={<Money amount={groupSurchargeAmount} />} />
-                {discountAmount > 0 && <PricingLine label="Remise pack" value={<Money amount={discountAmount} />} />}
-                <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} />
-              </>
-            ) : (
-              <PricingLine label="Cours" value={<Money amount={courseAmount} />} />
-            )}
-            {(transportFee > 0 || transportRouteLabel) && (
-              <PricingLine
-                label={transportRouteLabel ? `Déplacement` : "Frais de déplacement"}
-                value={transportFee > 0 ? <Money amount={transportFee} /> : "Inclus"}
-              />
-            )}
-            <div className="border-t border-[#E3E8F2] pt-2">
-              <PricingLine label="Total à payer" value={<Money amount={totalPrice} className="text-[#111B4D]" />} strong />
-            </div>
-          </>
-        )}
+      <div className="mt-3 min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3">
+        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
+            <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
+              {isGroup
+                ? "Le premier apprenant est inclus. Chaque apprenant supplémentaire ajoute 50% du prix de base."
+                : "Calcul individuel sur la formule sélectionnée."}
+            </p>
+          </div>
+          {!isQuoteOnly && (
+            <p className="text-sm font-semibold text-[#111B4D]">
+              Moyenne <Money amount={averageSessionPrice} /> / séance
+            </p>
+          )}
+        </div>
+
+        <div className="mt-3 space-y-2 text-sm">
+          {isQuoteOnly ? (
+            <PricingLine label="Montant" value="Sur devis" strong />
+          ) : (
+            <>
+              {isGroup ? (
+                <>
+                  <PricingLine label="Base séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
+                  <PricingLine label="Majoration groupe" detail={`${extraParticipants} participant${extraParticipants > 1 ? "s" : ""} en plus`} value={<Money amount={groupSurchargeAmount} />} />
+                  {discountAmount > 0 && <PricingLine label="Remise pack" value={<Money amount={discountAmount} />} />}
+                  <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} strong />
+                </>
+              ) : (
+                <PricingLine label="Cours" detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""}`} value={<Money amount={courseAmount} />} strong />
+              )}
+              {(transportFee > 0 || transportRouteLabel) && (
+                <PricingLine
+                  label="Déplacement"
+                  detail={transportRouteLabel ?? "Frais selon zone"}
+                  value={transportFee > 0 ? <Money amount={transportFee} /> : "Inclus"}
+                />
+              )}
+              {paymentServiceFeeAmount > 0 && (
+                <>
+                  <PricingLine label="Sous-total réservation" value={<Money amount={totalBeforePaymentServiceFee} />} />
+                  <PricingLine label={paymentServiceFeeLabel} value={<Money amount={paymentServiceFeeAmount} />} />
+                </>
+              )}
+              <div className="mt-3 border-t border-[#E3E8F2] pt-3">
+                <PricingLine label="Total à payer via PayDunya" value={<Money amount={totalPrice} className="text-[#111B4D]" />} strong />
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {transportRuleLabel && audience === "client" && (
-        <div className="mt-2 flex items-start gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
           <Car className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
           <span>{formatSentencePart(transportRuleLabel)}.</span>
         </div>
       )}
 
       {audience === "client" && (
-        <div className="mt-2 flex items-start gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B] shadow-sm">
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B] shadow-sm">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-          <span>Paiement sécurisé sur PayDunya, libéré après confirmation du cours.</span>
+          <span>Paiement sécurisé sur PayDunya. Le numéro et le moyen de paiement sont choisis uniquement sur PayDunya, puis vérifiés côté serveur.</span>
         </div>
       )}
 
@@ -175,31 +219,52 @@ function PricingFact({
   icon?: ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white px-2 py-2">
-      <div className="flex min-w-0 items-center gap-1.5 text-[#64748B]">
-        {icon && <span className="shrink-0 text-[#111B4D]">{icon}</span>}
-        <p className="break-words text-[10px] font-black uppercase tracking-normal">{label}</p>
+    <div className="flex min-w-0 items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
+      {icon && (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] text-[#111B4D]">
+          {icon}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="break-words text-[10.5px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+        <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-[#111827]">{value}</p>
+        <p className="mt-0.5 break-words text-[11px] font-medium leading-tight text-[#64748B]">{detail}</p>
       </div>
-      <p className="mt-1 break-words text-sm font-black leading-tight text-[#111827]">{value}</p>
-      <p className="mt-0.5 break-words text-[11px] font-semibold leading-tight text-[#64748B]">{detail}</p>
     </div>
   );
 }
 
-function PricingLine({ label, value, strong = false }: { label: string; value: ReactNode; strong?: boolean }) {
+function PricingLine({
+  label,
+  value,
+  detail,
+  strong = false,
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: string;
+  strong?: boolean;
+}) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-      <span className={strong ? "min-w-0 font-black leading-snug text-[#111827]" : "min-w-0 leading-snug text-[#64748B]"}>{label}</span>
-      <span className={strong ? "text-right font-black tabular-nums leading-snug text-foreground" : "text-right font-semibold tabular-nums leading-snug text-foreground"}>{value}</span>
+      <span className="min-w-0">
+        <span className={strong ? "block font-semibold leading-snug text-[#111827]" : "block font-medium leading-snug text-[#64748B]"}>
+          {label}
+        </span>
+        {detail && <span className="mt-0.5 block text-xs font-medium leading-snug text-[#64748B]">{detail}</span>}
+      </span>
+      <span className={strong ? "whitespace-nowrap text-right font-semibold tabular-nums leading-snug text-[#111B4D]" : "whitespace-nowrap text-right font-semibold tabular-nums leading-snug text-[#111827]"}>
+        {value}
+      </span>
     </div>
   );
 }
 
 function PricingMini({ label, value, detail }: { label: string; value: ReactNode; detail?: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 shadow-sm">
-      <p className="text-xs font-bold uppercase leading-snug tracking-normal text-[#64748B]">{label}</p>
-      <p className="mt-1 break-words text-sm font-black leading-tight text-[#111B4D]">{value}</p>
+    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 shadow-sm">
+      <p className="text-xs font-semibold uppercase leading-snug tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold leading-tight text-[#111B4D]">{value}</p>
       {detail && <p className="text-xs leading-snug text-[#64748B]">{detail}</p>}
     </div>
   );

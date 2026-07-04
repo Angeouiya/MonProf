@@ -272,7 +272,7 @@ export default async function SuiviProfesseursPage() {
                       <div className="flex min-w-64 items-center gap-3">
                         <ProfessorImage photoUrl={teacher.photoUrl} name={teacher.professionalName || teacher.fullName} size="sm" shape="circle" verified={teacher.badgeVerified} />
                         <div className="min-w-0">
-                          <Link href={`/admin/professeurs/${teacher.id}`} className="truncate text-sm font-semibold text-foreground hover:text-primary">
+                          <Link href={`/admin/professeurs/${teacher.id}`} className="inline-flex min-h-10 max-w-full items-center truncate text-sm font-semibold text-foreground hover:text-primary">
                             {teacher.professionalName || teacher.fullName}
                           </Link>
                           <p className="truncate text-xs text-muted-foreground">{primary} · {teacher.commune ?? "Abidjan"}</p>

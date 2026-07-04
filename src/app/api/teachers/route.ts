@@ -68,6 +68,12 @@ export async function GET(req: NextRequest) {
   ]);
 
   const items = teachers.map((t) => ({
+    displayRating: t.ratingCount > 0
+      ? t.rating
+      : t.adminRatingPublic && t.adminRating > 0
+        ? t.adminRating
+        : t.rating,
+    displayRatingSource: t.ratingCount > 0 ? "CLIENT_REVIEWS" : t.adminRatingPublic && t.adminRating > 0 ? "ADMIN_PLATFORM" : "NONE",
     id: t.id,
     fullName: t.fullName,
     professionalName: t.professionalName,
@@ -75,7 +81,15 @@ export async function GET(req: NextRequest) {
     photoUrl: t.photoUrl,
     rating: t.rating,
     ratingCount: t.ratingCount,
+    adminRating: t.adminRating,
+    adminRatingPublic: t.adminRatingPublic,
     experienceYears: t.experienceYears,
+    careerSummary: t.careerSummary,
+    skills: t.skills,
+    workHistory: t.workHistory,
+    certifications: t.certifications,
+    teachingAchievements: t.teachingAchievements,
+    learnersCoached: t.learnersCoached,
     offersHome: t.offersHome,
     offersOnline: t.offersOnline,
     commune: t.commune,

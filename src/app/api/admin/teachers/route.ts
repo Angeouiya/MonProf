@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
+import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
+import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -37,7 +40,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       fullName, professionalName, photoUrl, phone, email, commune, quartier, addressHint,
-      jobTitle, bio, experienceYears, diploma, cvUrl, profileType, status, featured,
+      portalAccessEnabled, portalPhone, portalPassword,
+      jobTitle, bio, experienceYears, diploma, cvUrl, careerSummary, skills, workHistory,
+      certifications, teachingAchievements, learnersCoached, profileType, status, featured,
       badgeVerified, badgeRecommended, badgeNew, badgePopular, badgePremium,
       internalNote,
       offersHome, offersOnline, offersGroup,
@@ -49,6 +54,25 @@ export async function POST(req: NextRequest) {
 
     if (!fullName || !phone || !jobTitle || !bio) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
+    }
+    const enablePortal = Boolean(portalAccessEnabled);
+    const normalizedPortalPhone = normalizeTeacherPhone(portalPhone || phone);
+    if (enablePortal) {
+      if (!normalizedPortalPhone) {
+        return NextResponse.json({ error: "Téléphone de connexion professeur requis." }, { status: 400 });
+      }
+      if (typeof portalPassword !== "string" || portalPassword.trim().length < 6) {
+        return NextResponse.json({ error: "Mot de passe professeur requis (6 caractères minimum)." }, { status: 400 });
+      }
+      const existingPortalPhone = await db.teacher.findFirst({
+        where: { portalPhone: normalizedPortalPhone },
+        select: { fullName: true, professionalName: true },
+      });
+      if (existingPortalPhone) {
+        return NextResponse.json({
+          error: `Ce numéro de connexion est déjà attribué à ${existingPortalPhone.professionalName || existingPortalPhone.fullName}.`,
+        }, { status: 409 });
+      }
     }
     const nextStatus = status || "ACTIVE";
     const rawPhotoUrl = typeof photoUrl === "string" ? photoUrl.trim() : "";
@@ -79,11 +103,20 @@ export async function POST(req: NextRequest) {
         commune: commune || null,
         quartier: quartier || null,
         addressHint: addressHint || null,
+        portalAccessEnabled: enablePortal,
+        portalPhone: enablePortal ? normalizedPortalPhone : null,
+        portalPasswordHash: enablePortal ? await bcrypt.hash(portalPassword.trim(), 10) : null,
         jobTitle,
         bio,
         experienceYears: Number(experienceYears) || 0,
         diploma: diploma || null,
         cvUrl: cvUrl || null,
+        careerSummary: normalizeTeacherProfileText(careerSummary),
+        skills: normalizeTeacherProfileText(skills),
+        workHistory: normalizeTeacherProfileText(workHistory),
+        certifications: normalizeTeacherProfileText(certifications),
+        teachingAchievements: normalizeTeacherProfileText(teachingAchievements),
+        learnersCoached: Math.max(0, Number(learnersCoached) || 0),
         profileType: profileType || "ENSEIGNANT",
         status: nextStatus,
         featured: !!featured,
@@ -140,6 +173,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: teacher.id, ok: true });
   } catch (e: any) {
     console.error("admin/teachers POST error", e);
+    if (e?.code === "P2002") {
+      return NextResponse.json({ error: "Ce téléphone de connexion professeur est déjà utilisé." }, { status: 409 });
+    }
     return NextResponse.json({ error: e.message || "Erreur serveur" }, { status: 500 });
   }
 }

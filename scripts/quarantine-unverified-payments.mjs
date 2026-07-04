@@ -85,6 +85,12 @@ function quarantineReason(booking) {
 const bookings = await prisma.booking.findMany({
   include: {
     transactions: { where: { type: { in: ["CLIENT_PAYMENT", "TEACHER_PAYOUT"] } } },
+    teacherTasks: {
+      where: { status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] } },
+    },
+    missionLinks: {
+      where: { status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] } },
+    },
   },
   orderBy: { createdAt: "desc" },
 });
@@ -92,6 +98,9 @@ const bookings = await prisma.booking.findMany({
 const suspects = bookings
   .map((booking) => ({ booking, reason: quarantineReason(booking) }))
   .filter(({ booking, reason }) => verifiedStatuses.has(booking.paymentStatus) && reason);
+const operationalArtifactsWithoutProof = bookings
+  .map((booking) => ({ booking, reason: quarantineReason(booking) }))
+  .filter(({ booking, reason }) => reason && (booking.teacherTasks.length > 0 || booking.missionLinks.length > 0));
 
 const report = {
   mode: apply ? "apply" : "dry-run",
@@ -103,9 +112,16 @@ const report = {
     paymentStatus: booking.paymentStatus,
     reason,
   })),
+  disabledOperationalArtifacts: operationalArtifactsWithoutProof.map(({ booking, reason }) => ({
+    reference: booking.reference,
+    id: booking.id,
+    teacherTasks: booking.teacherTasks.length,
+    missionLinks: booking.missionLinks.length,
+    reason,
+  })),
 };
 
-if (apply && suspects.length > 0) {
+if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0)) {
   const now = new Date();
   for (const { booking, reason } of suspects) {
     const nextStatus = operationalPaidStatuses.has(booking.status) ? "PENDING_PAYMENT" : booking.status;
@@ -172,6 +188,76 @@ if (apply && suspects.length > 0) {
           detail,
           oldStatus: `${booking.status}/${booking.paymentStatus}`,
           newStatus: `${nextStatus}/FAILED`,
+        },
+      });
+    });
+  }
+
+  for (const { booking, reason } of operationalArtifactsWithoutProof) {
+    const detail = `Désactivation opérationnelle anti-faux paiement sur ${booking.reference}: ${reason}. Aucune tâche ou mission professeur ne doit rester active sans confirmation PayDunya serveur.`;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.teacherTask.updateMany({
+        where: {
+          bookingId: booking.id,
+          status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] },
+        },
+        data: {
+          status: "CANCELLED",
+          completedAt: now,
+        },
+      });
+
+      await tx.teacherMissionLink.updateMany({
+        where: {
+          bookingId: booking.id,
+          status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+        },
+        data: {
+          status: "EXPIRED",
+          response: detail,
+        },
+      });
+
+      await tx.teacherNotification.updateMany({
+        where: {
+          bookingId: booking.id,
+          status: { in: ["DRAFT", "PENDING", "SENT"] },
+        },
+        data: {
+          status: "FAILED",
+          sent: false,
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: "Mission professeur désactivée sans PayDunya",
+          message: detail,
+          type: "PAYMENT_VERIFICATION_FAILED",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "CRITICAL",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${booking.id}`,
+          actionLabel: "Vérifier le dossier",
+        },
+      });
+
+      await tx.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Désactivation mission sans preuve PayDunya",
+          entityType: "Booking",
+          entityId: booking.id,
+          detail,
+          oldStatus: "ACTIVE_TEACHER_ARTIFACTS",
+          newStatus: "DISABLED_UNVERIFIED_PAYMENT",
         },
       });
     });

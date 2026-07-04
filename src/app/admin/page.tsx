@@ -51,6 +51,9 @@ export default async function AdminDashboard() {
     todayBookings, blockedFundsAgg, toReleaseAgg, teachersToPayAgg,
     openDisputes, allTimeCommissionAgg, monthCommissionAgg, totalPaidToTeachersAgg,
     recentPaidBookings, pendingReleaseBookings, openDisputeList, adminNotifications,
+    draftPayDunyaBookings, paidBookingsAwaitingAdmin, pendingTeacherConfirmations,
+    pendingScheduleProposals, teacherMessagesWaitingAdmin, pendingPayoutRequests,
+    pendingRefundRequests,
   ] = await Promise.all([
     db.user.count({ where: { role: "CLIENT" } }),
     db.teacher.count(),
@@ -95,6 +98,41 @@ export default async function AdminDashboard() {
       orderBy: { createdAt: "desc" }, take: 5,
     }),
     db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
+    db.booking.count({
+      where: {
+        status: "PENDING_PAYMENT",
+        OR: [
+          { paydunyaVerifiedAt: null },
+          { paydunyaStatus: { notIn: ["COMPLETED", "CONFIRMED", "SUCCESS"] } },
+        ],
+      },
+    }),
+    db.booking.count({
+      where: verifiedPayDunyaBookingWhere({
+        status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] },
+      }),
+    }),
+    db.teacherMissionLink.count({
+      where: {
+        status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+        expiresAt: { gte: now },
+        booking: { is: verifiedPayDunyaBookingWhere() },
+      },
+    }),
+    db.bookingScheduleProposal.count({
+      where: {
+        status: "PENDING",
+        booking: { is: verifiedPayDunyaBookingWhere() },
+      },
+    }),
+    db.teacherAdminMessage.count({
+      where: {
+        sender: "TEACHER",
+        status: { in: ["OPEN", "WAITING_ADMIN"] },
+      },
+    }),
+    db.teacherPayoutRequest.count({ where: { status: "PENDING" } }),
+    db.clientRefundRequest.count({ where: { status: { in: ["PENDING", "APPROVED"] } } }),
   ]);
 
   const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
@@ -159,7 +197,7 @@ export default async function AdminDashboard() {
     <div className="space-y-6">
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Vue d'ensemble de la plateforme MonProf CI"
+        description="Vue d'ensemble de la plateforme Compétence"
       >
         <Button asChild>
           <Link href="/admin/professeurs/nouveau">
@@ -167,6 +205,55 @@ export default async function AdminDashboard() {
           </Link>
         </Button>
       </PageHeader>
+
+      <Card className="border-[#E3E8F2] bg-white shadow-sm">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-base">Synchronisation des trois espaces</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Contrôle rapide client, professeur et administration : les réservations non payées restent en brouillon, et seules les preuves PayDunya vérifiées déclenchent le suivi opérationnel.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <ControlSpaceCard
+              title="Espace client"
+              description="Paiements, remboursements et réponses client."
+              icon={Users}
+              href="/admin/clients"
+              actionLabel="Voir clients"
+              items={[
+                { label: "Brouillons PayDunya", value: draftPayDunyaBookings, href: "/admin/reservations?status=PENDING_PAYMENT", attention: draftPayDunyaBookings > 0 },
+                { label: "Créneaux à répondre", value: pendingScheduleProposals, href: "/admin/reservations", attention: pendingScheduleProposals > 0 },
+                { label: "Remboursements", value: pendingRefundRequests, href: "/admin/reservations?refunds=pending", attention: pendingRefundRequests > 0 },
+              ]}
+            />
+            <ControlSpaceCard
+              title="Espace professeur"
+              description="Missions, messages et paiements professeur."
+              icon={GraduationCap}
+              href="/admin/suivi-professeurs"
+              actionLabel="Suivi professeurs"
+              items={[
+                { label: "Confirmations mission", value: pendingTeacherConfirmations, href: "/admin/notifications", attention: pendingTeacherConfirmations > 0 },
+                { label: "Messages à traiter", value: teacherMessagesWaitingAdmin, href: "/admin/messages", attention: teacherMessagesWaitingAdmin > 0 },
+                { label: "Demandes paiement", value: pendingPayoutRequests, href: "/admin/professeurs-a-payer", attention: pendingPayoutRequests > 0 },
+              ]}
+            />
+            <ControlSpaceCard
+              title="Espace admin"
+              description="Validation, libération de fonds et incidents."
+              icon={ShieldAlert}
+              href="/admin/centre-operationnel"
+              actionLabel="Centre opérationnel"
+              items={[
+                { label: "Résa. payées à valider", value: paidBookingsAwaitingAdmin, href: "/admin/reservations?status=paid", attention: paidBookingsAwaitingAdmin > 0 },
+                { label: "Paiements à libérer", value: teachersToPay, href: "/admin/paiements-a-liberer", attention: teachersToPay > 0 },
+                { label: "Litiges ouverts", value: openDisputes, href: "/admin/litiges", attention: openDisputes > 0 },
+              ]}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
@@ -412,6 +499,70 @@ function getPriorityClass(priority: string) {
   if (priority === "URGENT") return "border-amber-200 bg-amber-50 text-amber-700";
   if (priority === "IMPORTANT") return "border-violet-200 bg-violet-50 text-violet-700";
   return "border-blue-200 bg-blue-50 text-blue-700";
+}
+
+function ControlSpaceCard({
+  title,
+  description,
+  icon: Icon,
+  href,
+  actionLabel,
+  items,
+}: {
+  title: string;
+  description: string;
+  icon: typeof Users;
+  href: string;
+  actionLabel: string;
+  items: Array<{ label: string; value: number; href: string; attention?: boolean }>;
+}) {
+  const attentionCount = items.reduce((sum, item) => sum + (item.attention ? item.value : 0), 0);
+
+  return (
+    <section className="rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-semibold text-[#111827]">{title}</h2>
+              <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{description}</p>
+            </div>
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className={attentionCount > 0 ? "shrink-0 border-red-200 bg-white text-red-700" : "shrink-0 border-[#DDE6F7] bg-white text-[#111B4D]"}
+        >
+          {attentionCount > 0 ? `${attentionCount} à traiter` : "À jour"}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[#E6EAF3] bg-white px-3 py-2 text-sm transition hover:border-[#111B4D]"
+          >
+            <span className="min-w-0 truncate font-medium text-[#475569]">{item.label}</span>
+            <span className={item.attention ? "rounded-lg bg-[#111B4D] px-2 py-1 text-xs font-semibold text-white" : "rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs font-semibold text-[#111B4D]"}>
+              {item.value}
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      <Button asChild variant="outline" className="mt-4 min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D]">
+        <Link href={href}>
+          {actionLabel}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Button>
+    </section>
+  );
 }
 
 function getNotificationHref(link: string | null, bookingId: string | null, teacherId: string | null) {

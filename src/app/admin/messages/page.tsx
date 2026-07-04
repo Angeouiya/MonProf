@@ -17,6 +17,14 @@ import { MessagesClient } from "./client";
 
 export const dynamic = "force-dynamic";
 
+const TEACHER_MESSAGE_STATUS_LABELS: Record<string, string> = {
+  OPEN: "Ouvert",
+  WAITING_ADMIN: "Réponse admin attendue",
+  WAITING_TEACHER: "Réponse professeur attendue",
+  RESOLVED: "Résolu",
+  CLOSED: "Clôturé",
+};
+
 export default async function AdminMessagesPage({
   searchParams,
 }: {
@@ -28,7 +36,7 @@ export default async function AdminMessagesPage({
   const where: any = {};
   if (filter === "unhandled") where.handled = false;
 
-  const [messages, clientCommunications] = await Promise.all([
+  const [messages, clientCommunications, teacherAdminMessages] = await Promise.all([
     db.contactMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -60,15 +68,46 @@ export default async function AdminMessagesPage({
       orderBy: { createdAt: "desc" },
       take: 80,
     }),
+    db.teacherAdminMessage.findMany({
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            fullName: true,
+            professionalName: true,
+            photoUrl: true,
+            phone: true,
+            badgeVerified: true,
+          },
+        },
+        admin: { select: { name: true } },
+        booking: {
+          select: {
+            id: true,
+            reference: true,
+            subjectName: true,
+            levelName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
   ]);
+  const unreadTeacherMessages = teacherAdminMessages.filter((message) => message.sender === "TEACHER" && !message.readByAdminAt).length;
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client`}>
+      <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client, ${teacherAdminMessages.length} échange(s) professeur`}>
         <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
           Support client
         </Badge>
+        {unreadTeacherMessages > 0 && (
+          <Badge variant="outline" className="border-[#111B4D] bg-white text-[#111B4D]">
+            {unreadTeacherMessages} prof à traiter
+          </Badge>
+        )}
       </PageHeader>
       <MessagesClient filter={filter ?? ""} />
       {messages.length === 0 ? (
@@ -76,7 +115,7 @@ export default async function AdminMessagesPage({
       ) : (
         <div className="space-y-3">
           {messages.map((m) => (
-            <Card key={m.id} className={m.handled ? "opacity-75" : "border-violet-200 bg-gradient-to-br from-white to-violet-50/50"}>
+            <Card key={m.id} className={m.handled ? "opacity-75" : "border-[#E3E8F2] bg-white shadow-sm"}>
               <CardContent className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -107,6 +146,98 @@ export default async function AdminMessagesPage({
           ))}
         </div>
       )}
+
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Messages professeurs</h2>
+            <p className="text-sm text-muted-foreground">
+              Tous les échanges issus de l'espace professeur sont centralisés ici, puis traités dans la fiche interne du professeur.
+            </p>
+          </div>
+          <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
+            {unreadTeacherMessages} non lu(s) admin
+          </Badge>
+        </div>
+
+        {teacherAdminMessages.length === 0 ? (
+          <EmptyState icon={MessageSquare} title="Aucun message professeur" description="Les messages envoyés depuis l'espace professeur apparaîtront ici." />
+        ) : (
+          <div className="grid gap-3">
+            {teacherAdminMessages.map((message) => {
+              const teacherName = message.teacher.professionalName || message.teacher.fullName;
+              const unread = message.sender === "TEACHER" && !message.readByAdminAt;
+              return (
+                <Card key={message.id} className={unread ? "border-[#111B4D] bg-white shadow-sm" : "border-[#E3E8F2] bg-white shadow-sm"}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <ProfessorImage
+                          photoUrl={message.teacher.photoUrl}
+                          name={teacherName}
+                          size="sm"
+                          shape="circle"
+                          verified={message.teacher.badgeVerified}
+                        />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-bold text-foreground">{message.subject}</p>
+                            <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
+                              {message.sender === "TEACHER" ? "Professeur" : message.admin?.name || "Administration"}
+                            </Badge>
+                            <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
+                              {TEACHER_MESSAGE_STATUS_LABELS[message.status] ?? message.status}
+                            </Badge>
+                            <Badge variant="outline" className={unread ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#D7DEE9] bg-white text-[#111B4D]"}>
+                              {priorityLabel(message.priority)}
+                            </Badge>
+                            {unread && (
+                              <Badge variant="outline" className="border-red-200 bg-white text-red-700">
+                                À traiter
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Professeur : {teacherName}
+                            {message.teacher.phone ? ` · ${message.teacher.phone}` : ""}
+                            {message.booking ? ` · ${message.booking.reference}` : ""}
+                          </p>
+                          {message.booking && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {message.booking.subjectName} · {message.booking.levelName}
+                            </p>
+                          )}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {formatDateTime(message.createdAt)} • {timeAgo(message.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
+                        <Button asChild size="sm" variant={unread ? "default" : "outline"} className={unread ? "bg-[#111B4D] text-white hover:bg-[#1E2A78]" : ""}>
+                          <Link href={`/admin/professeurs/${message.teacher.id}?tab=messages&messageId=${message.id}`}>
+                            Répondre <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                        {message.booking && (
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/admin/reservations/${message.booking.id}`}>
+                              Réservation <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                      <p className="whitespace-pre-line text-sm text-foreground">{message.message}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">

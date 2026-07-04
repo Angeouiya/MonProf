@@ -49,6 +49,8 @@ function getDefaultFallback(pathname: string | null) {
   if (pathname.startsWith("/admin/")) return "/admin";
   if (pathname === "/client") return "/";
   if (pathname.startsWith("/client/")) return "/client";
+  if (pathname === "/professeur") return "/";
+  if (pathname.startsWith("/professeur/")) return "/professeur";
   if (pathname.startsWith("/professeurs/")) return "/professeurs";
   return "/";
 }

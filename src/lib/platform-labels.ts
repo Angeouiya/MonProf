@@ -33,6 +33,7 @@ export const missionStatusLabels: Record<string, string> = {
   CONFIRMED: "Confirmée",
   UNAVAILABLE: "Indisponible",
   PROBLEM_REPORTED: "Problème signalé",
+  RESCHEDULE_PROPOSED: "Nouveau créneau proposé",
   EXPIRED: "Lien expiré",
   RELAUNCHED: "Relancée",
   REPLACEMENT_RECOMMENDED: "Remplacement recommandé",
@@ -82,6 +83,7 @@ export const notificationChannelLabels: Record<string, string> = {
 export const notificationTypeLabels: Record<string, string> = {
   NEW_BOOKING: "Nouvelle réservation",
   QUOTE_REQUESTED: "Demande de devis",
+  PAYMENT_PENDING: "Paiement à finaliser",
   PAYMENT_RECEIVED: "Paiement reçu",
   BLOCKED_FUNDS: "Fonds bloqués",
   FUNDS_BLOCKED: "Fonds bloqués",

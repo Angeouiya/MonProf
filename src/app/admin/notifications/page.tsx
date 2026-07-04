@@ -105,26 +105,26 @@ export default async function AdminNotificationsPage({
         <AdminUrgentAlertCard title="Professeurs à suivre" description="Notifications professeur en attente de confirmation." count={teacherPendingCount} />
       </div>
 
-      <Card className="overflow-hidden border-violet-100 bg-white/95 shadow-sm">
-        <CardHeader className="border-b border-violet-100 bg-gradient-to-r from-[#1E2A78]/95 via-violet-700/90 to-[#1E2A78]/95 text-white">
+      <Card className="overflow-hidden border-[#E3E8F2] bg-white shadow-sm">
+        <CardHeader className="border-b border-[#E3E8F2] bg-white">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-base text-white">
-                <ShieldAlert className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-base text-[#111827]">
+                <ShieldAlert className="h-4 w-4 text-[#111B4D]" />
                 Radar opérationnel des notifications
               </CardTitle>
-              <p className="mt-1 max-w-3xl text-sm text-white/78">
+              <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-[#64748B]">
                 Lecture rapide pour décider quoi traiter en premier : urgences, professeurs à relancer, remplacements, litiges et paiements.
                 Le bouton de relance vérifie aussi les missions expirées, les confirmations en retard et les cours dans moins de 2h.
               </p>
             </div>
-            <Badge variant="outline" className="w-fit border-white/30 bg-white/15 text-white">
+            <Badge variant="outline" className="w-fit border-[#CAD7F2] bg-white text-[#111B4D]">
               {actionRequiredCount} action(s) à suivre
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 p-4 sm:p-5">
-          <div className={radarDecision.tone === "red" ? "rounded-3xl border border-red-100 bg-red-50/80 p-4" : radarDecision.tone === "amber" ? "rounded-3xl border border-amber-100 bg-amber-50/80 p-4" : "rounded-3xl border border-blue-100 bg-blue-50/70 p-4"}>
+          <div className={radarDecision.tone === "red" ? "rounded-3xl border border-red-200 bg-white p-4" : radarDecision.tone === "amber" ? "rounded-3xl border border-amber-200 bg-white p-4" : "rounded-3xl border border-[#CAD7F2] bg-white p-4"}>
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className={radarDecision.tone === "red" ? "text-xs font-bold uppercase tracking-wide text-red-900/65" : radarDecision.tone === "amber" ? "text-xs font-bold uppercase tracking-wide text-amber-900/65" : "text-xs font-bold uppercase tracking-wide text-blue-900/65"}>
@@ -310,7 +310,7 @@ function RadarMetric({
   return (
     <Link
       href={href}
-      className={danger ? "rounded-3xl border border-amber-100 bg-amber-50/75 p-4 transition hover:-translate-y-0.5 hover:bg-amber-50" : "rounded-3xl border border-violet-100 bg-violet-50/35 p-4 transition hover:-translate-y-0.5 hover:bg-violet-50/55"}
+      className={danger ? "rounded-3xl border border-amber-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-amber-300" : "rounded-3xl border border-[#E3E8F2] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#111B4D]"}
     >
       <div className="flex items-start justify-between gap-3">
         <div>

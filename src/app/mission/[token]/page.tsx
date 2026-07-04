@@ -10,6 +10,7 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { buildWhatsAppUrl } from "@/lib/phone";
 import { MissionCopyPanel } from "./mission-copy-panel";
 import { parsePricingSnapshot } from "@/lib/pricing";
+import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,30 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
     where: { token },
     include: {
       teacher: true,
-      booking: { include: { client: true } },
+      booking: {
+        include: {
+          client: true,
+          transactions: { where: { type: "CLIENT_PAYMENT" } },
+        },
+      },
     },
   });
   if (!mission) notFound();
+  if (!hasVerifiedPayDunyaClientPayment(mission.booking)) {
+    return (
+      <main className="min-h-screen bg-white px-4 py-10">
+        <div className="mx-auto max-w-xl rounded-2xl border border-[#E3E8F2] bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827]">Mission non activée</h1>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
+            Cette mission n'est pas disponible tant que le paiement PayDunya n'a pas été confirmé par vérification serveur. Contactez l'administration Compétence si vous avez reçu ce lien par erreur.
+          </p>
+        </div>
+      </main>
+    );
+  }
   const settingsRows = await db.setting.findMany({
     where: { key: { in: ["support_phone", "support_email"] } },
   });
@@ -44,21 +65,21 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
   const supportPhone = settings.support_phone || "";
   const supportEmail = settings.support_email || "";
   const supportMessage = [
-    `Bonjour MonProf CI, je suis ${teacherName}.`,
+    `Bonjour Compétence, je suis ${teacherName}.`,
     `Je vous contacte au sujet de la mission ${booking.reference}.`,
     `Cours : ${booking.subjectName} - ${booking.levelName}.`,
   ].join("\n");
   const supportWhatsAppUrl = buildWhatsAppUrl(supportPhone, supportMessage);
   const clientMessage = [
     `Bonjour ${booking.client.name},`,
-    `Je suis ${teacherName}, votre professeur pour le cours ${booking.subjectName} (${booking.levelName}) avec MonProf CI.`,
+    `Je suis ${teacherName}, votre professeur pour le cours ${booking.subjectName} (${booking.levelName}) avec Compétence.`,
     `Je vous contacte au sujet de la réservation ${booking.reference}.`,
   ].join("\n");
   const clientWhatsAppUrl = buildWhatsAppUrl(booking.client.phone, clientMessage);
   const clientPhoneHref = booking.client.phone ? `tel:${booking.client.phone.replace(/\s+/g, "")}` : "";
   const displayCourseDate = booking.scheduledDate ?? booking.startDate;
   const missionSummary = [
-    `Mission MonProf CI - ${booking.reference}`,
+    `Mission Compétence - ${booking.reference}`,
     `Professeur : ${teacherName}`,
     `Client : ${booking.client.name}`,
     `Contact client : ${booking.client.phone || "À confirmer par l'administration"}`,
@@ -81,7 +102,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
       <div className="mx-auto max-w-3xl space-y-5">
         <div className="text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-100 bg-white/85 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm">
-            <ShieldCheck className="h-4 w-4" /> MonProf CI - Mission professeur sécurisée
+            <ShieldCheck className="h-4 w-4" /> Compétence - Mission professeur sécurisée
           </div>
           <div className="mt-5 flex justify-center">
             <ProfessorImage

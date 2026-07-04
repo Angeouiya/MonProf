@@ -4,25 +4,38 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewRatingSelector } from "@/components/shared/review-rating-selector";
+import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shared/important-action-confirm";
 import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink } from "lucide-react";
 import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { formatFCFA } from "@/lib/format";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { activePaymentMethodOptions, paymentMethodLabel } from "@/lib/payment-methods";
 
 type BookingActionsProps = {
   booking: Booking & {
     reviews: Review[];
     transactions?: Transaction[];
     disputes: { id: string; reason: string; description: string; status: string; createdAt: Date }[];
+    clientRefundRequests?: {
+      id: string;
+      reference: string;
+      amount: number;
+      paymentServiceFeeNonRefunded: number;
+      method: string;
+      paymentPhone: string;
+      accountName?: string | null;
+      status: string;
+      createdAt: Date;
+    }[];
   };
 };
 
@@ -42,6 +55,151 @@ const DISPUTE_STATUS_LABELS: Record<string, string> = {
   REJECTED: "Clôturé sans suite",
 };
 
+export function BookingPrimaryAction({ booking }: BookingActionsProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState<string | null>(null);
+  const status = booking.status;
+  const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
+  const canResumePayDunya = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
+
+  async function callAction(action: string) {
+    setLoading(action);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Action impossible");
+        return null;
+      }
+      return data;
+    } catch {
+      toast.error("Erreur réseau");
+      return null;
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function onResumePayDunya() {
+    setLoading("paydunya_checkout");
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "paydunya_checkout" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.payment?.checkoutUrl) {
+        toast.error(data.error || "Impossible d'ouvrir PayDunya pour le moment.");
+        return;
+      }
+      toast.success("Ouverture de PayDunya...");
+      window.location.assign(data.payment.checkoutUrl);
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function onVerifyPayDunya() {
+    const data = await callAction("paydunya_verify");
+    if (!data) {
+      router.refresh();
+      return;
+    }
+    const message = data.payment?.message || "Vérification PayDunya terminée.";
+    if (data.payment?.verified) {
+      toast.success(message);
+    } else {
+      toast(message);
+    }
+    router.refresh();
+  }
+
+  async function onConfirmCourse() {
+    const data = await callAction("confirm");
+    if (!data) return;
+    toast.success("Cours confirmé. L'administration finalise le dossier.");
+    router.refresh();
+  }
+
+  if (canResumePayDunya) {
+    return (
+      <div className="mt-4 grid gap-2">
+        <ImportantActionConfirm
+          title="Ouvrir PayDunya ?"
+          description="Vous allez quitter Compétence pour finaliser le paiement sur PayDunya. Le moyen de paiement et le numéro seront saisis uniquement sur PayDunya."
+          badge="Paiement sécurisé"
+          notices={[
+            "Aucune réservation n'est confirmée sans paiement PayDunya vérifié côté serveur.",
+            "Le montant affiché inclut les frais de service du moyen de paiement.",
+            "Après paiement, revenez sur ce dossier pour suivre la validation administrative.",
+          ]}
+          confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+          cancelLabel="Rester ici"
+          onConfirm={onResumePayDunya}
+          trigger={
+            <Button className="min-h-11 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "paydunya_checkout"}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+            </Button>
+          }
+        />
+        <Button
+          variant="outline"
+          className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+          onClick={onVerifyPayDunya}
+          disabled={loading === "paydunya_verify"}
+        >
+          <ShieldCheck className="mr-2 h-4 w-4" />
+          {loading === "paydunya_verify" ? "Vérification..." : "Vérifier le paiement"}
+        </Button>
+      </div>
+    );
+  }
+
+  if (status === "PENDING_CLIENT_VALIDATION" && paymentVerified) {
+    return (
+      <div className="mt-4 grid gap-2">
+        <ImportantActionConfirm
+          title="Confirmer le cours ?"
+          description="Confirmez uniquement si le cours a bien eu lieu. Cette action déclenche la suite administrative du paiement professeur."
+          badge="Confirmation cours"
+          notices={[
+            "Votre confirmation est enregistrée dans le dossier.",
+            "En cas de problème, utilisez plutôt les actions détaillées du dossier.",
+          ]}
+          confirmLabel={loading === "confirm" ? "Confirmation..." : "Confirmer le cours"}
+          cancelLabel="Revoir le dossier"
+          onConfirm={onConfirmCourse}
+          trigger={
+            <Button className="min-h-11 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "confirm"}>
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              {loading === "confirm" ? "Confirmation..." : "Confirmer le cours"}
+            </Button>
+          }
+        />
+        <Button asChild variant="outline" className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <a href="#actions">Signaler un problème</a>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <Button asChild variant="outline" className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+        <a href="#actions">Voir les actions du dossier</a>
+      </Button>
+    </div>
+  );
+}
+
 export function BookingActions({ booking }: BookingActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -49,6 +207,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   // Dispute form
   const [disputeReason, setDisputeReason] = useState(DISPUTE_REASONS[0]);
@@ -58,6 +217,12 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const [rescheduleMsg, setRescheduleMsg] = useState("");
   const [cancelReason, setCancelReason] = useState<(typeof CANCELLATION_REASONS)[number]>(CANCELLATION_REASONS[0]);
   const [cancelDesc, setCancelDesc] = useState("");
+  const [cancelAcknowledged, setCancelAcknowledged] = useState(false);
+  const [refundMethod, setRefundMethod] = useState(activePaymentMethodOptions[0]?.value ?? "WAVE");
+  const [refundPhone, setRefundPhone] = useState("");
+  const [refundPhoneConfirm, setRefundPhoneConfirm] = useState("");
+  const [refundAccountName, setRefundAccountName] = useState("");
+  const [refundNote, setRefundNote] = useState("");
 
   // Review form
   const [rating, setRating] = useState(5);
@@ -129,11 +294,43 @@ export function BookingActions({ booking }: BookingActionsProps) {
       toast.error("Veuillez sélectionner un motif d'annulation");
       return;
     }
+    if (!cancelAcknowledged) {
+      toast.error("Veuillez confirmer que vous avez compris les règles d'annulation.");
+      return;
+    }
     const ok = await callAction("cancel", { reason: cancelReason, description: cancelDesc });
     if (ok) {
       toast.success("Réservation annulée.");
       setCancelOpen(false);
       setCancelDesc("");
+      setCancelAcknowledged(false);
+      router.refresh();
+    }
+  }
+
+  async function onSubmitRefundDetails() {
+    if (!refundPhone.trim() || !refundPhoneConfirm.trim()) {
+      toast.error("Saisissez et confirmez le numéro de remboursement.");
+      return;
+    }
+    if (refundPhone.replace(/\D/g, "") !== refundPhoneConfirm.replace(/\D/g, "")) {
+      toast.error("Les deux numéros ne correspondent pas.");
+      return;
+    }
+    if (refundAccountName.trim().length < 2) {
+      toast.error("Indiquez le nom du titulaire du compte.");
+      return;
+    }
+    const ok = await callAction("submit_refund_details", {
+      method: refundMethod,
+      paymentPhone: refundPhone,
+      confirmPaymentPhone: refundPhoneConfirm,
+      accountName: refundAccountName,
+      note: refundNote,
+    });
+    if (ok) {
+      toast.success("Coordonnées de remboursement transmises.");
+      setRefundOpen(false);
       router.refresh();
     }
   }
@@ -174,6 +371,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const status = booking.status;
   const hasReview = booking.reviews.length > 0;
   const hasDispute = booking.disputes.length > 0;
+  const latestRefundRequest = booking.clientRefundRequests?.[0] ?? null;
   const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
   const paidAmount = paymentVerified ? booking.transactions
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
@@ -182,6 +380,14 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const canReview = isReviewableBookingStatus(status);
   const canCancel = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(status);
   const canResumePayDunya = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
+  const foregroundNotice = getForegroundNotice({
+    status,
+    canCancel,
+    canResumePayDunya,
+    cancellationRefundAmount: booking.cancellationRefundAmount,
+    hasRefundRequest: Boolean(latestRefundRequest),
+    hasDispute,
+  });
   const actionSummary = getActionSummary({
     status,
     paymentStatus: booking.paymentStatus,
@@ -244,35 +450,67 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   return (
-    <Card className="rounded-[1.35rem]">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-black text-[#111827]">Actions du dossier</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className={`rounded-3xl border p-3 shadow-sm ${actionSummary.className}`}>
+    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm sm:p-4">
+      <div className="flex items-center justify-between gap-3 border-b border-[#E6EAF3] pb-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier</p>
+          <h2 className="mt-0.5 text-base font-semibold leading-tight text-[#111827]">Actions rapides</h2>
+        </div>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm [&>svg]:text-white">
+          {actionSummary.icon}
+        </span>
+      </div>
+      <div className="mt-3 space-y-3">
+        <div className={`rounded-xl border p-3 ${actionSummary.className}`}>
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
-              {actionSummary.icon}
-            </span>
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Situation actuelle</p>
-              <p className="mt-0.5 text-sm font-black leading-tight">{actionSummary.title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">{actionSummary.description}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Situation actuelle</p>
+              <p className="mt-0.5 text-sm font-semibold leading-tight">{actionSummary.title}</p>
+              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{actionSummary.description}</p>
             </div>
           </div>
         </div>
 
+        {foregroundNotice && (
+          <ImportantActionNotice
+            title={foregroundNotice.title}
+            description={foregroundNotice.description}
+          />
+        )}
+
         {canResumePayDunya && (
           <>
-            <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D] shadow-sm">
-              <div className="flex items-center gap-2 font-black">
+            <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D]">
+              <div className="flex items-center gap-2 font-semibold">
                 <ShieldCheck className="h-4 w-4" />
-                Paiement PayDunya à finaliser
+                Brouillon non réservé
               </div>
-              <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
-                Le moyen et les informations de paiement seront demandés uniquement sur PayDunya. MonProf CI valide uniquement après contrôle serveur du token, du montant et du statut PayDunya.
+              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                Le moyen de paiement et le numéro sont saisis uniquement sur PayDunya. Compétence valide le dossier après contrôle serveur.
               </p>
             </div>
+            <ImportantActionConfirm
+              title="Ouvrir PayDunya ?"
+              description="Vous allez quitter Compétence pour finaliser le paiement sur PayDunya. Le moyen de paiement et le numéro seront saisis uniquement sur PayDunya."
+              badge="Paiement sécurisé"
+              notices={[
+                "Aucun paiement n'est validé sans confirmation serveur PayDunya.",
+                "Le montant affiché inclut les frais de service du moyen de paiement.",
+                "Après paiement, revenez sur le dossier pour suivre la validation administrative.",
+              ]}
+              confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+              cancelLabel="Rester sur le dossier"
+              onConfirm={onResumePayDunya}
+              trigger={
+                <Button
+                  className="min-h-11 w-full rounded-2xl"
+                  disabled={loading === "paydunya_checkout"}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+                </Button>
+              }
+            />
             <Button
               variant="outline"
               className="min-h-11 w-full rounded-2xl"
@@ -282,21 +520,13 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <ShieldCheck className="mr-2 h-4 w-4" />
               {loading === "paydunya_verify" ? "Vérification..." : "Vérifier le paiement PayDunya"}
             </Button>
-            <Button
-              className="min-h-11 w-full rounded-2xl"
-              onClick={onResumePayDunya}
-              disabled={loading === "paydunya_checkout"}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
-            </Button>
           </>
         )}
 
         {/* DISPUTED */}
         {status === "DISPUTED" && (
-          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D] shadow-sm">
-            <div className="flex items-center gap-2 font-black">
+          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4" />
               Litige en cours
             </div>
@@ -304,7 +534,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               Notre support traite votre litige. Vous serez recontacté sous 24-48h.
             </p>
             {hasDispute && (
-              <div className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs shadow-sm">
+              <div className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs">
                 <p><strong>Raison :</strong> {booking.disputes[0].reason}</p>
                 <p className="mt-1 text-[#64748B]">{booking.disputes[0].description}</p>
                 <p className="mt-1 text-[#64748B]">
@@ -318,8 +548,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
         {/* PENDING_CLIENT_VALIDATION */}
         {status === "PENDING_CLIENT_VALIDATION" && (
           <>
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D] shadow-sm">
-              <div className="flex items-center gap-2 font-black">
+            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+              <div className="flex items-center gap-2 font-semibold">
                 <AlertCircle className="h-4 w-4" />
                 Action requise
               </div>
@@ -327,14 +557,28 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 Le cours a été effectué. Confirmez-le pour clôturer le dossier, ou signalez un problème.
               </p>
             </div>
-            <Button
-              className="min-h-11 w-full rounded-2xl"
-              onClick={onConfirm}
-              disabled={loading === "confirm"}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
-            </Button>
+            <ImportantActionConfirm
+              title="Confirmer que le cours est terminé ?"
+              description="Cette confirmation indique à l'administration que le cours a bien eu lieu. Elle déclenche la suite du traitement administratif du paiement professeur."
+              badge="Validation du cours"
+              notices={[
+                "Confirmez seulement si le cours s'est réellement déroulé.",
+                "Si le professeur était absent, en retard ou si le cours n'était pas conforme, signalez plutôt un problème.",
+                "Après confirmation, le dossier passe en traitement administratif.",
+              ]}
+              confirmLabel={loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
+              cancelLabel="Vérifier avant"
+              onConfirm={onConfirm}
+              trigger={
+                <Button
+                  className="min-h-11 w-full rounded-2xl"
+                  disabled={loading === "confirm"}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
+                </Button>
+              }
+            />
             <Button
               variant="outline"
               className="min-h-11 w-full rounded-2xl"
@@ -384,8 +628,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
         {/* Avis après validation client */}
         {canReview && (
           hasReview ? (
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D] shadow-sm">
-              <div className="flex items-center gap-2 font-black">
+            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+              <div className="flex items-center gap-2 font-semibold">
                 <MessageSquare className="h-4 w-4" />
                 Avis déposé
               </div>
@@ -401,8 +645,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
         {/* CANCELLED / REFUNDED */}
         {(status === "CANCELLED" || status === "REFUNDED") && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
-            <div className="flex items-center gap-2 font-black">
+          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="flex items-center gap-2 font-semibold">
               <Ban className="h-4 w-4" />
               Réservation {status === "REFUNDED" ? "remboursée" : "annulée"}
             </div>
@@ -411,47 +655,187 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 <p>Motif : {booking.cancellationReason}</p>
                 <p>Règle : {cancellationWindowLabel(booking.cancellationWindow)}</p>
                 <p>Frais : {formatFCFA(booking.cancellationFeeAmount)} · Remboursement : {formatFCFA(booking.cancellationRefundAmount)}</p>
+                {"paymentServiceFeeAmount" in booking && (
+                  <p>Frais service non remboursés : {formatFCFA((booking as any).paymentServiceFeeAmount ?? 0)}</p>
+                )}
+              </div>
+            )}
+            {booking.cancellationRefundAmount > 0 && (
+              <div className="mt-3 rounded-2xl border border-[#DDE6F7] bg-white p-3">
+                <p className="font-semibold text-[#111827]">Coordonnées de remboursement</p>
+                {latestRefundRequest ? (
+                  <div className="mt-2 text-xs leading-5 text-[#64748B]">
+                    <p className="font-semibold text-[#111B4D]">{latestRefundRequest.reference} · {refundStatusLabel(latestRefundRequest.status)}</p>
+                    <p>{paymentMethodLabel(latestRefundRequest.method)} · {latestRefundRequest.paymentPhone}</p>
+                    {latestRefundRequest.accountName && <p>Titulaire : {latestRefundRequest.accountName}</p>}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs leading-5 text-[#64748B]">
+                    Renseignez le numéro sur lequel l'administration pourra effectuer le dépôt.
+                  </p>
+                )}
               </div>
             )}
           </div>
         )}
 
+        {["CANCELLED", "REFUNDED"].includes(status) && booking.cancellationRefundAmount > 0 && (
+          <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
+            <DialogTrigger asChild>
+              <Button className="min-h-11 w-full rounded-2xl" disabled={!!loading}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {latestRefundRequest ? "Modifier le numéro de remboursement" : "Renseigner le remboursement"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Coordonnées de remboursement</DialogTitle>
+                <DialogDescription>
+                  Le remboursement prévu est de {formatFCFA(booking.cancellationRefundAmount)}. Vérifiez bien le numéro avant d'envoyer.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
+                  <p className="font-semibold text-[#111B4D]">Montant à déposer</p>
+                  <p className="mt-1 text-2xl font-semibold text-[#111827]">{formatFCFA(booking.cancellationRefundAmount)}</p>
+                  {"paymentServiceFeeAmount" in booking && (
+                    <p className="mt-1 text-xs leading-5 text-[#64748B]">
+                      Frais de service paiement non remboursés : {formatFCFA((booking as any).paymentServiceFeeAmount ?? 0)}.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="refundMethod">Moyen de remboursement</Label>
+                  <Select value={refundMethod} onValueChange={(value) => setRefundMethod(value as typeof refundMethod)}>
+                    <SelectTrigger id="refundMethod"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {activePaymentMethodOptions.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="refundPhone">Numéro de dépôt</Label>
+                    <Input
+                      id="refundPhone"
+                      value={refundPhone}
+                      onChange={(event) => setRefundPhone(event.target.value)}
+                      inputMode="tel"
+                      placeholder="Ex: 07 00 00 00 00"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="refundPhoneConfirm">Confirmer le numéro</Label>
+                    <Input
+                      id="refundPhoneConfirm"
+                      value={refundPhoneConfirm}
+                      onChange={(event) => setRefundPhoneConfirm(event.target.value)}
+                      inputMode="tel"
+                      placeholder="Ressaisir le même numéro"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="refundAccountName">Nom du titulaire</Label>
+                  <Input
+                    id="refundAccountName"
+                    value={refundAccountName}
+                    onChange={(event) => setRefundAccountName(event.target.value)}
+                    placeholder="Nom affiché sur le compte mobile money"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="refundNote">Note optionnelle</Label>
+                  <Textarea
+                    id="refundNote"
+                    rows={3}
+                    value={refundNote}
+                    onChange={(event) => setRefundNote(event.target.value)}
+                    placeholder="Ex: veuillez rembourser sur le numéro de ma mère..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRefundOpen(false)} className="rounded-2xl">Retour</Button>
+                <Button onClick={onSubmitRefundDetails} disabled={loading === "submit_refund_details"} className="rounded-2xl">
+                  Envoyer à l'administration
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
         {/* Annulation possible pour les statuts avant cours */}
         {canCancel && (
-          <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+          <Dialog
+            open={cancelOpen}
+            onOpenChange={(nextOpen) => {
+              setCancelOpen(nextOpen);
+              if (!nextOpen) setCancelAcknowledged(false);
+            }}
+          >
             <DialogTrigger asChild>
               <Button variant="outline" className="min-h-11 w-full rounded-2xl border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white hover:text-[#111B4D]" disabled={!!loading}>
                 <Ban className="mr-2 h-4 w-4" />
                 Annuler la réservation
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Annuler la réservation ?</DialogTitle>
                 <DialogDescription>
-                  Vérifiez les règles avant de confirmer. Le montant remboursable dépend du délai avant le cours.
+                  Lisez les règles avant de confirmer. L'annulation est transmise à l'administration et au professeur.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
-                  <p className="font-black text-[#111B4D]">{cancellationPolicy.label}</p>
+                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm shadow-sm">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-[#111B4D]">{cancellationPolicy.label}</p>
+                      <p className="mt-1 text-xs font-semibold text-[#64748B]">{cancellationPolicySummary(cancellationPolicy)}</p>
+                    </div>
+                    <span className="inline-flex w-fit rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
+                      Avant confirmation
+                    </span>
+                  </div>
                   <p className="mt-1 text-xs leading-relaxed text-[#64748B]">{cancellationPolicy.description}</p>
-                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-                    <div className="rounded-xl bg-white p-2">
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Base de calcul</p>
-                      <p className="font-bold text-[#111827]">{formatFCFA(cancellationPolicy.baseAmount)}</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.baseAmount)}</p>
                     </div>
-                    <div className="rounded-xl bg-white p-2">
-                      <p className="text-[#64748B]">Frais estimés</p>
-                      <p className="font-bold text-[#111827]">{formatFCFA(cancellationPolicy.feeAmount)}</p>
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Frais d'annulation</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.feeAmount)}</p>
                     </div>
-                    <div className="rounded-xl bg-white p-2">
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Frais service</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.serviceFeeAmount)}</p>
+                    </div>
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Remboursement estimé</p>
-                      <p className="font-bold text-[#111827]">{formatFCFA(cancellationPolicy.refundAmount)}</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.refundAmount)}</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs font-semibold text-[#64748B]">{cancellationPolicySummary(cancellationPolicy)}</p>
                 </div>
+
+                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569] shadow-sm">
+                  <p className="text-sm font-semibold text-[#111827]">Ce qui se passe après votre annulation</p>
+                  <ul className="mt-2 space-y-2">
+                    <li>La réservation est arrêtée et l'administration reçoit une notification pour contrôler le dossier.</li>
+                    <li>Le professeur est informé qu'il ne doit pas se présenter sans nouvelle instruction.</li>
+                    <li>Les frais de service du moyen de paiement ne sont pas remboursés : {formatFCFA(cancellationPolicy.serviceFeeAmount)}.</li>
+                    {cancellationPolicy.refundAmount > 0 ? (
+                      <li>Après annulation, vous devrez renseigner le moyen, le numéro et le titulaire du compte de remboursement.</li>
+                    ) : (
+                      <li>Aucun remboursement automatique n'est prévu selon la règle affichée. Le dossier peut être réexaminé par le support.</li>
+                    )}
+                    <li>Des annulations répétées ou tardives peuvent être revues par l'administration pour protéger les professeurs et les clients.</li>
+                  </ul>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="cancelReason">Motif d'annulation</Label>
                   <Select value={cancelReason} onValueChange={(value) => setCancelReason(value as (typeof CANCELLATION_REASONS)[number])}>
@@ -473,11 +857,22 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     placeholder="Précisez votre situation pour aider l'équipe support."
                   />
                 </div>
+                <label htmlFor="cancelAcknowledged" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
+                  <Checkbox
+                    id="cancelAcknowledged"
+                    checked={cancelAcknowledged}
+                    onCheckedChange={(checked) => setCancelAcknowledged(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-5 text-[#475569]">
+                    Je comprends les règles d'annulation, les frais éventuels, le remboursement estimé et le fait que les frais de service paiement ne sont pas remboursés.
+                  </span>
+                </label>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCancelOpen(false)} className="rounded-2xl">Retour</Button>
-                <Button onClick={onCancel} disabled={loading === "cancel"} className="rounded-2xl">
-                  Confirmer l'annulation
+                <Button onClick={onCancel} disabled={loading === "cancel" || !cancelAcknowledged} className="rounded-2xl">
+                  {loading === "cancel" ? "Annulation..." : "Confirmer l'annulation"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -532,14 +927,14 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
                 <MessageSquare className="h-5 w-5" />
               </div>
-              <DialogTitle className="text-xl font-black text-[#111827]">Laisser un avis</DialogTitle>
+              <DialogTitle className="text-xl font-semibold text-[#111827]">Laisser un avis</DialogTitle>
               <DialogDescription className="leading-6">
                 Votre retour aide les autres clients et permet à l'administration de suivre la qualité du cours.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
-                <div className="flex items-center gap-2 text-xs font-black text-[#111827]">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
                   <ShieldCheck className="h-4 w-4 text-[#111B4D]" />
                   Suivi qualité
                 </div>
@@ -548,7 +943,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </p>
               </div>
               <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
-                <div className="flex items-center gap-2 text-xs font-black text-[#111827]">
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
                   <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
                   Avis relié au cours
                 </div>
@@ -559,13 +954,13 @@ export function BookingActions({ booking }: BookingActionsProps) {
             </div>
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-black text-[#111827]">Évaluation qualité</Label>
+                <Label className="text-sm font-semibold text-[#111827]">Évaluation qualité</Label>
                 <div className="mt-2">
                   <ReviewRatingSelector value={rating} onChange={setRating} />
                 </div>
               </div>
               <div>
-                <Label htmlFor="comment" className="text-sm font-black text-[#111827]">Commentaire (optionnel)</Label>
+                <Label htmlFor="comment" className="text-sm font-semibold text-[#111827]">Commentaire (optionnel)</Label>
                 <Textarea
                   id="comment"
                   value={reviewComment}
@@ -596,9 +991,68 @@ export function BookingActions({ booking }: BookingActionsProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
+}
+
+function refundStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "En attente admin",
+    APPROVED: "Validé",
+    PAID: "Payé",
+    REJECTED: "Refusé",
+    CANCELLED: "Annulé",
+  };
+  return labels[status] ?? status;
+}
+
+function getForegroundNotice({
+  status,
+  canCancel,
+  canResumePayDunya,
+  cancellationRefundAmount,
+  hasRefundRequest,
+  hasDispute,
+}: {
+  status: string;
+  canCancel: boolean;
+  canResumePayDunya: boolean;
+  cancellationRefundAmount: number;
+  hasRefundRequest: boolean;
+  hasDispute: boolean;
+}) {
+  if (canResumePayDunya) {
+    return {
+      title: "Action à terminer : paiement",
+      description: "Ce dossier n'est pas une réservation active tant que PayDunya n'a pas confirmé le paiement par webhook. Continuez le paiement pour éviter l'expiration du brouillon.",
+    };
+  }
+  if (status === "PENDING_CLIENT_VALIDATION") {
+    return {
+      title: "Action à terminer : confirmation du cours",
+      description: "Confirmez le cours si tout s'est bien passé. En cas de problème, ouvrez un litige afin que le paiement reste protégé.",
+    };
+  }
+  if ((status === "CANCELLED" || status === "REFUNDED") && cancellationRefundAmount > 0 && !hasRefundRequest) {
+    return {
+      title: "Action à terminer : numéro de remboursement",
+      description: "Renseignez le moyen, le numéro et le titulaire du compte afin que l'administration puisse effectuer le dépôt.",
+    };
+  }
+  if (hasDispute || status === "DISPUTED") {
+    return {
+      title: "Dossier sensible : suivi support",
+      description: "Le support traite le dossier. Gardez vos informations et justificatifs prêts pour faciliter la décision.",
+    };
+  }
+  if (canCancel) {
+    return {
+      title: "Annulation possible avec règles",
+      description: "Avant toute annulation, consultez les frais, le remboursement estimé et les conséquences sur la réservation.",
+    };
+  }
+  return null;
 }
 
 function getActionSummary({
@@ -622,7 +1076,7 @@ function getActionSummary({
 }) {
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
-      title: "Support MonProf CI en cours",
+      title: "Support Compétence en cours",
       description: "Le dossier est suivi par l'administration. Votre paiement reste protégé pendant l'analyse.",
       icon: <AlertTriangle className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
@@ -648,8 +1102,8 @@ function getActionSummary({
     return {
       title: status === "REFUNDED" ? "Réservation remboursée" : "Réservation annulée",
       description: "Les règles appliquées et les montants restent visibles dans l'historique du dossier.",
-      icon: <Ban className="h-5 w-5 text-slate-700" />,
-      className: "border-slate-200 bg-white text-slate-800",
+      icon: <Ban className="h-5 w-5 text-[#111B4D]" />,
+      className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }
   if (isQuoteOnly) {
@@ -662,8 +1116,8 @@ function getActionSummary({
   }
   if (status === "PENDING_PAYMENT" && paymentStatus === "FAILED") {
     return {
-      title: "Paiement PayDunya à finaliser",
-      description: "Ouvrez PayDunya pour sélectionner le moyen de paiement et compléter les informations nécessaires sur la page sécurisée PayDunya.",
+      title: "Brouillon non réservé",
+      description: "Ouvrez PayDunya pour sélectionner le moyen de paiement et compléter les informations nécessaires. Le professeur n'est pas notifié avant confirmation serveur.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Camera, Clock, Loader2, Save, Trash2, X } from "lucide-react";
+import { CalendarClock, Camera, Clock, KeyRound, Loader2, Save, ShieldCheck, Trash2, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
@@ -35,6 +35,9 @@ const schema = z.object({
   professionalName: z.string().optional(),
   photoUrl: z.string().trim().optional().default(""),
   phone: z.string().min(5, "Téléphone requis"),
+  portalAccessEnabled: z.boolean().default(false),
+  portalPhone: z.string().optional(),
+  portalPassword: z.string().optional(),
   email: z.string().optional(),
   commune: z.string().optional(),
   quartier: z.string().optional(),
@@ -44,6 +47,12 @@ const schema = z.object({
   experienceYears: z.coerce.number().min(0).default(0),
   diploma: z.string().optional(),
   cvUrl: z.string().optional(),
+  careerSummary: z.string().optional(),
+  skills: z.string().optional(),
+  workHistory: z.string().optional(),
+  certifications: z.string().optional(),
+  teachingAchievements: z.string().optional(),
+  learnersCoached: z.coerce.number().min(0).default(0),
   profileType: z.string().default("ENSEIGNANT"),
   status: z.string().default("ACTIVE"),
   featured: z.boolean().default(false),
@@ -78,6 +87,23 @@ const schema = z.object({
       path: ["photoUrl"],
       message: "Utilisez une photo JPG, JPEG, PNG ou WEBP avec une URL http(s) ou un chemin local.",
     });
+  }
+  if (values.portalAccessEnabled) {
+    const loginPhone = values.portalPhone?.trim() || values.phone?.trim();
+    if (!loginPhone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["portalPhone"],
+        message: "Téléphone de connexion requis pour activer l'espace professeur.",
+      });
+    }
+    if (values.portalPassword && values.portalPassword.length < 6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["portalPassword"],
+        message: "Le mot de passe professeur doit contenir au moins 6 caractères.",
+      });
+    }
   }
 });
 
@@ -130,11 +156,15 @@ export function TeacherForm({
       ? {
           ...initial,
           experienceYears: initial.experienceYears ?? 0,
+          learnersCoached: initial.learnersCoached ?? 0,
           pricePerHour: initial.pricePerHour ?? 10000,
           pricePerSession: initial.pricePerSession ?? 10000,
           pricePack4: initial.pricePack4 ?? 38000,
           pricePack8: initial.pricePack8 ?? 72000,
           commissionRate: initial.commissionRate ?? PLATFORM_COMMISSION_PERCENT,
+          portalAccessEnabled: initial.portalAccessEnabled ?? false,
+          portalPhone: initial.portalPhone || initial.phone || "",
+          portalPassword: "",
         }
       : {
           profileType: "ENSEIGNANT",
@@ -150,6 +180,10 @@ export function TeacherForm({
           pricePack4: 38000,
           pricePack8: 72000,
           experienceYears: 0,
+          learnersCoached: 0,
+          portalAccessEnabled: false,
+          portalPhone: "",
+          portalPassword: "",
         } as any,
   });
 
@@ -190,6 +224,7 @@ export function TeacherForm({
     professionalName,
     badgeVerified,
     status,
+    portalAccessEnabled,
   ] = useWatch({
     control,
     name: [
@@ -199,6 +234,7 @@ export function TeacherForm({
       "professionalName",
       "badgeVerified",
       "status",
+      "portalAccessEnabled",
     ],
   });
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
@@ -251,6 +287,22 @@ export function TeacherForm({
     if (values.status === "ACTIVE" && countAvailabilitySlots(availability) === 0) {
       toast.error("Un professeur actif doit avoir au moins un créneau de 2h disponible.");
       return;
+    }
+    if (values.portalAccessEnabled) {
+      const loginPhone = values.portalPhone?.trim() || values.phone?.trim();
+      const portalPassword = values.portalPassword?.trim();
+      if (!loginPhone) {
+        toast.error("Ajoutez le téléphone de connexion du professeur.");
+        return;
+      }
+      if ((mode === "create" || !initial?.hasPortalPassword) && !portalPassword) {
+        toast.error("Définissez le mot de passe d'accès professeur. Aucun OTP ne sera demandé.");
+        return;
+      }
+      if (portalPassword && portalPassword.length < 6) {
+        toast.error("Le mot de passe professeur doit contenir au moins 6 caractères.");
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -341,6 +393,7 @@ export function TeacherForm({
       <Tabs defaultValue="infos" className="w-full">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 border border-violet-100 bg-white/80 p-1 shadow-sm">
           <TabsTrigger value="infos">Informations</TabsTrigger>
+          <TabsTrigger value="acces">Accès prof</TabsTrigger>
           <TabsTrigger value="pro">Pro</TabsTrigger>
           <TabsTrigger value="matieres">Matières & Niveaux</TabsTrigger>
           <TabsTrigger value="dispo">Disponibilités</TabsTrigger>
@@ -420,7 +473,7 @@ export function TeacherForm({
                 <Input {...register("phone")} placeholder="+225 07 00 00 00 00" />
               </Field>
               <Field label="Email">
-                <Input type="email" {...register("email")} placeholder="prof@monprof.ci" />
+                <Input type="email" {...register("email")} placeholder="prof@competence.ci" />
               </Field>
               <Field label="Commune">
                 <Input {...register("commune")} placeholder="Cocody" />
@@ -459,6 +512,71 @@ export function TeacherForm({
           </Card>
         </TabsContent>
 
+        {/* ACCÈS PROFESSEUR */}
+        <TabsContent value="acces">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="h-4 w-4 text-violet-700" />
+                Accès à la plateforme professeur
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Le professeur ne s'inscrit pas publiquement. L'administration active un accès léger avec téléphone et mot de passe, sans code de validation.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Controller control={control} name="portalAccessEnabled" render={({ field }) => (
+                  <label className={`flex cursor-pointer flex-col gap-3 rounded-3xl border p-4 shadow-sm transition sm:flex-row sm:items-center sm:justify-between ${field.value ? "border-violet-200 bg-violet-50 text-violet-950" : "border-violet-100 bg-white/85"}`}>
+                    <div>
+                      <p className="text-sm font-black text-foreground">Activer l'espace professeur</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-muted-foreground">
+                        Donne accès à /professeur avec uniquement ses missions, disponibilités, paiements, notifications, avis et profil.
+                      </p>
+                    </div>
+                    <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                  </label>
+                )} />
+              </div>
+
+              <Field label="Téléphone de connexion" error={errors.portalPhone?.message}>
+                <Input {...register("portalPhone")} placeholder="+225 07 00 00 00 00" disabled={!portalAccessEnabled} />
+                <p className="text-xs font-medium leading-5 text-muted-foreground">
+                  Ce numéro est l'identifiant du professeur sur /professeur. Aucun code de validation n'est demandé.
+                </p>
+              </Field>
+              <Field
+                label={mode === "create" ? "Mot de passe d'accès" : "Nouveau mot de passe d'accès"}
+                error={errors.portalPassword?.message}
+              >
+                <Input
+                  type="text"
+                  {...register("portalPassword")}
+                  placeholder={mode === "create" ? "Ex: prof123" : "Laisser vide pour conserver l'ancien"}
+                  disabled={!portalAccessEnabled}
+                />
+              </Field>
+
+              <div className="sm:col-span-2 grid gap-3 rounded-3xl border border-violet-100 bg-violet-50/45 p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-violet-700" />
+                  <div>
+                    <p className="text-sm font-black text-foreground">Règle d'accès</p>
+                    <p className="mt-1 text-sm font-medium leading-6 text-muted-foreground">
+                      Le professeur utilise uniquement son numéro de téléphone et le mot de passe communiqué par l'administration. Il ne peut pas modifier ses tarifs, créer des réservations ou accéder aux données d'autres professeurs.
+                    </p>
+                    {mode === "edit" && initial?.hasPortalPassword && portalAccessEnabled && (
+                      <p className="mt-2 text-xs font-bold text-violet-900">
+                        Un mot de passe est déjà enregistré. Saisissez-en un nouveau uniquement pour le réinitialiser.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* PRO */}
         <TabsContent value="pro">
           <Card>
@@ -475,6 +593,9 @@ export function TeacherForm({
               </Field>
               <Field label="CV (URL)">
                 <Input {...register("cvUrl")} placeholder="https://..." />
+              </Field>
+              <Field label="Apprenants encadrés">
+                <Input type="number" min={0} {...register("learnersCoached")} placeholder="Ex : 120" />
               </Field>
               <Field label="Type de profil">
                 <Controller control={control} name="profileType" render={({ field }) => (
@@ -493,6 +614,45 @@ export function TeacherForm({
               <div className="sm:col-span-2">
                 <Field label="Bio" error={errors.bio?.message} required>
                   <Textarea rows={5} {...register("bio")} placeholder="Présentation pédagogique..." />
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Résumé carrière / mini CV">
+                  <Textarea
+                    rows={4}
+                    {...register("careerSummary")}
+                    placeholder="Ex : 10 ans d'expérience entre lycée, soutien à domicile et préparation concours. Méthode orientée résultats, avec suivi des familles."
+                  />
+                </Field>
+              </div>
+              <div className="sm:col-span-2 grid gap-4 lg:grid-cols-2">
+                <Field label="Compétences clés">
+                  <Textarea
+                    rows={5}
+                    {...register("skills")}
+                    placeholder={"Une compétence par ligne\nPréparation BAC série D\nRemise à niveau adulte\nMéthodologie intensive"}
+                  />
+                </Field>
+                <Field label="Parcours et expériences">
+                  <Textarea
+                    rows={5}
+                    {...register("workHistory")}
+                    placeholder={"Une expérience par ligne\n2018-2024 - Encadrement Terminale à Cocody\nFormateur vacataire en soutien scolaire\nPréparation concours INP-HB / ENS"}
+                  />
+                </Field>
+                <Field label="Certifications / preuves">
+                  <Textarea
+                    rows={4}
+                    {...register("certifications")}
+                    placeholder={"Un élément par ligne\nMaster vérifié\nDiplôme transmis à l'administration\nRéférences pédagogiques disponibles"}
+                  />
+                </Field>
+                <Field label="Résultats et encadrements">
+                  <Textarea
+                    rows={4}
+                    {...register("teachingAchievements")}
+                    placeholder={"Un résultat par ligne\nPlusieurs élèves suivis jusqu'au BAC\nProgression moyenne constatée après 4 séances\nSuivi parent régulier"}
+                  />
                 </Field>
               </div>
             </CardContent>
@@ -524,7 +684,7 @@ export function TeacherForm({
                         <button
                           type="button"
                           onClick={(e) => { e.preventDefault(); setPrimarySubject(s.id); }}
-                          className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold leading-none ${primarySubject === s.id ? "premium-gradient text-primary-foreground shadow-sm" : "bg-white text-violet-700 hover:bg-violet-100"}`}
+                          className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold leading-none ${primarySubject === s.id ? "border-[#111B4D] bg-[#111B4D] text-white shadow-sm" : "border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D]"}`}
                         >
                           {primarySubject === s.id ? "Principale" : "Définir principale"}
                         </button>

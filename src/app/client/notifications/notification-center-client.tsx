@@ -7,24 +7,18 @@ import {
   AlertTriangle,
   ArrowRight,
   Bell,
-  CalendarCheck,
   CheckCircle2,
-  Clock,
-  WalletCards,
   ExternalLink,
   Filter,
   Search,
   ShieldCheck,
   X,
-  UserRound,
 } from "lucide-react";
 import { EmptyState } from "@/components/shared/page-header";
+import { ClientRecordCard, ClientSurface } from "@/components/shared/client-page-primitives";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { formatDate, formatDateTime, timeAgo } from "@/lib/format";
 import { notificationChannelLabel, notificationTypeLabel, priorityLabel } from "@/lib/platform-labels";
 import { ClientNotificationActions } from "./actions-client";
@@ -78,13 +72,6 @@ const filterOptions: { key: FilterKey; label: string }[] = [
   { key: "dispute", label: "Litiges" },
 ];
 
-const priorityTone: Record<string, string> = {
-  NORMAL: "border-[#E3E8F2] bg-white text-[#111B4D]",
-  IMPORTANT: "border-[#DDE6F7] bg-white text-[#111B4D]",
-  URGENT: "border-[#E3E8F2] bg-white text-[#111B4D]",
-  CRITICAL: "border-[#E3E8F2] bg-white text-[#111B4D]",
-};
-
 const statusLabel: Record<string, string> = {
   CREATED: "Créée",
   SENT: "Envoyée",
@@ -95,7 +82,22 @@ const statusLabel: Record<string, string> = {
   RELAUNCHED: "Relancée",
 };
 
-const paymentTypes = new Set(["PAYMENT_RECEIVED", "BLOCKED_FUNDS", "FUNDS_BLOCKED", "PAYMENT_TO_RELEASE", "REFUND"]);
+const clientPaymentStatusLabel: Record<string, string> = {
+  FAILED: "Paiement à finaliser",
+  RECEIVED: "Paiement reçu",
+  BLOCKED: "Paiement sécurisé",
+  VALIDATED: "Cours validé",
+  TO_PAY_TEACHER: "Traitement administratif",
+  TEACHER_PAID: "Cours clôturé",
+  DISPUTED: "Litige en cours",
+  REFUND_PENDING: "Remboursement en traitement",
+  PARTIAL_REFUND_PENDING: "Remboursement partiel en traitement",
+  REFUNDED: "Remboursé",
+  PARTIALLY_REFUNDED: "Remboursement partiel",
+  RETAINED: "Frais appliqués",
+};
+
+const paymentTypes = new Set(["PAYMENT_PENDING", "PAYMENT_RECEIVED", "BLOCKED_FUNDS", "FUNDS_BLOCKED", "PAYMENT_TO_RELEASE", "REFUND"]);
 const teacherTypes = new Set(["TEACHER_ASSIGNED", "TEACHER_REPLACED", "REPLACEMENT"]);
 const bookingTypes = new Set(["NEW_BOOKING", "BOOKING_CONFIRMED", "REMINDER", "COURSE_CONFIRMATION"]);
 const disputeTypes = new Set(["DISPUTE", "DISPUTE_OPENED"]);
@@ -171,20 +173,12 @@ export function ClientNotificationCenter({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Non lues" value={counts.unread} icon={Bell} />
-        <SummaryCard label="Urgentes" value={counts.urgent} icon={Clock} />
-        <SummaryCard label="Paiements" value={counts.payments} icon={WalletCards} tone="navy" />
-        <SummaryCard label="Professeur" value={counts.teachers} icon={UserRound} />
-      </div>
-
       <PriorityNotificationCard
         notification={priorityNotification}
         booking={priorityNotification?.bookingId ? bookingsById.get(priorityNotification.bookingId) ?? null : null}
       />
 
-      <Card className="rounded-[1.35rem] border-[#E3E8F2] bg-white shadow-sm">
-        <CardContent className="space-y-3 p-4">
+      <ClientSurface compact className="space-y-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto] lg:items-center">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
@@ -198,23 +192,19 @@ export function ClientNotificationCenter({
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9AAAD0]"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9AAAD0]"
                   aria-label="Effacer la recherche"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </label>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               <Filter className="h-4 w-4" />
-              {formatCount(filteredNotifications.length, "résultat")}
+              {activeFilterLabel} · {formatCount(filteredNotifications.length, "résultat")}
             </div>
           </div>
-          <div className="rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
-            Vue active : <span className="font-black text-[#111B4D]">{activeFilterLabel}</span>
-            {hasQuery && <span> · Recherche : <span className="font-black text-[#111827]">{query.trim()}</span></span>}
-          </div>
-          <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap">
+          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap">
             {filterOptions.map((option) => (
               <Button
                 key={option.key}
@@ -223,17 +213,16 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-11 min-w-0 justify-center rounded-full px-3 text-xs sm:text-sm"
+                className="min-h-10 w-full justify-center rounded-xl px-2 text-xs min-[420px]:px-3 sm:min-h-11 sm:text-sm lg:w-auto"
               >
-                {option.label}
-                <span className={filter === option.key ? "rounded-full bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "rounded-full bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
+                <span className="min-w-0 truncate">{option.label}</span>
+                <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
                   {filterCounts[option.key]}
                 </span>
               </Button>
             ))}
           </div>
-        </CardContent>
-      </Card>
+      </ClientSurface>
 
       {notifications.length === 0 ? (
         <EmptyState
@@ -249,55 +238,52 @@ export function ClientNotificationCenter({
       ) : filteredNotifications.length === 0 ? (
         <EmptyState icon={Search} title="Aucun résultat" description="Essayez un autre filtre ou une autre recherche." />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {filteredNotifications.map((notification) => {
             const booking = notification.bookingId ? bookingsById.get(notification.bookingId) ?? null : null;
-            const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur MonProf CI";
+            const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur Compétence";
+            const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
+            const actionLabel = notification.actionLabel || (booking ? "Voir réservation" : "Ouvrir");
+            const showPriorityLabel = ["URGENT", "CRITICAL", "IMPORTANT"].includes(notification.priority);
             return (
-              <Card
+              <ClientRecordCard
                 key={notification.id}
-                className={`overflow-hidden rounded-[1.35rem] ${
+                data-client-notification-card
+                className={`overflow-hidden rounded-xl ${
                   notification.read
                     ? "border-[#E3E8F2] bg-white shadow-sm"
                     : "border-[#111B4D] bg-white shadow-sm"
                 }`}
               >
-                <CardContent className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
-                  {!notification.read && <span className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-[#111B4D]" />}
+                <div className="relative flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
+                  {!notification.read && <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#111B4D] sm:inset-y-4" />}
                   <div className="flex min-w-0 gap-3">
                     {booking ? (
                       <ProfessorImage
                         photoUrl={booking.teacher.photoUrl}
                         name={teacherName}
-                        size="md"
+                        size={44}
                         shape="circle"
                         verified={booking.teacher.badgeVerified}
                       />
                     ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#DDE6F7] bg-white text-[#111B4D] shadow-sm">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#DDE6F7] bg-white text-[#111B4D] shadow-sm">
                         <Bell className="h-5 w-5" />
                       </div>
                     )}
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-sm font-black text-[#111827]">{notification.title}</h2>
-                        {!notification.read && <Badge className="bg-[#111B4D] text-white">Nouveau</Badge>}
-                        <Badge variant="outline" className={priorityTone[notification.priority] ?? priorityTone.NORMAL}>
-                          {priorityLabel(notification.priority)}
-                        </Badge>
-                        <Badge variant="outline">{statusLabel[notification.status] ?? notification.status}</Badge>
+                        {!notification.read && <span className="h-2.5 w-2.5 rounded-full bg-[#111B4D]" aria-label="Notification non lue" />}
+                        <h2 className="min-w-0 text-sm font-semibold leading-5 text-[#111827]">{notification.title}</h2>
+                        {!notification.read && <span className="text-xs font-semibold text-[#111B4D]">Nouveau</span>}
+                        {showPriorityLabel && <span className="text-xs font-semibold text-[#111B4D]">{priorityLabel(notification.priority)}</span>}
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge variant="outline" className="border-[#DDE6F7] bg-white text-[#111B4D]">
-                          {notificationTypeLabel(notification.type)}
-                        </Badge>
-                        <Badge variant="outline" className="border-[#E3E8F2] bg-white text-[#111B4D]">
-                          {notificationChannelLabel(notification.channel)}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#64748B]">{notification.message}</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                        {notificationTypeLabel(notification.type)} · {notificationChannelLabel(notification.channel)} · {statusLabel[notification.status] ?? notification.status}
+                      </p>
+                      <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm leading-5 text-[#475569] sm:line-clamp-4 sm:leading-6">{notification.message}</p>
                       {booking && <BookingNotificationPreview booking={booking} teacherName={teacherName} />}
-                      <p className="mt-2 text-xs font-medium text-[#64748B]">
+                      <p className="mt-2 line-clamp-1 text-xs font-medium text-[#64748B]">
                         {formatDateTime(notification.createdAt)} · {timeAgo(notification.createdAt)}
                         {notification.readAt ? ` · lu le ${formatDateTime(notification.readAt)}` : ""}
                         {notification.confirmedAt ? ` · confirmé le ${formatDateTime(notification.confirmedAt)}` : ""}
@@ -305,21 +291,16 @@ export function ClientNotificationCenter({
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-col gap-2 sm:min-w-44">
-                    {notification.link && (
-                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-11 w-full rounded-2xl">
-                        <Link href={notification.link}>{notification.actionLabel || "Ouvrir"} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
-                      </Button>
-                    )}
-                    {booking && (
-                      <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-2xl">
-                        <Link href={`/client/reservations/${booking.id}`}>Voir réservation <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
+                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
+                    {href && (
+                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-xl sm:min-h-11 sm:rounded-2xl">
+                        <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
                       </Button>
                     )}
                     <ClientNotificationActions mode="row" id={notification.id} read={notification.read} status={notification.status} />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </ClientRecordCard>
             );
           })}
         </div>
@@ -337,13 +318,13 @@ function PriorityNotificationCard({
 }) {
   if (!notification) {
     return (
-      <div className="rounded-[1.45rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-black text-[#111827]">Tout est à jour</p>
+            <p className="text-sm font-semibold text-[#111827]">Tout est à jour</p>
             <p className="mt-1 text-sm leading-6 text-[#64748B]">
               Vous n'avez aucune notification active. Les confirmations, paiements et messages importants apparaîtront ici.
             </p>
@@ -354,38 +335,30 @@ function PriorityNotificationCard({
   }
 
   const urgent = ["URGENT", "CRITICAL"].includes(notification.priority);
-  const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur MonProf CI";
+  const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur Compétence";
   const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
 
   return (
-    <div className={`overflow-hidden rounded-[1.45rem] border p-4 shadow-sm ${
+    <div className={`overflow-hidden rounded-xl border p-3 shadow-sm sm:p-4 ${
       urgent ? "border-[#111B4D] bg-white" : "border-[#DDE6F7] bg-white"
     }`}>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-w-0 gap-3">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
             urgent ? "bg-[#111B4D] text-white" : "bg-[#111B4D] text-white"
           }`}>
             {urgent ? <AlertTriangle className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {urgent ? "À traiter en priorité" : notification.read ? "Dernière information" : "Nouvelle information"}
             </p>
-            <h2 className="mt-1 line-clamp-2 text-lg font-black tracking-tight text-[#111827]">{notification.title}</h2>
-            <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#64748B]">{notification.message}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge variant="outline" className={priorityTone[notification.priority] ?? priorityTone.NORMAL}>
-                {priorityLabel(notification.priority)}
-              </Badge>
-              <Badge variant="outline" className="border-[#DDE6F7] bg-white text-[#111B4D]">
-                {notificationTypeLabel(notification.type)}
-              </Badge>
-              {booking && (
-                <Badge variant="outline" className="border-[#E3E8F2] bg-white text-[#111B4D]">
-                  {booking.reference} - {teacherName}
-                </Badge>
-              )}
+            <h2 className="mt-1 line-clamp-2 text-base font-semibold tracking-tight text-[#111827] sm:text-lg">{notification.title}</h2>
+            <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#64748B] sm:leading-6">{notification.message}</p>
+            <div className="mt-2 flex flex-col gap-1 text-xs font-semibold text-[#111B4D] min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
+              <span>Priorité : {priorityLabel(notification.priority)}</span>
+              <span>Type : {notificationTypeLabel(notification.type)}</span>
+              {booking && <span>Réservation : {booking.reference} - {teacherName}</span>}
             </div>
           </div>
         </div>
@@ -398,7 +371,7 @@ function PriorityNotificationCard({
               </Link>
             </Button>
           )}
-          <p className="text-xs font-semibold leading-5 text-[#64748B] lg:text-right">
+          <p className="line-clamp-1 text-xs font-semibold leading-5 text-[#64748B] lg:text-right">
             {formatDateTime(notification.createdAt)} · {timeAgo(notification.createdAt)}
           </p>
         </div>
@@ -416,52 +389,32 @@ function BookingNotificationPreview({ booking, teacherName }: { booking: Notific
   const timeLabel = booking.scheduledTime || booking.preferredTime || "Créneau à confirmer";
 
   return (
-    <div className="mt-3 rounded-[1.2rem] border border-[#E3E8F2] bg-white p-3 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-[#DDE6F7] bg-white text-[#111B4D]">{booking.reference}</Badge>
-        <PaymentStatusBadge status={booking.paymentStatus} audience="client" />
-        {booking.teacher.badgeVerified && (
-          <Badge className="gap-1 bg-[#111B4D] text-white"><ShieldCheck className="h-3 w-3" /> Prof vérifié</Badge>
-        )}
-      </div>
-      <p className="mt-2 text-sm font-black text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
-      <p className="mt-1 text-xs font-medium text-[#64748B]">
-        {teacherName} · {dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}
-      </p>
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  icon: Icon,
-  tone = "blue",
-}: {
-  label: string;
-  value: number;
-  icon: typeof Bell;
-  tone?: "blue" | "navy" | "amber" | "red";
-}) {
-  const tones = {
-    blue: "border-[#E3E8F2] bg-white text-[#111827]",
-    navy: "border-[#DDE6F7] bg-white text-[#111B4D]",
-    amber: "border-[#E3E8F2] bg-white text-[#111B4D]",
-    red: "border-[#E3E8F2] bg-white text-[#111B4D]",
-  };
-  return (
-    <div className={`rounded-[1.35rem] border p-4 shadow-sm ${tones[tone]}`}>
+    <div className="mt-2 rounded-xl border border-[#E3E8F2] bg-white p-2.5 shadow-sm sm:mt-3 sm:p-3">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-1 text-2xl font-black tabular-nums">{value}</p>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{booking.reference}</p>
+          <p className="mt-1 text-sm font-semibold text-[#111827]">{booking.subjectName} · {booking.levelName}</p>
         </div>
-        <Icon className="h-5 w-5 text-[#64748B]" />
+        <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(booking.paymentStatus)}</p>
       </div>
+      <div className="mt-2 grid gap-2 text-xs font-semibold text-[#475569] min-[420px]:grid-cols-2">
+        <p className="line-clamp-1 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1.5">{teacherName}</p>
+        <p className="line-clamp-1 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1.5">{dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}</p>
+      </div>
+      {booking.teacher.badgeVerified && (
+        <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#111B4D]">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Professeur vérifié
+        </p>
+      )}
     </div>
   );
 }
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatClientPaymentStatus(status: string) {
+  return clientPaymentStatusLabel[status] ?? "Suivi paiement";
 }

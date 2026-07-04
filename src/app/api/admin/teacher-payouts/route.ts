@@ -3,7 +3,7 @@ import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
 import { getSessionUser } from "@/lib/session";
-import { ACTIVE_PAYMENT_METHODS, isActivePaymentMethod } from "@/lib/payment-methods";
+import { ACTIVE_PAYMENT_METHODS, isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
@@ -16,6 +16,10 @@ function parseAmount(value: unknown) {
   return 0;
 }
 
+function normalizePhone(value: unknown) {
+  return typeof value === "string" ? value.replace(/[^\d+]/g, "").trim() : "";
+}
+
 export async function POST(req: NextRequest) {
   const admin = await getSessionUser();
   if (!admin || admin.role !== "ADMIN") {
@@ -24,10 +28,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const teacherId = typeof body.teacherId === "string" ? body.teacherId : "";
   const targetBookingId = typeof body.bookingId === "string" && body.bookingId.trim() ? body.bookingId.trim() : null;
+  const requestId = typeof body.requestId === "string" && body.requestId.trim() ? body.requestId.trim() : null;
   const amount = parseAmount(body.amount);
   const method = typeof body.method === "string" && PAYMENT_METHODS.includes(body.method as PaymentMethod)
     ? (body.method as PaymentMethod)
     : undefined;
+  const requestedPaymentPhone = normalizePhone(body.paymentPhone);
+  const requestedPaymentPhoneConfirm = normalizePhone(body.paymentPhoneConfirm);
   const note = typeof body.note === "string" ? body.note.trim() : "";
   const reference = typeof body.reference === "string" && body.reference.trim()
     ? body.reference.trim()
@@ -38,6 +45,9 @@ export async function POST(req: NextRequest) {
   }
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: "Montant de paiement invalide." }, { status: 400 });
+  }
+  if (!method) {
+    return NextResponse.json({ error: "Choisissez le moyen de paiement professeur." }, { status: 400 });
   }
   if (reference.length > MAX_REFERENCE_LENGTH) {
     return NextResponse.json({ error: `Référence trop longue (${MAX_REFERENCE_LENGTH} caractères maximum).` }, { status: 400 });
@@ -86,6 +96,52 @@ export async function POST(req: NextRequest) {
 
   if (!teacher) {
     return NextResponse.json({ error: "Professeur introuvable." }, { status: 404 });
+  }
+
+  const payoutRequest = requestId
+    ? await db.teacherPayoutRequest.findUnique({
+        where: { id: requestId },
+        select: {
+          id: true,
+          reference: true,
+          teacherId: true,
+          amount: true,
+          method: true,
+          paymentPhone: true,
+          status: true,
+        },
+      })
+    : null;
+
+  if (requestId && !payoutRequest) {
+    return NextResponse.json({ error: "Demande de paiement introuvable." }, { status: 404 });
+  }
+  if (payoutRequest && payoutRequest.teacherId !== teacher.id) {
+    return NextResponse.json({ error: "Cette demande de paiement n'appartient pas à ce professeur." }, { status: 400 });
+  }
+  if (payoutRequest && payoutRequest.status !== "PENDING") {
+    return NextResponse.json({ error: "Cette demande de paiement a déjà été traitée." }, { status: 400 });
+  }
+  if (payoutRequest && payoutRequest.amount !== amount) {
+    return NextResponse.json({ error: `La demande ${payoutRequest.reference} porte sur ${payoutRequest.amount} FCFA. Enregistrez ce montant ou désélectionnez la demande.` }, { status: 400 });
+  }
+  if (payoutRequest && payoutRequest.method !== method) {
+    return NextResponse.json({
+      error: `La demande ${payoutRequest.reference} a été faite via ${paymentMethodLabel(payoutRequest.method)}. Désélectionnez-la pour utiliser un autre moyen de paiement.`,
+    }, { status: 400 });
+  }
+
+  const paymentPhone = payoutRequest?.paymentPhone ?? requestedPaymentPhone;
+  if (paymentPhone.length < 8 || paymentPhone.length > 20) {
+    return NextResponse.json({ error: "Numéro de paiement professeur requis et invalide." }, { status: 400 });
+  }
+  if (!payoutRequest) {
+    if (!requestedPaymentPhoneConfirm) {
+      return NextResponse.json({ error: "Confirmez le numéro de paiement professeur." }, { status: 400 });
+    }
+    if (paymentPhone !== requestedPaymentPhoneConfirm) {
+      return NextResponse.json({ error: "Les deux numéros de paiement ne correspondent pas." }, { status: 400 });
+    }
   }
 
   let globalRetentionLeft = teacher.paymentAdjustments
@@ -150,6 +206,7 @@ export async function POST(req: NextRequest) {
         teacherId: teacher.id,
         amount,
         method,
+        paymentPhone,
         note: note || null,
         paidAt: now,
         createdById: admin.id,
@@ -212,11 +269,24 @@ export async function POST(req: NextRequest) {
         action: "Paiement professeur enregistré",
         entityType: "Teacher",
         entityId: teacher.id,
-        detail: `${admin.name} a enregistré ${amount} FCFA pour ${teacherName} (${allocations.length} réservation(s))${targetBookingId ? " avec imputation ciblée" : ""}. Référence: ${reference}.`,
+        detail: `${admin.name} a enregistré ${amount} FCFA pour ${teacherName} (${allocations.length} réservation(s))${targetBookingId ? " avec imputation ciblée" : ""}${payoutRequest ? ` depuis la demande ${payoutRequest.reference}` : ""}. Référence: ${reference}.`,
         oldStatus: "TO_PAY_TEACHER",
         newStatus: "PAID_LEDGER",
       },
     });
+
+    if (payoutRequest) {
+      await tx.teacherPayoutRequest.update({
+        where: { id: payoutRequest.id },
+        data: {
+          status: "PAID",
+          adminNote: `Versement enregistré par ${admin.name}. Reçu ${record.reference}. Numéro déclaré : ${paymentPhone}.`,
+          reviewedAt: now,
+          reviewedById: admin.id,
+          payoutRecordId: record.id,
+        },
+      });
+    }
 
     await tx.teacherNotification.create({
       data: {
@@ -226,9 +296,10 @@ export async function POST(req: NextRequest) {
         message: [
           `Bonjour ${teacherName},`,
           "",
-          `Un paiement professeur de ${amount.toLocaleString("fr-FR")} FCFA a été enregistré par l'administration MonProf CI.`,
+          `Un paiement professeur de ${amount.toLocaleString("fr-FR")} FCFA a été enregistré par l'administration Compétence.`,
           `Référence interne : ${reference}`,
-          method ? `Méthode : ${method}` : "",
+          method ? `Méthode : ${paymentMethodLabel(method)}` : "",
+          paymentPhone ? `Numéro payé : ${paymentPhone}` : "",
           note ? `Note : ${note}` : "",
           "",
           "Réservations concernées :",

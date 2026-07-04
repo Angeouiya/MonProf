@@ -151,7 +151,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
     return [
       `Bonjour ${booking.client.name},`,
       "",
-      "Petit rappel concernant votre cours prévu sur MonProf CI.",
+      "Petit rappel concernant votre cours prévu sur Compétence.",
       "",
       ...common,
       "",
@@ -173,7 +173,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
     return [
       `Bonjour ${booking.client.name},`,
       "",
-      `Votre paiement de ${formatFCFA(booking.totalPrice)} pour la réservation ${booking.reference} est bien suivi par MonProf CI.`,
+      `Votre paiement de ${formatFCFA(booking.totalPrice)} pour la réservation ${booking.reference} est bien suivi par Compétence.`,
       "",
       "Les fonds restent sécurisés jusqu'à la confirmation du cours.",
       "",
@@ -231,7 +231,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
     "",
     ...common,
     "",
-    "L'équipe MonProf CI reste disponible pour vous accompagner.",
+    "L'équipe Compétence reste disponible pour vous accompagner.",
   ].join("\n");
 }
 

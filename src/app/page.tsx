@@ -28,7 +28,6 @@ import {
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
 import { TeacherCard } from "@/components/shared/teacher-card";
-import { ProfessorImage } from "@/components/shared/professor-image";
 import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
 import { getLevelCategory, getSubjectCategory } from "@/lib/catalog-taxonomy";
@@ -66,28 +65,28 @@ const POPULAR_SUBJECTS = [
 const STEPS = [
   {
     icon: BadgeCheck,
-    title: "1. Recherchez un professeur",
-    text: "Parcourez les profils vérifiés par notre équipe et choisissez selon la matière, le niveau, la commune et le format (domicile ou en ligne).",
+    title: "Choisir",
+    text: "Profils vérifiés, matière, niveau, commune et format.",
   },
   {
     icon: CalendarCheck,
-    title: "2. Réservez votre cours",
-    text: "Indiquez vos préférences : jours, horaires, objectif pédagogique et nombre de séances. Choisissez un cours à la séance ou un pack.",
+    title: "Planifier",
+    text: "Date, créneau de 2h, objectif et formule.",
   },
   {
     icon: WalletCards,
-    title: "3. Payez en sécurité",
-    text: "Réglez par Wave, Orange Money, MTN Money ou Moov Money. Vos fonds sont bloqués jusqu'à la confirmation du cours.",
+    title: "Payer",
+    text: "PayDunya sécurise le paiement jusqu'au cours.",
   },
   {
     icon: Wallet,
-    title: "4. Confirmez après le cours",
-    text: "Une fois le cours dispensé, confirmez sa réalisation. La plateforme clôture ensuite la réservation en toute sécurité.",
+    title: "Confirmer",
+    text: "Vous validez le cours avant la clôture.",
   },
 ];
 
 export default async function HomePage() {
-  const [featured, subjects, levels, communes] = await Promise.all([
+  const [featured, activeTeacherCount, subjects, levels, communes] = await Promise.all([
     db.teacher.findMany({
       where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
       take: 6,
@@ -96,6 +95,9 @@ export default async function HomePage() {
         _count: { select: { reviews: true } },
       },
       orderBy: [{ rating: "desc" }],
+    }),
+    db.teacher.count({
+      where: { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     }),
     db.subject.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true, icon: true } }),
     db.level.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true, order: true } }),
@@ -111,6 +113,12 @@ export default async function HomePage() {
     rating: t.rating,
     ratingCount: t.ratingCount,
     experienceYears: t.experienceYears,
+    careerSummary: t.careerSummary,
+    skills: t.skills,
+    workHistory: t.workHistory,
+    certifications: t.certifications,
+    teachingAchievements: t.teachingAchievements,
+    learnersCoached: t.learnersCoached,
     pricePerSession: t.pricePerSession,
     pricePack4: t.pricePack4,
     pricePack8: t.pricePack8,
@@ -125,27 +133,26 @@ export default async function HomePage() {
     primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
     _count: { reviews: t._count.reviews },
   }));
-  const heroTeacher = featuredCards[0];
 
   return (
     <PublicLayout>
       {/* HERO */}
       <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto grid max-w-7xl gap-7 px-4 py-7 sm:px-6 sm:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:py-12">
-          <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+        <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+          <div className="mx-auto max-w-5xl text-center">
+            <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <ShieldCheck className="h-3.5 w-3.5" />
               Côte d'Ivoire · professeurs vérifiés · paiement PayDunya
             </div>
-            <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-[#111827] text-balance sm:text-5xl lg:text-6xl">
+            <h1 className="mx-auto max-w-4xl text-3xl font-semibold tracking-tight text-[#111827] text-balance sm:text-5xl lg:text-6xl">
               Réservez un professeur vérifié, avec un suivi clair jusqu'au cours.
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[#475569] sm:text-lg">
-              Choisissez la matière, le niveau, le lieu et l'horaire. Votre réservation reste suivie par MonProf CI, du paiement sécurisé à la confirmation du cours.
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#475569] sm:text-lg">
+              Un professeur, un créneau, un paiement PayDunya et un espace client pour suivre le dossier.
             </p>
-            <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs font-bold text-[#111B4D]">
+            <div className="mx-auto mt-5 hidden max-w-2xl grid-cols-3 gap-2 text-center text-xs font-semibold text-[#111B4D] min-[430px]:grid">
               <div className="rounded-2xl border border-[#E3E8F2] bg-white px-2 py-3">
-                <p className="text-lg text-[#111827]">{featuredCards.length}+</p>
+                <p className="text-lg text-[#111827]">{activeTeacherCount}+</p>
                 <p>profils actifs</p>
               </div>
               <div className="rounded-2xl border border-[#E3E8F2] bg-white px-2 py-3">
@@ -157,7 +164,7 @@ export default async function HomePage() {
                 <p>minimum</p>
               </div>
             </div>
-            <div className="mt-6">
+            <div className="mx-auto mt-6 max-w-5xl text-left">
               <HomeSearchBar
                 subjects={subjects.map((subject) => ({
                   slug: subject.slug,
@@ -173,59 +180,22 @@ export default async function HomePage() {
               />
             </div>
           </div>
-
-          <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3 border-b border-[#E3E8F2] pb-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Sélection MonProf CI</p>
-                <p className="text-lg font-bold text-[#111827]">Professeur recommandé</p>
-              </div>
-              <span className="rounded-full bg-[#111B4D] px-3 py-1 text-xs font-bold text-white">Vérifié</span>
-            </div>
-            <div className="mt-4 flex items-center gap-4">
-              <ProfessorImage
-                photoUrl={heroTeacher?.photoUrl}
-                name={heroTeacher?.professionalName || heroTeacher?.fullName || "Professeur MonProf"}
-                size="xl"
-                shape="rounded"
-                priority
-                verified={heroTeacher?.badgeVerified}
-              />
-              <div className="min-w-0">
-                <p className="truncate text-xl font-bold text-[#111827]">{heroTeacher?.professionalName || "M. Kouamé"}</p>
-                <p className="mt-1 truncate text-sm font-semibold text-[#475569]">{heroTeacher?.primarySubject || "Mathématiques"} · {heroTeacher?.commune || "Abidjan"}</p>
-                <p className="mt-2 text-sm font-bold text-[#111B4D]">Note {heroTeacher?.rating?.toFixed(1) || "4.9"}/5 · {heroTeacher?.experienceYears || 5} ans d'expérience</p>
-              </div>
-            </div>
-            <div className="mt-4 grid gap-2 min-[430px]:grid-cols-3">
-              <MiniProof icon={BadgeCheck} label="Identité contrôlée" />
-              <MiniProof icon={CalendarCheck} label="Disponibilité suivie" />
-              <MiniProof icon={WalletCards} label="PayDunya sécurisé" />
-            </div>
-            <Link
-              href={heroTeacher ? `/professeurs/${heroTeacher.id}` : "/professeurs"}
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78]"
-            >
-              Voir le profil
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
         </div>
       </section>
 
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <SectionHeader title="Réserver sans stress" text="Le parcours est court : choix du professeur, créneau, paiement PayDunya, puis suivi dans l'espace client." />
+          <SectionHeader title="Réserver sans stress" text="Un parcours court, lisible et suivi dans votre espace client." />
           <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <div
                 key={s.title}
-                className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm"
+                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
                   <s.icon className="h-5 w-5" />
                 </div>
-                <h3 className="mt-3 text-sm font-bold text-[#111827]">
+                <h3 className="mt-3 text-sm font-semibold text-[#111827]">
                   {s.title}
                 </h3>
                 <p className="mt-1.5 text-sm leading-6 text-[#64748B]">
@@ -243,7 +213,7 @@ export default async function HomePage() {
           <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-[#111827] sm:text-3xl">
+                <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
                   Professeurs en vedette
                 </h2>
                 <p className="mt-2 text-sm text-[#64748B]">
@@ -253,7 +223,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/professeurs"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[#CAD7F2] bg-white px-4 text-sm font-bold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] sm:justify-start"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[#CAD7F2] bg-white px-4 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] sm:justify-start"
               >
                 Voir tous les professeurs
                 <ArrowRight className="h-4 w-4" />
@@ -283,7 +253,7 @@ export default async function HomePage() {
                   <s.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-[#111827]">{s.name}</p>
+                  <p className="truncate text-sm font-semibold text-[#111827]">{s.name}</p>
                   <p className="text-xs text-[#64748B]">{s.desc}</p>
                 </div>
                 <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
@@ -291,7 +261,7 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="mt-5 text-center">
-            <Link href="/professeurs" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-bold text-[#111B4D] shadow-sm hover:border-[#111B4D]">
+            <Link href="/professeurs" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]">
               Explorer toutes les matières
             </Link>
           </div>
@@ -303,7 +273,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-[#111827] sm:text-3xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
                 Des tarifs clairs par niveau
               </h2>
               <p className="mt-3 text-sm text-[#64748B] sm:text-base">
@@ -326,14 +296,14 @@ export default async function HomePage() {
               <div className="mt-7">
                 <Link
                   href="/tarifs"
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-bold text-[#111B4D] shadow-sm transition hover:border-[#111B4D]"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D]"
                 >
                   Voir les tarifs détaillés
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
-            <div className="overflow-hidden rounded-3xl border border-[#E3E8F2] bg-white shadow-sm">
+            <div className="overflow-hidden rounded-[1.15rem] border border-[#E3E8F2] bg-white shadow-sm">
               <table className="w-full text-sm">
                 <thead className="bg-white text-left text-xs uppercase tracking-wide text-[#64748B]">
                   <tr>
@@ -341,13 +311,13 @@ export default async function HomePage() {
                     <th className="px-4 py-3 text-right font-medium">Prix / séance</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-[#E3E8F2]">
                   {PRICING.map((p) => (
                     <tr key={p.level} className="border-t border-[#E3E8F2]">
-                      <td className="px-4 py-3 font-bold text-[#111827]">
+                      <td className="px-4 py-3 font-semibold text-[#111827]">
                         {p.level}
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-[#111827] tabular-nums">
+                      <td className="px-4 py-3 text-right font-semibold text-[#111827] tabular-nums">
                         {formatFCFA(p.price)}
                       </td>
                     </tr>
@@ -369,17 +339,8 @@ export default async function HomePage() {
 function SectionHeader({ title, text }: { title: string; text: string }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-2xl font-bold tracking-tight text-[#111827] sm:text-3xl">{title}</h2>
+      <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-[#64748B] sm:text-base">{text}</p>
-    </div>
-  );
-}
-
-function MiniProof({ icon: Icon, label }: { icon: typeof ShieldCheck; label: string }) {
-  return (
-    <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-bold text-[#111B4D]">
-      <Icon className="h-4 w-4 shrink-0" />
-      <span>{label}</span>
     </div>
   );
 }

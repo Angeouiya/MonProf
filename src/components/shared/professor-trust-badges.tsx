@@ -15,23 +15,23 @@ type ProfessorTrustBadgesProps = {
 const sizeClasses = {
   sm: {
     container: "gap-1.5",
-    primary: "min-h-7 px-2.5 py-1 text-[10px]",
-    secondary: "min-h-7 px-2.5 py-1 text-[10px]",
-    iconPrimary: "h-3 w-3",
+    primary: "min-h-6 px-2 py-0.5 text-[9.5px]",
+    secondary: "min-h-6 px-2 py-0.5 text-[9.5px]",
+    iconPrimary: "h-2.5 w-2.5",
     iconSecondary: "h-3 w-3",
   },
   md: {
     container: "gap-2",
-    primary: "min-h-9 px-3.5 py-2 text-xs",
+    primary: "min-h-8 px-3 py-1.5 text-xs",
     secondary: "min-h-8 px-3 py-1.5 text-xs",
-    iconPrimary: "h-4 w-4",
+    iconPrimary: "h-3.5 w-3.5",
     iconSecondary: "h-3.5 w-3.5",
   },
   lg: {
     container: "gap-2.5",
-    primary: "min-h-11 px-4 py-2.5 text-sm",
+    primary: "min-h-10 px-3.5 py-2 text-sm",
     secondary: "min-h-9 px-3.5 py-2 text-xs",
-    iconPrimary: "h-[18px] w-[18px]",
+    iconPrimary: "h-4 w-4",
     iconSecondary: "h-4 w-4",
   },
 } as const;
@@ -90,16 +90,15 @@ export function ProfessorTrustBadges({
       {verified && (
         <span
           className={cn(
-            "inline-flex max-w-full min-w-0 items-center rounded-full border border-[#1E2A78] bg-[#1E2A78] font-extrabold uppercase tracking-wide text-white shadow-sm ring-1 ring-[#E3E8F2] ring-offset-1 ring-offset-white max-[360px]:px-2",
+            "inline-flex max-w-full min-w-0 items-center rounded-lg border border-[#111B4D] bg-[#111B4D] font-semibold uppercase tracking-wide text-white shadow-sm max-[360px]:px-2",
             styles.primary,
           )}
-          title="Professeur certifié par MonProf CI"
+          title="Professeur certifié"
         >
-          <span className="mr-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-[#E3E8F2]">
+          <span className="mr-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white text-[#111B4D]">
             <ShieldCheck className={cn("shrink-0", styles.iconPrimary)} />
           </span>
-          <span className="min-w-0 truncate max-[360px]:hidden">Certifié MonProf CI</span>
-          <span className="hidden min-w-0 truncate max-[360px]:inline">Certifié</span>
+          <span className="min-w-0 truncate">Certifié</span>
         </span>
       )}
       {visibleSecondary.map((badge) => {
@@ -108,7 +107,7 @@ export function ProfessorTrustBadges({
           <span
             key={badge.key}
             className={cn(
-              "inline-flex shrink-0 items-center rounded-full border font-extrabold uppercase tracking-wide shadow-sm",
+              "inline-flex shrink-0 items-center rounded-xl border font-semibold uppercase tracking-wide",
               styles.secondary,
               badge.className,
             )}

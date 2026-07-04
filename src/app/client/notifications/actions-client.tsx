@@ -41,7 +41,7 @@ export function ClientNotificationActions({
 
   if (mode === "all") {
     return (
-      <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-11 rounded-2xl">
+      <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-10 self-start rounded-2xl px-3 text-xs min-[460px]:min-h-11 min-[460px]:text-sm">
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
         Tout marquer lu
       </Button>

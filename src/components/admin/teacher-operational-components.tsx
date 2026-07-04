@@ -64,25 +64,25 @@ export function TeacherStatusBadge({ status, className }: { status: string; clas
 export function TeacherQualityScore({ score }: { score: number }) {
   const tone = qualityScoreTone(score);
   const color = {
-    blue: "from-blue-700 to-violet-600 text-white",
-    violet: "from-[#1E2A78] to-violet-600 text-white",
-    amber: "from-amber-200 to-amber-100 text-amber-900",
-    orange: "from-orange-200 to-orange-100 text-orange-900",
-    red: "from-red-200 to-red-100 text-red-900",
+    blue: "bg-[#111B4D] text-white",
+    violet: "bg-[#111B4D] text-white",
+    amber: "border border-amber-200 bg-white text-amber-900",
+    orange: "border border-orange-200 bg-white text-orange-900",
+    red: "border border-red-200 bg-white text-red-900",
   }[tone];
   return (
-    <div className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Score qualité</p>
           <p className="mt-1 text-sm text-muted-foreground">{qualityScoreLabel(score)}</p>
         </div>
-        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br text-xl font-black shadow-sm", color)}>
+        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-black shadow-sm", color)}>
           {score}
         </div>
       </div>
-      <div className="mt-4 h-2 rounded-full bg-violet-50">
-        <div className="h-full rounded-full premium-gradient" style={{ width: `${Math.max(4, Math.min(100, score))}%` }} />
+      <div className="mt-4 h-2 rounded-full bg-[#E5E7EB]">
+        <div className="h-full rounded-full bg-[#111B4D]" style={{ width: `${Math.max(4, Math.min(100, score))}%` }} />
       </div>
     </div>
   );
@@ -197,10 +197,10 @@ export function OperationalAlertCard({
   href?: string;
 }) {
   const styles = {
-    violet: "border-violet-100 bg-violet-50/70 text-violet-800",
-    amber: "border-amber-100 bg-amber-50/80 text-amber-900",
-    red: "border-red-100 bg-red-50/80 text-red-800",
-    blue: "border-blue-100 bg-blue-50/80 text-blue-800",
+    violet: "border-[#E3E8F2] bg-white text-[#111B4D]",
+    amber: "border-amber-200 bg-white text-amber-900",
+    red: "border-red-200 bg-white text-red-800",
+    blue: "border-[#CAD7F2] bg-white text-[#111B4D]",
   }[tone];
   const content = (
     <div className={cn("rounded-3xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md", styles)}>

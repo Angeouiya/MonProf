@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { OPEN_SUBJECT_PRESETS } from "../src/lib/open-subject-catalog";
+import { normalizeTeacherPhone } from "../src/lib/teacher-portal";
 
 const prisma = new PrismaClient();
 
@@ -403,6 +404,42 @@ const TEACHERS = [
   },
 ];
 
+function buildTeacherProfileExtras(t: (typeof TEACHERS)[number]) {
+  const primarySubject = t.subjects.find((subject) => subject.primary)?.name ?? t.subjects[0]?.name ?? "accompagnement";
+  const secondarySubjects = t.subjects.filter((subject) => !subject.primary).slice(0, 4).map((subject) => subject.name);
+  const coached = Math.max(25, (t.experienceYears * 18) + (t.ratingCount * 3));
+  const zones = t.zones.slice(0, 3).join(", ");
+  const levels = t.levels.slice(0, 4).join(", ");
+
+  return {
+    learnersCoached: coached,
+    careerSummary: `${t.professionalName} accompagne des apprenants à ${t.commune} et dans le Grand Abidjan depuis ${t.experienceYears} ans. Son profil est orienté ${primarySubject}, avec une approche pratique, structurée et suivie par l'administration Compétence.`,
+    skills: [
+      `${primarySubject} - accompagnement ciblé`,
+      ...secondarySubjects,
+      "Diagnostic de niveau et plan de progression",
+      "Suivi clair avec l'apprenant et la famille",
+    ].join("\n"),
+    workHistory: [
+      `${t.experienceYears} ans d'encadrement en ${primarySubject} auprès de profils ${levels}`,
+      `Interventions régulières sur ${zones}`,
+      t.profileType === "PROFESSIONNEL"
+        ? "Expérience terrain et transmission de compétences pratiques aux adultes et professionnels"
+        : "Accompagnement scolaire, préparation d'examens et remise à niveau individualisée",
+    ].join("\n"),
+    certifications: [
+      t.diploma,
+      "Identité, photo et profil vérifiés par l'administration Compétence",
+      "Références pédagogiques contrôlées en interne",
+    ].filter(Boolean).join("\n"),
+    teachingAchievements: [
+      `${coached}+ apprenants encadrés en suivi individuel ou groupe restreint`,
+      "Méthode centrée sur les objectifs, exercices guidés et progression mesurable",
+      "Historique de réservations, avis et paiements suivi dans le dashboard administrateur",
+    ].join("\n"),
+  };
+}
+
 async function main() {
   console.log("🧹 Nettoyage...");
   await prisma.teacherPayoutAllocation.deleteMany();
@@ -448,10 +485,11 @@ async function main() {
   console.log("👤 Création admin + client démo...");
   const adminPass = await bcrypt.hash("admin123", 10);
   const clientPass = await bcrypt.hash("client123", 10);
+  const teacherPass = await bcrypt.hash("prof123", 10);
   const admin = await prisma.user.create({
     data: {
       email: "admin@monprof.ci",
-      name: "Admin MonProf",
+      name: "Admin Compétence",
       phone: "+225 07 00 00 00 00",
       passwordHash: adminPass,
       role: "ADMIN",
@@ -506,11 +544,16 @@ async function main() {
   const teacherMap = new Map();
   for (const t of TEACHERS) {
     const { subjects, levels, zones, ...data } = t;
+    const profileExtras = buildTeacherProfileExtras(t);
     const teacher = await prisma.teacher.create({
       data: {
+        ...profileExtras,
         ...data,
         status: "ACTIVE",
         availability: AVAILABILITY,
+        portalAccessEnabled: true,
+        portalPhone: normalizeTeacherPhone(data.phone),
+        portalPasswordHash: teacherPass,
       } as any,
     });
     for (const s of subjects) {
@@ -642,6 +685,7 @@ async function main() {
       teacherId: t2.id,
       amount: 30400,
       method: "WAVE",
+      paymentPhone: "+2250700000002",
       note: "Versement complet démonstration - réservation MP-1015",
       status: "PAID",
       paidAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
@@ -831,6 +875,7 @@ async function main() {
       teacherId: t3.id,
       amount: 20000,
       method: "MOOV_MONEY",
+      paymentPhone: "+2250500000003",
       note: "Acompte professeur démonstration - reste dû conservé en comptabilité interne",
       status: "PAID",
       paidAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
@@ -872,10 +917,10 @@ async function main() {
   });
 
   console.log("⚙️ Paramètres plateforme...");
-  await prisma.setting.create({ data: { key: "platform_name", value: "MonProf CI" } });
+  await prisma.setting.create({ data: { key: "platform_name", value: "Compétence" } });
   await prisma.setting.create({ data: { key: "default_commission", value: "20" } });
   await prisma.setting.create({ data: { key: "support_phone", value: "+225 27 22 00 00 00" } });
-  await prisma.setting.create({ data: { key: "support_email", value: "support@monprof.ci" } });
+  await prisma.setting.create({ data: { key: "support_email", value: "support@competence.ci" } });
 
   console.log("\n✅ Seed terminé!");
   console.log("─".repeat(50));

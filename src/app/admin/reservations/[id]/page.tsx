@@ -16,8 +16,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  ArrowLeft, MapPin, Phone, Mail, Clock, Calendar, User, GraduationCap,
-  Video, Home, Users, CheckCircle2, XCircle,
+  MapPin, Phone, Mail, Clock, Calendar, User, GraduationCap,
+  Video, Home, Users, CheckCircle2, XCircle, CalendarClock,
 } from "lucide-react";
 import { BookingActionsClient } from "./actions-client";
 import { ClientCommunicationClient } from "./client-communication-client";
@@ -56,6 +56,12 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       transactions: { orderBy: { createdAt: "desc" } },
       reviews: { include: { client: { select: { name: true } } } },
       disputes: { include: { openedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      scheduleProposals: {
+        include: {
+          teacher: { select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
       replacements: {
         include: {
           booking: { select: { reference: true, client: { select: { name: true, phone: true } } } },
@@ -70,6 +76,9 @@ export default async function ReservationDetailPage({ params }: { params: Promis
         orderBy: { createdAt: "desc" },
         take: 30,
       },
+      clientRefundRequests: {
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -83,7 +92,11 @@ export default async function ReservationDetailPage({ params }: { params: Promis
   const displayTransportFee = pricingSnapshot?.transportFee ?? booking.transportFee;
   const displayMaterialFee = pricingSnapshot?.materialFee ?? booking.materialFee;
   const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
+  const displayPaymentServiceFeeAmount = pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount;
+  const displayPaymentServiceFeeLabel = pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel;
   const displayTotalPrice = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
+  const displayTotalBeforePaymentServiceFee = pricingSnapshot?.totalBeforePaymentServiceFee
+    ?? Math.max(0, displayTotalPrice - displayPaymentServiceFeeAmount);
   const displaySessionsCount = pricingSnapshot?.numberOfSessions ?? booking.sessionsCount;
   const displayParticipantsCount = pricingSnapshot?.participantsCount ?? booking.participantsCount;
   const displayCommissionAmount = pricingSnapshot?.platformCommissionAmount ?? booking.commissionAmount;
@@ -101,11 +114,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
 
   return (
     <div className="space-y-5">
-      <PageHeader title={`Réservation ${booking.reference}`} description={`Créée le ${formatDateTime(booking.createdAt)}`}>
-        <Button asChild variant="outline">
-          <Link href="/admin/reservations"><ArrowLeft className="mr-2 h-4 w-4" /> Retour</Link>
-        </Button>
-      </PageHeader>
+      <PageHeader title={`Réservation ${booking.reference}`} description={`Créée le ${formatDateTime(booking.createdAt)}`} />
 
       {/* Status header */}
       <Card>
@@ -181,6 +190,49 @@ export default async function ReservationDetailPage({ params }: { params: Promis
         </Card>
       )}
 
+      {booking.cancellationRefundAmount > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Remboursement client</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <AmountBox label="Montant à déposer" value={booking.cancellationRefundAmount} tone="primary" />
+              <AmountBox label="Frais service non remboursés" value={booking.paymentServiceFeeAmount} tone={booking.paymentServiceFeeAmount > 0 ? "warning" : "success"} />
+              <AmountBox label="Frais annulation" value={booking.cancellationFeeAmount} tone={booking.cancellationFeeAmount > 0 ? "danger" : "success"} />
+            </div>
+            {booking.clientRefundRequests.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
+                Le client n'a pas encore renseigné le numéro de remboursement.
+              </p>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {booking.clientRefundRequests.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-mono text-xs font-bold text-primary">{request.reference}</p>
+                      <Badge variant="outline">{clientRefundStatusLabel(request.status)}</Badge>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <Detail icon={Clock} label="Montant" value={formatFCFA(request.amount)} />
+                      <Detail icon={Phone} label="Moyen" value={paymentMethodLabel(request.method)} />
+                      <Detail icon={Phone} label="Numéro dépôt" value={request.paymentPhone} />
+                      <Detail icon={User} label="Titulaire" value={request.accountName ?? "—"} />
+                    </div>
+                    {request.note && (
+                      <p className="mt-3 rounded-2xl border border-border bg-white px-3 py-2 text-sm text-muted-foreground">
+                        Note client : {request.note}
+                      </p>
+                    )}
+                    {request.externalReference && (
+                      <p className="mt-2 text-xs text-muted-foreground">Référence externe : {request.externalReference}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Client card */}
         <Card>
@@ -191,7 +243,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                 <AvatarFallback className="bg-violet-50 text-violet-700">{initials(booking.client.name)}</AvatarFallback>
               </Avatar>
               <div>
-                <Link href={`/admin/clients/${booking.client.id}`} className="font-medium text-foreground hover:text-primary">{booking.client.name}</Link>
+                <Link href={`/admin/clients/${booking.client.id}`} className="inline-flex min-h-10 items-center font-medium text-foreground hover:text-primary">{booking.client.name}</Link>
                 <p className="text-xs text-muted-foreground">Client</p>
               </div>
             </div>
@@ -215,7 +267,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                 verified={booking.teacher.badgeVerified}
               />
               <div>
-                <Link href={`/admin/professeurs/${booking.teacher.id}?tab=cours&bookingId=${booking.id}`} className="font-medium text-foreground hover:text-primary">{booking.teacher.professionalName || booking.teacher.fullName}</Link>
+                <Link href={`/admin/professeurs/${booking.teacher.id}?tab=cours&bookingId=${booking.id}`} className="inline-flex min-h-10 items-center font-medium text-foreground hover:text-primary">{booking.teacher.professionalName || booking.teacher.fullName}</Link>
                 <p className="text-xs text-muted-foreground">Professeur</p>
               </div>
             </div>
@@ -303,6 +355,9 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             transportRuleLabel={pricingSnapshot?.transportRuleLabel}
             materialFee={displayMaterialFee}
             discountAmount={displayDiscountAmount}
+            paymentServiceFeeAmount={displayPaymentServiceFeeAmount}
+            paymentServiceFeeLabel={displayPaymentServiceFeeLabel}
+            totalBeforePaymentServiceFee={displayTotalBeforePaymentServiceFee}
             isQuoteOnly={booking.isQuoteOnly}
             teacherNetAmount={booking.teacherNetAmount}
             teacherPayoutAmount={displayTeacherCoursePayout}
@@ -332,6 +387,53 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           </div>
         </CardContent>
       </Card>
+
+      {/* Timeline */}
+      {booking.scheduleProposals.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Propositions de créneau professeur</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {booking.scheduleProposals.map((proposal) => (
+              <div key={proposal.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <ProfessorImage
+                    photoUrl={proposal.teacher.photoUrl}
+                    name={proposal.teacher.professionalName || proposal.teacher.fullName}
+                    size="sm"
+                    shape="circle"
+                    verified={proposal.teacher.badgeVerified}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{scheduleProposalStatusLabel(proposal.status)}</Badge>
+                      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        {formatDate(proposal.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      {formatDate(proposal.proposedDate)} · {proposal.proposedTime}
+                    </p>
+                    {proposal.reason && (
+                      <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Motif professeur : {proposal.reason}</p>
+                    )}
+                    {proposal.clientResponse && (
+                      <p className="mt-2 rounded-2xl border border-border bg-white px-3 py-2 text-sm text-foreground">
+                        Réponse client : {proposal.clientResponse}
+                      </p>
+                    )}
+                    {proposal.status === "REJECTED" && (
+                      <Button asChild size="sm" className="mt-3 rounded-2xl">
+                        <Link href={`/admin/reservations/${booking.id}?action=replace`}>Remplacer ou annuler</Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Timeline */}
       {booking.replacements.length > 0 && (
@@ -506,4 +608,25 @@ function AmountBox({ label, value, sub, tone = "default" }: { label: string; val
       {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
     </div>
   );
+}
+
+function scheduleProposalStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Réponse client attendue",
+    ACCEPTED: "Acceptée",
+    REJECTED: "Refusée",
+    CANCELLED: "Remplacée",
+  };
+  return labels[status] ?? status;
+}
+
+function clientRefundStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "À traiter",
+    APPROVED: "Validé",
+    PAID: "Payé",
+    REJECTED: "Rejeté",
+    CANCELLED: "Annulé",
+  };
+  return labels[status] ?? status;
 }

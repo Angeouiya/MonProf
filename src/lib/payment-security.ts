@@ -9,6 +9,8 @@ export const VERIFIED_CLIENT_FUND_STATUSES = [
   "TO_PAY_TEACHER",
   "TEACHER_PAID",
   "DISPUTED",
+  "REFUND_PENDING",
+  "PARTIAL_REFUND_PENDING",
   "PARTIALLY_REFUNDED",
   "REFUNDED",
   "RETAINED",
@@ -22,6 +24,8 @@ export const REFUNDABLE_CLIENT_FUND_STATUSES = [
   "VALIDATED",
   "TO_PAY_TEACHER",
   "DISPUTED",
+  "REFUND_PENDING",
+  "PARTIAL_REFUND_PENDING",
   "PARTIALLY_REFUNDED",
   "RETAINED",
 ] as const;
@@ -33,6 +37,8 @@ type TransactionLike = {
 };
 
 type PayDunyaPaymentProofLike = {
+  isQuoteOnly?: boolean | null;
+  status?: string | null;
   paymentStatus?: string | null;
   totalClientPays?: number | null;
   totalPrice?: number | null;
@@ -40,6 +46,23 @@ type PayDunyaPaymentProofLike = {
   paydunyaVerifiedAt?: Date | string | null;
   transactions?: TransactionLike[] | null;
 };
+
+export const PAYDUNYA_PROOF_REQUIRED_ERROR =
+  "Action bloquée: la réservation n'est pas active tant que PayDunya n'a pas confirmé le paiement via vérification serveur.";
+
+export const OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA = [
+  "PAID",
+  "PENDING_ADMIN_VALIDATION",
+  "CONFIRMED",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "COURSE_DONE",
+  "PENDING_CLIENT_VALIDATION",
+  "VALIDATED_BY_CLIENT",
+  "PAYMENT_TO_RELEASE",
+  "TEACHER_PAID",
+  "DISPUTED",
+] as const;
 
 export function getExpectedClientPaymentAmount(booking: PayDunyaPaymentProofLike) {
   const totalClientPays = Math.max(0, booking.totalClientPays ?? 0);
@@ -91,6 +114,16 @@ export function hasVerifiedPayDunyaClientPayment(booking: PayDunyaPaymentProofLi
 export function isPaymentReadyForCourseProgressWithProof(booking: PayDunyaPaymentProofLike) {
   return isPaymentReadyForCourseProgress(booking.paymentStatus)
     && hasVerifiedPayDunyaClientPayment(booking);
+}
+
+export function isOperationalBookingStatus(status?: string | null) {
+  return OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA.includes(
+    status as (typeof OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA)[number],
+  );
+}
+
+export function requiresVerifiedPayDunyaForOperationalAction(booking: PayDunyaPaymentProofLike) {
+  return !hasVerifiedPayDunyaClientPayment(booking);
 }
 
 const VERIFIED_PAYDUNYA_BOOKING_FILTER = {

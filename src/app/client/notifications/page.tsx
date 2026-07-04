@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { PageHeader } from "@/components/shared/page-header";
+import { ClientAppRail, ClientMetricStrip, ClientPageHeader } from "@/components/shared/client-page-primitives";
 import { ClientNotificationActions } from "./actions-client";
 import { ClientNotificationCenter } from "./notification-center-client";
-import { AlertTriangle, Bell, WalletCards, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bell, CalendarCheck, LifeBuoy, WalletCards, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -62,10 +62,7 @@ export default async function ClientNotificationsPage() {
   }));
   const urgentCount = notifications.filter((notification) => ["URGENT", "CRITICAL"].includes(notification.priority) && !notification.read).length;
   const paymentCount = notifications.filter((notification) => (
-    ["PAYMENT_RECEIVED", "BLOCKED_FUNDS", "FUNDS_BLOCKED", "PAYMENT_TO_RELEASE", "REFUND"].includes(notification.type)
-  )).length;
-  const teacherCount = notifications.filter((notification) => (
-    ["TEACHER_ASSIGNED", "TEACHER_REPLACED", "REPLACEMENT"].includes(notification.type)
+    ["PAYMENT_PENDING", "PAYMENT_RECEIVED", "BLOCKED_FUNDS", "FUNDS_BLOCKED", "PAYMENT_TO_RELEASE", "REFUND"].includes(notification.type)
   )).length;
   const bookingCount = notifications.filter((notification) => (
     Boolean(notification.bookingId) || ["NEW_BOOKING", "BOOKING_CONFIRMED", "REMINDER", "COURSE_CONFIRMATION"].includes(notification.type)
@@ -73,52 +70,33 @@ export default async function ClientNotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <ClientPageHeader
+        eyebrow="Messages"
         title="Notifications"
         description={`${formatCount(notifications.length, "notification")}, ${formatCount(unreadCount, "non lue")}.`}
       >
         <ClientNotificationActions mode="all" />
-      </PageHeader>
+      </ClientPageHeader>
 
-      <section className="rounded-[1.35rem] border border-[#E3E8F2] bg-white p-3 shadow-sm sm:p-4">
-        <div className="grid gap-2 min-[520px]:grid-cols-2 lg:grid-cols-5">
-          <NotificationMetric icon={Bell} label="Non lues" value={unreadCount} />
-          <NotificationMetric icon={AlertTriangle} label="Urgentes" value={urgentCount} attention={urgentCount > 0} />
-          <NotificationMetric icon={WalletCards} label="Paiements" value={paymentCount} />
-          <NotificationMetric icon={UserRound} label="Professeurs" value={teacherCount} />
-          <div className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 lg:col-span-1">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Suivi</p>
-              <p className="mt-0.5 truncate text-sm font-black text-[#111827]">{bookingCount} dossier(s)</p>
-            </div>
-            <ShieldCheck className="h-4 w-4 shrink-0 text-[#111B4D]" />
-          </div>
-        </div>
-      </section>
+      <ClientMetricStrip
+        metrics={[
+          { icon: Bell, label: "Non lues", value: unreadCount },
+          { icon: AlertTriangle, label: "Urgentes", value: urgentCount, attention: urgentCount > 0 },
+          { icon: WalletCards, label: "Paiements", value: paymentCount },
+          { icon: ShieldCheck, label: "Suivi", value: formatCount(bookingCount, "dossier") },
+        ]}
+      />
+
+      <ClientAppRail
+        items={[
+          { href: "/client/notifications", icon: Bell, label: "Centre", value: "Tous les messages", active: true },
+          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: formatCount(bookingCount, "suivi") },
+          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatCount(paymentCount, "alerte") },
+          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Aide et litige" },
+        ]}
+      />
 
       <ClientNotificationCenter notifications={serializedNotifications} bookings={serializedBookings} />
-    </div>
-  );
-}
-
-function NotificationMetric({
-  icon: Icon,
-  label,
-  value,
-  attention = false,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  attention?: boolean;
-}) {
-  return (
-    <div className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-        <p className={attention ? "mt-0.5 text-lg font-black leading-5 text-[#111B4D]" : "mt-0.5 text-lg font-black leading-5 text-[#111827]"}>{value}</p>
-      </div>
-      <Icon className="h-4 w-4 shrink-0 text-[#111B4D]" />
     </div>
   );
 }

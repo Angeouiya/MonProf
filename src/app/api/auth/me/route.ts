@@ -14,6 +14,8 @@ export async function GET() {
       email: user.email,
       name: user.name,
       role: user.role,
+      teacherId: user.teacherId ?? null,
+      phone: user.phone ?? null,
     },
   });
 }

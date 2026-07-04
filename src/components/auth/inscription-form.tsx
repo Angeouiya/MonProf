@@ -141,7 +141,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
         return;
       }
 
-      toast.success("Bienvenue sur MonProf CI ! Votre compte a été créé.");
+      toast.success("Bienvenue sur Compétence ! Votre compte a été créé.");
       router.push("/client");
       router.refresh();
     } catch (err: any) {
@@ -156,11 +156,11 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       <section className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(320px,430px)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-14">
           <aside className="overflow-hidden rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6 lg:sticky lg:top-24">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#111B4D] bg-white px-3 py-1 text-xs font-black text-[#111B4D]">
+            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <ShieldCheck className="h-3.5 w-3.5" />
               Nouveau compte client
             </span>
-            <h1 className="mt-5 text-3xl font-black tracking-tight text-[#111827] text-balance sm:text-4xl">
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#111827] text-balance sm:text-4xl">
               Créez votre espace et réservez sans perdre le fil.
             </h1>
             <p className="mt-3 text-sm font-medium leading-7 text-[#475569]">
@@ -176,16 +176,16 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
             <div className="mt-6 space-y-3">
               {TRUST_POINTS.map((item) => (
                 <div key={item} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111B4D] text-white">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
-                  <p className="text-sm font-semibold text-foreground">{item}</p>
+                  <p className="text-sm font-semibold text-[#111827]">{item}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 rounded-3xl border border-[#E3E8F2] bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Après création</p>
+            <div className="mt-5 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Après création</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#111827]">
                 Vous arrivez directement dans votre dashboard client pour retrouver vos réservations, cours, paiements et notifications.
               </p>
@@ -196,18 +196,18 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
             <div className="mb-5 rounded-[1.6rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#111B4D] px-3 py-1 text-xs font-black text-white">
+                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
                     <GraduationCap className="h-3.5 w-3.5" />
                     Inscription gratuite
                   </div>
-                  <h2 className="mt-3 text-2xl font-black tracking-tight text-[#111827] sm:text-3xl">
+                  <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
                     Créer un compte client
                   </h2>
                   <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
                     Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
                   </p>
                 </div>
-                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-black text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white">
+                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white">
                   Déjà inscrit
                 </Link>
               </div>
@@ -223,7 +223,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="font-bold text-[#111827]">
+                <Label htmlFor="name" className="font-semibold text-[#111827]">
                   Nom complet <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
@@ -241,7 +241,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="font-bold text-[#111827]">
+                  <Label htmlFor="email" className="font-semibold text-[#111827]">
                     Email <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
@@ -259,7 +259,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="font-bold text-[#111827]">Téléphone</Label>
+                  <Label htmlFor="phone" className="font-semibold text-[#111827]">Téléphone</Label>
                   <div className="relative">
                     <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
@@ -276,7 +276,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="commune" className="font-bold text-[#111827]">Commune</Label>
+                  <Label htmlFor="commune" className="font-semibold text-[#111827]">Commune</Label>
                   <Select value={commune} onValueChange={setCommune}>
                     <SelectTrigger id="commune" className={SELECT_CLASS}>
                       <SelectValue placeholder="Choisir une commune" />
@@ -291,7 +291,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="quartier" className="font-bold text-[#111827]">Quartier</Label>
+                  <Label htmlFor="quartier" className="font-semibold text-[#111827]">Quartier</Label>
                   <div className="relative">
                     <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
@@ -306,7 +306,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="font-bold text-[#111827]">
+                <Label htmlFor="password" className="font-semibold text-[#111827]">
                   Mot de passe <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
@@ -324,7 +324,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -333,7 +333,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="font-bold text-[#111827]">
+                <Label htmlFor="confirmPassword" className="font-semibold text-[#111827]">
                   Confirmer le mot de passe <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
@@ -351,7 +351,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   <button
                     type="button"
                     onClick={() => setShowPwdConfirm((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -383,10 +383,10 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   const Icon = item.icon;
                   return (
                     <div key={item.title} className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111B4D] text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#111B4D] text-white">
                         <Icon className="h-4 w-4" />
                       </div>
-                      <p className="mt-2 text-sm font-black text-[#111827]">{item.title}</p>
+                      <p className="mt-2 text-sm font-semibold text-[#111827]">{item.title}</p>
                       <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{item.text}</p>
                     </div>
                   );
@@ -403,11 +403,11 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               </ul>
             </form>
 
-            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground min-[420px]:flex-row">
+            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm font-medium text-[#64748B] min-[420px]:flex-row">
               <span>Vous avez déjà un compte ?</span>
               <Link
                 href="/connexion"
-                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 font-black text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
               >
                 Connectez-vous
               </Link>
@@ -423,8 +423,8 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 function Signal({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 text-center">
-      <p className="text-lg font-black leading-none text-[#111B4D]">{value}</p>
-      <p className="mt-1 text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="text-lg font-semibold leading-none text-[#111B4D]">{value}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
     </div>
   );
 }

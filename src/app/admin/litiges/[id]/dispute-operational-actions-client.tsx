@@ -56,7 +56,7 @@ export function DisputeOperationalActionsClient({
   const [loading, setLoading] = useState<string | null>(null);
   const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
   const summary = [
-    `Litige MonProf CI - ${booking.reference}`,
+    `Litige Compétence - ${booking.reference}`,
     `Client : ${booking.client.name}`,
     booking.client.phone ? `Contact client : ${booking.client.phone}` : "",
     `Professeur : ${teacherName}`,

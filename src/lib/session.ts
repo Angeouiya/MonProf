@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 
 export type SessionUser = {
   id: string;
-  email: string;
+  email?: string | null;
   name: string;
-  role: "CLIENT" | "ADMIN";
+  role: "CLIENT" | "ADMIN" | "TEACHER";
+  teacherId?: string | null;
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -15,15 +16,17 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!session?.user) return null;
   return {
     id: (session.user as any).id,
-    email: session.user.email!,
+    email: session.user.email,
     name: session.user.name!,
     role: (session.user as any).role,
+    teacherId: (session.user as any).teacherId ?? null,
   };
 }
 
 export async function requireClient() {
   const u = await getSessionUser();
   if (!u) redirect("/connexion");
+  if (u.role === "TEACHER") redirect("/professeur");
   if (u.role !== "CLIENT") redirect("/admin");
   return u;
 }
@@ -31,6 +34,7 @@ export async function requireClient() {
 export async function requireAdmin() {
   const u = await getSessionUser();
   if (!u) redirect("/connexion?from=/admin");
+  if (u.role === "TEACHER") redirect("/professeur");
   if (u.role !== "ADMIN") redirect("/");
   return u;
 }

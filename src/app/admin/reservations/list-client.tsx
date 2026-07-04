@@ -13,7 +13,7 @@ import { Search, X } from "lucide-react";
 import { CLIENT_TYPES, COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 
 const STATUSES = [
-  { v: "PENDING_PAYMENT", l: "En attente paiement" },
+  { v: "PENDING_PAYMENT", l: "Brouillon PayDunya" },
   { v: "PAID", l: "Payée" },
   { v: "PENDING_ADMIN_VALIDATION", l: "Validation admin" },
   { v: "CONFIRMED", l: "Confirmée" },
@@ -36,6 +36,8 @@ const PAYMENTS = [
   { v: "TO_PAY_TEACHER", l: "À payer prof" },
   { v: "TEACHER_PAID", l: "Prof payé" },
   { v: "DISPUTED", l: "Litige" },
+  { v: "REFUND_PENDING", l: "Remb. à traiter" },
+  { v: "PARTIAL_REFUND_PENDING", l: "Remb. partiel à traiter" },
   { v: "REFUNDED", l: "Remboursé" },
   { v: "PARTIALLY_REFUNDED", l: "Remboursé partiel" },
   { v: "RETAINED", l: "Frais retenus" },

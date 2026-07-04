@@ -55,7 +55,7 @@ const courseFormatLabels: Record<string, string> = {
 };
 
 const bookingStatusLabels: Record<string, string> = {
-  PENDING_PAYMENT: "Paiement en attente",
+  PENDING_PAYMENT: "Brouillon PayDunya",
   PAID: "Payée",
   PENDING_ADMIN_VALIDATION: "Validation admin requise",
   CONFIRMED: "Confirmée",
@@ -144,7 +144,7 @@ export function TeacherWhatsAppMessageClient({
     return [
       `Bonjour ${teacherName},`,
       "",
-      "Un cours vous est attribué sur MonProf CI.",
+      "Un cours vous est attribué sur Compétence.",
       "",
       `Réservation : ${selected.reference}`,
       `Client : ${selected.clientName}`,

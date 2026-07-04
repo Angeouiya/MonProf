@@ -1,4 +1,4 @@
-// MonProf CI - Plateforme de réservation de cours à domicile et en ligne
+// Compétence - Plateforme de réservation de cours à domicile et en ligne
 // Côte d'Ivoire
 
 generator client {
@@ -26,21 +26,25 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  bookings                   Booking[]
-  reviews                    Review[]
-  disputes                   Dispute[]             @relation("DisputeOpener")
-  notifications              Notification[]
-  adminNotificationsSent     Notification[]        @relation("NotificationAdminSender")
-  handledMessages            ContactMessage[]      @relation("HandledBy")
-  teacherTasksCreated        TeacherTask[]         @relation("TeacherTaskCreator")
-  teacherWarningsCreated     TeacherWarning[]      @relation("TeacherWarningCreator")
-  teacherSanctionsCreated    TeacherSanction[]     @relation("TeacherSanctionCreator")
-  teacherReplacementsCreated TeacherReplacement[]  @relation("TeacherReplacementCreator")
-  reviewsHandled             Review[]              @relation("ReviewAdminReviewer")
-  actionLogs                 AdminActionLog[]      @relation("AdminActionActor")
-  clientCommunications       ClientCommunication[] @relation("ClientCommunicationClient")
-  clientCommunicationsSent   ClientCommunication[] @relation("ClientCommunicationSender")
-  teacherPayoutsCreated      TeacherPayoutRecord[] @relation("TeacherPayoutCreator")
+  bookings                      Booking[]
+  reviews                       Review[]
+  disputes                      Dispute[]              @relation("DisputeOpener")
+  notifications                 Notification[]
+  adminNotificationsSent        Notification[]         @relation("NotificationAdminSender")
+  handledMessages               ContactMessage[]       @relation("HandledBy")
+  teacherTasksCreated           TeacherTask[]          @relation("TeacherTaskCreator")
+  teacherWarningsCreated        TeacherWarning[]       @relation("TeacherWarningCreator")
+  teacherSanctionsCreated       TeacherSanction[]      @relation("TeacherSanctionCreator")
+  teacherReplacementsCreated    TeacherReplacement[]   @relation("TeacherReplacementCreator")
+  reviewsHandled                Review[]               @relation("ReviewAdminReviewer")
+  actionLogs                    AdminActionLog[]       @relation("AdminActionActor")
+  clientCommunications          ClientCommunication[]  @relation("ClientCommunicationClient")
+  clientCommunicationsSent      ClientCommunication[]  @relation("ClientCommunicationSender")
+  clientRefundRequests          ClientRefundRequest[]  @relation("ClientRefundRequestClient")
+  teacherPayoutsCreated         TeacherPayoutRecord[]  @relation("TeacherPayoutCreator")
+  teacherPayoutRequestsReviewed TeacherPayoutRequest[] @relation("TeacherPayoutRequestReviewer")
+  teacherAdminMessagesSent      TeacherAdminMessage[]  @relation("TeacherAdminMessageAdminSender")
+  passwordResetTokens           PasswordResetToken[]
 
   @@index([role])
 }
@@ -86,55 +90,74 @@ model Commune {
 // PROFESSEUR (fiche interne gérée par l'admin)
 // ============================================================
 model Teacher {
-  id                 String             @id @default(cuid())
+  id                   String             @id @default(cuid())
   // Identité
-  fullName           String
-  professionalName   String?
-  photoUrl           String?
-  phone              String
-  email              String?
-  commune            String?
-  quartier           String?
-  addressHint        String?
+  fullName             String
+  professionalName     String?
+  photoUrl             String?
+  phone                String
+  email                String?
+  commune              String?
+  quartier             String?
+  addressHint          String?
+  // Accès léger à la plateforme professeur, activé uniquement par l'admin
+  portalAccessEnabled  Boolean            @default(false)
+  portalPhone          String?            @unique
+  portalPasswordHash   String?
+  portalLastLoginAt    DateTime?
+  defaultPayoutMethod   PaymentMethod?
+  defaultPayoutPhone    String?
+  payoutInstructions    String?
   // Pédagogie
-  jobTitle           String
-  bio                String
-  experienceYears    Int                @default(0)
-  diploma            String?
-  cvUrl              String?
-  profileType        TeacherProfileType @default(ENSEIGNANT)
+  jobTitle             String
+  bio                  String
+  experienceYears      Int                @default(0)
+  diploma              String?
+  cvUrl                String?
+  careerSummary        String?
+  skills               String?
+  workHistory          String?
+  certifications       String?
+  teachingAchievements String?
+  learnersCoached      Int                @default(0)
+  profileType          TeacherProfileType @default(ENSEIGNANT)
   // Statut & visibilité
-  status             TeacherStatus      @default(PENDING)
-  featured           Boolean            @default(false)
-  qualityScore       Int                @default(85)
-  lastActivityAt     DateTime?
-  operationalComment String?
+  status               TeacherStatus      @default(PENDING)
+  featured             Boolean            @default(false)
+  qualityScore         Int                @default(85)
+  lastActivityAt       DateTime?
+  operationalComment   String?
+  adminRating          Float              @default(0) // 0..5, note plateforme/admin
+  adminRatingNote      String?
+  adminRatingPublic    Boolean            @default(true)
+  adminRatingUpdatedAt DateTime?
+  adminRatingUpdatedById String?
   // Évaluation interne (gérée par admin)
-  rating             Float              @default(0) // 0..5
-  ratingCount        Int                @default(0)
+  rating               Float              @default(0) // 0..5
+  ratingCount          Int                @default(0)
   // Badges
-  badgeVerified      Boolean            @default(true)
-  badgeRecommended   Boolean            @default(false)
-  badgeNew           Boolean            @default(true)
-  badgePopular       Boolean            @default(false)
-  badgePremium       Boolean            @default(false)
-  internalNote       String?
+  badgeVerified        Boolean            @default(true)
+  badgeRecommended     Boolean            @default(false)
+  badgeNew             Boolean            @default(true)
+  badgePopular         Boolean            @default(false)
+  badgePremium         Boolean            @default(false)
+  internalNote         String?
   // Format
-  offersHome         Boolean            @default(true)
-  offersOnline       Boolean            @default(true)
-  offersGroup        Boolean            @default(false)
+  offersHome           Boolean            @default(true)
+  offersOnline         Boolean            @default(true)
+  offersGroup          Boolean            @default(false)
   // Tarification (FCFA)
-  pricePerHour       Int                @default(10000)
-  pricePerSession    Int                @default(10000)
-  pricePack4         Int                @default(38000)
-  pricePack8         Int                @default(72000)
-  commissionRate     Int                @default(30) // %
-  pricingTier        PricingTier        @default(STANDARD)
+  pricePerHour         Int                @default(10000)
+  pricePerSession      Int                @default(10000)
+  pricePack4           Int                @default(38000)
+  pricePack8           Int                @default(72000)
+  commissionRate       Int                @default(30) // %
+  pricingTier          PricingTier        @default(STANDARD)
   // Disponibilités (JSON: {mon:{morning,afternoon,evening}, ...})
-  availability       String?
+  availability         String?
   // Métadonnées
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   subjects           TeacherSubject[]
   levels             TeacherLevel[]
@@ -144,6 +167,7 @@ model Teacher {
   transactions       Transaction[]
   notifications      TeacherNotification[]
   missionLinks       TeacherMissionLink[]
+  scheduleProposals  BookingScheduleProposal[]
   tasks              TeacherTask[]
   warnings           TeacherWarning[]
   sanctions          TeacherSanction[]
@@ -151,9 +175,12 @@ model Teacher {
   newReplacements    TeacherReplacement[]       @relation("NewTeacherReplacement")
   paymentAdjustments TeacherPaymentAdjustment[]
   payoutRecords      TeacherPayoutRecord[]
+  payoutRequests     TeacherPayoutRequest[]
+  adminMessages      TeacherAdminMessage[]
 
   @@index([status])
   @@index([featured])
+  @@index([portalAccessEnabled])
 }
 
 enum TeacherStatus {
@@ -261,6 +288,9 @@ model Booking {
   transportFeeKey          String?
   materialFee              Int            @default(0)
   discountAmount           Int            @default(0)
+  paymentServiceFeeRate    Int            @default(0) // basis points, ex: 300 = 3%
+  paymentServiceFeeAmount  Int            @default(0)
+  paymentServiceFeeLabel   String?
   totalClientPays          Int            @default(0)
   totalTeacherReceives     Int            @default(0)
   isQuoteOnly              Boolean        @default(false)
@@ -307,9 +337,12 @@ model Booking {
   teacherSanctions          TeacherSanction[]
   replacements              TeacherReplacement[]
   clientCommunications      ClientCommunication[]
+  clientRefundRequests      ClientRefundRequest[]
   teacherPaymentAdjustments TeacherPaymentAdjustment[]
   teacherPayoutAllocations  TeacherPayoutAllocation[]
   missionLinks              TeacherMissionLink[]
+  scheduleProposals         BookingScheduleProposal[]
+  teacherAdminMessages      TeacherAdminMessage[]
 
   @@index([clientId])
   @@index([teacherId])
@@ -360,6 +393,8 @@ enum PaymentStatus {
   TO_PAY_TEACHER
   TEACHER_PAID
   DISPUTED
+  REFUND_PENDING
+  PARTIAL_REFUND_PENDING
   REFUNDED
   PARTIALLY_REFUNDED
   RETAINED
@@ -418,10 +453,10 @@ model Review {
   reviewedById String?
   createdAt    DateTime          @default(now())
 
-  client     User     @relation(fields: [clientId], references: [id])
-  teacher    Teacher  @relation(fields: [teacherId], references: [id])
-  booking    Booking  @relation(fields: [bookingId], references: [id])
-  reviewedBy User?    @relation("ReviewAdminReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  client     User    @relation(fields: [clientId], references: [id])
+  teacher    Teacher @relation(fields: [teacherId], references: [id])
+  booking    Booking @relation(fields: [bookingId], references: [id])
+  reviewedBy User?   @relation("ReviewAdminReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([adminStatus])
   @@index([teacherId, adminStatus])
@@ -592,8 +627,35 @@ enum TeacherMissionStatus {
   CONFIRMED
   UNAVAILABLE
   PROBLEM_REPORTED
+  RESCHEDULE_PROPOSED
   EXPIRED
   REPLACEMENT_RECOMMENDED
+}
+
+model BookingScheduleProposal {
+  id             String                 @id @default(cuid())
+  bookingId      String
+  teacherId      String
+  proposedDate   DateTime
+  proposedTime   String
+  reason         String?
+  status         ScheduleProposalStatus @default(PENDING)
+  clientResponse String?
+  createdAt      DateTime               @default(now())
+  respondedAt    DateTime?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, status])
+  @@index([teacherId, createdAt])
+}
+
+enum ScheduleProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
 }
 
 // ============================================================
@@ -655,6 +717,46 @@ enum TeacherTaskPriority {
   IMPORTANT
   URGENT
   CRITICAL
+}
+
+model TeacherAdminMessage {
+  id              String                    @id @default(cuid())
+  teacherId       String
+  bookingId       String?
+  sender          TeacherAdminMessageSender
+  subject         String
+  message         String
+  priority        NotificationPriority      @default(NORMAL)
+  status          TeacherAdminMessageStatus @default(OPEN)
+  adminId         String?
+  readByAdminAt   DateTime?
+  readByTeacherAt DateTime?
+  resolvedAt      DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  teacher Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  admin   User?    @relation("TeacherAdminMessageAdminSender", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, createdAt])
+  @@index([teacherId, status])
+  @@index([bookingId])
+  @@index([sender, status])
+  @@index([priority, status])
+}
+
+enum TeacherAdminMessageSender {
+  TEACHER
+  ADMIN
+}
+
+enum TeacherAdminMessageStatus {
+  OPEN
+  WAITING_ADMIN
+  WAITING_TEACHER
+  RESOLVED
+  CLOSED
 }
 
 model TeacherWarning {
@@ -818,6 +920,39 @@ enum ClientCommunicationType {
   COURSE_CONFIRMATION
 }
 
+model ClientRefundRequest {
+  id                           String                    @id @default(cuid())
+  reference                    String                    @unique
+  bookingId                    String
+  clientId                     String
+  amount                       Int
+  paymentServiceFeeNonRefunded Int                       @default(0)
+  method                       PaymentMethod
+  paymentPhone                 String
+  accountName                  String?
+  note                         String?
+  status                       ClientRefundRequestStatus @default(PENDING)
+  processedAt                  DateTime?
+  processedById                String?
+  externalReference            String?
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client  User    @relation("ClientRefundRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, status])
+  @@index([clientId, createdAt])
+}
+
+enum ClientRefundRequestStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  CANCELLED
+}
+
 model TeacherPaymentAdjustment {
   id        String                         @id @default(cuid())
   teacherId String
@@ -842,23 +977,49 @@ enum TeacherPaymentAdjustmentStatus {
 }
 
 model TeacherPayoutRecord {
-  id          String                    @id @default(cuid())
-  reference   String                    @unique
-  teacherId   String
-  amount      Int
-  method      PaymentMethod?
-  note        String?
-  status      TeacherPayoutRecordStatus @default(PAID)
-  paidAt      DateTime                  @default(now())
-  createdAt   DateTime                  @default(now())
-  createdById String?
+  id           String                    @id @default(cuid())
+  reference    String                    @unique
+  teacherId    String
+  amount       Int
+  method       PaymentMethod?
+  paymentPhone String?
+  note         String?
+  status       TeacherPayoutRecordStatus @default(PAID)
+  paidAt       DateTime                  @default(now())
+  createdAt    DateTime                  @default(now())
+  createdById  String?
 
-  teacher     Teacher                   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  createdBy   User?                     @relation("TeacherPayoutCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  allocations TeacherPayoutAllocation[]
+  teacher       Teacher                   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  createdBy     User?                     @relation("TeacherPayoutCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  allocations   TeacherPayoutAllocation[]
+  payoutRequest TeacherPayoutRequest?
 
   @@index([teacherId, paidAt])
   @@index([createdById])
+}
+
+model TeacherPayoutRequest {
+  id             String                     @id @default(cuid())
+  reference      String                     @unique
+  teacherId      String
+  amount         Int
+  method         PaymentMethod
+  paymentPhone   String
+  note           String?
+  status         TeacherPayoutRequestStatus @default(PENDING)
+  adminNote      String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  payoutRecordId String?                    @unique
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  teacher      Teacher              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  reviewedBy   User?                @relation("TeacherPayoutRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  payoutRecord TeacherPayoutRecord? @relation(fields: [payoutRecordId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, status, createdAt])
+  @@index([reviewedById])
 }
 
 model TeacherPayoutAllocation {
@@ -878,6 +1039,13 @@ model TeacherPayoutAllocation {
 enum TeacherPayoutRecordStatus {
   DRAFT
   PAID
+  CANCELLED
+}
+
+enum TeacherPayoutRequestStatus {
+  PENDING
+  PAID
+  REJECTED
   CANCELLED
 }
 
@@ -922,4 +1090,18 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }

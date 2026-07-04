@@ -14,7 +14,9 @@ import { BackButton } from "@/components/shared/back-button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-breakdown";
+import { ImportantActionNotice } from "@/components/shared/important-action-confirm";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { formatFCFA } from "@/lib/format";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
 import { PackType } from "@prisma/client";
@@ -95,8 +97,8 @@ const STEP_DETAILS = [
     description: "Contrôlez le dossier puis finalisez le paiement sur PayDunya.",
   },
 ] as const;
-const FIELD_CLASS = "mt-1.5 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
-const FIELD_CLASS_TALL = "mt-1.5 h-11 w-full rounded-2xl border border-[#DDE6F7] bg-white px-3 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
+const FIELD_CLASS = "mt-1.5 w-full rounded-xl border border-[#DDE6F7] bg-white py-2.5 pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
+const FIELD_CLASS_TALL = "mt-1.5 h-11 w-full rounded-xl border border-[#DDE6F7] bg-white pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
 const OBJECTIVES = [
   { value: "Devoir / soutien", label: "Devoir / soutien" },
   { value: "Remise à niveau", label: "Remise à niveau" },
@@ -213,7 +215,29 @@ function normalizeForMatch(value: string) {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
     .toLowerCase();
+}
+
+function isCatalogCourseCoveredByTeacher(
+  item: (typeof COURSE_CATALOG)[number],
+  teacherSubjects: string[],
+  selectedSubject: string,
+) {
+  const subject = normalizeForMatch(item.matiere_ou_competence);
+  const name = normalizeForMatch(item.nom);
+  const selected = normalizeForMatch(selectedSubject);
+  const allowedSubjects = teacherSubjects.map(normalizeForMatch).filter(Boolean);
+
+  if (selected && (subject.includes(selected) || selected.includes(subject) || name.includes(selected))) {
+    return true;
+  }
+
+  return allowedSubjects.some((allowed) => (
+    subject.includes(allowed)
+    || allowed.includes(subject)
+    || name.includes(allowed)
+  ));
 }
 
 const CATEGORY_LEVEL_PATTERNS: Record<string, RegExp> = {
@@ -312,6 +336,71 @@ function buildSessionPreview(timeLabels: string[], customTimeRequest: string, se
   }));
 }
 
+type ReservationFormNoticeInput = {
+  step: number;
+  displayName: string;
+  courseFormat: string;
+  groupType: string;
+  participantsCount: number;
+  selectedStartDateLabel: string;
+  preferredTimeSummary: string[];
+  isScheduleReadyForPayment: boolean;
+  paymentScheduleWarning: string;
+  isQuoteOnly: boolean;
+  totalPrice: number;
+};
+
+function getReservationFormNotice({
+  step,
+  displayName,
+  courseFormat,
+  groupType,
+  participantsCount,
+  selectedStartDateLabel,
+  preferredTimeSummary,
+  isScheduleReadyForPayment,
+  paymentScheduleWarning,
+  isQuoteOnly,
+  totalPrice,
+}: ReservationFormNoticeInput) {
+  if (step === 0) {
+    return {
+      title: "À terminer : besoin du cours",
+      description: `Cette réservation sera rattachée à ${displayName}. Choisissez uniquement une matière et un niveau que ce professeur peut assurer, puis ajoutez les précisions utiles pour l'administration.`,
+    };
+  }
+
+  if (step === 1) {
+    return {
+      title: "À vérifier : format et participants",
+      description: `Choisissez ${courseFormat === "HOME" ? "le cours à domicile" : "le cours en ligne"}, puis indiquez si la séance est individuelle ou en petit groupe. Chaque participant supplémentaire ajoute 50% du prix de base; le matériel éventuel reste à la charge de l'apprenant.`,
+    };
+  }
+
+  if (step === 2) {
+    return {
+      title: "Obligatoire : date et créneau",
+      description: isScheduleReadyForPayment
+        ? `Première séance : ${selectedStartDateLabel}. Créneau transmis : ${preferredTimeSummary.join(" ; ")}. Les séances durent 2h et seront visibles côté admin pour ce professeur.`
+        : paymentScheduleWarning || `Sélectionnez une date d'aujourd'hui ou ultérieure, puis un créneau de 2h. La réservation doit être faite au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le cours.`,
+    };
+  }
+
+  if (step === 3) {
+    return {
+      title: "À contrôler avant paiement",
+      description: `Relisez le professeur, la matière, le niveau, la date, le créneau, le format ${courseFormat === "HOME" ? "à domicile" : "en ligne"} et le montant. ${groupType === "SMALL_GROUP" ? `${participantsCount} participants sont comptés dans le calcul.` : "La séance est comptée en individuel."}`,
+    };
+  }
+
+  return {
+    title: isQuoteOnly ? "Action finale : envoyer le dossier" : "Action finale : paiement PayDunya",
+    description: isQuoteOnly
+      ? "Aucun paiement n'est demandé maintenant. L'administration reçoit le dossier, vérifie le montant, puis vous confirme la suite."
+      : `Le client paie uniquement le montant total affiché : ${formatFCFA(totalPrice)}. Le moyen de paiement et le numéro sont saisis sur PayDunya, puis le webhook confirme le paiement à Compétence.`,
+  };
+}
+
 export function ReserverForm({
   teacher, subjects, levels, communes,
 }: {
@@ -379,16 +468,19 @@ export function ReserverForm({
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
   const isLyceeSelection = schoolContext && isLyceeLevel(form.levelName);
   const preciseLevelOptions = isLyceeSelection ? getPreciseLevelOptions(form.schoolSystem) : [];
+  const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
   const selectedCategoryCourses = useMemo(() => (
     COURSE_CATALOG.filter((item) => (
       item.categorie === form.courseCategory
       && (!form.schoolSystem || !item.systeme_scolaire || item.systeme_scolaire === form.schoolSystem)
       && (!form.preciseLevel || !item.niveau || item.niveau === form.preciseLevel)
+      && isCatalogCourseCoveredByTeacher(item, teacherSubjectNames, form.subjectName)
     )).sort((a, b) => (
       a.sous_categorie.localeCompare(b.sous_categorie, "fr")
       || a.nom.localeCompare(b.nom, "fr")
     ))
-  ), [form.courseCategory, form.preciseLevel, form.schoolSystem]);
+  ), [form.courseCategory, form.preciseLevel, form.schoolSystem, form.subjectName, teacherSubjectNames]);
+  const selectedCategoryCourseIds = useMemo(() => new Set(selectedCategoryCourses.map((item) => item.id)), [selectedCategoryCourses]);
   const selectedCategoryCourseGroups = useMemo(() => {
     const groups = new Map<string, typeof selectedCategoryCourses>();
     for (const item of selectedCategoryCourses) {
@@ -396,15 +488,23 @@ export function ReserverForm({
       if (existing) existing.push(item);
       else groups.set(item.sous_categorie, [item]);
     }
-    return Array.from(groups.entries()).map(([subcategory, items]) => ({ subcategory, items }));
+    return Array.from(groups.entries()).map(([subcategory, items]) => ({
+      label: formatCatalogSubcategory(subcategory),
+      options: items.map((item) => ({
+        value: item.id,
+        label: item.niveau ? `${item.matiere_ou_competence} - ${item.niveau}` : item.nom,
+        keywords: `${item.matiere_ou_competence} ${item.niveau ?? ""} ${item.public_cible} ${item.objectif}`,
+      })),
+    }));
   }, [selectedCategoryCourses]);
-  const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === form.courseCatalogId);
+  const safeCourseCatalogId = selectedCategoryCourseIds.has(form.courseCatalogId) ? form.courseCatalogId : "";
+  const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === safeCourseCatalogId);
   const schoolProgramPayload = buildSchoolProgramSummary({
     clientType: form.clientType,
     category: form.courseCategory,
     schoolSystem: form.schoolSystem,
     preciseLevel: form.preciseLevel,
-    courseCatalogId: form.courseCatalogId,
+    courseCatalogId: safeCourseCatalogId,
     freeProgram: form.schoolProgram,
   });
   const participantsCount = form.groupType === "SMALL_GROUP" ? clampGroupParticipants(form.participantsCount) : 1;
@@ -427,33 +527,6 @@ export function ReserverForm({
     teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
     clientCommune: canResolveTransport ? form.commune : undefined,
   });
-  function calculateCatalogCoursePreview(item: (typeof COURSE_CATALOG)[number]) {
-    return calculateBookingPricing({
-      category: form.courseCategory,
-      schoolSystem: form.schoolSystem,
-      levelName: form.levelName,
-      preciseLevel: form.preciseLevel,
-      subjectName: form.subjectName || item.matiere_ou_competence,
-      courseCatalogName: item.nom,
-      objective: form.objective,
-      deliveryMode,
-      requiresMaterial: false,
-      packType: "SINGLE",
-      participantsCount: 1,
-      teacherPricePerSession: teacher.pricePerSession,
-      teacherCommune: canResolveTransport ? teacher.commune : undefined,
-      teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
-      clientCommune: canResolveTransport ? form.commune : undefined,
-    });
-  }
-
-  function catalogCourseOptionLabel(item: (typeof COURSE_CATALOG)[number]) {
-    const preview = calculateCatalogCoursePreview(item);
-    return preview.isQuoteOnly
-      ? `${item.nom} - Sur devis`
-      : `${item.nom} - ${formatFCFA(preview.unitSessionAmount)} / séance`;
-  }
-
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
   const courseFormulaAmount = pricing.courseAmount;
@@ -516,6 +589,19 @@ export function ReserverForm({
           : !hasMinimumBookingNotice
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
+  const reservationFormNotice = getReservationFormNotice({
+    step,
+    displayName,
+    courseFormat: form.courseFormat,
+    groupType: form.groupType,
+    participantsCount,
+    selectedStartDateLabel,
+    preferredTimeSummary,
+    isScheduleReadyForPayment,
+    paymentScheduleWarning,
+    isQuoteOnly: pricing.isQuoteOnly,
+    totalPrice,
+  });
 
   function handleClientTypeChange(clientType: string) {
     const nextCategory = CLIENT_TYPE_DEFAULT_CATEGORY[clientType] ?? form.courseCategory;
@@ -634,7 +720,7 @@ export function ReserverForm({
           courseCategory: form.courseCategory,
           schoolSystem: form.schoolSystem || undefined,
           preciseLevel: form.preciseLevel || undefined,
-          courseCatalogId: form.courseCatalogId || undefined,
+          courseCatalogId: safeCourseCatalogId || undefined,
           schoolProgram: form.schoolProgram || undefined,
           needDescription: [
             needsCustomSubjectDetail ? `Matière / besoin spécifique : ${form.customSubjectDetail.trim()}` : "",
@@ -680,19 +766,34 @@ export function ReserverForm({
     }
   }
 
+  const isFinalStep = step === STEPS.length - 1;
+  const primaryActionLabel = isFinalStep
+    ? pricing.isQuoteOnly
+      ? "Envoyer la demande"
+      : "Payer via PayDunya"
+    : "Continuer";
+  const primaryActionDisabled = submitting || (isFinalStep && !isScheduleReadyForPayment);
+  const handlePrimaryAction = () => {
+    if (isFinalStep) {
+      void submit();
+      return;
+    }
+    next();
+  };
+
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5 pb-8">
-      <section className="overflow-hidden rounded-[1.5rem] border border-[#E5E7EB] bg-white shadow-sm">
-        <div className="border-b border-[#E5E7EB] px-4 py-3 sm:px-5">
-          <BackButton fallbackHref="/client/rechercher" className="min-h-10" />
+    <div className="client-booking-form mx-auto w-full max-w-7xl space-y-3 pb-24 sm:pb-8">
+      <section className="client-booking-shell overflow-hidden rounded-xl border border-[#DDE6F7] bg-white shadow-sm">
+        <div className="border-b border-[#E6EAF3] px-3 py-2 sm:px-5">
+          <BackButton fallbackHref="/client/rechercher" className="min-h-10 rounded-xl px-3" />
         </div>
-        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:items-center">
+        <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:items-center">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size={68} shape="rounded" verified={teacher.badgeVerified} />
+            <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size={64} shape="circle" verified={teacher.badgeVerified} />
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Réserver un cours</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Réservation</p>
               <h1 className="truncate text-xl font-semibold tracking-normal text-[#111827] sm:text-2xl">{displayName}</h1>
-              <p className="mt-0.5 truncate text-sm font-medium text-[#6B7280]">{teacher.jobTitle} · {teacher.commune ?? "Abidjan"}</p>
+              <p className="mt-0.5 truncate text-sm font-medium text-[#64748B]">{teacher.jobTitle} · {teacher.commune ?? "Abidjan"}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <ProfessorTrustBadges
                   verified={teacher.badgeVerified}
@@ -703,7 +804,7 @@ export function ReserverForm({
                   size="sm"
                   maxSecondary={0}
                 />
-                <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
+                <span className="hidden min-h-8 items-center gap-1.5 rounded-xl border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] min-[420px]:inline-flex">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Paiement protégé
                 </span>
@@ -711,15 +812,15 @@ export function ReserverForm({
             </div>
           </div>
 
-          <div className="rounded-[1.15rem] border border-[#E5E7EB] bg-white p-3">
+          <div className="rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
-                <p className="mt-1 text-2xl font-semibold leading-tight text-[#111B4D]">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
+                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
               </div>
-              <WalletCards className="mt-1 h-5 w-5 text-[#111B4D]" />
+              <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
-            <p className="mt-2 text-xs font-medium leading-5 text-[#6B7280]">
+            <p className="mt-2 text-xs font-medium leading-5 text-white">
               {pricing.isQuoteOnly
                 ? "Le montant final sera validé par l'administration avant paiement."
                 : pricing.transportFee > 0
@@ -729,11 +830,11 @@ export function ReserverForm({
           </div>
         </div>
 
-        <div className="border-t border-[#E5E7EB] px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="border-t border-[#E6EAF3] px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#111827]">Étape {step + 1} sur {STEPS.length} · {currentStepDetail.title}</p>
-              <p className="mt-0.5 text-sm text-[#6B7280]">{currentStepDetail.description}</p>
+              <p className="mt-0.5 hidden text-sm text-[#64748B] sm:block">{currentStepDetail.description}</p>
             </div>
             <p className="shrink-0 text-sm font-semibold text-[#111B4D]">{progressPercent}%</p>
           </div>
@@ -742,6 +843,14 @@ export function ReserverForm({
               className="h-full rounded-full bg-[#111B4D] transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
+          </div>
+          <div className="mt-3 grid grid-cols-5 gap-1.5 lg:hidden" aria-label="Progression mobile">
+            {STEPS.map((stepLabel, index) => (
+              <span
+                key={stepLabel}
+                className={index <= step ? "h-1.5 rounded-full bg-[#111B4D]" : "h-1.5 rounded-full bg-[#E5E7EB]"}
+              />
+            ))}
           </div>
           <div className="mt-3 hidden grid-cols-5 gap-2 lg:grid">
             {STEPS.map((stepLabel, index) => {
@@ -754,12 +863,12 @@ export function ReserverForm({
                   onClick={() => {
                     if (index <= step) setStep(index);
                   }}
-                  className={`min-h-10 rounded-full border px-3 text-center text-xs font-semibold transition ${
+                  className={`min-h-10 rounded-xl border px-3 text-center text-xs font-semibold transition ${
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : complete
-                        ? "border-[#DDE6F7] bg-white text-[#111B4D]"
-                        : "cursor-default border-[#E5E7EB] bg-white text-[#6B7280]"
+                        ? "border-[#111B4D] bg-white text-[#111B4D]"
+                        : "cursor-default border-[#E6EAF3] bg-white text-[#64748B]"
                   }`}
                 >
                   {complete ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : null}
@@ -771,11 +880,17 @@ export function ReserverForm({
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Card className="overflow-hidden rounded-[1.5rem] border-[#E5E7EB] bg-white shadow-sm">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <Card className="client-booking-step-card overflow-hidden rounded-xl border-[#DDE6F7] bg-white shadow-sm">
           <CardContent className="p-4 sm:p-6">
-          {/* Step 1 — Besoin */}
-          {step === 0 && (
+            <ImportantActionNotice
+              title={reservationFormNotice.title}
+              description={reservationFormNotice.description}
+              className="mb-4"
+            />
+
+            {/* Step 1 — Besoin */}
+            {step === 0 && (
             <div className="space-y-5">
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -856,7 +971,7 @@ export function ReserverForm({
                   )}
                 </div>
                 {isLyceeSelection && (
-                  <div className="sm:col-span-2 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
@@ -894,44 +1009,40 @@ export function ReserverForm({
                 )}
                 <div className="sm:col-span-2">
                   <Label htmlFor="courseCatalogId">Cours catalogue conseillé</Label>
-                  <select
+                  <SearchableCatalogSelect
                     id="courseCatalogId"
-                    value={form.courseCatalogId}
-                    onChange={(e) => update("courseCatalogId", e.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Je choisis seulement la matière du professeur</option>
-                    {selectedCategoryCourseGroups.map((group) => (
-                      <optgroup key={group.subcategory} label={formatCatalogSubcategory(group.subcategory)}>
-                        {group.items.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {catalogCourseOptionLabel(item)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                    <p className="mt-1 text-xs text-[#64748B]">
-                      Optionnel : aide l'admin à préciser le besoin.
-                    </p>
+                    value={safeCourseCatalogId}
+                    onValueChange={(value) => update("courseCatalogId", value)}
+                    name="courseCatalogId"
+                    placeholder="Rechercher un cours compatible"
+                    searchPlaceholder="Tapez une matière, un niveau ou un mot-clé..."
+                    emptyLabel="Aucun cours catalogue compatible avec ce professeur."
+                    allLabel="Aucun cours précis"
+                    groups={selectedCategoryCourseGroups}
+                    triggerClassName="mt-1.5 min-h-12 rounded-2xl"
+                  />
+                  <p className="mt-1.5 text-xs leading-5 text-[#64748B]">
+                    Optionnel : seuls les cours cohérents avec {displayName} et ses matières sont proposés.
+                    {selectedCategoryCourses.length > 0 ? ` ${selectedCategoryCourses.length} option${selectedCategoryCourses.length > 1 ? "s" : ""} disponible${selectedCategoryCourses.length > 1 ? "s" : ""}.` : ""}
+                  </p>
                 </div>
                 {selectedCatalogCourse && (
-                  <div className="sm:col-span-2 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">{selectedCatalogCourse.nom}</p>
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
-                      <span className="rounded-full border border-[#E5E7EB] bg-white px-3 py-1">
+                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">
                         {pricing.isQuoteOnly ? "Tarif : sur devis administratif" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
                       </span>
-                      <span className="rounded-full border border-[#E5E7EB] bg-white px-3 py-1">
+                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">
                         {pricing.isQuoteOnly ? "Montant final validé par l'administration" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
                       </span>
-                      <span className="rounded-full border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
+                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
                     </div>
                   </div>
                 )}
                 {needsCustomSubjectDetail && (
-                  <div className="sm:col-span-2 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <Label htmlFor="customSubjectDetail">Précisez la matière ou le besoin *</Label>
                     <Textarea
                       id="customSubjectDetail"
@@ -1003,7 +1114,7 @@ export function ReserverForm({
                   >
                     <Home className={`mt-0.5 h-5 w-5 ${form.courseFormat === "HOME" ? "text-[#111B4D]" : "text-[#64748B]"}`} />
                     <div>
-                      <p className="text-sm font-medium text-foreground">À domicile</p>
+                      <p className="text-sm font-medium text-[#111827]">À domicile</p>
                       <p className="text-xs text-[#64748B]">Le professeur se déplace chez vous.</p>
                     </div>
                   </button>
@@ -1019,7 +1130,7 @@ export function ReserverForm({
                   >
                     <Video className={`mt-0.5 h-5 w-5 ${form.courseFormat === "ONLINE" ? "text-[#111B4D]" : "text-[#64748B]"}`} />
                     <div>
-                      <p className="text-sm font-medium text-foreground">En ligne</p>
+                      <p className="text-sm font-medium text-[#111827]">En ligne</p>
                       <p className="text-xs text-[#64748B]">Cours via Meet, Zoom ou WhatsApp.</p>
                     </div>
                   </button>
@@ -1045,7 +1156,7 @@ export function ReserverForm({
                     <RadioGroupItem value="INDIVIDUAL" />
                     <User className="h-5 w-5 text-[#64748B]" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Cours individuel</p>
+                      <p className="text-sm font-medium text-[#111827]">Cours individuel</p>
                       <p className="text-xs text-[#64748B]">Un seul élève.</p>
                     </div>
                   </label>
@@ -1055,7 +1166,7 @@ export function ReserverForm({
                     <RadioGroupItem value="SMALL_GROUP" disabled={!teacher.offersGroup} />
                     <Users className="h-5 w-5 text-[#64748B]" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Petit groupe</p>
+                      <p className="text-sm font-medium text-[#111827]">Petit groupe</p>
                       <p className="text-xs text-[#64748B]">
                         {teacher.offersGroup ? "Plusieurs élèves. +50% du montant de base par participant supplémentaire." : "Non proposé par ce professeur."}
                       </p>
@@ -1065,7 +1176,7 @@ export function ReserverForm({
               </div>
 
               {form.groupType === "SMALL_GROUP" && (
-                <div className="rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
                   <div className="grid gap-4 sm:grid-cols-[1fr_220px] sm:items-end">
                     <div>
                       <Label htmlFor="participantsCount">Nombre de participants *</Label>
@@ -1095,12 +1206,12 @@ export function ReserverForm({
               )}
 
               {(form.courseCategory === "apprentissage_metier" || form.courseCategory === "formation_professionnelle") && (
-                <div className="flex items-start gap-3 rounded-[1.25rem] border border-[#DDE6F7] bg-white p-4 text-sm text-[#111827]">
+                <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 text-sm text-[#111827]">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     <span className="block font-semibold">Matériel obligatoire à la charge de l'apprenant</span>
                     <span className="mt-1 block text-[#6B7280]">
-                      MonProf CI ne fournit, ne loue et ne facture aucun matériel. Pour les formations professionnelles ou métiers pratiques,
+                      Compétence ne fournit, ne loue et ne facture aucun matériel. Pour les formations professionnelles ou métiers pratiques,
                       l'apprenant doit disposer du matériel demandé avant la séance.
                     </span>
                   </span>
@@ -1152,7 +1263,7 @@ export function ReserverForm({
                       Un repère clair aide l'administration et le professeur à confirmer rapidement la faisabilité du déplacement.
                     </p>
                   </div>
-                  <div className="sm:col-span-2 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3">
                       <InfoMini label="Base professeur" value={teacher.commune ?? "À confirmer"} />
@@ -1186,7 +1297,7 @@ export function ReserverForm({
 
               <Separator />
 
-              <div className="rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+              <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
                   <div>
                     <Label htmlFor="startDate" className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
@@ -1238,7 +1349,7 @@ export function ReserverForm({
                 </p>
                 <div className="mt-3 space-y-3 md:hidden">
                   {mobileAvailabilityDays.length === 0 && (
-                    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
                       <p className="font-semibold text-[#111B4D]">Choisissez d'abord une date</p>
                       <p className="mt-1 text-sm leading-6 text-[#64748B]">
                         Les créneaux mobiles s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
@@ -1249,10 +1360,10 @@ export function ReserverForm({
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
                     return (
-                      <div key={day.key} className="rounded-3xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                      <div key={day.key} className="rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
                         <div className="flex items-center justify-between gap-3">
                           <p className="font-semibold text-[#111B4D]">{day.label}</p>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+                          <span className="rounded-xl bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
                             {availableSlots.length} créneau{availableSlots.length > 1 ? "x" : ""}
                           </span>
                         </div>
@@ -1261,7 +1372,7 @@ export function ReserverForm({
                             Aucun créneau disponible ce jour.
                           </p>
                         ) : (
-                          <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
                             {availableSlots.map((slot) => {
                               const key = `${day.key}|${slot.key}`;
                               const checked = form.selectedTimeSlots.includes(key);
@@ -1277,9 +1388,9 @@ export function ReserverForm({
                                         : [...form.selectedTimeSlots, key],
                                     );
                                   }}
-                                  className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-bold transition ${
+                                  className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${
                                     checked
-                                      ? "border-[#111B4D] bg-[#111B4D] text-white shadow-md"
+                                      ? "border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
                                       : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
                                   }`}
                                 >
@@ -1293,7 +1404,7 @@ export function ReserverForm({
                     );
                   })}
                 </div>
-                <div className="mt-3 hidden rounded-3xl border border-[#E3E8F2] bg-white p-3 shadow-sm md:block">
+                <div className="mt-3 hidden rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm md:block">
                   <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs lg:grid-cols-[112px_repeat(7,minmax(0,1fr))] lg:gap-2 lg:text-xs">
                     <div className="font-semibold text-[#64748B]">Jour</div>
                     {TWO_HOUR_SLOTS.map((slot) => (
@@ -1323,9 +1434,9 @@ export function ReserverForm({
                                     : [...form.selectedTimeSlots, key],
                                 );
                               }}
-                              className={`min-h-11 rounded-2xl border px-1.5 py-2 text-center text-xs font-bold transition lg:px-2 ${
+                              className={`min-h-11 rounded-2xl border px-1.5 py-2 text-center text-xs font-semibold transition lg:px-2 ${
                                 checked
-                                  ? "border-[#111B4D] bg-[#111B4D] text-white shadow-md"
+                                  ? "border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
                                   : available
                                     ? "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
                                     : "cursor-not-allowed border-[#E3E8F2] bg-white text-[#94A3B8]"
@@ -1343,14 +1454,14 @@ export function ReserverForm({
                 {form.selectedTimeSlots.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {selectedTimeLabels.map((label) => (
-                      <span key={label} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
+                      <span key={label} className="rounded-xl bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
                         {label}
                       </span>
                     ))}
                   </div>
                 )}
                 {sessionPreview.length > 0 && (
-                  <div className="mt-4 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de 2h</p>
@@ -1374,7 +1485,7 @@ export function ReserverForm({
                 )}
               </div>
 
-              <div className="rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+              <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
                 <Label>Votre préférence horaire personnalisée</Label>
                 <p className="mt-1 text-sm text-[#64748B]">
                   Si les créneaux proposés ne conviennent pas parfaitement, indiquez le jour et l'heure souhaités.
@@ -1420,7 +1531,7 @@ export function ReserverForm({
                   </div>
                 </div>
                 {form.customDay && customTimeRange && (
-                  <div className="mt-3 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                  <div className="mt-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
@@ -1476,14 +1587,14 @@ export function ReserverForm({
                         <span className="flex items-center gap-2">
                           <RadioGroupItem value={p.value} />
                           <span>
-                            <span className="block font-medium text-foreground">{p.label}</span>
+                            <span className="block font-medium text-[#111827]">{p.label}</span>
                             <span className="block text-xs text-[#64748B]">
                               {optionPricing.isQuoteOnly
                                 ? "Sur devis par l'administration"
                                 : `${formatFCFA(optionPricing.totalClientPays)} · ${formatCount(count, "séance")} de 2h · env. ${formatFCFA(average)}/séance`}
                             </span>
                             {optionPricing.discountAmount > 0 && (
-                              <span className="mt-0.5 block text-xs font-bold text-[#111B4D]">
+                              <span className="mt-0.5 block text-xs font-semibold text-[#111B4D]">
                                 Remise pack {formatFCFA(optionPricing.discountAmount)} déjà intégrée
                               </span>
                             )}
@@ -1514,7 +1625,7 @@ export function ReserverForm({
               <StepIntro step="Étape 4" title="Récapitulatif" description="Relisez les informations qui seront enregistrées et transmises à l'administration." />
 
               {/* Carte prof */}
-              <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+              <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
                 <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-[#111827]">{displayName}</p>
@@ -1526,7 +1637,7 @@ export function ReserverForm({
               </div>
 
               {/* Récap */}
-              <div className="overflow-hidden rounded-[1.25rem] border border-[#E5E7EB] bg-white">
+              <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
                 <dl className="divide-y divide-[#EEF2F7] text-sm">
                   <Row label="Type client" value={form.clientType} />
                   <Row label="Catégorie" value={categoryLabel} />
@@ -1554,7 +1665,7 @@ export function ReserverForm({
                     form.onlineLink && <Row label="Lien" value={form.onlineLink} />
                   )}
                   {(form.courseCategory === "apprentissage_metier" || form.courseCategory === "formation_professionnelle") && (
-                    <Row label="Matériel" value="Obligatoire côté apprenant, non fourni ni facturé par MonProf CI" />
+                    <Row label="Matériel" value="Obligatoire côté apprenant, non fourni ni facturé par Compétence" />
                   )}
                   <Row label="Date souhaitée" value={selectedStartDateLabel || "—"} />
                   <Row label="Validation planning" value={isScheduleReadyForPayment ? "Date et créneau prêts pour paiement" : paymentScheduleWarning || "Planning à compléter"} />
@@ -1580,23 +1691,36 @@ export function ReserverForm({
                   transportRuleLabel={pricing.transportRuleLabel}
                   materialFee={pricing.materialFee}
                   discountAmount={pricing.discountAmount}
+                  paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
+                  paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
+                  totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
                   isQuoteOnly={pricing.isQuoteOnly}
                 />
                 {sessionPreview.length > 0 && (
-                  <div className="rounded-[1.1rem] border border-[#E5E7EB] bg-white p-3">
-                    <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Séances prévues</p>
-                    <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#DDE6F7] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+                    <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-end min-[460px]:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Séances prévues</p>
+                        <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
+                          Une séance dure 2h. La première date est celle choisie par le client.
+                        </p>
+                      </div>
+                      <span className="w-fit rounded-lg border border-[#DDE6F7] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                        {sessionPreview.length} séance{sessionPreview.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {sessionPreview.map((session) => (
-                        <div key={session.label} className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#111827]">
-                          <p className="font-semibold">{session.label}</p>
-                          <p className="mt-0.5 font-medium">{session.date}</p>
-                          <p className="mt-0.5 text-[#6B7280]">{session.time}</p>
+                        <div key={session.label} className="rounded-xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs text-[#111827]">
+                          <p className="font-semibold text-[#111827]">{session.label}</p>
+                          <p className="mt-0.5 font-medium leading-5 text-[#111827]">{session.date}</p>
+                          <p className="mt-0.5 font-semibold text-[#64748B]">{session.time}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                <div className="flex items-start gap-2 rounded-[1.1rem] border border-[#E5E7EB] bg-white p-3 text-xs text-[#6B7280]">
+                <div className="flex items-start gap-2 rounded-xl border border-[#DDE6F7] bg-white p-3 text-xs font-medium leading-5 text-[#64748B]">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     {pricing.isQuoteOnly
@@ -1620,7 +1744,7 @@ export function ReserverForm({
               />
 
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
-                <div className="rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
                   <div className="flex items-start gap-3">
                     <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
                     <div className="min-w-0 flex-1">
@@ -1649,36 +1773,30 @@ export function ReserverForm({
                   )}
                 </div>
 
-                <div className="rounded-[1.25rem] border border-[#DDE6F7] bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">{pricing.isQuoteOnly ? "Montant" : "Total à payer"}</p>
-                  <p className="mt-1 text-3xl font-semibold leading-tight text-[#111B4D]">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
-                  <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-[#6B7280]">Prix séance</span>
-                      <span className="font-semibold text-[#111827]">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(pricing.unitSessionAmount)}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-[#6B7280]">Séances</span>
-                      <span className="font-semibold text-[#111827]">{formatCount(selectedPackSessions, "séance")}</span>
-                    </div>
-                    {pricing.transportFee > 0 && (
-                      <div className="flex justify-between gap-3">
-                        <span className="text-[#6B7280]">Déplacement</span>
-                        <span className="font-semibold text-[#111827]">{formatFCFA(pricing.transportFee)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-4 flex gap-2 text-xs font-medium leading-5 text-[#6B7280]">
-                    <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    {pricing.isQuoteOnly
-                      ? "Aucun paiement n'est demandé avant validation du devis."
-                      : "Le paiement est confirmé par PayDunya, puis conservé en sécurité jusqu'à votre confirmation après le cours."}
-                  </p>
-                </div>
+                <BookingPricingBreakdown
+                  unitPrice={pricing.unitSessionAmount}
+                  totalPrice={totalPrice}
+                  sessionsCount={selectedPackSessions}
+                  participantsCount={participantsCount}
+                  groupType={form.groupType}
+                  packType={form.packType}
+                  priceTierKey={pricing.priceTierKey}
+                  courseAmount={pricing.courseAmount}
+                  transportFee={pricing.transportFee}
+                  transportFeeLabel={pricing.transportFeeLabel}
+                  transportRouteLabel={pricing.transportRouteLabel}
+                  transportRuleLabel={pricing.transportRuleLabel}
+                  materialFee={pricing.materialFee}
+                  discountAmount={pricing.discountAmount}
+                  paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
+                  paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
+                  totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
+                  isQuoteOnly={pricing.isQuoteOnly}
+                />
               </div>
 
               {pricing.isQuoteOnly ? (
-                <div className="rounded-[1.25rem] border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
                   <p className="text-sm font-semibold text-[#111827]">Validation admin requise</p>
                   <p className="mt-1 text-sm leading-6 text-[#6B7280]">
                     {pricing.quoteReason ?? "Ce dossier nécessite une estimation manuelle."} Aucun paiement ne sera encaissé à cette étape.
@@ -1690,22 +1808,22 @@ export function ReserverForm({
                   </div>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-[1.35rem] border border-[#E3E8F2] bg-white shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white shadow-sm">
                   <div className="grid gap-4 border-b border-[#E5E7EB] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div className="min-w-0">
-                      <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         <PayDunyaMark />
-                        <span className="inline-flex min-h-8 items-center rounded-full border border-[#CAD7F2] bg-white px-3 text-xs font-black text-[#111B4D]">
+                        <span className="inline-flex min-h-8 items-center rounded-xl border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D]">
                           Webhook sécurisé
                         </span>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
-                        MonProf CI ne collecte aucune information Mobile Money et ne vous fait plus choisir le moyen de paiement ici.
+                        Compétence ne collecte aucune information Mobile Money et ne vous fait plus choisir le moyen de paiement ici.
                         PayDunya affichera les options disponibles, collectera les informations nécessaires et confirmera automatiquement le paiement à la plateforme.
                       </p>
                     </div>
-                    <div className="rounded-3xl border border-[#DDE6F7] bg-white px-4 py-3 text-right shadow-sm">
+                    <div className="rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-right shadow-sm">
                       <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant PayDunya</p>
                       <p className="mt-1 text-2xl font-semibold text-[#111B4D]">{formatFCFA(totalPrice)}</p>
                     </div>
@@ -1713,11 +1831,11 @@ export function ReserverForm({
 
                   <div className="p-4">
                     <p className="text-sm font-semibold text-[#111827]">Moyens disponibles sur PayDunya Côte d'Ivoire</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                    <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-4">
                       {PAYMENT_METHODS.map((m) => (
                         <div key={m.value} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white p-2.5 text-center">
                           <PaymentMethodLogo method={m.value} className="h-10 w-full min-w-0" />
-                          <span className="text-xs font-black text-[#111827]">{m.label}</span>
+                          <span className="text-xs font-semibold text-[#111827]">{m.label}</span>
                         </div>
                       ))}
                     </div>
@@ -1732,7 +1850,7 @@ export function ReserverForm({
           )}
 
           {/* Navigation */}
-          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
             {step > 0 ? (
               <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-2xl sm:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -1764,17 +1882,17 @@ export function ReserverForm({
         </Card>
 
         <aside className="hidden space-y-4 xl:sticky xl:top-24 xl:block xl:self-start">
-          <div className="rounded-[1.5rem] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
-                <p className="truncate text-xs font-medium text-[#6B7280]">{primarySubjectLabel} · {teacher.commune ?? "Abidjan"}</p>
+                <p className="truncate text-xs font-medium text-[#64748B]">{primarySubjectLabel} · {teacher.commune ?? "Abidjan"}</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-[1.1rem] border border-[#DDE6F7] bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Résumé instantané</p>
+            <div className="mt-4 rounded-xl border border-[#DDE6F7] bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Résumé instantané</p>
               <div className="mt-3 space-y-2">
                 <SummaryLine icon={<ClipboardList className="h-4 w-4" />} label="Besoin" value={primarySubjectLabel} />
                 <SummaryLine icon={<CalendarDays className="h-4 w-4" />} label="Date" value={selectedStartDateLabel || "À choisir"} />
@@ -1783,25 +1901,48 @@ export function ReserverForm({
               </div>
             </div>
 
-            <div className="mt-4 rounded-[1.1rem] border border-[#E5E7EB] bg-white p-3">
+            <div className="mt-4 rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Montant client</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-[#111B4D]">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Montant client</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
                 </div>
-                <Lock className="mt-1 h-5 w-5 text-[#111B4D]" />
+                <Lock className="mt-1 h-5 w-5 text-white" />
               </div>
-              <p className="mt-2 text-xs font-medium leading-5 text-[#6B7280]">
+              <p className="mt-2 text-xs font-medium leading-5 text-white">
                 Le client ne voit que le montant à payer. Les répartitions internes restent côté admin.
               </p>
             </div>
 
-            <div className="mt-4 space-y-2 text-xs font-medium leading-5 text-[#6B7280]">
+            <div className="mt-4 space-y-2 text-xs font-medium leading-5 text-[#64748B]">
               <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Réservation rattachée au professeur choisi.</p>
               <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au dashboard administrateur.</p>
             </div>
           </div>
         </aside>
+      </div>
+
+      <div
+        className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)] sm:hidden"
+        style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-center gap-2">
+          {step > 0 && (
+            <Button type="button" variant="outline" onClick={back} disabled={submitting} className="h-11 w-11 shrink-0 rounded-xl p-0" aria-label="Retour">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            onClick={handlePrimaryAction}
+            disabled={primaryActionDisabled}
+            className="min-h-11 flex-1 rounded-xl bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]"
+          >
+            <span className="truncate">{submitting ? "Traitement..." : primaryActionLabel}</span>
+            {!submitting && !isFinalStep && <ArrowRight className="ml-2 h-4 w-4" />}
+            {!submitting && isFinalStep && !pricing.isQuoteOnly && <ExternalLink className="ml-2 h-4 w-4" />}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -1818,10 +1959,10 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function StepIntro({ step, title, description }: { step: string; title: string; description: ReactNode }) {
   return (
-    <div className="px-1 py-1">
-      <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">{step}</p>
+    <div className="px-1">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{step}</p>
       <h2 className="mt-1 text-lg font-semibold tracking-normal text-[#111827] sm:text-xl">{title}</h2>
-      <p className="mt-1 text-sm leading-5 text-[#6B7280] sm:leading-6">{description}</p>
+      <p className="mt-1 hidden text-sm font-medium leading-5 text-[#64748B] sm:block sm:leading-6">{description}</p>
     </div>
   );
 }
@@ -1837,10 +1978,10 @@ function InfoMini({ label, value }: { label: string; value: ReactNode }) {
 
 function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-2xl bg-white px-3 py-2">
+    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-[#E6EAF3] bg-white px-3 py-2">
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-normal text-[#6B7280]">{label}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
         <p className="mt-0.5 break-words text-sm font-semibold leading-snug text-[#111827]">{value}</p>
       </div>
     </div>
@@ -1850,10 +1991,10 @@ function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; v
 function PayDunyaMark() {
   return (
     <span className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 shadow-sm" aria-label="PayDunya Checkout">
-      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-[11px] font-black text-white">
+      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-[11px] font-semibold text-white">
         PD
       </span>
-      <span className="text-sm font-black tracking-normal text-[#111827]">
+      <span className="text-sm font-semibold tracking-normal text-[#111827]">
         PayDunya
         <span className="ml-1 font-semibold text-[#64748B]">Checkout</span>
       </span>

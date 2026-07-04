@@ -237,7 +237,7 @@ export default async function AdminProfesseursPage({
                           verified={t.badgeVerified}
                         />
                         <div className="min-w-0">
-                          <Link href={`/admin/professeurs/${t.id}`} className="block truncate text-sm font-bold text-foreground">
+                          <Link href={`/admin/professeurs/${t.id}`} className="inline-flex min-h-10 max-w-full items-center truncate text-sm font-bold text-foreground">
                             {displayName}
                           </Link>
                           <p className="truncate text-xs text-muted-foreground">{t.jobTitle}</p>
@@ -246,7 +246,7 @@ export default async function AdminProfesseursPage({
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-2xl">
+                          <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-2xl">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -385,7 +385,7 @@ export default async function AdminProfesseursPage({
                             verified={t.badgeVerified}
                           />
                           <div className="min-w-0">
-                            <Link href={`/admin/professeurs/${t.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
+                            <Link href={`/admin/professeurs/${t.id}`} className="inline-flex min-h-10 max-w-full items-center truncate text-sm font-medium text-foreground hover:text-primary">
                               {t.professionalName || t.fullName}
                             </Link>
                             <p className="text-xs text-muted-foreground truncate">{t.jobTitle}</p>
@@ -435,7 +435,7 @@ export default async function AdminProfesseursPage({
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-10 w-10">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

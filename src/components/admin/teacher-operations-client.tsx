@@ -222,11 +222,11 @@ export function TeacherNotificationModal({ open, onOpenChange, teacherId, teache
   const selectedBooking = useMemo(() => bookings.find((b) => b.id === bookingId), [bookingId, bookings]);
   const defaultMessage = selectedBooking
     ? `Bonjour ${teacherName}, vous avez une nouvelle tâche liée au cours ${selectedBooking.subjectName} (${selectedBooking.levelName}). Merci de confirmer rapidement.`
-    : `Bonjour ${teacherName}, l'administration MonProf CI vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
+    : `Bonjour ${teacherName}, l'administration Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
   const isManualCall = channel === "MANUAL_CALL";
   const callOutcomeLabel = callOutcomes.find((item) => item.value === callOutcome)?.label ?? callOutcome;
   const callMessage = [
-    `Appel manuel enregistré par l'administration MonProf CI.`,
+    `Appel manuel enregistré par l'administration Compétence.`,
     selectedBooking ? `Réservation : ${selectedBooking.reference} - ${selectedBooking.subjectName} (${selectedBooking.levelName})` : "",
     `Professeur : ${teacherName}`,
     `Résultat : ${callOutcomeLabel}`,

@@ -153,6 +153,11 @@ function publicBookingPayload(b: any) {
     transportRuleLabel: pricingSnapshot?.transportRuleLabel ?? null,
     materialFee: pricingSnapshot?.materialFee ?? b.materialFee,
     discountAmount: pricingSnapshot?.discountAmount ?? b.discountAmount,
+    paymentServiceFeeRate: pricingSnapshot?.paymentServiceFeeRate ?? b.paymentServiceFeeRate ?? 0,
+    paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? b.paymentServiceFeeAmount ?? 0,
+    paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? b.paymentServiceFeeLabel ?? null,
+    totalBeforePaymentServiceFee: pricingSnapshot?.totalBeforePaymentServiceFee
+      ?? Math.max(0, totalClientPays - (pricingSnapshot?.paymentServiceFeeAmount ?? b.paymentServiceFeeAmount ?? 0)),
     totalClientPays,
     isQuoteOnly: b.isQuoteOnly,
     status: b.status,
@@ -173,6 +178,9 @@ export async function GET(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const userId = (session.user as any).id;
   const role = (session.user as any).role;
+  if (role !== "CLIENT" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès réservé aux clients et administrateurs." }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
@@ -396,6 +404,9 @@ export async function POST(req: NextRequest) {
       ? `Déplacement: ${pricing.transportRouteLabel ?? "trajet à confirmer"} - devis admin requis.`
       : `Déplacement: ${pricing.transportRouteLabel ?? "Grand Abidjan"} - ${pricing.transportFee.toLocaleString("fr-FR")} FCFA (${pricing.transportRuleLabel ?? "matrice Grand Abidjan"}).`
     : "Déplacement: aucun frais pour le cours en ligne.";
+  const paymentServiceLine = pricing.isQuoteOnly
+    ? "Frais de service paiement: calculés après validation du devis."
+    : `Frais de service paiement: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
   const sessionPricingLine = pricing.isQuoteOnly
     ? `Formule: ${pricing.packLabel}, nombre de séances à confirmer.`
     : `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
@@ -422,7 +433,6 @@ export async function POST(req: NextRequest) {
     ? `Créneaux demandés: ${normalizedPreferredTime}.`
     : "Créneaux demandés: à confirmer avec le client.";
   const now = new Date();
-  const confirmationDueAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const startDateLine = `Date souhaitée: ${formatDateFr(parsedStartDate)}.`;
 
   const booking = await db.$transaction(async (tx) => {
@@ -468,6 +478,9 @@ export async function POST(req: NextRequest) {
         transportFeeKey: pricing.transportFeeKey,
         materialFee: pricing.materialFee,
         discountAmount: pricing.discountAmount,
+        paymentServiceFeeRate: pricing.paymentServiceFeeRate,
+        paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+        paymentServiceFeeLabel: pricing.paymentServiceFeeLabel,
         totalClientPays: pricing.totalClientPays,
         totalTeacherReceives: pricing.totalTeacherReceives,
         isQuoteOnly: pricing.isQuoteOnly,
@@ -478,60 +491,33 @@ export async function POST(req: NextRequest) {
         paymentMethod: null,
       },
     });
-    const teacherMissionMessage = [
-      `Bonjour ${profName},`,
-      "",
-      "Une nouvelle mission MonProf CI doit être confirmée.",
-      "",
-      `Réservation : ${createdBooking.reference}`,
-      `Client : ${clientName}`,
-      `Cours : ${canonicalSubjectName} - ${canonicalLevelName}`,
-      normalizedSchoolProgram ? `Parcours : ${normalizedSchoolProgram}` : "",
-      `Date souhaitée : ${formatDateFr(parsedStartDate)}`,
-      `Créneau : ${normalizedPreferredTime || "à confirmer"}`,
-      `Format : ${courseFormat === "ONLINE" ? "En ligne" : "À domicile"}`,
-      courseFormat === "HOME" ? `Lieu : ${[commune, quartier, addressHint].filter(Boolean).join(" / ")}` : "Lieu : lien en ligne à confirmer",
-      transportLine,
-      `Formule : ${pricing.isQuoteOnly ? pricing.packLabel : `${normalizedSessionsCount} séance(s) de 2h`}`,
-      `Participants : ${normalizedParticipants}`,
-      groupPricingLine,
-      sessionPricingLine,
-      pricing.isQuoteOnly
-        ? "Montant : devis administratif à établir avant paiement."
-        : `Prix cours : ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA`,
-      !pricing.isQuoteOnly && pricing.transportFee > 0 ? `Frais déplacement : ${pricing.transportFee.toLocaleString("fr-FR")} FCFA` : "",
-      !pricing.isQuoteOnly ? `Montant net prévu professeur : ${teacherNetAmount.toLocaleString("fr-FR")} FCFA` : "",
-      "",
-      "Action attendue : confirmer rapidement votre disponibilité ou signaler un problème à l'administration.",
-    ].filter(Boolean).join("\n");
-
-    await tx.notification.create({
-      data: {
-        userId: null,
-        title: pricing.isQuoteOnly ? "Nouvelle demande de devis" : "Nouvelle réservation en attente PayDunya",
-        message: pricing.isQuoteOnly
-          ? `${clientName} demande un devis pour ${profName} sur ${canonicalSubjectName} ${canonicalLevelName}${daysStr ? `, ${daysStr}` : ""}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} ${transportLine}${needLine} Réservation rattachée au professeur ${profName}. Action requise : chiffrer le prix du cours et le déplacement si nécessaire. Le matériel reste à la charge de l'apprenant et n'est pas facturé par MonProf CI.`
-          : `${clientName} a préparé une réservation PayDunya pour ${profName} sur ${canonicalSubjectName} ${canonicalLevelName}${daysStr ? `, ${daysStr}` : ""}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} ${transportLine} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Total à payer via PayDunya: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.${needLine} La réservation reste en attente jusqu'au webhook PayDunya.`,
-        type: "NEW_BOOKING",
-        recipientType: "ADMIN",
-        channel: "INTERNAL",
-        status: "SENT",
-        priority: pricing.isQuoteOnly ? "URGENT" : "NORMAL",
-        bookingId: createdBooking.id,
-        teacherId,
-        clientId: userId,
-        sentAt: now,
-        link: `/admin/professeurs/${teacherId}?tab=cours&bookingId=${createdBooking.id}`,
-        actionLabel: "Ouvrir la fiche professeur",
-      },
-    });
+    if (pricing.isQuoteOnly) {
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: "Nouvelle demande de devis",
+          message: `${clientName} demande un devis pour ${profName} sur ${canonicalSubjectName} ${canonicalLevelName}${daysStr ? `, ${daysStr}` : ""}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} ${transportLine}${needLine} Réservation rattachée au professeur ${profName}. Action requise : chiffrer le prix du cours et le déplacement si nécessaire. Le matériel reste à la charge de l'apprenant et n'est pas facturé par Compétence.`,
+          type: "NEW_BOOKING",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "URGENT",
+          bookingId: createdBooking.id,
+          teacherId,
+          clientId: userId,
+          sentAt: now,
+          link: `/admin/professeurs/${teacherId}?tab=cours&bookingId=${createdBooking.id}`,
+          actionLabel: "Ouvrir la fiche professeur",
+        },
+      });
+    }
     await tx.notification.create({
       data: {
         userId,
         title: pricing.isQuoteOnly ? "Demande de devis enregistrée" : "Paiement PayDunya à finaliser",
         message: pricing.isQuoteOnly
           ? `Votre demande pour le cours de ${canonicalSubjectName} avec ${profName} est enregistrée. ${startDateLine} L'administration vous proposera un devis clair avant tout paiement.`
-          : `Votre réservation pour le cours de ${canonicalSubjectName} avec ${profName} est prête. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur MonProf CI.`,
+          : `Votre réservation pour le cours de ${canonicalSubjectName} avec ${profName} est prête. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
         type: pricing.isQuoteOnly ? "QUOTE_REQUESTED" : "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,
@@ -544,29 +530,6 @@ export async function POST(req: NextRequest) {
         sentAt: now,
         link: `/client/reservations/${createdBooking.id}`,
         actionLabel: "Voir réservation",
-      },
-    });
-    await tx.teacherTask.create({
-      data: {
-        teacherId,
-        bookingId: createdBooking.id,
-        type: "CONFIRM_AVAILABILITY",
-        title: `Confirmer disponibilité - ${createdBooking.reference}`,
-        description: `Confirmer la mission ${canonicalSubjectName} (${canonicalLevelName}) avec ${clientName}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} La réservation appartient à ${profName}.`,
-        priority: "IMPORTANT",
-        status: "TODO",
-        dueAt: confirmationDueAt,
-      },
-    });
-    await tx.teacherNotification.create({
-      data: {
-        teacherId,
-        bookingId: createdBooking.id,
-        title: `Mission à confirmer - ${createdBooking.reference}`,
-        message: teacherMissionMessage,
-        channel: "WHATSAPP",
-        sent: false,
-        status: "PENDING",
       },
     });
     await tx.teacher.update({
@@ -604,6 +567,8 @@ export async function POST(req: NextRequest) {
           totalClientPays: booking.totalClientPays,
           courseAmount: booking.courseAmount,
           transportFee: booking.transportFee,
+          paymentServiceFeeAmount: booking.paymentServiceFeeAmount,
+          paymentServiceFeeLabel: booking.paymentServiceFeeLabel,
         },
         client: {
           id: userId,

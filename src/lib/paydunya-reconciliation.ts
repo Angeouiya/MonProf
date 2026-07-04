@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
 import { confirmPayDunyaInvoice, type PayDunyaInvoiceStatus } from "@/lib/paydunya";
-import { VERIFIED_CLIENT_FUND_STATUS_VALUES } from "@/lib/payment-security";
+import { hasVerifiedPayDunyaClientPayment, VERIFIED_CLIENT_FUND_STATUS_VALUES } from "@/lib/payment-security";
 
 const SECURED_PAYMENT_STATUSES = new Set<string>(VERIFIED_CLIENT_FUND_STATUS_VALUES);
 
@@ -46,7 +46,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     include: {
       client: { select: { id: true, name: true } },
       teacher: { select: { id: true, fullName: true, professionalName: true } },
-      transactions: { where: { type: "CLIENT_PAYMENT" }, take: 1 },
+      transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -76,7 +76,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     };
   }
 
-  const alreadyPaid = SECURED_PAYMENT_STATUSES.has(booking.paymentStatus);
+  const alreadyPaid = hasVerifiedPayDunyaClientPayment(booking);
   const token = firstString(input.token, booking.paydunyaToken);
   if (!token) {
     await db.booking.update({
@@ -263,6 +263,28 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
 
       if (!alreadyPaid) {
         const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
+        const dateLabel = formatDateFr(booking.scheduledDate ?? booking.startDate);
+        const timeLabel = booking.scheduledTime || booking.preferredTime || "À confirmer";
+        const formatLabel = booking.courseFormat === "ONLINE" ? "En ligne" : "À domicile";
+        const locationLabel = booking.courseFormat === "ONLINE"
+          ? (booking.onlineLink || "Lien en ligne à confirmer")
+          : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" / ") || "Adresse à confirmer";
+        const existingAvailabilityTask = await tx.teacherTask.findFirst({
+          where: {
+            teacherId: booking.teacherId,
+            bookingId: booking.id,
+            type: "CONFIRM_AVAILABILITY",
+            status: { notIn: ["DONE", "CANCELLED"] },
+          },
+        });
+        const existingMissionNotification = await tx.teacherNotification.findFirst({
+          where: {
+            teacherId: booking.teacherId,
+            bookingId: booking.id,
+            title: { contains: booking.reference },
+          },
+        });
+
         await tx.notification.createMany({
           data: [
             {
@@ -300,6 +322,57 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
             },
           ],
         });
+
+        if (!existingAvailabilityTask) {
+          await tx.teacherTask.create({
+            data: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              type: "CONFIRM_AVAILABILITY",
+              title: `Confirmer disponibilité - ${booking.reference}`,
+              description: [
+                `Paiement PayDunya vérifié serveur pour ${booking.reference}.`,
+                `Confirmer la mission ${booking.subjectName} (${booking.levelName}) avec ${booking.client.name}.`,
+                `Date : ${dateLabel}. Créneau : ${timeLabel}. Format : ${formatLabel}.`,
+                `Lieu : ${locationLabel}.`,
+              ].join(" "),
+              priority: "IMPORTANT",
+              status: "TODO",
+              dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+            },
+          });
+        }
+
+        if (!existingMissionNotification) {
+          await tx.teacherNotification.create({
+            data: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              title: `Mission à confirmer - ${booking.reference}`,
+              message: [
+                `Bonjour ${teacherName},`,
+                "",
+                "Un cours Compétence vous est proposé après paiement client vérifié par PayDunya.",
+                "",
+                `Réservation : ${booking.reference}`,
+                `Client : ${booking.client.name}`,
+                `Cours : ${booking.subjectName}`,
+                `Niveau : ${booking.levelName}`,
+                `Date : ${dateLabel}`,
+                `Heure : ${timeLabel}`,
+                `Format : ${formatLabel}`,
+                `Lieu : ${locationLabel}`,
+                `Nombre de séance(s) : ${booking.sessionsCount}`,
+                `Montant net prévu : ${booking.teacherNetAmount.toLocaleString("fr-FR")} FCFA`,
+                "",
+                "Merci de confirmer rapidement votre disponibilité ou de signaler un problème à l'administration.",
+              ].join("\n"),
+              channel: "WHATSAPP",
+              sent: false,
+              status: "PENDING",
+            },
+          });
+        }
       }
 
       await tx.adminActionLog.create({
@@ -465,4 +538,16 @@ function compactPayload(value: unknown) {
   } catch {
     return String(value).slice(0, 8000);
   }
+}
+
+function formatDateFr(date?: Date | string | null) {
+  if (!date) return "À confirmer";
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "À confirmer";
+  return parsed.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }

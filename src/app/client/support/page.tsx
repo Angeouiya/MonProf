@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { PageHeader, EmptyState } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/page-header";
+import {
+  ClientAppRail,
+  ClientFocusPanel,
+  ClientMetricStrip,
+  ClientPageHeader,
+  ClientRecordCard,
+  ClientSectionTitle,
+  ClientSurface,
+} from "@/components/shared/client-page-primitives";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/format";
 import {
   LifeBuoy, Mail, Phone, AlertTriangle, ShieldCheck, CheckCircle2, FileText,
-  ArrowRight, type LucideIcon,
+  ArrowRight,
 } from "lucide-react";
 import { DisputeForm } from "./dispute-form";
 
 export const dynamic = "force-dynamic";
 
-const DISPUTE_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
-  OPEN: { label: "Ouvert", tone: "bg-white text-[#111B4D] border-[#DDE6F7]" },
-  INVESTIGATING: { label: "En cours d'examen", tone: "bg-white text-[#111B4D] border-[#DDE6F7]" },
-  RESOLVED: { label: "Résolu", tone: "bg-white text-[#111B4D] border-[#DDE6F7]" },
-  REFUNDED: { label: "Remboursé", tone: "bg-white text-[#111B4D] border-[#DDE6F7]" },
-  REJECTED: { label: "Rejeté", tone: "bg-white text-[#111827] border-[#DDE6F7]" },
+const DISPUTE_STATUS_LABELS: Record<string, string> = {
+  OPEN: "Ouvert",
+  INVESTIGATING: "En cours d'examen",
+  RESOLVED: "Résolu",
+  REFUNDED: "Remboursé",
+  REJECTED: "Rejeté",
 };
 
 export default async function SupportPage() {
@@ -56,79 +63,63 @@ export default async function SupportPage() {
   });
   const openDisputes = myDisputes.filter((dispute) => ["OPEN", "INVESTIGATING"].includes(dispute.status));
   const resolvedDisputes = myDisputes.filter((dispute) => ["RESOLVED", "REFUNDED", "REJECTED"].includes(dispute.status));
+  const focus = buildSupportFocus({
+    eligibleCount: bookableForDispute.length,
+    openCount: openDisputes.length,
+  });
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <ClientPageHeader
+        eyebrow="Assistance"
         title="Support et litiges"
-        description="Contactez le support, ouvrez un litige sur une réservation éligible et suivez chaque décision."
+        description="Une aide claire pour suivre vos cours, protéger votre paiement et garder une trace de chaque décision."
       />
 
-      <section className="rounded-[1.35rem] border border-[#E3E8F2] bg-white p-3 shadow-sm sm:p-4">
-        <div className="grid gap-2 min-[520px]:grid-cols-3">
-          <SupportCompactMetric icon={ShieldCheck} label="Protégées" value={eligibleBookings.length} />
-          <SupportCompactMetric icon={AlertTriangle} label="Ouverts" value={openDisputes.length} attention={openDisputes.length > 0} />
-          <SupportCompactMetric icon={CheckCircle2} label="Clôturés" value={resolvedDisputes.length} />
-        </div>
-        <div className="mt-3 flex flex-col gap-2 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-          <p className="text-sm font-semibold leading-6 text-[#64748B]">
-            {bookableForDispute.length > 0
-              ? "Sélectionnez une réservation éligible pour ouvrir un dossier support."
-              : "Aucun dossier éligible pour un nouveau litige actuellement."}
-          </p>
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl">
+      <ClientMetricStrip
+        metrics={[
+          { icon: ShieldCheck, label: "Éligibles", value: eligibleBookings.length },
+          { icon: AlertTriangle, label: "En cours", value: openDisputes.length, attention: openDisputes.length > 0 },
+          { icon: CheckCircle2, label: "Clos", value: resolvedDisputes.length },
+        ]}
+      />
+
+      <ClientFocusPanel
+        eyebrow={focus.eyebrow}
+        title={focus.title}
+        description={focus.description}
+        icon={LifeBuoy}
+        action={
+          <Button asChild variant="outline" className="min-h-11 w-full rounded-2xl">
             <Link href="/client/reservations">
-              Mes réservations
+              Mes cours
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-        </div>
-      </section>
+        }
+      />
 
-      {/* Coordonnées support */}
-      <Card className="overflow-hidden rounded-[1.35rem] border-[#DDE6F7] bg-white">
-        <CardContent className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center sm:p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
-              <LifeBuoy className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-[#111827]">Besoin d'aide ?</p>
-              <p className="text-xs leading-5 text-[#64748B]">Notre support vous répond sous 24-48h ouvrées.</p>
-            </div>
-          </div>
-          <div className="grid gap-2 text-sm min-[520px]:grid-cols-2">
-            <a href="tel:+22527220000" className="flex min-h-10 items-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 font-semibold text-[#111827] hover:border-[#CBD7EA] hover:bg-white">
-              <Phone className="h-4 w-4 text-[#111B4D]" />
-              +225 27 22 00 00 00
-            </a>
-            <a href="mailto:support@monprof.ci" className="flex min-h-10 items-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 font-semibold text-[#111827] hover:border-[#CBD7EA] hover:bg-white">
-              <Mail className="h-4 w-4 text-[#111B4D]" />
-              support@monprof.ci
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+      <ClientAppRail
+        items={[
+          { href: "tel:+22527220000", icon: Phone, label: "Appeler", value: "Support direct", active: true },
+          { href: "mailto:support@competence.ci", icon: Mail, label: "Email", value: "Trace écrite" },
+          { href: "/client/reservations", icon: FileText, label: "Dossiers", value: "Réservations" },
+          { href: "/client/notifications", icon: ShieldCheck, label: "Suivi", value: "Notifications" },
+        ]}
+      />
 
       {/* Ouvrir un litige */}
-      <Card className="rounded-[1.35rem] border-[#E3E8F2] bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base font-black text-[#111827]">
-                <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
-                Ouvrir un litige
-              </CardTitle>
-              <p className="mt-1 text-sm leading-6 text-[#64748B]">
-                Sélectionnez la réservation concernée. Le paiement professeur reste suspendu pendant l'analyse.
-              </p>
-            </div>
-            <Badge variant="outline" className="w-fit border-[#DDE6F7] bg-white text-[#111B4D]">
-              {formatCount(bookableForDispute.length, "éligible")}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
+      <ClientSurface className="space-y-4">
+        <ClientSectionTitle
+          title={
+            <span className="inline-flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
+              Signaler un cours
+            </span>
+          }
+          description="Choisissez la réservation, décrivez le problème, l'administration garde la trace."
+          action={<p className="text-sm font-semibold text-[#111B4D]">{formatCount(bookableForDispute.length, "éligible")}</p>}
+        />
           {bookableForDispute.length === 0 ? (
             <EmptyState
               icon={FileText}
@@ -146,41 +137,30 @@ export default async function SupportPage() {
               teacherBadgeVerified: b.teacher.badgeVerified,
             }))} />
           )}
-        </CardContent>
-      </Card>
+      </ClientSurface>
 
       {/* Mes litiges */}
-      <Card className="rounded-[1.35rem] border-[#E3E8F2] bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base font-black text-[#111827]">Mes litiges ({myDisputes.length})</CardTitle>
-            <Badge variant="outline" className="w-fit border-[#DDE6F7] bg-white text-[#111B4D]">
-              Historique support
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <ClientSurface className="space-y-4">
+        <ClientSectionTitle title={`Historique (${myDisputes.length})`} description="Dossiers ouverts et décisions de support." />
           {myDisputes.length === 0 ? (
             <EmptyState
               icon={CheckCircle2}
-              title="Aucun litige ouvert"
-              description="Votre historique support est calme. Les dossiers ouverts apparaîtront ici avec leur statut."
+              title="Aucun dossier"
+              description="Les signalements apparaîtront ici avec leur statut."
             />
           ) : (
             myDisputes.map((d) => {
-              const st = DISPUTE_STATUS_LABELS[d.status] ?? DISPUTE_STATUS_LABELS.OPEN;
+              const statusLabel = DISPUTE_STATUS_LABELS[d.status] ?? DISPUTE_STATUS_LABELS.OPEN;
               const name = d.booking.teacher.professionalName || d.booking.teacher.fullName;
               return (
-                <div key={d.id} className="rounded-[1.2rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                <ClientRecordCard key={d.id} data-client-support-dispute-card className="p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-black text-[#111827]">{d.booking.reference}</p>
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold ${st.tone}`}>
-                          {st.label}
-                        </span>
+                      <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-center min-[460px]:gap-3">
+                        <p className="text-sm font-semibold text-[#111827]">{d.booking.reference}</p>
+                        <p className="inline-flex w-fit rounded-xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">{statusLabel}</p>
                       </div>
-                      <p className="mt-1 text-sm font-bold text-[#111827]">{d.booking.subjectName} • {d.booking.levelName}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#111827]">{d.booking.subjectName} • {d.booking.levelName}</p>
                       <div className="mt-2 flex items-center gap-2 text-xs text-[#64748B]">
                         <ProfessorImage
                           photoUrl={d.booking.teacher.photoUrl}
@@ -194,49 +174,54 @@ export default async function SupportPage() {
                     </div>
                     <Button asChild variant="outline" size="sm" className="w-full rounded-2xl sm:w-auto">
                       <Link href={`/client/reservations/${d.booking.id}`}>
-                        Dossier <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        Ouvrir <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>
                     </Button>
                   </div>
                   <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs shadow-sm">
-                    <p><span className="font-bold text-[#111827]">Raison :</span> <span className="text-[#64748B]">{d.reason}</span></p>
-                    <p className="mt-1"><span className="font-bold text-[#111827]">Description :</span> <span className="text-[#64748B]">{d.description}</span></p>
+                    <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{d.reason}</span></p>
+                    <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{d.description}</span></p>
                     {d.resolution && (
-                      <p className="mt-1"><span className="font-bold text-[#111827]">Résolution :</span> <span className="text-[#64748B]">{d.resolution}</span></p>
+                      <p className="mt-1"><span className="font-semibold text-[#111827]">Décision :</span> <span className="text-[#64748B]">{d.resolution}</span></p>
                     )}
                   </div>
-                </div>
+                </ClientRecordCard>
               );
             })
           )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function SupportCompactMetric({
-  icon: Icon,
-  label,
-  value,
-  attention = false,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string | number;
-  attention?: boolean;
-}) {
-  return (
-    <div className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-        <p className={attention ? "mt-0.5 text-lg font-black text-[#111B4D]" : "mt-0.5 text-lg font-black text-[#111827]"}>{value}</p>
-      </div>
-      <Icon className="h-4 w-4 shrink-0 text-[#111B4D]" />
+      </ClientSurface>
     </div>
   );
 }
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function buildSupportFocus({
+  eligibleCount,
+  openCount,
+}: {
+  eligibleCount: number;
+  openCount: number;
+}) {
+  if (openCount > 0) {
+    return {
+      eyebrow: "Dossier en cours",
+      title: `${formatCount(openCount, "signalement")} suivi par l'équipe`,
+      description: "Suivez l'avancement depuis l'historique ou ouvrez la réservation liée.",
+    };
+  }
+  if (eligibleCount > 0) {
+    return {
+      eyebrow: "Cours protégé",
+      title: "Un cours peut être signalé si nécessaire",
+      description: "Le dossier reste rattaché au professeur, à la réservation et aux échanges.",
+    };
+  }
+  return {
+    eyebrow: "Tout est clair",
+    title: "Aucun signalement à traiter",
+    description: "Vos réservations restent accessibles si vous devez contacter le support.",
+  };
 }

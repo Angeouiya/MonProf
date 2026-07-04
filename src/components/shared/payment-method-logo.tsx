@@ -67,7 +67,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
   }
 
   return (
-    <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-black text-[#64748B]", className)}>
+    <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#64748B]", className)}>
       {label}
     </span>
   );

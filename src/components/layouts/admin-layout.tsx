@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
@@ -10,6 +9,8 @@ import {
   Banknote, Lock, MessageSquare, MapPin, ChevronRight, Home, Activity, ClipboardList, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/shared/brand-logo";
+import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
@@ -73,7 +74,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
   {
     title: "Communication",
     items: [
-      { href: "/admin/messages", label: "Messages contact", icon: MessageSquare },
+      { href: "/admin/messages", label: "Messages", icon: MessageSquare },
       { href: "/admin/notifications", label: "Notifications", icon: Bell },
       { href: "/admin/parametres", label: "Paramètres", icon: Settings },
     ],
@@ -99,46 +100,64 @@ export function AdminLayout({
     exact ? pathname === href : pathname?.startsWith(href);
 
   return (
-    <div className="flex min-h-screen flex-col bg-transparent">
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/60 bg-white/75 px-4 shadow-[0_10px_35px_rgba(30,42,120,0.07)] backdrop-blur-xl lg:px-6">
-        <div className="flex items-center gap-3">
+    <div className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 shadow-sm lg:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <button
-            className="rounded-2xl border border-violet-100 bg-white/80 p-2 text-foreground shadow-sm transition hover:bg-violet-50 lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] bg-white text-[#111827] shadow-sm transition hover:border-[#111B4D] lg:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Menu"
+            aria-expanded={open}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/admin" className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="MonProf CI" width={120} height={24} />
-            <span className="hidden rounded-full premium-gradient px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm sm:inline">
+          <Link href="/admin" className="flex min-w-0 items-center gap-2">
+            <BrandLogo size="sm" />
+            <span className="hidden rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] sm:inline-flex">
               Admin
             </span>
           </Link>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <NotificationHeaderRadar summary={summary} />
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link href="/"><Home className="mr-1.5 h-4 w-4" /> Voir le site</Link>
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => signOut({ callbackUrl: "/" })} title="Déconnexion">
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <ImportantActionConfirm
+            title="Déconnecter l'administration ?"
+            description="Les actions opérationnelles doivent être enregistrées avant de quitter le dashboard admin."
+            badge="Sortie admin"
+            danger={summary.urgent > 0}
+            notices={[
+              summary.urgent > 0 ? `${summary.urgent} urgence(s) restent visibles dans le centre opérationnel.` : "Aucune urgence critique n'est signalée dans le radar actuel.",
+              summary.payment > 0 ? `${summary.payment} notification(s) paiement ou remboursement sont à traiter.` : "Les remboursements et paiements non validés restent en attente.",
+              "Sauvegardez les paiements, sanctions, remplacements, messages et remboursements avant de sortir.",
+            ]}
+            confirmLabel="Me déconnecter"
+            cancelLabel="Rester dans l'admin"
+            onConfirm={() => signOut({ callbackUrl: "/" })}
+            trigger={
+              <Button variant="ghost" size="icon" title="Déconnexion">
+                <LogOut className="h-5 w-5" />
+              </Button>
+            }
+          />
         </div>
       </header>
 
       <div className="flex flex-1">
-        <aside className="hidden w-64 shrink-0 border-r border-white/20 bg-[#111827] text-white shadow-[20px_0_60px_rgba(17,24,39,0.12)] lg:block">
+        <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white shadow-sm lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} />
         </aside>
 
         {open && (
           <div className="fixed inset-0 z-50 lg:hidden">
-            <div className="absolute inset-0 bg-[#111827]/55 backdrop-blur-sm" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-72 max-w-[85%] overflow-y-auto bg-[#111827] text-white shadow-xl">
-              <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-                <Image src="/logo.svg" alt="MonProf CI" width={120} height={24} />
-                <button onClick={() => setOpen(false)} className="rounded-2xl p-2 transition hover:bg-white/10">
+            <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
+            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] overflow-y-auto border-r border-[#E6EAF3] bg-white shadow-sm">
+              <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
+                <BrandLogo size="sm" />
+                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -147,7 +166,7 @@ export function AdminLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-x-hidden">
+        <main className="flex-1 overflow-x-hidden lg:ml-72">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
@@ -171,13 +190,13 @@ function SidebarContent({
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3 scrollbar-thin">
+      <nav className="flex-1 space-y-4 overflow-y-auto p-3 lg:overflow-hidden">
         {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
-          <div className="rounded-3xl border border-white/10 bg-white/8 p-3">
+          <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/55">Radar admin</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">Radar admin</p>
               <span className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-black",
+                "rounded-lg border px-2 py-0.5 text-[10px] font-semibold",
                 summary.urgent > 0 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-800"
               )}>
                 {summary.total > 99 ? "99+" : summary.total}
@@ -192,7 +211,7 @@ function SidebarContent({
         )}
         {navSections.map((section) => (
           <div key={section.title}>
-            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">
               {section.title}
             </p>
             <div className="space-y-0.5">
@@ -206,8 +225,8 @@ function SidebarContent({
                       href={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all",
-                        active ? "premium-gradient text-white shadow-lg shadow-violet-950/20" : "text-white/70 hover:bg-white/10 hover:text-white"
+                        "flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                        active ? "bg-[#111B4D] text-white shadow-sm" : "bg-white text-[#475569] hover:text-[#111B4D] hover:shadow-sm"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -225,14 +244,14 @@ function SidebarContent({
           </div>
         ))}
       </nav>
-      <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-3 rounded-2xl bg-white/8 px-3 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-semibold text-primary">
+      <div className="border-t border-[#E6EAF3] p-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2 shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
             {(userName ?? "A")[0]?.toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white">{userName ?? "Admin"}</p>
-            <p className="truncate text-xs text-white/55">Administrateur</p>
+            <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Admin"}</p>
+            <p className="truncate text-xs font-semibold text-[#64748B]">Administrateur</p>
           </div>
         </div>
       </div>
@@ -258,8 +277,8 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
       variant="outline"
       size="sm"
       className={cn(
-        "hidden rounded-2xl border bg-white/82 shadow-sm sm:inline-flex",
-        summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-red-50" : "border-violet-100 text-violet-800 hover:bg-violet-50"
+        "hidden rounded-2xl border bg-white shadow-sm sm:inline-flex",
+        summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-white" : "border-[#CAD7F2] text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
       )}
     >
       <Link href={summary.urgent > 0 ? "/admin/notifications?filter=urgent" : "/admin/notifications"}>
@@ -288,8 +307,8 @@ function RadarPill({
       href={href}
       onClick={onNavigate}
       className={cn(
-        "rounded-2xl px-2 py-2 transition hover:bg-white/12",
-        danger ? "bg-red-100 text-red-800" : "bg-white/8 text-white/70"
+        "rounded-2xl border px-2 py-2 transition hover:border-[#111B4D]",
+        danger ? "border-red-200 bg-white text-red-700" : "border-[#E6EAF3] bg-white text-[#475569]"
       )}
     >
       <span className="block font-black">{value > 99 ? "99+" : value}</span>

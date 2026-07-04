@@ -38,7 +38,7 @@ const SORTS = [
 ];
 
 const FORMATS = [
-  { value: "", label: "Tous formats" },
+  { value: "", label: "Tout" },
   { value: "HOME", label: "À domicile" },
   { value: "ONLINE", label: "En ligne" },
 ];
@@ -115,7 +115,15 @@ export default async function TeachersPage({
     jobTitle: t.jobTitle,
     rating: t.rating,
     ratingCount: t.ratingCount,
+    adminRating: t.adminRating,
+    adminRatingPublic: t.adminRatingPublic,
     experienceYears: t.experienceYears,
+    careerSummary: t.careerSummary,
+    skills: t.skills,
+    workHistory: t.workHistory,
+    certifications: t.certifications,
+    teachingAchievements: t.teachingAchievements,
+    learnersCoached: t.learnersCoached,
     pricePerSession: t.pricePerSession,
     offersHome: t.offersHome,
     offersOnline: t.offersOnline,
@@ -156,53 +164,52 @@ export default async function TeachersPage({
   return (
     <PublicLayout>
       {/* HEADER */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="pointer-events-none absolute inset-0 bg-white" />
-        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-          <nav className="mb-5 flex min-h-10 flex-wrap items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Link href="/" className="inline-flex min-h-10 items-center rounded-xl bg-white px-2 hover:text-[#111B4D]">Accueil</Link>
+      <section className="relative overflow-hidden border-b border-[#E6EAF3] bg-white">
+        <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-10">
+          <nav className="mb-4 hidden min-h-9 flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B] sm:flex">
+            <Link href="/" className="inline-flex min-h-10 items-center px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
-            <span className="inline-flex min-h-10 items-center text-foreground">Professeurs</span>
+            <span className="inline-flex min-h-10 items-center text-[#111827]">Professeurs</span>
           </nav>
-          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
             <div className="min-w-0">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+              <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Recherche premium · Professeurs vérifiés
+                Recherche guidée · profils vérifiés
               </div>
-              <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-[#111827] text-balance sm:text-5xl">
+              <h1 className="max-w-3xl text-[2rem] font-semibold leading-[1.08] tracking-tight text-[#111827] text-balance sm:text-4xl lg:text-5xl">
                 Trouvez le professeur idéal, au bon niveau et au bon moment.
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-[#64748B]">
-                Filtrez par matière, niveau, commune et format. Soutien scolaire, université, adultes, concours, matières techniques, professionnelles et artistiques.
+              <p className="mt-3 max-w-2xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:text-base sm:leading-7">
+                Matières scolaires, université, adultes, concours, métiers techniques et art.
               </p>
             </div>
-            <div className="grid gap-3 rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white"><BadgeCheck className="h-5 w-5" /></span>
-                <div>
-                  <p className="text-sm font-bold text-[#111827]">Professeurs contrôlés</p>
-                  <p className="text-xs text-[#64748B]">Identité, diplôme et expérience vérifiés.</p>
+            <div className="grid gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 shadow-sm min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
+              <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Professeurs contrôlés</p>
+                  <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Identité, diplôme et expérience vérifiés.</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#D6DEED] bg-white text-[#111B4D]"><ShieldCheck className="h-5 w-5" /></span>
-                <div>
-                  <p className="text-sm font-bold text-[#111827]">Paiement rassurant</p>
-                  <p className="text-xs text-[#64748B]">Fonds bloqués jusqu'à confirmation du cours.</p>
+              <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#D6DEED] bg-white text-[#111B4D] lg:h-10 lg:w-10"><ShieldCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Paiement rassurant</p>
+                  <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Fonds bloqués jusqu'à confirmation du cours.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-8 flex flex-col gap-2 rounded-[1.75rem] border border-[#E3E8F2] bg-white p-2 shadow-sm sm:flex-row">
+          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 shadow-sm sm:mt-6 sm:flex-row">
             <input
               type="search"
               name="q"
               defaultValue={q}
               placeholder="Matière, concours, adulte, art, technique, spécialité..."
-              className="min-h-12 flex-1 rounded-2xl border border-border bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+              className="min-h-12 flex-1 rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
               style={{ minHeight: 48 }}
             />
             {/* Préserve les autres filtres */}
@@ -213,14 +220,14 @@ export default async function TeachersPage({
             {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
             >
               Rechercher
             </button>
             {q && (
               <Link
                 href={buildPaginationUrl(1)}
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-[#D6DEED] bg-white px-3 text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D6DEED] bg-white px-3 text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
                 title="Réinitialiser la recherche"
               >
                 <X className="h-4 w-4" />
@@ -233,154 +240,108 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[#E3E8F2] bg-white px-4 py-2 shadow-sm lg:hidden">
+            <p className="min-w-0 text-sm font-medium text-[#64748B]">
+              <span className="font-semibold text-[#111827]">{total}</span>{" "}
+              professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+            </p>
+            {activeFiltersCount > 0 && (
+              <Link href="/professeurs" className="shrink-0 text-xs font-semibold text-[#111B4D]">
+                Effacer ({activeFiltersCount})
+              </Link>
+            )}
+          </div>
+          <details className="mb-4 rounded-[1rem] border border-[#E3E8F2] bg-white p-3 shadow-sm lg:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-sm font-semibold text-[#111827]">
+              <span className="inline-flex items-center gap-2">
+                <Filter className="h-4 w-4 text-[#111B4D]" />
+                Filtres
+              </span>
+              {activeFiltersCount > 0 && (
+                <span className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs text-[#111B4D]">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </summary>
+            <div className="pt-3">
+              <FiltersForm
+                activeFiltersCount={activeFiltersCount}
+                q={q}
+                subject={subject}
+                level={level}
+                commune={commune}
+                format={format}
+                sort={sort}
+                subjectGroups={subjectGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((s) => ({
+                    value: s.slug,
+                    label: s.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                levelGroups={levelGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((l) => ({
+                    value: l.slug,
+                    label: l.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                communes={communes}
+                compact
+              />
+            </div>
+          </details>
           <div className="grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
             {/* SIDEBAR FILTRES */}
-            <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
-              <form
-                method="GET"
-                action="/professeurs"
-                className="min-w-0 rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    <Filter className="h-4 w-4 text-[#111B4D]" />
-                    Filtres
-                  </h2>
-                  {activeFiltersCount > 0 && (
-                    <Link
-                      href="/professeurs"
-                      className="text-xs font-medium text-[#111B4D] hover:underline"
-                    >
-                      Réinitialiser ({activeFiltersCount})
-                    </Link>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <Field label="Matière">
-                    <SearchableCatalogSelect
-                      name="subject"
-                      value={subject}
-                      placeholder="Toutes les matières"
-                      searchPlaceholder="Saisir une matière, concours, métier..."
-                      emptyLabel="Aucune matière trouvée"
-                      allLabel="Toutes les matières"
-                      groups={subjectGroups.map((group) => ({
-                        label: group.category.label,
-                        options: group.items.map((s) => ({
-                          value: s.slug,
-                          label: s.name,
-                          keywords: group.category.label,
-                        })),
-                      }))}
-                      triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-                    />
-                  </Field>
-
-                  <Field label="Niveau">
-                    <SearchableCatalogSelect
-                      name="level"
-                      value={level}
-                      placeholder="Tous les niveaux"
-                      searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
-                      emptyLabel="Aucun niveau trouvé"
-                      allLabel="Tous les niveaux"
-                      groups={levelGroups.map((group) => ({
-                        label: group.category.label,
-                        options: group.items.map((l) => ({
-                          value: l.slug,
-                          label: l.name,
-                          keywords: group.category.label,
-                        })),
-                      }))}
-                      triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-                    />
-                  </Field>
-
-                  <Field label="Commune">
-                    <select
-                      name="commune"
-                      defaultValue={commune}
-                      className="min-h-11 w-full rounded-xl border border-border bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-                    >
-                      <option value="">Toutes les communes</option>
-                      {communes.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Format">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {FORMATS.map((f) => (
-                        <label
-                          key={f.value || "all"}
-                          className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-xs font-semibold transition ${
-                            format === f.value
-                              ? "border-[#111B4D] bg-[#111B4D] text-white"
-                              : "border-[#D6DEED] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="format"
-                            value={f.value}
-                            defaultChecked={format === f.value}
-                            className="sr-only"
-                          />
-                          <span className="truncate px-1">{f.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </Field>
-
-                  <Field label="Trier par">
-                    <select
-                      name="sort"
-                      defaultValue={sort}
-                      className="min-h-11 w-full rounded-xl border border-border bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-                    >
-                      {SORTS.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  {/* Préserve la recherche texte */}
-                  {q && <input type="hidden" name="q" value={q} />}
-
-                  <button
-                    type="submit"
-                    className="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78]"
-                  >
-                    Appliquer les filtres
-                  </button>
-                </div>
-              </form>
+            <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
+              <FiltersForm
+                activeFiltersCount={activeFiltersCount}
+                q={q}
+                subject={subject}
+                level={level}
+                commune={commune}
+                format={format}
+                sort={sort}
+                subjectGroups={subjectGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((s) => ({
+                    value: s.slug,
+                    label: s.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                levelGroups={levelGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((l) => ({
+                    value: l.slug,
+                    label: l.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                communes={communes}
+              />
             </aside>
 
             {/* RÉSULTATS */}
             <div>
-              <div className="mb-5 flex flex-col gap-2 rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">{total}</span>{" "}
+              <div className="mb-5 hidden flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm lg:flex lg:flex-row lg:items-center lg:justify-between">
+                <p className="text-sm font-medium text-[#64748B]">
+                  <span className="font-semibold text-[#111827]">{total}</span>{" "}
                   professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
                   {subject || level || commune || format ? (
-                    <span className="ml-1 text-muted-foreground">
+                    <span className="ml-1 text-[#64748B]">
                       · filtres actifs
                     </span>
                   ) : null}
                 </p>
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
                   {format === "HOME" && (
-                    <BadgeFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
+                    <InlineFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
                   )}
                   {format === "ONLINE" && (
-                    <BadgeFilter icon={<Video className="h-3 w-3" />} label="En ligne" />
+                    <InlineFilter icon={<Video className="h-3 w-3" />} label="En ligne" />
                   )}
                 </div>
               </div>
@@ -393,7 +354,7 @@ export default async function TeachersPage({
                   action={
                     <Link
                       href="/professeurs"
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-[#1E2A78] px-4 text-sm font-semibold text-white transition hover:bg-[#111B4D]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
                     >
                       Réinitialiser les filtres
                     </Link>
@@ -422,8 +383,8 @@ export default async function TeachersPage({
                         <ChevronLeft className="h-4 w-4" />
                         Précédent
                       </Link>
-                      <span className="px-3 text-sm text-muted-foreground">
-                        Page <span className="font-semibold text-foreground">{page}</span> sur {totalPages}
+                      <span className="px-3 text-sm font-medium text-[#64748B]">
+                        Page <span className="font-semibold text-[#111827]">{page}</span> sur {totalPages}
                       </span>
                       <Link
                         href={buildPaginationUrl(Math.min(totalPages, page + 1))}
@@ -452,7 +413,7 @@ export default async function TeachersPage({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         {label}
       </label>
       {children}
@@ -460,9 +421,162 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function BadgeFilter({ icon, label }: { icon: React.ReactNode; label: string }) {
+type CatalogFilterGroup = {
+  label: string;
+  options: { value: string; label: string; keywords?: string }[];
+};
+
+type CommuneFilterOption = {
+  id: string;
+  name: string;
+};
+
+function FiltersForm({
+  activeFiltersCount,
+  q,
+  subject,
+  level,
+  commune,
+  format,
+  sort,
+  subjectGroups,
+  levelGroups,
+  communes,
+  compact = false,
+}: {
+  activeFiltersCount: number;
+  q: string;
+  subject: string;
+  level: string;
+  commune: string;
+  format: string;
+  sort: string;
+  subjectGroups: CatalogFilterGroup[];
+  levelGroups: CatalogFilterGroup[];
+  communes: CommuneFilterOption[];
+  compact?: boolean;
+}) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-[#D6DEED] bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+    <form
+      method="GET"
+      action="/professeurs"
+      className={compact ? "min-w-0" : "min-w-0 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm"}
+    >
+      {!compact && (
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]">
+            <Filter className="h-4 w-4 text-[#111B4D]" />
+            Filtres
+          </h2>
+          {activeFiltersCount > 0 && (
+            <Link
+              href="/professeurs"
+              className="text-xs font-medium text-[#111B4D] hover:underline"
+            >
+              Réinitialiser ({activeFiltersCount})
+            </Link>
+          )}
+        </div>
+      )}
+
+      <div className={compact ? "grid gap-3 min-[560px]:grid-cols-2" : "space-y-4"}>
+        <Field label="Matière">
+          <SearchableCatalogSelect
+            name="subject"
+            value={subject}
+            placeholder="Toutes les matières"
+            searchPlaceholder="Saisir une matière, concours, métier..."
+            emptyLabel="Aucune matière trouvée"
+            allLabel="Toutes les matières"
+            groups={subjectGroups}
+            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </Field>
+
+        <Field label="Niveau">
+          <SearchableCatalogSelect
+            name="level"
+            value={level}
+            placeholder="Tous les niveaux"
+            searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
+            emptyLabel="Aucun niveau trouvé"
+            allLabel="Tous les niveaux"
+            groups={levelGroups}
+            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </Field>
+
+        <Field label="Commune">
+          <select
+            name="commune"
+            defaultValue={commune}
+            className="min-h-11 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+          >
+            <option value="">Toutes les communes</option>
+            {communes.map((item) => (
+              <option key={item.id} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Format">
+          <div className="grid grid-cols-3 gap-1.5">
+            {FORMATS.map((item) => (
+              <label
+                key={item.value || "all"}
+                className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-xs font-semibold transition ${
+                  format === item.value
+                    ? "border-[#111B4D] bg-[#111B4D] text-white"
+                    : "border-[#D6DEED] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="format"
+                  value={item.value}
+                  defaultChecked={format === item.value}
+                  className="sr-only"
+                />
+                <span className="truncate px-1">{item.label}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Trier par">
+          <select
+            name="sort"
+            defaultValue={sort}
+            className="min-h-11 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+          >
+            {SORTS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {q && <input type="hidden" name="q" value={q} />}
+
+        <div className={compact ? "min-[560px]:self-end" : ""}>
+          <button
+            type="submit"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+          >
+            Appliquer les filtres
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function InlineFilter({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
       {icon}
       {label}
     </span>

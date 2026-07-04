@@ -5,7 +5,6 @@ import { Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -29,7 +28,17 @@ type SearchableCatalogGroup = {
   options: SearchableCatalogOption[];
 };
 
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+}
+
 type SearchableCatalogSelectProps = {
+  id?: string;
   name: string;
   value?: string | null;
   placeholder: string;
@@ -37,11 +46,13 @@ type SearchableCatalogSelectProps = {
   emptyLabel: string;
   allLabel: string;
   groups: SearchableCatalogGroup[];
+  onValueChange?: (value: string) => void;
   className?: string;
   triggerClassName?: string;
 };
 
 export function SearchableCatalogSelect({
+  id,
   name,
   value,
   placeholder,
@@ -49,37 +60,59 @@ export function SearchableCatalogSelect({
   emptyLabel,
   allLabel,
   groups,
+  onValueChange,
   className,
   triggerClassName,
 }: SearchableCatalogSelectProps) {
   const [open, setOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value ?? "");
+  const [query, setQuery] = useState("");
+  const isControlled = typeof onValueChange === "function";
+  const currentValue = isControlled ? value ?? "" : selectedValue;
 
   const selectedOption = useMemo(() => {
-    if (!selectedValue) return null;
+    if (!currentValue) return null;
     for (const group of groups) {
-      const match = group.options.find((option) => option.value === selectedValue);
+      const match = group.options.find((option) => option.value === currentValue);
       if (match) return match;
     }
     return null;
-  }, [groups, selectedValue]);
+  }, [currentValue, groups]);
+
+  const normalizedQuery = normalizeSearch(query);
+  const allOptionMatches = !normalizedQuery || normalizeSearch(`${allLabel} tous toutes aucun`).includes(normalizedQuery);
+  const visibleGroups = useMemo(() => {
+    if (!normalizedQuery) return groups;
+
+    return groups
+      .map((group) => ({
+        ...group,
+        options: group.options.filter((option) => (
+          normalizeSearch(`${option.label} ${option.keywords ?? ""}`).includes(normalizedQuery)
+        )),
+      }))
+      .filter((group) => group.options.length > 0);
+  }, [groups, normalizedQuery]);
 
   function choose(nextValue: string) {
-    setSelectedValue(nextValue);
+    if (!isControlled) setSelectedValue(nextValue);
+    onValueChange?.(nextValue);
+    setQuery("");
     setOpen(false);
   }
 
   return (
     <div className={cn("min-w-0", className)}>
-      <input type="hidden" name={name} value={selectedValue} />
+      <input type="hidden" name={name} value={currentValue} />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             type="button"
             variant="outline"
             aria-expanded={open}
             className={cn(
-              "min-h-11 w-full justify-between rounded-xl border-border bg-white px-3 text-left text-sm font-medium text-[#111827] shadow-none hover:bg-white",
+              "min-h-11 w-full justify-between rounded-xl border-[#DDE6F7] bg-white px-3 text-left text-sm font-medium text-[#111827] shadow-none hover:border-[#111B4D] hover:bg-white",
               triggerClassName,
             )}
           >
@@ -93,22 +126,23 @@ export function SearchableCatalogSelect({
           align="start"
           className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] p-0"
         >
-          <Command>
-            <CommandInput placeholder={searchPlaceholder} />
+          <Command shouldFilter={false}>
+            <CommandInput placeholder={searchPlaceholder} value={query} onValueChange={setQuery} />
             <CommandList className="max-h-[340px]">
-              <CommandEmpty>{emptyLabel}</CommandEmpty>
-              <CommandGroup heading="Recherche rapide">
-                <CommandItem
-                  value={`${allLabel} tous toutes`}
-                  onSelect={() => choose("")}
-                  className="min-h-11"
-                >
-                  <Search className="h-4 w-4" />
-                  <span className="flex-1">{allLabel}</span>
-                  {!selectedValue && <Check className="h-4 w-4 text-[#111B4D]" />}
-                </CommandItem>
-              </CommandGroup>
-              {groups.map((group) => (
+              {allOptionMatches && (
+                <CommandGroup heading="Recherche rapide">
+                  <CommandItem
+                    value={`${allLabel} tous toutes`}
+                    onSelect={() => choose("")}
+                    className="min-h-11"
+                  >
+                    <Search className="h-4 w-4" />
+                    <span className="flex-1">{allLabel}</span>
+                    {!currentValue && <Check className="h-4 w-4 text-[#111B4D]" />}
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {visibleGroups.map((group) => (
                 <CommandGroup key={group.label} heading={group.label}>
                   {group.options.map((option) => (
                     <CommandItem
@@ -118,14 +152,19 @@ export function SearchableCatalogSelect({
                       className="min-h-11"
                     >
                       <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                      {selectedValue === option.value && <Check className="h-4 w-4 text-[#111B4D]" />}
+                      {currentValue === option.value && <Check className="h-4 w-4 text-[#111B4D]" />}
                     </CommandItem>
                   ))}
                 </CommandGroup>
               ))}
+              {!allOptionMatches && visibleGroups.length === 0 && (
+                <div className="px-4 py-8 text-center text-sm font-medium text-[#64748B]">
+                  {emptyLabel}
+                </div>
+              )}
             </CommandList>
           </Command>
-          {selectedValue && (
+          {currentValue && (
             <button
               type="button"
               onClick={() => choose("")}

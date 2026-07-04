@@ -1,3 +1,10 @@
+import {
+  calculatePaymentServiceFee,
+  PAYMENT_SERVICE_FEE_LABEL,
+  PAYMENT_SERVICE_FEE_RATE_BPS,
+  paymentServiceFeeDescription,
+} from "@/lib/payment-service-fees";
+
 export const CURRENCY = "XOF";
 
 export const PLATFORM_COMMISSION_RATE = 0.3;
@@ -245,6 +252,10 @@ export type BookingPricingSnapshot = {
   transportRuleLabel?: string;
   transportCoveredByTeacherZone?: boolean;
   materialFee: number;
+  totalBeforePaymentServiceFee: number;
+  paymentServiceFeeRate: number;
+  paymentServiceFeeAmount: number;
+  paymentServiceFeeLabel: string;
   totalClientPays: number;
   totalTeacherReceives: number;
   packKey: string;
@@ -640,6 +651,10 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
       transportRuleLabel: transport.ruleLabel,
       transportCoveredByTeacherZone: transport.coveredByTeacherZone,
       materialFee,
+      totalBeforePaymentServiceFee: 0,
+      paymentServiceFeeRate: PAYMENT_SERVICE_FEE_RATE_BPS,
+      paymentServiceFeeAmount: 0,
+      paymentServiceFeeLabel: PAYMENT_SERVICE_FEE_LABEL,
       totalClientPays: 0,
       totalTeacherReceives: 0,
       packKey: pack.key,
@@ -664,7 +679,9 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const courseAmount = rawCourseAmount - discountAmount;
   const platformCommissionAmount = courseAmount - teacherPayoutAmount;
   const transportFee = transport.amount ?? 0;
-  const totalClientPays = courseAmount + transportFee;
+  const totalBeforePaymentServiceFee = courseAmount + transportFee + materialFee;
+  const paymentServiceFeeAmount = calculatePaymentServiceFee(totalBeforePaymentServiceFee);
+  const totalClientPays = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
   const totalTeacherReceives = teacherPayoutAmount + transportFee;
 
   return {
@@ -685,6 +702,10 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     transportRuleLabel: transport.ruleLabel,
     transportCoveredByTeacherZone: transport.coveredByTeacherZone,
     materialFee,
+    totalBeforePaymentServiceFee,
+    paymentServiceFeeRate: PAYMENT_SERVICE_FEE_RATE_BPS,
+    paymentServiceFeeAmount,
+    paymentServiceFeeLabel: `${PAYMENT_SERVICE_FEE_LABEL} (${paymentServiceFeeDescription()})`,
     totalClientPays,
     totalTeacherReceives,
     packKey: pack.key,

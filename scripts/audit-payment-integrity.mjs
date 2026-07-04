@@ -120,12 +120,14 @@ for (const booking of bookings) {
     });
   }
 
-  if (operationalPaidStatuses.has(booking.status) && !booking.isQuoteOnly && !verifiedTx) {
+  if (operationalPaidStatuses.has(booking.status) && !booking.isQuoteOnly && (!verifiedTx || !hasPayDunyaProof(booking))) {
     report.operationalStatusWithoutVerifiedFunds.push({
       reference: booking.reference,
       id: booking.id,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
+      paydunyaStatus: booking.paydunyaStatus,
+      paydunyaVerifiedAt: booking.paydunyaVerifiedAt,
     });
   }
 }

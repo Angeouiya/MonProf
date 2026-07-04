@@ -41,7 +41,7 @@ const courseFormatLabels: Record<string, string> = {
 };
 
 const bookingStatusLabels: Record<string, string> = {
-  PENDING_PAYMENT: "Paiement en attente",
+  PENDING_PAYMENT: "Brouillon PayDunya",
   PAID: "Payée",
   PENDING_ADMIN_VALIDATION: "Validation admin requise",
   CONFIRMED: "Confirmée",
@@ -64,6 +64,8 @@ const paymentStatusLabels: Record<string, string> = {
   TO_PAY_TEACHER: "À payer au professeur",
   TEACHER_PAID: "Professeur payé",
   DISPUTED: "Paiement suspendu",
+  REFUND_PENDING: "Remboursement à traiter",
+  PARTIAL_REFUND_PENDING: "Remboursement partiel à traiter",
   REFUNDED: "Remboursé",
   FAILED: "Échec paiement",
 };
@@ -97,7 +99,7 @@ function buildMissionMessage(teacherName: string, booking: TeacherCourseActionBo
   return [
     `Bonjour ${teacherName},`,
     "",
-    "Mission MonProf CI à traiter.",
+    "Mission Compétence à traiter.",
     "",
     `Réservation : ${booking.reference}`,
     `Client : ${booking.clientName}`,
@@ -134,7 +136,7 @@ function buildManualCallMessage(
     : "Le professeur indique être indisponible. Préparer un remplacement et avertir le client si nécessaire.";
 
   return [
-    "Appel manuel enregistré par l'administration MonProf CI.",
+    "Appel manuel enregistré par l'administration Compétence.",
     `Réservation : ${booking.reference} - ${booking.subjectName} (${booking.levelName})`,
     `Professeur : ${teacherName}`,
     `Client : ${booking.clientName}`,

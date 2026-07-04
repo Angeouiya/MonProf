@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
@@ -9,6 +8,7 @@ import {
   BookOpenCheck,
   CalendarCheck,
   GraduationCap,
+  Home,
   LayoutDashboard,
   Mail,
   MapPin,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/shared/back-button";
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 
@@ -50,6 +51,12 @@ const trustSignals = [
   { icon: WalletCards, label: "Paiement sécurisé" },
 ];
 
+const mobileNavBase = [
+  { href: "/", label: "Accueil", icon: Home, exact: true },
+  { href: "/professeurs", label: "Profs", icon: Search },
+  { href: "/tarifs", label: "Tarifs", icon: WalletCards },
+];
+
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -66,7 +73,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-1.5 transition hover:bg-white"
             onClick={() => setMobileOpen(false)}
           >
-            <Image src="/logo.svg" alt="MonProf CI" width={140} height={28} priority />
+            <BrandLogo priority />
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
@@ -75,7 +82,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-bold transition-colors",
+                  "inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.href)
                     ? "border border-[#DDE6F7] bg-white text-[#111B4D] shadow-sm"
                     : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
@@ -135,7 +142,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link
                 href="/professeurs"
                 onClick={() => setMobileOpen(false)}
-                className="flex min-h-14 items-center justify-between rounded-3xl border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-black text-white shadow-sm"
+                className="flex min-h-14 items-center justify-between rounded-[1.15rem] border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm"
               >
                 <span className="inline-flex items-center gap-2">
                   <Search className="h-4 w-4" />
@@ -149,7 +156,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "inline-flex min-h-12 items-center rounded-2xl px-4 text-sm font-bold transition",
+                    "inline-flex min-h-12 items-center rounded-2xl px-4 text-sm font-semibold transition",
                     pathname?.startsWith(link.href)
                       ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
                       : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
@@ -158,11 +165,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   {link.label}
                 </Link>
               ))}
-              <div className="mt-2 grid grid-cols-1 gap-2 rounded-3xl border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-2 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
                 {trustSignals.map((signal) => {
                   const Icon = signal.icon;
                   return (
-                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-3 text-xs font-black text-[#111B4D] shadow-sm">
+                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-3 text-xs font-semibold text-[#111B4D] shadow-sm">
                       <Icon className="h-4 w-4 shrink-0" />
                       <span>{signal.label}</span>
                     </div>
@@ -211,14 +218,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="mt-auto border-t border-[#E3E8F2] bg-white">
+      <footer className="mt-auto border-t border-[#E3E8F2] bg-white pb-24 lg:pb-0">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div className="mb-8 rounded-[1.6rem] border border-[#DDE6F7] bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-8 rounded-[1.15rem] border border-[#DDE6F7] bg-white p-4 shadow-sm sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
-                <p className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-black text-[#111B4D]">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
                   <BookOpenCheck className="h-3.5 w-3.5" />
-                  MonProf CI
+                  Compétence
                 </p>
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#475569]">
                   Une plateforme ivoirienne pensée pour réserver un professeur, payer proprement et suivre chaque cours depuis un espace client clair.
@@ -235,15 +242,15 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
           <div className="grid gap-7 md:grid-cols-[1.1fr_0.75fr_0.75fr_1fr]">
             <div>
-              <Image src="/logo.svg" alt="MonProf CI" width={140} height={28} />
+              <BrandLogo />
               <p className="mt-3 max-w-sm text-sm font-medium leading-6 text-[#64748B]">
                 Plateforme ivoirienne de réservation de cours à domicile et en ligne, avec des professeurs vérifiés et un paiement sécurisé.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid gap-2 text-xs font-semibold text-[#111B4D] sm:grid-cols-3">
                 {trustSignals.map((signal) => {
                   const Icon = signal.icon;
                   return (
-                    <span key={signal.label} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[#DDE6F7] bg-white px-3 text-xs font-black text-[#111B4D]">
+                    <span key={signal.label} className="inline-flex min-h-9 items-center gap-1.5">
                       <Icon className="h-3.5 w-3.5" />
                       {signal.label}
                     </span>
@@ -252,7 +259,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-black text-[#111827]">Plateforme</h4>
+              <h4 className="text-sm font-semibold text-[#111827]">Plateforme</h4>
               <ul className="mt-3 space-y-1 text-sm">
                 {footerPlatformLinks.map((link) => (
                   <li key={link.href}>
@@ -264,7 +271,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-black text-[#111827]">Compte</h4>
+              <h4 className="text-sm font-semibold text-[#111827]">Compte</h4>
               <ul className="mt-3 space-y-1 text-sm">
                 {footerAccountLinks.map((link) => (
                   <li key={link.href}>
@@ -276,20 +283,72 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-black text-[#111827]">Contact</h4>
+              <h4 className="text-sm font-semibold text-[#111827]">Contact</h4>
               <ul className="mt-3 space-y-2 text-sm font-semibold text-[#64748B]">
                 <li className="flex min-h-10 items-center gap-2"><Phone className="h-4 w-4 text-[#111B4D]" /> +225 27 22 00 00 00</li>
-                <li className="flex min-h-10 items-center gap-2"><Mail className="h-4 w-4 text-[#111B4D]" /> support@monprof.ci</li>
+                <li className="flex min-h-10 items-center gap-2"><Mail className="h-4 w-4 text-[#111B4D]" /> support@competence.ci</li>
                 <li className="flex min-h-10 items-center gap-2"><MapPin className="h-4 w-4 text-[#111B4D]" /> Cocody, Abidjan</li>
               </ul>
             </div>
           </div>
           <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-[#E3E8F2] pt-6 text-xs font-semibold text-[#64748B] sm:flex-row sm:items-center">
-            <p>© {new Date().getFullYear()} MonProf CI - Tous droits réservés.</p>
+            <p>© {new Date().getFullYear()} Compétence - Tous droits réservés.</p>
             <p className="flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-[#111B4D]" /> Professeurs vérifiés · Paiement sécurisé</p>
           </div>
         </div>
       </footer>
+      <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />
     </div>
+  );
+}
+
+function PublicMobileNav({
+  pathname,
+  isClient,
+  isAdmin,
+}: {
+  pathname: string | null;
+  isClient: boolean;
+  isAdmin: boolean;
+}) {
+  const accountLink = isAdmin
+    ? { href: "/admin", label: "Admin", icon: LayoutDashboard }
+    : isClient
+      ? { href: "/client", label: "Espace", icon: LayoutDashboard }
+      : { href: "/connexion", label: "Compte", icon: GraduationCap };
+  const items = [...mobileNavBase, accountLink];
+
+  return (
+    <nav
+      className="public-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 shadow-[0_14px_36px_rgba(15,23,42,0.12)] lg:hidden"
+      style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      aria-label="Navigation publique mobile"
+    >
+      <div className="grid grid-cols-4 gap-1">
+        {items.map((item) => {
+          const active = "exact" in item && item.exact
+            ? pathname === item.href
+            : pathname?.startsWith(item.href);
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.7rem] font-semibold transition-colors",
+                active
+                  ? "bg-[#111B4D] text-white shadow-sm"
+                  : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D]",
+              )}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="max-w-full truncate leading-none">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

@@ -231,7 +231,7 @@ export default async function AdminAvisPage({
                   return (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm">
-                      <Link href={`/admin/clients/${r.client.id}`} className="hover:text-primary">
+                      <Link href={`/admin/clients/${r.client.id}`} className="inline-flex min-h-10 items-center hover:text-primary">
                         {r.client.name}
                       </Link>
                     </TableCell>
@@ -244,7 +244,7 @@ export default async function AdminAvisPage({
                           shape="circle"
                           verified={r.teacher.badgeVerified}
                         />
-                        <Link href={`/admin/professeurs/${r.teacher.id}?tab=avis&bookingId=${r.booking.id}`} className="hover:text-primary">
+                        <Link href={`/admin/professeurs/${r.teacher.id}?tab=avis&bookingId=${r.booking.id}`} className="inline-flex min-h-10 items-center hover:text-primary">
                           {r.teacher.professionalName || r.teacher.fullName}
                         </Link>
                       </div>
@@ -263,7 +263,7 @@ export default async function AdminAvisPage({
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm max-w-xs truncate">{r.comment ?? "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell text-xs">
-                      <Link href={`/admin/reservations/${r.booking.id}`} className="font-mono hover:text-primary">
+                      <Link href={`/admin/reservations/${r.booking.id}`} className="inline-flex min-h-10 items-center font-mono hover:text-primary">
                         {r.booking.reference}
                       </Link>
                       <p className="mt-1 text-muted-foreground">{r.booking.subjectName}</p>

@@ -116,7 +116,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
       : `/admin/professeurs/${linkedTeacher.id}?tab=operationnel`
     : "";
   return (
-    <li className={cn("grid min-w-0 gap-4 px-4 py-4 transition hover:bg-violet-50/60", notification.read ? "bg-white/70" : "bg-violet-50/90")}>
+    <li className={cn("grid min-w-0 gap-4 border-l-4 px-4 py-4 transition hover:bg-white", notification.read ? "border-transparent bg-white" : "border-[#111B4D] bg-white")}>
       <div className="flex min-w-0 items-start gap-3">
         {linkedTeacher ? (
           <ProfessorImage photoUrl={linkedTeacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={linkedTeacher.badgeVerified} />
@@ -134,7 +134,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
           </div>
           <p className="mt-1 line-clamp-3 break-words text-sm text-muted-foreground">{notification.message}</p>
           {booking && (
-            <div className="mt-3 min-w-0 rounded-2xl border border-violet-100 bg-white/88 p-3 shadow-sm">
+            <div className="mt-3 min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">{booking.reference}</Badge>
                 <Badge variant="outline">{courseFormatLabel(booking.courseFormat)}</Badge>
@@ -170,7 +170,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
           </div>
         </div>
       </div>
-      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:flex 2xl:flex-wrap 2xl:items-center 2xl:justify-end">
+      <div className="notification-action-grid">
         {notification.link && (
           <Button asChild variant="outline" size="sm" className="w-full justify-center 2xl:w-auto">
             <Link href={notification.link}>{notification.actionLabel || "Ouvrir"} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>

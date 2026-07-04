@@ -13,6 +13,8 @@ type PayDunyaCheckoutInput = {
     totalClientPays: number;
     courseAmount: number;
     transportFee: number;
+    paymentServiceFeeAmount?: number | null;
+    paymentServiceFeeLabel?: string | null;
   };
   client: {
     id: string;
@@ -83,7 +85,7 @@ export function getPayDunyaConfig(): PayDunyaConfig | null {
     privateKey,
     token,
     mode: process.env.PAYDUNYA_MODE === "live" ? "live" : "sandbox",
-    storeName: process.env.PAYDUNYA_STORE_NAME || "MonProf CI",
+    storeName: process.env.PAYDUNYA_STORE_NAME || "Compétence",
     storeTagline: process.env.PAYDUNYA_STORE_TAGLINE || "Cours à domicile et en ligne en Côte d'Ivoire",
     storePhone: process.env.PAYDUNYA_STORE_PHONE || "",
     storeLogoUrl: process.env.PAYDUNYA_STORE_LOGO_URL || "",
@@ -127,6 +129,17 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
               },
             }
           : {}),
+        ...((input.booking.paymentServiceFeeAmount ?? 0) > 0
+          ? {
+              item_2: {
+                name: input.booking.paymentServiceFeeLabel || "Frais de service paiement",
+                quantity: 1,
+                unit_price: input.booking.paymentServiceFeeAmount,
+                total_price: input.booking.paymentServiceFeeAmount,
+                description: "Frais lies au paiement mobile money / PayDunya",
+              },
+            }
+          : {}),
       },
       customer: {
         name: input.client.name,
@@ -134,13 +147,13 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
       },
       channels: PAYDUNYA_CI_CHANNELS,
       total_amount: input.booking.totalClientPays,
-      description: `Réservation ${input.booking.reference} - MonProf CI`,
+      description: `Réservation ${input.booking.reference} - Compétence`,
     },
     store: {
       name: config.storeName,
       tagline: config.storeTagline,
       phone: config.storePhone,
-      logo_url: config.storeLogoUrl,
+      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon.png`,
       website_url: input.origin,
     },
     custom_data: {

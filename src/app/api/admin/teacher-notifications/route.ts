@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
+import { deliverTeacherNotification } from "@/lib/notification-delivery";
+import {
+  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  requiresVerifiedPayDunyaForOperationalAction,
+} from "@/lib/payment-security";
 
 const TEACHER_CHANNELS = ["SMS", "WHATSAPP", "EMAIL", "MANUAL_CALL", "INTERNAL", "PRIVATE_LINK"] as const;
 const PRIORITIES = ["NORMAL", "IMPORTANT", "URGENT", "CRITICAL"] as const;
@@ -45,9 +50,19 @@ export async function POST(req: NextRequest) {
             subjectName: true,
             levelName: true,
             status: true,
+            paymentStatus: true,
+            totalClientPays: true,
+            totalPrice: true,
+            paydunyaStatus: true,
+            paydunyaVerifiedAt: true,
             assignedAt: true,
             clientId: true,
             client: { select: { name: true } },
+            transactions: {
+              where: { type: "CLIENT_PAYMENT" },
+              select: { type: true, status: true, amount: true },
+              orderBy: { createdAt: "desc" },
+            },
           },
         })
       : null,
@@ -68,6 +83,10 @@ export async function POST(req: NextRequest) {
   const deliveryStatus = manualCallFailed ? "FAILED" : manualCallConfirmed ? "CONFIRMED" : "SENT";
   const publicStatus = manualCallFailed ? "FAILED" : manualCallConfirmed ? "CONFIRMED" : "SENT";
   const now = new Date();
+
+  if (booking && manualCallConfirmed && requiresVerifiedPayDunyaForOperationalAction(booking)) {
+    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+  }
 
   const notif = await db.$transaction(async (tx) => {
     const created = await tx.teacherNotification.create({
@@ -163,7 +182,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId: booking.clientId,
           title: "Professeur confirmé",
-          message: `${teacherName} a confirmé par appel avec l'administration sa disponibilité pour votre cours de ${booking.subjectName}. Votre réservation ${booking.reference} reste suivie par MonProf CI.`,
+          message: `${teacherName} a confirmé par appel avec l'administration sa disponibilité pour votre cours de ${booking.subjectName}. Votre réservation ${booking.reference} reste suivie par Compétence.`,
           type: "TEACHER_CONFIRMED",
           recipientType: "CLIENT",
           recipientName: booking.client.name,
@@ -292,7 +311,11 @@ export async function POST(req: NextRequest) {
 
     return created;
   });
-  return NextResponse.json({ id: notif.id, ok: true });
+  const delivery = ["SMS", "WHATSAPP", "EMAIL"].includes(channel)
+    ? await deliverTeacherNotification(notif.id)
+    : null;
+
+  return NextResponse.json({ id: notif.id, ok: true, delivery });
 }
 
 export async function PATCH(req: NextRequest) {

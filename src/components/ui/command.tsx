@@ -21,7 +21,7 @@ function Command({
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "flex h-full w-full flex-col overflow-hidden rounded-3xl border border-[#E3E8F2] bg-white/96 text-popover-foreground shadow-[0_30px_90px_rgba(30,42,120,0.18)] backdrop-blur-xl",
+        "flex h-full w-full flex-col overflow-hidden rounded-3xl border border-[#D7DEE9] bg-white text-popover-foreground shadow-sm",
         className
       )}
       {...props}
@@ -67,7 +67,7 @@ function CommandInput({
   return (
     <div
       data-slot="command-input-wrapper"
-      className="flex h-11 items-center gap-2 border-b border-[#E3E8F2] bg-[#EEF3FF]/35 px-4"
+      className="flex h-11 items-center gap-2 border-b border-[#E3E8F2] bg-white px-4"
     >
       <SearchIcon className="size-4 shrink-0 text-[#64748B]" />
       <CommandPrimitive.Input
@@ -147,7 +147,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-xl px-3 py-2 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-[#EEF3FF] data-[selected=true]:text-[#111B4D] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-[#64748B]",
+        "relative flex cursor-default items-center gap-2 rounded-xl border border-transparent bg-white px-3 py-2 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:border-[#111B4D] data-[selected=true]:bg-white data-[selected=true]:text-[#111B4D] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-[#64748B]",
         className
       )}
       {...props}

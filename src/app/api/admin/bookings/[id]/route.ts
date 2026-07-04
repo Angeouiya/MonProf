@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -18,13 +19,15 @@ import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
   isPaymentReadyForCourseProgressWithProof,
+  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
 const REPLACEABLE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "DISPUTED"] as const;
 const REPLACEABLE_PAYMENT_STATUSES = ["RECEIVED", "BLOCKED", "VALIDATED", "DISPUTED"] as const;
-const PAYDUNYA_PROOF_REQUIRED_ERROR = "Action bloquée: aucun paiement client PayDunya vérifié n'est rattaché à cette réservation.";
+const ACTIVE_PAYOUT_METHODS = ["WAVE", "ORANGE_MONEY", "MTN_MONEY", "MOOV_MONEY"] as const;
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -41,6 +44,10 @@ function includesNormalized(values: string[], target?: string | null) {
   if (!target) return false;
   const normalizedTarget = target.trim().toLocaleLowerCase("fr-FR");
   return values.some((value) => value.trim().toLocaleLowerCase("fr-FR") === normalizedTarget);
+}
+
+function normalizePhone(value: unknown) {
+  return typeof value === "string" ? value.replace(/[^\d+]/g, "").trim() : "";
 }
 
 function parsePreferredDays(value?: string | null) {
@@ -101,19 +108,6 @@ function hasActiveConflict(
   ));
 }
 
-function requiresPayDunyaProofForOperation(booking: {
-  isQuoteOnly?: boolean | null;
-  paymentStatus?: string | null;
-  totalClientPays?: number | null;
-  totalPrice?: number | null;
-  paydunyaStatus?: string | null;
-  paydunyaVerifiedAt?: Date | string | null;
-  transactions?: { type?: string | null; status?: string | null; amount?: number | null }[] | null;
-}) {
-  if (booking.isQuoteOnly && booking.paymentStatus === "FAILED") return false;
-  return !hasVerifiedPayDunyaClientPayment(booking);
-}
-
 function isAvailabilityCompatible(rawAvailability: string | null, booking: { preferredDays: string; scheduledDate: Date | null; scheduledTime: string | null }) {
   const availability = parseAvailability(rawAvailability);
   const requestedDays = Array.from(new Set([
@@ -164,6 +158,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       client: true,
       transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
       teacherPaymentAdjustments: { where: { status: "APPLIED" } },
+      clientRefundRequests: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -176,7 +171,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (booking.status !== "PENDING_ADMIN_VALIDATION" && booking.status !== "PAID") {
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });
         }
-        if (requiresPayDunyaProofForOperation(booking)) {
+        if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
           return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         await db.booking.update({
@@ -198,7 +193,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (booking.status !== "CONFIRMED" && booking.status !== "ASSIGNED") {
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });
         }
-        if (requiresPayDunyaProofForOperation(booking)) {
+        if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
           return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         await db.booking.update({
@@ -247,7 +242,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (!REPLACEABLE_PAYMENT_STATUSES.includes(booking.paymentStatus as (typeof REPLACEABLE_PAYMENT_STATUSES)[number])) {
           return NextResponse.json({ error: "Cette réservation n'est plus remplaçable avec ce statut de paiement." }, { status: 400 });
         }
-        if (requiresPayDunyaProofForOperation(booking)) {
+        if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
           return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         if ((booking.teacherPaidAmount || 0) > 0) {
@@ -653,6 +648,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           }, { status: 409 });
         }
         const admin = await getAdmin();
+        const payoutMethod = typeof body.method === "string" && ACTIVE_PAYOUT_METHODS.includes(body.method as (typeof ACTIVE_PAYOUT_METHODS)[number])
+          ? (body.method as PaymentMethod)
+          : booking.paymentMethod;
+        const paymentPhone = normalizePhone(body.paymentPhone);
         const alreadyPaid = booking.teacherPaidAmount || 0;
         const retained = booking.teacherPaymentAdjustments.reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
         const remaining = Math.max(0, booking.teacherNetAmount - alreadyPaid - retained);
@@ -670,13 +669,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           }
           return NextResponse.json({ error: "Cette réservation est déjà soldée côté professeur." }, { status: 400 });
         }
+        if (!payoutMethod || !ACTIVE_PAYOUT_METHODS.includes(payoutMethod as (typeof ACTIVE_PAYOUT_METHODS)[number])) {
+          return NextResponse.json({ error: "Choisissez le moyen de paiement professeur." }, { status: 400 });
+        }
+        if (paymentPhone.length < 8 || paymentPhone.length > 20) {
+          return NextResponse.json({ error: "Numéro de paiement professeur requis et invalide." }, { status: 400 });
+        }
         await db.$transaction(async (tx) => {
           const payout = await tx.teacherPayoutRecord.create({
             data: {
               reference: generateReference("PAY-PROF"),
               teacherId: booking.teacherId,
               amount: remaining,
-              method: booking.paymentMethod,
+              method: payoutMethod,
+              paymentPhone,
               note: `Paiement complet de la réservation ${booking.reference}`,
               paidAt: now,
               createdById: admin?.id,
@@ -704,7 +710,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               teacherNet: remaining,
               type: "TEACHER_PAYOUT",
               status: "TEACHER_PAID",
-              method: booking.paymentMethod,
+              method: payoutMethod,
               paidAt: now,
             },
           });
@@ -755,11 +761,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, cancellationActor);
         const nextPaymentStatus = !wasPaid
           ? booking.paymentStatus
-          : policy.refundAmount === policy.baseAmount
-            ? "REFUNDED"
-            : policy.refundAmount > 0
-              ? "PARTIALLY_REFUNDED"
-              : "RETAINED";
+          : policy.refundAmount <= 0
+            ? "RETAINED"
+            : policy.refundAmount >= policy.baseAmount
+              ? "REFUND_PENDING"
+              : "PARTIAL_REFUND_PENDING";
         await db.booking.update({
           where: { id },
           data: {
@@ -781,27 +787,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data: { status: nextPaymentStatus },
           });
         }
-        if (wasPaid && policy.refundAmount > 0) {
-          await db.transaction.create({
-            data: {
-              reference: generateReference("TX-REF"),
-              bookingId: booking.id,
-              teacherId: booking.teacherId,
-              amount: policy.refundAmount,
-              commission: 0,
-              teacherNet: 0,
-              type: "REFUND",
-              status: "REFUNDED",
-              method: booking.paymentMethod,
-              paidAt: now,
-            },
-          });
-        }
         await db.notification.create({
           data: {
             userId: null,
             title: "Réservation annulée",
-            message: `La réservation ${booking.reference} a été annulée par ${cancellationActor}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+            message: `La réservation ${booking.reference} a été annulée par ${cancellationActor}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
             type: "BOOKING_CANCELLED",
             recipientType: "ADMIN",
             channel: "INTERNAL",
@@ -821,7 +811,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data: {
               userId: booking.clientId,
               title: "Votre réservation a été annulée",
-              message: `La réservation ${booking.reference} est annulée. Remboursement prévu: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA. Frais retenus: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA.`,
+              message: `La réservation ${booking.reference} est annulée. Remboursement prévu: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA. Frais retenus: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Frais service paiement non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA.`,
               type: "BOOKING_CANCELLED",
               recipientType: "CLIENT",
               channel: "INTERNAL",
@@ -848,7 +838,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               `Cours : ${booking.subjectName}`,
               `Niveau : ${booking.levelName}`,
               `Motif : ${body.reason || "Non renseigné"}`,
-              `Décision financière client : frais ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, remboursement ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+              `Décision financière client : frais ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, frais service non remboursés ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA, remboursement ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
               "Merci de ne pas vous présenter au cours sans nouvelle instruction de l'administration.",
             ].join("\n"),
             channel: "WHATSAPP",
@@ -896,7 +886,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             action: "Annulation réservation",
             entityType: "Booking",
             entityId: booking.id,
-            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation administrative"}. Frais: ${policy.feeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
+            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation administrative"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
             oldStatus: booking.status,
             newStatus: "CANCELLED",
           },
@@ -909,35 +899,109 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             error: "Impossible de rembourser: aucun paiement PayDunya vérifié n'est rattaché à cette réservation.",
           }, { status: 409 });
         }
+        const fallbackRefundableAmount = Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
+        const refundAmount = booking.cancellationRefundAmount > 0
+          ? booking.cancellationRefundAmount
+          : fallbackRefundableAmount;
+        if (refundAmount <= 0) {
+          return NextResponse.json({ error: "Aucun montant remboursable n'est disponible pour cette réservation." }, { status: 400 });
+        }
+        const refundRequest = booking.clientRefundRequests.find((request) => ["PENDING", "APPROVED"].includes(request.status))
+          ?? booking.clientRefundRequests[0]
+          ?? null;
+        if (!refundRequest) {
+          return NextResponse.json({
+            error: "Le client doit d'abord renseigner son moyen et son numéro de remboursement.",
+          }, { status: 400 });
+        }
+        const externalReference = typeof body.externalReference === "string" ? body.externalReference.trim() : "";
+        if (externalReference.length < 3) {
+          return NextResponse.json({
+            error: "Saisissez la référence du dépôt ou du reçu Mobile Money.",
+          }, { status: 400 });
+        }
+        const finalPaymentStatus = refundAmount < fallbackRefundableAmount ? "PARTIALLY_REFUNDED" : "REFUNDED";
         await db.booking.update({
           where: { id },
-          data: { status: "REFUNDED", paymentStatus: "REFUNDED" },
+          data: { status: "REFUNDED", paymentStatus: finalPaymentStatus },
         });
         await db.transaction.updateMany({
           where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-          data: { status: "REFUNDED" },
+          data: { status: finalPaymentStatus },
         });
         await db.transaction.create({
           data: {
             reference: generateReference("TX"),
             bookingId: booking.id,
             teacherId: booking.teacherId,
-            amount: booking.totalPrice,
+            amount: refundAmount,
             commission: 0,
             teacherNet: 0,
             type: "REFUND",
-            status: "REFUNDED",
-            method: booking.paymentMethod,
+            status: finalPaymentStatus,
+            method: refundRequest.method ?? booking.paymentMethod,
             paidAt: now,
+          },
+        });
+        await db.clientRefundRequest.updateMany({
+          where: {
+            bookingId: booking.id,
+            status: { in: ["PENDING", "APPROVED"] },
+          },
+          data: {
+            status: "PAID",
+            processedAt: now,
+            externalReference,
           },
         });
         await db.notification.create({
           data: {
             userId: null,
             title: "Remboursement effectué",
-            message: `Le client de la réservation ${booking.reference} a été remboursé (${booking.totalPrice} FCFA).`,
+            message: `Le client de la réservation ${booking.reference} a été remboursé (${refundAmount} FCFA) via ${refundRequest.method}. Référence dépôt: ${externalReference}. Les frais service paiement non remboursés sont de ${booking.paymentServiceFeeAmount || 0} FCFA.`,
             type: "REFUND",
             link: `/admin/reservations/${id}`,
+          },
+        });
+        await db.notification.create({
+          data: {
+            userId: booking.clientId,
+            title: "Remboursement effectué",
+            message: `Votre remboursement de ${refundAmount.toLocaleString("fr-FR")} FCFA pour ${booking.reference} a été marqué effectué. Référence dépôt: ${externalReference}. Les frais de service paiement non remboursés sont de ${(booking.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA.`,
+            type: "REFUND",
+            recipientType: "CLIENT",
+            channel: "INTERNAL",
+            status: "SENT",
+            priority: "IMPORTANT",
+            bookingId: booking.id,
+            teacherId: booking.teacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            link: `/client/reservations/${booking.id}`,
+            actionLabel: "Voir remboursement",
+          },
+        });
+        await db.clientCommunication.create({
+          data: {
+            clientId: booking.clientId,
+            bookingId: booking.id,
+            type: "PAYMENT",
+            channel: "INTERNAL",
+            subject: `Remboursement effectué ${booking.reference}`,
+            content: `Votre remboursement est marqué effectué.\nMontant déposé : ${refundAmount.toLocaleString("fr-FR")} FCFA\nMoyen : ${refundRequest.method}\nNuméro : ${refundRequest.paymentPhone}\nTitulaire : ${refundRequest.accountName ?? "Non renseigné"}\nRéférence dépôt : ${externalReference}\nFrais de service paiement non remboursés : ${(booking.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA`,
+            priority: "IMPORTANT",
+            status: "SENT",
+          },
+        });
+        await db.adminActionLog.create({
+          data: {
+            adminId: (await getAdmin())?.id,
+            action: "Remboursement client effectué",
+            entityType: "ClientRefundRequest",
+            entityId: refundRequest.id,
+            detail: `Remboursement ${refundRequest.reference} pour ${booking.reference}: ${refundAmount} FCFA via ${refundRequest.method} au ${refundRequest.paymentPhone}. Référence dépôt: ${externalReference}.`,
+            oldStatus: refundRequest.status,
+            newStatus: "PAID",
           },
         });
         return NextResponse.json({ ok: true });

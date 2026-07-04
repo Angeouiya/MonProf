@@ -9,11 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ReviewRatingSelector } from "@/components/shared/review-rating-selector";
 import { CheckCircle2, MessageSquare, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const MAX_REVIEW_COMMENT_LENGTH = 900;
 const MIN_LOW_RATING_COMMENT_LENGTH = 20;
 
-export function ReviewDialog({ bookingId, teacherName }: { bookingId: string; teacherName: string }) {
+export function ReviewDialog({
+  bookingId,
+  teacherName,
+  triggerClassName,
+}: {
+  bookingId: string;
+  teacherName: string;
+  triggerClassName?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(5);
@@ -59,7 +68,7 @@ export function ReviewDialog({ bookingId, teacherName }: { bookingId: string; te
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="mt-3 min-h-11 w-full rounded-2xl">
+        <Button size="sm" className={cn("mt-3 min-h-11 w-full rounded-2xl", triggerClassName)}>
           <MessageSquare className="mr-2 h-4 w-4" />
           Laisser un avis
         </Button>
@@ -69,14 +78,14 @@ export function ReviewDialog({ bookingId, teacherName }: { bookingId: string; te
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
             <MessageSquare className="h-5 w-5" />
           </div>
-          <DialogTitle className="text-xl font-black text-[#111827]">Avis pour {teacherName}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-[#111827]">Avis pour {teacherName}</DialogTitle>
           <DialogDescription className="leading-6">
             Votre retour aide les autres clients à choisir ce professeur.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
-            <div className="flex items-center gap-2 text-xs font-black text-[#111827]">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
               <ShieldCheck className="h-4 w-4 text-[#111B4D]" />
               Suivi qualité
             </div>
@@ -85,7 +94,7 @@ export function ReviewDialog({ bookingId, teacherName }: { bookingId: string; te
             </p>
           </div>
           <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
-            <div className="flex items-center gap-2 text-xs font-black text-[#111827]">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
               <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
               Historique clair
             </div>
@@ -96,13 +105,13 @@ export function ReviewDialog({ bookingId, teacherName }: { bookingId: string; te
         </div>
         <div className="space-y-4">
           <div>
-            <Label className="text-sm font-black text-[#111827]">Évaluation qualité</Label>
+            <Label className="text-sm font-semibold text-[#111827]">Évaluation qualité</Label>
             <div className="mt-2">
               <ReviewRatingSelector value={rating} onChange={setRating} />
             </div>
           </div>
           <div>
-            <Label htmlFor="comment" className="text-sm font-black text-[#111827]">Commentaire (optionnel)</Label>
+            <Label htmlFor="comment" className="text-sm font-semibold text-[#111827]">Commentaire (optionnel)</Label>
             <Textarea
               id="comment"
               value={comment}

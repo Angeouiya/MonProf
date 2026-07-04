@@ -26,8 +26,10 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
     db.commune.findMany({ orderBy: { name: "asc" } }),
   ]);
 
+  const { portalPasswordHash, ...teacherFormData } = teacher as any;
   const initial = {
-    ...teacher,
+    ...teacherFormData,
+    hasPortalPassword: Boolean(portalPasswordHash),
     subjects: teacher.subjects.map((s) => ({ subjectId: s.subject.id, isPrimary: s.isPrimary })),
     levels: teacher.levels.map((l) => ({ levelId: l.level.id })),
     zones: teacher.zones.map((z) => ({ communeId: z.commune.id })),

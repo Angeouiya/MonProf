@@ -16,7 +16,7 @@ type OperationalActionBooking = {
 
 function buildTeacherMessage(teacherName: string, booking?: OperationalActionBooking | null) {
   if (!booking) {
-    return `Bonjour ${teacherName}, l'administration MonProf CI vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
+    return `Bonjour ${teacherName}, l'administration Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
   }
   return [
     `Bonjour ${teacherName},`,

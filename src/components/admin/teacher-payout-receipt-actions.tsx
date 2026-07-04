@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCopy, MessageCircle, Printer } from "lucide-react";
+import { ClipboardCopy, Download, MessageCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime, formatFCFA } from "@/lib/format";
 import { buildWhatsAppUrl } from "@/lib/phone";
@@ -22,6 +22,7 @@ type PayoutReceiptRecord = {
   reference: string;
   amount: number;
   method?: string | null;
+  paymentPhone?: string | null;
   note?: string | null;
   status?: string | null;
   paidAt: string | Date;
@@ -51,13 +52,13 @@ export function TeacherPayoutReceiptActions({
 
   const copyReceipt = async () => {
     await navigator.clipboard.writeText(receipt);
-    toast.success("Reçu professeur copié.");
+    toast.success("Facture/reçu professeur copié.");
   };
 
   const printReceipt = () => {
     const printWindow = window.open("", "_blank", "width=860,height=980");
     if (!printWindow) {
-      toast.error("Impossible d'ouvrir la fenêtre d'impression. Le reçu a été copié à la place.");
+      toast.error("Impossible d'ouvrir la fenêtre d'impression. La facture/reçu a été copiée à la place.");
       void navigator.clipboard.writeText(receipt);
       return;
     }
@@ -68,15 +69,32 @@ export function TeacherPayoutReceiptActions({
     printWindow.print();
   };
 
+  const downloadReceipt = () => {
+    const blob = new Blob([buildPayoutReceiptHtml(teacherName, record)], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `facture-recu-professeur-${record.reference}.html`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Facture/reçu téléchargée.");
+  };
+
   return (
     <div className={compact ? "grid gap-2 sm:flex sm:flex-wrap" : "flex flex-wrap items-center gap-2"}>
       <Button type="button" size="sm" variant="outline" onClick={copyReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
         <ClipboardCopy className="mr-1.5 h-4 w-4" />
-        Copier reçu
+        Copier facture
       </Button>
       <Button type="button" size="sm" variant="outline" onClick={printReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
         <Printer className="mr-1.5 h-4 w-4" />
         Imprimer
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={downloadReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
+        <Download className="mr-1.5 h-4 w-4" />
+        Télécharger facture
       </Button>
       {whatsAppUrl ? (
         <Button asChild type="button" size="sm" variant="outline" className={compact ? "h-10 rounded-2xl border-blue-100 text-blue-800 hover:bg-blue-50" : "border-blue-100 text-blue-800 hover:bg-blue-50"}>
@@ -103,11 +121,12 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     : ["- Aucune allocation détaillée"];
 
   return [
-    "Reçu de paiement professeur - MonProf CI",
+    "Facture / reçu de paiement professeur - Compétence",
     `Professeur : ${teacherName}`,
-    `Référence reçu : ${record.reference}`,
+    `Référence document : ${record.reference}`,
     `Montant versé : ${formatFCFA(record.amount)}`,
     `Méthode de paiement : ${paymentMethodLabel(record.method)}`,
+    record.paymentPhone ? `Numéro de paiement : ${record.paymentPhone}` : "",
     `Statut : ${record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé"}`,
     `Date : ${formatDateTime(record.paidAt)}`,
     record.createdBy?.name ? `Enregistré par : ${record.createdBy.name}` : "",
@@ -116,7 +135,7 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     "Réservations imputées :",
     ...allocationLines,
     "",
-    "Ce reçu est une trace comptable interne MonProf CI. Il confirme le versement enregistré par l'administration et doit être conservé avec la preuve opérateur si disponible.",
+    "Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par l'administration et doit être conservée avec la preuve opérateur si disponible.",
   ].filter(Boolean).join("\n");
 }
 
@@ -136,7 +155,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Reçu professeur ${escapeHtml(record.reference)}</title>
+  <title>Facture reçu professeur ${escapeHtml(record.reference)}</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; background: #f7f6fb; color: #111827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -174,19 +193,20 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
   <main>
     <section class="brand">
       <div>
-        <h1>Reçu de paiement professeur</h1>
-        <p>MonProf CI - Comptabilité interne</p>
+        <h1>Facture / reçu de paiement professeur</h1>
+        <p>Compétence - Comptabilité interne</p>
       </div>
       <span class="pill">${escapeHtml(record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé")}</span>
     </section>
     <section class="grid">
       <div class="box total"><span>Montant versé</span><strong>${escapeHtml(formatFCFA(record.amount))}</strong></div>
       <div class="box"><span>Professeur</span><strong>${escapeHtml(teacherName)}</strong></div>
-      <div class="box"><span>Référence reçu</span><strong>${escapeHtml(record.reference)}</strong></div>
+      <div class="box"><span>Référence document</span><strong>${escapeHtml(record.reference)}</strong></div>
       <div class="box"><span>Méthode</span><strong>${escapeHtml(paymentMethodLabel(record.method))}</strong></div>
+      ${record.paymentPhone ? `<div class="box"><span>Numéro payé</span><strong>${escapeHtml(record.paymentPhone)}</strong></div>` : ""}
       <div class="box"><span>Date</span><strong>${escapeHtml(formatDateTime(record.paidAt))}</strong></div>
       <div class="box"><span>Enregistré par</span><strong>${escapeHtml(record.createdBy?.name ?? "Administration")}</strong></div>
-      <div class="box"><span>Plateforme</span><strong>MonProf CI</strong></div>
+      <div class="box"><span>Plateforme</span><strong>Compétence</strong></div>
     </section>
     <section>
       <h2>Réservations imputées</h2>
@@ -197,7 +217,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
     </section>
     ${record.note ? `<section class="note"><strong>Note interne</strong><br />${escapeHtml(record.note)}</section>` : ""}
     <footer>
-      Ce reçu est une trace comptable interne MonProf CI. Il confirme le versement enregistré par l'administration et doit être conservé avec la preuve opérateur si disponible.
+      Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par l'administration et doit être conservée avec la preuve opérateur si disponible.
     </footer>
   </main>
 </body>

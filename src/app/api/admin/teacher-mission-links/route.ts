@@ -2,6 +2,10 @@ import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
+import {
+  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  requiresVerifiedPayDunyaForOperationalAction,
+} from "@/lib/payment-security";
 
 function makeToken() {
   return randomBytes(32).toString("hex");
@@ -19,10 +23,17 @@ export async function POST(req: NextRequest) {
 
   const booking = await db.booking.findUnique({
     where: { id: bookingId },
-    include: { teacher: true, client: true },
+    include: {
+      teacher: true,
+      client: true,
+      transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
+    },
   });
   if (!booking || booking.teacherId !== teacherId) {
     return NextResponse.json({ error: "Mission introuvable pour ce professeur" }, { status: 404 });
+  }
+  if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
   const settingsRows = await db.setting.findMany({
     where: { key: { in: ["support_phone", "support_email"] } },
@@ -68,7 +79,7 @@ export async function POST(req: NextRequest) {
   const message = [
     `Bonjour ${teacherName},`,
     "",
-    "Un cours vous a été attribué sur MonProf CI.",
+    "Un cours vous a été attribué sur Compétence.",
     "",
     `Réservation : ${booking.reference}`,
     `Client : ${booking.client.name}`,

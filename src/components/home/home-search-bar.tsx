@@ -1,19 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Search } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { groupByCatalogCategory, type CatalogCategory } from "@/lib/catalog-taxonomy";
 
 type Option = { slug: string; name: string; category?: CatalogCategory };
@@ -27,111 +17,114 @@ export function HomeSearchBar({
   levels: Option[];
   communes: Option[];
 }) {
-  const router = useRouter();
-  const [subject, setSubject] = useState<string>("all");
-  const [level, setLevel] = useState<string>("all");
-  const [commune, setCommune] = useState<string>("all");
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (subject && subject !== "all") params.set("subject", subject);
-    if (level && level !== "all") params.set("level", level);
-    if (commune && commune !== "all") params.set("commune", commune);
-    router.push(`/professeurs?${params.toString()}`);
-  }
+  const subjectGroups = useMemo(() => groupByCatalogCategory(
+    subjects.filter((option) => option.category),
+    (option) => option.category as CatalogCategory,
+  ), [subjects]);
+  const levelGroups = useMemo(() => groupByCatalogCategory(
+    levels.filter((option) => option.category),
+    (option) => option.category as CatalogCategory,
+  ), [levels]);
 
   return (
     <form
-      onSubmit={submit}
-      className="mx-auto flex w-full max-w-4xl flex-col gap-3 rounded-3xl border border-[#E3E8F2] bg-white p-3 shadow-sm"
+      method="GET"
+      action="/professeurs"
+      className="mx-auto w-full max-w-5xl rounded-xl border border-[#DDE6F7] bg-white p-3 shadow-sm sm:p-4"
     >
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <SelectField
-          value={subject}
-          onChange={setSubject}
-          placeholder="Matière"
-          allLabel="Toutes les matières"
-          options={subjects}
-        />
-        <SelectField
-          value={level}
-          onChange={setLevel}
-          placeholder="Niveau"
-          allLabel="Tous les niveaux"
-          options={levels}
-        />
-        <SelectField
-          value={commune}
-          onChange={setCommune}
-          placeholder="Commune"
-          allLabel="Toutes les communes"
-          options={communes}
-          className="sm:col-span-2"
-        />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
+        <label className="min-w-0">
+          <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+            Recherche
+          </span>
+          <input
+            name="q"
+            type="search"
+            placeholder="Matière, concours, adulte, métier..."
+            className="min-h-12 w-full rounded-2xl border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition placeholder:font-medium placeholder:text-[#64748B] focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </label>
+        <SearchFieldLabel label="Matière">
+          <SearchableCatalogSelect
+            name="subject"
+            placeholder="Toutes les matières"
+            searchPlaceholder="Saisir une matière, concours, métier..."
+            emptyLabel="Aucune matière trouvée"
+            allLabel="Toutes les matières"
+            groups={subjectGroups.map((group) => ({
+              label: group.category.label,
+              options: group.items.map((item) => ({
+                value: item.slug,
+                label: item.name,
+                keywords: group.category.label,
+              })),
+            }))}
+            triggerClassName="min-h-12 rounded-2xl border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </SearchFieldLabel>
+        <SearchFieldLabel label="Niveau">
+          <SearchableCatalogSelect
+            name="level"
+            placeholder="Tous les niveaux"
+            searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
+            emptyLabel="Aucun niveau trouvé"
+            allLabel="Tous les niveaux"
+            groups={levelGroups.map((group) => ({
+              label: group.category.label,
+              options: group.items.map((item) => ({
+                value: item.slug,
+                label: item.name,
+                keywords: group.category.label,
+              })),
+            }))}
+            triggerClassName="min-h-12 rounded-2xl border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </SearchFieldLabel>
+        <label className="min-w-0">
+          <span className="mb-1.5 block px-1 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+            Commune
+          </span>
+          <select
+            name="commune"
+            className="min-h-12 w-full rounded-2xl border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+          >
+            <option value="">Toutes les communes</option>
+            {communes.map((commune) => (
+              <option key={commune.slug} value={commune.name}>{commune.name}</option>
+            ))}
+          </select>
+        </label>
+        <Button
+          type="submit"
+          size="lg"
+          className="min-h-12 w-full rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
+        >
+          <Search className="h-4 w-4" />
+          Rechercher
+        </Button>
       </div>
-      <Button
-        type="submit"
-        size="lg"
-        className="w-full"
-      >
-        <Search className="mr-1.5 h-4 w-4" />
-        Rechercher
-      </Button>
+      <div className="mt-3 flex flex-col gap-1.5 border-t border-[#EEF2F7] pt-3 text-xs font-semibold text-[#64748B] min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
+        <span>Cours à domicile ou en ligne</span>
+        <span>Séances de 2h, réservation au moins 24h avant</span>
+        <span>Paiement PayDunya protégé</span>
+      </div>
     </form>
   );
 }
 
-function SelectField({
-  value,
-  onChange,
-  placeholder,
-  allLabel,
-  options,
-  className,
+function SearchFieldLabel({
+  label,
+  children,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  allLabel: string;
-  options: Option[];
-  className?: string;
+  label: string;
+  children: ReactNode;
 }) {
-  const selectedLabel =
-    value === "all" ? allLabel : options.find((o) => o.slug === value)?.name;
-  const groupedOptions = groupByCatalogCategory(
-    options.filter((option) => option.category),
-    (option) => option.category as CatalogCategory,
-  );
-  const ungroupedOptions = options.filter((option) => !option.category);
-
   return (
-    <Select value={value} onValueChange={onChange}>
-      <div className={className}>
-      <SelectTrigger className="min-h-12 w-full rounded-2xl border-[#D6DEED] bg-white text-sm font-semibold text-[#111827]">
-        <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
-      </SelectTrigger>
-      </div>
-      <SelectContent>
-        <SelectItem value="all">{allLabel}</SelectItem>
-        {groupedOptions.length > 0 && <SelectSeparator />}
-        {groupedOptions.map((group) => (
-          <SelectGroup key={group.category.slug}>
-            <SelectLabel>{group.category.label}</SelectLabel>
-            {group.items.map((o) => (
-              <SelectItem key={o.slug} value={o.slug}>
-                {o.name}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-        {ungroupedOptions.length > 0 && groupedOptions.length > 0 && <SelectSeparator />}
-        {ungroupedOptions.map((o) => (
-          <SelectItem key={o.slug} value={o.slug}>
-            {o.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="min-w-0">
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+        {label}
+      </span>
+      {children}
+    </div>
   );
 }

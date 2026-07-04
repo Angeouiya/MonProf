@@ -3,7 +3,7 @@ import { CheckCircle2, Clock, XCircle, AlertTriangle, Ban, RefreshCw, DollarSign
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 
 const bookingStatusConfig: Record<BookingStatus, { label: string; className: string; icon?: any }> = {
-  PENDING_PAYMENT: { label: "Paiement PayDunya attendu", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: Clock },
+  PENDING_PAYMENT: { label: "Brouillon non réservé", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: Clock },
   PAID: { label: "Payée", className: "bg-white text-[#111B4D] border-[#E3E8F2]", icon: CheckCircle2 },
   PENDING_ADMIN_VALIDATION: { label: "En attente validation admin", className: "bg-white text-[#111B4D] border-[#E3E8F2]", icon: Clock },
   CONFIRMED: { label: "Confirmée", className: "bg-white text-[#111B4D] border-[#E3E8F2]", icon: CheckCircle2 },
@@ -20,7 +20,7 @@ const bookingStatusConfig: Record<BookingStatus, { label: string; className: str
 };
 
 const clientBookingStatusLabels: Partial<Record<BookingStatus, string>> = {
-  PENDING_PAYMENT: "Dossier créé",
+  PENDING_PAYMENT: "Brouillon non réservé",
   PAID: "Réservation reçue",
   PENDING_ADMIN_VALIDATION: "Validation en cours",
   CONFIRMED: "Réservation confirmée",
@@ -53,6 +53,8 @@ const paymentStatusConfig: Record<PaymentStatus, { label: string; className: str
   TO_PAY_TEACHER: { label: "À payer au professeur", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: Unlock },
   TEACHER_PAID: { label: "Professeur payé", className: "bg-white text-[#111B4D] border-[#E3E8F2]", icon: DollarSign },
   DISPUTED: { label: "En litige", className: "bg-white text-[#B42318] border-[#E3E8F2]", icon: AlertTriangle },
+  REFUND_PENDING: { label: "Remboursement à traiter", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: RefreshCw },
+  PARTIAL_REFUND_PENDING: { label: "Remboursement partiel à traiter", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: RefreshCw },
   REFUNDED: { label: "Remboursé", className: "bg-white text-[#64748B] border-[#E3E8F2]", icon: RefreshCw },
   PARTIALLY_REFUNDED: { label: "Remboursé partiel", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: RefreshCw },
   RETAINED: { label: "Frais retenus", className: "bg-white text-[#8A4B05] border-[#E3E8F2]", icon: Lock },
@@ -66,6 +68,8 @@ const clientPaymentStatusLabels: Partial<Record<PaymentStatus, string>> = {
   TO_PAY_TEACHER: "Traitement administratif",
   TEACHER_PAID: "Cours clôturé",
   DISPUTED: "Litige en cours",
+  REFUND_PENDING: "Remboursement en traitement",
+  PARTIAL_REFUND_PENDING: "Remboursement partiel en traitement",
   REFUNDED: "Remboursé",
   PARTIALLY_REFUNDED: "Remboursement partiel",
   RETAINED: "Frais appliqués",
@@ -76,6 +80,8 @@ const clientPaymentStatusClasses: Partial<Record<PaymentStatus, string>> = {
   BLOCKED: "bg-white text-[#111B4D] border-[#E3E8F2]",
   TO_PAY_TEACHER: "bg-white text-[#111B4D] border-[#E3E8F2]",
   DISPUTED: "bg-white text-[#111B4D] border-[#E3E8F2]",
+  REFUND_PENDING: "bg-white text-[#111B4D] border-[#E3E8F2]",
+  PARTIAL_REFUND_PENDING: "bg-white text-[#111B4D] border-[#E3E8F2]",
   REFUNDED: "bg-white text-[#64748B] border-[#E3E8F2]",
   PARTIALLY_REFUNDED: "bg-white text-[#111B4D] border-[#E3E8F2]",
   RETAINED: "bg-white text-[#111B4D] border-[#E3E8F2]",

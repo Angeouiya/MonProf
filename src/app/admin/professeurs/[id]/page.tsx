@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
+import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { TeacherOperationsClient } from "@/components/admin/teacher-operations-client";
 import {
   AdminActionLog,
@@ -29,7 +30,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Pencil, Bell, MapPin, Phone, Mail, GraduationCap, Award,
+  Pencil, Bell, MapPin, Phone, Mail, GraduationCap, Award, BriefcaseBusiness,
   BookOpen, Wallet, CheckCircle2, Clock, Users, MessageSquare, ShieldAlert, ShieldCheck, Siren, ClipboardList,
 } from "lucide-react";
 import { TeacherActionsClient } from "./actions-client";
@@ -43,6 +44,7 @@ import { TeacherMissionLinksClient } from "./teacher-mission-links-client";
 import { TeacherCourseQuickActionsClient } from "./teacher-course-quick-actions-client";
 import { TeacherWarningActionsClient } from "./teacher-warning-actions-client";
 import { TeacherControlPanelClient } from "./teacher-control-panel-client";
+import { TeacherAdminMessagesClient, type TeacherAdminMessageItem } from "@/components/admin/teacher-admin-messages-client";
 import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, PRICE_TIERS, parsePricingSnapshot } from "@/lib/pricing";
 import { AvisClient } from "@/app/admin/avis/client";
 import { formatFCFA, formatDate, formatDateTime, timeAgo } from "@/lib/format";
@@ -57,6 +59,7 @@ import {
   teacherWarningReasonLabel,
 } from "@/lib/teacher-discipline-labels";
 import { transactionTypeLabel } from "@/lib/platform-labels";
+import { paymentMethodLabel } from "@/lib/payment-methods";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +106,7 @@ export default async function ProfesseurDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; action?: string; bookingId?: string; status?: string }>;
+  searchParams: Promise<{ tab?: string; action?: string; bookingId?: string; status?: string; messageId?: string; payoutRequestId?: string }>;
 }) {
   const user = await requireAdmin();
   const { id } = await params;
@@ -180,6 +183,21 @@ export default async function ProfesseurDetailPage({
           orderBy: { paidAt: "desc" },
           take: 50,
         },
+        payoutRequests: {
+          include: {
+            payoutRecord: { select: { reference: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        },
+        adminMessages: {
+          include: {
+            booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
+            admin: { select: { name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        },
         _count: { select: { bookings: true, reviews: true } },
       },
     }),
@@ -247,6 +265,22 @@ export default async function ProfesseurDetailPage({
     reference: booking.reference,
     subjectName: booking.subjectName,
     levelName: booking.levelName,
+  }));
+  const adminMessages: TeacherAdminMessageItem[] = teacher.adminMessages.map((message) => ({
+    id: message.id,
+    teacherId: message.teacherId,
+    bookingId: message.bookingId,
+    sender: message.sender,
+    subject: message.subject,
+    message: message.message,
+    priority: message.priority,
+    status: message.status,
+    readByAdminAt: message.readByAdminAt?.toISOString() ?? null,
+    readByTeacherAt: message.readByTeacherAt?.toISOString() ?? null,
+    resolvedAt: message.resolvedAt?.toISOString() ?? null,
+    createdAt: message.createdAt.toISOString(),
+    booking: message.booking,
+    admin: message.admin,
   }));
   const missionMessageBookings = teacher.bookings.slice(0, 25).map((booking) => {
     const settlement = hasVerifiedPayDunyaClientPayment(booking)
@@ -318,6 +352,7 @@ export default async function ProfesseurDetailPage({
     reference: record.reference,
     amount: record.amount,
     method: record.method,
+    paymentPhone: record.paymentPhone,
     note: record.note,
     status: record.status,
     paidAt: record.paidAt.toISOString(),
@@ -327,6 +362,19 @@ export default async function ProfesseurDetailPage({
       amount: allocation.amount,
       booking: allocation.booking,
     })),
+  }));
+  const payoutRequests = teacher.payoutRequests.map((request) => ({
+    id: request.id,
+    reference: request.reference,
+    amount: request.amount,
+    method: request.method,
+    paymentPhone: request.paymentPhone,
+    note: request.note,
+    status: request.status,
+    adminNote: request.adminNote,
+    createdAt: request.createdAt.toISOString(),
+    reviewedAt: request.reviewedAt?.toISOString() ?? null,
+    payoutRecord: request.payoutRecord,
   }));
   const ledgerRows = teacher.bookings.map((booking) => {
     const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
@@ -376,6 +424,16 @@ export default async function ProfesseurDetailPage({
     rating,
     count: publishedReviews.filter((review) => review.rating === rating).length,
   }));
+  const effectivePublicRating = teacher.ratingCount > 0
+    ? teacher.rating
+    : teacher.adminRatingPublic && teacher.adminRating > 0
+      ? teacher.adminRating
+      : teacher.rating;
+  const effectiveRatingSource = teacher.ratingCount > 0
+    ? `${teacher.ratingCount} avis client(s)`
+    : teacher.adminRatingPublic && teacher.adminRating > 0
+      ? "note admin publique"
+      : "aucune note publique";
   const payoutProgress = totalNet > 0 ? Math.min(100, Math.round((alreadyPaid / totalNet) * 100)) : 0;
   const restrictiveStatus = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"].includes(teacher.status);
   const openTasksCount = teacher.tasks.filter((task) => !["DONE", "CANCELLED"].includes(task.status)).length;
@@ -436,10 +494,25 @@ export default async function ProfesseurDetailPage({
               />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Note {teacher.rating.toFixed(1)}/5 ({teacher.ratingCount} avis)</span>
+              <span className="flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Note {effectivePublicRating.toFixed(1)}/5 ({effectiveRatingSource})</span>
               <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {teacher.commune ?? "—"}</span>
               <span className="flex items-center gap-1"><Phone className="h-4 w-4" /> {teacher.phone}</span>
               {teacher.email && <span className="flex items-center gap-1"><Mail className="h-4 w-4" /> {teacher.email}</span>}
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="h-4 w-4" />
+                Portail prof {teacher.portalAccessEnabled ? "activé" : "désactivé"}
+              </span>
+              {teacher.portalAccessEnabled && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  Connexion prof : {teacher.portalPhone || teacher.phone}
+                </span>
+              )}
+              {teacher.portalAccessEnabled && (
+                <Link href="/professeur/connexion" target="_blank" className="inline-flex min-h-10 items-center rounded-xl px-1 font-semibold text-primary hover:underline">
+                  Ouvrir la connexion professeur
+                </Link>
+              )}
             </div>
           </div>
           <div className="w-full sm:w-80">
@@ -477,32 +550,32 @@ export default async function ProfesseurDetailPage({
         nextBooking={nextControlBooking}
       />
 
-      <Card className="overflow-hidden border-violet-100 bg-white/95 shadow-sm">
-        <CardHeader className="border-b border-violet-100/80 bg-gradient-to-r from-[#1E2A78]/95 via-violet-700/90 to-[#1E2A78]/95 text-white">
+      <Card className="overflow-hidden border-[#E3E8F2] bg-white shadow-sm">
+        <CardHeader className="border-b border-[#E3E8F2] bg-white">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle className="text-base text-white">Espace professeur interne</CardTitle>
-              <p className="mt-1 max-w-3xl text-sm text-white/78">
+              <CardTitle className="text-base text-[#111827]">Espace professeur interne</CardTitle>
+              <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-[#64748B]">
                 Pilotage admin centralisé : statut, missions, messages à transmettre, fonds bloqués et reste à payer au professeur.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="secondary" className="rounded-full bg-white text-[#1E2A78] hover:bg-white/90">
+              <Button asChild size="sm" variant="outline" className="rounded-full border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href={`/admin/professeurs/${teacher.id}?tab=cours`}>
                   <BookOpen className="mr-1.5 h-4 w-4" /> Missions
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="secondary" className="rounded-full bg-white text-[#1E2A78] hover:bg-white/90">
+              <Button asChild size="sm" variant="outline" className="rounded-full border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href={`/admin/professeurs/${teacher.id}?tab=paiements`}>
                   <Wallet className="mr-1.5 h-4 w-4" /> Versements internes
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="secondary" className="rounded-full bg-white text-[#1E2A78] hover:bg-white/90">
+              <Button asChild size="sm" className="rounded-full bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                 <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=notify`}>
                   <Bell className="mr-1.5 h-4 w-4" /> Notifier
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="secondary" className="rounded-full bg-white text-[#1E2A78] hover:bg-white/90">
+              <Button asChild size="sm" variant="outline" className="rounded-full border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=reactivate`}>
                   <ShieldCheck className="mr-1.5 h-4 w-4" /> Réactiver
                 </Link>
@@ -512,22 +585,22 @@ export default async function ProfesseurDetailPage({
         </CardHeader>
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+            <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-violet-900/60">Statut opérationnel</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Statut opérationnel</p>
                   <div className="mt-2"><TeacherStatusBadge status={teacher.status} /></div>
                 </div>
-                <ShieldCheck className="h-5 w-5 text-violet-700" />
+                <ShieldCheck className="h-5 w-5 text-[#111B4D]" />
               </div>
-              <p className="mt-3 text-sm text-violet-950/72">
+              <p className="mt-3 text-sm font-medium leading-6 text-[#64748B]">
                 {restrictiveStatus
                   ? "Profil retiré du flux normal : vérifier les cours actifs et préparer un remplacement."
                   : "Profil exploitable par l'administration pour les réservations et missions."}
               </p>
             </div>
 
-            <div className="rounded-3xl border border-amber-100 bg-amber-50/75 p-4">
+            <div className="rounded-3xl border border-amber-200 bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-amber-900/65">À traiter</p>
@@ -540,7 +613,7 @@ export default async function ProfesseurDetailPage({
               </p>
             </div>
 
-            <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4">
+            <div className="rounded-3xl border border-[#CAD7F2] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-900/65">Fonds bloqués</p>
@@ -553,7 +626,7 @@ export default async function ProfesseurDetailPage({
               </p>
             </div>
 
-            <div className="rounded-3xl border border-violet-100 bg-white/85 p-4">
+            <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-violet-900/60">Déjà versé</p>
@@ -566,7 +639,7 @@ export default async function ProfesseurDetailPage({
               </p>
             </div>
 
-            <div className="rounded-3xl border border-red-100 bg-red-50/70 p-4">
+            <div className="rounded-3xl border border-red-200 bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-red-900/65">Reste à payer</p>
@@ -574,8 +647,8 @@ export default async function ProfesseurDetailPage({
                 </div>
                 <Wallet className="h-5 w-5 text-red-700" />
               </div>
-              <div className="mt-3 h-2 rounded-full bg-white/80">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#1E2A78] to-violet-600" style={{ width: `${payoutProgress}%` }} />
+              <div className="mt-3 h-2 rounded-full bg-[#E5E7EB]">
+                <div className="h-full rounded-full bg-[#111B4D]" style={{ width: `${payoutProgress}%` }} />
               </div>
               <p className="mt-2 text-xs font-medium text-red-950/68">{payoutProgress}% du net historique déjà enregistré comme payé.</p>
             </div>
@@ -644,7 +717,7 @@ export default async function ProfesseurDetailPage({
           <TeacherOperationsClient
             teacherId={teacher.id}
             teacherName={teacher.professionalName || teacher.fullName}
-            teacherPhone={teacher.phone}
+            teacherPhone={teacher.defaultPayoutPhone || teacher.phone}
             bookings={taskBookingOptions}
             initialAction={sp.action}
             initialStatus={sp.status}
@@ -659,6 +732,7 @@ export default async function ProfesseurDetailPage({
           <TabsTrigger value="tarifs">Tarifs</TabsTrigger>
           <TabsTrigger value="activite">Activité</TabsTrigger>
           <TabsTrigger value="operationnel">Opérationnel</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="taches">Tâches</TabsTrigger>
           <TabsTrigger value="cours">Cours</TabsTrigger>
           <TabsTrigger value="paiements">Paiements</TabsTrigger>
@@ -683,6 +757,10 @@ export default async function ProfesseurDetailPage({
                 <InfoRow label="Quartier" value={teacher.quartier || "—"} />
                 <InfoRow label="Adresse (indice)" value={teacher.addressHint || "—"} />
                 <Separator />
+                <InfoRow label="Moyen paiement prof" value={teacher.defaultPayoutMethod ? paymentMethodLabel(teacher.defaultPayoutMethod) : "À renseigner"} />
+                <InfoRow label="Numéro paiement prof" value={teacher.defaultPayoutPhone || "À renseigner"} />
+                {teacher.payoutInstructions && <InfoRow label="Consigne paiement" value={teacher.payoutInstructions} />}
+                <Separator />
                 <InfoRow label="Titre" value={teacher.jobTitle} />
                 <InfoRow label="Type de profil" value={teacher.profileType} />
                 <InfoRow label="Expérience" value={`${teacher.experienceYears} an(s)`} />
@@ -691,6 +769,20 @@ export default async function ProfesseurDetailPage({
                 <div>
                   <p className="text-xs text-muted-foreground">Bio</p>
                   <p className="mt-1 text-foreground">{teacher.bio}</p>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-xs text-muted-foreground">Mini CV structuré</p>
+                  <div className="mt-2">
+                    <TeacherMiniCv
+                      careerSummary={teacher.careerSummary}
+                      skills={teacher.skills}
+                      workHistory={teacher.workHistory}
+                      certifications={teacher.certifications || teacher.diploma}
+                      teachingAchievements={teacher.teachingAchievements}
+                      learnersCoached={teacher.learnersCoached}
+                    />
+                  </div>
                 </div>
                 {teacher.internalNote && (
                   <>
@@ -905,6 +997,17 @@ export default async function ProfesseurDetailPage({
           <TeacherActivityTimeline logs={actionLogs} warnings={teacher.warnings} sanctions={teacher.sanctions} />
         </TabsContent>
 
+        {/* MESSAGES */}
+        <TabsContent value="messages" className="space-y-4">
+          <TeacherAdminMessagesClient
+            teacherId={teacher.id}
+            teacherName={teacher.professionalName || teacher.fullName}
+            messages={adminMessages}
+            bookings={taskBookingOptions}
+            focusMessageId={sp.messageId ?? null}
+          />
+        </TabsContent>
+
         {/* TACHES */}
         <TabsContent value="taches" className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1083,6 +1186,29 @@ export default async function ProfesseurDetailPage({
             pendingAdjustments={pendingAdjustments}
           />
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BriefcaseBusiness className="h-4 w-4 text-[#111B4D]" />
+                Contexte professeur lié à la comptabilité
+              </CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ce volet financier est rattaché à la même fiche interne : parcours, compétences, missions réalisées, paiements et retenues restent centralisés sur ce professeur.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <TeacherMiniCv
+                compact
+                careerSummary={teacher.careerSummary}
+                skills={teacher.skills}
+                workHistory={teacher.workHistory}
+                certifications={teacher.certifications || teacher.diploma}
+                teachingAchievements={teacher.teachingAchievements}
+                learnersCoached={teacher.learnersCoached}
+              />
+            </CardContent>
+          </Card>
+
           {targetLedgerRow && (
             <Card className="border-[#1E2A78]/20 bg-blue-50/80 shadow-sm">
               <CardContent className="space-y-4 p-4">
@@ -1233,14 +1359,17 @@ export default async function ProfesseurDetailPage({
           <TeacherPayoutClient
             teacherId={teacher.id}
             teacherName={teacher.professionalName || teacher.fullName}
-            teacherPhone={teacher.phone}
+            teacherPhone={teacher.defaultPayoutPhone || teacher.phone}
+            teacherDefaultPayoutMethod={teacher.defaultPayoutMethod}
             targetBookingId={targetBookingId}
+            targetPayoutRequestId={sp.payoutRequestId ?? null}
             dueAmount={netToPay}
             grossDueAmount={toPay}
             appliedAdjustments={appliedAdjustments}
             pendingAdjustments={pendingAdjustments}
             paidAmount={alreadyPaid}
             records={payoutRecords}
+            payoutRequests={payoutRequests}
             ledgerRows={ledgerRows.map((row) => ({
               ...row,
               scheduledDate: row.scheduledDate.toISOString(),
@@ -1416,7 +1545,7 @@ export default async function ProfesseurDetailPage({
                   const warningMessage = [
                     `Bonjour ${teacher.professionalName || teacher.fullName},`,
                     "",
-                    "Avertissement MonProf CI.",
+                    "Avertissement Compétence.",
                     warning.booking ? `Réservation : ${warning.booking.reference}` : "",
                     `Niveau : ${warningLevel}`,
                     `Motif : ${warningReason}`,
@@ -1517,7 +1646,8 @@ export default async function ProfesseurDetailPage({
               <CardHeader><CardTitle className="text-base">Synthèse des avis clients</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                  <InfoBox label="Note publique" value={`${teacher.rating.toFixed(1)}/5`} />
+                  <InfoBox label="Note publique" value={`${effectivePublicRating.toFixed(1)}/5`} />
+                  <InfoBox label="Note admin" value={teacher.adminRating > 0 ? `${teacher.adminRating.toFixed(1)}/5` : "Non noté"} />
                   <InfoBox label="Avis publiés" value={`${publishedReviews.length}`} />
                   <InfoBox label="Avis masqués" value={`${hiddenReviews}`} />
                   <InfoBox label="Avis critiques" value={`${criticalReviews.length}`} danger={criticalReviews.length > 0} />
@@ -1538,7 +1668,7 @@ export default async function ProfesseurDetailPage({
                   })}
                 </div>
                 <p className="rounded-2xl border border-violet-100 bg-violet-50/60 p-3 text-xs leading-relaxed text-muted-foreground">
-                  La note publique vient uniquement des avis clients publiés. Les notes admin ci-dessous restent internes.
+                  Si aucun avis client n'est encore publié, l'administration peut utiliser une note plateforme visible publiquement. Les commentaires internes restent réservés au dashboard admin.
                 </p>
                 <div className={reviewDecision.tone === "red" ? "rounded-3xl border border-red-100 bg-red-50/75 p-4" : reviewDecision.tone === "amber" ? "rounded-3xl border border-amber-100 bg-amber-50/75 p-4" : "rounded-3xl border border-blue-100 bg-blue-50/65 p-4"}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1571,6 +1701,9 @@ export default async function ProfesseurDetailPage({
                   internalNote={teacher.internalNote}
                   operationalComment={teacher.operationalComment}
                   qualityScore={teacher.qualityScore}
+                  adminRating={teacher.adminRating}
+                  adminRatingNote={teacher.adminRatingNote}
+                  adminRatingPublic={teacher.adminRatingPublic}
                 />
               </CardContent>
             </Card>

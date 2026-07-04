@@ -172,6 +172,7 @@ export default async function AdminProfesseursAPayerPage() {
                     total={g.total}
                     count={g.rows.length}
                     teacherName={g.teacher.professionalName || g.teacher.fullName}
+                    teacherPhone={g.teacher.phone}
                     pendingRetentions={g.pendingRetentions}
                     retainedTotal={g.retainedTotal}
                   />

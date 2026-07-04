@@ -15,6 +15,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -32,11 +33,24 @@ type Booking = {
   status: string;
   paymentStatus: string;
   totalPrice: number;
+  totalClientPays?: number;
+  paymentServiceFeeAmount?: number;
+  cancellationRefundAmount?: number;
   commissionAmount: number;
   teacherNetAmount: number;
   teacherPaidAmount: number;
   teacherPaymentAdjustments?: { amount: number; status: string; bookingId?: string | null }[];
   transactions?: { amount: number; type: string; status: string }[];
+  clientRefundRequests?: {
+    id: string;
+    reference: string;
+    amount: number;
+    method: string;
+    paymentPhone: string;
+    accountName?: string | null;
+    status: string;
+    externalReference?: string | null;
+  }[];
   teacher: { id: string; fullName: string; professionalName: string | null; photoUrl: string | null; phone: string; badgeVerified: boolean };
   client: { name: string; phone: string | null };
   subjectName: string;
@@ -87,6 +101,10 @@ type ReplacementSuggestion = {
   };
 };
 
+function normalizePaymentPhone(value: string) {
+  return value.replace(/[^\d+]/g, "").trim();
+}
+
 export function BookingActionsClient({ booking }: { booking: Booking }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -95,6 +113,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [payTeacherOpen, setPayTeacherOpen] = useState(false);
   const [changeTeacherOpen, setChangeTeacherOpen] = useState(sp.get("action") === "replace");
   const [newTeacherId, setNewTeacherId] = useState("");
   const [availableTeachers, setAvailableTeachers] = useState<ReplacementSuggestion[]>([]);
@@ -111,12 +130,21 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [cancelActor, setCancelActor] = useState<"ADMIN" | "TEACHER" | "CLIENT">("ADMIN");
   const [cancelReason, setCancelReason] = useState<(typeof CANCELLATION_REASONS)[number]>("Autre");
   const [cancelDesc, setCancelDesc] = useState("Annulation décidée par l'administration.");
+  const [payTeacherMethod, setPayTeacherMethod] = useState("WAVE");
+  const [payTeacherPhone, setPayTeacherPhone] = useState(booking.teacher.phone ?? "");
+  const [refundExternalReference, setRefundExternalReference] = useState("");
   const didAutoPay = useRef(false);
   const didAutoReplace = useRef(false);
   const paidAmount = booking.transactions
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0);
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount }, new Date(), cancelActor);
+  const normalizedPayTeacherPhone = normalizePaymentPhone(payTeacherPhone);
+  const payTeacherPhoneInvalid = normalizedPayTeacherPhone.length < 8 || normalizedPayTeacherPhone.length > 20;
+  const latestRefundRequest = booking.clientRefundRequests?.[0] ?? null;
+  const refundableAmount = booking.cancellationRefundAmount || Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
+  const refundDetailsMissing = refundableAmount > 0 && !latestRefundRequest;
+  const refundReferenceInvalid = refundExternalReference.trim().length < 3;
 
   const doAction = async (action: string, extra?: Record<string, any>) => {
     setLoading(action);
@@ -133,6 +161,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       setDisputeOpen(false);
       setNotifyOpen(false);
       setCancelOpen(false);
+      setPayTeacherOpen(false);
       router.refresh();
     } catch (e: any) {
       toast.error(e.message);
@@ -147,7 +176,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
     const action = sp.get("action");
     if (action === "pay" && booking.paymentStatus === "TO_PAY_TEACHER") {
       didAutoPay.current = true;
-      queueMicrotask(() => doAction("pay_teacher"));
+      queueMicrotask(() => setPayTeacherOpen(true));
     }
   }, [booking.paymentStatus, sp]);
 
@@ -320,7 +349,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   }
   if (paymentStatus === "TO_PAY_TEACHER") {
     actions.push(
-      <AlertDialog key="pay">
+      <AlertDialog key="pay" open={payTeacherOpen} onOpenChange={setPayTeacherOpen}>
         <AlertDialogTrigger asChild>
           <Button variant="default" disabled={!!loading}>
             {loading === "pay_teacher" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Banknote className="mr-1.5 h-4 w-4" />}
@@ -332,12 +361,51 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
             <AlertDialogTitle>Payer le professeur ?</AlertDialogTitle>
             <AlertDialogDescription>
               Vous allez libérer le paiement de <strong>{formatFCFA(teacherRemainingAmount)}</strong> (reste net) à {booking.teacher.professionalName || booking.teacher.fullName}.
-              La commission plateforme ({formatFCFA(booking.commissionAmount)}) reste acquise. Action irréversible.
+              Saisissez le moyen et le numéro exact du dépôt. Un reçu comptable sera créé automatiquement.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-3 py-2 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Méthode</Label>
+              <Select value={payTeacherMethod} onValueChange={setPayTeacherMethod}>
+                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WAVE">Wave</SelectItem>
+                  <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
+                  <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
+                  <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Numéro de paiement</Label>
+              <Input
+                inputMode="tel"
+                value={payTeacherPhone}
+                onChange={(event) => setPayTeacherPhone(event.target.value)}
+                placeholder="Ex : +225 07 00 00 00 00"
+                className="mt-1"
+              />
+              <p className={payTeacherPhoneInvalid ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
+                Ce numéro figurera sur le reçu du professeur.
+              </p>
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => doAction("pay_teacher")}>Confirmer le paiement</AlertDialogAction>
+            <AlertDialogAction
+              disabled={payTeacherPhoneInvalid || loading === "pay_teacher"}
+              onClick={(event) => {
+                event.preventDefault();
+                if (payTeacherPhoneInvalid) {
+                  toast.error("Saisissez le numéro exact du paiement Mobile Money.");
+                  return;
+                }
+                doAction("pay_teacher", { method: payTeacherMethod, paymentPhone: normalizedPayTeacherPhone });
+              }}
+            >
+              Confirmer le paiement
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -402,7 +470,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
             <div className="rounded-3xl border border-orange-100 bg-orange-50/65 p-4">
               <p className="font-semibold text-orange-950">{cancellationPolicy.label}</p>
               <p className="mt-1 text-sm text-orange-950/72">{cancellationPolicy.description}</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-4">
                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Base de calcul</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.baseAmount)}</p>
@@ -410,6 +478,10 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Frais retenus</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.feeAmount)}</p>
+                </div>
+                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                  <p className="text-[11px] font-medium text-muted-foreground">Frais service</p>
+                  <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.serviceFeeAmount)}</p>
                 </div>
                 <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Remboursement</p>
@@ -445,24 +517,68 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       </Dialog>
     );
   }
-  if (paymentStatus === "BLOCKED" || paymentStatus === "VALIDATED" || paymentStatus === "TO_PAY_TEACHER" || paymentStatus === "TEACHER_PAID") {
+  if (["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "DISPUTED", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "PARTIALLY_REFUNDED", "RETAINED"].includes(paymentStatus)) {
     destructives.push(
       <AlertDialog key="refund">
         <AlertDialogTrigger asChild>
-          <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={!!loading}>
-            <RefreshCw className="mr-1.5 h-4 w-4" /> Rembourser
+          <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" disabled={!!loading || refundDetailsMissing || refundableAmount <= 0}>
+            <RefreshCw className="mr-1.5 h-4 w-4" />
+            {refundDetailsMissing ? "Numéro client attendu" : "Rembourser"}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Rembourser le client ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le client sera remboursé de <strong>{formatFCFA(booking.totalPrice)}</strong>. Une transaction REFUND sera créée.
+              Le client sera remboursé de <strong>{formatFCFA(refundableAmount)}</strong>.
+              Les frais de service paiement ne sont pas inclus dans ce dépôt.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            {latestRefundRequest ? (
+              <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm">
+                <p className="font-semibold text-[#111827]">{latestRefundRequest.reference} · {latestRefundRequest.status}</p>
+                <p className="mt-1 text-[#64748B]">
+                  {latestRefundRequest.method} · {latestRefundRequest.paymentPhone}
+                  {latestRefundRequest.accountName ? ` · ${latestRefundRequest.accountName}` : ""}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#64748B]">
+                Le client doit d'abord renseigner le moyen, le numéro et le titulaire du compte de remboursement.
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="refundExternalReference">Référence du dépôt</Label>
+              <Input
+                id="refundExternalReference"
+                value={refundExternalReference}
+                onChange={(event) => setRefundExternalReference(event.target.value)}
+                placeholder="Ex: Wave TX-9344, reçu Orange Money..."
+              />
+              <p className="text-xs text-muted-foreground">Cette référence sera visible dans l'historique et la facture de remboursement.</p>
+            </div>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Retour</AlertDialogCancel>
-            <AlertDialogAction onClick={() => doAction("refund")} className="bg-red-600 hover:bg-red-700">Rembourser</AlertDialogAction>
+            <AlertDialogAction
+              disabled={refundDetailsMissing || refundReferenceInvalid || loading === "refund"}
+              onClick={(event) => {
+                event.preventDefault();
+                if (refundDetailsMissing) {
+                  toast.error("Le client doit d'abord renseigner ses coordonnées de remboursement.");
+                  return;
+                }
+                if (refundReferenceInvalid) {
+                  toast.error("Saisissez la référence du dépôt.");
+                  return;
+                }
+                doAction("refund", { externalReference: refundExternalReference.trim() });
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remboursement effectué
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

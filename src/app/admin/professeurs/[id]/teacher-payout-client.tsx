@@ -26,6 +26,7 @@ type PayoutRecord = {
   reference: string;
   amount: number;
   method: string | null;
+  paymentPhone?: string | null;
   note: string | null;
   status: string;
   paidAt: string;
@@ -35,6 +36,20 @@ type PayoutRecord = {
     amount: number;
     booking: { id: string; reference: string; subjectName: string; levelName: string };
   }[];
+};
+
+type PayoutRequest = {
+  id: string;
+  reference: string;
+  amount: number;
+  method: string;
+  paymentPhone: string;
+  note: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  payoutRecord?: { reference: string } | null;
 };
 
 type AccountingLedgerRow = {
@@ -55,10 +70,21 @@ type AccountingLedgerRow = {
 const MAX_REFERENCE_LENGTH = 80;
 const MAX_NOTE_LENGTH = 500;
 
+function normalizePaymentPhone(value: string) {
+  return value.replace(/[^\d+]/g, "").trim();
+}
+
 const PAYOUT_RECORD_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Brouillon",
   PAID: "Payé",
   CANCELLED: "Annulé",
+};
+
+const PAYOUT_REQUEST_STATUS_LABELS: Record<string, string> = {
+  PENDING: "En attente",
+  PAID: "Payée",
+  REJECTED: "Rejetée",
+  CANCELLED: "Annulée",
 };
 
 const ACCOUNTING_STATUS_LABELS: Record<string, string> = {
@@ -66,6 +92,8 @@ const ACCOUNTING_STATUS_LABELS: Record<string, string> = {
   VALIDATED: "Fonds validés",
   TO_PAY_TEACHER: "À payer",
   TEACHER_PAID: "Professeur payé",
+  REFUND_PENDING: "Remboursement à traiter",
+  PARTIAL_REFUND_PENDING: "Remboursement partiel à traiter",
   REFUNDED: "Remboursé",
   FAILED: "Échec",
 };
@@ -77,6 +105,8 @@ const ACCOUNTING_FILTERS = [
   { value: "TO_PAY_TEACHER", label: "À payer" },
   { value: "TEACHER_PAID", label: "Payé" },
   { value: "DISPUTED", label: "Litige" },
+  { value: "REFUND_PENDING", label: "Remb. à traiter" },
+  { value: "PARTIAL_REFUND_PENDING", label: "Remb. partiel à traiter" },
   { value: "REFUNDED", label: "Remboursé" },
   { value: "FAILED", label: "Échec" },
 ];
@@ -85,7 +115,9 @@ export function TeacherPayoutClient({
   teacherId,
   teacherName,
   teacherPhone,
+  teacherDefaultPayoutMethod,
   targetBookingId,
+  targetPayoutRequestId,
   dueAmount,
   grossDueAmount,
   appliedAdjustments,
@@ -93,11 +125,14 @@ export function TeacherPayoutClient({
   paidAmount,
   records,
   ledgerRows,
+  payoutRequests,
 }: {
   teacherId: string;
   teacherName: string;
   teacherPhone?: string | null;
+  teacherDefaultPayoutMethod?: string | null;
   targetBookingId?: string | null;
+  targetPayoutRequestId?: string | null;
   dueAmount: number;
   grossDueAmount: number;
   appliedAdjustments: number;
@@ -105,6 +140,7 @@ export function TeacherPayoutClient({
   paidAmount: number;
   records: PayoutRecord[];
   ledgerRows: AccountingLedgerRow[];
+  payoutRequests: PayoutRequest[];
 }) {
   const router = useRouter();
   const targetRow = useMemo(
@@ -113,20 +149,37 @@ export function TeacherPayoutClient({
   );
   const targetPayableRow = targetRow && targetRow.paymentStatus === "TO_PAY_TEACHER" && targetRow.remaining > 0 ? targetRow : null;
   const payoutLimit = targetPayableRow ? targetPayableRow.remaining : dueAmount;
-  const [amount, setAmount] = useState(payoutLimit > 0 ? String(payoutLimit) : "");
-  const [method, setMethod] = useState("WAVE");
+  const initialRequest = payoutRequests.find((request) => request.id === targetPayoutRequestId && request.status === "PENDING" && request.amount <= payoutLimit) ?? null;
+  const [amount, setAmount] = useState(initialRequest ? String(initialRequest.amount) : payoutLimit > 0 ? String(payoutLimit) : "");
+  const [method, setMethod] = useState(initialRequest?.method ?? teacherDefaultPayoutMethod ?? "WAVE");
+  const [paymentPhone, setPaymentPhone] = useState(initialRequest?.paymentPhone ?? teacherPhone ?? "");
+  const [paymentPhoneConfirm, setPaymentPhoneConfirm] = useState(initialRequest?.paymentPhone ?? teacherPhone ?? "");
   const [reference, setReference] = useState("");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(initialRequest ? buildPayoutRequestNote(initialRequest) : "");
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(initialRequest?.id ?? null);
   const [ledgerQuery, setLedgerQuery] = useState("");
   const [ledgerStatus, setLedgerStatus] = useState("all");
   const [ledgerStart, setLedgerStart] = useState("");
   const [ledgerEnd, setLedgerEnd] = useState("");
   const [loading, setLoading] = useState(false);
+  const [requestActionLoading, setRequestActionLoading] = useState<string | null>(null);
 
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
+  const activeRequest = useMemo(
+    () => activeRequestId ? payoutRequests.find((request) => request.id === activeRequestId) ?? null : null,
+    [activeRequestId, payoutRequests],
+  );
+  const normalizedPaymentPhone = normalizePaymentPhone(paymentPhone);
+  const normalizedPaymentPhoneConfirm = normalizePaymentPhone(paymentPhoneConfirm);
   const referenceTooLong = reference.trim().length > MAX_REFERENCE_LENGTH;
   const noteTooLong = note.trim().length > MAX_NOTE_LENGTH;
-  const canSubmit = cleanAmount > 0 && cleanAmount <= payoutLimit && !referenceTooLong && !noteTooLong && !loading;
+  const requestAmountMismatch = activeRequest ? cleanAmount !== activeRequest.amount : false;
+  const requestMethodMismatch = activeRequest ? method !== activeRequest.method : false;
+  const phoneInvalid = normalizedPaymentPhone.length < 8 || normalizedPaymentPhone.length > 20;
+  const phoneConfirmationMismatch = !activeRequest && normalizedPaymentPhone !== normalizedPaymentPhoneConfirm;
+  const phoneMismatchVisible = !activeRequest && normalizedPaymentPhone.length > 0 && normalizedPaymentPhoneConfirm.length > 0 && phoneConfirmationMismatch;
+  const phoneConfirmed = !activeRequest && !phoneInvalid && normalizedPaymentPhone === normalizedPaymentPhoneConfirm;
+  const canSubmit = cleanAmount > 0 && cleanAmount <= payoutLimit && !requestAmountMismatch && !requestMethodMismatch && !phoneInvalid && !phoneConfirmationMismatch && !referenceTooLong && !noteTooLong && !loading;
   const projectedRemainingAfterPayment = Math.max(0, payoutLimit - Math.min(cleanAmount, payoutLimit));
   const payableRows = useMemo(
     () => ledgerRows.filter((row) => row.remaining > 0 && row.paymentStatus === "TO_PAY_TEACHER"),
@@ -211,7 +264,7 @@ export function TeacherPayoutClient({
     return [
       `Bonjour ${teacherName},`,
       "",
-      "Voici votre situation de paiement MonProf CI :",
+      "Voici votre situation de paiement Compétence :",
       `Montant déjà enregistré comme payé : ${formatFCFA(paidAmount)}`,
       `Montant actuellement prêt à payer : ${formatFCFA(dueAmount)}`,
       blockedRows.length ? `Montant encore bloqué en attente de validation : ${formatFCFA(totalBlocked)}` : "",
@@ -260,7 +313,7 @@ export function TeacherPayoutClient({
       "Contrôles avant validation :",
       ...(controlLines.length ? controlLines : ["Aucune alerte comptable particulière."]),
       "",
-      "Décision admin : vérifier la preuve opérateur, enregistrer le paiement dans MonProf CI, puis transmettre le reçu au professeur si nécessaire.",
+      "Décision admin : vérifier la preuve opérateur, enregistrer le paiement dans Compétence, puis transmettre le reçu au professeur si nécessaire.",
     ].filter(Boolean).join("\n");
   }, [
     appliedAdjustments,
@@ -455,6 +508,54 @@ export function TeacherPayoutClient({
     toast.success("Ordre de versement copié.");
   };
 
+  const prefillFromPayoutRequest = (request: PayoutRequest) => {
+    if (request.status !== "PENDING") return;
+    if (request.amount > payoutLimit) {
+      toast.error("Cette demande dépasse le montant actuellement payable.");
+      return;
+    }
+    setAmount(String(request.amount));
+    setMethod(request.method);
+    setPaymentPhone(request.paymentPhone);
+    setPaymentPhoneConfirm(request.paymentPhone);
+    setNote(buildPayoutRequestNote(request));
+    setActiveRequestId(request.id);
+    toast.success(`Demande ${request.reference} prête pour validation.`);
+  };
+
+  const reviewPayoutRequest = async (request: PayoutRequest, action: "reject" | "cancel") => {
+    if (request.status !== "PENDING") return;
+    const defaultReason = action === "reject"
+      ? "Demande rejetée : informations de paiement à corriger."
+      : "Demande annulée par l'administration.";
+    const adminNote = window.prompt("Motif à envoyer au professeur", defaultReason)?.trim();
+    if (!adminNote) {
+      toast.error("Le motif admin est obligatoire.");
+      return;
+    }
+
+    setRequestActionLoading(request.id);
+    try {
+      const res = await fetch(`/api/admin/teacher-payout-requests/${request.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, adminNote }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Traitement de la demande impossible.");
+      if (activeRequestId === request.id) {
+        setActiveRequestId(null);
+        setNote("");
+      }
+      toast.success(action === "reject" ? "Demande rejetée et professeur notifié." : "Demande annulée et historisée.");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Traitement de la demande impossible.");
+    } finally {
+      setRequestActionLoading(null);
+    }
+  };
+
   const submit = async () => {
     if (!canSubmit) return;
     setLoading(true);
@@ -462,13 +563,26 @@ export function TeacherPayoutClient({
       const res = await fetch("/api/admin/teacher-payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherId, bookingId: targetPayableRow?.id, amount: cleanAmount, method, reference, note }),
+        body: JSON.stringify({
+          teacherId,
+          bookingId: targetPayableRow?.id,
+          amount: cleanAmount,
+          method,
+          paymentPhone: normalizedPaymentPhone,
+          paymentPhoneConfirm: normalizedPaymentPhoneConfirm,
+          reference,
+          note,
+          requestId: activeRequest?.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Paiement impossible.");
       toast.success(`Paiement enregistré : ${formatFCFA(cleanAmount)}`);
       setReference("");
       setNote("");
+      setPaymentPhone(teacherPhone ?? "");
+      setPaymentPhoneConfirm(teacherPhone ?? "");
+      setActiveRequestId(null);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Paiement impossible.");
@@ -590,10 +704,84 @@ export function TeacherPayoutClient({
           </div>
         )}
 
+        {payoutRequests.length > 0 && (
+          <div className="rounded-3xl border border-violet-100 bg-white/88 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-sm font-black text-foreground">Demandes de paiement reçues</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Le professeur peut demander un paiement. L'administration contrôle le solde, exécute le dépôt, puis enregistre le reçu officiel.
+                </p>
+              </div>
+              <Badge variant="outline" className="w-fit border-violet-200 bg-white text-violet-800">
+                {payoutRequests.filter((request) => request.status === "PENDING").length} en attente
+              </Badge>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {payoutRequests.slice(0, 5).map((request) => {
+                const isPending = request.status === "PENDING";
+                const canUseRequest = isPending && request.amount <= payoutLimit;
+                const isActive = activeRequestId === request.id;
+                return (
+                  <div key={request.id} className={isActive ? "rounded-2xl border border-[#111B4D] bg-white p-3" : "rounded-2xl border border-[#E3E8F2] bg-white p-3"}>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-mono text-xs font-bold text-primary">{request.reference}</p>
+                          <Badge variant="outline" className={isPending ? "border-amber-200 bg-white text-amber-800" : "border-blue-200 bg-white text-blue-800"}>
+                            {PAYOUT_REQUEST_STATUS_LABELS[request.status] ?? request.status}
+                          </Badge>
+                          {request.payoutRecord?.reference && (
+                            <Badge variant="outline" className="border-blue-200 bg-white text-blue-800">
+                              Reçu {request.payoutRecord.reference}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(request.amount)} via {paymentMethodLabel(request.method)}</p>
+                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                          Numéro confirmé : {request.paymentPhone} · {formatDateTime(request.createdAt)}
+                        </p>
+                         {request.note && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{request.note}</p>}
+                         {request.adminNote && (
+                           <p className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
+                             Motif admin : {request.adminNote}
+                           </p>
+                         )}
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                        <Button
+                          type="button"
+                          variant={isActive ? "default" : "outline"}
+                          disabled={!canUseRequest || requestActionLoading === request.id}
+                          onClick={() => prefillFromPayoutRequest(request)}
+                        >
+                          {isActive ? "Sélectionnée" : canUseRequest ? "Préremplir" : isPending ? "Solde insuffisant" : "Traitée"}
+                        </Button>
+                        {isPending && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="border-red-200 bg-white text-red-700 hover:bg-white"
+                            disabled={requestActionLoading === request.id}
+                            onClick={() => reviewPayoutRequest(request, "reject")}
+                          >
+                            {requestActionLoading === request.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-1.5 h-4 w-4" />}
+                            Rejeter
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-3xl border border-violet-100 bg-violet-50/35 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-black text-foreground">Contrôle comptable avant versement</p>
+              <p className="text-sm font-black text-foreground">Contrôle comptable et saisie du versement</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Vue interne : ce qui peut être payé, ce qui reste bloqué, et les lignes sensibles à vérifier avant d'envoyer l'argent.
               </p>
@@ -749,6 +937,17 @@ export function TeacherPayoutClient({
 
         {dueAmount > 0 ? (
           <div className="rounded-3xl border border-violet-100 bg-white/80 p-4">
+            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-foreground">Saisir un versement réel au professeur</p>
+                <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                  L'admin saisit le montant réellement déposé. Après validation, le système déduit automatiquement ce montant du reste dû et crée le reçu.
+                </p>
+              </div>
+              <Badge variant="outline" className="w-fit border-blue-200 bg-white text-blue-800">
+                Déduction automatique
+              </Badge>
+            </div>
             <div className="mb-4 rounded-3xl border border-blue-100 bg-blue-50/70 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
@@ -780,17 +979,22 @@ export function TeacherPayoutClient({
                 </div>
               </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-[1fr_180px_160px]">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_180px_1fr_1fr_170px]">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Montant payé</label>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Montant réellement payé au professeur</label>
                 <Input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Ex : 25000" />
                 {cleanAmount > payoutLimit && (
                   <p className="mt-1 text-xs font-medium text-red-700">Le montant dépasse le plafond de ce mode de paiement ({formatFCFA(payoutLimit)}).</p>
                 )}
+                {requestAmountMismatch && activeRequest && (
+                  <p className="mt-1 text-xs font-medium text-red-700">
+                    Cette demande professeur porte sur {formatFCFA(activeRequest.amount)}. Désélectionnez-la pour saisir un autre montant.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Méthode</label>
-                <Select value={method} onValueChange={setMethod}>
+                <Select value={method} onValueChange={setMethod} disabled={Boolean(activeRequest)}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="WAVE">Wave</SelectItem>
@@ -799,11 +1003,60 @@ export function TeacherPayoutClient({
                     <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
                   </SelectContent>
                 </Select>
+                {requestMethodMismatch && activeRequest ? (
+                  <p className="mt-1 text-xs font-medium text-red-700">
+                    Le moyen de paiement ne correspond pas à la demande professeur.
+                  </p>
+                ) : activeRequest ? (
+                  <p className="mt-1 text-xs font-medium text-blue-800">
+                    Moyen verrouillé depuis la demande professeur : {paymentMethodLabel(activeRequest.method)}.
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  Numéro de paiement
+                </label>
+                <Input
+                  inputMode="tel"
+                  value={paymentPhone}
+                  onChange={(event) => setPaymentPhone(event.target.value)}
+                  placeholder="Ex : +225 07 00 00 00 00"
+                  disabled={Boolean(activeRequest)}
+                />
+                {activeRequest ? (
+                  <p className="mt-1 text-xs font-medium text-blue-800">Numéro verrouillé depuis la demande professeur.</p>
+                ) : phoneInvalid ? (
+                  <p className="mt-1 text-xs font-medium text-red-700">Saisissez le numéro exact du dépôt Mobile Money.</p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">Ce numéro apparaîtra sur la facture/reçu.</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  Confirmer le numéro
+                </label>
+                <Input
+                  inputMode="tel"
+                  value={paymentPhoneConfirm}
+                  onChange={(event) => setPaymentPhoneConfirm(event.target.value)}
+                  placeholder="Retapez le numéro"
+                  disabled={Boolean(activeRequest)}
+                />
+                {activeRequest ? (
+                  <p className="mt-1 text-xs font-medium text-blue-800">Confirmation verrouillée depuis la demande professeur.</p>
+                ) : phoneMismatchVisible ? (
+                  <p className="mt-1 text-xs font-medium text-red-700">Les deux numéros ne correspondent pas.</p>
+                ) : phoneConfirmed ? (
+                  <p className="mt-1 text-xs font-medium text-blue-800">Numéro confirmé avant enregistrement.</p>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">Double saisie obligatoire pour éviter une erreur de dépôt.</p>
+                )}
               </div>
               <div className="flex items-end">
                 <Button className="w-full" disabled={!canSubmit} onClick={submit}>
                   {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
-                  Enregistrer
+                  Enregistrer le versement
                 </Button>
               </div>
             </div>
@@ -836,16 +1089,29 @@ export function TeacherPayoutClient({
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button type="button" variant="secondary" onClick={() => setAmount(String(payoutLimit))}>
-                {targetPayableRow ? "Payer cette réservation" : "Payer tout le reste"}
+                {targetPayableRow ? "Saisir cette réservation" : "Saisir tout le reste"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setAmount(String(Math.ceil(payoutLimit / 2)))}>
                 Paiement partiel 50%
               </Button>
+              {activeRequest && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setActiveRequestId(null);
+                    setPaymentPhone(teacherPhone ?? "");
+                    setPaymentPhoneConfirm(teacherPhone ?? "");
+                  }}
+                >
+                  Désélectionner demande
+                </Button>
+              )}
             </div>
           </div>
         ) : (
           <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4 text-sm font-medium text-blue-900">
-            Aucun reste à payer pour ce professeur.
+            Aucun reste à payer pour ce professeur. Le champ de saisie se réactive dès qu'une réservation passe au statut À payer.
           </div>
         )}
 
@@ -900,7 +1166,7 @@ export function TeacherPayoutClient({
         </div>
 
         <div className="space-y-3">
-          <p className="text-sm font-bold text-foreground">Versements enregistrés</p>
+          <p className="text-sm font-bold text-foreground">Factures / reçus de paiement</p>
           {records.length === 0 ? (
             <p className="rounded-3xl border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">Aucun versement interne enregistré.</p>
           ) : (
@@ -913,6 +1179,11 @@ export function TeacherPayoutClient({
                       <p className="text-sm text-muted-foreground">
                         {formatDateTime(record.paidAt)} {record.createdBy?.name ? `par ${record.createdBy.name}` : ""}
                       </p>
+                      {record.paymentPhone && (
+                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                          Numéro payé : {record.paymentPhone}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                       <Badge variant="outline">{paymentMethodLabel(record.method)}</Badge>
@@ -943,6 +1214,16 @@ export function TeacherPayoutClient({
       </CardContent>
     </Card>
   );
+}
+
+function buildPayoutRequestNote(request: PayoutRequest) {
+  const note = [
+    `Demande professeur ${request.reference}`,
+    `Moyen demandé : ${paymentMethodLabel(request.method)}`,
+    `Numéro de paiement confirmé : ${request.paymentPhone}`,
+    request.note ? `Note professeur : ${request.note}` : "",
+  ].filter(Boolean).join("\n");
+  return note.length > MAX_NOTE_LENGTH ? `${note.slice(0, MAX_NOTE_LENGTH - 3)}...` : note;
 }
 
 function escapeCsvValue(value: string | number) {

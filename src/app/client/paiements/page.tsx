@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
-import { ClientFocusPanel, ClientMetricStrip, ClientPageHeader } from "@/components/shared/client-page-primitives";
-import { PaymentStatusBadge } from "@/components/shared/status-badge";
+import {
+  ClientAppRail,
+  ClientFocusPanel,
+  ClientInfoPill,
+  ClientMetricStrip,
+  ClientPageHeader,
+  ClientSurface,
+} from "@/components/shared/client-page-primitives";
 import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatFCFA, formatDate, formatDateTime } from "@/lib/format";
-import { paymentMethodLabel } from "@/lib/payment-methods";
-import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText } from "lucide-react";
+import { ACTIVE_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/payment-methods";
+import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck } from "lucide-react";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +63,7 @@ export default async function PaiementsPage() {
     <div className="space-y-5">
       <ClientPageHeader
         eyebrow="Paiements"
-        title="Mes paiements"
+        title="Paiements"
         description="Consultez vos paiements sécurisés, remboursements et dossiers liés aux professeurs choisis."
       />
 
@@ -67,6 +72,15 @@ export default async function PaiementsPage() {
           { icon: WalletCards, label: "Dépensé", value: formatFCFA(totalDepense) },
           { icon: Wallet, label: "Bloqués", value: formatFCFA(fondsBloques), attention: fondsBloques > 0 },
           { icon: ArrowDownCircle, label: "Remboursé", value: formatFCFA(totalRembourse) },
+        ]}
+      />
+
+      <ClientAppRail
+        items={[
+          { href: "/client/paiements", icon: ReceiptText, label: "Historique", value: `${transactions.length} mouvement(s)`, active: true },
+          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations liées" },
+          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau cours" },
+          { href: "/client/support", icon: ShieldCheck, label: "Sécurité", value: "Litige ou remboursement" },
         ]}
       />
 
@@ -88,27 +102,22 @@ export default async function PaiementsPage() {
       )}
 
       {transactions.length === 0 ? (
-        <EmptyState
-          icon={WalletCards}
-          title="Aucune transaction"
-          description="Vos paiements apparaîtront ici après votre première réservation."
-        />
+        <PaymentEmptyState />
       ) : (
-        <Card className="overflow-hidden rounded-[1.35rem]">
-          <CardContent className="p-0">
+        <ClientSurface compact className="overflow-hidden p-0">
             {/* Desktop table */}
-            <div className="hidden 2xl:block">
+            <div className="hidden xl:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#E3E8F2] bg-white text-left text-xs uppercase tracking-wide text-[#64748B]">
-                    <th className="px-4 py-3 font-bold">Date</th>
-                    <th className="px-4 py-3 font-bold">Référence</th>
-                    <th className="px-4 py-3 font-bold">Professeur</th>
-                    <th className="px-4 py-3 font-bold">Matière</th>
-                    <th className="px-4 py-3 font-bold">Canal</th>
-                    <th className="px-4 py-3 text-right font-bold">Montant</th>
-                    <th className="px-4 py-3 font-bold">Statut</th>
-                    <th className="px-4 py-3 text-right font-bold">Action</th>
+                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold">Référence</th>
+                    <th className="px-4 py-3 font-semibold">Professeur</th>
+                    <th className="px-4 py-3 font-semibold">Matière</th>
+                    <th className="px-4 py-3 font-semibold">Canal</th>
+                    <th className="px-4 py-3 text-right font-semibold">Montant</th>
+                    <th className="px-4 py-3 font-semibold">Statut</th>
+                    <th className="px-4 py-3 text-right font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E3E8F2]">
@@ -118,7 +127,7 @@ export default async function PaiementsPage() {
                         <p>{formatDate(t.createdAt)}</p>
                         <p className="text-xs font-semibold">{formatDateTime(t.createdAt)}</p>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-[#111827]">{t.reference}</td>
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-[#111827]">{t.reference}</td>
                       <td className="px-4 py-3 text-[#111827]">
                         <div className="flex items-center gap-2">
                           <ProfessorImage
@@ -132,21 +141,21 @@ export default async function PaiementsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[#111827]">
-                        <p className="font-bold">{t.booking.subjectName}</p>
+                        <p className="font-semibold">{t.booking.subjectName}</p>
                         <p className="text-xs text-[#64748B]">{t.booking.levelName}</p>
                         <p className="mt-0.5 text-xs font-semibold text-[#64748B]">
                           {t.booking.scheduledDate ? formatDate(t.booking.scheduledDate) : t.booking.startDate ? `${formatDate(t.booking.startDate)} demandée` : "Date à confirmer"}
                         </p>
-                        {t.booking.schoolProgram && (
-                          <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-[#111B4D]">{t.booking.schoolProgram}</p>
-                        )}
                       </td>
                       <td className="px-4 py-3 text-[#64748B]">{clientPaymentChannelLabel(t.method)}</td>
-                      <td className="px-4 py-3 text-right font-black tabular-nums text-[#111827]">
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#111827]">
                         {t.type === "REFUND" ? "+" : ""}
                         <Money amount={t.amount} />
                       </td>
-                      <td className="px-4 py-3"><PaymentStatusBadge status={t.status} audience="client" /></td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-[#111827]">{getClientTransactionStatusLabel(t.type, t.status)}</p>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-[#64748B]">{getPaymentHint(t.type, t.status)}</p>
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <Button asChild size="sm" variant="outline">
                           <Link href={`/client/reservations/${t.booking.id}`}>
@@ -162,57 +171,91 @@ export default async function PaiementsPage() {
             </div>
 
             {/* Responsive cards */}
-            <div className="divide-y divide-[#E3E8F2] 2xl:hidden">
-              {transactions.map((t) => (
-                <div key={t.id} className="p-4">
-                  <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
-                    <p className="min-w-0 break-words font-mono text-xs font-black text-[#111827]">{t.reference}</p>
-                    <PaymentStatusBadge status={t.status} audience="client" />
+            <div className="divide-y divide-[#E3E8F2] xl:hidden">
+              {transactions.map((t) => {
+                const teacherName = t.booking.teacher.professionalName || t.booking.teacher.fullName;
+                const courseDate = t.booking.scheduledDate
+                  ? formatDate(t.booking.scheduledDate)
+                  : t.booking.startDate
+                    ? `${formatDate(t.booking.startDate)} demandée`
+                    : "Date à confirmer";
+                return (
+                  <div key={t.id} data-client-payment-card className="p-3.5 sm:p-4">
+                    <div className="grid gap-3 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <ProfessorImage
+                          photoUrl={t.booking.teacher.photoUrl}
+                          name={teacherName}
+                          size={52}
+                          shape="circle"
+                          verified={t.booking.teacher.badgeVerified}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-mono text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{t.reference}</p>
+                          <h2 className="mt-0.5 break-words text-base font-semibold leading-6 text-[#111827]">
+                            {t.booking.subjectName} · {t.booking.levelName}
+                          </h2>
+                          <p className="mt-0.5 break-words text-xs font-semibold leading-5 text-[#64748B]">
+                            {teacherName}
+                          </p>
+                        </div>
+                      </div>
+                      <ClientInfoPill
+                        label="Montant"
+                        value={<>{t.type === "REFUND" ? "+" : ""}<Money amount={t.amount} /></>}
+                        strong
+                        className="min-[520px]:min-w-32 min-[520px]:text-right"
+                      />
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                      <ClientInfoPill label="Date" value={courseDate} />
+                      <ClientInfoPill label="Canal" value={clientPaymentChannelLabel(t.method)} />
+                      <ClientInfoPill label="État" value={getClientTransactionStatusLabel(t.type, t.status)} className="min-[420px]:col-span-2" />
+                    </div>
+
+                    <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
+                      <p className="text-sm font-semibold text-[#111827]">Sécurité du paiement</p>
+                      <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{getPaymentHint(t.type, t.status)}</p>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
+                      <p className="text-xs font-medium leading-5 text-[#64748B]">
+                        Mouvement enregistré le {formatDate(t.createdAt)} dans le dossier {t.booking.reference}.
+                      </p>
+                      <Button asChild size="sm" className="min-h-11 rounded-2xl">
+                        <Link href={`/client/reservations/${t.booking.id}`}>
+                          Voir le dossier <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm font-bold text-[#111827]">{t.booking.subjectName} • {t.booking.levelName}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-[#64748B]">
-                    {t.booking.scheduledDate ? formatDate(t.booking.scheduledDate) : t.booking.startDate ? `${formatDate(t.booking.startDate)} demandée` : "Date à confirmer"}
-                  </p>
-                  {t.booking.schoolProgram && (
-                    <p className="mt-0.5 line-clamp-2 text-xs font-semibold text-[#111B4D]">{t.booking.schoolProgram}</p>
-                  )}
-                  <div className="mt-2 flex min-w-0 items-center gap-2 text-xs text-[#64748B]">
-                    <ProfessorImage
-                      photoUrl={t.booking.teacher.photoUrl}
-                      name={t.booking.teacher.professionalName || t.booking.teacher.fullName}
-                      size={32}
-                      shape="circle"
-                      verified={t.booking.teacher.badgeVerified}
-                    />
-                    <span className="min-w-0 break-words">{t.booking.teacher.professionalName || t.booking.teacher.fullName} • {formatDate(t.createdAt)}</span>
-                  </div>
-                  <div className="mt-3 flex flex-col gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
-                    <span className="text-xs font-semibold text-[#64748B]">
-                      {clientPaymentChannelLabel(t.method)}
-                    </span>
-                    <span className="font-black tabular-nums text-[#111827]">
-                      {t.type === "REFUND" ? "+" : ""}<Money amount={t.amount} />
-                    </span>
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    <p className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
-                      <ReceiptText className="mr-1 inline h-3.5 w-3.5" />
-                      {getPaymentHint(t.type, t.status)}
-                    </p>
-                    <Button asChild variant="outline" size="sm" className="min-h-11 rounded-2xl">
-                      <Link href={`/client/reservations/${t.booking.id}`}>
-                        Voir le dossier <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
+        </ClientSurface>
       )}
     </div>
   );
+}
+
+function getClientTransactionStatusLabel(type: string, status: string) {
+  if (type === "REFUND") return "Remboursement";
+  const labels: Record<string, string> = {
+    FAILED: "Paiement à finaliser",
+    RECEIVED: "Paiement reçu",
+    BLOCKED: "Paiement sécurisé",
+    VALIDATED: "Cours validé",
+    TO_PAY_TEACHER: "Traitement administratif",
+    TEACHER_PAID: "Cours clôturé",
+    DISPUTED: "Litige en cours",
+    REFUND_PENDING: "Remboursement en traitement",
+    PARTIAL_REFUND_PENDING: "Remboursement partiel en traitement",
+    REFUNDED: "Remboursé",
+    PARTIALLY_REFUNDED: "Remboursement partiel",
+    RETAINED: "Frais appliqués",
+  };
+  return labels[status] ?? "Transaction suivie";
 }
 
 function getPaymentHint(type: string, status: string) {
@@ -220,10 +263,61 @@ function getPaymentHint(type: string, status: string) {
   if (status === "BLOCKED") return "Paiement confirmé par PayDunya et gardé bloqué jusqu'à la confirmation du cours.";
   if (status === "TO_PAY_TEACHER") return "Cours confirmé : l'administration finalise le dossier.";
   if (status === "TEACHER_PAID") return "Cours clôturé dans votre espace client.";
+  if (status === "REFUND_PENDING" || status === "PARTIAL_REFUND_PENDING") return "L'administration traite le dépôt de remboursement.";
   if (status === "DISPUTED") return "Paiement suspendu pendant le traitement du litige.";
   return "Transaction suivie dans le dossier de réservation.";
 }
 
 function clientPaymentChannelLabel(method?: string | null) {
   return method ? paymentMethodLabel(method) : "PayDunya Checkout";
+}
+
+function PaymentEmptyState() {
+  return (
+    <div data-client-payment-empty>
+      <ClientSurface compact className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+              <ShieldCheck className="h-6 w-6" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Paiement sécurisé</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">Aucun paiement pour le moment</h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                Après réservation, le paiement se fait sur PayDunya. Compétence vérifie le retour serveur avant d'afficher la transaction ici.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="min-h-11 rounded-2xl">
+            <Link href="/client/rechercher">
+              <Search className="mr-2 h-4 w-4" />
+              Trouver un professeur
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-2 min-[520px]:grid-cols-3">
+          <ClientInfoPill label="Étape 1" value="Choisir un professeur" />
+          <ClientInfoPill label="Étape 2" value="Payer via PayDunya" />
+          <ClientInfoPill label="Étape 3" value="Fonds sécurisés" />
+        </div>
+
+        <div className="rounded-xl border border-[#E3E8F2] bg-white p-3">
+          <div className="flex items-center gap-2">
+            <LockKeyhole className="h-4 w-4 text-[#111B4D]" />
+            <p className="text-sm font-semibold text-[#111827]">Moyens acceptés sur PayDunya</p>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[560px]:grid-cols-4">
+            {ACTIVE_PAYMENT_METHODS.map((method) => (
+              <PaymentMethodLogo key={method} method={method} className="h-12 w-full min-w-0 rounded-xl" />
+            ))}
+          </div>
+          <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
+            Aucun numéro de paiement n'est saisi dans votre espace client. La validation vient du webhook PayDunya.
+          </p>
+        </div>
+      </ClientSurface>
+    </div>
+  );
 }

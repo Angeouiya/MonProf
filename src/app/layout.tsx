@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Providers } from "@/components/providers";
 
-const inter = Inter({
-  variable: "--font-inter",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MonProf CI — Professeurs vérifiés pour cours à domicile et en ligne",
+  title: "Compétence — Professeurs vérifiés pour cours à domicile et en ligne",
   description:
     "Plateforme ivoirienne de réservation de cours à domicile et en ligne avec des professeurs vérifiés, un paiement sécurisé et un suivi administratif complet.",
   keywords: [
@@ -28,18 +28,18 @@ export const metadata: Metadata = {
     "répétiteur",
     "cours en ligne",
     "Abidjan",
-    "MonProf CI",
+    "Compétence",
   ],
-  authors: [{ name: "MonProf CI" }],
+  authors: [{ name: "Compétence" }],
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
+    icon: "/images/brand/competence-icon.png",
+    shortcut: "/images/brand/competence-icon.png",
   },
   openGraph: {
-    title: "MonProf CI — Professeurs vérifiés en Côte d'Ivoire",
+    title: "Compétence — Professeurs vérifiés en Côte d'Ivoire",
     description:
       "Trouvez un professeur vérifié, réservez votre cours et payez en toute sécurité. Le professeur est payé seulement après confirmation du cours.",
-    siteName: "MonProf CI",
+    siteName: "Compétence",
     type: "website",
     locale: "fr_CI",
   },
@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body
         className="font-sans antialiased bg-background text-foreground"
       >

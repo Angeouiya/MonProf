@@ -8,6 +8,9 @@ import { hasVerifiedClientFunds, hasVerifiedPayDunyaClientPayment } from "@/lib/
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  if ((session.user as any).role !== "CLIENT") {
+    return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
+  }
   const userId = (session.user as any).id;
 
   const disputes = await db.dispute.findMany({

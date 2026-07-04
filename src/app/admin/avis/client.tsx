@@ -229,7 +229,7 @@ export function AvisClient({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={loading}>
+          <Button variant="ghost" size="icon" className="h-10 w-10" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
           </Button>
         </DropdownMenuTrigger>

@@ -5,6 +5,7 @@ import {
   Award,
   BadgeCheck,
   BookOpen,
+  BriefcaseBusiness,
   Calendar,
   CheckCircle2,
   Clock,
@@ -20,6 +21,7 @@ import { PublicLayout } from "@/components/layouts/public-layout";
 import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
+import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { db } from "@/lib/db";
 import { formatFCFA, formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
@@ -70,6 +72,12 @@ export default async function TeacherDetailPage({
     count: teacher.reviews.filter((r) => r.rating === rating).length,
   }));
   const totalReviews = teacher.reviews.length || teacher.ratingCount;
+  const displayRating = totalReviews > 0
+    ? teacher.rating
+    : teacher.adminRatingPublic && teacher.adminRating > 0
+      ? teacher.adminRating
+      : teacher.rating;
+  const displayRatingLabel = totalReviews > 0 ? "Avis" : "Note plateforme";
   const availableSlotCount = WEEK_DAYS.reduce(
     (total, day) => total + TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]).length,
     0,
@@ -83,6 +91,7 @@ export default async function TeacherDetailPage({
   const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
   const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
+  const sessionPriceLabel = formatFCFA(teacher.pricePerSession || teacher.pricePerHour || 0);
 
   const reserveHref = session?.user
     ? `/client/reserver?teacherId=${teacher.id}`
@@ -92,34 +101,34 @@ export default async function TeacherDetailPage({
     <PublicLayout>
       {/* Breadcrumb */}
       <div className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <Link href="/" className="inline-flex min-h-10 items-center rounded-full px-1 hover:text-[#111B4D]">Accueil</Link>
+        <div className="mx-auto hidden max-w-7xl px-4 py-3 sm:block sm:px-6 lg:px-8">
+          <nav className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B]">
+            <Link href="/" className="inline-flex min-h-10 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
-            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-full px-1 hover:text-[#111B4D]">Professeurs</Link>
+            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-xl px-1 hover:text-[#111B4D]">Professeurs</Link>
             <span>/</span>
-            <span className="text-foreground">{displayName}</span>
+            <span className="text-[#111827]">{displayName}</span>
           </nav>
         </div>
       </div>
 
       {/* HEADER */}
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
-        <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
           <Link
             href="/professeurs"
-            className="mb-6 inline-flex min-h-11 items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] shadow-sm transition hover:border-[#111B4D] hover:text-[#111B4D]"
+            className="mb-6 hidden min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] shadow-sm transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour à la liste
           </Link>
 
-          <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
+          <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <ProfessorImage
               photoUrl={teacher.photoUrl}
               name={displayName}
-              size={190}
+              size={152}
               shape="rounded"
               priority
               verified={teacher.badgeVerified}
@@ -127,7 +136,7 @@ export default async function TeacherDetailPage({
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-col gap-3">
-                <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                <h1 className="text-3xl font-semibold tracking-tight text-[#111827] sm:text-4xl">
                   {displayName}
                 </h1>
                 <ProfessorTrustBadges
@@ -136,13 +145,14 @@ export default async function TeacherDetailPage({
                   premium={teacher.badgePremium}
                   popular={teacher.badgePopular}
                   isNew={teacher.badgeNew}
-                  size="lg"
+                  size="sm"
+                  maxSecondary={1}
                 />
               </div>
               <p className="mt-2 text-sm font-semibold text-[#111B4D] sm:text-base">
                 {teacher.jobTitle}
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-[#64748B]">
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-4 w-4" />
                   {primarySubject}
@@ -156,49 +166,65 @@ export default async function TeacherDetailPage({
                   {teacher.commune ?? "Abidjan"}
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-[#111B4D] bg-white px-3 py-1 text-sm font-bold text-[#111B4D]">
-                  Note {teacher.rating.toFixed(1)}/5
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-semibold text-[#111B4D]">
+                  {displayRatingLabel} {displayRating.toFixed(1)}/5
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  {teacher.ratingCount} avis
-                </span>
-                <span className="hidden text-muted-foreground sm:inline">·</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="hidden text-[#CBD5E1] sm:inline">·</span>
+                <span className="text-sm font-medium text-[#64748B]">
                   {teacher._count.bookings} réservations effectuées
                 </span>
+                <span className="hidden text-[#CBD5E1] sm:inline">·</span>
+                <span className="font-semibold text-[#111827]">
+                  {sessionPriceLabel} / séance
+                </span>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#111B4D]">
                 {teacher.offersHome && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D]">
+                  <span className="inline-flex items-center gap-1 font-semibold">
                     <HomeIcon className="h-3 w-3" /> Cours à domicile
                   </span>
                 )}
                 {teacher.offersOnline && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D]">
+                  <span className="inline-flex items-center gap-1 font-semibold">
                     <Video className="h-3 w-3" /> Cours en ligne
                   </span>
                 )}
               </div>
+              <div className="mt-5 grid gap-2 sm:hidden">
+                <Link
+                  href={reserveHref}
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Réserver ce professeur
+                </Link>
+                <a
+                  href="#disponibilites"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-[#C8D2E3] bg-white px-4 text-sm font-semibold text-[#111B4D]"
+                >
+                  Voir les créneaux disponibles
+                </a>
+              </div>
             </div>
           </div>
-          <div className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 sm:grid-cols-3">
             <MiniStat label="Cours attribués" value={teacher._count.bookings} />
             <MiniStat label="Avis vérifiés" value={totalReviews} />
-            <MiniStat label="Tarif" value="Selon besoin" />
+            <MiniStat label="Prix indicatif" value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />} />
           </div>
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-            <div className="rounded-[1.75rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
-                  <h2 className="mt-1 text-xl font-black tracking-tight text-[#111827]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
+                  <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#111827]">
                     Réserver {displayName} sans zone d'ombre.
                   </h2>
                 </div>
-                <span className="inline-flex w-fit items-center rounded-full border border-[#111B4D] bg-white px-3 py-1 text-xs font-bold text-[#111B4D]">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
                   Professeur suivi par l'administration
                 </span>
               </div>
@@ -224,14 +250,14 @@ export default async function TeacherDetailPage({
                   value={zonesPreview || teacher.commune || "Abidjan"}
                 />
               </div>
-              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              <p className="mt-4 text-sm font-medium leading-6 text-[#64748B]">
                 Le client choisit une date, un créneau de 2h et son besoin. Le prix final est affiché avant paiement, puis la réservation est rattachée à ce professeur dans le suivi client et admin.
               </p>
             </div>
 
-            <div className="rounded-[1.75rem] border border-[#111B4D] bg-white p-4 shadow-sm sm:p-5">
-              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Action recommandée</p>
-              <h2 className="mt-1 text-xl font-black text-[#111B4D]">Démarrer la réservation guidée</h2>
+            <div className="hidden rounded-xl border border-[#111B4D] bg-white p-4 shadow-sm sm:p-5 lg:block">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Action recommandée</p>
+              <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Démarrer la réservation guidée</h2>
               <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
                 <TrustLine icon={<ShieldCheck className="h-4 w-4" />} text="Paiement sécurisé, fonds bloqués jusqu'à confirmation." />
                 <TrustLine icon={<Wallet className="h-4 w-4" />} text="Montant total affiché avant paiement, sans information interne." />
@@ -239,7 +265,7 @@ export default async function TeacherDetailPage({
               </div>
               <Link
                 href={reserveHref}
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#1E2A78]"
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
               >
                 <Calendar className="h-4 w-4" />
                 Réserver ce professeur
@@ -250,7 +276,7 @@ export default async function TeacherDetailPage({
       </section>
 
       {/* CONTENU */}
-      <section className="bg-white">
+      <section className="bg-white pb-24 sm:pb-0">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             {/* COLONNE PRINCIPALE */}
@@ -272,37 +298,54 @@ export default async function TeacherDetailPage({
                 </CardTitle>
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Années d'expérience
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                    <p className="mt-1 text-sm font-semibold text-[#111827]">
                       {teacher.experienceYears} ans
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Diplôme principal
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                    <p className="mt-1 text-sm font-semibold text-[#111827]">
                       {teacher.diploma || "—"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Type de profil
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                    <p className="mt-1 text-sm font-semibold text-[#111827]">
                       {formatProfileType(teacher.profileType)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Réservations effectuées
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                    <p className="mt-1 text-sm font-semibold text-[#111827]">
                       {teacher._count.bookings} cours
                     </p>
                   </div>
+                </div>
+              </Card>
+
+              {/* Mini CV professionnel */}
+              <Card>
+                <CardTitle icon={<BriefcaseBusiness className="h-4 w-4" />}>
+                  Mini CV professionnel
+                </CardTitle>
+                <div className="mt-4">
+                  <TeacherMiniCv
+                    careerSummary={teacher.careerSummary}
+                    skills={teacher.skills}
+                    workHistory={teacher.workHistory}
+                    certifications={teacher.certifications || teacher.diploma}
+                    teachingAchievements={teacher.teachingAchievements}
+                    learnersCoached={teacher.learnersCoached}
+                  />
                 </div>
               </Card>
 
@@ -315,7 +358,7 @@ export default async function TeacherDetailPage({
                   {teacher.subjects.map((s) => (
                     <span
                       key={s.subject.id}
-                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold shadow-sm ${
+                      className={`inline-flex items-center gap-1 rounded-2xl border px-3 py-1.5 text-sm font-semibold shadow-sm ${
                         s.isPrimary
                           ? "border-[#111B4D] bg-white text-[#111B4D]"
                           : "border-[#E3E8F2] bg-white text-[#111827]"
@@ -323,19 +366,19 @@ export default async function TeacherDetailPage({
                     >
                       {s.subject.name}
                       {s.isPrimary && (
-                        <span className="rounded-full border border-[#E3E8F2] bg-white px-2 py-0.5 text-xs uppercase tracking-wide">Principale</span>
+                        <span className="text-xs uppercase tracking-wide text-[#64748B]">· Principale</span>
                       )}
                     </span>
                   ))}
                 </div>
-                <h3 className="mt-6 mb-3 text-sm font-semibold text-foreground">
+                <h3 className="mt-6 mb-3 text-sm font-semibold text-[#111827]">
                   Niveaux enseignés
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {teacher.levels.map((l) => (
                     <span
                       key={l.level.id}
-                      className="inline-flex items-center rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
+                      className="inline-flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
                     >
                       {l.level.name}
                     </span>
@@ -348,7 +391,7 @@ export default async function TeacherDetailPage({
                 <CardTitle icon={<MapPin className="h-4 w-4" />}>
                   Zones d'intervention
                 </CardTitle>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs font-medium leading-5 text-[#64748B]">
                   {teacher.offersHome
                     ? "Le professeur se déplace dans les communes suivantes pour les cours à domicile."
                     : "Cours en ligne uniquement — pas de déplacement à domicile."}
@@ -360,25 +403,25 @@ export default async function TeacherDetailPage({
                       return (
                       <span
                         key={commune.id}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] shadow-sm"
+                        className="inline-flex items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] shadow-sm"
                       >
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <MapPin className="h-3 w-3 text-[#64748B]" />
                         {commune.name}
                         {commune.zone && (
-                          <span className="text-muted-foreground">· {commune.zone}</span>
+                          <span className="text-[#64748B]">· {commune.zone}</span>
                         )}
                       </span>
                     )})}
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-3 text-sm font-medium text-[#64748B]">
                     Aucune zone enregistrée.
                   </p>
                 )}
               </Card>
 
               {/* Disponibilités */}
-              <Card>
+              <Card id="disponibilites">
                 <CardTitle icon={<Calendar className="h-4 w-4" />}>
                   Disponibilités
                 </CardTitle>
@@ -388,13 +431,13 @@ export default async function TeacherDetailPage({
                       {WEEK_DAYS.map((day) => {
                         const availableSlots = TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]);
                         return (
-                          <div key={day.key} className="rounded-3xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                          <div key={day.key} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3 shadow-sm">
                             <div className="flex items-center justify-between gap-3">
                               <div>
-                                <p className="text-sm font-bold text-foreground">{day.label}</p>
-                                <p className="text-xs text-muted-foreground">Séances de 2 heures</p>
+                                <p className="text-sm font-semibold text-[#111827]">{day.label}</p>
+                                <p className="text-xs font-medium text-[#64748B]">Séances de 2 heures</p>
                               </div>
-                              <span className="rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-[11px] font-bold text-[#111B4D]">
+                              <span className="text-[11px] font-semibold text-[#111B4D]">
                                 {availableSlots.length} dispo.
                               </span>
                             </div>
@@ -403,7 +446,7 @@ export default async function TeacherDetailPage({
                                 {availableSlots.map((slot) => (
                                   <span
                                     key={slot.key}
-                                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#111B4D] bg-white px-2 py-2 text-center text-xs font-bold text-[#111B4D]"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#111B4D] bg-white px-2 py-2 text-center text-xs font-semibold text-[#111B4D]"
                                   >
                                     {slot.label}
                                   </span>
@@ -421,20 +464,20 @@ export default async function TeacherDetailPage({
 
                     <div className="hidden xl:grid xl:gap-2">
                       <div className="grid grid-cols-[112px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs">
-                        <div className="flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 font-bold text-[#64748B]">
+                        <div className="flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 font-semibold text-[#64748B]">
                           Jour
                         </div>
                         {TWO_HOUR_SLOTS.map((slot) => (
                           <div
                             key={slot.key}
-                             className="flex min-h-10 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-1 text-center font-bold text-[#64748B]"
+                             className="flex min-h-10 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-1 text-center font-semibold text-[#64748B]"
                           >
                             {slot.shortLabel}
                           </div>
                         ))}
                         {WEEK_DAYS.map((day) => (
                           <div key={day.key} className="contents">
-                            <div className="flex min-h-11 items-center rounded-2xl border border-[#111B4D] bg-white px-3 text-sm font-black text-[#111B4D]">
+                            <div className="flex min-h-11 items-center rounded-2xl border border-[#111B4D] bg-white px-3 text-sm font-semibold text-[#111B4D]">
                               {day.label}
                             </div>
                             {TWO_HOUR_SLOTS.map((slot) => {
@@ -442,7 +485,7 @@ export default async function TeacherDetailPage({
                               return (
                                 <div
                                   key={slot.key}
-                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-black shadow-sm ${
+                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-semibold shadow-sm ${
                                     available
                                       ? "border-[#111B4D] bg-white text-[#111B4D]"
                                       : "border-[#E3E8F2] bg-white text-[#94A3B8]"
@@ -457,12 +500,12 @@ export default async function TeacherDetailPage({
                         ))}
                       </div>
                     </div>
-                    <p className="mt-3 text-xs text-muted-foreground">
+                    <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
                       Les créneaux affichés sont des séances de 2 heures. La réservation est rattachée directement à ce professeur.
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-3 text-sm font-medium text-[#64748B]">
                     Disponibilités à confirmer lors de la réservation.
                   </p>
                 )}
@@ -475,9 +518,9 @@ export default async function TeacherDetailPage({
                 </CardTitle>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <PriceTile
-                    label="Prix"
-                    value="Selon besoin"
-                    sub="Catégorie, niveau, système scolaire"
+                    label="Prix indicatif"
+                    value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />}
+                    sub="Séance de 2h"
                     highlight
                   />
                   <PriceTile
@@ -491,9 +534,9 @@ export default async function TeacherDetailPage({
                     sub="À domicile uniquement"
                   />
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Le tarif final est calculé pendant la réservation selon la grille officielle MonProf CI.
-                  Le client voit le prix du cours, les frais de déplacement et le total avant paiement.
+                <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
+                  Le prix final est confirmé pendant la réservation selon le niveau, le format, le nombre de participants et les frais de déplacement éventuels.
+                  Le client voit toujours le total avant paiement.
                 </p>
               </Card>
 
@@ -504,17 +547,17 @@ export default async function TeacherDetailPage({
                 </CardTitle>
 
                 {/* Répartition des notes */}
-                {totalReviews > 0 && (
+                {displayRating > 0 && (
                   <div className="mt-4 grid gap-4 sm:grid-cols-[200px_1fr]">
-                    <div className="flex flex-col items-center justify-center rounded-3xl border border-[#E3E8F2] bg-white p-4 text-center shadow-sm">
-                      <div className="text-4xl font-bold text-foreground">
-                        {teacher.rating.toFixed(1)}
+                    <div className="flex flex-col items-center justify-center rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 text-center shadow-sm">
+                      <div className="text-4xl font-semibold text-[#111827]">
+                        {displayRating.toFixed(1)}
                       </div>
-                      <div className="mt-1 rounded-full border border-[#111B4D] bg-white px-3 py-1 text-sm font-bold text-[#111B4D]">
+                      <div className="mt-1 text-sm font-semibold text-[#111B4D]">
                         Note moyenne
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {totalReviews} avis vérifiés
+                      <p className="mt-1 text-xs font-medium text-[#64748B]">
+                        {totalReviews > 0 ? `${totalReviews} avis vérifiés` : "Note validée par l'administration"}
                       </p>
                     </div>
                     <div className="space-y-1.5">
@@ -522,14 +565,14 @@ export default async function TeacherDetailPage({
                         const pct = totalReviews > 0 ? (b.count / totalReviews) * 100 : 0;
                         return (
                           <div key={b.rating} className="flex items-center gap-2 text-xs">
-                            <span className="w-16 text-muted-foreground">Note {b.rating}</span>
+                            <span className="w-16 font-medium text-[#64748B]">Note {b.rating}</span>
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E5E7EB]">
                               <div
                                 className="h-full rounded-full bg-[#111B4D]"
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="w-8 text-right tabular-nums text-muted-foreground">
+                            <span className="w-8 text-right tabular-nums font-medium text-[#64748B]">
                               {b.count}
                             </span>
                           </div>
@@ -541,7 +584,7 @@ export default async function TeacherDetailPage({
 
                 {/* Liste des avis */}
                 {teacher.reviews.length > 0 ? (
-                  <ul className="mt-6 divide-y divide-border">
+                  <ul className="mt-6 divide-y divide-[#E3E8F2]">
                     {teacher.reviews.map((r) => (
                       <li key={r.id} className="py-4 first:pt-2 last:pb-0">
                         <div className="flex items-start justify-between gap-3">
@@ -554,15 +597,15 @@ export default async function TeacherDetailPage({
                                 .join("")}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-foreground">
+                              <p className="text-sm font-semibold text-[#111827]">
                                 {r.client.name}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs font-medium text-[#64748B]">
                                 {formatDate(r.createdAt)}
                               </p>
                             </div>
                           </div>
-                          <span className="rounded-full border border-[#111B4D] bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+                          <span className="text-xs font-semibold text-[#111B4D]">
                             Note {r.rating}/5
                           </span>
                         </div>
@@ -575,7 +618,7 @@ export default async function TeacherDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B] shadow-sm">
                     Ce professeur n'a pas encore d'avis publié. Soyez le
                     premier à réserver et à laisser un avis après votre cours.
                   </p>
@@ -586,13 +629,15 @@ export default async function TeacherDetailPage({
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
             <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
               <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Tarif</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
                 <div className="mt-1">
-                  <span className="text-2xl font-bold tracking-tight text-foreground">Calculé selon le besoin</span>
-                  <p className="mt-1 text-sm text-muted-foreground">Prix du cours + déplacement éventuel avant paiement.</p>
+                  <span className="text-2xl font-semibold tracking-tight text-[#111827]">
+                    <Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />
+                  </span>
+                  <p className="mt-1 text-sm font-medium text-[#64748B]">Séance de 2h, total confirmé avant paiement.</p>
                 </div>
 
-                <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+                <div className="mt-4 space-y-2 border-t border-[#E3E8F2] pt-4 text-sm">
                   <Row label="Packs" value="1, 4, 8 ou 12 séances" />
                   <Row label="Devis" value="Cas spéciaux" />
                   <Row
@@ -624,38 +669,38 @@ export default async function TeacherDetailPage({
                 </Link>
 
                 {!session?.user && (
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                  <p className="mt-2 text-center text-xs font-medium leading-5 text-[#64748B]">
                     Vous devrez créer un compte ou vous connecter pour finaliser
                     la réservation.
                   </p>
                 )}
 
-                <div className="mt-5 space-y-2.5 border-t border-border pt-4">
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                <div className="mt-5 space-y-2.5 border-t border-[#E3E8F2] pt-4">
+                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
-                      <strong className="text-foreground">Paiement sécurisé.</strong>{" "}
+                      <strong className="text-[#111827]">Paiement sécurisé.</strong>{" "}
                       Fonds bloqués jusqu'à confirmation du cours.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
                     <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
-                      <strong className="text-foreground">Professeur vérifié</strong> par
+                      <strong className="text-[#111827]">Professeur vérifié</strong> par
                       notre équipe (identité, diplômes).
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
-                      <strong className="text-foreground">Annulation</strong> possible
+                      <strong className="text-[#111827]">Annulation</strong> possible
                       jusqu'à 24h avant le cours.
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
                     <Luggage className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
-                      <strong className="text-foreground">Litige</strong> traité par notre
+                      <strong className="text-[#111827]">Litige</strong> traité par notre
                       support sous 48h.
                     </span>
                   </div>
@@ -665,13 +710,27 @@ export default async function TeacherDetailPage({
           </div>
         </div>
       </section>
+      <div className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.18)] sm:hidden" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <div className="min-w-0 px-2">
+            <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
+            <p className="truncate text-xs font-semibold text-[#64748B]">{sessionPriceLabel} / séance 2h</p>
+          </div>
+          <Link
+            href={reserveHref}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111B4D] px-4 text-sm font-semibold text-white"
+          >
+            Réserver
+          </Link>
+        </div>
+      </div>
     </PublicLayout>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <div className="min-w-0 rounded-3xl border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
+    <div id={id} className="min-w-0 scroll-mt-24 rounded-xl border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
       {children}
     </div>
   );
@@ -685,7 +744,7 @@ function CardTitle({
   icon: React.ReactNode;
 }) {
   return (
-    <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+    <h2 className="flex items-center gap-2 text-base font-semibold text-[#111827]">
       <span className="text-[#111B4D]">{icon}</span>
       {children}
     </h2>
@@ -695,8 +754,8 @@ function CardTitle({
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-base font-extrabold text-foreground">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
     </div>
   );
 }
@@ -712,11 +771,11 @@ function DecisionPoint({
 }) {
   return (
     <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#64748B]">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         <span className="text-[#111B4D]">{icon}</span>
         {label}
       </div>
-      <p className="mt-1.5 line-clamp-2 text-sm font-extrabold leading-5 text-[#111827]">{value}</p>
+      <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{value}</p>
     </div>
   );
 }
@@ -733,8 +792,8 @@ function TrustLine({ icon, text }: { icon: React.ReactNode; text: string }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+      <span className="font-medium text-[#64748B]">{label}</span>
+      <span className="font-semibold text-[#111827]">{value}</span>
     </div>
   );
 }
@@ -758,13 +817,13 @@ function PriceTile({
           : "border-[#E3E8F2] bg-white"
       }`}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         {label}
       </p>
-      <p className="mt-1 text-lg font-bold text-foreground">
+      <p className="mt-1 text-lg font-semibold text-[#111827]">
         {value}
       </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
+      <p className="mt-0.5 text-xs font-medium text-[#64748B]">{sub}</p>
     </div>
   );
 }

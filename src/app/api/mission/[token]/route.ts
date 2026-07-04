@@ -1,40 +1,209 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  requiresVerifiedPayDunyaForOperationalAction,
+} from "@/lib/payment-security";
 
 const MIN_RESPONSE_LENGTH_FOR_ISSUE = 10;
 const MAX_RESPONSE_LENGTH = 700;
 
+function parseProposalDate(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function minimumProposalDate() {
+  const date = new Date();
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date;
+}
+
+function formatProposalDate(date: Date) {
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const body = await req.json();
-  const action = body.action as "confirm" | "unavailable" | "problem";
+  const action = body.action as "confirm" | "unavailable" | "problem" | "reschedule";
   const response = typeof body.response === "string" ? body.response.trim() : "";
+  const proposedDate = parseProposalDate(body.proposedDate);
+  const proposedTime = typeof body.proposedTime === "string" ? body.proposedTime.trim() : "";
 
-  if (!["confirm", "unavailable", "problem"].includes(action)) {
+  if (!["confirm", "unavailable", "problem", "reschedule"].includes(action)) {
     return NextResponse.json({ error: "Action mission invalide" }, { status: 400 });
   }
   if (response.length > MAX_RESPONSE_LENGTH) {
     return NextResponse.json({ error: `Message trop long (${MAX_RESPONSE_LENGTH} caractères maximum)` }, { status: 400 });
   }
-  if ((action === "unavailable" || action === "problem") && response.length < MIN_RESPONSE_LENGTH_FOR_ISSUE) {
+  if ((action === "unavailable" || action === "problem" || action === "reschedule") && response.length < MIN_RESPONSE_LENGTH_FOR_ISSUE) {
     return NextResponse.json({ error: "Expliquez brièvement la raison de votre réponse." }, { status: 400 });
+  }
+  if (action === "reschedule") {
+    if (!proposedDate || !proposedTime) {
+      return NextResponse.json({ error: "Date et heure proposées obligatoires." }, { status: 400 });
+    }
+    if (proposedDate < minimumProposalDate()) {
+      return NextResponse.json({ error: "Le nouveau créneau doit être proposé au moins 24h à l'avance." }, { status: 400 });
+    }
+    if (proposedTime.length < 5 || proposedTime.length > 40) {
+      return NextResponse.json({ error: "Créneau horaire invalide." }, { status: 400 });
+    }
   }
 
   const mission = await db.teacherMissionLink.findUnique({
     where: { token },
-    include: { booking: { include: { client: true, teacher: true } }, teacher: true },
+    include: {
+      booking: {
+        include: {
+          client: true,
+          teacher: true,
+          transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
+        },
+      },
+      teacher: true,
+    },
   });
   if (!mission) return NextResponse.json({ error: "Lien mission introuvable" }, { status: 404 });
   if (mission.expiresAt < new Date()) {
     await db.teacherMissionLink.update({ where: { id: mission.id }, data: { status: "EXPIRED" } });
     return NextResponse.json({ error: "Ce lien mission a expiré" }, { status: 410 });
   }
-  if (["CONFIRMED", "UNAVAILABLE", "PROBLEM_REPORTED", "EXPIRED", "REPLACEMENT_RECOMMENDED"].includes(mission.status)) {
+  if (["CONFIRMED", "UNAVAILABLE", "PROBLEM_REPORTED", "RESCHEDULE_PROPOSED", "EXPIRED", "REPLACEMENT_RECOMMENDED"].includes(mission.status)) {
     return NextResponse.json({ error: "Cette mission a déjà reçu une réponse." }, { status: 409 });
+  }
+  if (requiresVerifiedPayDunyaForOperationalAction(mission.booking)) {
+    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
 
   const now = new Date();
   const teacherName = mission.teacher.professionalName || mission.teacher.fullName;
+  if (action === "reschedule") {
+    const formattedDate = formatProposalDate(proposedDate!);
+    let proposalId = "";
+    await db.$transaction(async (tx) => {
+      await tx.bookingScheduleProposal.updateMany({
+        where: { bookingId: mission.bookingId, status: "PENDING" },
+        data: { status: "CANCELLED", respondedAt: now, clientResponse: "Remplacée par une nouvelle proposition professeur." },
+      });
+      const proposal = await tx.bookingScheduleProposal.create({
+        data: {
+          bookingId: mission.bookingId,
+          teacherId: mission.teacherId,
+          proposedDate: proposedDate!,
+          proposedTime,
+          reason: response,
+        },
+      });
+      proposalId = proposal.id;
+      await tx.teacherMissionLink.update({
+        where: { id: mission.id },
+        data: {
+          status: "RESCHEDULE_PROPOSED",
+          response: `Créneau proposé: ${formattedDate}, ${proposedTime}. Motif: ${response}`,
+        },
+      });
+      await tx.teacherTask.updateMany({
+        where: { teacherId: mission.teacherId, bookingId: mission.bookingId, type: "CONFIRM_AVAILABILITY" },
+        data: { status: "CONFIRMED", completedAt: now },
+      });
+      await tx.teacherTask.create({
+        data: {
+          teacherId: mission.teacherId,
+          bookingId: mission.bookingId,
+          type: "ADMIN_ACTION",
+          title: `Créneau proposé par professeur - ${mission.booking.reference}`,
+          description: `${teacherName} propose ${formattedDate} à ${proposedTime}. Motif: ${response}. Le client doit accepter ou refuser ce créneau.`,
+          priority: "IMPORTANT",
+          status: "TODO",
+          dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        },
+      });
+      await tx.teacherNotification.create({
+        data: {
+          teacherId: mission.teacherId,
+          bookingId: mission.bookingId,
+          title: `Créneau proposé - ${mission.booking.reference}`,
+          message: `Votre proposition a été transmise au client.\nDate: ${formattedDate}\nHeure: ${proposedTime}\nMotif: ${response}`,
+          channel: "PRIVATE_LINK",
+          sent: true,
+          status: "SENT",
+          readAt: now,
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: "Nouveau créneau proposé par le professeur",
+          message: `${teacherName} propose ${formattedDate} à ${proposedTime} pour ${mission.booking.reference}. Le client doit accepter ou refuser.`,
+          type: "TEACHER_RESCHEDULE_PROPOSED",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          bookingId: mission.bookingId,
+          teacherId: mission.teacherId,
+          clientId: mission.booking.clientId,
+          sentAt: now,
+          response,
+          link: `/admin/reservations/${mission.bookingId}`,
+          actionLabel: "Suivre la proposition",
+          actionType: "FOLLOW_RESCHEDULE_PROPOSAL",
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: mission.booking.clientId,
+          title: "Nouveau créneau proposé",
+          message: `${teacherName} propose de déplacer votre cours de ${mission.booking.subjectName} au ${formattedDate} à ${proposedTime}. Vous pouvez accepter ou refuser dans votre réservation.`,
+          type: "TEACHER_RESCHEDULE_PROPOSED",
+          recipientType: "CLIENT",
+          recipientName: mission.booking.client.name,
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          bookingId: mission.bookingId,
+          teacherId: mission.teacherId,
+          clientId: mission.booking.clientId,
+          sentAt: now,
+          link: `/client/reservations/${mission.bookingId}?proposalId=${proposal.id}`,
+          actionLabel: "Répondre au créneau",
+        },
+      });
+      await tx.clientCommunication.create({
+        data: {
+          clientId: mission.booking.clientId,
+          bookingId: mission.bookingId,
+          type: "INFORMATION",
+          channel: "INTERNAL",
+          subject: `Nouveau créneau proposé - ${mission.booking.reference}`,
+          content: `${teacherName} propose le créneau suivant : ${formattedDate} à ${proposedTime}.\n\nMotif : ${response}\n\nVous pouvez accepter ou refuser dans votre espace client.`,
+          priority: "IMPORTANT",
+          status: "SENT",
+        },
+      });
+      await tx.adminActionLog.create({
+        data: {
+          action: "Créneau professeur proposé",
+          entityType: "BookingScheduleProposal",
+          entityId: proposal.id,
+          detail: `${teacherName} propose ${formattedDate} à ${proposedTime} pour ${mission.booking.reference}. Motif: ${response}`,
+          oldStatus: mission.status,
+          newStatus: "RESCHEDULE_PROPOSED",
+        },
+      });
+    });
+    return NextResponse.json({ ok: true, proposalId });
+  }
+
   if (action === "confirm") {
     await db.$transaction(async (tx) => {
       await tx.teacherMissionLink.update({
@@ -89,7 +258,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         data: {
           userId: mission.booking.clientId,
           title: "Professeur confirmé",
-          message: `${teacherName} a confirmé sa disponibilité pour votre cours de ${mission.booking.subjectName}. Votre réservation ${mission.booking.reference} reste suivie par l'administration MonProf CI.`,
+          message: `${teacherName} a confirmé sa disponibilité pour votre cours de ${mission.booking.subjectName}. Votre réservation ${mission.booking.reference} reste suivie par l'administration Compétence.`,
           type: "TEACHER_CONFIRMED",
           recipientType: "CLIENT",
           recipientName: mission.booking.client.name,

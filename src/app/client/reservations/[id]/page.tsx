@@ -1,16 +1,17 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { PageHeader } from "@/components/shared/page-header";
-import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
+import {
+  ClientAppRail,
+  ClientPageHeader,
+  ClientSectionTitle,
+  ClientSurface,
+} from "@/components/shared/client-page-primitives";
 import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-breakdown";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { packTypeLabel } from "@/lib/platform-labels";
 import { cancellationWindowLabel } from "@/lib/cancellation-policy";
@@ -21,18 +22,51 @@ import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
   Home, Video, User, Users, Calendar, Clock, MapPin, MessageSquare,
   CheckCircle2, AlertTriangle, LockKeyhole, ClipboardCheck,
-  WalletCards, ShieldCheck, Hourglass, RefreshCw,
+  WalletCards, ShieldCheck, Hourglass, RefreshCw, LifeBuoy,
 } from "lucide-react";
-import { BookingActions } from "./actions";
+import { BookingActions, BookingPrimaryAction } from "./actions";
+import { ScheduleProposalActions } from "./schedule-proposal-actions";
 
 export const dynamic = "force-dynamic";
+
+const CLIENT_BOOKING_STATUS_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: "Brouillon non réservé",
+  PAID: "Réservation reçue",
+  PENDING_ADMIN_VALIDATION: "Validation en cours",
+  CONFIRMED: "Réservation confirmée",
+  ASSIGNED: "Professeur confirmé",
+  IN_PROGRESS: "Cours en cours",
+  COURSE_DONE: "Cours effectué",
+  PENDING_CLIENT_VALIDATION: "Votre confirmation attendue",
+  VALIDATED_BY_CLIENT: "Cours confirmé",
+  PAYMENT_TO_RELEASE: "Traitement administratif",
+  TEACHER_PAID: "Cours clôturé",
+  DISPUTED: "Litige en cours",
+  CANCELLED: "Réservation annulée",
+  REFUNDED: "Remboursement traité",
+};
+
+const CLIENT_PAYMENT_STATUS_LABELS: Record<string, string> = {
+  FAILED: "Paiement à finaliser",
+  RECEIVED: "Paiement reçu",
+  BLOCKED: "Paiement sécurisé",
+  VALIDATED: "Cours validé",
+  TO_PAY_TEACHER: "Traitement administratif",
+  TEACHER_PAID: "Cours clôturé",
+  DISPUTED: "Litige en cours",
+  REFUND_PENDING: "Remboursement en traitement",
+  PARTIAL_REFUND_PENDING: "Remboursement partiel en traitement",
+  REFUNDED: "Remboursé",
+  PARTIALLY_REFUNDED: "Remboursement partiel",
+  RETAINED: "Frais appliqués",
+};
 
 export default async function ReservationDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ action?: string; paydunya?: string; token?: string }>;
+  searchParams: Promise<{ action?: string; paydunya?: string; token?: string; proposalId?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user) return null;
@@ -48,6 +82,13 @@ export default async function ReservationDetailPage({
       transactions: { where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } }, orderBy: { createdAt: "asc" } },
       reviews: { where: { clientId: user.id } },
       disputes: { orderBy: { createdAt: "desc" } },
+      clientRefundRequests: { orderBy: { createdAt: "desc" } },
+      scheduleProposals: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+      },
     },
   });
   if (!booking || booking.clientId !== user.id) notFound();
@@ -72,6 +113,13 @@ export default async function ReservationDetailPage({
         transactions: { where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } }, orderBy: { createdAt: "asc" } },
         reviews: { where: { clientId: user.id } },
         disputes: { orderBy: { createdAt: "desc" } },
+        clientRefundRequests: { orderBy: { createdAt: "desc" } },
+        scheduleProposals: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          },
+        },
       },
     });
     if (!refreshedBooking || refreshedBooking.clientId !== user.id) notFound();
@@ -86,24 +134,25 @@ export default async function ReservationDetailPage({
   const displayTransportFee = pricingSnapshot?.transportFee ?? booking.transportFee;
   const displayMaterialFee = pricingSnapshot?.materialFee ?? booking.materialFee;
   const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
-  const displayTotalPrice = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
+  const displayPaymentServiceFeeAmount = pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount;
+  const displayPaymentServiceFeeLabel = pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel;
+  const displayTotalBeforePaymentServiceFee = pricingSnapshot?.totalBeforePaymentServiceFee
+    ?? Math.max(0, (pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice) - displayPaymentServiceFeeAmount);
+  const displayTotalPrice = firstPositiveAmount(
+    pricingSnapshot?.totalClientPays,
+    booking.totalClientPays,
+    booking.totalPrice,
+  );
   const displaySessionsCount = pricingSnapshot?.numberOfSessions ?? booking.sessionsCount;
   const displayParticipantsCount = pricingSnapshot?.participantsCount ?? booking.participantsCount;
   const requestedDate = booking.startDate ?? booking.scheduledDate;
   const confirmedDate = booking.scheduledDate;
   const dateShownToClient = confirmedDate ?? requestedDate;
-  const dateSourceLabel = confirmedDate
-    ? "Date confirmée pour le cours"
-    : requestedDate
-      ? "Date demandée par le client, en attente de validation admin"
-      : "Date à compléter";
   const timeShownToClient = booking.scheduledTime || booking.preferredTime || "Horaire à confirmer";
   const preferredDaysLabel = preferredDays.length
     ? preferredDays.map((day) => dayLabel(day)).join(", ")
     : "Selon le créneau choisi";
-  const locationLabel = booking.courseFormat === "HOME"
-    ? [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(", ") || "Adresse à confirmer"
-    : booking.onlineLink || "Lien en ligne à confirmer";
+  const schoolProgramDisplay = formatSchoolProgramDisplay(booking.schoolProgram);
   const paymentConfirmed = hasVerifiedPayDunyaClientPayment(booking);
   const visibleTransactions = paymentConfirmed
     ? booking.transactions
@@ -113,6 +162,22 @@ export default async function ReservationDetailPage({
     && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(booking.paymentStatus);
   const returnedFromPayDunya = sp.paydunya === "return";
   const cancelledOnPayDunya = sp.paydunya === "cancelled";
+  const scheduleProposals = booking.scheduleProposals.map((proposal) => ({
+    id: proposal.id,
+    proposedDate: proposal.proposedDate.toISOString(),
+    proposedTime: proposal.proposedTime,
+    reason: proposal.reason,
+    status: proposal.status,
+    clientResponse: proposal.clientResponse,
+    createdAt: proposal.createdAt.toISOString(),
+    respondedAt: proposal.respondedAt?.toISOString() ?? null,
+    teacher: proposal.teacher
+      ? {
+          fullName: proposal.teacher.fullName,
+          professionalName: proposal.teacher.professionalName,
+        }
+      : null,
+  }));
 
   // Timeline
   const timeline = [
@@ -140,21 +205,51 @@ export default async function ReservationDetailPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <ClientPageHeader
+        eyebrow="Dossier"
         title={`Réservation ${booking.reference}`}
         description={`Créée le ${formatDateTime(booking.createdAt)}`}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <BookingStatusBadge status={booking.status} audience="client" />
-          <PaymentStatusBadge status={booking.paymentStatus} audience="client" quoteOnly={booking.isQuoteOnly} />
+        <div className="grid w-full gap-2 min-[520px]:w-auto min-[520px]:grid-cols-2">
+          <ReservationStatusChip label="Statut" value={formatClientBookingStatus(booking.status)} />
+          <ReservationStatusChip label="Paiement" value={formatClientPaymentStatus(booking.paymentStatus, booking.isQuoteOnly)} />
         </div>
-      </PageHeader>
+      </ClientPageHeader>
+
+      <ClientAppRail
+        items={[
+          {
+            label: "Dossier",
+            value: formatClientBookingStatus(booking.status),
+            icon: ClipboardCheck,
+            active: true,
+          },
+          {
+            label: "Professeur",
+            value: name,
+            icon: User,
+            href: `/professeurs/${booking.teacher.id}`,
+          },
+          {
+            label: "Paiement",
+            value: booking.isQuoteOnly ? "Sur devis" : paymentConfirmed ? "Sécurisé" : "À finaliser",
+            icon: WalletCards,
+            href: "/client/paiements",
+          },
+          {
+            label: "Assistance",
+            value: hasBlockingClientState(booking.status, booking.paymentStatus, booking.disputes.length) ? "Suivi prioritaire" : "Support client",
+            icon: LifeBuoy,
+            href: "/client/support",
+          },
+        ]}
+      />
 
       {returnedFromPayDunya && paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-[1.25rem] border border-[#DDE6F7] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-black text-[#111B4D]">Paiement PayDunya confirmé</p>
+            <p className="font-semibold text-[#111B4D]">Paiement PayDunya confirmé</p>
             <p className="mt-1 leading-6 text-[#64748B]">
               Votre paiement de <strong className="text-[#111827]"><Money amount={displayTotalPrice} /></strong> a été reçu
               et est gardé bloqué jusqu'à la confirmation du cours. Date demandée : <strong className="text-[#111827]">{dateShownToClient ? formatDate(dateShownToClient) : "à confirmer"}</strong>.
@@ -165,10 +260,10 @@ export default async function ReservationDetailPage({
       )}
 
       {returnedFromPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-[1.25rem] border border-[#DDE6F7] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
           <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-black text-[#111B4D]">Retour PayDunya enregistré</p>
+            <p className="font-semibold text-[#111B4D]">Retour PayDunya enregistré</p>
             <p className="mt-1 leading-6 text-[#64748B]">
               Nous attendons la confirmation automatique de PayDunya. Si le paiement a été validé, le statut passera en paiement sécurisé dès réception du webhook.
               {paydunyaReturnCheck?.message ? ` Contrôle serveur: ${paydunyaReturnCheck.message}` : " Aucun paiement n'est validé sans confirmation serveur PayDunya."}
@@ -178,10 +273,10 @@ export default async function ReservationDetailPage({
       )}
 
       {cancelledOnPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-[1.25rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
           <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-black text-[#111B4D]">Paiement PayDunya non finalisé</p>
+            <p className="font-semibold text-[#111B4D]">Paiement PayDunya non finalisé</p>
             <p className="mt-1 leading-6 text-[#64748B]">
               Vous pouvez reprendre le paiement depuis les actions du dossier. Le moyen et les informations de paiement restent gérés sur PayDunya.
             </p>
@@ -190,12 +285,12 @@ export default async function ReservationDetailPage({
       )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-stretch">
-        <div className="order-2 rounded-[1.35rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5 lg:order-1">
+        <div className="order-2 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5 lg:order-1">
           <div className="flex flex-col gap-4 min-[520px]:flex-row min-[520px]:items-center">
             <ProfessorImage photoUrl={booking.teacher.photoUrl} name={name} size="md" shape="circle" verified={booking.teacher.badgeVerified} />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Dossier client</p>
-              <h2 className="mt-1 text-xl font-black tracking-tight text-[#111827] sm:text-2xl">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier client</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#111827] sm:text-2xl">
                 {booking.subjectName} avec {name}
               </h2>
               <p className="mt-1 text-sm font-semibold text-[#64748B]">{booking.teacher.jobTitle}</p>
@@ -205,7 +300,7 @@ export default async function ReservationDetailPage({
           <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <ReservationHeroMetric
               icon={<Calendar className="h-4 w-4" />}
-              label="Date"
+              label={confirmedDate ? "Date confirmée" : "Date demandée"}
               value={dateShownToClient ? formatDate(dateShownToClient) : "À confirmer"}
             />
             <ReservationHeroMetric
@@ -226,30 +321,19 @@ export default async function ReservationDetailPage({
           </div>
         </div>
 
-        <div className={`order-1 flex flex-col justify-between rounded-[1.35rem] border p-4 shadow-sm sm:p-5 lg:order-2 ${clientSituation.className}`}>
+        <div className={`order-1 flex flex-col justify-between rounded-xl border p-4 shadow-sm sm:p-5 lg:order-2 ${clientSituation.className}`}>
           <div>
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
                 {clientSituation.icon}
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Action attendue</p>
-                <h3 className="mt-0.5 text-lg font-black leading-tight">{clientSituation.title}</h3>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Action attendue</p>
+                <h3 className="mt-0.5 text-lg font-semibold leading-tight">{clientSituation.title}</h3>
               </div>
             </div>
             <p className="mt-4 text-sm font-semibold leading-6 text-[#64748B]">{clientSituation.description}</p>
-          </div>
-          <div className="mt-4 grid gap-2 min-[420px]:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Référence</p>
-              <p className="mt-1 font-mono text-sm font-black">{booking.reference}</p>
-            </div>
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Protection</p>
-              <p className="mt-1 text-sm font-black">
-                {booking.isQuoteOnly ? "Devis admin" : booking.paymentStatus === "BLOCKED" ? "Fonds bloqués" : "Suivi actif"}
-              </p>
-            </div>
+            <BookingPrimaryAction booking={bookingActionsPayload as any} />
           </div>
         </div>
       </section>
@@ -257,88 +341,57 @@ export default async function ReservationDetailPage({
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* Colonne gauche : détails */}
         <div className="order-2 min-w-0 space-y-4 lg:order-1">
-          <Card className="overflow-hidden rounded-[1.35rem] border-[#CAD7F2] bg-white">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-[#64748B]">Planning transmis au paiement</p>
-                  <h2 className="mt-1 text-xl font-black tracking-tight text-[#111B4D] sm:text-2xl">
-                    {dateShownToClient ? formatDate(dateShownToClient) : "Date à confirmer"}
-                  </h2>
-                  <p className="mt-1 text-sm font-semibold text-[#64748B]">{dateSourceLabel}</p>
-                </div>
-                <div className="rounded-2xl border border-[#DDE6F7] bg-white px-4 py-3 text-sm shadow-sm md:min-w-56">
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Créneau demandé</p>
-                  <p className="mt-1 font-black leading-6 text-[#111827]">{timeShownToClient}</p>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <DetailRow icon={<Calendar className="h-4 w-4" />} label="Jours" value={preferredDaysLabel} />
-                <DetailRow icon={<Clock className="h-4 w-4" />} label="Formule" value={packTypeLabel(booking.packType)} />
-                <DetailRow
-                  icon={booking.courseFormat === "HOME" ? <Home className="h-4 w-4" /> : <Video className="h-4 w-4" />}
-                  label="Format"
-                  value={booking.courseFormat === "HOME" ? "À domicile" : "En ligne"}
-                />
-                <DetailRow icon={<MapPin className="h-4 w-4" />} label={booking.courseFormat === "HOME" ? "Lieu" : "Accès"} value={locationLabel} />
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Détails cours */}
-          <Card className="rounded-[1.35rem]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-black text-[#111827]">Détails du cours</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+          <ClientSurface className="space-y-4">
+            <ClientSectionTitle
+              eyebrow="Cours"
+              title="Détails du cours"
+              description="Matière, niveau, format et consignes du dossier."
+            />
+            <div className="space-y-3 text-sm">
               <div className="grid gap-3 sm:grid-cols-2">
                 <DetailRow icon={null} label="Matière" value={booking.subjectName} />
                 <DetailRow icon={null} label="Niveau" value={booking.levelName} />
+                <DetailRow icon={<Calendar className="h-4 w-4" />} label="Jours" value={preferredDaysLabel} />
+                <DetailRow icon={<Clock className="h-4 w-4" />} label="Formule" value={packTypeLabel(booking.packType)} />
                 <DetailRow
                   icon={booking.groupType === "INDIVIDUAL" ? <User className="h-4 w-4" /> : <Users className="h-4 w-4" />}
                   label="Type"
                   value={booking.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"}
                 />
                 <DetailRow icon={<Clock className="h-4 w-4" />} label="Durée" value={`${displaySessionsCount} séance${displaySessionsCount > 1 ? "s" : ""} de 2h`} />
-                {booking.schoolProgram && (
+                {schoolProgramDisplay && (
                   <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 sm:col-span-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Parcours choisi</p>
-                    <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111B4D]">{booking.schoolProgram}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Parcours choisi</p>
+                    <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111B4D]">{schoolProgramDisplay}</p>
                   </div>
                 )}
               </div>
 
               {booking.courseFormat === "HOME" && (
-                <>
-                  <Separator />
-                  <DetailRow icon={<MapPin className="h-4 w-4" />} label="Lieu" value={[booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(", ") || "Non précisé"} />
-                </>
+                <DetailRow icon={<MapPin className="h-4 w-4" />} label="Lieu" value={[booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(", ") || "Non précisé"} />
               )}
               {booking.courseFormat === "ONLINE" && booking.onlineLink && (
-                <>
-                  <Separator />
-                  <DetailRow icon={<Video className="h-4 w-4" />} label="Lien" value={booking.onlineLink} />
-                </>
+                <DetailRow icon={<Video className="h-4 w-4" />} label="Lien" value={booking.onlineLink} />
               )}
 
               {booking.objective && (
-                <>
-                  <Separator />
-                  <DetailRow icon={<MessageSquare className="h-4 w-4" />} label="Objectif" value={booking.objective} />
-                </>
+                <DetailRow icon={<MessageSquare className="h-4 w-4" />} label="Objectif" value={booking.objective} />
               )}
               {booking.message && (
                 <DetailRow icon={<MessageSquare className="h-4 w-4" />} label="Message" value={booking.message} />
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </ClientSurface>
 
           {isCancelled && (
-            <Card className="rounded-[1.35rem] border-[#E3E8F2] bg-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-black text-[#111827]">Annulation et remboursement</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+            <ClientSurface className="space-y-4">
+              <ClientSectionTitle
+                eyebrow="Support"
+                title="Annulation et remboursement"
+                description="Règle appliquée, frais retenus et montant estimé."
+              />
+              <div className="space-y-3 text-sm">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <DetailRow icon={<AlertTriangle className="h-4 w-4" />} label="Motif" value={booking.cancellationReason || "Annulation demandée"} />
                   <DetailRow icon={<Calendar className="h-4 w-4" />} label="Date d'annulation" value={booking.cancelledAt ? formatDateTime(booking.cancelledAt) : "—"} />
@@ -346,37 +399,44 @@ export default async function ReservationDetailPage({
                   <DetailRow
                     icon={<CheckCircle2 className="h-4 w-4" />}
                     label="Statut paiement"
-                    value={<PaymentStatusBadge status={booking.paymentStatus} audience="client" quoteOnly={booking.isQuoteOnly} />}
+                    value={formatClientPaymentStatus(booking.paymentStatus, booking.isQuoteOnly)}
                   />
                 </div>
                 {booking.cancellationDetail && (
                   <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Message complémentaire</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Message complémentaire</p>
                     <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111827]">{booking.cancellationDetail}</p>
                   </div>
                 )}
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Frais retenus</p>
-                    <p className="mt-1 text-lg font-black text-[#111827]"><Money amount={booking.cancellationFeeAmount} /></p>
+                    <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.cancellationFeeAmount} /></p>
                     <p className="text-xs text-[#64748B]">{booking.cancellationFeeRate}%</p>
                   </div>
                   <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                    <p className="text-xs text-[#64748B]">Frais service non remboursés</p>
+                    <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.paymentServiceFeeAmount} /></p>
+                    <p className="text-xs text-[#64748B]">Frais du moyen de paiement</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Remboursement estimé</p>
-                    <p className="mt-1 text-lg font-black text-[#111827]"><Money amount={booking.cancellationRefundAmount} /></p>
+                    <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.cancellationRefundAmount} /></p>
                     <p className="text-xs text-[#64748B]">Selon la règle appliquée au moment de l'annulation.</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </ClientSurface>
           )}
 
           {/* Timeline */}
-          <Card className="rounded-[1.35rem]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-black text-[#111827]">Suivi de la réservation</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <ClientSurface className="space-y-4">
+            <ClientSectionTitle
+              eyebrow="Progression"
+              title="Suivi de la réservation"
+              description="Chaque étape reste visible jusqu'à la clôture du cours."
+            />
+            <div>
               <ol className="relative space-y-4 pl-6">
                 <span className="absolute left-[7px] top-1 bottom-1 w-px bg-[#DDE6F7]" />
                 {timeline.map((t, i) => (
@@ -387,7 +447,7 @@ export default async function ReservationDetailPage({
                       {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
                     </span>
                     <div className="flex flex-col gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
-                      <p className={`text-sm font-bold ${t.done ? "text-[#111827]" : "text-[#64748B]"}`}>{t.label}</p>
+                      <p className={`text-sm font-semibold ${t.done ? "text-[#111827]" : "text-[#64748B]"}`}>{t.label}</p>
                       {t.date && t.done && (
                         <p className="text-xs font-semibold text-[#64748B] min-[480px]:shrink-0">{formatDate(t.date)}</p>
                       )}
@@ -395,20 +455,22 @@ export default async function ReservationDetailPage({
                   </li>
                 ))}
               </ol>
-            </CardContent>
-          </Card>
+            </div>
+          </ClientSurface>
 
           {/* Transactions */}
           {visibleTransactions.length > 0 && (
-            <Card className="rounded-[1.35rem]">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-black text-[#111827]">Historique des transactions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <ClientSurface className="space-y-4">
+              <ClientSectionTitle
+                eyebrow="Paiement"
+                title="Historique des transactions"
+                description="Paiements et remboursements confirmés par le système."
+              />
+              <div className="space-y-2">
                 {visibleTransactions.map((tx) => (
                   <div key={tx.id} className="flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm shadow-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
                     <div>
-                      <p className="font-mono text-xs font-black text-[#111827]">{tx.reference}</p>
+                      <p className="font-mono text-xs font-semibold text-[#111827]">{tx.reference}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
                         {tx.type === "CLIENT_PAYMENT" ? "Paiement sécurisé" :
                           tx.type === "REFUND" ? "Remboursement" : "Transaction"}
@@ -416,13 +478,13 @@ export default async function ReservationDetailPage({
                       </p>
                     </div>
                     <div className="min-[460px]:text-right">
-                      <p className="font-black text-[#111827]"><Money amount={tx.amount} /></p>
-                      <PaymentStatusBadge status={tx.status} audience="client" />
+                      <p className="font-semibold text-[#111827]"><Money amount={tx.amount} /></p>
+                      <p className="mt-1 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(tx.status)}</p>
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </ClientSurface>
           )}
         </div>
 
@@ -443,12 +505,26 @@ export default async function ReservationDetailPage({
             transportRuleLabel={pricingSnapshot?.transportRuleLabel}
             materialFee={displayMaterialFee}
             discountAmount={displayDiscountAmount}
+            paymentServiceFeeAmount={displayPaymentServiceFeeAmount}
+            paymentServiceFeeLabel={displayPaymentServiceFeeLabel}
+            totalBeforePaymentServiceFee={displayTotalBeforePaymentServiceFee}
             isQuoteOnly={booking.isQuoteOnly}
           />
+
+          <ScheduleProposalActions bookingId={booking.id} proposals={scheduleProposals} />
 
           <BookingActions booking={bookingActionsPayload as any} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function ReservationStatusChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-left shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold text-[#111B4D]">{value}</p>
     </div>
   );
 }
@@ -469,7 +545,7 @@ function getClientSituation({
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
       title: "Support en traitement",
-      description: "Votre paiement reste protégé pendant que l'équipe analyse le litige et vous tient informé.",
+      description: "Votre paiement reste protégé pendant l'analyse.",
       icon: <AlertTriangle className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
@@ -477,7 +553,7 @@ function getClientSituation({
   if (status === "PENDING_CLIENT_VALIDATION") {
     return {
       title: "Confirmation du cours",
-      description: "Le cours est marqué comme effectué. Confirmez-le ou signalez un problème depuis les actions du dossier.",
+      description: "Confirmez le cours ou signalez un problème.",
       icon: <ClipboardCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
@@ -485,15 +561,15 @@ function getClientSituation({
   if (status === "CANCELLED" || status === "REFUNDED") {
     return {
       title: "Dossier annulé",
-      description: "Les règles d'annulation et le remboursement estimé sont affichés dans le détail de cette réservation.",
-      icon: <RefreshCw className="h-5 w-5 text-slate-700" />,
-      className: "border-slate-200 bg-white text-slate-800",
+      description: "Remboursement et frais restent visibles dans le dossier.",
+      icon: <RefreshCw className="h-5 w-5 text-[#111B4D]" />,
+      className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }
   if (isQuoteOnly) {
     return {
       title: "Devis en validation",
-      description: "L'administration vérifie le tarif final avant tout paiement. Vous recevrez un montant clair.",
+      description: "L'administration valide le montant avant paiement.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -501,15 +577,15 @@ function getClientSituation({
   if (paymentAwaitingProof) {
     return {
       title: "Paiement en vérification",
-      description: "Un statut financier existe, mais l'interface attend encore la preuve serveur PayDunya avant d'afficher le paiement comme confirmé.",
+      description: "Confirmation serveur PayDunya en attente.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
   }
   if (status === "PENDING_PAYMENT" && paymentStatus === "FAILED") {
     return {
-      title: "Paiement PayDunya à finaliser",
-      description: "Le paiement se fait sur PayDunya. MonProf CI ne collecte pas les informations Mobile Money et ne propose pas de choix de moyen interne.",
+      title: "Brouillon non réservé",
+      description: "Le paiement se fait uniquement sur PayDunya. Aucun professeur n'est notifié tant que PayDunya n'a pas confirmé le paiement côté serveur.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -517,7 +593,7 @@ function getClientSituation({
   if (paymentStatus === "BLOCKED") {
     return {
       title: "Paiement protégé",
-      description: "Les fonds sont gardés en sécurité. Ils ne seront libérés qu'après confirmation du cours.",
+      description: "Les fonds restent bloqués jusqu'à confirmation.",
       icon: <LockKeyhole className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -525,7 +601,7 @@ function getClientSituation({
   if (status === "VALIDATED_BY_CLIENT" || status === "PAYMENT_TO_RELEASE") {
     return {
       title: "Validation enregistrée",
-      description: "Votre confirmation est prise en compte. L'administration finalise le paiement du professeur.",
+      description: "L'administration finalise le paiement professeur.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -533,7 +609,7 @@ function getClientSituation({
   if (status === "TEACHER_PAID" || paymentStatus === "TEACHER_PAID") {
     return {
       title: "Cours clôturé",
-      description: "Le dossier est finalisé dans votre espace client avec son historique de paiement.",
+      description: "Historique et paiement sont archivés ici.",
       icon: <CheckCircle2 className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -541,7 +617,7 @@ function getClientSituation({
 
   return {
     title: "Validation en cours",
-    description: "L'équipe confirme la disponibilité du professeur et garde votre réservation sous suivi.",
+    description: "L'équipe confirme la disponibilité du professeur.",
     icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
     className: "border-[#CAD7F2] bg-white text-[#111B4D]",
   };
@@ -552,8 +628,8 @@ function ReservationHeroMetric({ icon, label, value }: { icon: ReactNode; label:
     <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-        <div className="mt-0.5 break-words text-sm font-black leading-5 text-[#111827]">{value}</div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+        <div className="mt-0.5 break-words text-sm font-semibold leading-5 text-[#111827]">{value}</div>
       </div>
     </div>
   );
@@ -564,9 +640,53 @@ function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; val
     <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm">
       {icon && <span className="mt-0.5 shrink-0 text-[#64748B]">{icon}</span>}
       <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
         <div className="break-words text-sm font-semibold leading-6 text-[#111827]">{value}</div>
       </div>
     </div>
   );
+}
+
+function formatClientBookingStatus(status: string) {
+  return CLIENT_BOOKING_STATUS_LABELS[status] ?? "Suivi en cours";
+}
+
+function formatClientPaymentStatus(status: string, quoteOnly = false) {
+  if (quoteOnly) return "Sur devis";
+  return CLIENT_PAYMENT_STATUS_LABELS[status] ?? "Suivi paiement";
+}
+
+function firstPositiveAmount(...values: Array<number | null | undefined>) {
+  for (const value of values) {
+    const amount = Math.round(Number(value) || 0);
+    if (amount > 0) return amount;
+  }
+  return 0;
+}
+
+function hasBlockingClientState(status: string, paymentStatus: string, disputeCount: number) {
+  return disputeCount > 0
+    || ["DISPUTED", "CANCELLED", "REFUNDED"].includes(status)
+    || ["DISPUTED", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "REFUNDED", "PARTIALLY_REFUNDED"].includes(paymentStatus);
+}
+
+function formatSchoolProgramDisplay(value?: string | null) {
+  if (!value?.trim()) return "";
+  const parts = value
+    .split("|")
+    .map((part) => part.trim())
+    .map((part) => {
+      const separatorIndex = part.indexOf(":");
+      if (separatorIndex === -1) return part;
+
+      const key = part.slice(0, separatorIndex).trim().toLowerCase();
+      const label = part.slice(separatorIndex + 1).trim();
+      if (!label) return "";
+      if (key.includes("type client")) return "";
+      if (key.includes("catégorie") || key.includes("categorie")) return label;
+      return label;
+    })
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" · ") : value.trim();
 }

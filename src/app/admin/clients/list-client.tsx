@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, X } from "lucide-react";
@@ -26,7 +25,7 @@ export function ClientsListClient({ q }: { q: string }) {
   };
 
   return (
-    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
+    <Card className="overflow-hidden border-[#E6EAF3] bg-white shadow-sm">
       <CardContent className="p-4">
         <form onSubmit={apply} className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">

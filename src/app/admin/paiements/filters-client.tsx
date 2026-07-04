@@ -55,6 +55,8 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
                 <SelectItem value="TO_PAY_TEACHER">À payer prof</SelectItem>
                 <SelectItem value="TEACHER_PAID">Prof payé</SelectItem>
                 <SelectItem value="DISPUTED">Litige</SelectItem>
+                <SelectItem value="REFUND_PENDING">Remb. à traiter</SelectItem>
+                <SelectItem value="PARTIAL_REFUND_PENDING">Remb. partiel à traiter</SelectItem>
                 <SelectItem value="REFUNDED">Remboursé</SelectItem>
                 <SelectItem value="PARTIALLY_REFUNDED">Remboursé partiel</SelectItem>
                 <SelectItem value="RETAINED">Frais retenus</SelectItem>

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireAdminApi } from "@/lib/admin-api";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
+import { normalizeTeacherPhone } from "@/lib/teacher-portal";
+import { isActivePaymentMethod } from "@/lib/payment-methods";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -126,6 +130,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     availability,
     statusChangeReason,
     notifyTeacherOnStatusChange,
+    portalPassword,
     ...rest
   } = body;
 
@@ -142,7 +147,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         fullName: true,
         professionalName: true,
         photoUrl: true,
+        phone: true,
+        portalAccessEnabled: true,
+        portalPhone: true,
         status: true,
+        qualityScore: true,
+        adminRating: true,
+        adminRatingNote: true,
+        adminRatingPublic: true,
+        portalPasswordHash: true,
         bookings: {
           where: { status: { in: [...ACTIVE_BOOKING_STATUSES] as any } },
           select: { id: true, reference: true, subjectName: true, levelName: true, scheduledDate: true, scheduledTime: true },
@@ -155,7 +168,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const data: any = {};
     const allowed = [
       "fullName","professionalName","photoUrl","phone","email","commune","quartier","addressHint",
-      "jobTitle","bio","experienceYears","diploma","cvUrl","profileType","status","featured","qualityScore","operationalComment",
+      "portalAccessEnabled","portalPhone","defaultPayoutMethod","defaultPayoutPhone","payoutInstructions",
+      "jobTitle","bio","experienceYears","diploma","cvUrl","careerSummary","skills","workHistory","certifications","teachingAchievements","learnersCoached","profileType","status","featured","qualityScore","operationalComment",
+      "adminRating","adminRatingNote","adminRatingPublic",
       "badgeVerified","badgeRecommended","badgeNew","badgePopular","badgePremium",
       "internalNote","offersHome","offersOnline","offersGroup",
       "pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate","pricingTier",
@@ -164,9 +179,81 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (k in rest) data[k] = rest[k];
     }
     if ("experienceYears" in data) data.experienceYears = Number(data.experienceYears) || 0;
+    if ("learnersCoached" in data) data.learnersCoached = Math.max(0, Number(data.learnersCoached) || 0);
+    for (const k of ["careerSummary","skills","workHistory","certifications","teachingAchievements"]) {
+      if (k in data) data[k] = normalizeTeacherProfileText(data[k]);
+    }
     if ("qualityScore" in data) data.qualityScore = Math.max(0, Math.min(100, Number(data.qualityScore) || 0));
+    if ("adminRating" in data) {
+      data.adminRating = Math.max(0, Math.min(5, Number(data.adminRating) || 0));
+      data.adminRatingUpdatedAt = new Date();
+      data.adminRatingUpdatedById = admin.id;
+    }
+    if ("adminRatingNote" in data) {
+      data.adminRatingNote = typeof data.adminRatingNote === "string" && data.adminRatingNote.trim()
+        ? data.adminRatingNote.trim().slice(0, 500)
+        : null;
+      data.adminRatingUpdatedAt = new Date();
+      data.adminRatingUpdatedById = admin.id;
+    }
+    if ("adminRatingPublic" in data) {
+      data.adminRatingPublic = Boolean(data.adminRatingPublic);
+    }
+    if ("defaultPayoutPhone" in data) {
+      const rawPhone = typeof data.defaultPayoutPhone === "string" ? data.defaultPayoutPhone.replace(/[^\d+]/g, "").trim() : "";
+      data.defaultPayoutPhone = rawPhone || null;
+    }
+    if ("defaultPayoutMethod" in data && data.defaultPayoutMethod !== null && !isActivePaymentMethod(data.defaultPayoutMethod)) {
+      return NextResponse.json({ error: "Moyen de paiement professeur invalide." }, { status: 400 });
+    }
+    if ("payoutInstructions" in data) {
+      data.payoutInstructions = typeof data.payoutInstructions === "string" && data.payoutInstructions.trim()
+        ? data.payoutInstructions.trim().slice(0, 500)
+        : null;
+    }
     for (const k of ["pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate"]) {
       if (k in data) data[k] = Number(data[k]) || 0;
+    }
+    if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
+      const normalizedPortalPhone = normalizeTeacherPhone(data.portalPhone || data.phone || existingTeacher.phone);
+      data.portalPhone = data.portalAccessEnabled === false ? null : normalizedPortalPhone;
+    }
+    if ("portalAccessEnabled" in data) {
+      data.portalAccessEnabled = Boolean(data.portalAccessEnabled);
+      if (data.portalAccessEnabled && !data.portalPhone) {
+        return NextResponse.json({ error: "Téléphone de connexion professeur requis." }, { status: 400 });
+      }
+      if (data.portalAccessEnabled && !existingTeacher.portalPasswordHash && (typeof portalPassword !== "string" || portalPassword.trim().length < 6)) {
+        return NextResponse.json({ error: "Définissez un mot de passe professeur de 6 caractères minimum avant d'activer l'accès." }, { status: 400 });
+      }
+    }
+    if (typeof portalPassword === "string" && portalPassword.trim()) {
+      if (portalPassword.trim().length < 6) {
+        return NextResponse.json({ error: "Le mot de passe professeur doit contenir au moins 6 caractères." }, { status: 400 });
+      }
+      data.portalPasswordHash = await bcrypt.hash(portalPassword.trim(), 10);
+      if (!("portalAccessEnabled" in data)) data.portalAccessEnabled = true;
+      if (!data.portalPhone) data.portalPhone = normalizeTeacherPhone(data.phone || existingTeacher.phone);
+    }
+    const nextPortalEnabled = "portalAccessEnabled" in data
+      ? Boolean(data.portalAccessEnabled)
+      : existingTeacher.portalAccessEnabled;
+    const nextPortalPhone = typeof data.portalPhone === "string" && data.portalPhone
+      ? data.portalPhone
+      : existingTeacher.portalPhone;
+    if (nextPortalEnabled && nextPortalPhone) {
+      const duplicatePortalPhone = await db.teacher.findFirst({
+        where: {
+          portalPhone: nextPortalPhone,
+          id: { not: id },
+        },
+        select: { fullName: true, professionalName: true },
+      });
+      if (duplicatePortalPhone) {
+        return NextResponse.json({
+          error: `Ce numéro de connexion est déjà attribué à ${duplicatePortalPhone.professionalName || duplicatePortalPhone.fullName}.`,
+        }, { status: 409 });
+      }
     }
     if (availability !== undefined) {
       data.availability = availability ? (typeof availability === "string" ? availability : JSON.stringify(availability)) : null;
@@ -198,6 +285,42 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (statusChanged) data.lastActivityAt = new Date();
 
     await db.teacher.update({ where: { id }, data });
+
+    const qualityTouched = [
+      "qualityScore",
+      "adminRating",
+      "adminRatingNote",
+      "adminRatingPublic",
+    ].some((key) => key in data);
+    if (qualityTouched) {
+      const teacherName = existingTeacher.professionalName || existingTeacher.fullName;
+      const nextRating = "adminRating" in data ? data.adminRating : existingTeacher.adminRating;
+      const nextScore = "qualityScore" in data ? data.qualityScore : existingTeacher.qualityScore;
+      await db.$transaction([
+        db.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Évaluation qualité professeur modifiée",
+            entityType: "Teacher",
+            entityId: id,
+            detail: `${admin.name} a mis à jour l'évaluation de ${teacherName}. Note plateforme : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
+            oldStatus: `rating=${Number(existingTeacher.adminRating || 0).toFixed(1)};score=${existingTeacher.qualityScore}`,
+            newStatus: `rating=${Number(nextRating || 0).toFixed(1)};score=${nextScore}`,
+          },
+        }),
+        db.teacherNotification.create({
+          data: {
+            teacherId: id,
+            title: "Évaluation qualité mise à jour",
+            message: `Bonjour ${teacherName}, votre suivi qualité Compétence a été mis à jour. Note plateforme : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
+            channel: "INTERNAL",
+            sent: true,
+            status: "SENT",
+            sentById: admin.id,
+          },
+        }),
+      ]);
+    }
 
     // Sync relations
     if (Array.isArray(subjects)) {
@@ -299,6 +422,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     console.error("admin/teachers PATCH error", e);
+    if (e?.code === "P2002") {
+      return NextResponse.json({ error: "Ce téléphone de connexion professeur est déjà utilisé." }, { status: 409 });
+    }
     return NextResponse.json({ error: e.message || "Erreur serveur" }, { status: 500 });
   }
 }

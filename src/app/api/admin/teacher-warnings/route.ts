@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         message: [
           `Bonjour ${teacherName},`,
           "",
-          "Un avertissement a été enregistré par l'administration MonProf CI.",
+          "Un avertissement a été enregistré par l'administration Compétence.",
           booking ? `Réservation : ${booking.reference}` : "",
           booking ? `Cours : ${booking.subjectName} - ${booking.levelName}` : "",
           `Niveau : ${levelLabel}`,

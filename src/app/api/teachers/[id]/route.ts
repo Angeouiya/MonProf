@@ -23,6 +23,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
   }
 
+  const displayRating = teacher.ratingCount > 0
+    ? teacher.rating
+    : teacher.adminRatingPublic && teacher.adminRating > 0
+      ? teacher.adminRating
+      : teacher.rating;
+
   return NextResponse.json({
     id: teacher.id,
     fullName: teacher.fullName,
@@ -32,9 +38,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     bio: teacher.bio,
     experienceYears: teacher.experienceYears,
     diploma: teacher.diploma,
+    careerSummary: teacher.careerSummary,
+    skills: teacher.skills,
+    workHistory: teacher.workHistory,
+    certifications: teacher.certifications,
+    teachingAchievements: teacher.teachingAchievements,
+    learnersCoached: teacher.learnersCoached,
     profileType: teacher.profileType,
     rating: teacher.rating,
     ratingCount: teacher.ratingCount,
+    adminRating: teacher.adminRating,
+    adminRatingPublic: teacher.adminRatingPublic,
+    displayRating,
+    displayRatingSource: teacher.ratingCount > 0 ? "CLIENT_REVIEWS" : teacher.adminRatingPublic && teacher.adminRating > 0 ? "ADMIN_PLATFORM" : "NONE",
     reviewsCount: teacher._count.reviews,
     bookingsCount: teacher._count.bookings,
     badges: {

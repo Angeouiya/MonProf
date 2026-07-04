@@ -31,11 +31,11 @@ export function StatCard({
     primary: "bg-[#111B4D] text-white shadow-sm",
   };
   return (
-    <div className={cn("premium-hover rounded-[1.35rem] border p-4 shadow-sm sm:p-5", toneClasses[tone], className)}>
+    <div className={cn("premium-hover rounded-xl border p-4 shadow-sm sm:p-5", toneClasses[tone], className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-1.5 break-words text-xl font-black leading-tight tracking-tight text-[#111827] sm:text-2xl">{value}</p>
+          <p className="mt-1.5 break-words text-xl font-semibold leading-tight tracking-tight text-[#111827] sm:text-2xl">{value}</p>
           {trend && <p className="mt-1 text-xs font-semibold text-[#111B4D]">{trend.value}</p>}
         </div>
         {Icon && (

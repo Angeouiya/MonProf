@@ -85,7 +85,7 @@ export function ProfessorImage({
     >
       <span
         className={cn(
-          "relative block h-full w-full overflow-hidden border border-border bg-[#111B4D] shadow-sm",
+          "relative block h-full w-full overflow-hidden border border-[#E3E8F2] bg-[#111B4D] shadow-sm",
           shape === "circle" ? "rounded-full" : "rounded-2xl"
         )}
       >
@@ -129,6 +129,7 @@ export function ProfessorImage({
       </span>
       {verified && (
         <span
+          data-professor-image-badge
           className="absolute flex items-center justify-center rounded-full border-white bg-[#1E2A78] text-white"
           style={{
             width: badge.size,
@@ -138,8 +139,8 @@ export function ProfessorImage({
             borderWidth: badge.borderWidth,
             boxShadow: `0 0 0 ${badge.haloWidth}px #FFFFFF`,
           }}
-          title="Professeur certifié MonProf CI"
-          aria-label="Professeur certifié MonProf CI"
+          title="Professeur certifié"
+          aria-label="Professeur certifié"
         >
           <BadgeCheck
             style={{

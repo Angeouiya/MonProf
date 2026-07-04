@@ -22,7 +22,7 @@ import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "
 export const dynamic = "force-dynamic";
 
 const VALID_METHODS = ["WAVE","ORANGE_MONEY","MTN_MONEY","MOOV_MONEY"];
-const VALID_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
+const VALID_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUND_PENDING","PARTIAL_REFUND_PENDING","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
 
 export default async function AdminPaiementsPage({
   searchParams,
@@ -91,7 +91,7 @@ export default async function AdminPaiementsPage({
   const disputedAmount = txs.filter((tx) => tx.status === "DISPUTED").reduce((sum, tx) => sum + tx.amount, 0);
   const toPayTeacherAmount = txs.filter((tx) => tx.status === "TO_PAY_TEACHER").reduce((sum, tx) => sum + tx.amount, 0);
   const paidTeacherAmount = teacherPayoutAgg._sum.amount ?? 0;
-  const financialAttentionCount = txs.filter((tx) => ["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "RETAINED"].includes(tx.status)).length;
+  const financialAttentionCount = txs.filter((tx) => ["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "RETAINED"].includes(tx.status)).length;
 
   return (
     <div className="space-y-5">
@@ -267,7 +267,7 @@ export default async function AdminPaiementsPage({
                       <TableCell>
                         <div className="space-y-1">
                           <PaymentStatusBadge status={t.status} />
-                          {["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "RETAINED"].includes(t.status) && (
+                          {["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "RETAINED"].includes(t.status) && (
                             <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Suivi requis</Badge>
                           )}
                         </div>
@@ -291,9 +291,9 @@ export default async function AdminPaiementsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Versements professeurs enregistrés</CardTitle>
+          <CardTitle className="text-base">Factures / reçus professeurs</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Registre interne des paiements réellement versés aux professeurs, avec allocations par réservation.
+            Registre interne des paiements réellement versés aux professeurs, avec allocations, numéro de paiement et document téléchargeable.
           </p>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -329,6 +329,9 @@ export default async function AdminPaiementsPage({
                             {teacherName}
                           </Link>
                           <p className="truncate text-xs text-muted-foreground">{paymentMethodLabel(payout.method)}</p>
+                          {payout.paymentPhone && (
+                            <p className="truncate text-xs text-muted-foreground">Numéro payé : {payout.paymentPhone}</p>
+                          )}
                         </div>
                       </div>
 
@@ -383,7 +386,7 @@ export default async function AdminPaiementsPage({
                 <TableHead className="hidden md:table-cell">Méthode</TableHead>
                 <TableHead className="text-right">Montant</TableHead>
                 <TableHead className="hidden xl:table-cell">Admin</TableHead>
-                <TableHead className="text-right">Reçu</TableHead>
+                <TableHead className="text-right">Facture/reçu</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -410,6 +413,7 @@ export default async function AdminPaiementsPage({
                           <Link href={teacherAccountingHref(payout.teacher.id, payout.allocations[0]?.booking.id)} className="block truncate font-medium text-foreground hover:text-primary">
                             {payout.teacher.professionalName || payout.teacher.fullName}
                           </Link>
+                          {payout.paymentPhone && <p className="line-clamp-1 text-xs text-muted-foreground">Numéro payé : {payout.paymentPhone}</p>}
                           {payout.note && <p className="line-clamp-1 text-xs text-muted-foreground">{payout.note}</p>}
                         </div>
                       </div>

@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientRootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/connexion?from=/client");
+  if ((session.user as any).role === "TEACHER") redirect("/professeur");
   if ((session.user as any).role !== "CLIENT") redirect("/admin");
 
   const user = await db.user.findUnique({

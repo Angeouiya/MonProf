@@ -8,10 +8,13 @@ import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancell
 import { parsePricingSnapshot } from "@/lib/pricing";
 import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
   isPaymentReadyForCourseProgressWithProof,
+  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 
 function parsePreferredDays(value?: string | null) {
@@ -66,6 +69,11 @@ function publicBookingDetailPayload(booking: any) {
     transportRuleLabel: pricingSnapshot?.transportRuleLabel ?? null,
     materialFee: pricingSnapshot?.materialFee ?? booking.materialFee,
     discountAmount: pricingSnapshot?.discountAmount ?? booking.discountAmount,
+    paymentServiceFeeRate: pricingSnapshot?.paymentServiceFeeRate ?? booking.paymentServiceFeeRate ?? 0,
+    paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount ?? 0,
+    paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel ?? null,
+    totalBeforePaymentServiceFee: pricingSnapshot?.totalBeforePaymentServiceFee
+      ?? Math.max(0, totalClientPays - (pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount ?? 0)),
     totalClientPays,
     isQuoteOnly: booking.isQuoteOnly,
     status: booking.status,
@@ -88,6 +96,37 @@ function publicBookingDetailPayload(booking: any) {
     client: booking.client,
     reviews: booking.reviews,
     disputes: booking.disputes,
+    clientRefundRequests: Array.isArray(booking.clientRefundRequests)
+      ? booking.clientRefundRequests.map((request: any) => ({
+          id: request.id,
+          reference: request.reference,
+          amount: request.amount,
+          paymentServiceFeeNonRefunded: request.paymentServiceFeeNonRefunded,
+          method: request.method,
+          paymentPhone: request.paymentPhone,
+          accountName: request.accountName,
+          note: request.note,
+          status: request.status,
+          processedAt: request.processedAt,
+          externalReference: request.externalReference,
+          createdAt: request.createdAt,
+        }))
+      : [],
+    scheduleProposals: Array.isArray(booking.scheduleProposals)
+      ? booking.scheduleProposals.map((proposal: any) => ({
+          id: proposal.id,
+          bookingId: proposal.bookingId,
+          teacherId: proposal.teacherId,
+          proposedDate: proposal.proposedDate,
+          proposedTime: proposal.proposedTime,
+          reason: proposal.reason,
+          status: proposal.status,
+          clientResponse: proposal.clientResponse,
+          createdAt: proposal.createdAt,
+          respondedAt: proposal.respondedAt,
+          teacher: proposal.teacher,
+        }))
+      : [],
     transactions: Array.isArray(booking.transactions)
       ? booking.transactions
           .filter((transaction: any) => (
@@ -116,6 +155,9 @@ export async function GET(
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const userId = (session.user as any).id;
   const role = (session.user as any).role;
+  if (role !== "CLIENT" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Accès réservé aux clients et administrateurs." }, { status: 403 });
+  }
   const { id } = await params;
 
   const booking = await db.booking.findUnique({
@@ -131,6 +173,13 @@ export async function GET(
       transactions: { orderBy: { createdAt: "asc" } },
       reviews: true,
       disputes: { orderBy: { createdAt: "desc" } },
+      clientRefundRequests: { orderBy: { createdAt: "desc" } },
+      scheduleProposals: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+      },
     },
   });
 
@@ -157,11 +206,18 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const userId = (session.user as any).id;
+  if ((session.user as any).role !== "CLIENT") {
+    return NextResponse.json({ error: "Action réservée au client propriétaire de la réservation." }, { status: 403 });
+  }
   const { id } = await params;
 
   const booking = await db.booking.findUnique({
     where: { id },
-    include: { transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } } },
+    include: {
+      transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
+      teacher: { select: { id: true, fullName: true, professionalName: true } },
+      client: { select: { id: true, name: true } },
+    },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
   if (booking.clientId !== userId) {
@@ -169,7 +225,7 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { action, reason, description, rescheduleMessage } = body;
+  const { action, reason, description, rescheduleMessage, proposalId, clientResponse } = body;
 
   const now = new Date();
 
@@ -222,6 +278,8 @@ export async function PATCH(
           totalClientPays: pricingSnapshot?.totalClientPays ?? detailedBooking.totalClientPays ?? detailedBooking.totalPrice,
           courseAmount: pricingSnapshot?.courseAmount ?? detailedBooking.courseAmount,
           transportFee: pricingSnapshot?.transportFee ?? detailedBooking.transportFee,
+          paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? detailedBooking.paymentServiceFeeAmount,
+          paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? detailedBooking.paymentServiceFeeLabel,
         },
         client: {
           id: detailedBooking.client.id,
@@ -355,6 +413,216 @@ export async function PATCH(
       return NextResponse.json({ booking: publicBookingDetailPayload(updated) });
     }
 
+    case "accept_schedule_proposal":
+    case "reject_schedule_proposal": {
+      if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+      }
+      if (typeof proposalId !== "string" || !proposalId) {
+        return NextResponse.json({ error: "Proposition de créneau introuvable." }, { status: 400 });
+      }
+      const proposal = await db.bookingScheduleProposal.findUnique({
+        where: { id: proposalId },
+        include: { teacher: true },
+      });
+      if (!proposal || proposal.bookingId !== booking.id || proposal.teacherId !== booking.teacherId) {
+        return NextResponse.json({ error: "Cette proposition ne correspond pas à votre réservation." }, { status: 404 });
+      }
+      if (proposal.status !== "PENDING") {
+        return NextResponse.json({ error: "Cette proposition a déjà été traitée." }, { status: 409 });
+      }
+      const cleanClientResponse = typeof clientResponse === "string" ? clientResponse.trim().slice(0, 700) : "";
+      const teacherName = proposal.teacher.professionalName || proposal.teacher.fullName;
+      const formattedDate = proposal.proposedDate.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+
+      if (action === "accept_schedule_proposal") {
+        await db.$transaction(async (tx) => {
+          await tx.bookingScheduleProposal.update({
+            where: { id: proposal.id },
+            data: {
+              status: "ACCEPTED",
+              clientResponse: cleanClientResponse || "Créneau accepté par le client.",
+              respondedAt: now,
+            },
+          });
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              scheduledDate: proposal.proposedDate,
+              startDate: proposal.proposedDate,
+              scheduledTime: proposal.proposedTime,
+              preferredTime: proposal.proposedTime,
+              status: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status)
+                ? "ASSIGNED"
+                : booking.status,
+              assignedAt: booking.assignedAt ?? now,
+            },
+          });
+          await tx.notification.create({
+            data: {
+              userId: null,
+              title: "Créneau accepté par le client",
+              message: `${booking.client.name} a accepté le créneau proposé par ${teacherName} pour ${booking.reference}: ${formattedDate} à ${proposal.proposedTime}.`,
+              type: "CLIENT_ACCEPTED_RESCHEDULE",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "CONFIRMED",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: booking.teacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              confirmedAt: now,
+              response: cleanClientResponse || null,
+              link: `/admin/reservations/${booking.id}`,
+              actionLabel: "Voir réservation",
+            },
+          });
+          await tx.notification.create({
+            data: {
+              userId: booking.clientId,
+              title: "Nouveau créneau confirmé",
+              message: `Votre cours avec ${teacherName} est désormais prévu le ${formattedDate} à ${proposal.proposedTime}.`,
+              type: "RESCHEDULE_ACCEPTED",
+              recipientType: "CLIENT",
+              channel: "INTERNAL",
+              status: "CONFIRMED",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: booking.teacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              confirmedAt: now,
+              link: `/client/reservations/${booking.id}`,
+              actionLabel: "Voir réservation",
+            },
+          });
+          await tx.teacherNotification.create({
+            data: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              title: `Créneau accepté - ${booking.reference}`,
+              message: `Le client a accepté votre proposition.\nDate: ${formattedDate}\nHeure: ${proposal.proposedTime}${cleanClientResponse ? `\nMessage client: ${cleanClientResponse}` : ""}`,
+              channel: "PRIVATE_LINK",
+              sent: true,
+              status: "CONFIRMED",
+              readAt: now,
+            },
+          });
+          await tx.teacherTask.updateMany({
+            where: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              type: "ADMIN_ACTION",
+              title: { contains: "Créneau proposé" },
+              status: { in: ["TODO", "SENT_TO_TEACHER", "LATE"] },
+            },
+            data: { status: "DONE", completedAt: now },
+          });
+          await tx.adminActionLog.create({
+            data: {
+              action: "Créneau professeur accepté",
+              entityType: "BookingScheduleProposal",
+              entityId: proposal.id,
+              detail: `${booking.client.name} a accepté ${formattedDate} à ${proposal.proposedTime} pour ${booking.reference}.`,
+              oldStatus: "PENDING",
+              newStatus: "ACCEPTED",
+            },
+          });
+        });
+        return NextResponse.json({ ok: true });
+      }
+
+      await db.$transaction(async (tx) => {
+        await tx.bookingScheduleProposal.update({
+          where: { id: proposal.id },
+          data: {
+            status: "REJECTED",
+            clientResponse: cleanClientResponse || "Créneau refusé par le client.",
+            respondedAt: now,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: null,
+            title: "Créneau refusé par le client",
+            message: `${booking.client.name} a refusé le créneau proposé par ${teacherName} pour ${booking.reference}. Remplacement ou annulation administrative à décider.`,
+            type: "CLIENT_REJECTED_RESCHEDULE",
+            recipientType: "ADMIN",
+            channel: "INTERNAL",
+            status: "SENT",
+            priority: "CRITICAL",
+            bookingId: booking.id,
+            teacherId: booking.teacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            response: cleanClientResponse || null,
+            link: `/admin/reservations/${booking.id}?action=replace`,
+            actionLabel: "Remplacer ou annuler",
+            actionType: "REPLACE_TEACHER",
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: booking.clientId,
+            title: "Créneau refusé",
+            message: "Votre refus est transmis à l'administration. Vous pourrez choisir un autre professeur ou un autre créneau selon les options proposées.",
+            type: "RESCHEDULE_REJECTED",
+            recipientType: "CLIENT",
+            channel: "INTERNAL",
+            status: "SENT",
+            priority: "IMPORTANT",
+            bookingId: booking.id,
+            teacherId: booking.teacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            link: `/client/reservations/${booking.id}`,
+            actionLabel: "Voir réservation",
+          },
+        });
+        await tx.teacherNotification.create({
+          data: {
+            teacherId: booking.teacherId,
+            bookingId: booking.id,
+            title: `Créneau refusé - ${booking.reference}`,
+            message: `Le client a refusé le créneau proposé (${formattedDate}, ${proposal.proposedTime}). L'administration décidera remplacement, annulation ou nouveau créneau.${cleanClientResponse ? `\nMessage client: ${cleanClientResponse}` : ""}`,
+            channel: "PRIVATE_LINK",
+            sent: true,
+            status: "SENT",
+            readAt: now,
+          },
+        });
+        await tx.teacherTask.create({
+          data: {
+            teacherId: booking.teacherId,
+            bookingId: booking.id,
+            type: "ADMIN_ACTION",
+            title: `Décision requise - créneau refusé ${booking.reference}`,
+            description: `Le client a refusé la proposition de ${teacherName}. Décider: remplacer le professeur, proposer un nouveau créneau ou confirmer l'annulation au client.`,
+            priority: "CRITICAL",
+            status: "TODO",
+            dueAt: now,
+          },
+        });
+        await tx.adminActionLog.create({
+          data: {
+            action: "Créneau professeur refusé",
+            entityType: "BookingScheduleProposal",
+            entityId: proposal.id,
+            detail: `${booking.client.name} a refusé ${formattedDate} à ${proposal.proposedTime} pour ${booking.reference}. ${cleanClientResponse || ""}`.trim(),
+            oldStatus: "PENDING",
+            newStatus: "REJECTED",
+          },
+        });
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     case "report":
     case "open_dispute": {
       if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
@@ -399,6 +667,9 @@ export async function PATCH(
     }
 
     case "reschedule": {
+      if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+      }
       const updated = await db.booking.update({
         where: { id },
         data: {
@@ -447,11 +718,11 @@ export async function PATCH(
       const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, "CLIENT");
       const paymentStatus = !wasPaid
         ? booking.paymentStatus
-        : policy.refundAmount === policy.baseAmount
-          ? "REFUNDED"
-          : policy.refundAmount > 0
-            ? "PARTIALLY_REFUNDED"
-            : "RETAINED";
+        : policy.refundAmount <= 0
+          ? "RETAINED"
+          : policy.refundAmount >= policy.baseAmount
+            ? "REFUND_PENDING"
+            : "PARTIAL_REFUND_PENDING";
       const updated = await db.booking.update({
         where: { id },
         data: {
@@ -473,27 +744,11 @@ export async function PATCH(
           data: { status: paymentStatus },
         });
       }
-      if (wasPaid && policy.refundAmount > 0) {
-        await db.transaction.create({
-          data: {
-            reference: generateReference("TX-REF"),
-            bookingId: id,
-            teacherId: booking.teacherId,
-            amount: policy.refundAmount,
-            commission: 0,
-            teacherNet: 0,
-            type: "REFUND",
-            status: "REFUNDED",
-            method: booking.paymentMethod,
-            paidAt: now,
-          },
-        });
-      }
       await db.notification.create({
         data: {
           userId: null,
           title: "Réservation annulée",
-          message: `Le client a annulé la réservation ${booking.reference}. ${cancellationPolicySummary(policy)}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+          message: `Le client a annulé la réservation ${booking.reference}. ${cancellationPolicySummary(policy)}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
           type: "BOOKING_CANCELLED",
           recipientType: "ADMIN",
           channel: "INTERNAL",
@@ -535,7 +790,7 @@ export async function PATCH(
           channel: "INTERNAL",
           subject: `Annulation réservation ${booking.reference}`,
           content: wasPaid
-            ? `Votre réservation est annulée.\n\n${policy.label}\n${policy.description}\n\nFrais retenus : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA\nRemboursement estimé : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA`
+            ? `Votre réservation est annulée.\n\n${policy.label}\n${policy.description}\n\nFrais retenus : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA\nFrais de service paiement non remboursés : ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA\nRemboursement estimé : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA`
             : "Votre réservation est annulée. Aucun paiement n'était à rembourser.",
           priority: policy.feeRate > 0 ? "IMPORTANT" : "NORMAL",
           status: "SENT",
@@ -552,6 +807,7 @@ export async function PATCH(
             `Niveau : ${booking.levelName}`,
             `Motif : ${reason || "Annulation demandée par le client"}`,
             `Frais retenus côté client : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA`,
+            `Frais service paiement non remboursés : ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA`,
             "Ne vous présentez pas au cours sans nouvelle instruction de l'administration.",
           ].join("\n"),
           channel: "WHATSAPP",
@@ -581,12 +837,113 @@ export async function PATCH(
           action: "Annulation client réservation",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Client a annulé ${booking.reference}. Motif: ${reason || "Non renseigné"}. Frais: ${policy.feeAmount} FCFA. Remboursement: ${wasPaid ? policy.refundAmount : 0} FCFA. Tâche professeur créée pour information.`,
+          detail: `Client a annulé ${booking.reference}. Motif: ${reason || "Non renseigné"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${wasPaid ? policy.refundAmount : 0} FCFA. Tâche professeur créée pour information.`,
           oldStatus: booking.status,
           newStatus: "CANCELLED",
         },
       });
       return NextResponse.json({ booking: publicBookingDetailPayload(updated) });
+    }
+
+    case "submit_refund_details": {
+      if (!["CANCELLED", "REFUNDED"].includes(booking.status) || booking.cancellationRefundAmount <= 0) {
+        return NextResponse.json({ error: "Aucun remboursement client n'est disponible pour cette réservation." }, { status: 400 });
+      }
+      const method = typeof body.method === "string" ? body.method.trim() : "";
+      const paymentPhone = typeof body.paymentPhone === "string" ? body.paymentPhone.trim().replace(/\s+/g, " ") : "";
+      const confirmPaymentPhone = typeof body.confirmPaymentPhone === "string" ? body.confirmPaymentPhone.trim().replace(/\s+/g, " ") : "";
+      const accountName = typeof body.accountName === "string" ? body.accountName.trim() : "";
+      const note = typeof body.note === "string" ? body.note.trim() : "";
+      const normalizedPhoneDigits = paymentPhone.replace(/\D/g, "");
+      const confirmedPhoneDigits = confirmPaymentPhone.replace(/\D/g, "");
+
+      if (!isActivePaymentMethod(method)) {
+        return NextResponse.json({ error: "Choisissez un moyen de remboursement valide." }, { status: 400 });
+      }
+      if (normalizedPhoneDigits.length < 8 || normalizedPhoneDigits.length > 15) {
+        return NextResponse.json({ error: "Le numéro de remboursement doit contenir entre 8 et 15 chiffres." }, { status: 400 });
+      }
+      if (normalizedPhoneDigits !== confirmedPhoneDigits) {
+        return NextResponse.json({ error: "Les deux numéros saisis ne correspondent pas." }, { status: 400 });
+      }
+      if (accountName.length < 2) {
+        return NextResponse.json({ error: "Indiquez le nom du titulaire du compte mobile money." }, { status: 400 });
+      }
+
+      const existingPending = await db.clientRefundRequest.findFirst({
+        where: {
+          bookingId: booking.id,
+          clientId: booking.clientId,
+          status: { in: ["PENDING", "APPROVED"] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      const payload = {
+        amount: booking.cancellationRefundAmount,
+        paymentServiceFeeNonRefunded: booking.paymentServiceFeeAmount,
+        method,
+        paymentPhone,
+        accountName,
+        note: note || null,
+        status: "PENDING" as const,
+      };
+      const refundRequest = existingPending
+        ? await db.clientRefundRequest.update({
+            where: { id: existingPending.id },
+            data: payload,
+          })
+        : await db.clientRefundRequest.create({
+            data: {
+              reference: generateReference("RF"),
+              bookingId: booking.id,
+              clientId: booking.clientId,
+              ...payload,
+            },
+          });
+
+      await db.notification.create({
+        data: {
+          userId: null,
+          title: "Coordonnées de remboursement reçues",
+          message: `Le client a renseigné le remboursement ${refundRequest.reference} pour ${booking.reference}: ${booking.cancellationRefundAmount.toLocaleString("fr-FR")} FCFA via ${paymentMethodLabel(method)} au ${paymentPhone}.`,
+          type: "CLIENT_REFUND_DETAILS",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${booking.id}`,
+          actionLabel: "Traiter remboursement",
+        },
+      });
+      await db.clientCommunication.create({
+        data: {
+          clientId: booking.clientId,
+          bookingId: booking.id,
+          type: "PAYMENT",
+          channel: "INTERNAL",
+          subject: `Coordonnées remboursement ${booking.reference}`,
+          content: `Votre demande de remboursement ${refundRequest.reference} est enregistrée.\nMontant prévu : ${booking.cancellationRefundAmount.toLocaleString("fr-FR")} FCFA\nMoyen : ${paymentMethodLabel(method)}\nNuméro : ${paymentPhone}\nTitulaire : ${accountName}\nFrais de service paiement non remboursés : ${booking.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA`,
+          priority: "IMPORTANT",
+          status: "SENT",
+        },
+      });
+      await db.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Coordonnées remboursement client",
+          entityType: "ClientRefundRequest",
+          entityId: refundRequest.id,
+          detail: `Remboursement ${refundRequest.reference} pour ${booking.reference}: ${booking.cancellationRefundAmount} FCFA via ${paymentMethodLabel(method)} au ${paymentPhone}.`,
+          oldStatus: existingPending?.status ?? "NO_REFUND_REQUEST",
+          newStatus: "PENDING",
+        },
+      });
+
+      return NextResponse.json({ ok: true, refundRequest });
     }
 
     default:
