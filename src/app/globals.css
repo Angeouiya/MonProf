@@ -250,11 +250,12 @@ b {
   top: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;
-  z-index: 50 !important;
+  z-index: 70 !important;
   flex-shrink: 0;
   isolation: isolate;
   overscroll-behavior: contain;
   pointer-events: auto;
+  contain: layout style;
   border-bottom: 1px solid #E3E8F2;
   background: #FFFFFF !important;
   box-shadow: 0 1px 0 rgba(17, 27, 77, 0.04);
@@ -274,11 +275,12 @@ b {
   top: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;
-  z-index: 50 !important;
+  z-index: 70 !important;
   flex-shrink: 0;
   isolation: isolate;
   overscroll-behavior: contain;
   pointer-events: auto;
+  contain: layout style;
   border-bottom: 1px solid #E3E8F2;
   background: #FFFFFF !important;
   box-shadow: 0 1px 0 rgba(17, 27, 77, 0.04);
