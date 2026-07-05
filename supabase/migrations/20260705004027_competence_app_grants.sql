@@ -1,6 +1,17 @@
 -- Runtime role permissions for the Compétence application.
 -- The role password is provisioned outside migrations and must never be committed.
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_roles
+    WHERE rolname = 'competence_app'
+  ) THEN
+    CREATE ROLE competence_app NOLOGIN;
+  END IF;
+END $$;
+
 GRANT USAGE ON SCHEMA competence TO competence_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA competence TO competence_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA competence TO competence_app;
