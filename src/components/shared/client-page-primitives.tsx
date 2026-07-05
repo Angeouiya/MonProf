@@ -435,7 +435,7 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid snap-x snap-mandatory auto-cols-[minmax(9.35rem,1fr)] grid-flow-col gap-1 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#D8DEE9] bg-white p-1 [scrollbar-width:none] min-[720px]:auto-cols-auto min-[720px]:grid-flow-row min-[720px]:overflow-visible [&::-webkit-scrollbar]:hidden",
+        "client-app-rail grid snap-x snap-mandatory auto-cols-[minmax(7.6rem,1fr)] grid-flow-col gap-1 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#D8DEE9] bg-white p-1 [scrollbar-width:none] min-[390px]:auto-cols-[minmax(8.25rem,1fr)] min-[720px]:auto-cols-auto min-[720px]:grid-flow-row min-[720px]:overflow-visible [&::-webkit-scrollbar]:hidden",
         desktopGridClassName,
         className,
       )}
@@ -448,11 +448,11 @@ export function ClientAppRail({
             <span className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:h-9 sm:w-9",
-                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white text-[#111B4D] group-hover:border-[#111B4D]",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors sm:h-9 sm:w-9",
+                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#111B4D] bg-[#111B4D] text-white",
                 )}
               >
-                {item.icon && <item.icon className="h-4 w-4" />}
+                {item.icon && <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
               </span>
             </span>
             <span className="min-w-0 text-center sm:flex-1 sm:text-left">
@@ -463,7 +463,7 @@ export function ClientAppRail({
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 block line-clamp-2 text-[0.72rem] font-semibold leading-4 sm:line-clamp-1 sm:text-sm sm:leading-5",
+                "mt-0.5 hidden text-[0.72rem] font-semibold leading-4 min-[430px]:line-clamp-1 sm:text-sm sm:leading-5",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -472,7 +472,7 @@ export function ClientAppRail({
             {item.href && (
               <ChevronRight
                 className={cn(
-                  "ml-auto hidden h-4 w-4 shrink-0 sm:block",
+                  "ml-auto hidden h-4 w-4 shrink-0 min-[1400px]:block",
                   item.active ? "text-white" : "text-[#64748B]",
                 )}
               />
@@ -481,7 +481,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-14 min-w-[9.35rem] snap-start items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors sm:justify-between sm:px-3 sm:text-left min-[720px]:min-w-0",
+          "client-shortcut-card group flex min-h-14 min-w-[7.6rem] snap-start items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] sm:justify-between sm:px-3 sm:text-left min-[390px]:min-w-[8.25rem] min-[720px]:min-w-0",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
