@@ -52,6 +52,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const currentSection = getCurrentSection(pathname);
+  const mobileSectionLabel = currentSection.mobileLabel ?? currentSection.label;
   const hideMobileBottomNav = Boolean(
     pathname?.startsWith("/client/reserver")
     || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
@@ -90,7 +91,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             <BrandLogo size="sm" className="hidden lg:inline-flex" />
           </Link>
           <div className="flex min-w-0 flex-col lg:hidden">
-            <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{currentSection.label}</span>
+            <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{mobileSectionLabel}</span>
             <span className="hidden truncate text-[11px] font-medium leading-4 text-[#64748B] min-[360px]:block">{currentSection.hint}</span>
           </div>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] lg:inline-flex">
@@ -481,7 +482,7 @@ function getInitials(name: string) {
 
 function getCurrentSection(pathname: string | null) {
   if (!pathname || pathname === "/client") {
-    return { label: "Tableau de bord", hint: "Suivi des cours" };
+    return { label: "Tableau de bord", mobileLabel: "Accueil", hint: "Suivi des cours" };
   }
   if (pathname.startsWith("/client/reserver")) {
     return { label: "Réserver", hint: "Parcours sécurisé" };
@@ -490,7 +491,7 @@ function getCurrentSection(pathname: string | null) {
     return { label: "Professeurs", hint: "Recherche rapide" };
   }
   if (pathname.startsWith("/client/reservations")) {
-    return { label: "Réservations", hint: "Dossiers et paiements" };
+    return { label: "Réservations", mobileLabel: "Dossiers", hint: "Dossiers et paiements" };
   }
   if (pathname.startsWith("/client/cours")) {
     return { label: "Cours", hint: "Séances à suivre" };
@@ -499,13 +500,13 @@ function getCurrentSection(pathname: string | null) {
     return { label: "Paiements", hint: "PayDunya sécurisé" };
   }
   if (pathname.startsWith("/client/notifications")) {
-    return { label: "Notifications", hint: "Actions importantes" };
+    return { label: "Notifications", mobileLabel: "Alertes", hint: "Actions importantes" };
   }
   if (pathname.startsWith("/client/avis")) {
     return { label: "Avis", hint: "Qualité des cours" };
   }
   if (pathname.startsWith("/client/support")) {
-    return { label: "Support", hint: "Aide et litiges" };
+    return { label: "Support", mobileLabel: "Aide", hint: "Aide et litiges" };
   }
   if (pathname.startsWith("/client/profil")) {
     return { label: "Profil", hint: "Coordonnées client" };

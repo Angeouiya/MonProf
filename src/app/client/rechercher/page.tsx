@@ -137,16 +137,16 @@ export default async function RechercherPage({
           <div className="flex flex-col gap-2 min-[820px]:flex-row min-[820px]:items-center">
             <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
             <div
-              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[820px]:mx-0 min-[820px]:flex-wrap min-[820px]:overflow-visible min-[820px]:px-0 min-[820px]:pb-0"
+              className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 min-[820px]:flex min-[820px]:flex-wrap"
               aria-label="Recherches fréquentes"
             >
               {quickSearches.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group inline-flex min-h-11 min-w-[9.5rem] shrink-0 snap-start items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:min-w-0 min-[820px]:justify-center"
+                  className="group inline-flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm font-semibold leading-4 text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:justify-center"
                 >
-                  <span className="truncate">{item.label}</span>
+                  <span className="min-w-0">{item.label}</span>
                   <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
                 </Link>
               ))}
