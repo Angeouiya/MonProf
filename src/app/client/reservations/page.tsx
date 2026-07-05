@@ -3,12 +3,14 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import { EmptyState } from "@/components/shared/page-header";
 import {
+  ClientCompactFacts,
   ClientFocusPanel,
   ClientAppRail,
-  ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientRecordAmount,
   ClientRecordCard,
+  ClientRecordStatusLine,
   ClientTabBar,
 } from "@/components/shared/client-page-primitives";
 import { ProfessorImage } from "@/components/shared/professor-image";
@@ -200,25 +202,25 @@ export default async function ReservationsPage({
                         </p>
                       </div>
                     </div>
-                    <ClientInfoPill label="Montant" value={amountLabel} strong className="min-[560px]:min-w-32 min-[560px]:text-right" />
+                    <ClientRecordAmount value={amountLabel} className="min-[560px]:min-w-36 min-[560px]:text-right" />
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
-                    <ClientInfoPill label="Date" value={bookingDate} />
-                    <ClientInfoPill label="Créneau" value={bookingTime} />
-                    <ClientInfoPill label="Format" value={formatLabel} className="min-[420px]:col-span-2 lg:col-span-1" />
-                  </div>
+                  <ClientCompactFacts
+                    className="mt-3"
+                    items={[
+                      { label: "Date", value: bookingDate },
+                      { label: "Créneau", value: bookingTime },
+                      { label: "Format", value: formatLabel },
+                    ]}
+                  />
 
-                  <div className="mt-3 grid gap-2 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
-                    <div className={cn("rounded-lg border px-3 py-2.5", nextStep.className)}>
-                      <div className="flex min-h-6 flex-col gap-1 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold leading-5 text-[#111827]">{nextStep.label}</p>
-                          <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{nextStep.hint}</p>
-                        </div>
-                        <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{paymentLabel}</p>
-                      </div>
-                    </div>
+                  <div className="mt-3 grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
+                    <ClientRecordStatusLine
+                      className={cn(nextStep.className)}
+                      label={nextStep.label}
+                      hint={nextStep.hint}
+                      aside={paymentLabel}
+                    />
                     <Button asChild size="sm" className="min-h-11 rounded-lg min-[620px]:min-w-28">
                       <Link href={`/client/reservations/${b.id}`}>
                         Détails <ArrowRight className="ml-1 h-3.5 w-3.5" />

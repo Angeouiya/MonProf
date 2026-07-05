@@ -268,6 +268,94 @@ export function ClientInfoPill({
   );
 }
 
+export type ClientCompactFact = {
+  label: string;
+  value: ReactNode;
+  strong?: boolean;
+  className?: string;
+};
+
+export function ClientCompactFacts({
+  items,
+  className,
+}: {
+  items: ClientCompactFact[];
+  className?: string;
+}) {
+  return (
+    <dl
+      className={cn(
+        "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-[#D8DEE9] [grid-template-columns:repeat(2,minmax(0,1fr))] min-[360px]:[grid-template-columns:repeat(3,minmax(0,1fr))]",
+        className,
+      )}
+    >
+      {items.map((item, index) => (
+        <div
+          key={`${item.label}-${index}`}
+          className={cn(
+            "min-w-0 bg-white px-3 py-2.5",
+            items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[360px]:col-span-1",
+            item.className,
+          )}
+        >
+          <dt className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">
+            {item.label}
+          </dt>
+          <dd
+            className={cn(
+              "mt-1 min-w-0 break-words text-sm font-semibold leading-5 text-[#111827]",
+              item.strong && "text-[#111B4D]",
+            )}
+          >
+            {item.value || "—"}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+export function ClientRecordAmount({
+  label = "Montant",
+  value,
+  className,
+}: {
+  label?: string;
+  value: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5", className)}>
+      <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">{label}</p>
+      <div className="mt-1 break-words text-sm font-semibold leading-5 text-[#111B4D]">{value || "—"}</div>
+    </div>
+  );
+}
+
+export function ClientRecordStatusLine({
+  label,
+  hint,
+  aside,
+  className,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  aside?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("client-record-status-line border-t border-[#D8DEE9] pt-3", className)}>
+      <div className="flex flex-col gap-2 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-5 text-[#111827]">{label}</p>
+          {hint && <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>}
+        </div>
+        {aside && <div className="shrink-0 text-xs font-semibold leading-5 text-[#111B4D]">{aside}</div>}
+      </div>
+    </div>
+  );
+}
+
 export function ClientRecordCard({
   children,
   className,

@@ -3,12 +3,14 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import { EmptyState } from "@/components/shared/page-header";
 import {
+  ClientCompactFacts,
   ClientAppRail,
   ClientFocusPanel,
-  ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientRecordAmount,
   ClientRecordCard,
+  ClientRecordStatusLine,
   ClientTabBar,
 } from "@/components/shared/client-page-primitives";
 import { ProfessorImage } from "@/components/shared/professor-image";
@@ -176,19 +178,19 @@ export default async function CoursPage({
                         </p>
                       </div>
                     </div>
-                    <ClientInfoPill label="Montant" value={amountLabel} strong className="min-[520px]:min-w-32 min-[520px]:text-right" />
+                    <ClientRecordAmount value={amountLabel} className="min-[520px]:min-w-36 min-[520px]:text-right" />
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 lg:grid-cols-3">
-                    <ClientInfoPill label={b.scheduledDate ? "Date" : "Date souhaitée"} value={courseDate} />
-                    <ClientInfoPill label="Créneau" value={courseTime} />
-                    <ClientInfoPill label="Format" value={formatLabel} className="min-[420px]:col-span-2 lg:col-span-1" />
-                  </div>
+                  <ClientCompactFacts
+                    className="mt-3"
+                    items={[
+                      { label: b.scheduledDate ? "Date" : "Date souhaitée", value: courseDate },
+                      { label: "Créneau", value: courseTime },
+                      { label: "Format", value: formatLabel },
+                    ]}
+                  />
 
-                  <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
-                    <p className="text-sm font-semibold leading-5 text-[#111827]">{step.label}</p>
-                    <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{step.hint}</p>
-                  </div>
+                  <ClientRecordStatusLine className="mt-3" label={step.label} hint={step.hint} />
 
                   <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
                     <p className="text-xs font-medium leading-5 text-[#64748B]">

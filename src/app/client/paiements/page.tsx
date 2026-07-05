@@ -3,10 +3,13 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
   ClientAppRail,
+  ClientCompactFacts,
   ClientFocusPanel,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientRecordAmount,
+  ClientRecordStatusLine,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
 import { Money } from "@/components/shared/money";
@@ -200,24 +203,26 @@ export default async function PaiementsPage() {
                           </p>
                         </div>
                       </div>
-                      <ClientInfoPill
-                        label="Montant"
+                      <ClientRecordAmount
                         value={<>{t.type === "REFUND" ? "+" : ""}<Money amount={t.amount} /></>}
-                        strong
-                        className="min-[520px]:min-w-32 min-[520px]:text-right"
+                        className="min-[520px]:min-w-36 min-[520px]:text-right"
                       />
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-                      <ClientInfoPill label="Date" value={courseDate} />
-                      <ClientInfoPill label="Canal" value={clientPaymentChannelLabel(t.method)} />
-                      <ClientInfoPill label="État" value={getClientTransactionStatusLabel(t.type, t.status)} className="min-[420px]:col-span-2" />
-                    </div>
+                    <ClientCompactFacts
+                      className="mt-3"
+                      items={[
+                        { label: "Date", value: courseDate },
+                        { label: "Canal", value: clientPaymentChannelLabel(t.method) },
+                        { label: "État", value: getClientTransactionStatusLabel(t.type, t.status), strong: true },
+                      ]}
+                    />
 
-                    <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
-                      <p className="text-sm font-semibold text-[#111827]">Sécurité du paiement</p>
-                      <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{getPaymentHint(t.type, t.status)}</p>
-                    </div>
+                    <ClientRecordStatusLine
+                      className="mt-3"
+                      label="Sécurité du paiement"
+                      hint={getPaymentHint(t.type, t.status)}
+                    />
 
                     <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
                       <p className="text-xs font-medium leading-5 text-[#64748B]">
