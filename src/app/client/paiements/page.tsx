@@ -91,7 +91,7 @@ export default async function PaiementsPage() {
           title={<Money amount={lastSecureTransaction.amount} />}
           description={`${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)} · ${lastSecureTransaction.booking.reference}`}
           action={
-            <Button asChild className="min-h-11 w-full rounded-2xl">
+            <Button asChild className="min-h-11 w-full rounded-lg">
               <Link href={`/client/reservations/${lastSecureTransaction.booking.id}`}>
                 Ouvrir le dossier
                 <ExternalLink className="ml-1.5 h-4 w-4" />
@@ -214,7 +214,7 @@ export default async function PaiementsPage() {
                       <ClientInfoPill label="État" value={getClientTransactionStatusLabel(t.type, t.status)} className="min-[420px]:col-span-2" />
                     </div>
 
-                    <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
+                    <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
                       <p className="text-sm font-semibold text-[#111827]">Sécurité du paiement</p>
                       <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{getPaymentHint(t.type, t.status)}</p>
                     </div>
@@ -223,7 +223,7 @@ export default async function PaiementsPage() {
                       <p className="text-xs font-medium leading-5 text-[#64748B]">
                         Mouvement enregistré le {formatDate(t.createdAt)} dans le dossier {t.booking.reference}.
                       </p>
-                      <Button asChild size="sm" className="min-h-11 rounded-2xl">
+                      <Button asChild size="sm" className="min-h-11 rounded-lg">
                         <Link href={`/client/reservations/${t.booking.id}`}>
                           Voir le dossier <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                         </Link>
@@ -278,7 +278,7 @@ function PaymentEmptyState() {
       <ClientSurface compact className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
           <div className="flex min-w-0 gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
               <ShieldCheck className="h-6 w-6" />
             </span>
             <div className="min-w-0">
@@ -289,7 +289,7 @@ function PaymentEmptyState() {
               </p>
             </div>
           </div>
-          <Button asChild className="min-h-11 rounded-2xl">
+          <Button asChild className="min-h-11 rounded-lg">
             <Link href="/client/rechercher">
               <Search className="mr-2 h-4 w-4" />
               Trouver un professeur

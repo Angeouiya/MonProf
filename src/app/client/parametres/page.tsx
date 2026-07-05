@@ -40,7 +40,7 @@ export default function ClientParametresPage() {
 
         <ClientSurface compact>
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
               <UserCog className="h-5 w-5" />
             </span>
             <div>
@@ -51,10 +51,10 @@ export default function ClientParametresPage() {
             </div>
           </div>
           <div className="mt-4 grid gap-2">
-            <Button asChild className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+            <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
               <Link href="/mot-de-passe-oublie">Demander un lien email</Link>
             </Button>
-            <Button asChild variant="outline" className="min-h-11 rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+            <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
               <Link href="/client/notifications">Voir mes notifications</Link>
             </Button>
           </div>

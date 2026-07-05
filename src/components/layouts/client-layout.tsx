@@ -70,7 +70,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-1.5 transition hover:bg-white">
+          <Link href="/client" className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white">
             <BrandLogo size="sm" />
           </Link>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">

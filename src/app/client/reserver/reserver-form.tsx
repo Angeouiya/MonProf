@@ -840,7 +840,7 @@ export function ReserverForm({
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
             <div
-              className="h-full rounded-full bg-[#111B4D] transition-all duration-300"
+              className="h-full rounded-full bg-[#111B4D] transition-colors duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -1019,7 +1019,7 @@ export function ReserverForm({
                     emptyLabel="Aucun cours catalogue compatible avec ce professeur."
                     allLabel="Aucun cours précis"
                     groups={selectedCategoryCourseGroups}
-                    triggerClassName="mt-1.5 min-h-12 rounded-2xl"
+                    triggerClassName="mt-1.5 min-h-12 rounded-lg"
                   />
                   <p className="mt-1.5 text-xs leading-5 text-[#64748B]">
                     Optionnel : seuls les cours cohérents avec {displayName} et ses matières sont proposés.
@@ -1150,7 +1150,7 @@ export function ReserverForm({
                   }}
                   className="mt-2 grid gap-3 sm:grid-cols-2"
                 >
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
                     form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                   }`}>
                     <RadioGroupItem value="INDIVIDUAL" />
@@ -1160,7 +1160,7 @@ export function ReserverForm({
                       <p className="text-xs text-[#64748B]">Un seul élève.</p>
                     </div>
                   </label>
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
                     form.groupType === "SMALL_GROUP" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                   } ${!teacher.offersGroup ? "cursor-not-allowed border-[#E3E8F2] text-[#9CA3AF]" : ""}`}>
                     <RadioGroupItem value="SMALL_GROUP" disabled={!teacher.offersGroup} />
@@ -1191,7 +1191,7 @@ export function ReserverForm({
                       max={12}
                       value={participantsCount}
                       onChange={(event) => update("participantsCount", clampGroupParticipants(event.target.value))}
-                      className="h-11 rounded-2xl bg-white"
+                      className="h-11 rounded-lg bg-white"
                     />
                   </div>
                   <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
@@ -1311,7 +1311,7 @@ export function ReserverForm({
                       value={form.startDate}
                       onChange={(e) => handleStartDateChange(e.target.value)}
                       onInput={(e) => handleStartDateChange(e.currentTarget.value)}
-                      className="mt-2 h-12 rounded-2xl"
+                      className="mt-2 h-12 rounded-lg"
                       aria-invalid={!hasValidStartDate}
                       required
                     />
@@ -1319,7 +1319,7 @@ export function ReserverForm({
                       Le client doit réserver au moins {MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Cette date est reprise au récapitulatif, au paiement et dans l'espace admin.
                     </p>
                   </div>
-                  <div className={`rounded-2xl border px-4 py-3 ${
+                  <div className={`rounded-lg border px-4 py-3 ${
                     hasScheduleDayMismatch
                       ? "border-[#111B4D] bg-white text-[#111827]"
                       : selectedStartDateLabel
@@ -1368,7 +1368,7 @@ export function ReserverForm({
                           </span>
                         </div>
                         {availableSlots.length === 0 ? (
-                          <p className="mt-2 rounded-2xl bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
+                          <p className="mt-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
                             Aucun créneau disponible ce jour.
                           </p>
                         ) : (
@@ -1388,7 +1388,7 @@ export function ReserverForm({
                                         : [...form.selectedTimeSlots, key],
                                     );
                                   }}
-                                  className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${
+                                  className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${
                                     checked
                                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                                       : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
@@ -1412,7 +1412,7 @@ export function ReserverForm({
                     ))}
                     {WEEK_DAYS.map((day) => (
                       <div key={day.key} className="contents">
-                        <div className="flex items-center rounded-2xl bg-white px-2 py-2 font-semibold text-[#111B4D] lg:px-3">
+                        <div className="flex items-center rounded-lg bg-white px-2 py-2 font-semibold text-[#111B4D] lg:px-3">
                           {day.label}
                         </div>
                         {TWO_HOUR_SLOTS.map((slot) => {
@@ -1434,7 +1434,7 @@ export function ReserverForm({
                                     : [...form.selectedTimeSlots, key],
                                 );
                               }}
-                              className={`min-h-11 rounded-2xl border px-1.5 py-2 text-center text-xs font-semibold transition lg:px-2 ${
+                              className={`min-h-11 rounded-lg border px-1.5 py-2 text-center text-xs font-semibold transition lg:px-2 ${
                                 checked
                                   ? "border-[#111B4D] bg-[#111B4D] text-white"
                                   : available
@@ -1473,7 +1473,7 @@ export function ReserverForm({
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {sessionPreview.map((session) => (
-                        <div key={session.label} className="rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm">
+                        <div key={session.label} className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm">
                           <p className="font-semibold text-[#111827]">{session.label}</p>
                           <p className="mt-0.5 text-xs font-semibold text-[#111827]">{session.date}</p>
                           <p className="mt-0.5 text-xs font-medium text-[#6B7280]">{session.time}</p>
@@ -1515,7 +1515,7 @@ export function ReserverForm({
                       type="time"
                       value={form.customStartTime}
                       onChange={(event) => update("customStartTime", event.target.value)}
-                      className="mt-1.5 h-11 rounded-2xl"
+                      className="mt-1.5 h-11 rounded-lg"
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -1539,7 +1539,7 @@ export function ReserverForm({
                           {dayLabel(form.customDay)} {customTimeRange}. Cette demande représente une séance de 2h à confirmer avec {displayName}.
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-right">
+                      <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-right">
                         <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Prix moyen</p>
                         <p className="mt-0.5 whitespace-nowrap text-sm font-semibold text-[#111827]">{formatFCFA(averageSessionPrice)} / séance</p>
                       </div>
@@ -1580,7 +1580,7 @@ export function ReserverForm({
                     return (
                       <label
                         key={p.value}
-                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-2xl border p-3 text-sm transition-all ${
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border p-3 text-sm transition-colors ${
                           form.packType === p.value ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                         }`}
                       >
@@ -1761,13 +1761,13 @@ export function ReserverForm({
                   </div>
 
                   {schoolProgramPayload && (
-                    <p className="mt-3 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#6B7280]">
+                    <p className="mt-3 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#6B7280]">
                       {schoolProgramPayload}
                     </p>
                   )}
 
                   {!isScheduleReadyForPayment && (
-                    <div className="mt-4 rounded-2xl border border-[#111B4D] bg-white px-4 py-3 text-sm font-semibold leading-6 text-[#111B4D]">
+                    <div className="mt-4 rounded-lg border border-[#111B4D] bg-white px-4 py-3 text-sm font-semibold leading-6 text-[#111B4D]">
                       {paymentScheduleWarning}
                     </div>
                   )}
@@ -1833,13 +1833,13 @@ export function ReserverForm({
                     <p className="text-sm font-semibold text-[#111827]">Moyens disponibles sur PayDunya Côte d'Ivoire</p>
                     <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-4">
                       {PAYMENT_METHODS.map((m) => (
-                        <div key={m.value} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white p-2.5 text-center">
+                        <div key={m.value} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-center">
                           <PaymentMethodLogo method={m.value} className="h-10 w-full min-w-0" />
                           <span className="text-xs font-semibold text-[#111827]">{m.label}</span>
                         </div>
                       ))}
                     </div>
-                    <p className="mt-3 flex gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
+                    <p className="mt-3 flex gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                       Le bouton final ouvre PayDunya. La réservation ne sera marquée payée qu'après confirmation PayDunya par webhook.
                     </p>
@@ -1852,7 +1852,7 @@ export function ReserverForm({
           {/* Navigation */}
           <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
             {step > 0 ? (
-              <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-2xl sm:w-auto">
+              <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-lg sm:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Retour
               </Button>
@@ -1860,12 +1860,12 @@ export function ReserverForm({
               <span className="hidden sm:block" />
             )}
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={next} className="min-h-11 w-full rounded-2xl sm:w-auto">
+              <Button type="button" onClick={next} className="min-h-11 w-full rounded-lg sm:w-auto">
                 Continuer
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={submit} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-2xl sm:w-auto">
+              <Button type="button" onClick={submit} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg sm:w-auto">
                 {submitting ? (
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
@@ -1969,7 +1969,7 @@ function StepIntro({ step, title, description }: { step: string; title: string; 
 
 function InfoMini({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2">
+    <div className="min-w-0 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
       <p className="text-xs font-medium leading-snug text-[#6B7280]">{label}</p>
       <p className="mt-0.5 break-words text-sm font-semibold leading-snug text-[#111827]">{value}</p>
     </div>
@@ -1990,7 +1990,7 @@ function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; v
 
 function PayDunyaMark() {
   return (
-    <span className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3" aria-label="PayDunya Checkout">
+    <span className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3" aria-label="PayDunya Checkout">
       <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-[11px] font-semibold text-white">
         PD
       </span>

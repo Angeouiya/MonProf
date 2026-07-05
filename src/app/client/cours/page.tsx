@@ -120,7 +120,7 @@ export default async function CoursPage({
             : "Réservez un cours pour afficher ici la prochaine séance à suivre."
         }
         action={
-          <Button asChild className="min-h-11 rounded-2xl sm:min-w-52">
+          <Button asChild className="min-h-11 rounded-lg sm:min-w-52">
             <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : "/client/rechercher"}>
               {nextCourse ? "Voir le dossier" : "Trouver un professeur"}
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -146,7 +146,7 @@ export default async function CoursPage({
           title="Aucun cours dans cette catégorie"
           description="Réservez un cours pour le voir apparaître ici."
           action={
-            <Button asChild size="sm" className="min-h-11 rounded-2xl">
+            <Button asChild size="sm" className="min-h-11 rounded-lg">
               <Link href="/client/rechercher">Réserver un cours</Link>
             </Button>
           }
@@ -185,7 +185,7 @@ export default async function CoursPage({
                     <ClientInfoPill label="Format" value={formatLabel} className="min-[420px]:col-span-2 lg:col-span-1" />
                   </div>
 
-                  <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
+                  <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
                     <p className="text-sm font-semibold leading-5 text-[#111827]">{step.label}</p>
                     <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{step.hint}</p>
                   </div>
@@ -194,7 +194,7 @@ export default async function CoursPage({
                     <p className="text-xs font-medium leading-5 text-[#64748B]">
                       Cours rattaché à {name}. Le lien en ligne et les actions sont disponibles dans le dossier.
                     </p>
-                    <Button asChild size="sm" className="min-h-11 w-full rounded-2xl">
+                    <Button asChild size="sm" className="min-h-11 w-full rounded-lg">
                       <Link href={`/client/reservations/${b.id}`}>
                         Voir le dossier <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>

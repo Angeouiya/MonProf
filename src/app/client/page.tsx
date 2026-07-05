@@ -154,13 +154,13 @@ export default async function ClientDashboardPage() {
             : "Réservez, payez via PayDunya et suivez chaque cours depuis un espace clair."
         }
       >
-        <Button asChild className="min-h-11 rounded-2xl">
+        <Button asChild className="min-h-11 rounded-lg">
           <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : "/client/rechercher"}>
             {nextCourse ? "Ouvrir le dossier" : "Trouver un professeur"}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="min-h-11 rounded-2xl">
+        <Button asChild variant="outline" className="min-h-11 rounded-lg">
           <Link href="/client/reservations">Réservations</Link>
         </Button>
       </ClientPageHeader>
@@ -224,7 +224,7 @@ export default async function ClientDashboardPage() {
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-semibold text-[#111B4D]">Statut : {formatClientBookingStatus(nextCourse.status)}</p>
-                  <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-2xl sm:w-auto">
+                  <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-lg sm:w-auto">
                     <Link href={`/client/reservations/${nextCourse.id}`}>Voir détails</Link>
                   </Button>
                 </div>
@@ -233,7 +233,7 @@ export default async function ClientDashboardPage() {
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
                 <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                       <CalendarCheck className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
@@ -249,7 +249,7 @@ export default async function ClientDashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button asChild className="min-h-11 rounded-2xl">
+                <Button asChild className="min-h-11 rounded-lg">
                   <Link href="/client/rechercher">
                     Rechercher un professeur
                     <ArrowRight className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default async function ClientDashboardPage() {
             {pendingValidation.length === 0 ? (
               <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                     <CheckCircle2 className="h-5 w-5" />
                   </span>
                   <div>
@@ -306,10 +306,10 @@ export default async function ClientDashboardPage() {
                     <p className="shrink-0 text-xs font-semibold text-[#111B4D]">À confirmer</p>
                   </div>
                   <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-                    <Button asChild size="sm" className="min-h-11 rounded-2xl text-xs">
+                    <Button asChild size="sm" className="min-h-11 rounded-lg text-xs">
                       <Link href={`/client/reservations/${b.id}?action=confirm`}>Confirmer</Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="min-h-11 rounded-2xl text-xs">
+                    <Button asChild size="sm" variant="outline" className="min-h-11 rounded-lg text-xs">
                       <Link href={`/client/reservations/${b.id}?action=report`}>Signaler</Link>
                     </Button>
                   </div>
@@ -326,7 +326,7 @@ export default async function ClientDashboardPage() {
           title="Professeurs recommandés"
           description="Profils vérifiés avec photo réelle."
           action={(
-          <Button asChild variant="ghost" size="sm" className="min-h-11 w-full justify-center rounded-2xl min-[520px]:w-auto">
+          <Button asChild variant="ghost" size="sm" className="min-h-11 w-full justify-center rounded-lg min-[520px]:w-auto">
             <Link href="/client/rechercher">Plus de professeurs <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
           </Button>
           )}
@@ -344,7 +344,7 @@ export default async function ClientDashboardPage() {
                   <Link
                     key={`${t.id}-${index}`}
                     href={`/client/reserver?teacherId=${t.id}`}
-                    className="group flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition-all hover:border-[#111B4D]"
+                    className="group flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition-colors hover:border-[#111B4D]"
                   >
                     <ProfessorImage photoUrl={t.photoUrl} name={displayName} size={54} shape="circle" verified={t.badgeVerified} />
                     <div className="min-w-0 flex-1">

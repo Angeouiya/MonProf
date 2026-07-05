@@ -290,7 +290,7 @@ export default async function ReservationDetailPage({
             <ProfessorImage photoUrl={booking.teacher.photoUrl} name={name} size="md" shape="circle" verified={booking.teacher.badgeVerified} />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier client</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#111827] sm:text-2xl">
+              <h2 className="mt-1 text-xl font-semibold tracking-normal text-[#111827] sm:text-2xl">
                 {booking.subjectName} avec {name}
               </h2>
               <p className="mt-1 text-sm font-semibold text-[#64748B]">{booking.teacher.jobTitle}</p>
@@ -324,7 +324,7 @@ export default async function ReservationDetailPage({
         <div className={`order-1 flex flex-col justify-between rounded-xl border p-4 sm:p-5 lg:order-2 ${clientSituation.className}`}>
           <div>
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white">
                 {clientSituation.icon}
               </span>
               <div className="min-w-0">
@@ -361,7 +361,7 @@ export default async function ReservationDetailPage({
                 />
                 <DetailRow icon={<Clock className="h-4 w-4" />} label="Durée" value={`${displaySessionsCount} séance${displaySessionsCount > 1 ? "s" : ""} de 2h`} />
                 {schoolProgramDisplay && (
-                  <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 sm:col-span-2">
+                  <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 sm:col-span-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Parcours choisi</p>
                     <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111B4D]">{schoolProgramDisplay}</p>
                   </div>
@@ -403,23 +403,23 @@ export default async function ReservationDetailPage({
                   />
                 </div>
                 {booking.cancellationDetail && (
-                  <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Message complémentaire</p>
                     <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111827]">{booking.cancellationDetail}</p>
                   </div>
                 )}
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Frais retenus</p>
                     <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.cancellationFeeAmount} /></p>
                     <p className="text-xs text-[#64748B]">{booking.cancellationFeeRate}%</p>
                   </div>
-                  <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Frais service non remboursés</p>
                     <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.paymentServiceFeeAmount} /></p>
                     <p className="text-xs text-[#64748B]">Frais du moyen de paiement</p>
                   </div>
-                  <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Remboursement estimé</p>
                     <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.cancellationRefundAmount} /></p>
                     <p className="text-xs text-[#64748B]">Selon la règle appliquée au moment de l'annulation.</p>
@@ -446,7 +446,7 @@ export default async function ReservationDetailPage({
                     }`}>
                       {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
                     </span>
-                    <div className="flex flex-col gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
+                    <div className="flex flex-col gap-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
                       <p className={`text-sm font-semibold ${t.done ? "text-[#111827]" : "text-[#64748B]"}`}>{t.label}</p>
                       {t.date && t.done && (
                         <p className="text-xs font-semibold text-[#64748B] min-[480px]:shrink-0">{formatDate(t.date)}</p>
@@ -468,7 +468,7 @@ export default async function ReservationDetailPage({
               />
               <div className="space-y-2">
                 {visibleTransactions.map((tx) => (
-                  <div key={tx.id} className="flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
+                  <div key={tx.id} className="flex flex-col gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
                     <div>
                       <p className="font-mono text-xs font-semibold text-[#111827]">{tx.reference}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
@@ -625,7 +625,7 @@ function getClientSituation({
 
 function ReservationHeroMetric({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
@@ -637,7 +637,7 @@ function ReservationHeroMetric({ icon, label, value }: { icon: ReactNode; label:
 
 function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
       {icon && <span className="mt-0.5 shrink-0 text-[#64748B]">{icon}</span>}
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

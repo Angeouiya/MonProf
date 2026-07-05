@@ -127,7 +127,7 @@ export function TeacherCardSkeleton() {
           <Skeleton className="h-3 w-2/3 rounded-full" />
         </div>
       </div>
-      <Skeleton className="mt-4 h-8 rounded-2xl" />
+      <Skeleton className="mt-4 h-8 rounded-lg" />
     </div>
   );
 }

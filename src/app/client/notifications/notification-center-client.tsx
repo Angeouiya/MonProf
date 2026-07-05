@@ -186,7 +186,7 @@ export function ClientNotificationCenter({
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Rechercher une réservation, un professeur, un paiement..."
-                className="h-11 rounded-2xl border-[#E3E8F2] pl-9 pr-10 focus:border-[#9AAAD0] focus:ring-[#DDE6F7]"
+                className="h-11 rounded-lg border-[#E3E8F2] pl-9 pr-10 focus:border-[#9AAAD0] focus:ring-[#DDE6F7]"
               />
               {hasQuery && (
                 <button
@@ -230,7 +230,7 @@ export function ClientNotificationCenter({
           title="Aucune notification"
           description="Votre centre est calme. Les validations, paiements, confirmations de cours et messages du support apparaîtront ici."
           action={
-            <Button asChild size="sm" className="min-h-11 rounded-2xl">
+            <Button asChild size="sm" className="min-h-11 rounded-lg">
               <Link href="/client/rechercher">Trouver un professeur <ArrowRight className="h-4 w-4" /></Link>
             </Button>
           }
@@ -293,7 +293,7 @@ export function ClientNotificationCenter({
 
                   <div className="grid shrink-0 grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
                     {href && (
-                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-xl sm:min-h-11 sm:rounded-2xl">
+                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-xl sm:min-h-11 sm:rounded-lg">
                         <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
                       </Button>
                     )}
@@ -320,7 +320,7 @@ function PriorityNotificationCard({
     return (
       <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div>
@@ -353,7 +353,7 @@ function PriorityNotificationCard({
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {urgent ? "À traiter en priorité" : notification.read ? "Dernière information" : "Nouvelle information"}
             </p>
-            <h2 className="mt-1 line-clamp-2 text-base font-semibold tracking-tight text-[#111827] sm:text-lg">{notification.title}</h2>
+            <h2 className="mt-1 line-clamp-2 text-base font-semibold tracking-normal text-[#111827] sm:text-lg">{notification.title}</h2>
             <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#64748B] sm:leading-6">{notification.message}</p>
             <div className="mt-2 flex flex-col gap-1 text-xs font-semibold text-[#111B4D] min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
               <span>Priorité : {priorityLabel(notification.priority)}</span>
@@ -364,7 +364,7 @@ function PriorityNotificationCard({
         </div>
         <div className="flex flex-col gap-2 lg:min-w-56">
           {href && (
-            <Button asChild size="sm" className="h-11 rounded-2xl">
+            <Button asChild size="sm" className="h-11 rounded-lg">
               <Link href={href}>
                 {notification.actionLabel || "Ouvrir le dossier"}
                 <ArrowRight className="h-4 w-4" />

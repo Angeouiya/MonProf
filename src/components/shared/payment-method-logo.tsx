@@ -12,7 +12,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
 
   if (method === "WAVE") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center overflow-hidden rounded-2xl border border-[#E3E8F2] bg-[#26BCEB] px-2", className)} aria-label={label}>
+      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center overflow-hidden rounded-lg border border-[#E3E8F2] bg-[#26BCEB] px-2", className)} aria-label={label}>
         <Image
           src="/images/payments/wave-logo.webp"
           alt=""
@@ -27,7 +27,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
 
   if (method === "ORANGE_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
+      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
         <svg viewBox="0 0 104 34" className="h-8 w-full" aria-hidden="true">
           <rect x="3" y="3" width="28" height="28" rx="5" fill="#FF7900" />
           <text x="8" y="25" fill="#fff" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="800">orange</text>
@@ -40,7 +40,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
 
   if (method === "MTN_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
+      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
         <svg viewBox="0 0 102 34" className="h-8 w-full" aria-hidden="true">
           <rect width="102" height="34" rx="17" fill="#FFCC00" />
           <ellipse cx="33" cy="17" rx="24" ry="11" fill="none" stroke="#111827" strokeWidth="2" />
@@ -53,7 +53,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
 
   if (method === "MOOV_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-2", className)} aria-label={label}>
+      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2", className)} aria-label={label}>
         <Image
           src="/images/payments/moov-money-logo.webp"
           alt=""
@@ -67,7 +67,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
   }
 
   return (
-    <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#64748B]", className)}>
+    <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#64748B]", className)}>
       {label}
     </span>
   );

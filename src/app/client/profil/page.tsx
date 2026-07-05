@@ -163,7 +163,7 @@ export default function ProfilPage() {
               <ShieldCheck className="h-4 w-4" />
               Compte sécurisé
             </div>
-            <Button asChild className="min-h-11 rounded-2xl">
+            <Button asChild className="min-h-11 rounded-lg">
               <Link href="/client/rechercher">
                 Trouver un professeur
                 <ArrowRight className="h-4 w-4" />
@@ -313,7 +313,7 @@ export default function ProfilPage() {
                   Pour une adresse, un numéro ou une réservation sensible, le support garde une trace claire de vos demandes.
                 </p>
               </div>
-              <Button asChild variant="outline" className="min-h-11 rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+              <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href="/client/support">Contacter le support</Link>
               </Button>
             </div>
@@ -340,7 +340,7 @@ function ProfileSkeleton() {
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-2xl border border-[#E3E8F2] bg-white" />
+                <div key={item} className="h-20 animate-pulse rounded-lg border border-[#E3E8F2] bg-white" />
               ))}
             </div>
           </div>
@@ -350,7 +350,7 @@ function ProfileSkeleton() {
             <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[#E5E7EB]" />
             <div className="mt-5 grid gap-2 min-[460px]:grid-cols-2">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-11 animate-pulse rounded-2xl bg-white" />
+                <div key={item} className="h-11 animate-pulse rounded-lg bg-white" />
               ))}
             </div>
           </div>
@@ -367,7 +367,7 @@ function ProfileSkeleton() {
 
 function ProfileInfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
+    <div className="flex min-w-0 items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

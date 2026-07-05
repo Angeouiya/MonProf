@@ -90,7 +90,7 @@ export default async function SupportPage() {
         description={focus.description}
         icon={LifeBuoy}
         action={
-          <Button asChild variant="outline" className="min-h-11 w-full rounded-2xl">
+          <Button asChild variant="outline" className="min-h-11 w-full rounded-lg">
             <Link href="/client/reservations">
               Mes cours
               <ArrowRight className="h-4 w-4" />
@@ -172,13 +172,13 @@ export default async function SupportPage() {
                         <span className="min-w-0 break-words">{name} • {formatDate(d.createdAt)}</span>
                       </div>
                     </div>
-                    <Button asChild variant="outline" size="sm" className="w-full rounded-2xl sm:w-auto">
+                    <Button asChild variant="outline" size="sm" className="w-full rounded-lg sm:w-auto">
                       <Link href={`/client/reservations/${d.booking.id}`}>
                         Ouvrir <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>
                     </Button>
                   </div>
-                  <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs">
+                  <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs">
                     <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{d.reason}</span></p>
                     <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{d.description}</span></p>
                     {d.resolution && (

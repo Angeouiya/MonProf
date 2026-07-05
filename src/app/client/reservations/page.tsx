@@ -138,7 +138,7 @@ export default async function ReservationsPage({
           ? `${priorityBooking.reference} · ${priorityTeacherName} · ${priorityDate}`
           : "Réservez un cours pour afficher votre prochain dossier."}
         action={
-          <Button asChild className="min-h-11 w-full rounded-2xl" size="sm">
+          <Button asChild className="min-h-11 w-full rounded-lg" size="sm">
             <Link href={priorityBooking ? `/client/reservations/${priorityBooking.id}` : "/client/rechercher"}>
               {priorityBooking ? "Ouvrir le dossier" : "Trouver un professeur"}
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
@@ -209,7 +209,7 @@ export default async function ReservationsPage({
                   </div>
 
                   <div className="mt-3 grid gap-2 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
-                    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
                       <div className="flex min-h-6 flex-col gap-1 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold leading-5 text-[#111827]">{nextStep.label}</p>
@@ -217,7 +217,7 @@ export default async function ReservationsPage({
                         <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{paymentLabel}</p>
                       </div>
                     </div>
-                    <Button asChild size="sm" className="min-h-11 rounded-2xl min-[620px]:min-w-28">
+                    <Button asChild size="sm" className="min-h-11 rounded-lg min-[620px]:min-w-28">
                       <Link href={`/client/reservations/${b.id}`}>
                         Détails <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>

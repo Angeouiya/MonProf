@@ -68,14 +68,14 @@ export function ReviewDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className={cn("mt-3 min-h-11 w-full rounded-2xl", triggerClassName)}>
+        <Button size="sm" className={cn("mt-3 min-h-11 w-full rounded-lg", triggerClassName)}>
           <MessageSquare className="mr-2 h-4 w-4" />
           Laisser un avis
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
             <MessageSquare className="h-5 w-5" />
           </div>
           <DialogTitle className="text-xl font-semibold text-[#111827]">Avis pour {teacherName}</DialogTitle>
@@ -84,7 +84,7 @@ export function ReviewDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
+          <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
               <ShieldCheck className="h-4 w-4 text-[#111B4D]" />
               Suivi qualité
@@ -93,7 +93,7 @@ export function ReviewDialog({
               Les avis faibles aident l'administration à vérifier le cours.
             </p>
           </div>
-          <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
+          <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
               <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
               Historique clair
@@ -119,7 +119,7 @@ export function ReviewDialog({
               rows={5}
               maxLength={MAX_REVIEW_COMMENT_LENGTH + 50}
               placeholder="Décrivez le déroulement du cours, la pédagogie, la ponctualité, la communication..."
-              className="mt-1.5 rounded-2xl border-[#DDE6F7] bg-white leading-6"
+              className="mt-1.5 rounded-lg border-[#DDE6F7] bg-white leading-6"
             />
             <div className="mt-1 flex flex-col gap-1 text-xs min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
               <p className={commentTooLong || lowRatingNeedsComment ? "font-medium text-[#111B4D]" : "text-[#64748B]"}>
@@ -128,15 +128,15 @@ export function ReviewDialog({
               <p className="text-[#64748B]">Votre avis reste lié au cours concerné.</p>
             </div>
             {rating <= 3 && (
-              <p className="mt-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
+              <p className="mt-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
                 Les notes de 1 à 3 nécessitent un commentaire précis. L'administration pourra ainsi vérifier le cours et suivre le professeur correctement.
               </p>
             )}
           </div>
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)} className="rounded-2xl">Annuler</Button>
-          <Button onClick={submit} disabled={loading || commentTooLong || lowRatingNeedsComment} className="rounded-2xl">
+          <Button variant="outline" onClick={() => setOpen(false)} className="rounded-lg">Annuler</Button>
+          <Button onClick={submit} disabled={loading || commentTooLong || lowRatingNeedsComment} className="rounded-lg">
             {loading ? "Envoi..." : "Publier l'avis"}
           </Button>
         </DialogFooter>

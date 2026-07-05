@@ -135,7 +135,7 @@ export default async function AvisPage() {
                 </div>
                 <div className="grid gap-2">
                   <ReviewDialog bookingId={primaryReviewBooking.id} teacherName={primaryReviewTeacherName} triggerClassName="mt-0" />
-                  <Button asChild variant="outline" className="min-h-11 rounded-2xl">
+                  <Button asChild variant="outline" className="min-h-11 rounded-lg">
                     <Link href={`/client/reservations/${primaryReviewBooking.id}`}>
                       Voir le dossier
                       <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -164,7 +164,7 @@ export default async function AvisPage() {
                         </div>
                         <div className="grid gap-2 min-[420px]:grid-cols-2 min-[520px]:w-52 min-[520px]:grid-cols-1">
                           <ReviewDialog bookingId={b.id} teacherName={name} triggerClassName="mt-0" />
-                          <Button asChild size="sm" variant="outline" className="min-h-11 rounded-2xl">
+                          <Button asChild size="sm" variant="outline" className="min-h-11 rounded-lg">
                             <Link href={`/client/reservations/${b.id}`}>Dossier</Link>
                           </Button>
                         </div>
@@ -217,9 +217,9 @@ export default async function AvisPage() {
                           </span>
                         </div>
                         {r.comment && (
-                          <p className="mt-3 line-clamp-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-sm leading-6 text-[#111827]">{r.comment}</p>
+                          <p className="mt-3 line-clamp-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm leading-6 text-[#111827]">{r.comment}</p>
                         )}
-                        <Button asChild size="sm" variant="outline" className="mt-3 min-h-11 w-full rounded-2xl min-[460px]:w-auto">
+                        <Button asChild size="sm" variant="outline" className="mt-3 min-h-11 w-full rounded-lg min-[460px]:w-auto">
                           <Link href={`/client/reservations/${r.booking.id}`}>Voir le dossier</Link>
                         </Button>
                       </div>

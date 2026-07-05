@@ -76,7 +76,7 @@ export function ScheduleProposalActions({
   return (
     <section className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white p-4">
       <div className="flex items-start gap-3 border-b border-[#E6EAF3] pb-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <CalendarClock className="h-5 w-5" />
         </span>
         <div className="min-w-0">
@@ -89,7 +89,7 @@ export function ScheduleProposalActions({
 
       {pendingProposal && (
         <div className="mt-4 space-y-3">
-          <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
+          <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Créneau proposé</p>
             <p className="mt-1 text-lg font-semibold leading-tight text-[#111B4D]">
               {formatDate(pendingProposal.proposedDate)}
@@ -107,13 +107,13 @@ export function ScheduleProposalActions({
             onChange={(event) => setResponse(event.target.value)}
             maxLength={700}
             placeholder="Message optionnel pour le professeur ou l'administration."
-            className="rounded-2xl border-[#DDE6F7] bg-white"
+            className="rounded-lg border-[#DDE6F7] bg-white"
           />
           <div className="grid gap-2 min-[460px]:grid-cols-2">
             <Button
               disabled={!!loading}
               onClick={() => respond("accept_schedule_proposal")}
-              className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+              className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
             >
               {loading === "accept_schedule_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Accepter ce créneau
@@ -122,7 +122,7 @@ export function ScheduleProposalActions({
               variant="outline"
               disabled={!!loading}
               onClick={() => respond("reject_schedule_proposal")}
-              className="min-h-11 rounded-2xl border-[#D7DEE9] bg-white text-[#111B4D]"
+              className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
             >
               {loading === "reject_schedule_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
               Refuser
@@ -137,7 +137,7 @@ export function ScheduleProposalActions({
       {proposals.length > 0 && (
         <div className="mt-4 space-y-2">
           {proposals.slice(0, 3).map((proposal) => (
-            <div key={proposal.id} className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2 text-sm">
+            <div key={proposal.id} className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-[#111827]">{formatDate(proposal.proposedDate)} · {proposal.proposedTime}</p>
                 <span className="rounded-full border border-[#DDE6F7] px-2 py-1 text-[11px] font-semibold text-[#111B4D]">

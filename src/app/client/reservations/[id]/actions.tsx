@@ -456,7 +456,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier</p>
           <h2 className="mt-0.5 text-base font-semibold leading-tight text-[#111827]">Actions rapides</h2>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white [&>svg]:text-white">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white [&>svg]:text-white">
           {actionSummary.icon}
         </span>
       </div>
@@ -480,7 +480,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
         {canResumePayDunya && (
           <>
-            <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D]">
               <div className="flex items-center gap-2 font-semibold">
                 <ShieldCheck className="h-4 w-4" />
                 Brouillon non réservé
@@ -503,7 +503,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               onConfirm={onResumePayDunya}
               trigger={
                 <Button
-                  className="min-h-11 w-full rounded-2xl"
+                  className="min-h-11 w-full rounded-lg"
                   disabled={loading === "paydunya_checkout"}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
@@ -513,7 +513,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
             />
             <Button
               variant="outline"
-              className="min-h-11 w-full rounded-2xl"
+              className="min-h-11 w-full rounded-lg"
               onClick={onVerifyPayDunya}
               disabled={loading === "paydunya_verify"}
             >
@@ -525,7 +525,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
         {/* DISPUTED */}
         {status === "DISPUTED" && (
-          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
             <div className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4" />
               Litige en cours
@@ -534,7 +534,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               Notre support traite votre litige. Vous serez recontacté sous 24-48h.
             </p>
             {hasDispute && (
-              <div className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs">
+              <div className="mt-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs">
                 <p><strong>Raison :</strong> {booking.disputes[0].reason}</p>
                 <p className="mt-1 text-[#64748B]">{booking.disputes[0].description}</p>
                 <p className="mt-1 text-[#64748B]">
@@ -548,7 +548,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         {/* PENDING_CLIENT_VALIDATION */}
         {status === "PENDING_CLIENT_VALIDATION" && (
           <>
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
               <div className="flex items-center gap-2 font-semibold">
                 <AlertCircle className="h-4 w-4" />
                 Action requise
@@ -571,7 +571,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               onConfirm={onConfirm}
               trigger={
                 <Button
-                  className="min-h-11 w-full rounded-2xl"
+                  className="min-h-11 w-full rounded-lg"
                   disabled={loading === "confirm"}
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -581,7 +581,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
             />
             <Button
               variant="outline"
-              className="min-h-11 w-full rounded-2xl"
+              className="min-h-11 w-full rounded-lg"
               onClick={() => setDisputeOpen(true)}
               disabled={!!loading}
             >
@@ -590,7 +590,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
             </Button>
             <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="min-h-11 w-full rounded-2xl" disabled={!!loading}>
+                <Button variant="outline" className="min-h-11 w-full rounded-lg" disabled={!!loading}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Demander un report
                 </Button>
@@ -615,8 +615,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setRescheduleOpen(false)} className="rounded-2xl">Annuler</Button>
-                  <Button onClick={onSubmitReschedule} disabled={loading === "reschedule"} className="rounded-2xl">
+                  <Button variant="outline" onClick={() => setRescheduleOpen(false)} className="rounded-lg">Annuler</Button>
+                  <Button onClick={onSubmitReschedule} disabled={loading === "reschedule"} className="rounded-lg">
                     Envoyer la demande
                   </Button>
                 </DialogFooter>
@@ -628,7 +628,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         {/* Avis après validation client */}
         {canReview && (
           hasReview ? (
-            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
               <div className="flex items-center gap-2 font-semibold">
                 <MessageSquare className="h-4 w-4" />
                 Avis déposé
@@ -636,7 +636,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <p className="mt-1 text-xs">Merci pour votre retour ! Note : {booking.reviews[0].rating}/5</p>
             </div>
           ) : (
-            <Button className="min-h-11 w-full rounded-2xl" onClick={() => setReviewOpen(true)} disabled={!!loading}>
+            <Button className="min-h-11 w-full rounded-lg" onClick={() => setReviewOpen(true)} disabled={!!loading}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Laisser un avis
             </Button>
@@ -645,7 +645,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
         {/* CANCELLED / REFUNDED */}
         {(status === "CANCELLED" || status === "REFUNDED") && (
-          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
             <div className="flex items-center gap-2 font-semibold">
               <Ban className="h-4 w-4" />
               Réservation {status === "REFUNDED" ? "remboursée" : "annulée"}
@@ -661,7 +661,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               </div>
             )}
             {booking.cancellationRefundAmount > 0 && (
-              <div className="mt-3 rounded-2xl border border-[#DDE6F7] bg-white p-3">
+              <div className="mt-3 rounded-lg border border-[#DDE6F7] bg-white p-3">
                 <p className="font-semibold text-[#111827]">Coordonnées de remboursement</p>
                 {latestRefundRequest ? (
                   <div className="mt-2 text-xs leading-5 text-[#64748B]">
@@ -682,7 +682,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         {["CANCELLED", "REFUNDED"].includes(status) && booking.cancellationRefundAmount > 0 && (
           <Dialog open={refundOpen} onOpenChange={setRefundOpen}>
             <DialogTrigger asChild>
-              <Button className="min-h-11 w-full rounded-2xl" disabled={!!loading}>
+              <Button className="min-h-11 w-full rounded-lg" disabled={!!loading}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {latestRefundRequest ? "Modifier le numéro de remboursement" : "Renseigner le remboursement"}
               </Button>
@@ -695,7 +695,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
+                <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
                   <p className="font-semibold text-[#111B4D]">Montant à déposer</p>
                   <p className="mt-1 text-2xl font-semibold text-[#111827]">{formatFCFA(booking.cancellationRefundAmount)}</p>
                   {"paymentServiceFeeAmount" in booking && (
@@ -758,8 +758,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setRefundOpen(false)} className="rounded-2xl">Retour</Button>
-                <Button onClick={onSubmitRefundDetails} disabled={loading === "submit_refund_details"} className="rounded-2xl">
+                <Button variant="outline" onClick={() => setRefundOpen(false)} className="rounded-lg">Retour</Button>
+                <Button onClick={onSubmitRefundDetails} disabled={loading === "submit_refund_details"} className="rounded-lg">
                   Envoyer à l'administration
                 </Button>
               </DialogFooter>
@@ -777,7 +777,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
             }}
           >
             <DialogTrigger asChild>
-              <Button variant="outline" className="min-h-11 w-full rounded-2xl border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white hover:text-[#111B4D]" disabled={!!loading}>
+              <Button variant="outline" className="min-h-11 w-full rounded-lg border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white hover:text-[#111B4D]" disabled={!!loading}>
                 <Ban className="mr-2 h-4 w-4" />
                 Annuler la réservation
               </Button>
@@ -790,7 +790,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
+                <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-semibold text-[#111B4D]">{cancellationPolicy.label}</p>
@@ -821,7 +821,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569]">
+                <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569]">
                   <p className="text-sm font-semibold text-[#111827]">Ce qui se passe après votre annulation</p>
                   <ul className="mt-2 space-y-2">
                     <li>La réservation est arrêtée et l'administration reçoit une notification pour contrôler le dossier.</li>
@@ -857,7 +857,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     placeholder="Précisez votre situation pour aider l'équipe support."
                   />
                 </div>
-                <label htmlFor="cancelAcknowledged" className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
+                <label htmlFor="cancelAcknowledged" className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
                   <Checkbox
                     id="cancelAcknowledged"
                     checked={cancelAcknowledged}
@@ -870,8 +870,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </label>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCancelOpen(false)} className="rounded-2xl">Retour</Button>
-                <Button onClick={onCancel} disabled={loading === "cancel" || !cancelAcknowledged} className="rounded-2xl">
+                <Button variant="outline" onClick={() => setCancelOpen(false)} className="rounded-lg">Retour</Button>
+                <Button onClick={onCancel} disabled={loading === "cancel" || !cancelAcknowledged} className="rounded-lg">
                   {loading === "cancel" ? "Annulation..." : "Confirmer l'annulation"}
                 </Button>
               </DialogFooter>
@@ -912,8 +912,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDisputeOpen(false)} className="rounded-2xl">Annuler</Button>
-              <Button onClick={onSubmitDispute} disabled={loading === "open_dispute"} className="rounded-2xl">
+              <Button variant="outline" onClick={() => setDisputeOpen(false)} className="rounded-lg">Annuler</Button>
+              <Button onClick={onSubmitDispute} disabled={loading === "open_dispute"} className="rounded-lg">
                 Ouvrir le litige
               </Button>
             </DialogFooter>
@@ -924,7 +924,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
           <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                 <MessageSquare className="h-5 w-5" />
               </div>
               <DialogTitle className="text-xl font-semibold text-[#111827]">Laisser un avis</DialogTitle>
@@ -933,7 +933,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-2 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
+              <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
                   <ShieldCheck className="h-4 w-4 text-[#111B4D]" />
                   Suivi qualité
@@ -942,7 +942,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   Les notes faibles déclenchent une lecture admin plus attentive.
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3">
+              <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
                   <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
                   Avis relié au cours
@@ -968,7 +968,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   rows={5}
                   maxLength={MAX_REVIEW_COMMENT_LENGTH + 50}
                   placeholder="Décrivez le déroulement du cours, la pédagogie, la ponctualité, la communication..."
-                  className="mt-1.5 rounded-2xl border-[#DDE6F7] bg-white leading-6"
+                  className="mt-1.5 rounded-lg border-[#DDE6F7] bg-white leading-6"
                 />
                 <div className="mt-1 flex flex-col gap-1 text-xs min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
                   <p className={reviewCommentTooLong || reviewLowRatingNeedsComment ? "font-medium text-[#111B4D]" : "text-[#64748B]"}>
@@ -977,15 +977,15 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   <p className="text-[#64748B]">Avis lié à cette réservation.</p>
                 </div>
                 {rating <= 3 && (
-                  <p className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
+                  <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
                     Les notes de 1 à 3 nécessitent un commentaire précis. L'administration pourra ainsi vérifier le cours et suivre le professeur correctement.
                   </p>
                 )}
               </div>
             </div>
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setReviewOpen(false)} className="rounded-2xl">Annuler</Button>
-              <Button onClick={onSubmitReview} disabled={loading === "review" || reviewCommentTooLong || reviewLowRatingNeedsComment} className="rounded-2xl">
+              <Button variant="outline" onClick={() => setReviewOpen(false)} className="rounded-lg">Annuler</Button>
+              <Button onClick={onSubmitReview} disabled={loading === "review" || reviewCommentTooLong || reviewLowRatingNeedsComment} className="rounded-lg">
                 Publier l'avis
               </Button>
             </DialogFooter>
