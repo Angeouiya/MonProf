@@ -871,13 +871,39 @@ export function ReserverForm({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div className="mt-3 grid grid-cols-5 gap-1.5 lg:hidden" aria-label="Progression mobile">
-            {STEPS.map((stepLabel, index) => (
-              <span
-                key={stepLabel}
-                className={index <= step ? "h-1.5 rounded-full bg-[#111B4D]" : "h-1.5 rounded-full bg-[#E5E7EB]"}
-              />
-            ))}
+          <div
+            className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden"
+            aria-label="Progression mobile"
+          >
+            {STEPS.map((stepLabel, index) => {
+              const complete = index < step;
+              const active = index === step;
+              const reachable = index <= step;
+              return (
+                <button
+                  key={stepLabel}
+                  type="button"
+                  disabled={!reachable}
+                  aria-current={active ? "step" : undefined}
+                  onClick={() => {
+                    if (reachable) setStep(index);
+                  }}
+                  className={`min-h-11 min-w-[7.8rem] shrink-0 snap-start rounded-lg border px-2.5 text-left text-xs font-semibold leading-4 transition-colors ${
+                    active
+                      ? "border-[#111B4D] bg-[#111B4D] text-white"
+                      : complete
+                        ? "border-[#111B4D] bg-white text-[#111B4D]"
+                        : "cursor-default border-[#E3E8F2] bg-white text-[#64748B]"
+                  }`}
+                >
+                  <span className="block text-[10px] uppercase tracking-wide">
+                    Étape {index + 1}
+                    {complete ? <CheckCircle2 className="ml-1 inline h-3 w-3" /> : null}
+                  </span>
+                  <span className="mt-0.5 block truncate">{stepLabel}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="mt-3 hidden grid-cols-5 gap-2 lg:grid">
             {STEPS.map((stepLabel, index) => {

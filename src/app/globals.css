@@ -247,10 +247,15 @@ b {
   inset-inline: 0 !important;
   top: 0 !important;
   width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 45 !important;
   flex-shrink: 0;
+  border-bottom: 1px solid #E3E8F2;
   background: #FFFFFF !important;
-  transform: translateZ(0);
+  box-shadow: 0 1px 0 rgba(17, 27, 77, 0.04);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
+  will-change: transform;
 }
 
 .public-shell > header:first-of-type,
@@ -261,10 +266,15 @@ b {
   inset-inline: 0 !important;
   top: 0 !important;
   width: 100% !important;
+  max-width: 100vw !important;
+  z-index: 45 !important;
   flex-shrink: 0;
+  border-bottom: 1px solid #E3E8F2;
   background: #FFFFFF !important;
-  transform: translateZ(0);
+  box-shadow: 0 1px 0 rgba(17, 27, 77, 0.04);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
+  will-change: transform;
 }
 
 .public-shell section,
