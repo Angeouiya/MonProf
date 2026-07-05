@@ -60,10 +60,10 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     <div className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       {/* Top bar (mobile + desktop) */}
-      <header className="client-app-topbar sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 shadow-sm sm:px-4 lg:px-6">
+      <header className="client-app-topbar sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
         <div className="flex items-center gap-3">
           <button
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E1E7F2] bg-white text-[#111827] shadow-sm transition hover:border-[#111B4D] hover:bg-white lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Menu"
             aria-expanded={open}
@@ -128,7 +128,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
       <div className="flex flex-1">
         {/* Sidebar desktop */}
-        <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white shadow-sm lg:block">
+        <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} />
         </aside>
 
@@ -136,7 +136,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         {open && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] border-r border-[#E6EAF3] bg-white shadow-sm">
+            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] border-r border-[#E6EAF3] bg-white">
               <div className="flex min-h-16 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
                 <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
@@ -206,7 +206,7 @@ function SidebarContent({
               onClick={onNavigate}
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
-                active ? "bg-[#111B4D] text-white shadow-sm" : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
+                active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -224,7 +224,7 @@ function SidebarContent({
         })}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
-        <div className="rounded-xl border border-[#E6EAF3] bg-white p-3 shadow-sm">
+        <div className="bg-white p-1">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
               {getInitials(userName ?? "Client")}
@@ -275,7 +275,7 @@ function MobileBottomNav({
 }) {
   return (
     <nav
-      className="client-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 shadow-[0_14px_36px_rgba(15,23,42,0.12)] lg:hidden"
+      className="client-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
@@ -288,7 +288,7 @@ function MobileBottomNav({
               href={item.href}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-xs font-semibold transition-colors",
-                active ? "bg-[#111B4D] text-white shadow-sm" : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
+                active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
               )}
               aria-current={active ? "page" : undefined}
             >

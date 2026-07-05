@@ -31,6 +31,7 @@ function ConnexionContent() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const isAdminAuth = from?.startsWith("/admin") ?? false;
+  const isClientAuth = from?.startsWith("/client") ?? false;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,12 +44,25 @@ function ConnexionContent() {
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.user?.role === "ADMIN") router.replace("/admin");
-        else if (data?.user?.role === "TEACHER") router.replace("/professeur");
-        else if (!isAdminAuth && data?.user?.role === "CLIENT") router.replace("/client");
+        const role = data?.user?.role;
+        if (!role) return;
+
+        if (isAdminAuth) {
+          if (role === "ADMIN") router.replace("/admin");
+          return;
+        }
+
+        if (isClientAuth) {
+          if (role === "CLIENT") router.replace("/client");
+          return;
+        }
+
+        if (role === "ADMIN") router.replace("/admin");
+        else if (role === "TEACHER") router.replace("/professeur");
+        else if (role === "CLIENT") router.replace("/client");
       })
       .catch(() => {});
-  }, [isAdminAuth, router]);
+  }, [isAdminAuth, isClientAuth, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

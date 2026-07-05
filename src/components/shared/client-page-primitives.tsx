@@ -32,7 +32,7 @@ export function ClientPageHeader({
   className?: string;
 }) {
   return (
-    <section className={cn("client-page-header client-screen-header overflow-hidden rounded-lg border border-[#DDE3EE] bg-white px-3.5 py-3 shadow-sm sm:px-5 sm:py-4", className)}>
+    <section className={cn("client-page-header client-screen-header overflow-hidden rounded-lg border border-[#DDE3EE] bg-white px-3.5 py-3 sm:px-5 sm:py-4", className)}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex min-h-8 flex-wrap items-center gap-2">
@@ -88,7 +88,7 @@ export function ClientMetricStrip({
         <div
           key={`${metric.label}-${index}`}
           className={cn(
-            "client-metric-card flex min-h-18 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E1E7F2] bg-white px-3 py-3 shadow-sm sm:px-4",
+            "client-metric-card flex min-h-18 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E1E7F2] bg-white px-3 py-3 sm:px-4",
             metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "col-span-2 lg:col-span-1",
           )}
         >
@@ -126,7 +126,7 @@ export function ClientSurface({
   return (
     <section
       className={cn(
-        "client-app-surface rounded-lg border border-[#DDE3EE] bg-white shadow-sm",
+        "client-app-surface rounded-lg border border-[#DDE3EE] bg-white",
         compact ? "p-3 sm:p-4" : "p-3.5 sm:p-4",
         className,
       )}
@@ -175,7 +175,7 @@ export function ClientFocusPanel({
   className?: string;
 }) {
   return (
-    <section className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 shadow-sm sm:p-4", className)}>
+    <section className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 sm:p-4", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 gap-3">
           {Icon && (
@@ -214,7 +214,7 @@ export function ClientTabBar({
   return (
     <div
       className={cn(
-        "client-tab-bar grid grid-cols-1 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 shadow-sm min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap",
+        "client-tab-bar grid grid-cols-1 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap",
         className,
       )}
     >
@@ -226,7 +226,7 @@ export function ClientTabBar({
             href={item.href}
             className={cn(
               "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-semibold transition lg:w-auto lg:justify-start",
-              active ? "bg-[#111B4D] text-white shadow-sm" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
+              active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
             <span className="truncate">{item.label}</span>
@@ -259,7 +259,7 @@ export function ClientInfoPill({
   strong?: boolean;
 }) {
   return (
-    <div className={cn("client-info-pill min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm", className)}>
+    <div className={cn("client-info-pill min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2", className)}>
       <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-[#64748B]">{label}</p>
       <div className={cn("mt-0.5 break-words text-sm font-semibold leading-5", strong ? "text-[#111B4D]" : "text-[#111827]")}>
         {value || "—"}
@@ -274,7 +274,7 @@ export function ClientRecordCard({
   ...props
 }: ComponentPropsWithoutRef<"article">) {
   return (
-    <article {...props} className={cn("client-record-card overflow-hidden rounded-lg border border-[#DDE3EE] bg-white shadow-sm transition-colors hover:border-[#111B4D]", className)}>
+    <article {...props} className={cn("client-record-card overflow-hidden rounded-lg border border-[#DDE3EE] bg-white transition-colors hover:border-[#111B4D]", className)}>
       {children}
     </article>
   );
@@ -296,7 +296,7 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-1.5 rounded-lg border border-[#E3E8F2] bg-white p-1.5 shadow-sm min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
+        "client-app-rail grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#DDE3EE] bg-[#DDE3EE] p-px min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
         className,
       )}
     >
@@ -307,17 +307,23 @@ export function ClientAppRail({
               <span
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-md sm:h-9 sm:w-9",
-                  item.active ? "bg-[#111B4D] text-white" : "bg-white text-[#111B4D]",
+                  item.active ? "bg-white text-[#111B4D]" : "bg-[#111B4D] text-white",
                 )}
               >
                 {item.icon && <item.icon className="h-4 w-4" />}
               </span>
             </span>
             <span className="min-w-0 text-center sm:flex-1 sm:text-left">
-              <span className="block truncate text-[9.5px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] sm:text-[10.5px]">
+              <span className={cn(
+                "block truncate text-[9.5px] font-semibold uppercase leading-3 tracking-wide sm:text-[10.5px]",
+                item.active ? "text-white" : "text-[#64748B]",
+              )}>
               {item.label}
               </span>
-              <span className="mt-0.5 hidden line-clamp-1 text-[0.72rem] font-semibold leading-4 text-[#111827] min-[360px]:block sm:text-sm sm:leading-5">
+              <span className={cn(
+                "mt-0.5 hidden line-clamp-1 text-[0.72rem] font-semibold leading-4 min-[360px]:block sm:text-sm sm:leading-5",
+                item.active ? "text-white" : "text-[#111827]",
+              )}>
                 {item.value}
               </span>
             </span>
@@ -325,7 +331,7 @@ export function ClientAppRail({
               <ChevronRight
                 className={cn(
                   "ml-auto hidden h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 sm:block",
-                  item.active ? "text-[#111B4D]" : "text-[#64748B]",
+                  item.active ? "text-white" : "text-[#64748B]",
                 )}
               />
             )}
@@ -333,10 +339,10 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center rounded-md bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
+        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
           item.active
-            ? "text-[#111827] ring-1 ring-[#111B4D]"
-            : "text-[#111827] hover:ring-1 hover:ring-[#111B4D]",
+            ? "bg-[#111B4D] text-white"
+            : "text-[#111827] hover:bg-white",
         );
         const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">{content}</span>;
 
