@@ -94,7 +94,7 @@ export default async function RechercherPage({
         description="Tapez une matière, un concours, un métier ou une commune."
       />
 
-      <form className="client-app-surface rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
+      <form className="rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
         <div className="grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="sr-only" htmlFor="client-search-query">Recherche</label>

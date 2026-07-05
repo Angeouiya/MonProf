@@ -126,8 +126,8 @@ export function ClientSurface({
   return (
     <section
       className={cn(
-        "client-app-surface rounded-lg border border-[#DDE3EE] bg-white",
-        compact ? "p-3 sm:p-4" : "p-3.5 sm:p-4",
+        "client-app-surface border-t border-[#E6EAF3] bg-white",
+        compact ? "py-3 sm:py-4" : "py-4 sm:py-5",
         className,
       )}
     >

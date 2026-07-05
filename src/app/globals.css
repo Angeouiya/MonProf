@@ -1202,8 +1202,12 @@ b {
   box-shadow: none !important;
 }
 
+.client-app-surface {
+  border-radius: 0 !important;
+  outline: none !important;
+}
+
 .client-page-header,
-.client-app-surface,
 .client-focus-panel,
 .client-record-card,
 .client-shortcut-card,
