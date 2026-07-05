@@ -89,7 +89,7 @@ export function ClientMetricStrip({
           key={`${metric.label}-${index}`}
           className={cn(
             "client-metric-card flex min-h-16 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 sm:min-h-17 sm:px-4",
-            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "col-span-2 lg:col-span-1",
+            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[380px]:col-span-2 lg:col-span-1",
           )}
         >
           <div className="min-w-0">
@@ -255,7 +255,7 @@ export function ClientTabBar({
   return (
     <div
       className={cn(
-        "client-tab-bar flex gap-1.5 overflow-x-auto rounded-lg border border-[#DDE3EE] bg-white p-1.5",
+        "client-tab-bar flex snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#DDE3EE] bg-white p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >
@@ -435,7 +435,7 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid auto-cols-[minmax(9.35rem,1fr)] grid-flow-col gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:auto-cols-auto min-[720px]:grid-flow-row min-[720px]:overflow-visible",
+        "client-app-rail grid snap-x snap-mandatory auto-cols-[minmax(9.35rem,1fr)] grid-flow-col gap-1 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#D8DEE9] bg-white p-1 [scrollbar-width:none] min-[720px]:auto-cols-auto min-[720px]:grid-flow-row min-[720px]:overflow-visible [&::-webkit-scrollbar]:hidden",
         desktopGridClassName,
         className,
       )}
