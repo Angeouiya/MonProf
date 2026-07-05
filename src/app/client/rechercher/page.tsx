@@ -54,20 +54,18 @@ export default async function RechercherPage({
     default: orderBy = [{ featured: "desc" }, { rating: "desc" }, { ratingCount: "desc" }]; break;
   }
 
-  const [teachers, subjects, levels, communes] = await db.$transaction([
-    db.teacher.findMany({
-      where,
-      orderBy,
-      take: 24,
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true } },
-      },
-    }),
-    db.subject.findMany({ orderBy: { name: "asc" } }),
-    db.level.findMany({ orderBy: { order: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  const teachers = await db.teacher.findMany({
+    where,
+    orderBy,
+    take: 24,
+    include: {
+      subjects: { include: { subject: true } },
+      _count: { select: { reviews: true } },
+    },
+  });
+  const subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
+  const levels = await db.level.findMany({ orderBy: { order: "asc" } });
+  const communes = await db.commune.findMany({ orderBy: { name: "asc" } });
 
   const items = teachers.map((t) => ({
     ...t,

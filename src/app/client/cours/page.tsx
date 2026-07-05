@@ -41,42 +41,40 @@ export default async function CoursPage({
   const tabId = sp.tab ?? "avenir";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const [bookings, overviewBookings] = await db.$transaction([
-    db.booking.findMany({
-      where: { clientId: user.id, status: { in: tab.statuses as any } },
-      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-      include: {
-        teacher: {
-          select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true },
-        },
+  const bookings = await db.booking.findMany({
+    where: { clientId: user.id, status: { in: tab.statuses as any } },
+    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
+    include: {
+      teacher: {
+        select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true },
       },
-    }),
-    db.booking.findMany({
-      where: { clientId: user.id, status: { in: COURSE_STATUSES as any } },
-      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-      select: {
-        id: true,
-        status: true,
-        paymentStatus: true,
-        totalPrice: true,
-        totalClientPays: true,
-        paydunyaStatus: true,
-        paydunyaVerifiedAt: true,
-        isQuoteOnly: true,
-        subjectName: true,
-        levelName: true,
-        scheduledDate: true,
-        startDate: true,
-        teacher: {
-          select: { fullName: true, professionalName: true },
-        },
-        transactions: {
-          where: { type: "CLIENT_PAYMENT" },
-          select: { type: true, status: true, amount: true },
-        },
+    },
+  });
+  const overviewBookings = await db.booking.findMany({
+    where: { clientId: user.id, status: { in: COURSE_STATUSES as any } },
+    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      totalPrice: true,
+      totalClientPays: true,
+      paydunyaStatus: true,
+      paydunyaVerifiedAt: true,
+      isQuoteOnly: true,
+      subjectName: true,
+      levelName: true,
+      scheduledDate: true,
+      startDate: true,
+      teacher: {
+        select: { fullName: true, professionalName: true },
       },
-    }),
-  ]);
+      transactions: {
+        where: { type: "CLIENT_PAYMENT" },
+        select: { type: true, status: true, amount: true },
+      },
+    },
+  });
 
   const tabCounts = Object.fromEntries(
     TABS.map((item) => [item.id, overviewBookings.filter((booking) => item.statuses.includes(booking.status)).length]),
