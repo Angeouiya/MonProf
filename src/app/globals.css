@@ -2302,3 +2302,185 @@ b {
     font-size: 0.62rem !important;
   }
 }
+
+/* Client platform refinement pass: app-like navigation, stable lists and clean production surfaces. */
+.client-shell :where(
+  [data-client-layout],
+  [data-client-topbar],
+  [data-client-main],
+  [data-client-content],
+  [data-client-sidebar],
+  [data-client-sidebar-nav],
+  [data-client-sidebar-account],
+  [data-client-mobile-drawer],
+  [data-client-mobile-search-panel],
+  [data-client-mobile-nav],
+  [data-client-app-rail],
+  [data-client-shortcut-card],
+  [data-client-record-amount],
+  [data-client-record-status-line],
+  [data-client-notification-card],
+  [data-client-payment-card],
+  [data-client-account-form],
+  [data-client-password-rules],
+  [data-client-password-field]
+) {
+  min-width: 0;
+}
+
+.client-shell :where(
+  [data-client-app-rail],
+  [data-client-shortcut-card],
+  [data-client-record-amount],
+  [data-client-empty-state],
+  [data-client-notification-filterbar],
+  [data-client-payment-card],
+  [data-client-account-form] [data-client-password-rules],
+  [data-client-mobile-search-panel] form
+) {
+  background-color: #FFFFFF !important;
+  border-color: #D8DEE9 !important;
+  box-shadow: none !important;
+}
+
+.client-shell :where([data-client-record-amount], [data-client-info-pill], [data-client-compact-fact]) {
+  contain: layout paint;
+}
+
+.client-shell :where([data-client-shortcut-card], [data-client-tab-item], [data-client-mobile-nav] a) {
+  user-select: none;
+}
+
+.client-shell :where([data-client-payment-card], [data-client-notification-card], [data-client-reservation-card]) {
+  overflow-wrap: anywhere;
+}
+
+.client-shell :where([data-client-payment-card] a, [data-client-notification-card] a, [data-client-reservation-card] a) {
+  min-width: 0;
+}
+
+.client-shell :where([data-client-account-form] input, [data-client-account-form] select, [data-client-account-form] textarea) {
+  min-height: 2.75rem;
+  border-color: #D8DEE9 !important;
+  background-color: #FFFFFF !important;
+}
+
+.client-shell :where([data-client-account-form] label, form label) {
+  color: #111827;
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
+.client-shell [data-client-mobile-search-panel] {
+  box-shadow: none !important;
+}
+
+.client-shell [data-client-mobile-search-panel] a {
+  white-space: nowrap;
+}
+
+.client-shell [data-client-mobile-nav] {
+  max-width: 28rem;
+  margin-inline: auto;
+  box-shadow: none !important;
+}
+
+.client-shell [data-client-mobile-nav] a {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.client-shell [data-client-mobile-nav] span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-shell [data-client-mobile-nav] svg {
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .client-shell [data-client-content] {
+    padding-top: 1.75rem !important;
+    padding-bottom: 1.75rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .client-shell [data-client-content] {
+    padding-block: 1rem !important;
+  }
+
+  .client-shell [data-client-page-header] > div {
+    gap: 0.75rem !important;
+  }
+
+  .client-shell [data-client-page-header] [data-slot="button"],
+  .client-shell [data-client-page-header] a[class*="inline-flex"],
+  .client-shell [data-client-page-header] button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .client-shell [data-client-app-rail] {
+    gap: 0.35rem !important;
+    padding: 0.35rem !important;
+  }
+
+  .client-shell [data-client-shortcut-card] {
+    min-height: 3.8rem !important;
+    padding: 0.55rem !important;
+  }
+
+  .client-shell [data-client-record-amount] {
+    padding: 0.7rem 0.85rem !important;
+  }
+
+  .client-shell [data-client-notification-filterbar] {
+    padding: 0.85rem !important;
+  }
+
+  .client-shell [data-client-account-form] {
+    gap: 0.85rem !important;
+  }
+
+  .client-shell [data-client-password-rules] {
+    padding: 0.75rem !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .client-shell [data-client-content] {
+    padding-inline: 0.625rem !important;
+  }
+
+  .client-shell [data-client-topbar] {
+    padding-inline: 0.5rem !important;
+  }
+
+  .client-shell [data-client-shortcut-card] {
+    min-height: 3.4rem !important;
+    padding-inline: 0.4rem !important;
+  }
+
+  .client-shell [data-client-shortcut-card] svg {
+    height: 0.9rem !important;
+    width: 0.9rem !important;
+  }
+
+  .client-shell [data-client-mobile-nav] {
+    inset-inline: 0.5rem !important;
+    padding-inline: 0.4rem !important;
+  }
+
+  .client-shell [data-client-mobile-nav] a {
+    min-height: 3.05rem !important;
+    padding-inline: 0.15rem !important;
+  }
+
+  .client-shell [data-client-mobile-nav] span {
+    font-size: 0.62rem !important;
+  }
+}

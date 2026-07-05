@@ -263,7 +263,7 @@ export function ClientTabBar({
     <div
       data-client-tab-bar
       className={cn(
-        "client-tab-bar flex snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#DDE3EE] bg-white p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "client-tab-bar grid grid-cols-2 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[520px]:grid-cols-3 lg:flex lg:flex-nowrap",
         className,
       )}
     >
@@ -275,7 +275,7 @@ export function ClientTabBar({
             href={item.href}
             data-client-tab-item
             className={cn(
-              "flex min-h-11 min-w-[7.75rem] shrink-0 snap-start items-center justify-center rounded-lg px-2.5 py-2 text-center text-sm font-semibold transition-colors lg:min-w-0 lg:flex-1 lg:px-3",
+              "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:flex-1 lg:px-3",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
@@ -377,7 +377,7 @@ export function ClientRecordAmount({
   className?: string;
 }) {
   return (
-    <div className={cn("min-w-0 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5", className)}>
+    <div data-client-record-amount className={cn("min-w-0 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5", className)}>
       <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">{label}</p>
       <div className="mt-1 break-words text-sm font-semibold leading-5 text-[#111B4D]">{value || "—"}</div>
     </div>
@@ -396,7 +396,7 @@ export function ClientRecordStatusLine({
   className?: string;
 }) {
   return (
-    <div className={cn("client-record-status-line border-t border-[#D8DEE9] pt-3", className)}>
+    <div data-client-record-status-line className={cn("client-record-status-line border-t border-[#D8DEE9] pt-3", className)}>
       <div className="flex flex-col gap-2 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-5 text-[#111827]">{label}</p>
@@ -445,6 +445,7 @@ export function ClientAppRail({
 
   return (
     <div
+      data-client-app-rail
       className={cn(
         "client-app-rail grid grid-cols-2 gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid-flow-row min-[720px]:overflow-visible",
         desktopGridClassName,
@@ -505,6 +506,7 @@ export function ClientAppRail({
             <Link
               key={`${item.label}-${item.href}`}
               href={item.href}
+              data-client-shortcut-card
               className={itemClassName}
               aria-current={item.active ? "page" : undefined}
             >
@@ -518,6 +520,7 @@ export function ClientAppRail({
             <a
               key={`${item.label}-${item.href}`}
               href={item.href}
+              data-client-shortcut-card
               className={itemClassName}
               target={isHttpHref(item.href) ? "_blank" : undefined}
               rel={isHttpHref(item.href) ? "noopener noreferrer" : undefined}
@@ -528,7 +531,7 @@ export function ClientAppRail({
         }
 
         return (
-          <div key={item.label} className={itemClassName}>
+          <div key={item.label} data-client-shortcut-card className={itemClassName}>
             {inner}
           </div>
         );

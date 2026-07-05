@@ -219,7 +219,7 @@ export function ClientNotificationCenter({
               </Button>
             )}
           </div>
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtres notifications">
+          <div className="grid grid-cols-2 gap-1 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap" aria-label="Filtres notifications">
             {filterOptions.map((option) => (
               <Button
                 key={option.key}
@@ -228,7 +228,7 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-10 shrink-0 justify-center rounded-lg px-3 text-xs sm:min-h-11 sm:text-sm"
+                className="min-h-10 min-w-0 justify-center rounded-lg px-2 text-xs sm:min-h-11 sm:px-3 sm:text-sm"
               >
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>

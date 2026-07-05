@@ -104,18 +104,17 @@ function ConnexionContent() {
         return;
       }
 
-      if (from) {
-        router.push(from);
-      } else if (role === "ADMIN") {
-        router.push("/admin");
-      } else if (role === "CLIENT") {
-        router.push("/client");
-      } else if (role === "TEACHER") {
-        router.push("/professeur");
-      } else {
-        router.push("/");
-      }
-      router.refresh();
+      const target = from
+        ? from
+        : role === "ADMIN"
+          ? "/admin"
+          : role === "CLIENT"
+            ? "/client"
+            : role === "TEACHER"
+              ? "/professeur"
+              : "/";
+      router.replace(target);
+      window.location.assign(target);
     } catch (err: any) {
       setError(err.message || "Une erreur est survenue. Réessayez.");
       setLoading(false);

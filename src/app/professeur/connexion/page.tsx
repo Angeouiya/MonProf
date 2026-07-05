@@ -70,8 +70,9 @@ function ProfesseurConnexionContent() {
       }
 
       toast.success("Connexion professeur réussie.");
-      router.push(from.startsWith("/professeur") ? from : "/professeur");
-      router.refresh();
+      const target = from.startsWith("/professeur") ? from : "/professeur";
+      router.replace(target);
+      window.location.assign(target);
     } catch {
       setError("Connexion impossible. Vérifiez votre accès ou contactez l'administration.");
       setLoading(false);

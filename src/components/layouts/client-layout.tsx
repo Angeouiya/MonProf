@@ -70,10 +70,10 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }
 
   return (
-    <div className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div data-client-layout className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       {/* Top bar (mobile + desktop) */}
-      <header className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
+      <header data-client-topbar className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
@@ -183,7 +183,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         </div>
       </header>
       {mobileSearchOpen && !open && (
-        <div id="client-mobile-search-panel" className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
+        <div id="client-mobile-search-panel" data-client-mobile-search-panel className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
           <form
             key={`mobile-${searchParams.get("q") ?? "empty-search"}`}
             onSubmit={submitQuickSearch}
@@ -230,15 +230,16 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
       <div className="flex flex-1">
         {/* Sidebar desktop */}
-        <aside className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
+        <aside data-client-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} />
         </aside>
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-client-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside
+              data-client-mobile-drawer
               className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"
               role="dialog"
               aria-modal="true"
@@ -275,6 +276,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
         {/* Main */}
         <main
+          data-client-main
           className={cn(
             "min-w-0 flex-1 overflow-x-hidden lg:ml-72 lg:pb-0",
             hideMobileBottomNav
@@ -282,7 +284,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               : "client-main-with-mobile-nav pb-28"
           )}
         >
-          <div className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">
+          <div data-client-content className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">
             {children}
           </div>
         </main>
@@ -307,7 +309,7 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav className="client-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3" aria-label="Navigation principale client">
+      <nav data-client-sidebar-nav className="client-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3" aria-label="Navigation principale client">
         <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
@@ -348,7 +350,7 @@ function SidebarContent({
           );
         })}
       </nav>
-      <div className="client-sidebar-account border-t border-[#E6EAF3] p-3">
+      <div data-client-sidebar-account className="client-sidebar-account border-t border-[#E6EAF3] p-3">
         <div className="bg-white p-1">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
@@ -432,6 +434,7 @@ function MobileBottomNav({
 }) {
   return (
     <nav
+      data-client-mobile-nav
       className="client-mobile-nav fixed inset-x-2 z-40 rounded-lg border border-[#E1E7F2] bg-white px-1.5 py-1.5 min-[390px]:inset-x-3 min-[390px]:px-2 min-[390px]:py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
