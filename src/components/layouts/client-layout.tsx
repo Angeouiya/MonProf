@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
@@ -47,6 +47,8 @@ const mobileNavItems: ClientNavItem[] = [
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const currentSection = getCurrentSection(pathname);
   const hideMobileBottomNav = Boolean(
@@ -56,6 +58,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
   const isActive = (item: ClientNavItem) =>
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
+
+  function submitQuickSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const query = String(formData.get("q") ?? "").trim();
+    router.push(query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher");
+  }
 
   return (
     <div className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
@@ -83,6 +92,28 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             {currentSection.label}
           </span>
         </div>
+        <form
+          key={searchParams.get("q") ?? "empty-search"}
+          onSubmit={submitQuickSearch}
+          className="hidden min-w-[16rem] max-w-xl flex-1 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-2 py-1 lg:mx-4 lg:flex"
+          role="search"
+          aria-label="Recherche rapide de professeur"
+        >
+          <Search className="h-4 w-4 shrink-0 text-[#111B4D]" />
+          <input
+            name="q"
+            defaultValue={searchParams.get("q") ?? ""}
+            placeholder="Matière, niveau, commune, concours..."
+            className="min-h-9 min-w-0 flex-1 border-0 bg-white px-1 text-sm font-medium text-[#111827] outline-none placeholder:text-[#64748B]"
+            aria-label="Rechercher une matière, un niveau ou une commune"
+          />
+          <button
+            type="submit"
+            className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] px-3 text-xs font-semibold text-white transition hover:bg-[#182260]"
+          >
+            Rechercher
+          </button>
+        </form>
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D] xl:flex">
             <ShieldCheck className="h-3.5 w-3.5" />
