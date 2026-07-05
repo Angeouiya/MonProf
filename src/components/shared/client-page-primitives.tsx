@@ -330,7 +330,7 @@ export function ClientAppRail({
             {item.href && (
               <ChevronRight
                 className={cn(
-                  "ml-auto hidden h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 sm:block",
+                  "ml-auto hidden h-4 w-4 shrink-0 sm:block",
                   item.active ? "text-white" : "text-[#64748B]",
                 )}
               />

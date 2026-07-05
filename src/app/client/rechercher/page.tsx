@@ -140,7 +140,7 @@ export default async function RechercherPage({
               className="group inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#111827] transition hover:text-[#111B4D]"
             >
               <span>{item.label}</span>
-              <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D] transition group-hover:translate-x-0.5" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
             </Link>
           ))}
         </div>

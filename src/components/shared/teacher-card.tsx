@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Home, MapPin, Video } from "lucide-react";
+import { ArrowRight, Home, MapPin, Video } from "lucide-react";
 import { Teacher } from "@prisma/client";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -57,12 +58,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
               <span className="font-semibold text-[#111827]">Note {displayRating.toFixed(1)}/5</span>
               <span> · {teacher.experienceYears} ans</span>
             </p>
-            {teacher.badgeVerified && (
-              <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#111B4D]">
-                <BadgeCheck className="h-3.5 w-3.5" />
-                Certifié
-              </p>
-            )}
+            <ProfessorTrustBadges verified={teacher.badgeVerified} size="sm" maxSecondary={0} />
           </div>
         </div>
       </div>
@@ -101,7 +97,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
               <span className="ml-1 text-xs font-medium text-[#64748B]">/ 2h</span>
             </p>
           </div>
-          <ArrowRight className="hidden h-4 w-4 shrink-0 text-[#111B4D] transition group-hover:translate-x-0.5 min-[380px]:block" />
+          <ArrowRight className="hidden h-4 w-4 shrink-0 text-[#111B4D] min-[380px]:block" />
         </div>
         <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#C8D2E3] bg-white px-3 text-sm text-[#111B4D] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">

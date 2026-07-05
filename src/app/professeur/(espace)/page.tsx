@@ -526,7 +526,7 @@ function ProfessorControlStep({
     >
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
-        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D] transition group-hover:translate-x-0.5" />
+        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
       </div>
       <p className="mt-2 truncate text-sm font-semibold text-[#111827]">{value}</p>
       <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#64748B]">{detail}</p>
@@ -551,7 +551,7 @@ function ProfessorQuickLink({
       <span className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</span>
       <span className="mt-2 flex items-center justify-between gap-2 text-sm font-semibold text-[#111827]">
         <span className="truncate">{value}</span>
-        <ArrowRight className="h-4 w-4 shrink-0 text-[#111B4D] transition group-hover:translate-x-0.5" />
+        <ArrowRight className="h-4 w-4 shrink-0 text-[#111B4D]" />
       </span>
     </Link>
   );
@@ -590,7 +590,7 @@ function ProfessorActionTile({
         <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">{detail}</p>
       </div>
       <span className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-[#111B4D]">
-        Ouvrir <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+        Ouvrir <ArrowRight className="h-4 w-4" />
       </span>
     </Link>
   );

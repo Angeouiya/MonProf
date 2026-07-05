@@ -426,7 +426,7 @@ function ContactPathCard({
       <p className="mt-2 text-sm leading-6 text-[#64748B]">{text}</p>
       <p className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#111B4D]">
         {action}
-        <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+        <ArrowRight className="h-4 w-4" />
       </p>
     </article>
   );
