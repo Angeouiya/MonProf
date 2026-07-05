@@ -54,7 +54,7 @@ export default async function AdminDashboard() {
     draftPayDunyaBookings, paidBookingsAwaitingAdmin, pendingTeacherConfirmations,
     pendingScheduleProposals, teacherMessagesWaitingAdmin, pendingPayoutRequests,
     pendingRefundRequests,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.user.count({ where: { role: "CLIENT" } }),
     db.teacher.count(),
     db.teacher.count({ where: { status: "ACTIVE" } }),
