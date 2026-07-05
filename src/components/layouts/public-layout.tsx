@@ -146,7 +146,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       {mobileOpen && (
-        <div className="fixed inset-x-0 top-[4.5rem] z-40 max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-b border-[#E3E8F2] bg-white lg:hidden">
+        <div
+          className="fixed inset-x-0 z-40 overflow-y-auto border-b border-[#E3E8F2] bg-white lg:hidden"
+          style={{
+            top: "var(--app-topbar-height)",
+            maxHeight: "calc(100dvh - var(--app-topbar-height))",
+          }}
+        >
           <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             <Link
               href="/professeurs"
@@ -215,7 +221,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       )}
-      <div className="h-18 shrink-0" aria-hidden="true" />
+      <div className="app-topbar-spacer" aria-hidden="true" />
 
       {pathname !== "/" && (
         <div className="border-b border-[#E3E8F2] bg-white">

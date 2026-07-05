@@ -183,7 +183,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         </div>
       </header>
       {mobileSearchOpen && !open && (
-        <div id="client-mobile-search-panel" className="fixed inset-x-0 top-16 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
+        <div id="client-mobile-search-panel" className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
           <form
             key={`mobile-${searchParams.get("q") ?? "empty-search"}`}
             onSubmit={submitQuickSearch}
@@ -226,17 +226,17 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           </div>
         </div>
       )}
-      <div className="h-16 shrink-0" aria-hidden="true" />
+      <div className="app-topbar-spacer" aria-hidden="true" />
 
       <div className="flex flex-1">
         {/* Sidebar desktop */}
-        <aside className="fixed left-0 top-16 z-30 hidden h-[calc(100vh-4rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
+        <aside className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} />
         </aside>
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-30 overflow-hidden lg:hidden">
+          <div className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside
               className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"

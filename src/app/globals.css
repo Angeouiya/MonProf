@@ -238,8 +238,21 @@ b {
 }
 
 .public-shell {
+  --app-topbar-height: 4.5625rem;
   min-width: 0;
   -webkit-tap-highlight-color: transparent;
+}
+
+.client-shell {
+  --app-topbar-height: 4.5625rem;
+}
+
+.professor-shell {
+  --app-topbar-height: 4.5625rem;
+}
+
+.admin-shell {
+  --app-topbar-height: 3.5625rem;
 }
 
 .app-topbar {
@@ -250,6 +263,7 @@ b {
   top: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;
+  min-height: var(--app-topbar-height) !important;
   z-index: 70 !important;
   flex-shrink: 0;
   isolation: isolate;
@@ -264,6 +278,26 @@ b {
   will-change: transform;
 }
 
+.app-topbar-spacer {
+  height: var(--app-topbar-height);
+  flex-shrink: 0;
+}
+
+.app-topbar-offset {
+  top: var(--app-topbar-height) !important;
+}
+
+.app-topbar-panel {
+  top: var(--app-topbar-height) !important;
+  max-height: calc(100dvh - var(--app-topbar-height));
+}
+
+.app-sidebar-below-topbar {
+  top: var(--app-topbar-height) !important;
+  height: calc(100vh - var(--app-topbar-height)) !important;
+  height: calc(100dvh - var(--app-topbar-height)) !important;
+}
+
 .public-shell > header:first-of-type,
 .client-shell > header:first-of-type,
 .admin-shell > header:first-of-type,
@@ -275,6 +309,7 @@ b {
   top: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;
+  min-height: var(--app-topbar-height) !important;
   z-index: 70 !important;
   flex-shrink: 0;
   isolation: isolate;
