@@ -1025,7 +1025,7 @@ function getForegroundNotice({
   if (canResumePayDunya) {
     return {
       title: "Action à terminer : paiement",
-      description: "Ce dossier n'est pas une réservation active tant que PayDunya n'a pas confirmé le paiement par webhook. Continuez le paiement pour éviter l'expiration du brouillon.",
+      description: "Ce dossier n'est pas une réservation active tant que PayDunya n'a pas confirmé le paiement côté serveur. Continuez le paiement pour éviter l'expiration du brouillon.",
     };
   }
   if (status === "PENDING_CLIENT_VALIDATION") {

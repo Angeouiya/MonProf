@@ -314,7 +314,7 @@ function PaymentEmptyState() {
             ))}
           </div>
           <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-            Aucun numéro de paiement n'est saisi dans votre espace client. La validation vient du webhook PayDunya.
+            Aucun numéro de paiement n'est saisi dans votre espace client. La validation vient de la confirmation serveur PayDunya.
           </p>
         </div>
       </ClientSurface>

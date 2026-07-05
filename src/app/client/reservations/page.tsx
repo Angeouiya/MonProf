@@ -17,6 +17,7 @@ import { formatFCFA, formatDate } from "@/lib/format";
 import { CalendarCheck, ArrowRight, Lock, MessageSquare, Wallet, Search, WalletCards } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -209,10 +210,11 @@ export default async function ReservationsPage({
                   </div>
 
                   <div className="mt-3 grid gap-2 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
-                    <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
+                    <div className={cn("rounded-lg border px-3 py-2.5", nextStep.className)}>
                       <div className="flex min-h-6 flex-col gap-1 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold leading-5 text-[#111827]">{nextStep.label}</p>
+                          <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">{nextStep.hint}</p>
                         </div>
                         <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{paymentLabel}</p>
                       </div>

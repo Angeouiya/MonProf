@@ -397,7 +397,7 @@ function getReservationFormNotice({
     title: isQuoteOnly ? "Action finale : envoyer le dossier" : "Action finale : paiement PayDunya",
     description: isQuoteOnly
       ? "Aucun paiement n'est demandé maintenant. L'administration reçoit le dossier, vérifie le montant, puis vous confirme la suite."
-      : `Le client paie uniquement le montant total affiché : ${formatFCFA(totalPrice)}. Le moyen de paiement et le numéro sont saisis sur PayDunya, puis le webhook confirme le paiement à Compétence.`,
+      : `Le client paie uniquement le montant total affiché : ${formatFCFA(totalPrice)}. Le moyen de paiement et le numéro sont saisis sur PayDunya, puis la confirmation serveur PayDunya active la réservation.`,
   };
 }
 
@@ -1755,7 +1755,7 @@ export function ReserverForm({
                   <span>
                     {pricing.isQuoteOnly
                       ? "Aucun paiement n'est demandé maintenant. L'administration vous proposera un montant final clair."
-                      : "Le paiement sera finalisé sur PayDunya, confirmé par webhook, puis gardé sécurisé jusqu'à votre confirmation après le cours."}
+                      : "Le paiement sera finalisé sur PayDunya, confirmé côté serveur, puis gardé sécurisé jusqu'à votre confirmation après le cours."}
                   </span>
                 </div>
               </div>
@@ -1845,7 +1845,7 @@ export function ReserverForm({
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         <PayDunyaMark />
                         <span className="inline-flex min-h-8 items-center rounded-lg border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D]">
-                          Webhook sécurisé
+                          Confirmation sécurisée
                         </span>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
@@ -1871,7 +1871,7 @@ export function ReserverForm({
                     </div>
                     <p className="mt-3 flex gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                      Le bouton final ouvre PayDunya. La réservation ne sera marquée payée qu'après confirmation PayDunya par webhook.
+                      Le bouton final ouvre PayDunya. La réservation ne sera marquée payée qu'après confirmation serveur PayDunya.
                     </p>
                   </div>
                 </div>

@@ -265,7 +265,7 @@ export default async function ReservationDetailPage({
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Retour PayDunya enregistré</p>
             <p className="mt-1 leading-6 text-[#64748B]">
-              Nous attendons la confirmation automatique de PayDunya. Si le paiement a été validé, le statut passera en paiement sécurisé dès réception du webhook.
+              Nous attendons la confirmation automatique de PayDunya. Si le paiement a été validé, le statut passera en paiement sécurisé dès réception de la confirmation serveur.
               {paydunyaReturnCheck?.message ? ` Contrôle serveur: ${paydunyaReturnCheck.message}` : " Aucun paiement n'est validé sans confirmation serveur PayDunya."}
             </p>
           </div>
