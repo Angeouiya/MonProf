@@ -253,6 +253,20 @@ b {
   backface-visibility: hidden;
 }
 
+.public-shell > header:first-of-type,
+.client-shell > header:first-of-type,
+.admin-shell > header:first-of-type,
+.professor-shell > header:first-of-type {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  flex-shrink: 0;
+  background: #FFFFFF !important;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 .public-shell section,
 .public-shell article,
 .public-shell div {
