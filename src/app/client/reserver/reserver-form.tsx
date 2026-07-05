@@ -783,7 +783,7 @@ export function ReserverForm({
 
   return (
     <div className="client-booking-form mx-auto w-full max-w-7xl space-y-3 pb-24 sm:pb-8">
-      <section className="client-booking-shell overflow-hidden rounded-xl border border-[#DDE6F7] bg-white shadow-sm">
+      <section className="client-booking-shell overflow-hidden rounded-xl border border-[#DDE6F7] bg-white">
         <div className="border-b border-[#E6EAF3] px-3 py-2 sm:px-5">
           <BackButton fallbackHref="/client/rechercher" className="min-h-10 rounded-xl px-3" />
         </div>
@@ -812,7 +812,7 @@ export function ReserverForm({
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white shadow-sm">
+          <div className="rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
@@ -881,7 +881,7 @@ export function ReserverForm({
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Card className="client-booking-step-card overflow-hidden rounded-xl border-[#DDE6F7] bg-white shadow-sm">
+        <Card className="client-booking-step-card overflow-hidden rounded-xl border-[#DDE6F7] bg-white">
           <CardContent className="p-4 sm:p-6">
             <ImportantActionNotice
               title={reservationFormNotice.title}
@@ -1150,7 +1150,7 @@ export function ReserverForm({
                   }}
                   className="mt-2 grid gap-3 sm:grid-cols-2"
                 >
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 shadow-sm transition-all ${
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
                     form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                   }`}>
                     <RadioGroupItem value="INDIVIDUAL" />
@@ -1160,7 +1160,7 @@ export function ReserverForm({
                       <p className="text-xs text-[#64748B]">Un seul élève.</p>
                     </div>
                   </label>
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 shadow-sm transition-all ${
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all ${
                     form.groupType === "SMALL_GROUP" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                   } ${!teacher.offersGroup ? "cursor-not-allowed border-[#E3E8F2] text-[#9CA3AF]" : ""}`}>
                     <RadioGroupItem value="SMALL_GROUP" disabled={!teacher.offersGroup} />
@@ -1349,7 +1349,7 @@ export function ReserverForm({
                 </p>
                 <div className="mt-3 space-y-3 md:hidden">
                   {mobileAvailabilityDays.length === 0 && (
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
                       <p className="font-semibold text-[#111B4D]">Choisissez d'abord une date</p>
                       <p className="mt-1 text-sm leading-6 text-[#64748B]">
                         Les créneaux mobiles s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
@@ -1360,7 +1360,7 @@ export function ReserverForm({
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
                     return (
-                      <div key={day.key} className="rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                      <div key={day.key} className="rounded-xl border border-[#E3E8F2] bg-white p-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="font-semibold text-[#111B4D]">{day.label}</p>
                           <span className="rounded-xl bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
@@ -1390,7 +1390,7 @@ export function ReserverForm({
                                   }}
                                   className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${
                                     checked
-                                      ? "border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
+                                      ? "border-[#111B4D] bg-[#111B4D] text-white"
                                       : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
                                   }`}
                                 >
@@ -1404,7 +1404,7 @@ export function ReserverForm({
                     );
                   })}
                 </div>
-                <div className="mt-3 hidden rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm md:block">
+                <div className="mt-3 hidden rounded-xl border border-[#E3E8F2] bg-white p-3 md:block">
                   <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs lg:grid-cols-[112px_repeat(7,minmax(0,1fr))] lg:gap-2 lg:text-xs">
                     <div className="font-semibold text-[#64748B]">Jour</div>
                     {TWO_HOUR_SLOTS.map((slot) => (
@@ -1436,7 +1436,7 @@ export function ReserverForm({
                               }}
                               className={`min-h-11 rounded-2xl border px-1.5 py-2 text-center text-xs font-semibold transition lg:px-2 ${
                                 checked
-                                  ? "border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
+                                  ? "border-[#111B4D] bg-[#111B4D] text-white"
                                   : available
                                     ? "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
                                     : "cursor-not-allowed border-[#E3E8F2] bg-white text-[#94A3B8]"
@@ -1580,7 +1580,7 @@ export function ReserverForm({
                     return (
                       <label
                         key={p.value}
-                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-2xl border p-3 text-sm shadow-sm transition-all ${
+                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-2xl border p-3 text-sm transition-all ${
                           form.packType === p.value ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
                         }`}
                       >
@@ -1697,7 +1697,7 @@ export function ReserverForm({
                   isQuoteOnly={pricing.isQuoteOnly}
                 />
                 {sessionPreview.length > 0 && (
-                  <div className="rounded-xl border border-[#DDE6F7] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+                  <div className="rounded-xl border border-[#DDE6F7] bg-white p-3">
                     <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-end min-[460px]:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Séances prévues</p>
@@ -1808,7 +1808,7 @@ export function ReserverForm({
                   </div>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white">
                   <div className="grid gap-4 border-b border-[#E5E7EB] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
@@ -1823,7 +1823,7 @@ export function ReserverForm({
                         PayDunya affichera les options disponibles, collectera les informations nécessaires et confirmera automatiquement le paiement à la plateforme.
                       </p>
                     </div>
-                    <div className="rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-right shadow-sm">
+                    <div className="rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-right">
                       <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant PayDunya</p>
                       <p className="mt-1 text-2xl font-semibold text-[#111B4D]">{formatFCFA(totalPrice)}</p>
                     </div>
@@ -1882,7 +1882,7 @@ export function ReserverForm({
         </Card>
 
         <aside className="hidden space-y-4 xl:sticky xl:top-24 xl:block xl:self-start">
-          <div className="rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
+          <div className="rounded-xl border border-[#DDE6F7] bg-white p-4">
             <div className="flex items-center gap-3">
               <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
               <div className="min-w-0">
@@ -1923,7 +1923,7 @@ export function ReserverForm({
       </div>
 
       <div
-        className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-1.5 shadow-[0_12px_30px_rgba(15,23,42,0.14)] sm:hidden"
+        className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-1.5 sm:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center gap-2">
@@ -1990,7 +1990,7 @@ function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; v
 
 function PayDunyaMark() {
   return (
-    <span className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 shadow-sm" aria-label="PayDunya Checkout">
+    <span className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3" aria-label="PayDunya Checkout">
       <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-[11px] font-semibold text-white">
         PD
       </span>

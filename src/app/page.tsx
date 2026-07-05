@@ -190,9 +190,9 @@ export default async function HomePage() {
             {STEPS.map((s) => (
               <div
                 key={s.title}
-                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm"
+                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
                   <s.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-3 text-sm font-semibold text-[#111827]">
@@ -223,7 +223,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/professeurs"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[#CAD7F2] bg-white px-4 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] sm:justify-start"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-[#CAD7F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:justify-start"
               >
                 Voir tous les professeurs
                 <ArrowRight className="h-4 w-4" />
@@ -247,9 +247,9 @@ export default async function HomePage() {
               <Link
                 key={s.slug}
                 href={`/professeurs?subject=${s.slug}`}
-                className="group flex items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm transition hover:border-[#111B4D]"
+                className="group flex items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 transition hover:border-[#111B4D]"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white text-[#111B4D] shadow-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white text-[#111B4D]">
                   <s.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
@@ -261,7 +261,7 @@ export default async function HomePage() {
             ))}
           </div>
           <div className="mt-5 text-center">
-            <Link href="/professeurs" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]">
+            <Link href="/professeurs" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] hover:border-[#111B4D]">
               Explorer toutes les matières
             </Link>
           </div>
@@ -296,14 +296,14 @@ export default async function HomePage() {
               <div className="mt-7">
                 <Link
                   href="/tarifs"
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D]"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
                 >
                   Voir les tarifs détaillés
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
-            <div className="overflow-hidden rounded-[1.15rem] border border-[#E3E8F2] bg-white shadow-sm">
+            <div className="overflow-hidden rounded-[1.15rem] border border-[#E3E8F2] bg-white">
               <table className="w-full text-sm">
                 <thead className="bg-white text-left text-xs uppercase tracking-wide text-[#64748B]">
                   <tr>

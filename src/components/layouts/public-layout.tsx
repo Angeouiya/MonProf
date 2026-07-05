@@ -66,7 +66,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="public-shell flex min-h-screen flex-col bg-white">
-      <header className="sticky top-0 z-50 w-full border-b border-[#E3E8F2] bg-white shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
@@ -84,8 +84,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.href)
-                    ? "border border-[#DDE6F7] bg-white text-[#111B4D] shadow-sm"
-                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
+                    ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
+                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
                 )}
               >
                 {link.label}
@@ -107,12 +107,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </Button>
             )}
             {!session && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D] hover:shadow-sm">
+              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
                 <Link href="/connexion">Connexion</Link>
               </Button>
             )}
             {!session && (
-              <Button asChild className="min-h-11 rounded-2xl bg-[#111B4D] px-5 text-white shadow-sm hover:bg-[#1E2A78]">
+              <Button asChild className="min-h-11 rounded-2xl bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
                 <Link href="/inscription">
                   Créer un compte
                   <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -120,14 +120,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </Button>
             )}
             {session && !isAdmin && !isClient && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D] hover:shadow-sm">
+              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
                 <Link href="/connexion">Connexion</Link>
               </Button>
             )}
           </div>
 
           <button
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Menu"
             aria-expanded={mobileOpen}
@@ -137,12 +137,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {mobileOpen && (
-          <div className="border-t border-[#E3E8F2] bg-white shadow-sm lg:hidden">
+          <div className="border-t border-[#E3E8F2] bg-white lg:hidden">
             <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
               <Link
                 href="/professeurs"
                 onClick={() => setMobileOpen(false)}
-                className="flex min-h-14 items-center justify-between rounded-[1.15rem] border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm"
+                className="flex min-h-14 items-center justify-between rounded-[1.15rem] border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
               >
                 <span className="inline-flex items-center gap-2">
                   <Search className="h-4 w-4" />
@@ -159,7 +159,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     "inline-flex min-h-12 items-center rounded-2xl px-4 text-sm font-semibold transition",
                     pathname?.startsWith(link.href)
                       ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
-                      : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D] hover:shadow-sm"
+                      : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
                   )}
                 >
                   {link.label}
@@ -169,7 +169,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 {trustSignals.map((signal) => {
                   const Icon = signal.icon;
                   return (
-                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-3 text-xs font-semibold text-[#111B4D] shadow-sm">
+                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-3 text-xs font-semibold text-[#111B4D]">
                       <Icon className="h-4 w-4 shrink-0" />
                       <span>{signal.label}</span>
                     </div>
@@ -220,7 +220,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="mt-auto border-t border-[#E3E8F2] bg-white pb-24 lg:pb-0">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div className="mb-8 rounded-[1.15rem] border border-[#DDE6F7] bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-8 rounded-[1.15rem] border border-[#DDE6F7] bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
@@ -320,7 +320,7 @@ function PublicMobileNav({
 
   return (
     <nav
-      className="public-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 shadow-[0_14px_36px_rgba(15,23,42,0.12)] lg:hidden"
+      className="public-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation publique mobile"
     >
@@ -338,7 +338,7 @@ function PublicMobileNav({
               className={cn(
                 "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.7rem] font-semibold transition-colors",
                 active
-                  ? "bg-[#111B4D] text-white shadow-sm"
+                  ? "bg-[#111B4D] text-white"
                   : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D]",
               )}
               aria-current={active ? "page" : undefined}

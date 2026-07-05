@@ -23,8 +23,8 @@ const ADMIN_BENEFITS = [
   { icon: Bell, title: "Notifications critiques", text: "Alertes, relances PayDunya, litiges et actions à traiter sont visibles dès l'entrée." },
 ];
 
-const FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
-const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:ring-[#9AAAD0]";
+const FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
 
 function ConnexionContent() {
   const router = useRouter();
@@ -162,7 +162,7 @@ function ConnexionContent() {
               </p>
               <div className="mt-8 grid gap-3">
                 {benefits.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                  <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <item.icon className="h-5 w-5" />
                     </div>
@@ -178,7 +178,7 @@ function ConnexionContent() {
 
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2A78] text-white shadow-lg">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2A78] text-white">
                 {isAdminAuth ? <ShieldCheck className="h-6 w-6" /> : <GraduationCap className="h-6 w-6" />}
               </div>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
@@ -189,9 +189,9 @@ function ConnexionContent() {
               </p>
             </div>
 
-          <div className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-6 shadow-sm">
+          <div className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-6">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700 shadow-sm">
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -219,7 +219,7 @@ function ConnexionContent() {
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="password">Mot de passe</Label>
                   {!isAdminAuth && (
-                    <Link href="/mot-de-passe-oublie" className="text-xs font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                    <Link href="/mot-de-passe-oublie" className="inline-flex min-h-11 items-center text-xs font-semibold text-[#111B4D] underline-offset-4 hover:underline">
                       Mot de passe oublié ?
                     </Link>
                   )}
@@ -250,7 +250,7 @@ function ConnexionContent() {
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white shadow-sm hover:bg-[#1E2A78]"
+                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (
@@ -289,7 +289,7 @@ function ConnexionContent() {
           </div>
 
           {/* Compte démo */}
-          <div className="mt-6 rounded-[1.25rem] border border-dashed border-[#DDE6F7] bg-white p-4 shadow-sm">
+          <div className="mt-6 rounded-[1.25rem] border border-dashed border-[#DDE6F7] bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {isAdminAuth ? "Démonstration administrateur" : "Démonstration client"}
             </p>

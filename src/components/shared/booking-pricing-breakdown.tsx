@@ -76,7 +76,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const adminProps = props as BookingPricingBreakdownAdminProps;
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 shadow-sm sm:p-4">
+    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 sm:p-4">
       <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(12rem,auto)] min-[560px]:items-start">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -190,7 +190,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       )}
 
       {audience === "client" && (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B] shadow-sm">
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
           <span>Paiement sécurisé sur PayDunya. Le numéro et le moyen de paiement sont choisis uniquement sur PayDunya, puis vérifiés côté serveur.</span>
         </div>
@@ -262,7 +262,7 @@ function PricingLine({
 
 function PricingMini({ label, value, detail }: { label: string; value: ReactNode; detail?: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 shadow-sm">
+    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2">
       <p className="text-xs font-semibold uppercase leading-snug tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 break-words text-sm font-semibold leading-tight text-[#111B4D]">{value}</p>
       {detail && <p className="text-xs leading-snug text-[#64748B]">{detail}</p>}

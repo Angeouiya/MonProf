@@ -60,9 +60,9 @@ const TRUST_POINTS = [
   "Historique complet des cours et avis",
 ];
 
-const FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 text-sm shadow-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-2xl border-[#E3E8F2] bg-white shadow-sm focus:border-[#111B4D] focus:ring-[#111B4D]";
+const FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-2xl border-[#E3E8F2] bg-white focus:border-[#111B4D] focus:ring-[#111B4D]";
 
 export function InscriptionForm({ communes }: { communes: Commune[] }) {
   const router = useRouter();
@@ -155,7 +155,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
     <PublicLayout>
       <section className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(320px,430px)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-14">
-          <aside className="overflow-hidden rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6 lg:sticky lg:top-24">
+          <aside className="overflow-hidden rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 sm:p-6 lg:sticky lg:top-24">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <ShieldCheck className="h-3.5 w-3.5" />
               Nouveau compte client
@@ -193,7 +193,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
           </aside>
 
           <div className="w-full">
-            <div className="mb-5 rounded-[1.6rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+            <div className="mb-5 rounded-[1.6rem] border border-[#E3E8F2] bg-white p-4 sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
@@ -207,15 +207,15 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
                   </p>
                 </div>
-                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white">
+                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
                   Déjà inscrit
                 </Link>
               </div>
             </div>
 
-            <div className="rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6">
+            <div className="rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 sm:p-6">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B] shadow-sm">
+              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B]">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -362,7 +362,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white shadow-sm hover:bg-[#1E2A78]"
+                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (

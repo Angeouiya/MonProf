@@ -31,7 +31,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
   return (
     <article
       data-client-teacher-card
-      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 shadow-sm transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
+      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
     >
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3.5">
         <ProfessorImage
@@ -118,7 +118,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
 
 export function TeacherCardSkeleton() {
   return (
-    <div className="rounded-xl border border-[#E3E8F2] bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
       <div className="flex gap-4">
         <Skeleton className="h-20 w-20 shrink-0 rounded-full" />
         <div className="flex-1 space-y-2">

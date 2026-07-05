@@ -30,7 +30,7 @@ export function HomeSearchBar({
     <form
       method="GET"
       action="/professeurs"
-      className="mx-auto w-full max-w-5xl rounded-xl border border-[#DDE6F7] bg-white p-3 shadow-sm sm:p-4"
+      className="mx-auto w-full max-w-5xl rounded-xl border border-[#DDE6F7] bg-white p-3 sm:p-4"
     >
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
         <label className="min-w-0">
@@ -97,7 +97,7 @@ export function HomeSearchBar({
         <Button
           type="submit"
           size="lg"
-          className="min-h-12 w-full rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
+          className="min-h-12 w-full rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
         >
           <Search className="h-4 w-4" />
           Rechercher

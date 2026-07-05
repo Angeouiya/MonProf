@@ -184,7 +184,7 @@ export default async function TeachersPage({
                 Matières scolaires, université, adultes, concours, métiers techniques et art.
               </p>
             </div>
-            <div className="grid gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 shadow-sm min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
+            <div className="grid gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
               <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
@@ -203,13 +203,13 @@ export default async function TeachersPage({
           </div>
 
           {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 shadow-sm sm:mt-6 sm:flex-row">
+          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 sm:mt-6 sm:flex-row">
             <input
               type="search"
               name="q"
               defaultValue={q}
               placeholder="Matière, concours, adulte, art, technique, spécialité..."
-              className="min-h-12 flex-1 rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-sm shadow-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+              className="min-h-12 flex-1 rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
               style={{ minHeight: 48 }}
             />
             {/* Préserve les autres filtres */}
@@ -220,7 +220,7 @@ export default async function TeachersPage({
             {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#182260]"
             >
               Rechercher
             </button>
@@ -240,7 +240,7 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[#E3E8F2] bg-white px-4 py-2 shadow-sm lg:hidden">
+          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
             <p className="min-w-0 text-sm font-medium text-[#64748B]">
               <span className="font-semibold text-[#111827]">{total}</span>{" "}
               professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
@@ -251,7 +251,7 @@ export default async function TeachersPage({
               </Link>
             )}
           </div>
-          <details className="mb-4 rounded-[1rem] border border-[#E3E8F2] bg-white p-3 shadow-sm lg:hidden">
+          <details className="mb-4 rounded-[1rem] border border-[#E3E8F2] bg-white p-3 lg:hidden">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-sm font-semibold text-[#111827]">
               <span className="inline-flex items-center gap-2">
                 <Filter className="h-4 w-4 text-[#111B4D]" />
@@ -326,7 +326,7 @@ export default async function TeachersPage({
 
             {/* RÉSULTATS */}
             <div>
-              <div className="mb-5 hidden flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm lg:flex lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-5 hidden flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
                 <p className="text-sm font-medium text-[#64748B]">
                   <span className="font-semibold text-[#111827]">{total}</span>{" "}
                   professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
@@ -374,7 +374,7 @@ export default async function TeachersPage({
                       <Link
                         href={buildPaginationUrl(Math.max(1, page - 1))}
                         aria-disabled={page === 1}
-                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${
+                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
                           page === 1
                             ? "pointer-events-none border-[#E3E8F2] bg-white text-[#8892A8]"
                             : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
@@ -389,7 +389,7 @@ export default async function TeachersPage({
                       <Link
                         href={buildPaginationUrl(Math.min(totalPages, page + 1))}
                         aria-disabled={page === totalPages}
-                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${
+                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
                           page === totalPages
                             ? "pointer-events-none border-[#E3E8F2] bg-white text-[#8892A8]"
                             : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
@@ -460,7 +460,7 @@ function FiltersForm({
     <form
       method="GET"
       action="/professeurs"
-      className={compact ? "min-w-0" : "min-w-0 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm"}
+      className={compact ? "min-w-0" : "min-w-0 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5"}
     >
       {!compact && (
         <div className="mb-4 flex items-center justify-between">
@@ -564,7 +564,7 @@ function FiltersForm({
         <div className={compact ? "min-[560px]:self-end" : ""}>
           <button
             type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
           >
             Appliquer les filtres
           </button>

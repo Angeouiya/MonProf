@@ -117,13 +117,13 @@ export default async function TeacherDetailPage({
         <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
           <Link
             href="/professeurs"
-            className="mb-6 hidden min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] shadow-sm transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
+            className="mb-6 hidden min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour à la liste
           </Link>
 
-          <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-6">
+          <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <ProfessorImage
               photoUrl={teacher.photoUrl}
@@ -194,7 +194,7 @@ export default async function TeacherDetailPage({
               <div className="mt-5 grid gap-2 sm:hidden">
                 <Link
                   href={reserveHref}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
                 >
                   <Calendar className="h-4 w-4" />
                   Réserver ce professeur
@@ -216,7 +216,7 @@ export default async function TeacherDetailPage({
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 sm:p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
@@ -255,7 +255,7 @@ export default async function TeacherDetailPage({
               </p>
             </div>
 
-            <div className="hidden rounded-xl border border-[#111B4D] bg-white p-4 shadow-sm sm:p-5 lg:block">
+            <div className="hidden rounded-xl border border-[#111B4D] bg-white p-4 sm:p-5 lg:block">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Action recommandée</p>
               <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Démarrer la réservation guidée</h2>
               <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
@@ -265,7 +265,7 @@ export default async function TeacherDetailPage({
               </div>
               <Link
                 href={reserveHref}
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
                 <Calendar className="h-4 w-4" />
                 Réserver ce professeur
@@ -358,7 +358,7 @@ export default async function TeacherDetailPage({
                   {teacher.subjects.map((s) => (
                     <span
                       key={s.subject.id}
-                      className={`inline-flex items-center gap-1 rounded-2xl border px-3 py-1.5 text-sm font-semibold shadow-sm ${
+                      className={`inline-flex items-center gap-1 rounded-2xl border px-3 py-1.5 text-sm font-semibold ${
                         s.isPrimary
                           ? "border-[#111B4D] bg-white text-[#111B4D]"
                           : "border-[#E3E8F2] bg-white text-[#111827]"
@@ -403,7 +403,7 @@ export default async function TeacherDetailPage({
                       return (
                       <span
                         key={commune.id}
-                        className="inline-flex items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827] shadow-sm"
+                        className="inline-flex items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827]"
                       >
                         <MapPin className="h-3 w-3 text-[#64748B]" />
                         {commune.name}
@@ -431,7 +431,7 @@ export default async function TeacherDetailPage({
                       {WEEK_DAYS.map((day) => {
                         const availableSlots = TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]);
                         return (
-                          <div key={day.key} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                          <div key={day.key} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3">
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-[#111827]">{day.label}</p>
@@ -485,7 +485,7 @@ export default async function TeacherDetailPage({
                               return (
                                 <div
                                   key={slot.key}
-                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-semibold shadow-sm ${
+                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-semibold ${
                                     available
                                       ? "border-[#111B4D] bg-white text-[#111B4D]"
                                       : "border-[#E3E8F2] bg-white text-[#94A3B8]"
@@ -549,7 +549,7 @@ export default async function TeacherDetailPage({
                 {/* Répartition des notes */}
                 {displayRating > 0 && (
                   <div className="mt-4 grid gap-4 sm:grid-cols-[200px_1fr]">
-                    <div className="flex flex-col items-center justify-center rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 text-center shadow-sm">
+                    <div className="flex flex-col items-center justify-center rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 text-center">
                       <div className="text-4xl font-semibold text-[#111827]">
                         {displayRating.toFixed(1)}
                       </div>
@@ -618,7 +618,7 @@ export default async function TeacherDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B] shadow-sm">
+                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B]">
                     Ce professeur n'a pas encore d'avis publié. Soyez le
                     premier à réserver et à laisser un avis après votre cours.
                   </p>
@@ -628,7 +628,7 @@ export default async function TeacherDetailPage({
 
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
             <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
-              <div className="rounded-[2rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
                 <div className="mt-1">
                   <span className="text-2xl font-semibold tracking-tight text-[#111827]">
@@ -662,7 +662,7 @@ export default async function TeacherDetailPage({
 
                 <Link
                   href={reserveHref}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E2A78]"
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
                 >
                   <Calendar className="h-4 w-4" />
                   Réserver ce professeur
@@ -710,7 +710,7 @@ export default async function TeacherDetailPage({
           </div>
         </div>
       </section>
-      <div className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.18)] sm:hidden" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <div className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-2 sm:hidden" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="min-w-0 px-2">
             <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
@@ -730,7 +730,7 @@ export default async function TeacherDetailPage({
 
 function Card({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <div id={id} className="min-w-0 scroll-mt-24 rounded-xl border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
+    <div id={id} className="min-w-0 scroll-mt-24 rounded-xl border border-[#E3E8F2] bg-white p-5 sm:p-6">
       {children}
     </div>
   );
@@ -753,7 +753,7 @@ function CardTitle({
 
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 shadow-sm">
+    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
     </div>
@@ -770,7 +770,7 @@ function DecisionPoint({
   value: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         <span className="text-[#111B4D]">{icon}</span>
         {label}
