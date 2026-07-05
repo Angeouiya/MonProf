@@ -134,14 +134,17 @@ export default async function RechercherPage({
         </div>
 
         <div className="mt-3 border-t border-[#E6EAF3] pt-3">
-          <div className="flex flex-col gap-2 min-[700px]:flex-row min-[700px]:items-center">
+          <div className="flex flex-col gap-2 min-[820px]:flex-row min-[820px]:items-center">
             <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
-            <div className="grid grid-cols-2 gap-2 min-[560px]:grid-cols-3 min-[900px]:flex min-[900px]:flex-wrap">
+            <div
+              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[820px]:mx-0 min-[820px]:flex-wrap min-[820px]:overflow-visible min-[820px]:px-0 min-[820px]:pb-0"
+              aria-label="Recherches fréquentes"
+            >
               {quickSearches.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group inline-flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[900px]:justify-center"
+                  className="group inline-flex min-h-11 min-w-[9.5rem] shrink-0 snap-start items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:min-w-0 min-[820px]:justify-center"
                 >
                   <span className="truncate">{item.label}</span>
                   <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
@@ -175,15 +178,18 @@ export default async function RechercherPage({
           <div className="border-t border-[#E3E8F2] p-3 sm:p-4">
             {hasActiveFilters && (
               <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 min-[620px]:flex-row min-[620px]:items-center min-[620px]:justify-between">
-                <div className="flex min-w-0 flex-wrap gap-2">
+                <div
+                  className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[620px]:mx-0 min-[620px]:flex-wrap min-[620px]:overflow-visible min-[620px]:px-0 min-[620px]:pb-0"
+                  aria-label="Filtres actifs"
+                >
                   {activeFilters.map((filter) => (
                     <Link
                       key={filter.key}
                       href={filter.href}
-                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                      className="inline-flex min-h-9 max-w-[16rem] shrink-0 snap-start items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D] min-[620px]:max-w-none"
                       title={`Retirer le filtre ${filter.label}`}
                     >
-                      <span>{filter.label}</span>
+                      <span className="truncate">{filter.label}</span>
                       <X className="h-3.5 w-3.5" />
                     </Link>
                   ))}
@@ -308,10 +314,13 @@ export default async function RechercherPage({
               title="Aucun professeur ne correspond"
               description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
             />
-            <div className="flex flex-wrap justify-center gap-2">
+            <div
+              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0"
+              aria-label="Suggestions de recherche"
+            >
               <Link
                 href="/client/rechercher"
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                className="inline-flex min-h-11 min-w-[10rem] shrink-0 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] sm:min-w-0"
               >
                 Voir tous les professeurs
               </Link>
@@ -319,7 +328,7 @@ export default async function RechercherPage({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                  className="inline-flex min-h-11 min-w-[9rem] shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:min-w-0"
                 >
                   {item.label}
                 </Link>
