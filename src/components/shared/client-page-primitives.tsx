@@ -328,7 +328,7 @@ export function ClientAppRail({
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 hidden line-clamp-1 text-[0.72rem] font-semibold leading-4 min-[390px]:block sm:text-sm sm:leading-5",
+                "mt-0.5 block line-clamp-2 text-[0.72rem] font-semibold leading-4 sm:line-clamp-1 sm:text-sm sm:leading-5",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}

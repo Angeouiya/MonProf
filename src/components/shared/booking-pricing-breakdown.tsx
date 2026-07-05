@@ -78,13 +78,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 sm:p-4" data-client-pricing-breakdown>
       <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(12rem,auto)] min-[560px]:items-start">
-        <div className="flex min-w-0 items-start gap-3">
+        <div className="order-2 flex min-w-0 items-start gap-3 min-[560px]:order-1">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
             <Calculator className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#111827]">Coût de la réservation</p>
-            <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block">
+            <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block" data-client-pricing-helper>
               {isQuoteOnly
                 ? "Chiffrage manuel avant paiement."
                 : audience === "client"
@@ -94,7 +94,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#111B4D] bg-[#111B4D] px-4 py-3 text-white">
+        <div className="order-1 rounded-lg border border-[#111B4D] bg-[#111B4D] px-4 py-3 text-white min-[560px]:order-2" data-client-pricing-total>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-white">
             {isQuoteOnly ? "Montant" : "Total client"}
           </p>
@@ -109,7 +109,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 min-[520px]:grid-cols-3">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[580px]:grid-cols-3" data-client-pricing-facts>
         <PricingFact
           icon={<Clock className="h-4 w-4" />}
           label="Formule"
@@ -129,11 +129,11 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         />
       </div>
 
-      <div className="mt-3 min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3">
+      <div className="mt-3 min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3" data-client-pricing-detail>
         <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
-            <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
+            <p className="mt-0.5 hidden text-xs font-medium leading-5 text-[#64748B] min-[430px]:block">
               {isGroup
                 ? "Chaque apprenant supplémentaire ajoute 50% du prix de base."
                 : "Calcul individuel sur la formule choisie."}

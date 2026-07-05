@@ -1317,7 +1317,7 @@ b {
 }
 
 .client-app-rail .client-shortcut-card {
-  min-height: 4.1rem;
+  min-height: 4.55rem;
   box-shadow: none !important;
 }
 
@@ -1327,6 +1327,33 @@ b {
 
 .client-app-rail {
   align-items: stretch;
+}
+
+.client-app-rail .client-shortcut-card span {
+  overflow-wrap: normal;
+}
+
+.client-shell [data-client-pricing-breakdown] {
+  contain: layout paint;
+}
+
+.client-shell [data-client-pricing-total] {
+  min-width: 0;
+}
+
+.client-shell [data-client-pricing-total] [data-slot="money"],
+.client-shell [data-client-pricing-detail] [data-slot="money"] {
+  white-space: nowrap;
+}
+
+.client-shell [data-client-pricing-facts] > * {
+  min-width: 0;
+}
+
+@media (min-width: 360px) and (max-width: 579px) {
+  .client-shell [data-client-pricing-facts] > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 .client-shell [data-client-teacher-card] {
