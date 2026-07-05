@@ -78,7 +78,7 @@ export function ClientMetricStrip({
         "client-metric-strip grid gap-2 bg-white",
         metrics.length === 1
           ? "grid-cols-1"
-        : metrics.length === 2
+          : metrics.length === 2
             ? "grid-cols-2"
             : "grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
@@ -296,10 +296,11 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-2 bg-white min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
+        "client-app-rail grid grid-cols-2 gap-2 bg-white min-[560px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
         className,
       )}
       aria-label="Raccourcis client"
+      role="navigation"
     >
       {items.map((item) => {
         const content = (
@@ -316,13 +317,13 @@ export function ClientAppRail({
             </span>
             <span className="min-w-0 text-center sm:flex-1 sm:text-left">
               <span className={cn(
-                "block truncate text-[9.5px] font-semibold uppercase leading-3 tracking-wide sm:text-[10.5px]",
+                "block truncate text-[10px] font-semibold uppercase leading-3 tracking-wide min-[380px]:text-[10.5px]",
                 item.active ? "text-white" : "text-[#64748B]",
               )}>
-              {item.label}
+                {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 hidden line-clamp-1 text-[0.72rem] font-semibold leading-4 min-[360px]:block sm:text-sm sm:leading-5",
+                "mt-0.5 hidden line-clamp-1 text-[0.72rem] font-semibold leading-4 min-[390px]:block sm:text-sm sm:leading-5",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -340,7 +341,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
+          "client-shortcut-card group flex min-h-[4.15rem] items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-16 sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
           item.active
             ? "border-[#111B4D] bg-[#111B4D] text-white"
             : "text-[#111827] hover:border-[#111B4D] hover:bg-white",

@@ -323,8 +323,12 @@ b {
 }
 
 @media (max-width: 640px) {
-  .public-shell footer {
+  .public-shell.public-shell--mobile-nav-visible footer {
     padding-bottom: 6.75rem !important;
+  }
+
+  .public-shell.public-shell--mobile-nav-hidden footer {
+    padding-bottom: 0 !important;
   }
 
   .public-shell h1,
@@ -1282,7 +1286,11 @@ b {
 }
 
 .client-app-rail .client-shortcut-card > span {
-  gap: 0.4rem;
+  gap: 0.45rem;
+}
+
+.client-app-rail {
+  align-items: stretch;
 }
 
 .client-shell [data-client-teacher-card] {
