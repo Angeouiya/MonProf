@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
 import {
   ClientCompactFacts,
   ClientAppRail,
+  ClientEmptyState,
   ClientFocusPanel,
   ClientMetricStrip,
   ClientPageHeader,
@@ -131,7 +131,6 @@ export default async function CoursPage({
 
       <ClientTabBar
         activeId={tabId}
-        className="min-[420px]:grid-cols-3"
         items={TABS.map((t) => ({
           id: t.id,
           label: t.label,
@@ -141,7 +140,7 @@ export default async function CoursPage({
       />
 
       {bookings.length === 0 ? (
-        <EmptyState
+        <ClientEmptyState
           icon={BookOpen}
           title="Aucun cours dans cette catégorie"
           description="Réservez un cours pour le voir apparaître ici."

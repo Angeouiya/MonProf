@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { EmptyState } from "@/components/shared/page-header";
-import { ClientPageHeader, ClientSectionTitle, ClientSurface } from "@/components/shared/client-page-primitives";
+import { ClientEmptyState, ClientPageHeader, ClientSectionTitle, ClientSurface } from "@/components/shared/client-page-primitives";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { CalendarCheck, ChevronDown, SlidersHorizontal, Search, X } from "lucide-react";
@@ -304,7 +303,7 @@ export default async function RechercherPage({
         />
         {items.length === 0 ? (
           <div className="space-y-4">
-            <EmptyState
+            <ClientEmptyState
               icon={Search}
               title="Aucun professeur ne correspond"
               description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."

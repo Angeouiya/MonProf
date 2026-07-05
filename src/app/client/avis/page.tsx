@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
 import {
   ClientAppRail,
+  ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -103,7 +103,7 @@ export default async function AvisPage() {
           description={bookingsToReview.length > 0 ? `${bookingsToReview.length} retour${bookingsToReview.length > 1 ? "s" : ""} qualité attendu${bookingsToReview.length > 1 ? "s" : ""}` : "Tout est à jour"}
         />
         {!primaryReviewBooking ? (
-          <EmptyState
+          <ClientEmptyState
             icon={MessageSquare}
             title="Aucun avis en attente"
             description="Les cours terminés à évaluer apparaîtront ici automatiquement."
@@ -182,7 +182,7 @@ export default async function AvisPage() {
       <section className="space-y-3">
         <ClientSectionTitle title="Historique" description={`${myReviews.length} avis publié${myReviews.length > 1 ? "s" : ""}`} />
         {myReviews.length === 0 ? (
-          <EmptyState
+          <ClientEmptyState
             icon={BookOpen}
             title="Aucun avis publié"
             description="Vos avis apparaîtront ici une fois publiés."

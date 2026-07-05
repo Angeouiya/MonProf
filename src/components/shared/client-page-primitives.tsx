@@ -138,6 +138,45 @@ export function ClientSurface({
   );
 }
 
+export function ClientEmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
+  compact = false,
+}: {
+  icon?: LucideIcon;
+  title: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "client-empty-state flex min-w-0 flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-center",
+        compact ? "px-4 py-5" : "px-4 py-8 sm:px-6 sm:py-10",
+        className,
+      )}
+    >
+      {Icon && (
+        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          <Icon className="h-5 w-5" />
+        </span>
+      )}
+      <h2 className="max-w-md text-base font-semibold leading-6 text-[#111827]">{title}</h2>
+      {description && (
+        <div className="mt-1 max-w-md text-sm font-medium leading-6 text-[#64748B]">
+          {description}
+        </div>
+      )}
+      {action && <div className="mt-4 grid w-full max-w-xs gap-2 sm:w-auto sm:max-w-none">{action}</div>}
+    </div>
+  );
+}
+
 export function ClientSectionTitle({
   eyebrow,
   title,

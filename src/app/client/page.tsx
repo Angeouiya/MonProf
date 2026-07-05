@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
 import {
   ClientAppRail,
+  ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -322,7 +322,7 @@ export default async function ClientDashboardPage() {
         />
         <div className="mt-4">
           {recommended.length === 0 ? (
-            <EmptyState icon={Search} title="Aucun professeur recommandé" />
+            <ClientEmptyState icon={Search} title="Aucun professeur recommandé" compact />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {recommended.map((t, index) => {

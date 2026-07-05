@@ -14,8 +14,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import { EmptyState } from "@/components/shared/page-header";
-import { ClientRecordCard, ClientSurface } from "@/components/shared/client-page-primitives";
+import { ClientEmptyState, ClientRecordCard, ClientSurface } from "@/components/shared/client-page-primitives";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -241,7 +240,7 @@ export function ClientNotificationCenter({
       </ClientSurface>
 
       {notifications.length === 0 ? (
-        <EmptyState
+        <ClientEmptyState
           icon={Bell}
           title="Aucune notification"
           description="Votre centre est calme. Les validations, paiements, confirmations de cours et messages du support apparaîtront ici."
@@ -252,7 +251,7 @@ export function ClientNotificationCenter({
           }
         />
       ) : filteredNotifications.length === 0 ? (
-        <EmptyState icon={Search} title="Aucun résultat" description="Essayez un autre filtre ou une autre recherche." />
+        <ClientEmptyState icon={Search} title="Aucun résultat" description="Essayez un autre filtre ou une autre recherche." compact />
       ) : (
         <div className="space-y-2.5">
           {filteredNotifications.map((notification) => {

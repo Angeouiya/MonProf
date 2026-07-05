@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
 import {
   ClientCompactFacts,
+  ClientEmptyState,
   ClientFocusPanel,
   ClientAppRail,
   ClientMetricStrip,
@@ -159,7 +159,7 @@ export default async function ReservationsPage({
       />
 
       {visibleBookings.length === 0 ? (
-        <EmptyState
+        <ClientEmptyState
           icon={CalendarCheck}
           title="Aucune réservation"
           description="Vous n'avez pas encore réservé de cours."

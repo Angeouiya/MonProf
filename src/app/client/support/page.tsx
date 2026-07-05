@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { EmptyState } from "@/components/shared/page-header";
 import {
   ClientAppRail,
+  ClientEmptyState,
   ClientFocusPanel,
   ClientMetricStrip,
   ClientPageHeader,
@@ -121,7 +121,7 @@ export default async function SupportPage() {
           action={<p className="text-sm font-semibold text-[#111B4D]">{formatCount(bookableForDispute.length, "éligible")}</p>}
         />
           {bookableForDispute.length === 0 ? (
-            <EmptyState
+            <ClientEmptyState
               icon={FileText}
               title="Aucune réservation éligible"
               description="Vous pouvez ouvrir un litige uniquement sur une réservation en cours ou récemment terminée."
@@ -143,7 +143,7 @@ export default async function SupportPage() {
       <ClientSurface className="space-y-4">
         <ClientSectionTitle title={`Historique (${myDisputes.length})`} description="Dossiers ouverts et décisions de support." />
           {myDisputes.length === 0 ? (
-            <EmptyState
+            <ClientEmptyState
               icon={CheckCircle2}
               title="Aucun dossier"
               description="Les signalements apparaîtront ici avec leur statut."
