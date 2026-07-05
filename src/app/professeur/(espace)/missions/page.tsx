@@ -41,13 +41,13 @@ export default async function ProfesseurMissionsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Mes missions"
-        description="Toutes les réservations attribuées à votre fiche professeur. Les confirmations sont historisées côté administration."
+        description="Toutes les réservations attribuées à votre fiche professeur. Les confirmations sont historisées côté service client."
       />
 
       {verifiedBookings.length === 0 ? (
         <EmptyProfessorState
           title="Aucune mission pour le moment"
-          description="Quand l'administration vous attribue une réservation, elle apparaît ici avec les détails nécessaires."
+          description="Quand le service client vous attribue une réservation, elle apparaît ici avec les détails nécessaires."
         />
       ) : (
         <div className="grid gap-4">
@@ -69,7 +69,7 @@ export default async function ProfesseurMissionsPage() {
                       {mission && <StatusPill status={mission.status} type="mission" />}
                     </div>
                     <p className="mt-2 text-base font-semibold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">{booking.objective || booking.needDescription || "Besoin client transmis par l'administration."}</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">{booking.objective || booking.needDescription || "Besoin client transmis par le service client."}</p>
 
                     <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                       <MissionInfo icon={<CalendarDays className="h-4 w-4" />} label="Date" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />

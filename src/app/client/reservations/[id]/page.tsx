@@ -39,7 +39,7 @@ const CLIENT_BOOKING_STATUS_LABELS: Record<string, string> = {
   COURSE_DONE: "Cours effectué",
   PENDING_CLIENT_VALIDATION: "Votre confirmation attendue",
   VALIDATED_BY_CLIENT: "Cours confirmé",
-  PAYMENT_TO_RELEASE: "Traitement administratif",
+  PAYMENT_TO_RELEASE: "Traitement service client",
   TEACHER_PAID: "Cours clôturé",
   DISPUTED: "Litige en cours",
   CANCELLED: "Réservation annulée",
@@ -51,7 +51,7 @@ const CLIENT_PAYMENT_STATUS_LABELS: Record<string, string> = {
   RECEIVED: "Paiement reçu",
   BLOCKED: "Paiement sécurisé",
   VALIDATED: "Cours validé",
-  TO_PAY_TEACHER: "Traitement administratif",
+  TO_PAY_TEACHER: "Traitement service client",
   TEACHER_PAID: "Cours clôturé",
   DISPUTED: "Litige en cours",
   REFUND_PENDING: "Remboursement en traitement",
@@ -185,7 +185,7 @@ export default async function ReservationDetailPage({
     { label: canShowOperationalProgress ? "Réservation créée" : "Brouillon créé", date: booking.createdAt, done: true },
     { label: canShowOperationalProgress ? "Paiement PayDunya vérifié" : "Paiement PayDunya à finaliser", date: paymentConfirmed ? booking.createdAt : null, done: paymentConfirmed },
     {
-      label: canShowOperationalProgress ? "Validée par l'admin" : "Validation admin après paiement",
+      label: canShowOperationalProgress ? "Validée par le service client" : "Validation service client après paiement",
       date: canShowOperationalProgress ? booking.confirmedAt : null,
       done: canShowOperationalProgress && (
         !!booking.confirmedAt
@@ -282,7 +282,7 @@ export default async function ReservationDetailPage({
             <p className="mt-1 leading-6 text-[#64748B]">
               Votre paiement de <strong className="text-[#111827]"><Money amount={displayTotalPrice} /></strong> a été reçu
               et est gardé bloqué jusqu'à la confirmation du cours. Date demandée : <strong className="text-[#111827]">{dateShownToClient ? formatDate(dateShownToClient) : "à confirmer"}</strong>.
-              L'administrateur valide votre réservation prochainement.
+              Le service clientistrateur valide votre réservation prochainement.
             </p>
           </div>
         </div>
@@ -598,7 +598,7 @@ function getClientSituation({
   if (isQuoteOnly) {
     return {
       title: "Devis en validation",
-      description: "L'administration valide le montant avant paiement.",
+      description: "Le service client valide le montant avant paiement.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -630,7 +630,7 @@ function getClientSituation({
   if (status === "VALIDATED_BY_CLIENT" || status === "PAYMENT_TO_RELEASE") {
     return {
       title: "Validation enregistrée",
-      description: "L'administration finalise le paiement professeur.",
+      description: "Le service client finalise le paiement professeur.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

@@ -25,7 +25,7 @@ const priorityLabel: Record<string, string> = {
 
 const statusLabel: Record<string, string> = {
   OPEN: "Ouvert",
-  WAITING_ADMIN: "Réponse admin attendue",
+  WAITING_ADMIN: "Réponse service client attendue",
   WAITING_TEACHER: "Réponse professeur attendue",
   RESOLVED: "Résolu",
   CLOSED: "Clôturé",
@@ -63,8 +63,8 @@ export default async function ProfesseurMessagesPage() {
     <div className="space-y-6">
       <MarkAdminMessagesRead enabled={unreadAdminMessages > 0} />
       <ProfessorPageHeader
-        title="Messages avec l'administration"
-        description="Contactez l'administration Compétence pour une mission, un paiement, une disponibilité ou une situation urgente. Chaque échange est enregistré dans votre fiche."
+        title="Messages avec le service client"
+        description="Contactez le service client Compétence pour une mission, un paiement, une disponibilité ou une situation urgente. Chaque échange est enregistré dans votre fiche."
         action={(
           <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <a href="#nouveau-message">
@@ -77,8 +77,8 @@ export default async function ProfesseurMessagesPage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <ProfessorStatCard label="Messages ouverts" value={openMessages} detail="Échanges non clôturés" icon="clock" />
-        <ProfessorStatCard label="Réponses admin non lues" value={unreadAdminMessages} detail="À consulter rapidement" icon="alert" />
-        <ProfessorStatCard label="Réponses attendues" value={waitingAdmin} detail="L'administration doit répondre" icon="calendar" />
+        <ProfessorStatCard label="Réponses service client non lues" value={unreadAdminMessages} detail="À consulter rapidement" icon="alert" />
+        <ProfessorStatCard label="Réponses attendues" value={waitingAdmin} detail="Le service client doit répondre" icon="calendar" />
       </div>
 
       <PortalCard id="nouveau-message" className="scroll-mt-24">
@@ -87,7 +87,7 @@ export default async function ProfesseurMessagesPage() {
             <MessageSquareText className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-[#111827]">Contacter l'administration</h2>
+            <h2 className="text-lg font-semibold text-[#111827]">Contacter le service client</h2>
             <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
               Pour une urgence, choisissez la priorité adaptée et liez le message à une mission quand c'est possible.
             </p>
@@ -100,7 +100,7 @@ export default async function ProfesseurMessagesPage() {
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[#111827]">Historique des échanges</h2>
-            <p className="text-sm font-medium text-[#64748B]">Messages envoyés et réponses de l'administration.</p>
+            <p className="text-sm font-medium text-[#64748B]">Messages envoyés et réponses du service client.</p>
           </div>
           <Badge variant="outline" className="w-fit border-[#D7DEE9] bg-white text-[#111B4D]">
             {messages.length} message{messages.length > 1 ? "s" : ""}
@@ -110,7 +110,7 @@ export default async function ProfesseurMessagesPage() {
         {messages.length === 0 ? (
           <EmptyProfessorState
             title="Aucun message pour le moment"
-            description="Lorsque vous contactez l'administration ou qu'elle vous répond, l'historique apparaîtra ici."
+            description="Lorsque vous contactez le service client ou qu'elle vous répond, l'historique apparaîtra ici."
           />
         ) : (
           <div className="grid gap-3">
@@ -123,7 +123,7 @@ export default async function ProfesseurMessagesPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
-                        {message.sender === "TEACHER" ? "Vous" : message.admin?.name || "Administration"}
+                        {message.sender === "TEACHER" ? "Vous" : "Service client"}
                       </Badge>
                       <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
                         {statusLabel[message.status] ?? message.status}

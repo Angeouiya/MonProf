@@ -61,7 +61,7 @@ export function ScheduleProposalActions({
       }
       toast.success(action === "accept_schedule_proposal"
         ? "Nouveau créneau confirmé."
-        : "Refus transmis à l'administration.");
+        : "Refus transmis au service client.");
       setResponse("");
       router.refresh();
     } catch {
@@ -106,7 +106,7 @@ export function ScheduleProposalActions({
             value={response}
             onChange={(event) => setResponse(event.target.value)}
             maxLength={700}
-            placeholder="Message optionnel pour le professeur ou l'administration."
+            placeholder="Message optionnel pour le professeur ou le service client."
             className="rounded-lg border-[#DDE6F7] bg-white"
           />
           <div className="grid gap-2 min-[460px]:grid-cols-2">
@@ -129,7 +129,7 @@ export function ScheduleProposalActions({
             </Button>
           </div>
           <p className="text-xs font-medium leading-5 text-[#64748B]">
-            Si vous refusez, l'administration cherchera un autre professeur ou vous proposera une autre solution.
+            Si vous refusez, le service client cherchera un autre professeur ou vous proposera une autre solution.
           </p>
         </div>
       )}

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const RATING_OPTIONS = [
   { value: 1, label: "1", title: "Très insuffisant", detail: "Cours non acceptable", tone: "Suivi qualité urgent" },
-  { value: 2, label: "2", title: "Insuffisant", detail: "Problèmes importants", tone: "Analyse admin requise" },
+  { value: 2, label: "2", title: "Insuffisant", detail: "Problèmes importants", tone: "Analyse service client requise" },
   { value: 3, label: "3", title: "Moyen", detail: "À améliorer", tone: "Retour utile au professeur" },
   { value: 4, label: "4", title: "Bien", detail: "Expérience positive", tone: "Cours satisfaisant" },
   { value: 5, label: "5", title: "Excellent", detail: "Très satisfait", tone: "Professeur recommandé" },
@@ -50,7 +50,7 @@ export function ReviewRatingSelector({
             {selected.tone}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-[#64748B]">{selected.detail}. Les notes faibles déclenchent un suivi qualité par l'administration.</p>
+        <p className="mt-0.5 text-xs text-[#64748B]">{selected.detail}. Les notes faibles déclenchent un suivi qualité par le service client.</p>
       </div>
     </div>
   );

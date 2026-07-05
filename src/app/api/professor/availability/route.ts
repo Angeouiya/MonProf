@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
       data: {
         teacherId: teacher.id,
         title: "Disponibilités enregistrées",
-        message: `Vos disponibilités ont été mises à jour (${selectedSlots} créneau(x) de 2h). L'administration peut les vérifier si nécessaire.`,
+        message: `Vos disponibilités ont été mises à jour (${selectedSlots} créneau(x) de 2h). Le service client peut les vérifier si nécessaire.`,
         channel: "INTERNAL",
         sent: true,
         status: "CONFIRMED",

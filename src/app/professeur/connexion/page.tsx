@@ -22,7 +22,7 @@ function ProfesseurConnexionContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
-    denied ? "Accès professeur désactivé ou suspendu. Contactez l'administration." : null,
+    denied ? "Accès professeur désactivé ou suspendu. Contactez le service client." : null,
   );
 
   useEffect(() => {
@@ -74,7 +74,7 @@ function ProfesseurConnexionContent() {
       router.replace(target);
       window.location.assign(target);
     } catch {
-      setError("Connexion impossible. Vérifiez votre accès ou contactez l'administration.");
+      setError("Connexion impossible. Vérifiez votre accès ou contactez le service client.");
       setLoading(false);
     }
   }
@@ -99,13 +99,13 @@ function ProfesseurConnexionContent() {
                 Gérez vos missions sans dashboard compliqué.
               </h1>
               <p className="mt-4 max-w-lg text-base leading-7 text-[#475569]">
-                Consultez vos cours, confirmez vos disponibilités, suivez vos paiements et recevez les consignes de l'administration Compétence depuis une interface mobile-first.
+                Consultez vos cours, confirmez vos disponibilités, suivez vos paiements et recevez les consignes de le service client Compétence depuis une interface mobile-first.
               </p>
               <div className="mt-8 grid gap-3">
                 {[
                   "Connexion directe par téléphone + mot de passe d'accès.",
                   "Aucune inscription publique professeur.",
-                  "Les tarifs, sanctions et paiements restent contrôlés par l'administration.",
+                  "Les tarifs, sanctions et paiements restent contrôlés par le service client.",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">✓</span>
@@ -128,7 +128,7 @@ function ProfesseurConnexionContent() {
                 Connexion professeur
               </h1>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-                Utilisez le numéro de téléphone et le mot de passe transmis par l'administration.
+                Utilisez le numéro de téléphone et le mot de passe transmis par le service client.
               </p>
             </div>
 
@@ -192,10 +192,10 @@ function ProfesseurConnexionContent() {
               <div className="mt-5 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
                 <p className="font-semibold uppercase tracking-wide text-[#111B4D]">Important</p>
                 <p className="mt-1">
-                  Ce portail ne permet pas de créer un compte professeur. Aucun code SMS n'est envoyé : le numéro sert uniquement d'identifiant et l'accès est activé ou désactivé par l'administration.
+                  Ce portail ne permet pas de créer un compte professeur. Aucun code SMS n'est envoyé : le numéro sert uniquement d'identifiant et l'accès est activé ou désactivé par le service client.
                 </p>
                 <p className="mt-2">
-                  Avant l'activation des identifiants, le professeur doit lire et accepter le cadre Compétence présenté par l'administration :{" "}
+                  Avant l'activation des identifiants, le professeur doit lire et accepter le cadre Compétence présenté par le service client :{" "}
                   <Link href="/conditions-utilisation" className="font-semibold text-[#111B4D] hover:underline">
                     conditions d'utilisation
                   </Link>{" "}

@@ -88,7 +88,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             <h3 className="text-base font-semibold text-[#111827]">Client et consignes</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <DetailTile icon={<Phone className="h-4 w-4" />} label="Client" value={booking.client.name} />
-              <DetailTile label="Contact client" value={booking.client.phone || "À confirmer par l'administration"} />
+              <DetailTile label="Contact client" value={booking.client.phone || "À confirmer par le service client"} />
               <DetailTile label="Commune client" value={[booking.client.commune, booking.client.quartier].filter(Boolean).join(" · ") || "Non renseignée"} />
               <DetailTile label="Objectif" value={booking.objective || "Objectif à préciser pendant le premier échange"} />
             </div>
@@ -108,7 +108,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
           <PortalCard>
             <h3 className="text-base font-semibold text-[#111827]">Tâches liées</h3>
             {booking.teacherTasks.length === 0 ? (
-              <p className="mt-3 text-sm font-semibold text-[#64748B]">Aucune tâche spécifique ajoutée par l'administration.</p>
+              <p className="mt-3 text-sm font-semibold text-[#64748B]">Aucune tâche spécifique ajoutée par le service client.</p>
             ) : (
               <div className="mt-4 grid gap-3">
                 {booking.teacherTasks.map((task) => (
@@ -180,7 +180,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
               <InfoLine label="Statut paiement" value={<StatusPill status={booking.paymentStatus} />} />
             </div>
             <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">
-              Les paiements restent enregistrés par l'administration. Le professeur ne voit que son net opérationnel.
+              Les paiements restent enregistrés par le service client. Le professeur ne voit que son net opérationnel.
             </p>
           </PortalCard>
 

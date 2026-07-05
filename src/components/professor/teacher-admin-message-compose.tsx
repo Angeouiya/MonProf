@@ -54,7 +54,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Message impossible à envoyer.");
 
-      toast.success("Message envoyé à l'administration.");
+      toast.success("Message envoyé au service client.");
       setSubject("");
       setMessage("");
       setBookingId("");
@@ -114,14 +114,14 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="teacher-admin-message">Message à l'administration</Label>
+        <Label htmlFor="teacher-admin-message">Message au service client</Label>
         <Textarea
           id="teacher-admin-message"
           rows={5}
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           maxLength={2500}
-          placeholder="Expliquez clairement la situation. L'administration verra ce message dans votre fiche professeur."
+          placeholder="Expliquez clairement la situation. Le service client verra ce message dans votre fiche professeur."
           className="rounded-lg border-[#D7DEE9] bg-white"
         />
         <p className="text-xs font-semibold text-[#64748B]">{message.trim().length}/2500 caractères</p>
@@ -129,7 +129,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
 
       <Button type="submit" disabled={loading} className="min-h-12 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
-        Envoyer à l'administration
+        Envoyer au service client
       </Button>
     </form>
   );

@@ -81,7 +81,7 @@ export function TeacherPayoutRequestForm({
         toast.error(data.error || "Impossible d'envoyer la demande.");
         return;
       }
-      toast.success("Demande de paiement envoyée. Traitement prévu entre 1h et 72h après contrôle admin.");
+      toast.success("Demande de paiement envoyée. Traitement prévu entre 1h et 72h après contrôle du service client.");
       setAmount("");
       setNote("");
       router.refresh();
@@ -96,10 +96,10 @@ export function TeacherPayoutRequestForm({
         <div>
           <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-            Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle admin.
+            Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle du service client.
           </p>
           <p className="mt-2 rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
-            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par l'administration entre 1 heure et 72 heures ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
+            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par le service client entre 1 heure et 72 heures ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
           </p>
           {payoutInstructions && (
             <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
@@ -141,7 +141,7 @@ export function TeacherPayoutRequestForm({
           <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2">
             <PaymentMethodLogo method={method} className="h-9 min-w-20 rounded-lg" />
             <p className="text-xs font-semibold leading-5 text-[#64748B]">
-              L'admin paiera uniquement via le moyen choisi après vérification.
+              Le service client paiera uniquement via le moyen choisi après vérification.
             </p>
           </div>
         </div>
@@ -181,7 +181,7 @@ export function TeacherPayoutRequestForm({
       </div>
 
       <div className="mt-3">
-        <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note pour l'administration</label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note pour le service client</label>
         <Textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}

@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: null,
         title: `Message professeur - ${subject}`,
-        message: `${teacherName} a envoyé un message à l'administration${booking ? ` pour ${booking.reference}` : ""} : ${message}`,
+        message: `${teacherName} a envoyé un message au service client${booking ? ` pour ${booking.reference}` : ""} : ${message}`,
         type: "TEACHER_ADMIN_MESSAGE",
         recipientType: "ADMIN",
         channel: "INTERNAL",
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         action: "Message professeur reçu",
         entityType: "TeacherAdminMessage",
         entityId: item.id,
-        detail: `${teacherName} a contacté l'administration${booking ? ` pour ${booking.reference}` : ""}. Sujet : ${subject}.`,
+        detail: `${teacherName} a contacté le service client${booking ? ` pour ${booking.reference}` : ""}. Sujet : ${subject}.`,
         newStatus: "WAITING_ADMIN",
       },
     });

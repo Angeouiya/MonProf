@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const teacherBookingStatusLabels: Record<string, string> = {
   PENDING_PAYMENT: "Brouillon non réservé",
   PAID: "Payée",
-  PENDING_ADMIN_VALIDATION: "Validation admin",
+  PENDING_ADMIN_VALIDATION: "Validation service client",
   CONFIRMED: "Confirmée",
   ASSIGNED: "Attribuée",
   IN_PROGRESS: "En cours",

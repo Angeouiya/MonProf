@@ -65,9 +65,9 @@ export function MissionCopyPanel({
             <Phone className="mr-2 h-4 w-4" />
             Copier client
           </Button>
-          <Button type="button" variant="outline" className="h-11 justify-start rounded-lg" onClick={() => copyText(supportMessage, "Message admin copié.")}>
+          <Button type="button" variant="outline" className="h-11 justify-start rounded-lg" onClick={() => copyText(supportMessage, "Message service client copié.")}>
             <Link2 className="mr-2 h-4 w-4" />
-            Copier admin
+            Copier service client
           </Button>
           {clientWhatsAppUrl ? (
             <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
@@ -80,7 +80,7 @@ export function MissionCopyPanel({
             <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
               <a href={supportWhatsAppUrl} target="_blank" rel="noreferrer">
                 <MessageCircle className="mr-2 h-4 w-4" />
-                WhatsApp admin
+                WhatsApp service client
               </a>
             </Button>
           ) : (

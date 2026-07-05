@@ -38,7 +38,7 @@ export function ReviewDialog({
       return;
     }
     if (lowRatingNeedsComment) {
-      toast.error(`Pour une note de ${rating}/5, ajoutez au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que l'administration puisse traiter votre retour.`);
+      toast.error(`Pour une note de ${rating}/5, ajoutez au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que le service client puisse traiter votre retour.`);
       return;
     }
     setLoading(true);
@@ -90,7 +90,7 @@ export function ReviewDialog({
               Suivi qualité
             </div>
             <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-              Les avis faibles aident l'administration à vérifier le cours.
+              Les avis faibles aident le service client à vérifier le cours.
             </p>
           </div>
           <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
@@ -129,7 +129,7 @@ export function ReviewDialog({
             </div>
             {rating <= 3 && (
               <p className="mt-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
-                Les notes de 1 à 3 nécessitent un commentaire précis. L'administration pourra ainsi vérifier le cours et suivre le professeur correctement.
+                Les notes de 1 à 3 nécessitent un commentaire précis. Le service client pourra ainsi vérifier le cours et suivre le professeur correctement.
               </p>
             )}
           </div>

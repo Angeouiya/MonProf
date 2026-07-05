@@ -38,7 +38,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827]">Mission non activée</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-            Cette mission n'est pas disponible tant que le paiement PayDunya n'a pas été confirmé par vérification serveur. Contactez l'administration Compétence si vous avez reçu ce lien par erreur.
+            Cette mission n'est pas disponible tant que le paiement PayDunya n'a pas été confirmé par vérification serveur. Contactez le service client Compétence si vous avez reçu ce lien par erreur.
           </p>
         </div>
       </main>
@@ -82,7 +82,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
     `Mission Compétence - ${booking.reference}`,
     `Professeur : ${teacherName}`,
     `Client : ${booking.client.name}`,
-    `Contact client : ${booking.client.phone || "À confirmer par l'administration"}`,
+    `Contact client : ${booking.client.phone || "À confirmer par le service client"}`,
     `Cours : ${booking.subjectName} - ${booking.levelName}`,
     `Date : ${displayCourseDate ? formatDate(displayCourseDate) : "À confirmer"}`,
     `Heure : ${booking.scheduledTime || booking.preferredTime || "À confirmer"}`,
@@ -91,10 +91,10 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
     `Nombre de séance(s) : ${booking.sessionsCount} séance(s) de 2h`,
     `Lieu : ${locationLabel || "À confirmer"}`,
     pricingSnapshot?.transportRouteLabel ? `Trajet : ${pricingSnapshot.transportRouteLabel}` : "",
-    booking.isQuoteOnly ? "Montant : devis administratif en préparation" : `Part cours : ${formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)}`,
+    booking.isQuoteOnly ? "Montant : devis du service client en préparation" : `Part cours : ${formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)}`,
     !booking.isQuoteOnly && booking.transportFee > 0 ? `Frais déplacement : ${formatFCFA(booking.transportFee)}` : "",
     booking.isQuoteOnly ? "" : `Total à recevoir : ${formatFCFA(booking.teacherNetAmount)}`,
-    mission.instructions ? `Consignes admin : ${mission.instructions}` : "Consignes admin : confirmer rapidement la disponibilité.",
+    mission.instructions ? `Consignes service client : ${mission.instructions}` : "Consignes service client : confirmer rapidement la disponibilité.",
   ].filter(Boolean).join("\n");
 
   return (
@@ -129,14 +129,14 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
             icon={<TimerReset className="h-4 w-4" />}
             label="Expiration"
             value={expired ? "Expiré" : formatDateTime(mission.expiresAt)}
-            description={expired ? "Contactez l'administration pour une mise à jour." : "Répondez avant cette limite."}
+            description={expired ? "Contactez le service client pour une mise à jour." : "Répondez avant cette limite."}
             tone={expired ? "red" : "amber"}
           />
           <MissionSignalCard
             icon={<ShieldCheck className="h-4 w-4" />}
             label="Statut réponse"
             value={statusLabel}
-            description="Votre réponse est transmise à l'administration."
+            description="Votre réponse est transmise au service client."
             tone={expired ? "red" : mission.status === "CONFIRMED" ? "blue" : "violet"}
           />
         </div>
@@ -198,7 +198,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
           <CardHeader><CardTitle>Contact client pour cette mission</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Utilisez ces actions uniquement pour organiser ce cours. Si l'information semble incorrecte, contactez l'administration.
+              Utilisez ces actions uniquement pour organiser ce cours. Si l'information semble incorrecte, contactez le service client.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {clientPhoneHref ? (
@@ -236,10 +236,10 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Consignes admin</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Consignes service client</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm font-medium leading-6 text-[#64748B]">
-              {mission.instructions || "Merci de confirmer rapidement votre disponibilité et de contacter l'administration si une information manque."}
+              {mission.instructions || "Merci de confirmer rapidement votre disponibilité et de contacter le service client si une information manque."}
             </p>
             {locked && (
               <div className="rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm font-semibold text-[#111B4D]">
@@ -253,7 +253,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
 
         {(supportPhone || supportEmail) && (
           <Card>
-            <CardHeader><CardTitle>Contact administration</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Contact service client</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Utilisez ces contacts uniquement pour cette mission. Pour toute difficulté, indiquez la référence {booking.reference}.

@@ -124,7 +124,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   async function onConfirmCourse() {
     const data = await callAction("confirm");
     if (!data) return;
-    toast.success("Cours confirmé. L'administration finalise le dossier.");
+    toast.success("Cours confirmé. Le service client finalise le dossier.");
     router.refresh();
   }
 
@@ -138,7 +138,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           notices={[
             "Aucune réservation n'est confirmée sans paiement PayDunya vérifié côté serveur.",
             "Le montant affiché inclut les frais de service du moyen de paiement.",
-            "Après paiement, revenez sur ce dossier pour suivre la validation administrative.",
+            "Après paiement, revenez sur ce dossier pour suivre la validation du service client.",
           ]}
           confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
           cancelLabel="Rester ici"
@@ -168,7 +168,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
       <div className="mt-4 grid gap-2">
         <ImportantActionConfirm
           title="Confirmer le cours ?"
-          description="Confirmez uniquement si le cours a bien eu lieu. Cette action déclenche la suite administrative du paiement professeur."
+          description="Confirmez uniquement si le cours a bien eu lieu. Cette action déclenche la suite du traitement par le service client pour le paiement professeur."
           badge="Confirmation cours"
           notices={[
             "Votre confirmation est enregistrée dans le dossier.",
@@ -256,7 +256,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   async function onConfirm() {
     const ok = await callAction("confirm");
     if (ok) {
-      toast.success("Cours confirmé. L'administration finalise le dossier.");
+      toast.success("Cours confirmé. Le service client finalise le dossier.");
       router.refresh();
     }
   }
@@ -282,7 +282,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
     }
     const ok = await callAction("reschedule", { rescheduleMessage: rescheduleMsg });
     if (ok) {
-      toast.success("Demande de report envoyée à l'admin.");
+      toast.success("Demande de report envoyée au service client.");
       setRescheduleOpen(false);
       setRescheduleMsg("");
       router.refresh();
@@ -341,7 +341,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       return;
     }
     if (reviewLowRatingNeedsComment) {
-      toast.error(`Pour une note de ${rating}/5, ajoutez au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que l'administration puisse traiter votre retour.`);
+      toast.error(`Pour une note de ${rating}/5, ajoutez au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que le service client puisse traiter votre retour.`);
       return;
     }
     setLoading("review");
@@ -496,7 +496,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               notices={[
                 "Aucun paiement n'est validé sans confirmation serveur PayDunya.",
                 "Le montant affiché inclut les frais de service du moyen de paiement.",
-                "Après paiement, revenez sur le dossier pour suivre la validation administrative.",
+                "Après paiement, revenez sur le dossier pour suivre la validation du service client.",
               ]}
               confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
               cancelLabel="Rester sur le dossier"
@@ -559,12 +559,12 @@ export function BookingActions({ booking }: BookingActionsProps) {
             </div>
             <ImportantActionConfirm
               title="Confirmer que le cours est terminé ?"
-              description="Cette confirmation indique à l'administration que le cours a bien eu lieu. Elle déclenche la suite du traitement administratif du paiement professeur."
+              description="Cette confirmation indique au service client que le cours a bien eu lieu. Elle déclenche la suite du traitement du paiement professeur."
               badge="Validation du cours"
               notices={[
                 "Confirmez seulement si le cours s'est réellement déroulé.",
                 "Si le professeur était absent, en retard ou si le cours n'était pas conforme, signalez plutôt un problème.",
-                "Après confirmation, le dossier passe en traitement administratif.",
+                "Après confirmation, le dossier passe en traitement service client.",
               ]}
               confirmLabel={loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
               cancelLabel="Vérifier avant"
@@ -599,7 +599,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 <DialogHeader>
                   <DialogTitle>Demande de report</DialogTitle>
                   <DialogDescription>
-                    Expliquez pourquoi vous souhaitez reporter ce cours. L'admin reprogrammera avec le professeur.
+                    Expliquez pourquoi vous souhaitez reporter ce cours. Le service client reprogrammera avec le professeur.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
@@ -671,7 +671,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                 ) : (
                   <p className="mt-1 text-xs leading-5 text-[#64748B]">
-                    Renseignez le numéro sur lequel l'administration pourra effectuer le dépôt.
+                    Renseignez le numéro sur lequel le service client pourra effectuer le dépôt.
                   </p>
                 )}
               </div>
@@ -760,7 +760,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setRefundOpen(false)} className="rounded-lg">Retour</Button>
                 <Button onClick={onSubmitRefundDetails} disabled={loading === "submit_refund_details"} className="rounded-lg">
-                  Envoyer à l'administration
+                  Envoyer au service client
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -786,7 +786,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <DialogHeader>
                 <DialogTitle>Annuler la réservation ?</DialogTitle>
                 <DialogDescription>
-                  Lisez les règles avant de confirmer. L'annulation est transmise à l'administration et au professeur.
+                  Lisez les règles avant de confirmer. L'annulation est transmise au service client et au professeur.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -824,7 +824,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569]">
                   <p className="text-sm font-semibold text-[#111827]">Ce qui se passe après votre annulation</p>
                   <ul className="mt-2 space-y-2">
-                    <li>La réservation est arrêtée et l'administration reçoit une notification pour contrôler le dossier.</li>
+                    <li>La réservation est arrêtée et le service client reçoit une notification pour contrôler le dossier.</li>
                     <li>Le professeur est informé qu'il ne doit pas se présenter sans nouvelle instruction.</li>
                     <li>Les frais de service du moyen de paiement ne sont pas remboursés : {formatFCFA(cancellationPolicy.serviceFeeAmount)}.</li>
                     {cancellationPolicy.refundAmount > 0 ? (
@@ -832,7 +832,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     ) : (
                       <li>Aucun remboursement automatique n'est prévu selon la règle affichée. Le dossier peut être réexaminé par le support.</li>
                     )}
-                    <li>Des annulations répétées ou tardives peuvent être revues par l'administration pour protéger les professeurs et les clients.</li>
+                    <li>Des annulations répétées ou tardives peuvent être revues par le service client pour protéger les professeurs et les clients.</li>
                   </ul>
                 </div>
 
@@ -929,7 +929,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               </div>
               <DialogTitle className="text-xl font-semibold text-[#111827]">Laisser un avis</DialogTitle>
               <DialogDescription className="leading-6">
-                Votre retour aide les autres clients et permet à l'administration de suivre la qualité du cours.
+                Votre retour aide les autres clients et permet au service client de suivre la qualité du cours.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -939,7 +939,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   Suivi qualité
                 </div>
                 <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                  Les notes faibles déclenchent une lecture admin plus attentive.
+                  Les notes faibles déclenchent une lecture du service client plus attentive.
                 </p>
               </div>
               <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
@@ -978,7 +978,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </div>
                 {rating <= 3 && (
                   <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#111B4D]">
-                    Les notes de 1 à 3 nécessitent un commentaire précis. L'administration pourra ainsi vérifier le cours et suivre le professeur correctement.
+                    Les notes de 1 à 3 nécessitent un commentaire précis. Le service client pourra ainsi vérifier le cours et suivre le professeur correctement.
                   </p>
                 )}
               </div>
@@ -998,7 +998,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
 function refundStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    PENDING: "En attente admin",
+    PENDING: "En attente service client",
     APPROVED: "Validé",
     PAID: "Payé",
     REJECTED: "Refusé",
@@ -1037,7 +1037,7 @@ function getForegroundNotice({
   if ((status === "CANCELLED" || status === "REFUNDED") && cancellationRefundAmount > 0 && !hasRefundRequest) {
     return {
       title: "Action à terminer : numéro de remboursement",
-      description: "Renseignez le moyen, le numéro et le titulaire du compte afin que l'administration puisse effectuer le dépôt.",
+      description: "Renseignez le moyen, le numéro et le titulaire du compte afin que le service client puisse effectuer le dépôt.",
     };
   }
   if (hasDispute || status === "DISPUTED") {
@@ -1077,7 +1077,7 @@ function getActionSummary({
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
       title: "Support Compétence en cours",
-      description: "Le dossier est suivi par l'administration. Votre paiement reste protégé pendant l'analyse.",
+      description: "Le dossier est suivi par le service client. Votre paiement reste protégé pendant l'analyse.",
       icon: <AlertTriangle className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
@@ -1093,7 +1093,7 @@ function getActionSummary({
   if (canReview && !hasReview) {
     return {
       title: "Avis qualité disponible",
-      description: "Vous pouvez noter le cours. Le retour aide les autres clients et le suivi admin du professeur.",
+      description: "Vous pouvez noter le cours. Le retour aide les autres clients et le suivi service client du professeur.",
       icon: <MessageSquare className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -1109,7 +1109,7 @@ function getActionSummary({
   if (isQuoteOnly) {
     return {
       title: "Devis en préparation",
-      description: "Aucun paiement n'est encaissé avant le montant final validé par l'administration.",
+      description: "Aucun paiement n'est encaissé avant le montant final validé par le service client.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -1133,7 +1133,7 @@ function getActionSummary({
   if (canCancel) {
     return {
       title: "Réservation active",
-      description: "Le professeur et l'administration disposent des informations nécessaires. Vous pouvez encore demander l'annulation selon les règles.",
+      description: "Le professeur et le service client disposent des informations nécessaires. Vous pouvez encore demander l'annulation selon les règles.",
       icon: <CheckCircle2 className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

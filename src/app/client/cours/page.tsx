@@ -413,7 +413,7 @@ function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly"
   if (booking.isQuoteOnly) {
     return {
       label: "Devis en préparation",
-      hint: "L'administration doit finaliser le tarif avant paiement. Le cours n'est pas encore réservé.",
+      hint: "Le service client doit finaliser le tarif avant paiement. Le cours n'est pas encore réservé.",
     };
   }
 
@@ -427,7 +427,7 @@ function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
       label: "Devis en préparation",
-      hint: "L'administration prépare le montant final avant paiement.",
+      hint: "Le service client prépare le montant final avant paiement.",
       icon: Clock,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
@@ -445,7 +445,7 @@ function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
       label: "Cours validé",
       hint: paymentStatus === "TEACHER_PAID"
         ? "Le dossier est clôturé côté paiement sécurisé."
-        : "Votre confirmation est prise en compte. L'administration finalise le dossier.",
+        : "Votre confirmation est prise en compte. Le service client finalise le dossier.",
       icon: CheckCircle2,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
@@ -460,7 +460,7 @@ function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   }
   return {
     label: "À venir",
-    hint: "Le professeur et l'administration disposent des informations nécessaires au suivi du cours.",
+    hint: "Le professeur et le service client disposent des informations nécessaires au suivi du cours.",
     icon: Calendar,
     className: "border-[#E3E8F2] bg-white text-[#111B4D]",
   };

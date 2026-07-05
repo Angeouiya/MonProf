@@ -242,7 +242,7 @@ function getClientPaymentLabel(status: PaymentStatus, quoteOnly: boolean) {
     RECEIVED: "Paiement reçu",
     BLOCKED: "Paiement sécurisé",
     VALIDATED: "Cours validé",
-    TO_PAY_TEACHER: "Traitement administratif",
+    TO_PAY_TEACHER: "Traitement service client",
     TEACHER_PAID: "Cours clôturé",
     DISPUTED: "Litige en cours",
     REFUND_PENDING: "Remboursement en traitement",
@@ -258,7 +258,7 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   if (status === "PENDING_PAYMENT" && !paymentVerified) {
     return {
       label: "Brouillon non réservé",
-      hint: "Ce dossier n'est pas une réservation active : aucun professeur ni admin opérationnel n'est notifié tant que PayDunya n'a pas confirmé le paiement.",
+      hint: "Ce dossier n'est pas une réservation active : aucun professeur ni service client opérationnel n'est notifié tant que PayDunya n'a pas confirmé le paiement.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }
@@ -272,7 +272,7 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
       label: "Devis en préparation",
-      hint: "L'administration prépare le montant final avant paiement.",
+      hint: "Le service client prépare le montant final avant paiement.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }
@@ -293,7 +293,7 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   if (paymentStatus === "TO_PAY_TEACHER") {
     return {
       label: "Paiement en traitement",
-      hint: "Votre confirmation est prise en compte, l'administration finalise le dossier.",
+      hint: "Votre confirmation est prise en compte, le service client finalise le dossier.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }

@@ -85,7 +85,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Créneaux ouverts" value={selectedSlots} detail={`${selectedHours}h disponibles`} />
           <Metric label="Durée séance" value="2h" detail="Une séance = deux heures" />
-          <Metric label="Validation" value="Admin" detail="Chaque mise à jour est historisée" />
+          <Metric label="Validation" value="Service client" detail="Chaque mise à jour est historisée" />
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[360px]">
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekdays")}>Jours ouvrés</Button>

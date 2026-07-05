@@ -178,7 +178,7 @@ export default async function ProfesseurDashboardPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title={`Bonjour ${teacherName}`}
-        description="Votre espace professeur regroupe vos missions, disponibilités, paiements et notifications envoyées par l'administration."
+        description="Votre espace professeur regroupe vos missions, disponibilités, paiements et notifications envoyées par le service client."
         showBack={false}
         action={(
           <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
@@ -204,7 +204,7 @@ export default async function ProfesseurDashboardPage() {
         />
         <ProfessorQuickLink
           href="/professeur/messages"
-          label="Messages admin"
+          label="Service client"
           value={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} non lu(s)` : "Écrire"}
         />
         <ProfessorQuickLink href="/professeur/avis" label="Avis & qualité" value={`${fullTeacher?.qualityScore ?? 0}/100`} />
@@ -242,7 +242,7 @@ export default async function ProfesseurDashboardPage() {
           <Button asChild variant="outline" className="min-h-11 rounded-lg px-2 text-xs sm:text-sm">
             <Link href="/professeur/messages">
               <MessageSquareText className="h-4 w-4" />
-              Admin
+              Service client
             </Link>
           </Button>
         </div>
@@ -251,7 +251,7 @@ export default async function ProfesseurDashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ProfessorStatCard label="Cours aujourd'hui" value={verifiedTodayBookings.length} detail="Séances prévues sur la journée" icon="calendar" />
         <ProfessorStatCard label="Missions à confirmer" value={verifiedPendingMissions.length} detail="Répondez rapidement pour éviter les relances" icon="clock" />
-        <ProfessorStatCard label="Tâches ouvertes" value={verifiedOpenTasks.length} detail="Demandes administratives en attente" icon="alert" />
+        <ProfessorStatCard label="Tâches ouvertes" value={verifiedOpenTasks.length} detail="Demandes du service client en attente" icon="alert" />
         <ProfessorStatCard label="Reste à recevoir" value={formatFCFA(amountToReceive)} detail={`${realizedCount} paiement(s) déjà soldé(s)`} icon="wallet" />
       </div>
 
@@ -260,12 +260,12 @@ export default async function ProfesseurDashboardPage() {
           <div>
             <p className="text-base font-semibold text-[#111827]">Espace professeur opérationnel complet</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Chaque action est reliée au dashboard admin : missions, disponibilités, paiements, messages, qualité, profil professionnel et suivi administratif restent historisés.
+              Chaque action est reliée au suivi service client : missions, disponibilités, paiements, messages, qualité, profil professionnel et suivi opérationnel restent historisés.
             </p>
           </div>
           <Button asChild variant="outline" className="min-h-11 rounded-lg">
             <Link href="/professeur/messages">
-              Contacter l'admin
+              Contacter le service client
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -294,9 +294,9 @@ export default async function ProfesseurDashboardPage() {
           />
           <ProfessorControlStep
             href="/professeur/messages"
-            label="Messages admin"
+            label="Service client"
             value={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} non lu(s)` : "Disponible"}
-            detail="Contacter l'administration avec historique."
+            detail="Contacter le service client avec historique."
             urgent={unreadAdminMessageCount > 0}
           />
           <ProfessorControlStep
@@ -310,14 +310,14 @@ export default async function ProfesseurDashboardPage() {
             href="/professeur/paiements"
             label="Demandes envoyées"
             value={pendingPayoutRequestCount > 0 ? `${pendingPayoutRequestCount} en attente` : "Aucune"}
-            detail="Validation et reçu créés par l'administration."
+            detail="Validation et reçu créés par le service client."
             urgent={pendingPayoutRequestCount > 0}
           />
           <ProfessorControlStep
             href="/professeur/paiements"
             label="Fonds bloqués"
             value={formatFCFA(blockedTeacherAmount)}
-            detail="Non payables avant confirmation client/admin."
+            detail="Non payables avant confirmation client/service client."
             urgent={blockedTeacherAmount > 0}
           />
           <ProfessorControlStep
@@ -341,7 +341,7 @@ export default async function ProfesseurDashboardPage() {
             href="/professeur/disponibilites"
             icon={CalendarClock}
             title="Mettre à jour vos créneaux"
-            detail="L'admin et le client s'appuient sur ces disponibilités pour les réservations et reports."
+            detail="Le service client et le client s'appuient sur ces disponibilités pour les réservations et reports."
             state="Planning"
           />
           <ProfessorActionTile
@@ -359,8 +359,8 @@ export default async function ProfesseurDashboardPage() {
           <ProfessorActionTile
             href="/professeur/messages"
             icon={MessageSquareText}
-            title="Échanger avec l'administration"
-            detail={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} message(s) admin à consulter.` : "Écrivez à l'admin pour une mission, un paiement ou un incident."}
+            title="Échanger avec le service client"
+            detail={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} message(s) du service client à consulter.` : "Écrivez au service client pour une mission, un paiement ou un incident."}
             state={unreadAdminMessageCount > 0 ? "Réponse attendue" : "Disponible"}
             urgent={unreadAdminMessageCount > 0}
           />
@@ -413,7 +413,7 @@ export default async function ProfesseurDashboardPage() {
             </Button>
           </div>
           {verifiedUpcomingBookings.length === 0 ? (
-            <EmptyProfessorState title="Aucune mission attribuée" description="Les prochaines réservations confirmées par l'administration apparaîtront ici." />
+            <EmptyProfessorState title="Aucune mission attribuée" description="Les prochaines réservations confirmées par le service client apparaîtront ici." />
           ) : (
             <div className="grid gap-3">
               {verifiedUpcomingBookings.map((booking) => (

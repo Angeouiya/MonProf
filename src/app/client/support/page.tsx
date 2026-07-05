@@ -117,7 +117,7 @@ export default async function SupportPage() {
               Signaler un cours
             </span>
           }
-          description="Choisissez la réservation, décrivez le problème, l'administration garde la trace."
+          description="Choisissez la réservation, décrivez le problème, le service client garde la trace."
           action={<p className="text-sm font-semibold text-[#111B4D]">{formatCount(bookableForDispute.length, "éligible")}</p>}
         />
           {bookableForDispute.length === 0 ? (

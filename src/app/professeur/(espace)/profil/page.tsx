@@ -37,7 +37,7 @@ export default async function ProfesseurProfilPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Mon profil"
-        description="Informations visibles et opérationnelles de votre fiche. Les modifications sensibles sont validées par l'administration."
+        description="Informations visibles et opérationnelles de votre fiche. Les modifications sensibles sont validées par le service client."
       />
 
       <PortalCard className="grid gap-5 lg:grid-cols-[auto_1fr] lg:items-start">
@@ -62,7 +62,7 @@ export default async function ProfesseurProfilPage() {
         <PortalCard>
           <h3 className="text-base font-semibold text-[#111827]">Parcours et compétences</h3>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-            Ces informations sont visibles côté client et suivies par l'administration.
+            Ces informations sont visibles côté client et suivies par le service client.
           </p>
           <div className="mt-4">
             <TeacherMiniCv
@@ -77,7 +77,7 @@ export default async function ProfesseurProfilPage() {
           <div className="mt-5 border-t border-[#E6EAF3] pt-5">
             <h4 className="text-sm font-semibold text-[#111827]">Compléter mon mini-CV</h4>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Renseignez votre parcours, vos expériences et vos compétences. L'administration reçoit une notification et garde la traçabilité.
+              Renseignez votre parcours, vos expériences et vos compétences. Le service client reçoit une notification et garde la traçabilité.
             </p>
             <TeacherProfessionalProfileForm
               careerSummary={profile.careerSummary}
@@ -110,7 +110,7 @@ export default async function ProfesseurProfilPage() {
             <InfoLine label="Dernière connexion" value={formatDateTime(profile.portalLastLoginAt)} />
           </div>
           <p className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-            Les tarifs finaux et les paiements sont contrôlés par l'administration selon la grille tarifaire et les réservations validées.
+            Les tarifs finaux et les paiements sont contrôlés par le service client selon la grille tarifaire et les réservations validées.
           </p>
         </PortalCard>
       </div>

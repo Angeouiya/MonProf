@@ -109,16 +109,16 @@ export default async function ProfesseurPaiementsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paiements"
-        description="Suivi de votre comptabilité interne : montants nets, paiements enregistrés et reçus administratifs."
+        description="Suivi de votre comptabilité interne : montants nets, paiements enregistrés et reçus de paiement."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Somme nette professeur sur les cours suivis" icon="wallet" />
-        <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par l'administration" icon="check" />
-        <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté admin" icon="clock" />
-        <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par l'administration" icon="wallet" />
+        <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
+        <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
+        <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par le service client" icon="wallet" />
         <ProfessorStatCard label="Encore bloqué" value={formatFCFA(blockedAmount)} detail="En attente de confirmation ou contrôle" icon="clock" />
-        <ProfessorStatCard label="Retenues" value={formatFCFA(totalRetained)} detail="Retenues validées administrativement" icon="alert" />
+        <ProfessorStatCard label="Retenues" value={formatFCFA(totalRetained)} detail="Retenues validées par le service client" icon="alert" />
       </div>
 
       <PortalCard>
@@ -126,7 +126,7 @@ export default async function ProfesseurPaiementsPage() {
           <div>
             <p className="text-base font-semibold text-[#111827]">Décompte comptable</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Calcul appliqué : net professeur - versements enregistrés - retenues validées = reste dû. Le professeur peut demander un paiement, mais seul l'admin valide et enregistre le versement réel.
+              Calcul appliqué : net professeur - versements enregistrés - retenues validées = reste dû. Le professeur peut demander un paiement, mais seul le service client valide et enregistre le versement réel.
             </p>
           </div>
           <div className="grid gap-2 text-sm min-[520px]:grid-cols-3 lg:min-w-[36rem]">
@@ -154,7 +154,7 @@ export default async function ProfesseurPaiementsPage() {
             <div>
               <h2 className="text-base font-semibold text-[#111827]">Demandes de paiement</h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-                Les demandes restent en attente jusqu'à validation et versement réel par l'administration.
+                Les demandes restent en attente jusqu'à validation et versement réel par le service client.
               </p>
             </div>
             <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-right">
@@ -192,7 +192,7 @@ export default async function ProfesseurPaiementsPage() {
                           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Facture liée</p>
                           <p className="mt-1 font-mono text-sm font-semibold text-[#111827]">{request.payoutRecord.reference}</p>
                           <p className="mt-1 text-xs font-semibold text-[#64748B]">
-                            Document généré après validation et versement par l'administration.
+                            Document généré après validation et versement par le service client.
                           </p>
                         </div>
                         <TeacherPayoutReceiptActions
@@ -216,7 +216,7 @@ export default async function ProfesseurPaiementsPage() {
           <h2 className="text-base font-semibold text-[#111827]">Grand livre professeur</h2>
           {settlementRows.length === 0 ? (
             <div className="mt-4">
-              <EmptyProfessorState title="Aucune ligne de paiement" description="Les réservations payables apparaîtront ici après validation administrative." />
+              <EmptyProfessorState title="Aucune ligne de paiement" description="Les réservations payables apparaîtront ici après validation du service client." />
             </div>
           ) : (
             <div className="mt-4 grid gap-3">

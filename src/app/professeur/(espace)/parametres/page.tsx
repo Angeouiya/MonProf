@@ -66,7 +66,7 @@ export default async function ProfesseurParametresPage() {
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">Coordonnées de paiement</h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-                Ces informations préremplissent vos demandes de paiement. L'administration garde la validation finale avant tout versement.
+                Ces informations préremplissent vos demandes de paiement. Le service client garde la validation finale avant tout versement.
               </p>
             </div>
           </div>
@@ -92,11 +92,11 @@ export default async function ProfesseurParametresPage() {
           <div className="mt-4 grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
             <p className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-              L'administration garde la main sur vos réservations, paiements et notifications.
+              Le service client garde la main sur vos réservations, paiements et notifications.
             </p>
             <p className="flex items-start gap-2">
               <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-              Le numéro de connexion est celui validé par l'administration.
+              Le numéro de connexion est celui validé par le service client.
             </p>
             <p className="flex items-start gap-2">
               <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />

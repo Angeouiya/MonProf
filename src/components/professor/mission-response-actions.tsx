@@ -37,7 +37,7 @@ export function MissionResponseActions({
       return;
     }
     if ((action === "unavailable" || action === "problem" || action === "reschedule") && cleanResponse.length < MIN_RESPONSE_LENGTH_FOR_ISSUE) {
-      toast.error("Expliquez brièvement la raison pour aider l'administration.");
+      toast.error("Expliquez brièvement la raison pour aider le service client.");
       return;
     }
     if (action === "reschedule") {
@@ -78,7 +78,7 @@ export function MissionResponseActions({
   if (done) {
     return (
       <div className="rounded-lg border border-[#D7DEE9] bg-white p-4 text-sm font-bold text-[#111B4D]">
-        Merci, votre réponse a été transmise à l'administration.
+        Merci, votre réponse a été transmise au service client.
       </div>
     );
   }
@@ -90,7 +90,7 @@ export function MissionResponseActions({
         value={response}
         onChange={(event) => setResponse(event.target.value)}
         maxLength={MAX_RESPONSE_LENGTH + 50}
-        placeholder="Message pour l'administration : confirmation, précision, indisponibilité, besoin d'information..."
+        placeholder="Message pour le service client : confirmation, précision, indisponibilité, besoin d'information..."
         disabled={disabled}
         className="rounded-lg border-[#D7DEE9] bg-white"
       />

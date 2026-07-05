@@ -45,7 +45,7 @@ const navGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
       { href: "/professeur/missions", label: "Missions", icon: BookOpenCheck },
       { href: "/professeur/disponibilites", label: "Disponibilités", icon: CalendarClock },
       { href: "/professeur/paiements", label: "Paiements", icon: CreditCard },
-      { href: "/professeur/messages", label: "Messages admin", icon: MessageSquareText },
+      { href: "/professeur/messages", label: "Service client", icon: MessageSquareText },
       { href: "/professeur/avis", label: "Avis & qualité", icon: MessageSquareText },
       { href: "/professeur/profil", label: "Profil & mini-CV", icon: User },
     ],
@@ -139,7 +139,7 @@ export function ProfessorLayout({
           </Button>
           <ImportantActionConfirm
             title="Quitter l'espace professeur ?"
-            description="Avant de sortir, vérifiez que vos missions, confirmations et messages à l'administration sont bien terminés."
+            description="Avant de sortir, vérifiez que vos missions, confirmations et messages au service client sont bien terminés."
             badge="Déconnexion professeur"
             danger={missionCount > 0 || taskCount > 0}
             notices={[
@@ -273,7 +273,7 @@ function SidebarContent({
             />
             <SidebarSignal
               href="/professeur/messages"
-              label="Messages admin"
+              label="Service client"
               value={messageCount}
               active={messageCount > 0}
               onNavigate={onNavigate}
@@ -325,7 +325,7 @@ function SidebarContent({
       <div className="border-t border-[#E6EAF3] p-3">
         <div className="mb-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-[11px] font-semibold leading-5 text-[#64748B]">
           <p className="text-[#111827]">Cadre Compétence</p>
-          <p className="mt-1">L'accès professeur suppose l'acceptation des règles présentées pendant l'enrôlement administratif.</p>
+          <p className="mt-1">L'accès professeur suppose l'acceptation des règles présentées pendant l'enrôlement avec le service client.</p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
             <Link href="/conditions-utilisation" className="text-[#111B4D] hover:underline" onClick={onNavigate}>
               CGU
@@ -337,13 +337,13 @@ function SidebarContent({
         </div>
         <ImportantActionConfirm
           title="Quitter l'espace professeur ?"
-          description="Vos missions et messages restent suivis par l'administration. Vérifiez les actions en attente avant de sortir."
+          description="Vos missions et messages restent suivis par le service client. Vérifiez les actions en attente avant de sortir."
           badge="Déconnexion professeur"
           danger={missionCount > 0 || taskCount > 0}
           notices={[
             missionCount > 0 ? `${missionCount} mission(s) demandent encore votre attention.` : "Aucune mission urgente n'est signalée dans ce bandeau.",
             taskCount > 0 ? `${taskCount} tâche(s) restent à traiter.` : "Les tâches déjà terminées restent historisées.",
-            messageCount > 0 ? `${messageCount} message(s) admin restent à consulter.` : "Vous pourrez reprendre vos échanges à la prochaine connexion.",
+            messageCount > 0 ? `${messageCount} message(s) du service client restent à consulter.` : "Vous pourrez reprendre vos échanges à la prochaine connexion.",
           ]}
           confirmLabel="Me déconnecter"
           cancelLabel="Rester connecté"

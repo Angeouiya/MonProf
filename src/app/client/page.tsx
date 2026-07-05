@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 const CLIENT_BOOKING_STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: "Brouillon non réservé",
   PAID: "Paiement reçu",
-  PENDING_ADMIN_VALIDATION: "Validation admin",
+  PENDING_ADMIN_VALIDATION: "Validation service client",
   CONFIRMED: "Confirmé",
   ASSIGNED: "Professeur attribué",
   IN_PROGRESS: "En cours",

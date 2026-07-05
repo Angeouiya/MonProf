@@ -84,7 +84,7 @@ export default async function AvisPage() {
         metrics={[
           { icon: ClipboardCheck, label: "À donner", value: bookingsToReview.length, attention: bookingsToReview.length > 0 },
           { icon: MessageSquare, label: "Envoyés", value: myReviews.length },
-          { icon: ShieldCheck, label: "Qualité", value: "Suivi admin" },
+          { icon: ShieldCheck, label: "Qualité", value: "Suivi service client" },
         ]}
       />
 

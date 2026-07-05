@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   }
   if (roundedRating <= 3 && cleanedComment.length < MIN_LOW_RATING_COMMENT_LENGTH) {
     return NextResponse.json({
-      error: `Pour une note de ${roundedRating}/5, ajoutez un commentaire d'au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que l'administration puisse comprendre et traiter le problème.`,
+      error: `Pour une note de ${roundedRating}/5, ajoutez un commentaire d'au moins ${MIN_LOW_RATING_COMMENT_LENGTH} caractères afin que le service client puisse comprendre et traiter le problème.`,
     }, { status: 400 });
   }
 

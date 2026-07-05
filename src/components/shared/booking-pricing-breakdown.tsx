@@ -89,7 +89,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                 ? "Chiffrage manuel avant paiement."
                 : audience === "client"
                   ? "Séances de 2h, participants, déplacement et frais PayDunya."
-                  : "Vue admin avec éléments comptables internes."}
+                  : "Vue interne avec éléments comptables réservés au service client."}
             </p>
           </div>
         </div>

@@ -60,7 +60,7 @@ export default async function ProfesseurAvisPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Avis & qualité"
-        description="Suivi qualité visible sur votre fiche professeur : avis clients publiés, score qualité et décisions administratives."
+        description="Suivi qualité visible sur votre fiche professeur : avis clients publiés, score qualité et décisions du service client."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -71,7 +71,7 @@ export default async function ProfesseurAvisPage() {
           detail={profile?.adminRatingPublic ? "Peut servir de note visible au démarrage" : "Note interne de suivi"}
           icon="check"
         />
-        <ProfessorStatCard label="Score qualité" value={`${profile?.qualityScore ?? 0}/100`} detail="Calculé par l'administration" icon="calendar" />
+        <ProfessorStatCard label="Score qualité" value={`${profile?.qualityScore ?? 0}/100`} detail="Calculé par le service client" icon="calendar" />
         <ProfessorStatCard label="Suivis actifs" value={warnings.length + sanctions.length} detail="Avertissements et sanctions visibles" icon="alert" />
       </div>
 
@@ -81,7 +81,7 @@ export default async function ProfesseurAvisPage() {
             <div>
               <p className="text-base font-semibold text-[#111827]">Évaluation plateforme</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-                Cette note est attribuée par l'administration Compétence pour suivre la qualité, surtout avant que les avis clients soient nombreux.
+                Cette note est attribuée par le service client Compétence pour suivre la qualité, surtout avant que les avis clients soient nombreux.
               </p>
               {profile?.adminRatingNote && (
                 <p className="mt-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-sm font-semibold leading-6 text-[#475569]">
@@ -90,7 +90,7 @@ export default async function ProfesseurAvisPage() {
               )}
             </div>
             <div className="rounded-lg border border-[#111B4D] bg-white px-5 py-4 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note admin</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note service client</p>
               <p className="mt-1 text-3xl font-semibold tracking-normal text-[#111B4D]">
                 {Number(profile?.adminRating ?? 0).toFixed(1)}/5
               </p>
@@ -104,7 +104,7 @@ export default async function ProfesseurAvisPage() {
           <h2 className="text-base font-semibold text-[#111827]">Avis clients publiés</h2>
           {reviews.length === 0 ? (
             <div className="mt-4">
-              <EmptyProfessorState title="Aucun avis publié" description="Les avis validés par l'administration apparaîtront ici." />
+              <EmptyProfessorState title="Aucun avis publié" description="Les avis validés par le service client apparaîtront ici." />
             </div>
           ) : (
             <div className="mt-4 grid gap-3">

@@ -366,7 +366,7 @@ function getReservationFormNotice({
   if (step === 0) {
     return {
       title: "À terminer : besoin du cours",
-      description: `Cette réservation sera rattachée à ${displayName}. Choisissez uniquement une matière et un niveau que ce professeur peut assurer, puis ajoutez les précisions utiles pour l'administration.`,
+      description: `Cette réservation sera rattachée à ${displayName}. Choisissez uniquement une matière et un niveau que ce professeur peut assurer, puis ajoutez les précisions utiles pour le service client.`,
     };
   }
 
@@ -381,7 +381,7 @@ function getReservationFormNotice({
     return {
       title: "Obligatoire : date et créneau",
       description: isScheduleReadyForPayment
-        ? `Première séance : ${selectedStartDateLabel}. Créneau transmis : ${preferredTimeSummary.join(" ; ")}. Les séances durent 2h et seront visibles côté admin pour ce professeur.`
+        ? `Première séance : ${selectedStartDateLabel}. Créneau transmis : ${preferredTimeSummary.join(" ; ")}. Les séances durent 2h et seront visibles côté service client pour ce professeur.`
         : paymentScheduleWarning || `Sélectionnez une date d'aujourd'hui ou ultérieure, puis un créneau de 2h. La réservation doit être faite au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le cours.`,
     };
   }
@@ -396,7 +396,7 @@ function getReservationFormNotice({
   return {
     title: isQuoteOnly ? "Action finale : envoyer le dossier" : "Action finale : paiement PayDunya",
     description: isQuoteOnly
-      ? "Aucun paiement n'est demandé maintenant. L'administration reçoit le dossier, vérifie le montant, puis vous confirme la suite."
+      ? "Aucun paiement n'est demandé maintenant. Le service client reçoit le dossier, vérifie le montant, puis vous confirme la suite."
       : `Le client paie uniquement le montant total affiché : ${formatFCFA(totalPrice)}. Le moyen de paiement et le numéro sont saisis sur PayDunya, puis la confirmation serveur PayDunya active la réservation.`,
   };
 }
@@ -658,8 +658,8 @@ export function ReserverForm({
     if (s === 0) {
       if (!form.clientType) return "Veuillez sélectionner le type de client.";
       if (!form.courseCategory) return "Veuillez sélectionner la catégorie du besoin.";
-      if (!hasTeacherLevels) return "Ce professeur n'a pas encore de niveau/profil configuré par l'administration.";
-      if (!hasTeacherSubjects) return "Ce professeur n'a pas encore de matière configurée par l'administration.";
+      if (!hasTeacherLevels) return "Ce professeur n'a pas encore de niveau/profil configuré par le service client.";
+      if (!hasTeacherSubjects) return "Ce professeur n'a pas encore de matière configurée par le service client.";
       if (!form.levelName) return `Veuillez sélectionner : ${categoryCopy.levelLabel.toLowerCase()}.`;
       if (schoolContext) {
         const educationValidation = validateEducationSelection({
@@ -777,7 +777,7 @@ export function ReserverForm({
         return;
       }
       if (data.booking?.isQuoteOnly) {
-        toast.success("Demande transmise. L'administration vous proposera un devis.");
+        toast.success("Demande transmise. Le service client vous proposera un devis.");
         router.push(`/client/reservations/${data.booking.id}`);
       } else if (data.payment?.checkoutUrl) {
         toast.success("Redirection vers PayDunya...");
@@ -849,7 +849,7 @@ export function ReserverForm({
             </div>
             <p className="mt-2 text-xs font-medium leading-5 text-white">
               {pricing.isQuoteOnly
-                ? "Le montant final sera validé par l'administration avant paiement."
+                ? "Le montant final sera validé par le service client avant paiement."
                 : pricing.transportFee > 0
                   ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
                   : "Aucun frais de déplacement ajouté pour le moment."}
@@ -1005,7 +1005,7 @@ export function ReserverForm({
                     </p>
                   ) : (
                     <p className="mt-1 text-xs font-medium text-[#111B4D]">
-                      Aucun niveau n'est configuré pour ce professeur. L'administration doit compléter sa fiche.
+                      Aucun niveau n'est configuré pour ce professeur. Le service client doit compléter sa fiche.
                     </p>
                   )}
                 </div>
@@ -1029,7 +1029,7 @@ export function ReserverForm({
                     </p>
                   ) : (
                     <p className="mt-1 text-xs font-medium text-[#111B4D]">
-                      Aucune matière n'est configurée pour ce professeur. L'administration doit compléter sa fiche.
+                      Aucune matière n'est configurée pour ce professeur. Le service client doit compléter sa fiche.
                     </p>
                   )}
                 </div>
@@ -1095,10 +1095,10 @@ export function ReserverForm({
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        {pricing.isQuoteOnly ? "Tarif : sur devis administratif" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
+                        {pricing.isQuoteOnly ? "Tarif : sur devis du service client" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        {pricing.isQuoteOnly ? "Montant final validé par l'administration" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
+                        {pricing.isQuoteOnly ? "Montant final validé par le service client" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
                     </div>
@@ -1115,7 +1115,7 @@ export function ReserverForm({
                       className="mt-1.5 min-h-24 bg-white"
                     />
                     <p className="mt-1 text-xs text-[#64748B]">
-                      Cette précision sera transmise à l'administration avec la réservation de {displayName}.
+                      Cette précision sera transmise au service client avec la réservation de {displayName}.
                     </p>
                   </div>
                 )}
@@ -1143,7 +1143,7 @@ export function ReserverForm({
                     placeholder={categoryCopy.programPlaceholder}
                     className="mt-1.5"
                   />
-                  <p className="mt-1 text-xs text-[#64748B]">Le résumé transmis à l'admin inclura le profil, la catégorie, le niveau et cette précision.</p>
+                  <p className="mt-1 text-xs text-[#64748B]">Le résumé transmis au service client inclura le profil, la catégorie, le niveau et cette précision.</p>
                 </div>
               </div>
               <div>
@@ -1324,7 +1324,7 @@ export function ReserverForm({
                       rows={2}
                     />
                     <p className="mt-1 text-xs text-[#64748B]">
-                      Un repère clair aide l'administration et le professeur à confirmer rapidement la faisabilité du déplacement.
+                      Un repère clair aidu service client et le professeur à confirmer rapidement la faisabilité du déplacement.
                     </p>
                   </div>
                   <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -1351,7 +1351,7 @@ export function ReserverForm({
                     id="onlineLink"
                     value={form.onlineLink}
                     onChange={(e) => update("onlineLink", e.target.value)}
-                    placeholder="Ex: Meet, Zoom — l'admin ajoutera le lien définitif"
+                    placeholder="Ex: Meet, Zoom — le service client ajoutera le lien définitif"
                   />
                   <p className="mt-1 text-xs text-[#64748B]">
                     Le lien de connexion définitif sera communiqué après validation de la réservation.
@@ -1380,7 +1380,7 @@ export function ReserverForm({
                       required
                     />
                     <p className="mt-1.5 text-xs text-[#64748B]">
-                      Le client doit réserver au moins {MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Cette date est reprise au récapitulatif, au paiement et dans l'espace admin.
+                      Le client doit réserver au moins {MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Cette date est reprise au récapitulatif, au paiement et dans l'espace service client.
                     </p>
                   </div>
                   <div className={`rounded-lg border px-4 py-3 ${
@@ -1530,7 +1530,7 @@ export function ReserverForm({
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de 2h</p>
                         <p className="text-xs leading-5 text-[#6B7280]">
-                          L'administration confirmera les dates exactes avec {displayName}. Les créneaux répétés suivent la disponibilité du professeur.
+                          Le service client confirmera les dates exactes avec {displayName}. Les créneaux répétés suivent la disponibilité du professeur.
                         </p>
                       </div>
                       <span className="text-xs font-semibold text-[#111B4D]">{formatCount(selectedPackSessions, "séance")}, {totalHours}h</span>
@@ -1553,7 +1553,7 @@ export function ReserverForm({
                 <Label>Votre préférence horaire personnalisée</Label>
                 <p className="mt-1 text-sm text-[#64748B]">
                   Si les créneaux proposés ne conviennent pas parfaitement, indiquez le jour et l'heure souhaités.
-                  L'administration vérifiera avec le professeur avant confirmation.
+                  Le service client vérifiera avec le professeur avant confirmation.
                 </p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_180px]">
                   <div>
@@ -1611,7 +1611,7 @@ export function ReserverForm({
                   </div>
                 )}
                 <p className="mt-2 text-xs text-[#64748B]">
-                  Le prix affiché reste celui de la formule choisie pour des séances de 2h. Si une demande sort du cadre normal, l'administration valide l'ajustement avant confirmation.
+                  Le prix affiché reste celui de la formule choisie pour des séances de 2h. Si une demande sort du cadre normal, le service client valide l'ajustement avant confirmation.
                 </p>
               </div>
 
@@ -1654,7 +1654,7 @@ export function ReserverForm({
                             <span className="block font-medium text-[#111827]">{p.label}</span>
                             <span className="block text-xs text-[#64748B]">
                               {optionPricing.isQuoteOnly
-                                ? "Sur devis par l'administration"
+                                ? "Sur devis par le service client"
                                 : `${formatFCFA(optionPricing.totalClientPays)} · ${formatCount(count, "séance")} de 2h · env. ${formatFCFA(average)}/séance`}
                             </span>
                             {optionPricing.discountAmount > 0 && (
@@ -1686,7 +1686,7 @@ export function ReserverForm({
           {/* Step 4 — Récapitulatif */}
           {step === 3 && (
             <div className="space-y-5">
-              <StepIntro step="Étape 4" title="Récapitulatif" description="Relisez les informations qui seront enregistrées et transmises à l'administration." />
+              <StepIntro step="Étape 4" title="Récapitulatif" description="Relisez les informations qui seront enregistrées et transmises au service client." />
 
               {/* Carte prof */}
               <div className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -1723,7 +1723,7 @@ export function ReserverForm({
                       <Row label="Quartier" value={form.quartier || "—"} />
                       {form.addressHint && <Row label="Adresse" value={form.addressHint} />}
                       <Row label="Trajet" value={pricing.transportRouteLabel ?? "À confirmer"} />
-                      <Row label="Déplacement" value={pricing.isQuoteOnly ? "À confirmer par l'administration" : formatFCFA(pricing.transportFee)} />
+                      <Row label="Déplacement" value={pricing.isQuoteOnly ? "À confirmer par le service client" : formatFCFA(pricing.transportFee)} />
                     </>
                   ) : (
                     form.onlineLink && <Row label="Lien" value={form.onlineLink} />
@@ -1788,7 +1788,7 @@ export function ReserverForm({
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     {pricing.isQuoteOnly
-                      ? "Aucun paiement n'est demandé maintenant. L'administration vous proposera un montant final clair."
+                      ? "Aucun paiement n'est demandé maintenant. Le service client vous proposera un montant final clair."
                       : "Le paiement sera finalisé sur PayDunya, confirmé côté serveur, puis gardé sécurisé jusqu'à votre confirmation après le cours."}
                   </span>
                 </div>
@@ -1803,7 +1803,7 @@ export function ReserverForm({
                 step="Étape 5"
                 title={pricing.isQuoteOnly ? "Demande de devis" : "Paiement sécurisé"}
                 description={pricing.isQuoteOnly
-                  ? "Contrôlez le dossier. L'administration vous confirmera un devis précis avant paiement."
+                  ? "Contrôlez le dossier. Le service client vous confirmera un devis précis avant paiement."
                   : "Contrôlez le dossier. Le moyen de paiement et les informations de paiement seront gérés uniquement sur PayDunya."}
               />
 
@@ -1861,7 +1861,7 @@ export function ReserverForm({
 
               {pricing.isQuoteOnly ? (
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                  <p className="text-sm font-semibold text-[#111827]">Validation admin requise</p>
+                  <p className="text-sm font-semibold text-[#111827]">Validation service client requise</p>
                   <p className="mt-1 text-sm leading-6 text-[#6B7280]">
                     {pricing.quoteReason ?? "Ce dossier nécessite une estimation manuelle."} Aucun paiement ne sera encaissé à cette étape.
                   </p>
@@ -1974,13 +1974,13 @@ export function ReserverForm({
                 <Lock className="mt-1 h-5 w-5 text-white" />
               </div>
               <p className="mt-2 text-xs font-medium leading-5 text-white">
-                Le client ne voit que le montant à payer. Les répartitions internes restent côté admin.
+                Le client ne voit que le montant à payer. Les répartitions internes restent côté service client.
               </p>
             </div>
 
             <div className="mt-4 space-y-2 text-xs font-medium leading-5 text-[#64748B]">
               <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Réservation rattachée au professeur choisi.</p>
-              <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au dashboard administrateur.</p>
+              <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au suivi service clientistrateur.</p>
             </div>
           </div>
         </aside>

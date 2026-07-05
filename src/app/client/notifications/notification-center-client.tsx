@@ -86,7 +86,7 @@ const clientPaymentStatusLabel: Record<string, string> = {
   RECEIVED: "Paiement reçu",
   BLOCKED: "Paiement sécurisé",
   VALIDATED: "Cours validé",
-  TO_PAY_TEACHER: "Traitement administratif",
+  TO_PAY_TEACHER: "Traitement service client",
   TEACHER_PAID: "Cours clôturé",
   DISPUTED: "Litige en cours",
   REFUND_PENDING: "Remboursement en traitement",

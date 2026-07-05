@@ -189,7 +189,7 @@ export function TeacherPaymentProfileSettingsForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="teacher-payout-instructions">Consigne paiement pour l'administration</Label>
+        <Label htmlFor="teacher-payout-instructions">Consigne paiement pour le service client</Label>
         <Textarea
           id="teacher-payout-instructions"
           value={instructions}

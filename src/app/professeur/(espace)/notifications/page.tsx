@@ -23,13 +23,13 @@ export default async function ProfesseurNotificationsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Notifications"
-        description="Messages opérationnels envoyés par l'administration : missions, rappels, paiements, avertissements ou consignes."
+        description="Messages opérationnels envoyés par le service client : missions, rappels, paiements, avertissements ou consignes."
         action={<MarkTeacherNotificationsReadButton disabled={unreadCount === 0} />}
       />
 
       <PortalCard>
         {notifications.length === 0 ? (
-          <EmptyProfessorState title="Aucune notification" description="Les notifications administratives reçues apparaîtront ici." />
+          <EmptyProfessorState title="Aucune notification" description="Les notifications du service client reçues apparaîtront ici." />
         ) : (
           <div className="grid gap-3">
             {notifications.map((notification) => (

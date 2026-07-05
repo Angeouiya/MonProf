@@ -81,7 +81,7 @@ export function TeacherProfessionalProfileForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Mise à jour impossible.");
-      toast.success("Profil professionnel mis à jour et transmis à l'administration.");
+      toast.success("Profil professionnel mis à jour et transmis au service client.");
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Mise à jour impossible.");
@@ -174,7 +174,7 @@ export function TeacherProfessionalProfileForm({
 
       <p className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
         <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-[#111B4D]" />
-        Toute modification est historisée et envoyée à l'administration pour suivi de qualité.
+        Toute modification est historisée et envoyée au service client pour suivi de qualité.
       </p>
     </form>
   );
