@@ -146,14 +146,15 @@ export default async function ReservationDetailPage({
   const displaySessionsCount = pricingSnapshot?.numberOfSessions ?? booking.sessionsCount;
   const displayParticipantsCount = pricingSnapshot?.participantsCount ?? booking.participantsCount;
   const requestedDate = booking.startDate ?? booking.scheduledDate;
-  const confirmedDate = booking.scheduledDate;
+  const paymentConfirmed = hasVerifiedPayDunyaClientPayment(booking);
+  const canShowOperationalProgress = booking.isQuoteOnly || paymentConfirmed;
+  const confirmedDate = canShowOperationalProgress ? booking.scheduledDate : null;
   const dateShownToClient = confirmedDate ?? requestedDate;
   const timeShownToClient = booking.scheduledTime || booking.preferredTime || "Horaire à confirmer";
   const preferredDaysLabel = preferredDays.length
     ? preferredDays.map((day) => dayLabel(day)).join(", ")
     : "Selon le créneau choisi";
   const schoolProgramDisplay = formatSchoolProgramDisplay(booking.schoolProgram);
-  const paymentConfirmed = hasVerifiedPayDunyaClientPayment(booking);
   const visibleTransactions = paymentConfirmed
     ? booking.transactions
     : booking.transactions.filter((transaction) => transaction.type === "REFUND");
@@ -181,13 +182,41 @@ export default async function ReservationDetailPage({
 
   // Timeline
   const timeline = [
-    { label: "Réservation créée", date: booking.createdAt, done: true },
-    { label: "Paiement PayDunya vérifié", date: booking.createdAt, done: paymentConfirmed },
-    { label: "Validée par l'admin", date: booking.confirmedAt, done: !!booking.confirmedAt || ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status) },
-    { label: "Cours effectué", date: booking.courseDoneAt, done: !!booking.courseDoneAt || ["COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status) },
-    { label: "Confirmé par le client", date: booking.clientValidatedAt, done: !!booking.clientValidatedAt || ["VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status) },
-    { label: "Cours clôturé", date: booking.teacherPaidAt, done: booking.status === "TEACHER_PAID" },
+    { label: canShowOperationalProgress ? "Réservation créée" : "Brouillon créé", date: booking.createdAt, done: true },
+    { label: canShowOperationalProgress ? "Paiement PayDunya vérifié" : "Paiement PayDunya à finaliser", date: paymentConfirmed ? booking.createdAt : null, done: paymentConfirmed },
+    {
+      label: canShowOperationalProgress ? "Validée par l'admin" : "Validation admin après paiement",
+      date: canShowOperationalProgress ? booking.confirmedAt : null,
+      done: canShowOperationalProgress && (
+        !!booking.confirmedAt
+        || ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status)
+      ),
+    },
+    {
+      label: canShowOperationalProgress ? "Cours effectué" : "Cours après validation",
+      date: canShowOperationalProgress ? booking.courseDoneAt : null,
+      done: canShowOperationalProgress && (
+        !!booking.courseDoneAt
+        || ["COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status)
+      ),
+    },
+    {
+      label: canShowOperationalProgress ? "Confirmé par le client" : "Confirmation client après cours",
+      date: canShowOperationalProgress ? booking.clientValidatedAt : null,
+      done: canShowOperationalProgress && (
+        !!booking.clientValidatedAt
+        || ["VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(booking.status)
+      ),
+    },
+    {
+      label: canShowOperationalProgress ? "Cours clôturé" : "Clôture après confirmation",
+      date: canShowOperationalProgress ? booking.teacherPaidAt : null,
+      done: canShowOperationalProgress && booking.status === "TEACHER_PAID",
+    },
   ];
+  const timelineDescription = canShowOperationalProgress
+    ? "Chaque étape reste visible jusqu'à la clôture du cours."
+    : "Aucune étape opérationnelle ne démarre tant que PayDunya n'a pas confirmé le paiement côté serveur.";
   const isCancelled = booking.status === "CANCELLED" || booking.status === "REFUNDED";
   const clientSituation = getClientSituation({
     status: booking.status,
@@ -434,7 +463,7 @@ export default async function ReservationDetailPage({
             <ClientSectionTitle
               eyebrow="Progression"
               title="Suivi de la réservation"
-              description="Chaque étape reste visible jusqu'à la clôture du cours."
+              description={timelineDescription}
             />
             <div>
               <ol className="relative space-y-4 pl-6">
