@@ -100,9 +100,9 @@ export function AdminLayout({
     exact ? pathname === href : pathname?.startsWith(href);
 
   return (
-    <div className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div data-admin-layout className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
-      <header className="app-topbar fixed inset-x-0 top-0 z-[70] flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
+      <header data-admin-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
@@ -148,14 +148,14 @@ export function AdminLayout({
       <div className="app-topbar-spacer" aria-hidden="true" />
 
       <div className="flex flex-1">
-        <aside className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
+        <aside data-admin-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} />
         </aside>
 
         {open && (
-          <div className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-admin-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="admin-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
+            <aside data-admin-mobile-drawer className="admin-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
                 <BrandLogo size="sm" />
                 <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
@@ -167,8 +167,8 @@ export function AdminLayout({
           </div>
         )}
 
-        <main className="min-w-0 flex-1 overflow-x-hidden lg:ml-72">
-          <div className="mx-auto w-full max-w-[86rem] px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <main data-admin-main className="min-w-0 flex-1 overflow-x-hidden lg:ml-72">
+          <div data-admin-content className="mx-auto w-full max-w-[86rem] px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
     </div>
@@ -191,7 +191,7 @@ function SidebarContent({
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav className="admin-sidebar-main-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
+      <nav data-admin-sidebar-nav className="admin-sidebar-main-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
         {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
           <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
             <div className="flex items-center justify-between gap-2">

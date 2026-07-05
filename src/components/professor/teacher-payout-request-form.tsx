@@ -91,7 +91,7 @@ export function TeacherPayoutRequestForm({
   };
 
   return (
-    <div className="rounded-lg border border-[#E6EAF3] bg-white p-4">
+    <div data-professor-payout-request className="rounded-lg border border-[#E6EAF3] bg-white p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
@@ -113,7 +113,7 @@ export function TeacherPayoutRequestForm({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_190px]">
+      <div data-professor-payout-fields className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
         <div>
           <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Montant demandé</label>
           <Input

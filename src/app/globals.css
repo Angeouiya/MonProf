@@ -2143,3 +2143,162 @@ b {
     inset-inline: 0.5rem !important;
   }
 }
+
+/* Operations hardening pass: admin/professor surfaces behave like app screens on mobile and desktop. */
+.admin-shell,
+.professor-shell,
+.admin-shell main,
+.professor-shell main {
+  min-width: 0;
+  overflow-x: clip;
+  background: #FFFFFF !important;
+}
+
+.admin-shell :where([data-admin-main], [data-admin-content], [data-admin-sidebar], [data-admin-sidebar-nav], [data-admin-mobile-drawer]),
+.professor-shell :where([data-professor-main], [data-professor-content], [data-professor-sidebar], [data-professor-sidebar-nav], [data-professor-mobile-drawer], [data-professor-page-header], [data-professor-page-action]) {
+  min-width: 0;
+}
+
+.admin-shell :where([data-slot="card"], [data-slot="card-content"], [data-slot="card-header"], [data-admin-payout-preview], [data-admin-payout-preview-item]),
+.professor-shell :where([data-slot="card"], [data-slot="card-content"], [data-slot="card-header"], [data-professor-stat-card], [data-professor-portal-card], [data-professor-empty-state], [data-professor-payout-request], [data-professor-mini-counter], [data-professor-sidebar-signal]) {
+  min-width: 0;
+  background-color: #FFFFFF !important;
+  border-color: #D8DEE9 !important;
+  box-shadow: none !important;
+}
+
+.admin-shell :where([class*="shadow-"]),
+.professor-shell :where([class*="shadow-"]) {
+  box-shadow: none !important;
+}
+
+.admin-shell :where(.overflow-x-auto),
+.professor-shell :where(.overflow-x-auto) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #CAD3E2 #FFFFFF;
+  scrollbar-width: thin;
+}
+
+.admin-shell :where(table),
+.professor-shell :where(table) {
+  width: 100%;
+  min-width: max-content;
+}
+
+.admin-shell :where(th, td),
+.professor-shell :where(th, td) {
+  max-width: min(28rem, 70vw);
+  overflow-wrap: anywhere;
+}
+
+.admin-shell :where(input, select, textarea, [data-slot="select-trigger"]),
+.professor-shell :where(input, select, textarea, [data-slot="select-trigger"]) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-shell :where([data-slot="button"], button, a[role="button"]),
+.professor-shell :where([data-slot="button"], button, a[role="button"]) {
+  max-width: 100%;
+}
+
+.professor-mobile-nav {
+  inset-inline: 0.75rem !important;
+  max-width: 28rem;
+  margin-inline: auto;
+  background: #FFFFFF !important;
+  border-color: #D8DEE9 !important;
+  box-shadow: none !important;
+}
+
+.professor-mobile-nav a {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.professor-mobile-nav svg {
+  flex-shrink: 0;
+}
+
+.professor-mobile-nav span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.professor-shell [data-professor-info-line] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.professor-shell [data-professor-info-line] > :last-child {
+  overflow-wrap: anywhere;
+}
+
+.professor-shell [data-professor-payout-fields] {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .admin-shell [data-admin-content],
+  .professor-shell [data-professor-content] {
+    padding-inline: 0.75rem !important;
+    padding-block: 1rem !important;
+  }
+
+  .admin-shell [data-slot="card-content"],
+  .professor-shell [data-slot="card-content"] {
+    padding: 1rem !important;
+  }
+
+  .professor-shell [data-professor-page-header] h1 {
+    font-size: 1.55rem !important;
+    line-height: 1.18 !important;
+  }
+
+  .professor-shell [data-professor-page-header] p {
+    font-size: 0.88rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .professor-shell [data-professor-stat-card],
+  .professor-shell [data-professor-portal-card],
+  .professor-shell [data-professor-payout-request],
+  .admin-shell [data-admin-payout-preview] {
+    padding: 0.9rem !important;
+  }
+
+  .professor-shell [data-professor-stat-card] p:nth-child(2) {
+    font-size: 1.35rem !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .admin-shell [data-admin-content],
+  .professor-shell [data-professor-content] {
+    padding-inline: 0.625rem !important;
+  }
+
+  .professor-mobile-nav {
+    inset-inline: 0.5rem !important;
+    padding-inline: 0.4rem !important;
+  }
+
+  .professor-mobile-nav a {
+    min-height: 3.05rem !important;
+    padding-inline: 0.2rem !important;
+  }
+
+  .professor-mobile-nav svg {
+    height: 0.95rem !important;
+    width: 0.95rem !important;
+  }
+
+  .professor-mobile-nav span {
+    font-size: 0.62rem !important;
+  }
+}

@@ -91,9 +91,9 @@ export function ProfessorLayout({
   );
 
   return (
-    <div className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div data-professor-layout className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
-      <header className="app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
+      <header data-professor-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -165,7 +165,7 @@ export function ProfessorLayout({
       <div className="app-topbar-spacer" aria-hidden="true" />
 
       <div className="flex flex-1">
-        <aside className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
+        <aside data-professor-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent
             teacherName={teacherName}
             photoUrl={photoUrl}
@@ -178,9 +178,9 @@ export function ProfessorLayout({
         </aside>
 
         {open && (
-          <div className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-professor-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="professor-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
+            <aside data-professor-mobile-drawer className="professor-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex min-h-18 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
                 <button
@@ -206,8 +206,8 @@ export function ProfessorLayout({
           </div>
         )}
 
-        <main className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
-          <div className="mx-auto w-full max-w-7xl px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">
+        <main data-professor-main className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
+          <div data-professor-content className="mx-auto w-full max-w-7xl px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </div>
         </main>
@@ -239,7 +239,7 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav className="professor-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3">
+      <nav data-professor-sidebar-nav className="professor-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3">
         <p className="px-3 pb-2 pt-2 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
           Plateforme professeur
         </p>
@@ -374,7 +374,8 @@ function MobileBottomNav({
 }) {
   return (
     <nav
-      className="fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      data-professor-mobile-nav
+      className="professor-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation professeur mobile"
     >
@@ -413,7 +414,7 @@ function MobileBottomNav({
 
 function MiniCounter({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-[#E6EAF3] bg-white px-2 py-2">
+    <div data-professor-mini-counter className="rounded-lg border border-[#E6EAF3] bg-white px-2 py-2">
       <p className="text-sm font-semibold text-[#111B4D]">{value > 99 ? "99+" : value}</p>
       <p className="truncate text-[10px] font-semibold text-[#64748B]">{label}</p>
     </div>
@@ -435,6 +436,7 @@ function SidebarSignal({
 }) {
   return (
     <Link
+      data-professor-sidebar-signal
       href={href}
       onClick={onNavigate}
       className={cn(
