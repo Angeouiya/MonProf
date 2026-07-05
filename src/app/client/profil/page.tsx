@@ -334,7 +334,7 @@ function ProfileSkeleton() {
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-lg border border-[#E3E8F2] bg-white" />
+                <div key={item} className="h-20 animate-pulse rounded-lg border border-[#E3E8F2] bg-[#E5E7EB]" />
               ))}
             </div>
           </div>
@@ -344,7 +344,7 @@ function ProfileSkeleton() {
             <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[#E5E7EB]" />
             <div className="mt-5 grid gap-2 min-[460px]:grid-cols-2">
               {[0, 1, 2].map((item) => (
-                <div key={item} className="h-11 animate-pulse rounded-lg bg-white" />
+                <div key={item} className="h-11 animate-pulse rounded-lg bg-[#E5E7EB]" />
               ))}
             </div>
           </div>
@@ -352,7 +352,7 @@ function ProfileSkeleton() {
       </section>
       <div className="grid gap-3 md:grid-cols-3">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="h-28 animate-pulse rounded-lg border border-[#E3E8F2] bg-white" />
+          <div key={item} className="h-28 animate-pulse rounded-lg border border-[#E3E8F2] bg-[#E5E7EB]" />
         ))}
       </div>
     </div>
