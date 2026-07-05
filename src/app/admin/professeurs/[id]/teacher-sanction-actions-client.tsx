@@ -52,7 +52,7 @@ export function TeacherSanctionActionsClient({
   };
 
   return (
-    <div className="mt-3 rounded-2xl border border-red-100 bg-white p-3">
+    <div className="mt-3 rounded-lg border border-red-100 bg-white p-3">
       {financial && (
         <div className="mb-3 space-y-2">
           <p className="text-xs font-medium text-red-800">
@@ -63,7 +63,7 @@ export function TeacherSanctionActionsClient({
             onChange={(event) => setDecisionNote(event.target.value)}
             maxLength={760}
             placeholder="Justification admin obligatoire : preuve, décision, contexte de retenue..."
-            className="min-h-20 rounded-2xl text-sm"
+            className="min-h-20 rounded-lg text-sm"
           />
           <p className={decisionInvalid || decisionTooLong ? "text-xs font-medium text-red-700" : "text-xs text-muted-foreground"}>
             {decisionNoteLength}/700 caractères. Minimum 10 caractères pour valider ou annuler une retenue.

@@ -68,7 +68,7 @@ export function TeacherPasswordSettingsForm() {
       <PasswordField id="teacher-new-password" label="Nouveau mot de passe" value={newPassword} onChange={setNewPassword} autoComplete="new-password" />
       <PasswordField id="teacher-confirm-password" label="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" />
 
-      <div className="grid gap-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] sm:grid-cols-3">
+      <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] sm:grid-cols-3">
         {rules.map((rule) => (
           <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>
             <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
@@ -77,7 +77,7 @@ export function TeacherPasswordSettingsForm() {
         ))}
       </div>
 
-      <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
+      <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
         Modifier le mot de passe
       </Button>
@@ -144,7 +144,7 @@ export function TeacherPaymentProfileSettingsForm({
         <div className="space-y-1.5">
           <Label htmlFor="teacher-payout-method">Moyen de paiement préféré</Label>
           <Select value={method} onValueChange={setMethod}>
-            <SelectTrigger id="teacher-payout-method" className="h-11 rounded-2xl border-[#DDE6F7] bg-white">
+            <SelectTrigger id="teacher-payout-method" className="h-11 rounded-lg border-[#DDE6F7] bg-white">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -155,7 +155,7 @@ export function TeacherPaymentProfileSettingsForm({
           </Select>
         </div>
         <div className="flex items-end">
-          <PaymentMethodLogo method={method} className="h-11 w-full rounded-2xl" />
+          <PaymentMethodLogo method={method} className="h-11 w-full rounded-lg" />
         </div>
       </div>
 
@@ -168,7 +168,7 @@ export function TeacherPaymentProfileSettingsForm({
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             placeholder="Ex : +225 07 00 00 00 00"
-            className="h-11 rounded-2xl border-[#DDE6F7] bg-white"
+            className="h-11 rounded-lg border-[#DDE6F7] bg-white"
             required
           />
         </div>
@@ -180,7 +180,7 @@ export function TeacherPaymentProfileSettingsForm({
             value={phoneConfirm}
             onChange={(event) => setPhoneConfirm(event.target.value)}
             placeholder="Retapez le même numéro"
-            className="h-11 rounded-2xl border-[#DDE6F7] bg-white"
+            className="h-11 rounded-lg border-[#DDE6F7] bg-white"
             required
           />
           {phoneMismatch && <p className="text-xs font-semibold text-red-700">Les deux numéros ne correspondent pas.</p>}
@@ -195,14 +195,14 @@ export function TeacherPaymentProfileSettingsForm({
           value={instructions}
           onChange={(event) => setInstructions(event.target.value)}
           placeholder="Ex : utiliser ce numéro uniquement pour mes paiements Wave."
-          className="min-h-24 rounded-2xl border-[#DDE6F7] bg-white"
+          className="min-h-24 rounded-lg border-[#DDE6F7] bg-white"
         />
         <p className={instructionsTooLong ? "text-xs font-semibold text-red-700" : "text-xs font-semibold text-[#64748B]"}>
           {instructions.trim().length}/500 caractères
         </p>
       </div>
 
-      <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
+      <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Enregistrer mes coordonnées
       </Button>
@@ -232,7 +232,7 @@ function PasswordField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}
-        className="h-11 rounded-2xl border-[#DDE6F7] bg-white text-sm focus-visible:ring-[#9AAAD0]"
+        className="h-11 rounded-lg border-[#DDE6F7] bg-white text-sm focus-visible:ring-[#9AAAD0]"
         required
       />
     </div>

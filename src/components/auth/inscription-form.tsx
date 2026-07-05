@@ -60,9 +60,9 @@ const TRUST_POINTS = [
   "Historique complet des cours et avis",
 ];
 
-const FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-2xl border-[#E3E8F2] bg-white focus:border-[#111B4D] focus:ring-[#111B4D]";
+const FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-lg border-[#E3E8F2] bg-white focus:border-[#111B4D] focus:ring-[#111B4D]";
 
 export function InscriptionForm({ communes }: { communes: Commune[] }) {
   const router = useRouter();
@@ -160,7 +160,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <ShieldCheck className="h-3.5 w-3.5" />
               Nouveau compte client
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#111827] text-balance sm:text-4xl">
+            <h1 className="mt-5 text-3xl font-semibold tracking-normal text-[#111827] text-balance sm:text-4xl">
               Créez votre espace et réservez sans perdre le fil.
             </h1>
             <p className="mt-3 text-sm font-medium leading-7 text-[#475569]">
@@ -175,7 +175,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
             <div className="mt-6 space-y-3">
               {TRUST_POINTS.map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                <div key={item} className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
@@ -200,14 +200,14 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     <GraduationCap className="h-3.5 w-3.5" />
                     Inscription gratuite
                   </div>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+                  <h2 className="mt-3 text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">
                     Créer un compte client
                   </h2>
                   <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
                     Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
                   </p>
                 </div>
-                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
+                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
                   Déjà inscrit
                 </Link>
               </div>
@@ -215,7 +215,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
             <div className="rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 sm:p-6">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B]">
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B]">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -362,7 +362,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+                className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (
@@ -382,7 +382,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                 {ACCOUNT_BENEFITS.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.title} className="rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                    <div key={item.title} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#111B4D] text-white">
                         <Icon className="h-4 w-4" />
                       </div>
@@ -393,7 +393,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                 })}
               </div>
 
-              <ul className="space-y-1.5 rounded-2xl border border-[#E3E8F2] bg-white px-3.5 py-3 text-xs font-semibold text-[#111B4D]">
+              <ul className="space-y-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3.5 py-3 text-xs font-semibold text-[#111B4D]">
                 {TRUST_POINTS.map((point) => (
                   <li key={point} className="flex items-start gap-1.5">
                     <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
@@ -407,7 +407,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <span>Vous avez déjà un compte ?</span>
               <Link
                 href="/connexion"
-                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-4 font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
               >
                 Connectez-vous
               </Link>
@@ -422,7 +422,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
 
 function Signal({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 text-center">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-3 text-center">
       <p className="text-lg font-semibold leading-none text-[#111B4D]">{value}</p>
       <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
     </div>

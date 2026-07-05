@@ -112,7 +112,7 @@ export function TeacherTaskActionsClient({
           onChange={(event) => setNote(event.target.value)}
           maxLength={560}
           placeholder="Note de suivi admin optionnelle avant changement de statut ou relance..."
-          className="min-h-20 rounded-2xl text-sm"
+          className="min-h-20 rounded-lg text-sm"
         />
         <p className={noteTooLong ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
           {note.trim().length}/500 caractères. Cette note est ajoutée au message professeur et au journal admin.
@@ -121,7 +121,7 @@ export function TeacherTaskActionsClient({
 
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <Select value={task.status} onValueChange={(value) => updateStatus(value)}>
-          <SelectTrigger className="h-10 rounded-2xl">
+          <SelectTrigger className="h-10 rounded-lg">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -133,7 +133,7 @@ export function TeacherTaskActionsClient({
         <Button
           type="button"
           variant="outline"
-          className="h-10 rounded-2xl"
+          className="h-10 rounded-lg"
           disabled={Boolean(loading)}
           onClick={() => updateStatus("SENT_TO_TEACHER", true)}
         >

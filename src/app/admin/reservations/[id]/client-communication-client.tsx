@@ -319,7 +319,7 @@ export function ClientCommunicationClient({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-3xl border border-violet-100 bg-violet-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-lg border border-violet-100 bg-violet-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <ProfessorImage
               photoUrl={booking.teacher.photoUrl}
@@ -343,7 +343,7 @@ export function ClientCommunicationClient({
         </div>
 
         {communications.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
             Aucun message client historisé pour cette réservation.
           </p>
         ) : (
@@ -351,7 +351,7 @@ export function ClientCommunicationClient({
             {communications.map((item) => {
               const historyWhatsAppUrl = buildWhatsAppUrl(booking.client.phone, item.content);
               return (
-                <div key={item.id} className="rounded-3xl border border-violet-100 bg-white p-4">
+                <div key={item.id} className="rounded-lg border border-violet-100 bg-white p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -368,7 +368,7 @@ export function ClientCommunicationClient({
                       {notificationDeliveryStatusLabel(item.status)}
                     </Badge>
                   </div>
-                  <p className="mt-3 whitespace-pre-line rounded-2xl border border-violet-100 bg-violet-50/35 p-3 text-sm text-foreground">
+                  <p className="mt-3 whitespace-pre-line rounded-lg border border-violet-100 bg-violet-50/35 p-3 text-sm text-foreground">
                     {item.content}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">

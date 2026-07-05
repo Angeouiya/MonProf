@@ -119,7 +119,7 @@ export default async function AdminMessagesPage({
               <CardContent className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 ring-1 ring-violet-100">
                       <MessageSquare className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
@@ -137,7 +137,7 @@ export default async function AdminMessagesPage({
                   </div>
                   <MessagesClient message={{ id: m.id, handled: m.handled }} />
                 </div>
-                <div className="mt-3 rounded-2xl border border-violet-100 bg-white p-3">
+                <div className="mt-3 rounded-lg border border-violet-100 bg-white p-3">
                   <p className="text-xs font-medium text-muted-foreground">Sujet: {m.subject}</p>
                   <p className="mt-1 text-sm">{m.message}</p>
                 </div>
@@ -228,7 +228,7 @@ export default async function AdminMessagesPage({
                         )}
                       </div>
                     </div>
-                    <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                    <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
                       <p className="whitespace-pre-line text-sm text-foreground">{message.message}</p>
                     </div>
                   </CardContent>
@@ -319,7 +319,7 @@ export default async function AdminMessagesPage({
                         </Button>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/35 p-3">
+                    <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/35 p-3">
                       <p className="whitespace-pre-line text-sm text-foreground">{communication.content}</p>
                     </div>
                   </CardContent>

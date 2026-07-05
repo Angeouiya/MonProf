@@ -157,7 +157,7 @@ export default async function ProfesseurPaiementsPage() {
                 Les demandes restent en attente jusqu'à validation et versement réel par l'administration.
               </p>
             </div>
-            <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2 text-right">
+            <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-right">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Demandable</p>
               <p className="text-sm font-semibold text-[#111B4D]">{formatFCFA(requestableAmount)}</p>
             </div>
@@ -184,9 +184,9 @@ export default async function ProfesseurPaiementsPage() {
                     {request.reviewedAt && <InfoLine label="Traitée" value={formatDateTime(request.reviewedAt)} />}
                   </div>
                   {request.note && <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">{request.note}</p>}
-                  {request.adminNote && <p className="mt-3 rounded-2xl border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">{request.adminNote}</p>}
+                  {request.adminNote && <p className="mt-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">{request.adminNote}</p>}
                   {request.payoutRecord && (
-                    <div className="mt-3 rounded-2xl border border-[#D7DEE9] bg-white p-3">
+                    <div className="mt-3 rounded-lg border border-[#D7DEE9] bg-white p-3">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Facture liée</p>
@@ -273,7 +273,7 @@ export default async function ProfesseurPaiementsPage() {
                   {payout.allocations.length > 0 && (
                     <div className="mt-3 grid gap-2">
                       {payout.allocations.map((allocation) => (
-                        <div key={allocation.id} className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2 text-xs">
+                        <div key={allocation.id} className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-xs">
                           <p className="font-semibold text-[#111827]">{allocation.booking.reference} · {allocation.booking.subjectName}</p>
                           <p className="mt-0.5 font-semibold text-[#111B4D]">{formatFCFA(allocation.amount)}</p>
                         </div>
@@ -301,7 +301,7 @@ export default async function ProfesseurPaiementsPage() {
 
 function AccountingMini({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={strong ? "rounded-2xl border border-[#111B4D] bg-white px-3 py-2" : "rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2"}>
+    <div className={strong ? "rounded-lg border border-[#111B4D] bg-white px-3 py-2" : "rounded-lg border border-[#E6EAF3] bg-white px-3 py-2"}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className={strong ? "mt-0.5 text-sm font-semibold text-[#111B4D]" : "mt-0.5 text-sm font-semibold text-[#111827]"}>{value}</p>
     </div>

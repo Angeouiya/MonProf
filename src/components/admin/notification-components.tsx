@@ -134,7 +134,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
           </div>
           <p className="mt-1 line-clamp-3 break-words text-sm text-muted-foreground">{notification.message}</p>
           {booking && (
-            <div className="mt-3 min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+            <div className="mt-3 min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">{booking.reference}</Badge>
                 <Badge variant="outline">{courseFormatLabel(booking.courseFormat)}</Badge>
@@ -203,7 +203,7 @@ export function NotificationHistoryTable({ notifications }: { notifications: Not
       <CardHeader><CardTitle className="text-base">Historique des notifications</CardTitle></CardHeader>
       <CardContent className="space-y-3 p-4 md:hidden">
         {notifications.map((notification) => (
-          <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white p-4">
+          <div key={notification.id} className="rounded-lg border border-violet-100 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 {(notification.teacher || notification.booking?.teacher) && (
@@ -236,7 +236,7 @@ export function NotificationHistoryTable({ notifications }: { notifications: Not
               <span>Lue: {notification.readAt ? formatDateTime(notification.readAt) : "—"}</span>
             </div>
             {notificationAction(notification) && (
-              <Button asChild size="sm" variant="outline" className="mt-3 w-full rounded-2xl">
+              <Button asChild size="sm" variant="outline" className="mt-3 w-full rounded-lg">
                 <Link href={notificationAction(notification)!.href}>
                   {notificationAction(notification)!.label}
                   <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
@@ -313,7 +313,7 @@ export function NotificationHistoryTable({ notifications }: { notifications: Not
 
 export function AdminUrgentAlertCard({ title, description, count }: { title: string; description: string; count: number }) {
   return (
-    <div className={cn("rounded-3xl border p-4", count ? "border-red-100 bg-red-50/80 text-red-800" : "border-violet-100 bg-white text-foreground")}>
+    <div className={cn("rounded-lg border p-4", count ? "border-red-100 bg-red-50/80 text-red-800" : "border-violet-100 bg-white text-foreground")}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-semibold">{title}</p>

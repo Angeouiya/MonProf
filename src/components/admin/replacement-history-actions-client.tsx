@@ -26,7 +26,7 @@ export function ReplacementHistoryActionsClient({
 
   if (availableTargets.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-3 text-xs text-muted-foreground">
+      <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-3 text-xs text-muted-foreground">
         Aucun message historisé pour ce remplacement.
       </p>
     );
@@ -37,7 +37,7 @@ export function ReplacementHistoryActionsClient({
       {availableTargets.map((target) => {
         const whatsAppUrl = buildWhatsAppUrl(target.phone, target.message || "");
         return (
-          <div key={target.label} className="flex flex-col gap-2 rounded-2xl border border-violet-100 bg-white p-2 sm:flex-row sm:items-center sm:justify-between">
+          <div key={target.label} className="flex flex-col gap-2 rounded-lg border border-violet-100 bg-white p-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-bold text-foreground">{target.label}</p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => copyMessage(target)} className="h-8 rounded-xl">

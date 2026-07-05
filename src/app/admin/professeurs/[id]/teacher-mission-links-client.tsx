@@ -119,7 +119,7 @@ export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissi
       </CardHeader>
       <CardContent className="space-y-3">
         {missions.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
             Aucun lien mission privé généré pour ce professeur.
           </p>
         ) : (
@@ -128,7 +128,7 @@ export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissi
             const action = missionAction(mission);
             const ActionIcon = action?.icon;
             return (
-              <div key={mission.id} className="rounded-3xl border border-violet-100 bg-white p-4">
+              <div key={mission.id} className="rounded-lg border border-violet-100 bg-white p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -148,12 +148,12 @@ export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissi
                       {missionEventDate(mission)} · expire le {formatDateTime(mission.expiresAt)}
                     </p>
                     {mission.instructions && (
-                      <p className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/35 p-3 text-sm text-muted-foreground">
+                      <p className="mt-3 rounded-lg border border-violet-100 bg-violet-50/35 p-3 text-sm text-muted-foreground">
                         {mission.instructions}
                       </p>
                     )}
                     {mission.response && (
-                      <p className="mt-2 rounded-2xl border border-blue-100 bg-blue-50/50 p-3 text-sm font-medium text-blue-900">
+                      <p className="mt-2 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-sm font-medium text-blue-900">
                         <ShieldCheck className="mr-1.5 inline h-4 w-4" />
                         Réponse professeur : {mission.response}
                       </p>

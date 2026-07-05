@@ -65,7 +65,7 @@ export function AdminTeacherNotesClient({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
+      <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <Label>Note plateforme / admin</Label>
@@ -73,7 +73,7 @@ export function AdminTeacherNotesClient({
               Cette note est donnée par l'administration. Elle peut servir de note publique au démarrage, avant les vrais avis clients.
             </p>
           </div>
-          <label className="flex min-h-10 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111B4D]">
+          <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111B4D]">
             <input
               type="checkbox"
               checked={ratingPublic}
@@ -90,7 +90,7 @@ export function AdminTeacherNotesClient({
               type="button"
               onClick={() => setRating(value)}
               className={cn(
-                "min-h-11 rounded-2xl border px-2 text-sm font-semibold transition",
+                "min-h-11 rounded-lg border px-2 text-sm font-semibold transition",
                 rating === value
                   ? "border-[#111B4D] bg-[#111B4D] text-white"
                   : "border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D]",

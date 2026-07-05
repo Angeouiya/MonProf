@@ -103,7 +103,7 @@ export function TeacherNotificationHistoryClient({
       </CardHeader>
       <CardContent className="space-y-3">
         {notifications.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">
             Aucune notification envoyée.
           </p>
         ) : (
@@ -111,7 +111,7 @@ export function TeacherNotificationHistoryClient({
             const expanded = expandedId === notification.id;
             const whatsAppUrl = buildWhatsAppUrl(teacherPhone, notification.message);
             return (
-              <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white p-4">
+              <div key={notification.id} className="rounded-lg border border-violet-100 bg-white p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +123,7 @@ export function TeacherNotificationHistoryClient({
                       {formatDateTime(notification.createdAt)} • {timeAgo(notification.createdAt)}
                       {notification.readAt ? ` • lu le ${formatDateTime(notification.readAt)}` : ""}
                     </p>
-                    <p className={`${expanded ? "whitespace-pre-line" : "line-clamp-2"} mt-3 rounded-2xl border border-violet-100 bg-violet-50/35 p-3 text-sm text-foreground`}>
+                    <p className={`${expanded ? "whitespace-pre-line" : "line-clamp-2"} mt-3 rounded-lg border border-violet-100 bg-violet-50/35 p-3 text-sm text-foreground`}>
                       {notification.message}
                     </p>
                   </div>
@@ -163,7 +163,7 @@ export function TeacherNotificationHistoryClient({
                     </Button>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2 rounded-2xl border border-violet-100 bg-violet-50/35 p-2">
+                <div className="mt-3 flex flex-wrap gap-2 rounded-lg border border-violet-100 bg-violet-50/35 p-2">
                   <StatusActionButton
                     notificationId={notification.id}
                     status="SENT"
@@ -205,7 +205,7 @@ export function TeacherNotificationHistoryClient({
             );
           })
         )}
-        <p className="rounded-2xl border border-violet-100 bg-violet-50/45 p-3 text-xs text-muted-foreground">
+        <p className="rounded-lg border border-violet-100 bg-violet-50/45 p-3 text-xs text-muted-foreground">
           Professeur concerné : {teacherName}. Les canaux externes sont historisés ici et peuvent être raccordés aux intégrations SMS, WhatsApp et email.
         </p>
       </CardContent>

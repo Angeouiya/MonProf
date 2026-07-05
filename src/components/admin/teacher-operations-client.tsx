@@ -256,7 +256,7 @@ export function TeacherNotificationModal({ open, onOpenChange, teacherId, teache
           <BookingSelect bookings={bookings} value={bookingId} onValueChange={setBookingId} />
           <FieldSelect label="Canal" value={channel} onValueChange={setChannel} items={channels} />
           {isManualCall ? (
-            <div className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+            <div className="rounded-lg border border-violet-100 bg-violet-50/45 p-4">
               <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
                 <FieldSelect label="Résultat de l'appel" value={callOutcome} onValueChange={setCallOutcome} items={callOutcomes} />
                 <Field label="Durée estimée (min)" type="number" value={callDuration} onChange={setCallDuration} />
@@ -363,7 +363,7 @@ export function TeacherWarningModal({ open, onOpenChange, teacherId, bookings, l
             />
           </div>
           {visibility === "admin" && (
-            <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-3 text-sm text-amber-900">
+            <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-3 text-sm text-amber-900">
               L'avertissement impacte le score qualité, mais aucune notification professeur ne sera créée.
             </div>
           )}
@@ -466,7 +466,7 @@ export function TeacherStatusModal({ open, onOpenChange, teacherName, bookingsCo
           <p className={reasonInvalid ? "text-xs font-medium text-red-700" : "text-xs text-muted-foreground"}>
             {reasonLength}/700 caractères. Minimum 10 caractères pour conserver une décision exploitable.
           </p>
-          <div className={`rounded-3xl border p-4 text-sm ${selectedPolicy.className}`}>
+          <div className={`rounded-lg border p-4 text-sm ${selectedPolicy.className}`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="font-black">{selectedPolicy.title}</p>
@@ -495,7 +495,7 @@ export function TeacherStatusModal({ open, onOpenChange, teacherName, bookingsCo
             ]}
           />
           {restrictive && (
-            <div className="rounded-3xl border border-red-100 bg-red-50/80 p-3 text-sm font-medium text-red-800">
+            <div className="rounded-lg border border-red-100 bg-red-50/80 p-3 text-sm font-medium text-red-800">
               Ce statut retire le professeur du flux normal. Vérifiez ses réservations actives et préparez un remplacement si nécessaire.
             </div>
           )}

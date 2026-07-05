@@ -84,27 +84,27 @@ export function TeacherPayoutReceiptActions({
 
   return (
     <div className={compact ? "grid gap-2 sm:flex sm:flex-wrap" : "flex flex-wrap items-center gap-2"}>
-      <Button type="button" size="sm" variant="outline" onClick={copyReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
+      <Button type="button" size="sm" variant="outline" onClick={copyReceipt} className={compact ? "h-10 rounded-lg" : undefined}>
         <ClipboardCopy className="mr-1.5 h-4 w-4" />
         Copier facture
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={printReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
+      <Button type="button" size="sm" variant="outline" onClick={printReceipt} className={compact ? "h-10 rounded-lg" : undefined}>
         <Printer className="mr-1.5 h-4 w-4" />
         Imprimer
       </Button>
-      <Button type="button" size="sm" variant="outline" onClick={downloadReceipt} className={compact ? "h-10 rounded-2xl" : undefined}>
+      <Button type="button" size="sm" variant="outline" onClick={downloadReceipt} className={compact ? "h-10 rounded-lg" : undefined}>
         <Download className="mr-1.5 h-4 w-4" />
         Télécharger facture
       </Button>
       {whatsAppUrl ? (
-        <Button asChild type="button" size="sm" variant="outline" className={compact ? "h-10 rounded-2xl border-blue-100 text-blue-800 hover:bg-blue-50" : "border-blue-100 text-blue-800 hover:bg-blue-50"}>
+        <Button asChild type="button" size="sm" variant="outline" className={compact ? "h-10 rounded-lg border-blue-100 text-blue-800 hover:bg-blue-50" : "border-blue-100 text-blue-800 hover:bg-blue-50"}>
           <a href={whatsAppUrl} target="_blank" rel="noreferrer">
             <MessageCircle className="mr-1.5 h-4 w-4" />
             WhatsApp
           </a>
         </Button>
       ) : (
-        <Button type="button" size="sm" variant="outline" disabled className={compact ? "h-10 rounded-2xl" : undefined}>
+        <Button type="button" size="sm" variant="outline" disabled className={compact ? "h-10 rounded-lg" : undefined}>
           <MessageCircle className="mr-1.5 h-4 w-4" />
           Téléphone absent
         </Button>

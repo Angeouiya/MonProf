@@ -92,7 +92,7 @@ export function MissionResponseActions({
         maxLength={MAX_RESPONSE_LENGTH + 50}
         placeholder="Message pour l'administration : confirmation, précision, indisponibilité, besoin d'information..."
         disabled={disabled}
-        className="rounded-2xl border-[#D7DEE9] bg-white"
+        className="rounded-lg border-[#D7DEE9] bg-white"
       />
       <div className="flex flex-col gap-1 text-xs font-semibold text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
         <p className={responseTooLong ? "font-bold text-red-600" : ""}>
@@ -101,15 +101,15 @@ export function MissionResponseActions({
         <p>Obligatoire si vous êtes indisponible, signalez un problème ou proposez un autre créneau.</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
-        <Button disabled={disabled || !!loading} onClick={() => send("confirm")} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+        <Button disabled={disabled || !!loading} onClick={() => send("confirm")} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Confirmer
         </Button>
-        <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("unavailable")} className="min-h-11 rounded-2xl border-[#D7DEE9] bg-white text-[#111B4D]">
+        <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("unavailable")} className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]">
           {loading === "unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
           Indisponible
         </Button>
-        <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("problem")} className="min-h-11 rounded-2xl border-red-300 bg-white text-red-700">
+        <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("problem")} className="min-h-11 rounded-lg border-red-300 bg-white text-red-700">
           {loading === "problem" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
           Problème
         </Button>
@@ -120,7 +120,7 @@ export function MissionResponseActions({
           variant="ghost"
           disabled={disabled || !!loading}
           onClick={() => setShowReschedule((value) => !value)}
-          className="min-h-11 w-full justify-start rounded-2xl px-3 text-[#111B4D] hover:bg-[#F8FAFC]"
+          className="min-h-11 w-full justify-start rounded-lg px-3 text-[#111B4D] hover:bg-[#F8FAFC]"
         >
           <CalendarClock className="h-4 w-4" />
           Proposer un autre créneau
@@ -137,7 +137,7 @@ export function MissionResponseActions({
                   value={proposalDate}
                   disabled={disabled || !!loading}
                   onChange={(event) => setProposalDate(event.target.value)}
-                  className="rounded-2xl border-[#D7DEE9] bg-white"
+                  className="rounded-lg border-[#D7DEE9] bg-white"
                 />
               </div>
               <div className="space-y-1.5">
@@ -149,7 +149,7 @@ export function MissionResponseActions({
                   value={proposalStartTime}
                   disabled={disabled || !!loading}
                   onChange={(event) => setProposalStartTime(event.target.value)}
-                  className="rounded-2xl border-[#D7DEE9] bg-white"
+                  className="rounded-lg border-[#D7DEE9] bg-white"
                 />
               </div>
             </div>
@@ -159,7 +159,7 @@ export function MissionResponseActions({
             <Button
               disabled={disabled || !!loading}
               onClick={() => send("reschedule")}
-              className="min-h-11 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+              className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
             >
               {loading === "reschedule" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
               Envoyer le créneau au client

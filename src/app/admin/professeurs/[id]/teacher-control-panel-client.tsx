@@ -275,7 +275,7 @@ export function TeacherControlPanelClient({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4 sm:p-5">
-        <div className="rounded-3xl border border-blue-100 bg-blue-50/65 p-4">
+        <div className="rounded-lg border border-blue-100 bg-blue-50/65 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-blue-950/55">Décision immédiate</p>
@@ -295,7 +295,7 @@ export function TeacherControlPanelClient({
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-3xl border border-violet-100 bg-white p-4">
+          <div className="rounded-lg border border-violet-100 bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Chaîne agence du professeur</p>
@@ -315,7 +315,7 @@ export function TeacherControlPanelClient({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-amber-100 bg-amber-50/65 p-4">
+          <div className="rounded-lg border border-amber-100 bg-amber-50/65 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-black text-amber-950">Contrôles avant attribution/paiement</p>
@@ -332,7 +332,7 @@ export function TeacherControlPanelClient({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-blue-100 bg-white p-4">
+        <div className="rounded-lg border border-blue-100 bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="flex items-center gap-2 text-sm font-black text-blue-950">
@@ -357,7 +357,7 @@ export function TeacherControlPanelClient({
         </div>
 
         {nextBooking && (
-          <div className="grid gap-3 rounded-3xl border border-violet-100 bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 rounded-lg border border-violet-100 bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="min-w-0">
               <p className="font-mono text-xs font-bold text-primary">{nextBooking.reference}</p>
               <p className="mt-1 truncate text-sm font-black text-foreground">
@@ -368,12 +368,12 @@ export function TeacherControlPanelClient({
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild variant="outline" className="rounded-2xl">
+              <Button asChild variant="outline" className="rounded-lg">
                 <Link href={`/admin/professeurs/${teacherId}?tab=cours&bookingId=${nextBooking.id}`}>
                   Mission <ExternalLink className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="rounded-2xl">
+              <Button asChild variant="outline" className="rounded-lg">
                 <Link href={`/admin/professeurs/${teacherId}?tab=paiements&bookingId=${nextBooking.id}`}>
                   Versements <ExternalLink className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -406,7 +406,7 @@ function FlowStep({
   }[tone];
 
   return (
-    <div className={`rounded-2xl border px-3 py-3 ${className}`}>
+    <div className={`rounded-lg border px-3 py-3 ${className}`}>
       <Icon className="h-4 w-4" />
       <p className="mt-2 text-[11px] font-bold uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-sm font-black">{value}</p>
@@ -416,7 +416,7 @@ function FlowStep({
 
 function ControlCheck({ label, value, danger }: { label: string; value: number; danger: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white bg-white px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-white bg-white px-3 py-2">
       <span className="text-sm font-semibold text-foreground">{label}</span>
       <Badge variant="outline" className={danger ? "border-red-200 bg-red-50 text-red-800" : "border-blue-200 bg-blue-50 text-blue-800"}>
         {value}
@@ -444,7 +444,7 @@ function AccountingTile({
   }[tone];
 
   return (
-    <div className={`rounded-2xl border px-3 py-3 ${className}`}>
+    <div className={`rounded-lg border px-3 py-3 ${className}`}>
       <p className="text-[11px] font-bold uppercase tracking-wide opacity-65">{label}</p>
       <p className="mt-1 text-lg font-black">{value}</p>
       <p className="mt-1 text-xs font-semibold opacity-72">{detail}</p>
@@ -464,7 +464,7 @@ function ControlTile({
   danger?: boolean;
 }) {
   return (
-    <div className={danger ? "rounded-3xl border border-amber-100 bg-amber-50/75 p-4" : "rounded-3xl border border-violet-100 bg-violet-50/35 p-4"}>
+    <div className={danger ? "rounded-lg border border-amber-100 bg-amber-50/75 p-4" : "rounded-lg border border-violet-100 bg-violet-50/35 p-4"}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className={danger ? "text-xs font-bold uppercase tracking-wide text-amber-950/60" : "text-xs font-bold uppercase tracking-wide text-violet-950/55"}>

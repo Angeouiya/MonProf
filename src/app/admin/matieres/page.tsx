@@ -43,7 +43,7 @@ export default async function AdminMatieresPage() {
 
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         {Object.entries(categoryCounts).map(([label, count]) => (
-          <div key={label} className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+          <div key={label} className="rounded-lg border border-violet-100 bg-violet-50/45 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-violet-950/60">{label}</p>
             <p className="mt-1 text-2xl font-black text-violet-950">{count}</p>
             <p className="mt-1 text-xs text-violet-950/65">matière(s)</p>
@@ -51,7 +51,7 @@ export default async function AdminMatieresPage() {
         ))}
       </div>
 
-      <div className="rounded-3xl border border-blue-100 bg-blue-50/55 p-4 text-sm text-blue-950/78">
+      <div className="rounded-lg border border-blue-100 bg-blue-50/55 p-4 text-sm text-blue-950/78">
         <p className="font-bold text-blue-950">Catalogue ouvert</p>
         <p className="mt-1">
           La plateforme couvre le soutien scolaire, l'université, les concours, les adultes, les langues,

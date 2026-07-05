@@ -161,7 +161,7 @@ export default async function AdminPaiementsPage({
                         <PaymentStatusBadge status={t.status} />
                       </div>
 
-                      <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                      <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                         {t.teacher ? (
                           <ProfessorImage
                             photoUrl={t.teacher.photoUrl}
@@ -186,19 +186,19 @@ export default async function AdminPaiementsPage({
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                        <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                           <Money amount={t.amount} className="mt-1 text-xs font-black" />
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                        <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Méthode</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{t.method ? paymentMethodLabel(t.method) : "—"}</p>
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                        <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Cours</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{t.booking?.subjectName ?? "—"}</p>
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                        <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(t.createdAt)}</p>
                         </div>
@@ -299,7 +299,7 @@ export default async function AdminPaiementsPage({
         <CardContent className="p-0 overflow-x-auto">
           <div className="grid gap-3 p-4 md:hidden">
             {teacherPayouts.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
                 Aucun versement professeur enregistré.
               </p>
             ) : (
@@ -316,7 +316,7 @@ export default async function AdminPaiementsPage({
                         <Money amount={payout.amount} className="shrink-0 text-sm font-black" />
                       </div>
 
-                      <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                      <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                         <ProfessorImage
                           photoUrl={payout.teacher.photoUrl}
                           name={teacherName}
@@ -342,7 +342,7 @@ export default async function AdminPaiementsPage({
                             <Link
                               key={allocation.id}
                               href={`/admin/reservations/${allocation.booking.id}`}
-                              className="block rounded-2xl border border-violet-100 bg-white px-3 py-2 text-xs text-foreground"
+                              className="block rounded-lg border border-violet-100 bg-white px-3 py-2 text-xs text-foreground"
                             >
                               <span className="font-mono font-bold text-primary">{allocation.booking.reference}</span>
                               <span className="ml-1 text-muted-foreground">{allocation.booking.subjectName}</span>
@@ -356,10 +356,10 @@ export default async function AdminPaiementsPage({
                       )}
 
                       {payout.note && (
-                        <p className="rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-xs text-muted-foreground">{payout.note}</p>
+                        <p className="rounded-lg border border-violet-100 bg-violet-50/50 p-3 text-xs text-muted-foreground">{payout.note}</p>
                       )}
 
-                      <Button asChild variant="outline" className="h-11 w-full rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 w-full rounded-lg">
                         <Link href={teacherAccountingHref(payout.teacher.id, payout.allocations[0]?.booking.id)}>Voir comptabilité professeur</Link>
                       </Button>
                       <TeacherPayoutReceiptActions
@@ -474,7 +474,7 @@ function SignalCard({
   }[tone];
   const Icon = tone === "red" ? AlertTriangle : tone === "amber" ? Lock : tone === "violet" ? ReceiptText : FileText;
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{title}</p>
@@ -498,14 +498,14 @@ function PaymentActions({
 }) {
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
-      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/reservations/${bookingId}`}>
           <ExternalLink className="mr-1.5 h-4 w-4" />
           Dossier
         </Link>
       </Button>
       {teacherId && (
-        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
           <Link href={teacherAccountingHref(teacherId, bookingId)}>
             <Wallet className="mr-1.5 h-4 w-4" />
             Comptabilité

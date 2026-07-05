@@ -124,7 +124,7 @@ export default async function AdminNotificationsPage({
           </div>
         </CardHeader>
         <CardContent className="space-y-4 p-4 sm:p-5">
-          <div className={radarDecision.tone === "red" ? "rounded-3xl border border-red-200 bg-white p-4" : radarDecision.tone === "amber" ? "rounded-3xl border border-amber-200 bg-white p-4" : "rounded-3xl border border-[#CAD7F2] bg-white p-4"}>
+          <div className={radarDecision.tone === "red" ? "rounded-lg border border-red-200 bg-white p-4" : radarDecision.tone === "amber" ? "rounded-lg border border-amber-200 bg-white p-4" : "rounded-lg border border-[#CAD7F2] bg-white p-4"}>
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className={radarDecision.tone === "red" ? "text-xs font-bold uppercase tracking-wide text-red-900/65" : radarDecision.tone === "amber" ? "text-xs font-bold uppercase tracking-wide text-amber-900/65" : "text-xs font-bold uppercase tracking-wide text-blue-900/65"}>
@@ -137,7 +137,7 @@ export default async function AdminNotificationsPage({
                   {radarDecision.description}
                 </p>
               </div>
-              <Button asChild variant="outline" className="rounded-2xl bg-white">
+              <Button asChild variant="outline" className="rounded-lg bg-white">
                 <Link href={radarDecision.href}>
                   {radarDecision.actionLabel}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -310,7 +310,7 @@ function RadarMetric({
   return (
     <Link
       href={href}
-      className={danger ? "rounded-3xl border border-amber-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-amber-300" : "rounded-3xl border border-[#E3E8F2] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[#111B4D]"}
+      className={danger ? "rounded-lg border border-amber-200 bg-white p-4 transition hover:border-amber-300" : "rounded-lg border border-[#E3E8F2] bg-white p-4 transition hover:border-[#111B4D]"}
     >
       <div className="flex items-start justify-between gap-3">
         <div>

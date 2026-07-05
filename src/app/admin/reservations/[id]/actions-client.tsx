@@ -467,23 +467,23 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-orange-100 bg-orange-50/65 p-4">
+            <div className="rounded-lg border border-orange-100 bg-orange-50/65 p-4">
               <p className="font-semibold text-orange-950">{cancellationPolicy.label}</p>
               <p className="mt-1 text-sm text-orange-950/72">{cancellationPolicy.description}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                <div className="rounded-2xl border border-white bg-white px-3 py-2">
+                <div className="rounded-lg border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Base de calcul</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.baseAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white bg-white px-3 py-2">
+                <div className="rounded-lg border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Frais retenus</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.feeAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white bg-white px-3 py-2">
+                <div className="rounded-lg border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Frais service</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.serviceFeeAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white bg-white px-3 py-2">
+                <div className="rounded-lg border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Remboursement</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.refundAmount)}</p>
                 </div>
@@ -536,7 +536,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
           </AlertDialogHeader>
           <div className="space-y-3 py-2">
             {latestRefundRequest ? (
-              <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm">
                 <p className="font-semibold text-[#111827]">{latestRefundRequest.reference} · {latestRefundRequest.status}</p>
                 <p className="mt-1 text-[#64748B]">
                   {latestRefundRequest.method} · {latestRefundRequest.paymentPhone}
@@ -544,7 +544,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                 </p>
               </div>
             ) : (
-              <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#64748B]">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#64748B]">
                 Le client doit d'abord renseigner le moyen, le numéro et le titulaire du compte de remboursement.
               </div>
             )}
@@ -716,13 +716,13 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
           </DialogHeader>
           <div className="space-y-3 py-2">
             {replacementLockedReason && (
-              <div className="rounded-3xl border border-red-100 bg-red-50/80 p-4 text-sm text-red-900">
+              <div className="rounded-lg border border-red-100 bg-red-50/80 p-4 text-sm text-red-900">
                 <p className="font-black">Remplacement bloqué</p>
                 <p className="mt-1">{replacementLockedReason}</p>
               </div>
             )}
             <Label>Professeur actuel</Label>
-            <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 px-3 py-2 text-sm text-muted-foreground">
               <ProfessorImage
                 photoUrl={booking.teacher.photoUrl}
                 name={booking.teacher.professionalName || booking.teacher.fullName}
@@ -758,7 +758,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               </SelectContent>
             </Select>
             {!replacementLoading && availableTeachers.length === 0 && (
-              <div className="rounded-3xl border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
+              <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
                 Aucun professeur compatible trouvé pour cette matière, ce niveau et ce format. Activez un professeur correspondant ou modifiez la réservation avant remplacement.
               </div>
             )}
@@ -768,7 +768,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                   key={teacher.id}
                   type="button"
                   onClick={() => setNewTeacherId(teacher.id)}
-                  className={`rounded-3xl border p-3 text-left transition hover:-translate-y-0.5 hover: ${
+                  className={`rounded-lg border p-3 text-left transition hover: ${
                     newTeacherId === teacher.id ? "border-violet-300 bg-violet-50" : "border-violet-100 bg-white"
                   }`}
                 >
@@ -804,7 +804,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               ))}
             </div>
             {selectedReplacement && (
-              <div className="rounded-3xl border border-violet-100 bg-white p-3 text-sm">
+              <div className="rounded-lg border border-violet-100 bg-white p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-foreground">Résumé du remplacement</span>
                   <Badge variant="outline" className={selectedReplacement.financialImpact > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-blue-200 bg-blue-50 text-blue-800"}>
@@ -815,33 +815,33 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                   {selectedReplacement.professionalName || selectedReplacement.fullName} couvre {selectedReplacement.subjects.slice(0, 3).join(", ")} et intervient à {selectedReplacement.zones.slice(0, 3).join(", ") || selectedReplacement.commune || "Abidjan"}.
                 </p>
                 <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2">
                     <p className="font-bold text-blue-950">Disponibilité</p>
                     <p className="mt-0.5 text-blue-900/75">{selectedReplacement.compatibility.availabilityCompatible ? "Compatible avec la demande" : "À vérifier avant affectation"}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2">
                     <p className="font-bold text-violet-950">Planning</p>
                     <p className="mt-0.5 text-violet-900/75">{selectedReplacement.compatibility.activeConflict ? "Conflit actif détecté" : "Aucun conflit évident"}</p>
                   </div>
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-3 py-2">
+                  <div className="rounded-lg border border-amber-100 bg-amber-50/70 px-3 py-2">
                     <p className="font-bold text-amber-950">Litiges récents</p>
                     <p className="mt-0.5 text-amber-900/75">{selectedReplacement.compatibility.recentDisputeCount}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-violet-50/70 px-3 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2">
                     <p className="font-bold text-violet-950">Part cours</p>
                     <p className="mt-0.5 text-violet-900/75">{formatFCFA(selectedReplacement.teacherCourseShare)}</p>
                   </div>
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-3 py-2">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2">
                     <p className="font-bold text-blue-950">Déplacement</p>
                     <p className="mt-0.5 text-blue-900/75">{formatFCFA(selectedReplacement.transportFee)}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                     <p className="font-bold text-violet-950">Net remplaçant</p>
                     <p className="mt-0.5 text-violet-900/75">{formatFCFA(selectedReplacement.netAmount)}</p>
                   </div>
                 </div>
                 {selectedReplacement.transportRouteLabel && (
-                  <p className="mt-2 rounded-2xl border border-violet-100 bg-violet-50/50 px-3 py-2 text-xs font-medium text-violet-950/75">
+                  <p className="mt-2 rounded-lg border border-violet-100 bg-violet-50/50 px-3 py-2 text-xs font-medium text-violet-950/75">
                     Trajet : {selectedReplacement.transportRouteLabel}. {selectedReplacement.transportRuleLabel}
                   </p>
                 )}

@@ -115,26 +115,26 @@ export default async function AdminClientsPage({
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Réservations</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{c._count.bookings}</p>
                       </div>
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Total dépensé</p>
                         <Money amount={total} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Fonds bloqués</p>
                         <Money amount={blocked} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Commune</p>
                         <p className="mt-1 truncate text-xs font-bold text-foreground">{c.commune ?? "—"}</p>
                       </div>
                     </div>
 
                     {latest && latestTeacherName && (
-                      <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                      <div className="flex min-w-0 items-center gap-3 rounded-lg border border-[#E6EAF3] bg-white p-3">
                         <ProfessorImage photoUrl={latest.teacher.photoUrl} name={latestTeacherName} size="sm" shape="circle" verified={latest.teacher.badgeVerified} />
                         <div className="min-w-0">
                           <Link href={`/admin/reservations/${latest.id}`} className="flex min-h-10 items-center truncate text-sm font-bold text-foreground">
@@ -149,7 +149,7 @@ export default async function AdminClientsPage({
 
                     <Badge variant="outline" className={action.className}>{action.label}</Badge>
 
-                    <Button asChild className="h-11 w-full rounded-2xl">
+                    <Button asChild className="h-11 w-full rounded-lg">
                       <Link href={`/admin/clients/${c.id}`}>Voir le client</Link>
                     </Button>
                   </CardContent>

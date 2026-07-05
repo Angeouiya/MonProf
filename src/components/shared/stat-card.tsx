@@ -35,11 +35,11 @@ export function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-1.5 break-words text-xl font-semibold leading-tight tracking-tight text-[#111827] sm:text-2xl">{value}</p>
+          <p className="mt-1.5 break-words text-xl font-semibold leading-tight tracking-normal text-[#111827] sm:text-2xl">{value}</p>
           {trend && <p className="mt-1 text-xs font-semibold text-[#111B4D]">{trend.value}</p>}
         </div>
         {Icon && (
-          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", iconClasses[tone])}>
+          <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", iconClasses[tone])}>
             <Icon className="h-5 w-5" />
           </div>
         )}

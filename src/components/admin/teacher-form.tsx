@@ -408,7 +408,7 @@ export function TeacherForm({
             <CardHeader><CardTitle className="text-base">Informations personnelles</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <div className="flex flex-col gap-4 rounded-3xl border border-violet-100 bg-violet-50/45 p-4 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-4 rounded-lg border border-violet-100 bg-violet-50/45 p-4 sm:flex-row sm:items-center">
                   <ProfessorImage photoUrl={photoUrl} name={previewName} size="lg" shape="circle" verified={Boolean(badgeVerified)} />
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
@@ -527,7 +527,7 @@ export function TeacherForm({
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <Controller control={control} name="portalAccessEnabled" render={({ field }) => (
-                  <label className={`flex cursor-pointer flex-col gap-3 rounded-3xl border p-4 transition sm:flex-row sm:items-center sm:justify-between ${field.value ? "border-violet-200 bg-violet-50 text-violet-950" : "border-violet-100 bg-white"}`}>
+                  <label className={`flex cursor-pointer flex-col gap-3 rounded-lg border p-4 transition sm:flex-row sm:items-center sm:justify-between ${field.value ? "border-violet-200 bg-violet-50 text-violet-950" : "border-violet-100 bg-white"}`}>
                     <div>
                       <p className="text-sm font-black text-foreground">Activer l'espace professeur</p>
                       <p className="mt-1 text-xs font-semibold leading-5 text-muted-foreground">
@@ -557,7 +557,7 @@ export function TeacherForm({
                 />
               </Field>
 
-              <div className="sm:col-span-2 grid gap-3 rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+              <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/45 p-4">
                 <div className="flex items-start gap-3">
                   <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-violet-700" />
                   <div>
@@ -671,7 +671,7 @@ export function TeacherForm({
                 {subjects.map((s) => {
                   const checked = !!selectedSubjects[s.id];
                   return (
-                    <label key={s.id} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition-all ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60"}`}>
+                    <label key={s.id} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
                       <Checkbox
                         checked={checked}
                         onCheckedChange={(v) => {
@@ -699,7 +699,7 @@ export function TeacherForm({
                   {levels.map((l) => {
                     const checked = !!selectedLevels[l.id];
                     return (
-                      <label key={l.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition-all ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60"}`}>
+                      <label key={l.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
                         <Checkbox
                           checked={checked}
                           onCheckedChange={(v) => setSelectedLevels((prev) => ({ ...prev, [l.id]: !!v }))}
@@ -727,29 +727,29 @@ export function TeacherForm({
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 rounded-3xl border border-violet-100 bg-violet-50/45 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/45 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <AvailabilityMetric label="Créneaux ouverts" value={`${selectedAvailabilityCount}`} detail={`${selectedAvailabilityHours}h disponibles`} />
                   <AvailabilityMetric label="Jours couverts" value={`${daysWithAvailability}/7`} detail="Planning hebdomadaire" />
                   <AvailabilityMetric label="Durée séance" value="2h" detail="Chaque réservation suit ce format" />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:w-[360px]">
-                  <Button type="button" variant="outline" className="justify-start rounded-2xl bg-white" onClick={() => setAvailabilityPreset("weekdays")}>
+                  <Button type="button" variant="outline" className="justify-start rounded-lg bg-white" onClick={() => setAvailabilityPreset("weekdays")}>
                     Jours ouvrés
                   </Button>
-                  <Button type="button" variant="outline" className="justify-start rounded-2xl bg-white" onClick={() => setAvailabilityPreset("weekends")}>
+                  <Button type="button" variant="outline" className="justify-start rounded-lg bg-white" onClick={() => setAvailabilityPreset("weekends")}>
                     Week-end
                   </Button>
-                  <Button type="button" variant="outline" className="justify-start rounded-2xl bg-white" onClick={() => setAvailabilityPreset("evenings")}>
+                  <Button type="button" variant="outline" className="justify-start rounded-lg bg-white" onClick={() => setAvailabilityPreset("evenings")}>
                     Soirs
                   </Button>
-                  <Button type="button" variant="ghost" className="justify-start rounded-2xl" onClick={() => setAvailabilityPreset("clear")}>
+                  <Button type="button" variant="ghost" className="justify-start rounded-lg" onClick={() => setAvailabilityPreset("clear")}>
                     Tout vider
                   </Button>
                 </div>
               </div>
               {selectedAvailabilityCount === 0 && (
-                <div className="flex items-start gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 p-3 text-sm text-amber-950">
+                <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50/80 p-3 text-sm text-amber-950">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
                   <p>
                     Aucun créneau défini. Un professeur actif ne pourra pas être enregistré sans au moins une disponibilité de 2h.
@@ -760,7 +760,7 @@ export function TeacherForm({
                 {WEEK_DAYS.map((day) => {
                   const selectedCount = TWO_HOUR_SLOTS.filter((slot) => availability[day.key]?.[slot.key]).length;
                   return (
-                    <section key={day.key} className="rounded-3xl border border-violet-100 bg-white p-3">
+                    <section key={day.key} className="rounded-lg border border-violet-100 bg-white p-3">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">{day.label}</p>
@@ -783,7 +783,7 @@ export function TeacherForm({
                               key={slot.key}
                               type="button"
                               onClick={() => updateAvailability(day.key, slot.key, !checked)}
-                              className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${checked ? "border-violet-300 bg-violet-50 text-violet-900" : "border-violet-100 bg-slate-50 text-slate-600 hover:border-violet-200 hover:bg-white"}`}
+                              className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${checked ? "border-violet-300 bg-violet-50 text-violet-900" : "border-violet-100 bg-slate-50 text-slate-600 hover:border-violet-200 hover:bg-white"}`}
                               aria-pressed={checked}
                             >
                               {slot.label}
@@ -863,7 +863,7 @@ export function TeacherForm({
                 {communes.map((c) => {
                   const checked = !!selectedZones[c.id];
                   return (
-                    <label key={c.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm transition-all ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/60"}`}>
+                    <label key={c.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
                       <Checkbox
                         checked={checked}
                         onCheckedChange={(v) => setSelectedZones((prev) => ({ ...prev, [c.id]: !!v }))}
@@ -911,7 +911,7 @@ export function TeacherForm({
                 )} />
               </Field>
 
-              <div className="sm:col-span-2 grid gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-4">
+              <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
                 <div>
                   <p className="text-sm font-black text-foreground">Référence grille officielle</p>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -919,15 +919,15 @@ export function TeacherForm({
                   </p>
                 </div>
                 <div className="grid gap-2 text-center sm:grid-cols-3">
-                  <div className="rounded-2xl border border-violet-100 bg-white p-3">
+                  <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Commission cours</p>
                     <p className="text-sm font-semibold">{commissionRate ?? PLATFORM_COMMISSION_PERCENT}%</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white p-3">
+                  <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Part professeur</p>
                     <p className="text-sm font-semibold">{TEACHER_PERCENT}% + déplacement</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white p-3">
+                  <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Remises packs</p>
                     <p className="text-sm font-semibold">Prises sur commission</p>
                   </div>
@@ -948,7 +948,7 @@ export function TeacherForm({
           <Card>
             <CardHeader><CardTitle className="text-base">Avis publics, notes admin & badges</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 rounded-3xl border border-blue-100 bg-blue-50/70 p-4 sm:grid-cols-2">
+              <div className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/70 p-4 sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-900/70">Note publique client</p>
                   <p className="mt-1 text-2xl font-black text-blue-950">
@@ -981,7 +981,7 @@ export function TeacherForm({
         </TabsContent>
       </Tabs>
 
-      <div className="sticky bottom-0 flex items-center justify-end gap-2 rounded-3xl border border-violet-100 bg-white p-3">
+      <div className="sticky bottom-0 flex items-center justify-end gap-2 rounded-lg border border-violet-100 bg-white p-3">
         <Button type="button" variant="ghost" onClick={() => router.back()}>
           <X className="mr-1.5 h-4 w-4" /> Annuler
         </Button>
@@ -1009,7 +1009,7 @@ function Field({ label, error, required, children }: { label: string; error?: st
 function FormatSwitch({ control, name, label }: { control: any; name: "offersHome" | "offersOnline" | "offersGroup"; label: string }) {
   return (
     <Controller control={control} name={name} render={({ field }) => (
-      <label className="flex cursor-pointer items-center justify-between gap-2 rounded-2xl border border-violet-100 bg-white px-3 py-2 transition hover:border-violet-200 hover:bg-violet-50/60">
+      <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-violet-100 bg-white px-3 py-2 transition hover:border-violet-200 hover:bg-violet-50/60">
         <span className="text-sm font-medium">{label}</span>
         <Switch checked={!!field.value} onCheckedChange={field.onChange} />
       </label>
@@ -1019,7 +1019,7 @@ function FormatSwitch({ control, name, label }: { control: any; name: "offersHom
 
 function AvailabilityMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white p-3">
+    <div className="rounded-lg border border-violet-100 bg-white p-3">
       <p className="text-[11px] font-bold uppercase tracking-wide text-violet-950/55">{label}</p>
       <p className="mt-1 text-xl font-black text-violet-950">{value}</p>
       <p className="mt-1 text-xs font-medium text-muted-foreground">{detail}</p>
@@ -1030,7 +1030,7 @@ function AvailabilityMetric({ label, value, detail }: { label: string; value: st
 function BadgeToggle({ control, name, label }: { control: any; name: any; label: string }) {
   return (
     <Controller control={control} name={name} render={({ field }) => (
-      <label className={`flex cursor-pointer items-center justify-between gap-2 rounded-2xl border px-3 py-2 transition ${field.value ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:bg-violet-50/60"}`}>
+      <label className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 transition ${field.value ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:bg-violet-50/60"}`}>
         <span className="text-sm font-medium">{label}</span>
         <Switch checked={!!field.value} onCheckedChange={field.onChange} />
       </label>

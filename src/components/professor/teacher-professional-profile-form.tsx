@@ -99,7 +99,7 @@ export function TeacherProfessionalProfileForm({
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
           placeholder="Ex : répétiteur en mathématiques avec expérience en préparation BEPC, BAC et concours."
-          className="mt-1.5 min-h-28 rounded-2xl border-[#DDE6F7] bg-white"
+          className="mt-1.5 min-h-28 rounded-lg border-[#DDE6F7] bg-white"
         />
       </FieldCounter>
 
@@ -111,7 +111,7 @@ export function TeacherProfessionalProfileForm({
             value={skillText}
             onChange={(event) => setSkillText(event.target.value)}
             placeholder="Une compétence par ligne : pédagogie active, préparation concours, soutien universitaire..."
-            className="mt-1.5 min-h-32 rounded-2xl border-[#DDE6F7] bg-white"
+            className="mt-1.5 min-h-32 rounded-lg border-[#DDE6F7] bg-white"
           />
         </FieldCounter>
 
@@ -122,7 +122,7 @@ export function TeacherProfessionalProfileForm({
             value={historyText}
             onChange={(event) => setHistoryText(event.target.value)}
             placeholder="Une expérience par ligne : école, centre de formation, familles accompagnées..."
-            className="mt-1.5 min-h-32 rounded-2xl border-[#DDE6F7] bg-white"
+            className="mt-1.5 min-h-32 rounded-lg border-[#DDE6F7] bg-white"
           />
         </FieldCounter>
 
@@ -133,7 +133,7 @@ export function TeacherProfessionalProfileForm({
             value={certificationText}
             onChange={(event) => setCertificationText(event.target.value)}
             placeholder="Une certification ou diplôme par ligne."
-            className="mt-1.5 min-h-28 rounded-2xl border-[#DDE6F7] bg-white"
+            className="mt-1.5 min-h-28 rounded-lg border-[#DDE6F7] bg-white"
           />
         </FieldCounter>
 
@@ -144,12 +144,12 @@ export function TeacherProfessionalProfileForm({
             value={achievementText}
             onChange={(event) => setAchievementText(event.target.value)}
             placeholder="Ex : élèves suivis jusqu'au BAC, remise à niveau adulte, accompagnement projet professionnel..."
-            className="mt-1.5 min-h-28 rounded-2xl border-[#DDE6F7] bg-white"
+            className="mt-1.5 min-h-28 rounded-lg border-[#DDE6F7] bg-white"
           />
         </FieldCounter>
       </div>
 
-      <div className="grid gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-end">
+      <div className="grid gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-end">
         <div>
           <Label htmlFor="teacher-learners-coached">Nombre d'apprenants encadrés</Label>
           <Input
@@ -160,19 +160,19 @@ export function TeacherProfessionalProfileForm({
             inputMode="numeric"
             value={coached}
             onChange={(event) => setCoached(event.target.value)}
-            className="mt-1.5 h-11 rounded-2xl border-[#DDE6F7] bg-white"
+            className="mt-1.5 h-11 rounded-lg border-[#DDE6F7] bg-white"
           />
           <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
             Indicateur visible côté client après contrôle global de la fiche.
           </p>
         </div>
-        <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+        <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Enregistrer
         </Button>
       </div>
 
-      <p className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
+      <p className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
         <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-[#111B4D]" />
         Toute modification est historisée et envoyée à l'administration pour suivi de qualité.
       </p>

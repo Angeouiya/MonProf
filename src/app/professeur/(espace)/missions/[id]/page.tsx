@@ -47,7 +47,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
         title={`Mission ${booking.reference}`}
         description="Détail opérationnel de la réservation attribuée à votre fiche professeur."
         action={(
-          <Button asChild variant="outline" className="rounded-2xl bg-white">
+          <Button asChild variant="outline" className="rounded-lg bg-white">
             <Link href="/professeur/missions">
               <ArrowLeft className="h-4 w-4" />
               Retour
@@ -63,7 +63,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
               <StatusPill status={booking.status} />
               {activeMission && <StatusPill status={activeMission.status} type="mission" />}
             </div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827]">{booking.subjectName}</h2>
+            <h2 className="mt-3 text-2xl font-semibold tracking-normal text-[#111827]">{booking.subjectName}</h2>
             <p className="mt-1 text-sm font-bold text-[#64748B]">{booking.levelName} · {courseFormatLabel(booking.courseFormat)}</p>
             {booking.needDescription && (
               <p className="mt-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
@@ -149,7 +149,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             ) : (
               <div className="mt-4 space-y-3">
                 {booking.scheduleProposals.map((proposal) => (
-                  <div key={proposal.id} className="rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                  <div key={proposal.id} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <CalendarClock className="h-4 w-4 text-[#111B4D]" />
                       <span className="text-sm font-semibold text-[#111827]">
@@ -191,7 +191,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             ) : (
               <div className="mt-4 space-y-3">
                 {booking.missionLinks.map((mission) => (
-                  <div key={mission.id} className="rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                  <div key={mission.id} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusPill status={mission.status} type="mission" />
                       <span className="text-xs font-bold text-[#64748B]">Expire le {formatDateTime(mission.expiresAt)}</span>
@@ -210,7 +210,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
 
 function DetailTile({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-3">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-3">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#64748B]">
         {icon}
         {label}

@@ -251,7 +251,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 <Link
                   key={booking.id}
                   href={`/admin/reservations/${booking.id}`}
-                  className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm transition hover:border-[#111B4D]"
+                  className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm transition hover:border-[#111B4D]"
                 >
                   <p className="font-mono text-xs font-semibold text-[#111B4D]">{booking.reference}</p>
                   <p className="mt-1 font-semibold text-[#111827]">{booking.subjectName} · {booking.levelName}</p>
@@ -270,7 +270,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <CardContent className="p-0">
           <div className="grid gap-3 p-4 md:hidden">
             {client.bookings.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">Aucune réservation.</p>
+              <p className="rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">Aucune réservation.</p>
             ) : (
               client.bookings.map((b) => {
                 const teacherName = b.teacher.professionalName || b.teacher.fullName;
@@ -286,7 +286,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <PaymentStatusBadge status={b.paymentStatus} />
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-[#E6EAF3] bg-white p-3">
                       <ProfessorImage
                         photoUrl={b.teacher.photoUrl}
                         name={teacherName}
@@ -311,11 +311,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                         <Money amount={b.totalPrice} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                      <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                         <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(b.scheduledDate ?? b.createdAt)}</p>
                       </div>
@@ -326,14 +326,14 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <PaymentStatusBadge status={b.paymentStatus} />
                     </div>
 
-                    <Button asChild className="h-11 w-full rounded-2xl">
+                    <Button asChild className="h-11 w-full rounded-lg">
                       <Link href={`/admin/reservations/${b.id}`}>Voir la réservation</Link>
                     </Button>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      <Button asChild variant="outline" className="h-11 rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 rounded-lg">
                         <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`}>Fiche professeur</Link>
                       </Button>
-                      <Button asChild variant="outline" className="h-11 rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 rounded-lg">
                         <Link href={`/admin/reservations/${b.id}?action=replace`}>Remplacer</Link>
                       </Button>
                     </div>
@@ -413,7 +413,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <CardHeader><CardTitle className="text-base">Communications envoyées au client</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {communications.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">
+            <p className="rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">
               Aucun message opérationnel envoyé à ce client.
             </p>
           ) : (
@@ -466,7 +466,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 whitespace-pre-line rounded-2xl border border-[#E6EAF3] bg-white p-3 text-sm font-medium leading-6 text-[#475569]">
+                  <p className="mt-3 whitespace-pre-line rounded-lg border border-[#E6EAF3] bg-white p-3 text-sm font-medium leading-6 text-[#475569]">
                     {communication.content}
                   </p>
                 </div>
@@ -486,7 +486,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </CardHeader>
           <CardContent className="space-y-3">
             {disputes.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
                 Aucun litige ouvert par ce client.
               </p>
             ) : (
@@ -503,7 +503,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                         {formatDisputeStatus(dispute.status)}
                       </Badge>
                     </div>
-                    <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                    <div className="mt-3 flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
                       <ProfessorImage photoUrl={dispute.booking.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={dispute.booking.teacher.badgeVerified} />
                       <div className="min-w-0">
                         <Link href={`/admin/professeurs/${dispute.booking.teacher.id}?tab=cours&bookingId=${dispute.booking.id}`} className="flex min-h-10 items-center truncate text-sm font-bold text-foreground">
@@ -516,7 +516,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">{dispute.description}</p>
                     <div className="mt-3">
-                      <Button asChild size="sm" variant="outline" className="w-full rounded-2xl">
+                      <Button asChild size="sm" variant="outline" className="w-full rounded-lg">
                         <Link href={`/admin/litiges/${dispute.id}`}>Ouvrir le litige</Link>
                       </Button>
                     </div>
@@ -536,7 +536,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </CardHeader>
           <CardContent className="space-y-3">
             {refundRequests.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
                 Aucune demande de remboursement enregistrée.
               </p>
             ) : (
@@ -560,7 +560,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                         <p className="text-muted-foreground">Frais service non remboursés : <span className="font-semibold text-foreground">{formatFCFA(request.paymentServiceFeeNonRefunded)}</span></p>
                       )}
                     </div>
-                    <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+                    <div className="mt-3 flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
                       <ProfessorImage photoUrl={request.booking.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={request.booking.teacher.badgeVerified} />
                       <div className="min-w-0">
                         <Link href={`/admin/reservations/${request.booking.id}`} className="flex min-h-10 items-center truncate text-sm font-bold text-foreground">
@@ -586,7 +586,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </CardHeader>
           <CardContent className="space-y-3">
             {reviews.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-[#E3E8F2] bg-white p-4 text-sm text-muted-foreground">
                 Aucun avis publié par ce client.
               </p>
             ) : (
@@ -631,7 +631,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <CardContent className="p-0">
           <div className="grid gap-3 p-4 md:hidden">
             {txs.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">Aucune transaction.</p>
+              <p className="rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">Aucune transaction.</p>
             ) : (
               txs.map((t) => (
                 <div key={t.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
@@ -643,11 +643,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     <PaymentStatusBadge status={t.status} />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                    <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                       <Money amount={t.amount} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+                    <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDateTime(t.createdAt)}</p>
                     </div>

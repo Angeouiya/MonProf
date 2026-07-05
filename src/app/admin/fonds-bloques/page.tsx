@@ -74,7 +74,7 @@ export default async function AdminFondsBloquesPage() {
         </div>
       )}
 
-      <div className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4 text-sm text-violet-950/78">
+      <div className="rounded-lg border border-violet-100 bg-violet-50/45 p-4 text-sm text-violet-950/78">
         <p className="font-bold text-violet-950">Règle opérationnelle</p>
         <p className="mt-1">
           Un fonds bloqué doit toujours avoir une cause lisible : cours à venir, cours terminé en attente client,
@@ -106,7 +106,7 @@ export default async function AdminFondsBloquesPage() {
                       <Badge variant="outline" className={`shrink-0 ${risk.className}`}>{risk.label}</Badge>
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                       <ProfessorImage
                         photoUrl={b.teacher.photoUrl}
                         name={teacherName}
@@ -130,7 +130,7 @@ export default async function AdminFondsBloquesPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-3">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         {waitingClient ? (
                           <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Validation client</Badge>
@@ -144,15 +144,15 @@ export default async function AdminFondsBloquesPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Montant client</p>
                         <Money amount={b.totalPrice} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Net professeur</p>
                         <Money amount={b.teacherNetAmount} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="col-span-2 rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="col-span-2 rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Bloqué depuis</p>
                         <p className="mt-1 text-xs font-bold text-foreground" title={formatDateTime(b.createdAt)}>{timeAgo(b.createdAt)}</p>
                       </div>
@@ -299,7 +299,7 @@ function SignalCard({
     violet: "border-violet-100 bg-violet-50/75 text-violet-950",
   }[tone];
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <p className="text-xs font-bold uppercase tracking-wide opacity-70">{title}</p>
       <p className="mt-1 text-xl font-black">{value}</p>
       <p className="mt-2 text-sm opacity-75">{description}</p>
@@ -318,19 +318,19 @@ function BlockedActions({
 }) {
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
-      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/reservations/${bookingId}`}>
           <ExternalLink className="mr-1.5 h-4 w-4" />
           Dossier
         </Link>
       </Button>
-      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/professeurs/${teacherId}?tab=cours&bookingId=${bookingId}`}>
           <MessageSquare className="mr-1.5 h-4 w-4" />
           Prof
         </Link>
       </Button>
-      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/reservations/${bookingId}?action=replace`}>
           <UserCog className="mr-1.5 h-4 w-4" />
           Remplacer

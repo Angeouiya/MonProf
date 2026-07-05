@@ -181,7 +181,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             <AmountBox label="Frais retenus" value={booking.cancellationFeeAmount} tone="warning" sub={`${booking.cancellationFeeRate}%`} />
             <AmountBox label="Remboursement client" value={booking.cancellationRefundAmount} tone="primary" />
             {booking.cancellationDetail && (
-              <div className="rounded-2xl border border-orange-100 bg-white p-3 sm:col-span-2">
+              <div className="rounded-lg border border-orange-100 bg-white p-3 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Détail</p>
                 <p className="mt-1 text-sm text-foreground">{booking.cancellationDetail}</p>
               </div>
@@ -200,13 +200,13 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               <AmountBox label="Frais annulation" value={booking.cancellationFeeAmount} tone={booking.cancellationFeeAmount > 0 ? "danger" : "success"} />
             </div>
             {booking.clientRefundRequests.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
                 Le client n'a pas encore renseigné le numéro de remboursement.
               </p>
             ) : (
               <div className="grid gap-3 lg:grid-cols-2">
                 {booking.clientRefundRequests.map((request) => (
-                  <div key={request.id} className="rounded-2xl border border-border bg-white p-4">
+                  <div key={request.id} className="rounded-lg border border-border bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="font-mono text-xs font-bold text-primary">{request.reference}</p>
                       <Badge variant="outline">{clientRefundStatusLabel(request.status)}</Badge>
@@ -218,7 +218,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                       <Detail icon={User} label="Titulaire" value={request.accountName ?? "—"} />
                     </div>
                     {request.note && (
-                      <p className="mt-3 rounded-2xl border border-border bg-white px-3 py-2 text-sm text-muted-foreground">
+                      <p className="mt-3 rounded-lg border border-border bg-white px-3 py-2 text-sm text-muted-foreground">
                         Note client : {request.note}
                       </p>
                     )}
@@ -309,13 +309,13 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             </div>
           )}
           {booking.schoolProgram && (
-            <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-violet-100 bg-violet-50/45 p-3">
+            <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-violet-100 bg-violet-50/45 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-violet-900/65">Programme / contexte scolaire</p>
               <p className="mt-1 whitespace-pre-line text-sm text-violet-950/85">{booking.schoolProgram}</p>
             </div>
           )}
           {booking.needDescription && (
-            <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-amber-100 bg-amber-50/65 p-3">
+            <div className="sm:col-span-2 lg:col-span-3 rounded-lg border border-amber-100 bg-amber-50/65 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/70">Besoin précis du client</p>
               <p className="mt-1 whitespace-pre-line text-sm text-amber-950/85">{booking.needDescription}</p>
             </div>
@@ -366,7 +366,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             commissionRate={booking.commissionRate}
           />
           {booking.isQuoteOnly && (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
+            <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
               <p className="font-black">Dossier sur devis</p>
               <p className="mt-1 text-amber-950/75">
                 Aucun paiement client n'est encore encaissé. L'administration doit valider le prix du cours, le déplacement et les frais éventuels avant paiement.
@@ -394,7 +394,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Propositions de créneau professeur</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             {booking.scheduleProposals.map((proposal) => (
-              <div key={proposal.id} className="rounded-2xl border border-border bg-white p-4">
+              <div key={proposal.id} className="rounded-lg border border-border bg-white p-4">
                 <div className="flex items-start gap-3">
                   <ProfessorImage
                     photoUrl={proposal.teacher.photoUrl}
@@ -418,12 +418,12 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                       <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">Motif professeur : {proposal.reason}</p>
                     )}
                     {proposal.clientResponse && (
-                      <p className="mt-2 rounded-2xl border border-border bg-white px-3 py-2 text-sm text-foreground">
+                      <p className="mt-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground">
                         Réponse client : {proposal.clientResponse}
                       </p>
                     )}
                     {proposal.status === "REJECTED" && (
-                      <Button asChild size="sm" className="mt-3 rounded-2xl">
+                      <Button asChild size="sm" className="mt-3 rounded-lg">
                         <Link href={`/admin/reservations/${booking.id}?action=replace`}>Remplacer ou annuler</Link>
                       </Button>
                     )}
@@ -468,12 +468,12 @@ export default async function ReservationDetailPage({ params }: { params: Promis
         <CardContent className="p-0">
           <div className="grid gap-3 p-4 md:hidden">
             {booking.transactions.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
                 Aucune transaction.
               </p>
             ) : (
               booking.transactions.map((t) => (
-                <div key={t.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white p-4">
+                <div key={t.id} className="space-y-3 rounded-lg border border-violet-100 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-mono text-xs font-bold text-primary">{t.reference}</p>
@@ -483,19 +483,19 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                       <Money amount={t.amount} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Net professeur</p>
                       <Money amount={t.teacherNet} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Commission</p>
                       <Money amount={t.commission} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(t.createdAt)}</p>
                     </div>
@@ -545,7 +545,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Litiges</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {booking.disputes.map((d) => (
-              <div key={d.id} className="rounded-2xl border border-violet-100 bg-white p-3">
+              <div key={d.id} className="rounded-lg border border-violet-100 bg-white p-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground">{d.reason}</p>
                   <Badge variant="outline">{disputeStatusLabel(d.status)}</Badge>
@@ -553,7 +553,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                 <p className="mt-1 text-sm text-muted-foreground">{d.description}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Ouvert par {d.openedBy.name} • {formatDateTime(d.createdAt)}</p>
                 {d.resolution && (
-                  <p className="mt-2 rounded-2xl border border-violet-100 bg-white p-3 text-sm">Résolution: {d.resolution}</p>
+                  <p className="mt-2 rounded-lg border border-violet-100 bg-white p-3 text-sm">Résolution: {d.resolution}</p>
                 )}
                 <Button asChild size="sm" variant="ghost" className="mt-2">
                   <Link href={`/admin/litiges/${d.id}`}>Voir le litige</Link>
@@ -570,7 +570,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <CardHeader><CardTitle className="text-base">Avis client</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {booking.reviews.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-violet-100 bg-white p-3">
+              <div key={r.id} className="rounded-lg border border-violet-100 bg-white p-3">
                 <p className="text-sm font-medium">{r.client.name} — Note: {r.rating}/5</p>
                 {r.comment && <p className="mt-1 text-sm">{r.comment}</p>}
               </div>
@@ -602,7 +602,7 @@ function AmountBox({ label, value, sub, tone = "default" }: { label: string; val
     danger: "border-red-200 bg-red-50/60",
   }[tone];
   return (
-    <div className={`rounded-2xl border ${cls} p-3`}>
+    <div className={`rounded-lg border ${cls} p-3`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-lg font-semibold text-foreground"><Money amount={value} /></p>
       {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}

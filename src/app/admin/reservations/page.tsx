@@ -166,7 +166,7 @@ export default async function AdminReservationsPage({
                       <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalClientPays || b.totalPrice} />}</p>
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                       <ProfessorImage
                         photoUrl={b.teacher.photoUrl}
                         name={b.teacher.professionalName || b.teacher.fullName}
@@ -190,7 +190,7 @@ export default async function AdminReservationsPage({
                       </div>
                     </div>
 
-                    <div className="space-y-2 rounded-3xl border border-blue-100 bg-blue-50/70 p-3">
+                    <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
                       <div className="flex flex-wrap gap-2">
                         <BookingStatusBadge status={b.status} />
                         <PaymentStatusBadge status={b.paymentStatus} quoteOnly={b.isQuoteOnly} />
@@ -404,7 +404,7 @@ function SignalCard({
   }[tone];
   const Icon = tone === "red" ? AlertTriangle : tone === "amber" ? Clock : tone === "violet" ? Wallet : CalendarRange;
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{title}</p>
@@ -436,20 +436,20 @@ function ReservationActions({
   const canPay = paymentVerified && paymentStatus === "TO_PAY_TEACHER";
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
-      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/reservations/${bookingId}`}>
           <ExternalLink className="mr-1.5 h-4 w-4" />
           Dossier
         </Link>
       </Button>
-      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/professeurs/${teacherId}?tab=cours&bookingId=${bookingId}`}>
           <Eye className="mr-1.5 h-4 w-4" />
           Prof
         </Link>
       </Button>
       {canPay && (
-        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
           <Link href={`/admin/reservations/${bookingId}?action=pay`}>
             <Banknote className="mr-1.5 h-4 w-4" />
             Payer
@@ -457,7 +457,7 @@ function ReservationActions({
         </Button>
       )}
       {canReplace && (
-        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+        <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
           <Link href={`/admin/reservations/${bookingId}?action=replace`}>
             <UserCog className="mr-1.5 h-4 w-4" />
             Remplacer

@@ -99,12 +99,12 @@ export function TeacherPayoutRequestForm({
             Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle admin.
           </p>
           {payoutInstructions && (
-            <p className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
+            <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
               Consigne enregistrée : {payoutInstructions}
             </p>
           )}
         </div>
-        <div className="rounded-2xl border border-[#111B4D] bg-white px-3 py-2 text-right">
+        <div className="rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Disponible</p>
           <p className="text-sm font-semibold text-[#111B4D]">{formatFCFA(requestableAmount)}</p>
         </div>
@@ -135,7 +135,7 @@ export function TeacherPayoutRequestForm({
               ))}
             </SelectContent>
           </Select>
-          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-[#E6EAF3] bg-white p-2">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2">
             <PaymentMethodLogo method={method} className="h-9 min-w-20 rounded-xl" />
             <p className="text-xs font-semibold leading-5 text-[#64748B]">
               L'admin paiera uniquement via le moyen choisi après vérification.
@@ -196,7 +196,7 @@ export function TeacherPayoutRequestForm({
           <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
           <span>{pendingRequested > 0 ? `${formatFCFA(pendingRequested)} déjà demandé et en attente.` : "Aucune demande en attente."}</span>
         </div>
-        <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+        <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
           Envoyer la demande
         </Button>

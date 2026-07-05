@@ -41,7 +41,7 @@ export function HomeSearchBar({
             name="q"
             type="search"
             placeholder="Matière, concours, adulte, métier..."
-            className="min-h-12 w-full rounded-2xl border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition placeholder:font-medium placeholder:text-[#64748B] focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+            className="min-h-12 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition placeholder:font-medium placeholder:text-[#64748B] focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           />
         </label>
         <SearchFieldLabel label="Matière">
@@ -59,7 +59,7 @@ export function HomeSearchBar({
                 keywords: group.category.label,
               })),
             }))}
-            triggerClassName="min-h-12 rounded-2xl border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+            triggerClassName="min-h-12 rounded-lg border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           />
         </SearchFieldLabel>
         <SearchFieldLabel label="Niveau">
@@ -77,7 +77,7 @@ export function HomeSearchBar({
                 keywords: group.category.label,
               })),
             }))}
-            triggerClassName="min-h-12 rounded-2xl border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+            triggerClassName="min-h-12 rounded-lg border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           />
         </SearchFieldLabel>
         <label className="min-w-0">
@@ -86,7 +86,7 @@ export function HomeSearchBar({
           </span>
           <select
             name="commune"
-            className="min-h-12 w-full rounded-2xl border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+            className="min-h-12 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           >
             <option value="">Toutes les communes</option>
             {communes.map((commune) => (
@@ -97,7 +97,7 @@ export function HomeSearchBar({
         <Button
           type="submit"
           size="lg"
-          className="min-h-12 w-full rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
+          className="min-h-12 w-full rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
         >
           <Search className="h-4 w-4" />
           Rechercher

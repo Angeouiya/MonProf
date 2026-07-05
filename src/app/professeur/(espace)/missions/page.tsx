@@ -100,7 +100,7 @@ export default async function ProfesseurMissionsPage() {
                         <p className="text-sm font-semibold leading-6 text-[#64748B]">
                           {mission ? "Aucune action immédiate demandée sur cette mission." : "Aucun lien de confirmation actif pour cette réservation."}
                         </p>
-                        <Button asChild className="w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                        <Button asChild className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                           <Link href={`/professeur/missions/${booking.id}`}>
                             Ouvrir le détail
                             <ArrowRight className="h-4 w-4" />
@@ -109,7 +109,7 @@ export default async function ProfesseurMissionsPage() {
                       </div>
                     )}
                     {canRespond && (
-                      <Button asChild variant="ghost" className="mt-2 w-full rounded-2xl bg-white text-[#111B4D]">
+                      <Button asChild variant="ghost" className="mt-2 w-full rounded-lg bg-white text-[#111B4D]">
                         <Link href={`/professeur/missions/${booking.id}`}>
                           Détail complet
                           <ArrowRight className="h-4 w-4" />
@@ -129,7 +129,7 @@ export default async function ProfesseurMissionsPage() {
 
 function MissionInfo({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#64748B]">
         {icon}
         {label}

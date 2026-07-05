@@ -98,7 +98,7 @@ export default async function AdminLitigesPage({
                     <Badge variant="outline" className={`${BADGE_CLS[d.status]} shrink-0`}>{LABELS[d.status]}</Badge>
                   </div>
 
-                  <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                  <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                     <ProfessorImage
                       photoUrl={d.booking.teacher.photoUrl}
                       name={d.booking.teacher.professionalName || d.booking.teacher.fullName}
@@ -123,19 +123,19 @@ export default async function AdminLitigesPage({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Matière</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{d.booking.subjectName}</p>
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                       <Money amount={d.booking.totalPrice} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Ouvert par</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{d.openedBy.name}</p>
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                       <p className="mt-1 text-xs font-bold text-foreground">{timeAgo(d.createdAt)}</p>
                     </div>
@@ -146,13 +146,13 @@ export default async function AdminLitigesPage({
                     <PaymentStatusBadge status={d.booking.paymentStatus} />
                   </div>
 
-                  <Button asChild className="h-11 w-full rounded-2xl">
+                  <Button asChild className="h-11 w-full rounded-lg">
                     <Link href={`/admin/litiges/${d.id}`}>
                       Traiter le litige
                     </Link>
                   </Button>
                   {["OPEN", "INVESTIGATING"].includes(d.status) && (
-                    <Button asChild variant="outline" className="h-11 w-full rounded-2xl">
+                    <Button asChild variant="outline" className="h-11 w-full rounded-lg">
                       <Link href={`/admin/reservations/${d.booking.id}?action=replace`}>
                         Préparer un remplacement
                       </Link>
@@ -261,7 +261,7 @@ function DisputeSummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

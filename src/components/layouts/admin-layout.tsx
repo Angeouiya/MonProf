@@ -105,7 +105,7 @@ export function AdminLayout({
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Menu"
             aria-expanded={open}
@@ -157,7 +157,7 @@ export function AdminLayout({
             <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] overflow-y-auto border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
                 <BrandLogo size="sm" />
-                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
+                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -225,7 +225,7 @@ function SidebarContent({
                       href={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                        "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
                         active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
                       )}
                     >
@@ -245,7 +245,7 @@ function SidebarContent({
         ))}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
+        <div className="flex items-center gap-3 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
             {(userName ?? "A")[0]?.toUpperCase()}
           </div>
@@ -277,7 +277,7 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
       variant="outline"
       size="sm"
       className={cn(
-        "hidden rounded-2xl border bg-white sm:inline-flex",
+        "hidden rounded-lg border bg-white sm:inline-flex",
         summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-white" : "border-[#CAD7F2] text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
       )}
     >
@@ -307,7 +307,7 @@ function RadarPill({
       href={href}
       onClick={onNavigate}
       className={cn(
-        "rounded-2xl border px-2 py-2 transition hover:border-[#111B4D]",
+        "rounded-lg border px-2 py-2 transition hover:border-[#111B4D]",
         danger ? "border-red-200 bg-white text-red-700" : "border-[#E6EAF3] bg-white text-[#475569]"
       )}
     >

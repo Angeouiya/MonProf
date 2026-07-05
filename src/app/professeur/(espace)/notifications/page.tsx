@@ -37,7 +37,7 @@ export default async function ProfesseurNotificationsPage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                         <Bell className="h-4 w-4" />
                       </span>
                       <h2 className="text-base font-semibold text-[#111827]">{notification.title}</h2>

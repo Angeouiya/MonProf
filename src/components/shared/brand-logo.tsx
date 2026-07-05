@@ -66,7 +66,7 @@ export function BrandLogo({
       {!compact && (
         <span
           className={cn(
-            "truncate font-semibold tracking-tight",
+            "truncate font-semibold tracking-normal",
             styles.text,
             tone === "inverse" ? "text-white" : "text-[#111827]",
             textClassName

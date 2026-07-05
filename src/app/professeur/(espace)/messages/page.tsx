@@ -66,7 +66,7 @@ export default async function ProfesseurMessagesPage() {
         title="Messages avec l'administration"
         description="Contactez l'administration Compétence pour une mission, un paiement, une disponibilité ou une situation urgente. Chaque échange est enregistré dans votre fiche."
         action={(
-          <Button asChild className="rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+          <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <a href="#nouveau-message">
               Écrire
               <SendHorizontal className="h-4 w-4" />
@@ -83,7 +83,7 @@ export default async function ProfesseurMessagesPage() {
 
       <PortalCard id="nouveau-message" className="scroll-mt-24">
         <div className="mb-4 flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
             <MessageSquareText className="h-5 w-5" />
           </span>
           <div>

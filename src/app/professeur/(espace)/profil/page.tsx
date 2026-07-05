@@ -44,7 +44,7 @@ export default async function ProfesseurProfilPage() {
         <ProfessorImage photoUrl={profile.photoUrl} name={teacherName} size="xl" verified={profile.badgeVerified} />
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">{teacherName}</h2>
+            <h2 className="text-2xl font-semibold tracking-normal text-[#111827]">{teacherName}</h2>
             <StatusPill status={profile.status} />
           </div>
           <p className="mt-1 text-sm font-bold text-[#64748B]">{profile.jobTitle}</p>
@@ -109,7 +109,7 @@ export default async function ProfesseurProfilPage() {
             <InfoLine label="Prix indicatif séance" value={formatFCFA(profile.pricePerSession)} />
             <InfoLine label="Dernière connexion" value={formatDateTime(profile.portalLastLoginAt)} />
           </div>
-          <p className="mt-4 rounded-2xl border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
+          <p className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
             Les tarifs finaux et les paiements sont contrôlés par l'administration selon la grille tarifaire et les réservations validées.
           </p>
         </PortalCard>
@@ -120,7 +120,7 @@ export default async function ProfesseurProfilPage() {
 
 function ContactTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-3 py-3">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-3">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[#64748B]">{icon}{label}</p>
       <p className="mt-1 break-words text-sm font-semibold text-[#111827]">{value}</p>
     </div>

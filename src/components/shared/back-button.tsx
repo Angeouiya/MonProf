@@ -32,7 +32,7 @@ export function BackButton({ fallbackHref, label = "Retour", className }: BackBu
       size="sm"
       onClick={goBack}
       className={cn(
-        "w-fit rounded-2xl border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white",
+        "w-fit rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white",
         className,
       )}
       aria-label="Retour à la page précédente"

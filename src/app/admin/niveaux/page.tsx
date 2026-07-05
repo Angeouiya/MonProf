@@ -40,7 +40,7 @@ export default async function AdminNiveauxPage() {
 
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         {Object.entries(categoryCounts).map(([label, count]) => (
-          <div key={label} className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+          <div key={label} className="rounded-lg border border-violet-100 bg-violet-50/45 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-violet-950/60">{label}</p>
             <p className="mt-1 text-2xl font-black text-violet-950">{count}</p>
             <p className="mt-1 text-xs text-violet-950/65">niveau(x)</p>
@@ -48,7 +48,7 @@ export default async function AdminNiveauxPage() {
         ))}
       </div>
 
-      <div className="rounded-3xl border border-amber-100 bg-amber-50/55 p-4 text-sm text-amber-950/80">
+      <div className="rounded-lg border border-amber-100 bg-amber-50/55 p-4 text-sm text-amber-950/80">
         <p className="font-bold text-amber-950">Parcours ouvert</p>
         <p className="mt-1">
           Les niveaux ne sont pas limités au primaire/collège/lycée : l'admin peut gérer l'université, la formation professionnelle,

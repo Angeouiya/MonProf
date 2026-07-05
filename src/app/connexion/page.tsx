@@ -23,8 +23,8 @@ const ADMIN_BENEFITS = [
   { icon: Bell, title: "Notifications critiques", text: "Alertes, relances PayDunya, litiges et actions à traiter sont visibles dès l'entrée." },
 ];
 
-const FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
-const PASSWORD_FIELD_CLASS = "h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
+const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
 
 function ConnexionContent() {
   const router = useRouter();
@@ -154,7 +154,7 @@ function ConnexionContent() {
                 <ShieldCheck className="h-3.5 w-3.5" />
                 {heroBadge}
               </span>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-[#111827] text-balance">
+              <h1 className="mt-5 text-4xl font-semibold tracking-normal text-[#111827] text-balance">
                 {heroTitle}
               </h1>
               <p className="mt-4 max-w-lg text-base font-medium leading-7 text-[#64748B]">
@@ -162,7 +162,7 @@ function ConnexionContent() {
               </p>
               <div className="mt-8 grid gap-3">
                 {benefits.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4">
+                  <div key={item.title} className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <item.icon className="h-5 w-5" />
                     </div>
@@ -178,10 +178,10 @@ function ConnexionContent() {
 
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E2A78] text-white">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[#1E2A78] text-white">
                 {isAdminAuth ? <ShieldCheck className="h-6 w-6" /> : <GraduationCap className="h-6 w-6" />}
               </div>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">
                 {formTitle}
               </h1>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
@@ -191,7 +191,7 @@ function ConnexionContent() {
 
           <div className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-6">
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -250,7 +250,7 @@ function ConnexionContent() {
               <Button
                 type="submit"
                 size="lg"
-                className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+                className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
                 disabled={loading}
               >
                 {loading ? (
@@ -272,13 +272,13 @@ function ConnexionContent() {
                 <span>Pas encore de compte ?</span>
                 <Link
                   href="/inscription"
-                  className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white px-4 font-semibold text-[#111B4D] transition hover:bg-white"
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 font-semibold text-[#111B4D] transition hover:bg-white"
                 >
                   Créer un compte
                 </Link>
               </p>
             )}
-            <div className="mt-5 grid gap-2 rounded-2xl border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
+            <div className="mt-5 grid gap-2 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
               <p className="font-semibold uppercase tracking-wide text-[#111B4D]">Après connexion</p>
               <p>
                 {isAdminAuth
@@ -297,7 +297,7 @@ function ConnexionContent() {
               <button
                 type="button"
                 onClick={isAdminAuth ? fillDemoAdmin : fillDemoClient}
-                className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
               >
                 <div>
                   <p className="font-semibold text-[#111827]">{isAdminAuth ? "Compte administrateur" : "Compte client"}</p>

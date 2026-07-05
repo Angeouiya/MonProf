@@ -263,12 +263,12 @@ export default async function CentreOperationnelPage() {
         <CardContent className="p-0">
           <div className="grid gap-3 p-4 md:hidden">
             {disputedBookings.length === 0 ? (
-              <p className="rounded-2xl border border-violet-100 bg-white p-3 text-sm text-muted-foreground">Aucun litige ouvert.</p>
+              <p className="rounded-lg border border-violet-100 bg-white p-3 text-sm text-muted-foreground">Aucun litige ouvert.</p>
             ) : (
               disputedBookings.map((booking) => {
                 const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
                 return (
-                  <div key={booking.id} className="space-y-4 rounded-3xl border border-red-100 bg-white p-4">
+                  <div key={booking.id} className="space-y-4 rounded-lg border border-red-100 bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <Link href={`/admin/reservations/${booking.id}`} className="block font-mono text-xs font-bold text-primary">
@@ -279,7 +279,7 @@ export default async function CentreOperationnelPage() {
                       <BookingStatusBadge status={booking.status} />
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-3 rounded-3xl border border-violet-100 bg-violet-50/50 p-3">
+                    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
                       <ProfessorImage
                         photoUrl={booking.teacher.photoUrl}
                         name={teacherName}
@@ -296,17 +296,17 @@ export default async function CentreOperationnelPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                         <Money amount={booking.totalPrice} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Mis à jour</p>
                         <p className="mt-1 truncate text-xs font-bold text-foreground">{timeAgo(booking.updatedAt)}</p>
                       </div>
                     </div>
 
-                    <Button asChild className="h-11 w-full rounded-2xl">
+                    <Button asChild className="h-11 w-full rounded-lg">
                       <Link href={`/admin/reservations/${booking.id}`}>Traiter le litige</Link>
                     </Button>
                   </div>
@@ -371,7 +371,7 @@ function OpsCard({ title, icon: Icon, children }: { title: string; icon: any; ch
 }
 
 function EmptyLine({ label }: { label: string }) {
-  return <p className="rounded-2xl border border-violet-100 bg-white p-3 text-sm text-muted-foreground">{label}</p>;
+  return <p className="rounded-lg border border-violet-100 bg-white p-3 text-sm text-muted-foreground">{label}</p>;
 }
 
 function TeacherLine({
@@ -395,7 +395,7 @@ function TeacherLine({
     levelName: booking.levelName,
   } : null;
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white p-3 transition hover:-translate-y-0.5">
+    <div className="rounded-lg border border-violet-100 bg-white p-3 transition">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Link href={actionHref || `/admin/professeurs/${teacher.id}`} className="flex min-w-0 items-center gap-3">
           <ProfessorImage photoUrl={teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={teacher.badgeVerified} />
@@ -437,7 +437,7 @@ function BookingLine({
     levelName: booking.levelName,
   };
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white p-3 transition hover:-translate-y-0.5">
+    <div className="rounded-lg border border-violet-100 bg-white p-3 transition">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Link href={href} className="flex min-w-0 items-center gap-3">
           <ProfessorImage photoUrl={booking.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={booking.teacher.badgeVerified} />
@@ -486,7 +486,7 @@ function MissionLine({ mission }: { mission: any }) {
     levelName: mission.booking.levelName,
   };
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white p-3 transition hover:-translate-y-0.5">
+    <div className="rounded-lg border border-violet-100 bg-white p-3 transition">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Link href={`/admin/reservations/${mission.bookingId}`} className="flex min-w-0 items-center gap-3">
           <ProfessorImage photoUrl={mission.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={mission.teacher.badgeVerified} />

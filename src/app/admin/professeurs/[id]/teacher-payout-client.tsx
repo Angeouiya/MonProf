@@ -611,7 +611,7 @@ export function TeacherPayoutClient({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className={`rounded-3xl border p-4 ${accountingState.className}`}>
+        <div className={`rounded-lg border p-4 ${accountingState.className}`}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -624,7 +624,7 @@ export function TeacherPayoutClient({
               </div>
               <p className="mt-3 text-lg font-black leading-snug">{accountingState.title}</p>
               <p className="mt-1 text-sm font-medium opacity-80">{accountingState.detail}</p>
-              <p className="mt-3 rounded-2xl border border-white bg-white px-3 py-2 text-sm font-semibold">
+              <p className="mt-3 rounded-lg border border-white bg-white px-3 py-2 text-sm font-semibold">
                 {accountingState.action}
               </p>
             </div>
@@ -650,7 +650,7 @@ export function TeacherPayoutClient({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-blue-100 bg-blue-50/65 p-4">
+        <div className="rounded-lg border border-blue-100 bg-blue-50/65 p-4">
           <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <p className="text-sm font-black text-blue-950">Règle de calcul interne</p>
@@ -667,12 +667,12 @@ export function TeacherPayoutClient({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4">
+          <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4">
             <Wallet className="h-5 w-5 text-blue-700" />
             <p className="mt-3 text-xs font-bold uppercase tracking-wide text-blue-900/70">Déjà payé</p>
             <p className="mt-1 text-xl font-black text-blue-950">{formatFCFA(paidAmount)}</p>
           </div>
-          <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-4">
+          <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-4">
             <Banknote className="h-5 w-5 text-amber-700" />
             <p className="mt-3 text-xs font-bold uppercase tracking-wide text-amber-900/70">Net à payer</p>
             <p className="mt-1 text-xl font-black text-amber-950">{formatFCFA(dueAmount)}</p>
@@ -685,7 +685,7 @@ export function TeacherPayoutClient({
         </div>
 
         {targetRow && (
-          <div className={targetPayableRow ? "rounded-3xl border border-blue-100 bg-blue-50/75 p-4" : "rounded-3xl border border-amber-100 bg-amber-50/80 p-4"}>
+          <div className={targetPayableRow ? "rounded-lg border border-blue-100 bg-blue-50/75 p-4" : "rounded-lg border border-amber-100 bg-amber-50/80 p-4"}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className={targetPayableRow ? "text-sm font-black text-blue-950" : "text-sm font-black text-amber-950"}>
@@ -705,7 +705,7 @@ export function TeacherPayoutClient({
         )}
 
         {payoutRequests.length > 0 && (
-          <div className="rounded-3xl border border-violet-100 bg-white p-4">
+          <div className="rounded-lg border border-violet-100 bg-white p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Demandes de paiement reçues</p>
@@ -723,7 +723,7 @@ export function TeacherPayoutClient({
                 const canUseRequest = isPending && request.amount <= payoutLimit;
                 const isActive = activeRequestId === request.id;
                 return (
-                  <div key={request.id} className={isActive ? "rounded-2xl border border-[#111B4D] bg-white p-3" : "rounded-2xl border border-[#E3E8F2] bg-white p-3"}>
+                  <div key={request.id} className={isActive ? "rounded-lg border border-[#111B4D] bg-white p-3" : "rounded-lg border border-[#E3E8F2] bg-white p-3"}>
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -743,7 +743,7 @@ export function TeacherPayoutClient({
                         </p>
                          {request.note && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{request.note}</p>}
                          {request.adminNote && (
-                           <p className="mt-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
+                           <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
                              Motif admin : {request.adminNote}
                            </p>
                          )}
@@ -778,7 +778,7 @@ export function TeacherPayoutClient({
           </div>
         )}
 
-        <div className="rounded-3xl border border-violet-100 bg-violet-50/35 p-4">
+        <div className="rounded-lg border border-violet-100 bg-violet-50/35 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-black text-foreground">Contrôle comptable et saisie du versement</p>
@@ -835,7 +835,7 @@ export function TeacherPayoutClient({
           </div>
           <div className="mt-4 grid gap-2">
             {payableRows.slice(0, 4).map((row) => (
-              <div key={row.id} className="flex flex-col gap-2 rounded-2xl border border-white bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <div key={row.id} className="flex flex-col gap-2 rounded-lg border border-white bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs font-bold text-primary">{row.reference}</p>
                   <p className="truncate font-semibold text-foreground">{row.subjectName} - {row.clientName}</p>
@@ -847,14 +847,14 @@ export function TeacherPayoutClient({
               </div>
             ))}
             {payableRows.length === 0 && (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-white p-3 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-white p-3 text-sm text-muted-foreground">
                 Aucun paiement immédiat. Les montants sont soit déjà soldés, soit encore bloqués, soit en contrôle.
               </p>
             )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-violet-100 bg-white p-4">
+        <div className="rounded-lg border border-violet-100 bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-black text-foreground">Pilotage comptable filtré</p>
@@ -906,7 +906,7 @@ export function TeacherPayoutClient({
 
           <div className="mt-4 grid gap-2">
             {filteredLedgerRows.slice(0, 8).map((row) => (
-              <div key={row.id} className="grid gap-3 rounded-2xl border border-violet-100 bg-violet-50/30 p-3 md:grid-cols-[1fr_auto] md:items-center">
+              <div key={row.id} className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/30 p-3 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs font-bold text-primary">{row.reference}</p>
                   <p className="mt-1 truncate text-sm font-black text-foreground">{row.clientName} - {row.subjectName}</p>
@@ -923,12 +923,12 @@ export function TeacherPayoutClient({
               </div>
             ))}
             {filteredLedgerRows.length > 8 && (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/25 p-3 text-xs font-medium text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/25 p-3 text-xs font-medium text-muted-foreground">
                 +{filteredLedgerRows.length - 8} autre(s) ligne(s) dans l'export et le relevé copié.
               </p>
             )}
             {filteredLedgerRows.length === 0 && (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/25 p-4 text-center text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/25 p-4 text-center text-sm text-muted-foreground">
                 Aucune ligne comptable ne correspond aux filtres.
               </p>
             )}
@@ -936,8 +936,8 @@ export function TeacherPayoutClient({
         </div>
 
         {dueAmount > 0 ? (
-          <div className="rounded-3xl border border-violet-100 bg-white p-4">
-            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-lg border border-violet-100 bg-white p-4">
+            <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Saisir un versement réel au professeur</p>
                 <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
@@ -948,7 +948,7 @@ export function TeacherPayoutClient({
                 Déduction automatique
               </Badge>
             </div>
-            <div className="mb-4 rounded-3xl border border-blue-100 bg-blue-50/70 p-4">
+            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="flex items-center gap-2 text-sm font-black text-blue-950">
@@ -965,15 +965,15 @@ export function TeacherPayoutClient({
                 </Button>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-blue-100 bg-white p-3">
+                <div className="rounded-lg border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">À verser maintenant</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(cleanAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-white p-3">
+                <div className="rounded-lg border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Plafond autorisé</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(payoutLimit)}</p>
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-white p-3">
+                <div className="rounded-lg border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Reste après opération</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(projectedRemainingAfterPayment)}</p>
                 </div>
@@ -1110,12 +1110,12 @@ export function TeacherPayoutClient({
             </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4 text-sm font-medium text-blue-900">
+          <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-sm font-medium text-blue-900">
             Aucun reste à payer pour ce professeur. Le champ de saisie se réactive dès qu'une réservation passe au statut À payer.
           </div>
         )}
 
-        <div className="rounded-3xl border border-violet-100 bg-white p-4">
+        <div className="rounded-lg border border-violet-100 bg-white p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-black text-foreground">Relevé comptable chronologique</p>
@@ -1129,12 +1129,12 @@ export function TeacherPayoutClient({
           </div>
           <div className="mt-4 grid gap-3">
             {accountingTimeline.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-4 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-4 text-sm text-muted-foreground">
                 Aucun mouvement comptable pour ce professeur.
               </p>
             ) : (
               accountingTimeline.map((item) => (
-                <div key={item.id} className="grid gap-3 rounded-2xl border border-violet-100 bg-violet-50/30 p-3 sm:grid-cols-[140px_1fr_auto] sm:items-center">
+                <div key={item.id} className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/30 p-3 sm:grid-cols-[140px_1fr_auto] sm:items-center">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-violet-950/55">Date</p>
                     <p className="mt-1 text-sm font-semibold text-violet-950">{formatDateTime(item.date)}</p>
@@ -1168,11 +1168,11 @@ export function TeacherPayoutClient({
         <div className="space-y-3">
           <p className="text-sm font-bold text-foreground">Factures / reçus de paiement</p>
           {records.length === 0 ? (
-            <p className="rounded-3xl border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">Aucun versement interne enregistré.</p>
+            <p className="rounded-lg border border-dashed border-violet-100 p-4 text-sm text-muted-foreground">Aucun versement interne enregistré.</p>
           ) : (
             records.map((record) => {
               return (
-                <div key={record.id} className="rounded-3xl border border-violet-100 bg-white p-4">
+                <div key={record.id} className="rounded-lg border border-violet-100 bg-white p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-mono text-sm font-bold text-foreground">{record.reference}</p>
@@ -1198,7 +1198,7 @@ export function TeacherPayoutClient({
                   {record.note && <p className="mt-2 text-sm text-muted-foreground">{record.note}</p>}
                   <div className="mt-3 grid gap-2">
                     {record.allocations.map((allocation) => (
-                      <div key={allocation.id} className="flex flex-col gap-1 rounded-2xl bg-violet-50/60 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div key={allocation.id} className="flex flex-col gap-1 rounded-lg bg-violet-50/60 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <span className="font-medium text-violet-950">
                           {allocation.booking.reference} - {allocation.booking.subjectName} ({allocation.booking.levelName})
                         </span>
@@ -1233,7 +1233,7 @@ function escapeCsvValue(value: string | number) {
 
 function MiniLedgerPill({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={strong ? "rounded-2xl border border-blue-200 bg-white px-3 py-2" : "rounded-2xl border border-blue-100 bg-white px-3 py-2"}>
+    <div className={strong ? "rounded-lg border border-blue-200 bg-white px-3 py-2" : "rounded-lg border border-blue-100 bg-white px-3 py-2"}>
       <p className="text-[10px] font-bold uppercase tracking-wide text-blue-950/55">{label}</p>
       <p className={strong ? "mt-0.5 whitespace-nowrap text-sm font-black text-blue-950" : "mt-0.5 whitespace-nowrap text-sm font-bold text-blue-950/82"}>{value}</p>
     </div>
@@ -1242,7 +1242,7 @@ function MiniLedgerPill({ label, value, strong = false }: { label: string; value
 
 function FilteredLedgerMetric({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/65 p-3" : "rounded-2xl border border-violet-100 bg-violet-50/35 p-3"}>
+    <div className={danger ? "rounded-lg border border-red-100 bg-red-50/65 p-3" : "rounded-lg border border-violet-100 bg-violet-50/35 p-3"}>
       <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={danger ? "mt-1 text-sm font-black text-red-800" : "mt-1 text-sm font-black text-foreground"}>{value}</p>
     </div>
@@ -1274,7 +1274,7 @@ function AccountingControlTile({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <Icon className={`h-5 w-5 ${iconClass}`} />
       <p className="mt-3 text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-lg font-black">{formatFCFA(amount)}</p>

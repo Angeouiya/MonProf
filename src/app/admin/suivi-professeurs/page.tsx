@@ -141,7 +141,7 @@ export default async function SuiviProfesseursPage() {
 
                 <TeacherQualityScore score={score} />
 
-                <div className={decision.tone === "red" ? "rounded-3xl border border-red-100 bg-red-50/75 p-4" : decision.tone === "amber" ? "rounded-3xl border border-amber-100 bg-amber-50/75 p-4" : "rounded-3xl border border-blue-100 bg-blue-50/65 p-4"}>
+                <div className={decision.tone === "red" ? "rounded-lg border border-red-100 bg-red-50/75 p-4" : decision.tone === "amber" ? "rounded-lg border border-amber-100 bg-amber-50/75 p-4" : "rounded-lg border border-blue-100 bg-blue-50/65 p-4"}>
                   <p className={decision.tone === "red" ? "text-xs font-bold uppercase tracking-wide text-red-900/65" : decision.tone === "amber" ? "text-xs font-bold uppercase tracking-wide text-amber-900/65" : "text-xs font-bold uppercase tracking-wide text-blue-900/65"}>
                     Action recommandée
                   </p>
@@ -151,52 +151,52 @@ export default async function SuiviProfesseursPage() {
                   <p className={decision.tone === "red" ? "mt-1 text-xs text-red-950/72" : decision.tone === "amber" ? "mt-1 text-xs text-amber-950/72" : "mt-1 text-xs text-blue-950/72"}>
                     {decision.description}
                   </p>
-                  <Button asChild size="sm" variant="outline" className="mt-3 h-10 w-full rounded-2xl bg-white">
+                  <Button asChild size="sm" variant="outline" className="mt-3 h-10 w-full rounded-lg bg-white">
                     <Link href={decision.href}>{decision.actionLabel}</Link>
                   </Button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Cours</p>
                     <p className="mt-1 font-black tabular-nums">{teacher.bookings.length}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Réalisés</p>
                     <p className="mt-1 font-black tabular-nums">{realized}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Retards</p>
                     <p className="mt-1 font-black tabular-nums">{late}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Tâches</p>
                     <p className="mt-1 font-black tabular-nums">{openTasks}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Annul.</p>
                     <p className="mt-1 font-black tabular-nums">{cancelled}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Litiges</p>
                     <p className="mt-1 font-black tabular-nums">{disputes}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Avert.</p>
                     <p className="mt-1 font-black tabular-nums">{teacher.warnings.length}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Critiques</p>
                     <p className="mt-1 font-black tabular-nums">{criticalTasks}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-2xl border border-violet-100 bg-violet-50/45 px-3 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/45 px-3 py-2">
                     <p className="text-[11px] font-medium text-muted-foreground">Fonds bloqués</p>
                     <Money amount={blocked} className="mt-1 text-xs font-black" />
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-violet-50/45 px-3 py-2">
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/45 px-3 py-2">
                     <p className="text-[11px] font-medium text-muted-foreground">À payer</p>
                     <Money amount={toPay} className="mt-1 text-xs font-black" />
                     {paid > 0 && <p className="mt-1 text-[11px] text-muted-foreground">Payé: {paid.toLocaleString("fr-FR")} FCFA</p>}
@@ -204,30 +204,30 @@ export default async function SuiviProfesseursPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button asChild size="sm" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}`}><Eye className="mr-1.5 h-4 w-4" /> Fiche</Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=notify`}><Bell className="mr-1.5 h-4 w-4" /> Notifier</Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=warning`}><Siren className="mr-1.5 h-4 w-4" /> Avertir</Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=sanction`}><ShieldAlert className="mr-1.5 h-4 w-4" /> Sanction</Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=paiements`}><Wallet className="mr-1.5 h-4 w-4" /> Payer</Link>
                   </Button>
                   {activeBooking && (
-                    <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                    <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                       <Link href={`/admin/reservations/${activeBooking.id}?action=replace`}><RefreshCw className="mr-1.5 h-4 w-4" /> Remplacer</Link>
                     </Button>
                   )}
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=suspend`}><UserX className="mr-1.5 h-4 w-4" /> Suspendre</Link>
                   </Button>
-                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-2xl">
+                  <Button asChild size="sm" variant="outline" className="h-10 flex-1 rounded-lg">
                     <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=block`}><ShieldAlert className="mr-1.5 h-4 w-4" /> Bloquer</Link>
                   </Button>
                 </div>
@@ -282,7 +282,7 @@ export default async function SuiviProfesseursPage() {
                     <TableCell><TeacherStatusBadge status={teacher.status} /></TableCell>
                     <TableCell><RiskBadge risk={risk} /></TableCell>
                     <TableCell className="min-w-60">
-                      <Link href={decision.href} className="block rounded-2xl border border-violet-100 bg-violet-50/35 px-3 py-2 transition hover:bg-violet-50">
+                      <Link href={decision.href} className="block rounded-lg border border-violet-100 bg-violet-50/35 px-3 py-2 transition hover:bg-violet-50">
                         <p className="text-xs font-black text-foreground">{decision.title}</p>
                         <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">{decision.description}</p>
                       </Link>
@@ -366,7 +366,7 @@ function SummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

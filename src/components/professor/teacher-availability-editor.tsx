@@ -88,10 +88,10 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
           <Metric label="Validation" value="Admin" detail="Chaque mise à jour est historisée" />
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:w-[360px]">
-          <Button type="button" variant="outline" className="rounded-2xl bg-white" onClick={() => setPreset("weekdays")}>Jours ouvrés</Button>
-          <Button type="button" variant="outline" className="rounded-2xl bg-white" onClick={() => setPreset("weekends")}>Week-end</Button>
-          <Button type="button" variant="outline" className="rounded-2xl bg-white" onClick={() => setPreset("evenings")}>Soirs</Button>
-          <Button type="button" variant="ghost" className="rounded-2xl bg-white" onClick={() => setPreset("clear")}>Tout vider</Button>
+          <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekdays")}>Jours ouvrés</Button>
+          <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekends")}>Week-end</Button>
+          <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("evenings")}>Soirs</Button>
+          <Button type="button" variant="ghost" className="rounded-lg bg-white" onClick={() => setPreset("clear")}>Tout vider</Button>
         </div>
       </div>
 
@@ -118,7 +118,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
                       key={slot.key}
                       type="button"
                       onClick={() => updateSlot(day.key, slot.key, !checked)}
-                      className={`min-h-11 rounded-2xl border px-2 py-2 text-center text-xs font-semibold transition ${checked ? "border-[#111B4D] bg-[#111B4D] text-white" : "border-[#E6EAF3] bg-white text-[#475569]"}`}
+                      className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${checked ? "border-[#111B4D] bg-[#111B4D] text-white" : "border-[#E6EAF3] bg-white text-[#475569]"}`}
                       aria-pressed={checked}
                     >
                       {slot.shortLabel}
@@ -169,7 +169,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
       </div>
 
       <div className="sticky bottom-20 z-10 flex justify-end rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3 lg:bottom-3">
-        <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
+        <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Enregistrer les disponibilités
         </Button>
@@ -180,7 +180,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
 
 function Metric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
   return (
-    <div className="rounded-2xl border border-[#E6EAF3] bg-white p-3">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
       <p className="text-[11px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 text-xl font-semibold text-[#111B4D]">{value}</p>
       <p className="mt-1 text-xs font-semibold text-[#64748B]">{detail}</p>

@@ -44,7 +44,7 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
       {!token && (
-        <div className="rounded-2xl border border-red-200 bg-white p-3 text-sm font-semibold text-red-700">
+        <div className="rounded-lg border border-red-200 bg-white p-3 text-sm font-semibold text-red-700">
           Lien absent. Demandez un nouveau lien de réinitialisation.
         </div>
       )}
@@ -56,7 +56,7 @@ export function ResetPasswordForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="new-password"
-          className="mt-1.5 h-11 rounded-2xl border-[#DDE6F7]"
+          className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
           required
         />
       </div>
@@ -68,11 +68,11 @@ export function ResetPasswordForm() {
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           autoComplete="new-password"
-          className="mt-1.5 h-11 rounded-2xl border-[#DDE6F7]"
+          className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
           required
         />
       </div>
-      <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
+      <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
         <p className={password.length >= 6 ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
           6 caractères minimum
@@ -82,7 +82,7 @@ export function ResetPasswordForm() {
           Confirmation identique
         </p>
       </div>
-      <Button type="submit" disabled={!valid || loading} className="min-h-11 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+      <Button type="submit" disabled={!valid || loading} className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
         Modifier le mot de passe
       </Button>

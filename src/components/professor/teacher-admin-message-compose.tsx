@@ -78,7 +78,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
             onChange={(event) => setSubject(event.target.value)}
             maxLength={140}
             placeholder="Ex : précision sur une mission, paiement, indisponibilité..."
-            className="min-h-12 rounded-2xl border-[#D7DEE9] bg-white"
+            className="min-h-12 rounded-lg border-[#D7DEE9] bg-white"
           />
         </div>
         <div className="space-y-1.5">
@@ -87,7 +87,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
             id="teacher-admin-priority"
             value={priority}
             onChange={(event) => setPriority(event.target.value)}
-            className="min-h-12 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
+            className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
           >
             {priorities.map((item) => (
               <option key={item.value} value={item.value}>{item.label}</option>
@@ -102,7 +102,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
           id="teacher-admin-booking"
           value={bookingId}
           onChange={(event) => setBookingId(event.target.value)}
-          className="min-h-12 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
+          className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
         >
           <option value="">Aucune mission spécifique</option>
           {bookings.map((booking) => (
@@ -122,12 +122,12 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
           onChange={(event) => setMessage(event.target.value)}
           maxLength={2500}
           placeholder="Expliquez clairement la situation. L'administration verra ce message dans votre fiche professeur."
-          className="rounded-2xl border-[#D7DEE9] bg-white"
+          className="rounded-lg border-[#D7DEE9] bg-white"
         />
         <p className="text-xs font-semibold text-[#64748B]">{message.trim().length}/2500 caractères</p>
       </div>
 
-      <Button type="submit" disabled={loading} className="min-h-12 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
+      <Button type="submit" disabled={loading} className="min-h-12 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
         Envoyer à l'administration
       </Button>

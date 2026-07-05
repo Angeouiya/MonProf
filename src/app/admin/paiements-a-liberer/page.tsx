@@ -89,7 +89,7 @@ export default async function AdminPaiementsALibererPage() {
         </div>
       )}
 
-      <div className="rounded-3xl border border-amber-100 bg-amber-50/55 p-4 text-sm text-amber-950/80">
+      <div className="rounded-lg border border-amber-100 bg-amber-50/55 p-4 text-sm text-amber-950/80">
         <p className="font-bold text-amber-950">Règle de libération</p>
         <p className="mt-1">
           Le paiement professeur est libérable uniquement après validation client ou décision admin. Les retenues restent
@@ -134,7 +134,7 @@ export default async function AdminPaiementsALibererPage() {
                     </Link>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-blue-100 bg-blue-50/70 p-3">
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
                     <BookingStatusBadge status={b.status} />
                     {b.clientValidatedAt && (
                       <Badge variant="outline" className={hoursSince(b.clientValidatedAt, now) >= 48 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-blue-200 bg-blue-50 text-blue-700"}>
@@ -147,7 +147,7 @@ export default async function AdminPaiementsALibererPage() {
                     <MobileAmount label="Déjà payé" amount={paid} muted={paid === 0} />
                     <MobileAmount label="Reste net" amount={remaining} strong />
                     {retained > 0 && <MobileAmount label="Retenu" amount={retained} danger />}
-                    <div className="rounded-2xl border border-violet-100 bg-violet-50/60 px-3 py-2">
+                    <div className="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Validation client</p>
                       <p className="mt-1 text-xs font-semibold text-foreground">
                         {b.clientValidatedAt ? timeAgo(b.clientValidatedAt) : "À vérifier"}
@@ -156,7 +156,7 @@ export default async function AdminPaiementsALibererPage() {
                   </div>
 
                   {partiallyPaid && (
-                    <p className="rounded-2xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
                       Paiement partiel ou retenue déjà enregistré.
                     </p>
                   )}
@@ -272,7 +272,7 @@ function SignalCard({
     violet: "border-violet-100 bg-violet-50/75 text-violet-950",
   }[tone];
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <p className="text-xs font-bold uppercase tracking-wide opacity-70">{title}</p>
       <p className="mt-1 text-xl font-black">{value}</p>
       <p className="mt-2 text-sm opacity-75">{description}</p>
@@ -296,13 +296,13 @@ function ReleaseActions({
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
       <PayTeacherButton bookingId={bookingId} amount={amount} teacherName={teacherName} />
-      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/professeurs/${teacherId}?tab=paiements&bookingId=${bookingId}`}>
           <Wallet className="mr-1.5 h-4 w-4" />
           Comptabilité
         </Link>
       </Button>
-      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-2xl" : undefined}>
+      <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/reservations/${bookingId}`}>
           <ExternalLink className="mr-1.5 h-4 w-4" />
           Dossier
@@ -326,7 +326,7 @@ function MobileAmount({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+    <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
       <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       <Money
         amount={amount}

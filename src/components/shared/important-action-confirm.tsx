@@ -77,7 +77,7 @@ export function ImportantActionConfirm({
         </AlertDialogHeader>
 
         {notices.length > 0 && (
-          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111827]">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111827]">
             <div className="flex items-center gap-2 font-semibold text-[#111B4D]">
               <ShieldCheck className="h-4 w-4" />
               À vérifier avant de continuer
@@ -94,11 +94,11 @@ export function ImportantActionConfirm({
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel className="min-h-11 rounded-2xl" disabled={submitting}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel className="min-h-11 rounded-lg" disabled={submitting}>{cancelLabel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={submitting}
             className={cn(
-              "min-h-11 rounded-2xl",
+              "min-h-11 rounded-lg",
               danger ? "bg-[#B42318] text-white hover:bg-[#971B12]" : "bg-[#111B4D] text-white hover:bg-[#1E2A78]",
             )}
             onClick={(event) => {

@@ -91,7 +91,7 @@ export default async function ProfesseurAvisPage() {
             </div>
             <div className="rounded-[1.15rem] border border-[#111B4D] bg-white px-5 py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note admin</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-[#111B4D]">
+              <p className="mt-1 text-3xl font-semibold tracking-normal text-[#111B4D]">
                 {Number(profile?.adminRating ?? 0).toFixed(1)}/5
               </p>
             </div>

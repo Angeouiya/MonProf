@@ -157,29 +157,29 @@ export default async function AdminAvisPage({
                     </div>
 
                     {r.comment ? (
-                      <p className="rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-sm leading-relaxed text-foreground">
+                      <p className="rounded-lg border border-violet-100 bg-violet-50/50 p-3 text-sm leading-relaxed text-foreground">
                         {r.comment}
                       </p>
                     ) : (
-                      <p className="rounded-2xl border border-dashed border-violet-100 bg-violet-50/30 p-3 text-sm text-muted-foreground">
+                      <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-3 text-sm text-muted-foreground">
                         Aucun commentaire laissé par le client.
                       </p>
                     )}
 
                     {r.adminNote && (
-                      <div className="rounded-2xl border border-blue-100 bg-blue-50/55 p-3 text-sm">
+                      <div className="rounded-lg border border-blue-100 bg-blue-50/55 p-3 text-sm">
                         <p className="text-[11px] font-bold uppercase tracking-wide text-blue-900/65">Note admin</p>
                         <p className="mt-1 leading-relaxed text-blue-950">{r.adminNote}</p>
                       </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Cours</p>
                         <p className="mt-1 truncate text-xs font-bold text-foreground">{r.booking.subjectName}</p>
                         <p className="truncate text-[11px] text-muted-foreground">{r.booking.levelName}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                         <p className="mt-1 text-xs font-bold text-foreground">{formatDate(r.createdAt)}</p>
                         <Link href={`/admin/reservations/${r.booking.id}`} className="block truncate text-[11px] font-medium text-primary">
@@ -199,7 +199,7 @@ export default async function AdminAvisPage({
                       comment={r.comment}
                     />
 
-                    <Button asChild variant="outline" className="h-11 w-full rounded-2xl">
+                    <Button asChild variant="outline" className="h-11 w-full rounded-lg">
                       <Link href={`/admin/professeurs/${r.teacher.id}?tab=avis&bookingId=${r.booking.id}`}>
                         Voir la fiche professeur
                       </Link>
@@ -336,7 +336,7 @@ function ReviewSummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 ${toneClass}`}>
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

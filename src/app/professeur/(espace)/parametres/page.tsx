@@ -35,7 +35,7 @@ export default async function ProfesseurParametresPage() {
         title="Paramètres"
         description="Sécurité de votre accès professeur léger. Aucun OTP n'est demandé : le changement se fait depuis la session connectée."
         action={
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
             <Link href="/professeur/profil">Voir mon profil</Link>
           </Button>
         }
@@ -45,7 +45,7 @@ export default async function ProfesseurParametresPage() {
         <div className="space-y-5">
         <PortalCard>
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
               <Lock className="h-5 w-5" />
             </span>
             <div>
@@ -60,7 +60,7 @@ export default async function ProfesseurParametresPage() {
 
         <PortalCard>
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
               <WalletCards className="h-5 w-5" />
             </span>
             <div>
@@ -89,7 +89,7 @@ export default async function ProfesseurParametresPage() {
             <InfoLine label="Accès portail" value={profile.portalAccessEnabled ? "Activé" : "Désactivé"} />
             <InfoLine label="Dernière connexion" value={formatDateTime(profile.portalLastLoginAt)} />
           </div>
-          <div className="mt-4 grid gap-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
+          <div className="mt-4 grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
             <p className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
               L'administration garde la main sur vos réservations, paiements et notifications.

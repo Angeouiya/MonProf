@@ -38,7 +38,7 @@ export default async function AdminCommunesPage() {
             </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="rounded-3xl border border-violet-100 bg-violet-50/45 p-4">
+            <div className="rounded-lg border border-violet-100 bg-violet-50/45 p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-violet-950/55">Zones couvertes par la matrice</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {GRAND_ABIDJAN_AREAS.map((area) => (
@@ -48,11 +48,11 @@ export default async function AdminCommunesPage() {
                 ))}
               </div>
             </div>
-            <div className="rounded-3xl border border-blue-100 bg-blue-50/50 p-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-blue-950/55">Routes proches à {formatFCFA(TRANSPORT_FEES.NEAR_COMMUNE.amount)}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {GRAND_ABIDJAN_NEAR_ROUTES.slice(0, 12).map(([from, to]) => (
-                  <p key={`${from}-${to}`} className="rounded-2xl border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-950">
+                  <p key={`${from}-${to}`} className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-950">
                     {from} {"->"} {to}
                   </p>
                 ))}
@@ -116,7 +116,7 @@ export default async function AdminCommunesPage() {
 
 function MatrixPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-violet-50/60 px-3 py-2">
+    <div className="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2">
       <p className="font-bold text-violet-950">{label}</p>
       <p className="mt-0.5 font-black text-[#1E2A78]">{value}</p>
     </div>

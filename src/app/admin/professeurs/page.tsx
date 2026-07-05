@@ -176,7 +176,7 @@ export default async function AdminProfesseursPage({
       <Card className={missingPhotoCount > 0 ? "border-amber-100 bg-amber-50/80" : "border-blue-100 bg-blue-50/65"}>
         <CardContent className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex gap-3">
-            <span className={missingPhotoCount > 0 ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700" : "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-700"}>
+            <span className={missingPhotoCount > 0 ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700" : "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-blue-700"}>
               {missingPhotoCount > 0 ? <AlertTriangle className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
             </span>
             <div>
@@ -196,13 +196,13 @@ export default async function AdminProfesseursPage({
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant={missingPhotoCount > 0 ? "default" : "outline"} className="rounded-2xl">
+            <Button asChild variant={missingPhotoCount > 0 ? "default" : "outline"} className="rounded-lg">
               <Link href="/admin/professeurs?photo=missing">
                 <ImageIcon className="mr-1.5 h-4 w-4" />
                 Voir sans photo
               </Link>
             </Button>
-            <Button asChild variant="outline" className="rounded-2xl bg-white">
+            <Button asChild variant="outline" className="rounded-lg bg-white">
               <Link href="/admin/professeurs/nouveau">
                 <Plus className="mr-1.5 h-4 w-4" />
                 Ajouter avec photo
@@ -246,7 +246,7 @@ export default async function AdminProfesseursPage({
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-2xl">
+                          <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-lg">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -297,52 +297,52 @@ export default async function AdminProfesseursPage({
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Cours réalisés</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{realized}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Total généré</p>
                         <Money amount={totalGenerated} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Réservations</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.bookings}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Avis</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.reviews}</p>
                       </div>
-                      <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-3 py-2">
+                      <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2">
                         <p className="text-[11px] font-medium text-blue-900/70">Fonds bloqués</p>
                         <Money amount={blocked} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-3 py-2">
+                      <div className="rounded-lg border border-amber-100 bg-amber-50/70 px-3 py-2">
                         <p className="text-[11px] font-medium text-amber-900/70">Reste à payer</p>
                         <Money amount={toPay} className="mt-1 text-xs font-black" />
                         {paid > 0 && <p className="mt-1 text-[11px] text-amber-900/70">Payé: {paid.toLocaleString("fr-FR")} FCFA</p>}
                       </div>
-                      <div className="rounded-2xl border border-red-100 bg-red-50/55 px-3 py-2">
+                      <div className="rounded-lg border border-red-100 bg-red-50/55 px-3 py-2">
                         <p className="text-[11px] font-medium text-red-900/70">Tâches urgentes</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-red-950">{criticalTasks + lateTasks}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-violet-50/55 px-3 py-2">
+                      <div className="rounded-lg border border-violet-100 bg-violet-50/55 px-3 py-2">
                         <p className="text-[11px] font-medium text-violet-900/70">Discipline</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-violet-950">{t.warnings.length + t.sanctions.length}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <Button asChild className="h-11 rounded-2xl">
+                      <Button asChild className="h-11 rounded-lg">
                         <Link href={`/admin/professeurs/${t.id}`}><Eye className="mr-1.5 h-4 w-4" /> Fiche</Link>
                       </Button>
-                      <Button asChild variant="outline" className="h-11 rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 rounded-lg">
                         <Link href={`/admin/professeurs/${t.id}?tab=operationnel&action=notify`}><Bell className="mr-1.5 h-4 w-4" /> Notifier</Link>
                       </Button>
-                      <Button asChild variant="outline" className="h-11 rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 rounded-lg">
                         <Link href={`/admin/professeurs/${t.id}?tab=cours`}><ClipboardList className="mr-1.5 h-4 w-4" /> Mission</Link>
                       </Button>
-                      <Button asChild variant="outline" className="h-11 rounded-2xl">
+                      <Button asChild variant="outline" className="h-11 rounded-lg">
                         <Link href={`/admin/professeurs/${t.id}?tab=paiements`}><Wallet className="mr-1.5 h-4 w-4" /> Comptabilité</Link>
                       </Button>
                     </div>

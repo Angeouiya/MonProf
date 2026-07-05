@@ -167,7 +167,7 @@ export function TeacherAdminMessagesClient({
                   if (item) choose(item);
                   else setSelectedId("");
                 }}
-                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
+                className="min-h-11 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
               >
                 <option value="">Nouveau message non lié</option>
                 {messages.map((item) => (
@@ -184,7 +184,7 @@ export function TeacherAdminMessagesClient({
                 id="admin-teacher-message-booking"
                 value={bookingId}
                 onChange={(event) => setBookingId(event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
+                className="min-h-11 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
               >
                 <option value="">Aucune réservation spécifique</option>
                 {bookings.map((booking) => (
@@ -203,7 +203,7 @@ export function TeacherAdminMessagesClient({
                   value={subject}
                   onChange={(event) => setSubject(event.target.value)}
                   maxLength={140}
-                  className="min-h-11 rounded-2xl border-[#D7DEE9] bg-white"
+                  className="min-h-11 rounded-lg border-[#D7DEE9] bg-white"
                 />
               </div>
               <div className="space-y-1.5">
@@ -212,7 +212,7 @@ export function TeacherAdminMessagesClient({
                   id="admin-teacher-message-priority"
                   value={priority}
                   onChange={(event) => setPriority(event.target.value)}
-                  className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
+                  className="min-h-11 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
                 >
                   {priorities.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
@@ -230,12 +230,12 @@ export function TeacherAdminMessagesClient({
                 onChange={(event) => setMessage(event.target.value)}
                 maxLength={2500}
                 placeholder="Réponse claire à transmettre au professeur..."
-                className="rounded-2xl border-[#D7DEE9] bg-white"
+                className="rounded-lg border-[#D7DEE9] bg-white"
               />
               <p className="text-xs font-semibold text-[#64748B]">{message.trim().length}/2500 caractères</p>
             </div>
 
-            <Button type="submit" disabled={!!loading} className="min-h-11 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+            <Button type="submit" disabled={!!loading} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
               {loading === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
               Envoyer au professeur
             </Button>
@@ -255,7 +255,7 @@ export function TeacherAdminMessagesClient({
         </div>
 
         {messages.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-[#D7DEE9] bg-white p-6 text-center text-sm font-semibold text-[#64748B]">
+          <div className="mt-4 rounded-lg border border-dashed border-[#D7DEE9] bg-white p-6 text-center text-sm font-semibold text-[#64748B]">
             Aucun message libre avec ce professeur pour le moment.
           </div>
         ) : (
@@ -295,24 +295,24 @@ export function TeacherAdminMessagesClient({
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-[#EEF2F7] pt-3">
-                  <Button type="button" variant="outline" size="sm" className="rounded-2xl bg-white" onClick={() => choose(item)}>
+                  <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white" onClick={() => choose(item)}>
                     <Reply className="h-3.5 w-3.5" />
                     Répondre
                   </Button>
                   {item.sender === "TEACHER" && !item.readByAdminAt && (
-                    <Button type="button" variant="outline" size="sm" className="rounded-2xl bg-white" disabled={loading === `read-${item.id}`} onClick={() => patch(item.id, "read")}>
+                    <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white" disabled={loading === `read-${item.id}`} onClick={() => patch(item.id, "read")}>
                       {loading === `read-${item.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MailCheck className="h-3.5 w-3.5" />}
                       Lu
                     </Button>
                   )}
                   {!["RESOLVED", "CLOSED"].includes(item.status) && (
-                    <Button type="button" variant="outline" size="sm" className="rounded-2xl bg-white" disabled={loading === `resolve-${item.id}`} onClick={() => patch(item.id, "resolve")}>
+                    <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white" disabled={loading === `resolve-${item.id}`} onClick={() => patch(item.id, "resolve")}>
                       {loading === `resolve-${item.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
                       Résolu
                     </Button>
                   )}
                   {item.status !== "CLOSED" && (
-                    <Button type="button" variant="outline" size="sm" className="rounded-2xl bg-white" disabled={loading === `close-${item.id}`} onClick={() => patch(item.id, "close")}>
+                    <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white" disabled={loading === `close-${item.id}`} onClick={() => patch(item.id, "close")}>
                       {loading === `close-${item.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
                       Clôturer
                     </Button>
@@ -331,7 +331,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
       <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-[#111B4D]">{value}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-normal text-[#111B4D]">{value}</p>
     </div>
   );
 }

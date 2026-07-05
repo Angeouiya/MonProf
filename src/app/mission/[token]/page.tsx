@@ -32,11 +32,11 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
   if (!hasVerifiedPayDunyaClientPayment(mission.booking)) {
     return (
       <main className="min-h-screen bg-white px-4 py-10">
-        <div className="mx-auto max-w-xl rounded-2xl border border-[#E3E8F2] bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+        <div className="mx-auto max-w-xl rounded-lg border border-[#E3E8F2] bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827]">Mission non activée</h1>
+          <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827]">Mission non activée</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
             Cette mission n'est pas disponible tant que le paiement PayDunya n'a pas été confirmé par vérification serveur. Contactez l'administration Compétence si vous avez reçu ce lien par erreur.
           </p>
@@ -113,7 +113,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               verified={mission.teacher.badgeVerified}
             />
           </div>
-          <h1 className="mt-5 text-3xl font-black tracking-tight text-foreground sm:text-4xl">{mission.title}</h1>
+          <h1 className="mt-5 text-3xl font-black tracking-normal text-foreground sm:text-4xl">{mission.title}</h1>
           <p className="mt-2 text-muted-foreground">Bonjour {teacherName}, consultez les détails et confirmez votre disponibilité.</p>
         </div>
 
@@ -179,7 +179,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               <Info label="Lieu" value={locationLabel} icon={<MapPin className="h-4 w-4" />} />
             </div>
             {(booking.objective || booking.schoolProgram || booking.needDescription || booking.message) && (
-              <div className="sm:col-span-2 rounded-3xl border border-amber-100 bg-amber-50/70 p-4 shadow-sm">
+              <div className="sm:col-span-2 rounded-lg border border-amber-100 bg-amber-50/70 p-4 shadow-sm">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-900/70">
                   <BookOpen className="h-4 w-4" /> Détails pédagogiques
                 </p>
@@ -202,33 +202,33 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {clientPhoneHref ? (
-                <Button asChild variant="outline" className="h-11 rounded-2xl">
+                <Button asChild variant="outline" className="h-11 rounded-lg">
                   <a href={clientPhoneHref}>
                     <Phone className="mr-2 h-4 w-4" />
                     Appeler le client
                   </a>
                 </Button>
               ) : (
-                <Button variant="outline" className="h-11 rounded-2xl" disabled>
+                <Button variant="outline" className="h-11 rounded-lg" disabled>
                   <Phone className="mr-2 h-4 w-4" />
                   Numéro client absent
                 </Button>
               )}
               {clientWhatsAppUrl ? (
-                <Button asChild variant="outline" className="h-11 rounded-2xl border-blue-100 text-blue-800 hover:bg-blue-50">
+                <Button asChild variant="outline" className="h-11 rounded-lg border-blue-100 text-blue-800 hover:bg-blue-50">
                   <a href={clientWhatsAppUrl} target="_blank" rel="noreferrer">
                     <MessageCircle className="mr-2 h-4 w-4" />
                     WhatsApp client
                   </a>
                 </Button>
               ) : (
-                <Button variant="outline" className="h-11 rounded-2xl" disabled>
+                <Button variant="outline" className="h-11 rounded-lg" disabled>
                   <MessageCircle className="mr-2 h-4 w-4" />
                   WhatsApp indisponible
                 </Button>
               )}
             </div>
-            <div className="rounded-3xl border border-violet-100 bg-violet-50/55 p-4 text-sm">
+            <div className="rounded-lg border border-violet-100 bg-violet-50/55 p-4 text-sm">
               <p><span className="font-semibold text-foreground">Client :</span> {booking.client.name}</p>
               <p className="mt-1"><span className="font-semibold text-foreground">Téléphone :</span> {booking.client.phone || "Non renseigné"}</p>
             </div>
@@ -238,11 +238,11 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
         <Card>
           <CardHeader><CardTitle>Consignes admin</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="rounded-3xl border border-violet-100 bg-white/80 p-4 text-sm text-muted-foreground">
+            <p className="rounded-lg border border-violet-100 bg-white/80 p-4 text-sm text-muted-foreground">
               {mission.instructions || "Merci de confirmer rapidement votre disponibilité et de contacter l'administration si une information manque."}
             </p>
             {locked && (
-              <div className="rounded-3xl border border-blue-100 bg-blue-50/80 p-4 text-sm font-medium text-blue-900">
+              <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4 text-sm font-medium text-blue-900">
                 Statut actuel : {statusLabel}. {mission.response ? `Votre message : ${mission.response}` : "Aucune action supplémentaire n'est nécessaire depuis ce lien."}
               </div>
             )}
@@ -260,7 +260,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {supportPhone && (
-                  <Button asChild variant="outline" className="h-11 rounded-2xl">
+                  <Button asChild variant="outline" className="h-11 rounded-lg">
                     <a href={`tel:${supportPhone.replace(/\s+/g, "")}`}>
                       <Phone className="mr-2 h-4 w-4" />
                       Appeler
@@ -268,7 +268,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                   </Button>
                 )}
                 {supportWhatsAppUrl && (
-                  <Button asChild variant="outline" className="h-11 rounded-2xl">
+                  <Button asChild variant="outline" className="h-11 rounded-lg">
                     <a href={supportWhatsAppUrl} target="_blank" rel="noreferrer">
                       <MessageCircle className="mr-2 h-4 w-4" />
                       WhatsApp
@@ -276,7 +276,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                   </Button>
                 )}
                 {supportEmail && (
-                  <Button asChild variant="outline" className="h-11 rounded-2xl">
+                  <Button asChild variant="outline" className="h-11 rounded-lg">
                     <a href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Mission ${booking.reference}`)}`}>
                       <Mail className="mr-2 h-4 w-4" />
                       Email
@@ -284,7 +284,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                   </Button>
                 )}
               </div>
-              <div className="rounded-3xl border border-violet-100 bg-violet-50/55 p-4 text-sm">
+              <div className="rounded-lg border border-violet-100 bg-violet-50/55 p-4 text-sm">
                 {supportPhone && <p><span className="font-semibold text-foreground">Téléphone :</span> {supportPhone}</p>}
                 {supportEmail && <p className="mt-1"><span className="font-semibold text-foreground">Email :</span> {supportEmail}</p>}
               </div>
@@ -316,7 +316,7 @@ function MissionSignalCard({
     red: "border-red-100 bg-red-50/85 text-red-950",
   }[tone];
   return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${toneClass}`}>
+    <div className={`rounded-lg border p-4 shadow-sm ${toneClass}`}>
       <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide opacity-70">
         {icon}
         {label}
@@ -351,7 +351,7 @@ function getMissionStatusTone(status: string) {
 
 function Info({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-violet-100 bg-white/80 p-4 shadow-sm">
+    <div className="rounded-lg border border-violet-100 bg-white/80 p-4 shadow-sm">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{icon}{label}</p>
       <p className="mt-1 font-semibold text-foreground">{value || "—"}</p>
     </div>

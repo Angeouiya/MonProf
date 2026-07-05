@@ -195,7 +195,7 @@ export default async function ProfesseurDashboardPage() {
         description="Votre espace professeur regroupe vos missions, disponibilités, paiements et notifications envoyées par l'administration."
         showBack={false}
         action={(
-          <Button asChild className="rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+          <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <Link href="/professeur/missions">
               Voir mes missions
               <ArrowRight className="h-4 w-4" />
@@ -239,21 +239,21 @@ export default async function ProfesseurDashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 lg:w-[30rem]">
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl px-2 text-xs sm:text-sm">
+          <Button asChild variant="outline" className="min-h-11 rounded-lg px-2 text-xs sm:text-sm">
             <Link href="/professeur/disponibilites">
               <CalendarClock className="h-4 w-4" />
               <span className="hidden min-[430px]:inline">Disponibilités</span>
               <span className="min-[430px]:hidden">Dispos</span>
             </Link>
           </Button>
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl px-2 text-xs sm:text-sm">
+          <Button asChild variant="outline" className="min-h-11 rounded-lg px-2 text-xs sm:text-sm">
             <Link href="/professeur/paiements">
               <CreditCard className="h-4 w-4" />
               <span className="hidden min-[430px]:inline">Paiements</span>
               <span className="min-[430px]:hidden">Paie</span>
             </Link>
           </Button>
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl px-2 text-xs sm:text-sm">
+          <Button asChild variant="outline" className="min-h-11 rounded-lg px-2 text-xs sm:text-sm">
             <Link href="/professeur/messages">
               <MessageSquareText className="h-4 w-4" />
               Admin
@@ -277,7 +277,7 @@ export default async function ProfesseurDashboardPage() {
               Chaque action est reliée au dashboard admin : missions, disponibilités, paiements, messages, qualité, profil professionnel et suivi administratif restent historisés.
             </p>
           </div>
-          <Button asChild variant="outline" className="min-h-11 rounded-2xl">
+          <Button asChild variant="outline" className="min-h-11 rounded-lg">
             <Link href="/professeur/messages">
               Contacter l'admin
               <ArrowRight className="h-4 w-4" />
@@ -407,7 +407,7 @@ export default async function ProfesseurDashboardPage() {
               : "Ajoutez votre moyen de paiement et confirmez votre numéro pour accélérer vos demandes de paiement."}
           </p>
         </div>
-        <Button asChild variant={payoutProfileReady ? "outline" : "default"} className="min-h-11 rounded-2xl">
+        <Button asChild variant={payoutProfileReady ? "outline" : "default"} className="min-h-11 rounded-lg">
           <Link href="/professeur/parametres">
             {payoutProfileReady ? "Modifier" : "Compléter"}
             <ArrowRight className="h-4 w-4" />
@@ -422,7 +422,7 @@ export default async function ProfesseurDashboardPage() {
               <p className="text-base font-semibold text-[#111827]">Prochaines missions</p>
               <p className="text-sm font-medium text-[#64748B]">Cours attribués à votre fiche professeur.</p>
             </div>
-            <Button asChild variant="ghost" className="rounded-2xl">
+            <Button asChild variant="ghost" className="rounded-lg">
               <Link href="/professeur/missions">Tout voir</Link>
             </Button>
           </div>
@@ -466,7 +466,7 @@ export default async function ProfesseurDashboardPage() {
             ) : (
               <div className="space-y-3">
                 {verifiedOpenTasks.map((task) => (
-                  <div key={task.id} className="rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                  <div key={task.id} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
                     <div className="flex flex-wrap gap-2">
                       <StatusPill status={task.priority} type="priority" />
                       <StatusPill status={task.status} type="task" />
@@ -489,7 +489,7 @@ export default async function ProfesseurDashboardPage() {
             ) : (
               <div className="space-y-2">
                 {recentNotifications.map((notification) => (
-                  <div key={notification.id} className="rounded-2xl border border-[#E6EAF3] bg-white p-3">
+                  <div key={notification.id} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
                     <InfoLine label={notification.title} value={formatDate(notification.createdAt)} />
                     <p className="mt-2 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{notification.message}</p>
                   </div>
@@ -578,7 +578,7 @@ function ProfessorActionTile({
       className="group grid min-h-40 gap-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D]"
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <Icon className="h-5 w-5" />
         </span>
         <span className={urgent ? "rounded-full border border-[#B42318] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#B42318]" : "rounded-full border border-[#D7DEE9] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#111B4D]"}>

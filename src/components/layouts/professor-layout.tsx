@@ -98,13 +98,13 @@ export function ProfessorLayout({
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
             aria-label="Menu professeur"
             aria-expanded={open}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/professeur" className="flex min-h-11 items-center gap-2 rounded-2xl px-1.5">
+          <Link href="/professeur" className="flex min-h-11 items-center gap-2 rounded-lg px-1.5">
             <BrandLogo size="sm" />
           </Link>
           <span className="hidden rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
@@ -113,7 +113,7 @@ export function ProfessorLayout({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" className="relative h-11 w-11 rounded-2xl text-[#111B4D] hover:bg-white sm:hidden" aria-label="Notifications professeur">
+          <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white sm:hidden" aria-label="Notifications professeur">
             <Link href="/professeur/notifications">
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
@@ -123,7 +123,7 @@ export function ProfessorLayout({
               )}
             </Link>
           </Button>
-          <Button asChild variant="outline" className="relative hidden min-h-11 rounded-2xl border-[#D7DEE9] bg-white px-4 text-[#111B4D] sm:inline-flex">
+          <Button asChild variant="outline" className="relative hidden min-h-11 rounded-lg border-[#D7DEE9] bg-white px-4 text-[#111B4D] sm:inline-flex">
             <Link href="/professeur/notifications">
               <Bell className="h-4 w-4" />
               Notifications
@@ -134,7 +134,7 @@ export function ProfessorLayout({
               )}
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="hidden min-h-11 rounded-2xl bg-white px-4 text-[#111B4D] sm:inline-flex">
+          <Button asChild variant="ghost" className="hidden min-h-11 rounded-lg bg-white px-4 text-[#111B4D] sm:inline-flex">
             <Link href="/">Site public</Link>
           </Button>
           <ImportantActionConfirm
@@ -154,7 +154,7 @@ export function ProfessorLayout({
               <Button
                 variant="ghost"
                 title="Déconnexion"
-                className="hidden h-11 w-11 rounded-2xl text-[#111B4D] hover:bg-white sm:inline-flex"
+                className="hidden h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white sm:inline-flex"
               >
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -185,7 +185,7 @@ export function ProfessorLayout({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2]"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2]"
                   aria-label="Fermer le menu"
                 >
                   <X className="h-5 w-5" />
@@ -338,7 +338,7 @@ function SidebarContent({
           trigger={
             <Button
               variant="outline"
-              className="w-full rounded-2xl border-[#D7DEE9] bg-white text-[#111B4D]"
+              className="w-full rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
             >
               <LogOut className="h-4 w-4" />
               Déconnexion
@@ -400,7 +400,7 @@ function MobileBottomNav({
 
 function MiniCounter({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-[#E6EAF3] bg-white px-2 py-2">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white px-2 py-2">
       <p className="text-sm font-semibold text-[#111B4D]">{value > 99 ? "99+" : value}</p>
       <p className="truncate text-[10px] font-semibold text-[#64748B]">{label}</p>
     </div>

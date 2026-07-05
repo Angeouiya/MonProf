@@ -31,7 +31,7 @@ export function MarkTeacherNotificationsReadButton({ disabled }: { disabled?: bo
       variant="outline"
       onClick={markRead}
       disabled={disabled || loading}
-      className="rounded-2xl bg-white"
+      className="rounded-lg bg-white"
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
       Marquer comme lues

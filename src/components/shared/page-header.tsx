@@ -23,7 +23,7 @@ export function PageHeader({
       <div className="flex min-w-0 flex-col gap-3">
         {showBack && <BackButton fallbackHref={backHref} label={backLabel} />}
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-[#111827] sm:text-2xl">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-normal text-[#111827] sm:text-2xl">{title}</h1>
           {description && <p className="mt-1 max-w-2xl text-sm leading-6 text-[#64748B]">{description}</p>}
         </div>
       </div>
@@ -48,7 +48,7 @@ export function EmptyState({
   return (
     <div className={cn("flex flex-col items-center justify-center rounded-xl border border-[#E3E8F2] bg-white p-8 text-center", className)}>
       {Icon && (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] ring-1 ring-[#111B4D]">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] ring-1 ring-[#111B4D]">
           <Icon className="h-6 w-6 text-white" />
         </div>
       )}

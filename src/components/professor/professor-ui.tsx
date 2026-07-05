@@ -95,7 +95,7 @@ export function ProfessorPageHeader({
             <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-xl px-3" />
           </div>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">{description}</p>}
       </div>
       {action}
@@ -129,9 +129,9 @@ export function ProfessorStatCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-[#111B4D]">{value}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-normal text-[#111B4D]">{value}</p>
         </div>
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <Icon className="h-5 w-5" />
         </span>
       </div>
@@ -204,13 +204,13 @@ export function EmptyProfessorState({
 }) {
   return (
     <div className="rounded-[1.15rem] border border-dashed border-[#D7DEE9] bg-white p-6 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
         <Info className="h-5 w-5" />
       </div>
       <p className="mt-3 text-base font-semibold text-[#111827]">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-sm font-medium leading-6 text-[#64748B]">{description}</p>
       {href && actionLabel && (
-        <Button asChild className="mt-4 rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+        <Button asChild className="mt-4 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           <Link href={href}>
             {actionLabel}
             <ArrowRight className="h-4 w-4" />

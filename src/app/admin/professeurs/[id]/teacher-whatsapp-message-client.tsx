@@ -291,7 +291,7 @@ export function TeacherWhatsAppMessageClient({
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid gap-3 rounded-3xl border border-violet-100 bg-violet-50/35 p-4 lg:grid-cols-3">
+        <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/35 p-4 lg:grid-cols-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-violet-950/55">Transmission rapide</p>
             <p className="mt-1 text-sm font-semibold text-violet-950">
@@ -324,7 +324,7 @@ export function TeacherWhatsAppMessageClient({
           </SelectContent>
         </Select>
         {selected && (
-          <div className="grid gap-3 rounded-3xl border border-[#1E2A78]/15 bg-blue-50/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 rounded-lg border border-[#1E2A78]/15 bg-blue-50/70 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-blue-950/55">Réservation</p>
               <p className="mt-1 font-mono text-sm font-black text-[#1E2A78]">{selected.reference}</p>
@@ -386,7 +386,7 @@ export function TeacherWhatsAppMessageClient({
           </div>
         )}
         {activeMission?.url && (
-          <div className="flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
+          <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
             <div className="min-w-0">
               <p className="font-semibold">Lien privé sécurisé généré et historisé.</p>

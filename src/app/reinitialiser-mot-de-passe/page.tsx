@@ -12,13 +12,13 @@ export default function ResetPasswordPage() {
         </div>
         <section className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Sécurité client</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#111827]">Nouveau mot de passe</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[#111827]">Nouveau mot de passe</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
             Choisissez un nouveau mot de passe pour votre compte client Compétence.
           </p>
           <Suspense
             fallback={
-              <div className="mt-5 rounded-2xl border border-[#E3E8F2] bg-white p-4 text-sm font-semibold text-[#64748B]">
+              <div className="mt-5 rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm font-semibold text-[#64748B]">
                 Chargement du lien sécurisé...
               </div>
             }

@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
         </div>
         <section className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Compte client</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#111827]">Mot de passe oublié</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[#111827]">Mot de passe oublié</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
             Saisissez votre email client. Nous envoyons un lien sécurisé de réinitialisation. Aucun OTP n'est demandé.
           </p>
