@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
+  ClientAppRail,
   ClientMetricStrip,
   ClientPageHeader,
   ClientSectionTitle,
@@ -18,6 +19,8 @@ import {
   Save,
   Loader2,
   ShieldCheck,
+  Settings,
+  CalendarCheck,
   Mail,
   Phone,
   MapPin,
@@ -178,6 +181,15 @@ export default function ProfilPage() {
           { icon: User, label: "Profil", value: `${profileCompletion}%`, attention: profileCompletion < 75 },
           { icon: MapPin, label: "Zone", value: commune || "À compléter" },
           { icon: ShieldCheck, label: "Sécurité", value: "Active" },
+        ]}
+      />
+
+      <ClientAppRail
+        items={[
+          { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées", active: true },
+          { href: "/client/parametres", icon: Settings, label: "Sécurité", value: "Mot de passe" },
+          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
+          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Aide compte" },
         ]}
       />
 

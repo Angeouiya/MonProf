@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Lock, Mail, ShieldCheck, UserCog } from "lucide-react";
+import { CalendarCheck, LifeBuoy, Lock, Mail, ShieldCheck, User, UserCog } from "lucide-react";
 import {
+  ClientAppRail,
   ClientMetricStrip,
   ClientPageHeader,
   ClientSectionTitle,
@@ -25,6 +26,15 @@ export default function ClientParametresPage() {
           { icon: ShieldCheck, label: "Sécurité", value: "Modifiable" },
           { icon: Mail, label: "Oubli", value: "Lien email" },
           { icon: Lock, label: "OTP", value: "Non utilisé" },
+        ]}
+      />
+
+      <ClientAppRail
+        items={[
+          { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées" },
+          { href: "/client/parametres", icon: UserCog, label: "Sécurité", value: "Mot de passe", active: true },
+          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
+          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Aide compte" },
         ]}
       />
 
