@@ -926,6 +926,106 @@ b {
   background-color: #FFFFFF !important;
 }
 
+.admin-shell [class*="bg-[#EEF3FF]"],
+.admin-shell [class*="bg-[#F8FAFD]"],
+.admin-shell [class*="bg-[#FAFBFF]"],
+.admin-shell [class*="bg-[#F3F6FB]"],
+.admin-shell [class*="bg-[#E5ECFB]"],
+.admin-shell [class*="bg-[#E8EEF8]"],
+.admin-shell [class*="bg-[#DDE6F7]"],
+.admin-shell [class*="bg-[#E3E8F2]"],
+.admin-shell [class*="bg-blue-50"],
+.admin-shell [class*="bg-blue-100"],
+.admin-shell [class*="bg-sky-50"],
+.admin-shell [class*="bg-indigo-50"],
+.admin-shell [class*="bg-violet-50"],
+.admin-shell [class*="bg-purple-50"],
+.admin-shell [class*="bg-amber-50"],
+.admin-shell [class*="bg-amber-100"],
+.admin-shell [class*="bg-orange-50"],
+.admin-shell [class*="bg-orange-100"],
+.admin-shell [class*="bg-red-50"],
+.admin-shell [class*="bg-red-100"],
+.admin-shell [class*="bg-slate-50"],
+.admin-shell [class*="bg-slate-100"],
+.admin-shell [class*="bg-gray-50"],
+.admin-shell [class*="bg-gray-100"],
+.admin-shell [class*="bg-zinc-50"],
+.admin-shell [class*="bg-zinc-100"],
+.admin-shell [class*="bg-neutral-50"],
+.admin-shell [class*="bg-neutral-100"],
+.professor-shell [class*="bg-[#EEF3FF]"],
+.professor-shell [class*="bg-[#F8FAFD]"],
+.professor-shell [class*="bg-[#FAFBFF]"],
+.professor-shell [class*="bg-[#F3F6FB]"],
+.professor-shell [class*="bg-[#E5ECFB]"],
+.professor-shell [class*="bg-[#E8EEF8]"],
+.professor-shell [class*="bg-[#DDE6F7]"],
+.professor-shell [class*="bg-[#E3E8F2]"],
+.professor-shell [class*="bg-blue-50"],
+.professor-shell [class*="bg-blue-100"],
+.professor-shell [class*="bg-sky-50"],
+.professor-shell [class*="bg-indigo-50"],
+.professor-shell [class*="bg-violet-50"],
+.professor-shell [class*="bg-purple-50"],
+.professor-shell [class*="bg-amber-50"],
+.professor-shell [class*="bg-amber-100"],
+.professor-shell [class*="bg-orange-50"],
+.professor-shell [class*="bg-orange-100"],
+.professor-shell [class*="bg-red-50"],
+.professor-shell [class*="bg-red-100"],
+.professor-shell [class*="bg-slate-50"],
+.professor-shell [class*="bg-slate-100"],
+.professor-shell [class*="bg-gray-50"],
+.professor-shell [class*="bg-gray-100"],
+.professor-shell [class*="bg-zinc-50"],
+.professor-shell [class*="bg-zinc-100"],
+.professor-shell [class*="bg-neutral-50"],
+.professor-shell [class*="bg-neutral-100"] {
+  background-color: #FFFFFF !important;
+}
+
+.admin-shell [class*="hover:bg-[#EEF3FF]"]:hover,
+.admin-shell [class*="hover:bg-[#F8FAFD]"]:hover,
+.admin-shell [class*="hover:bg-[#F3F6FB]"]:hover,
+.admin-shell [class*="hover:bg-[#E5ECFB]"]:hover,
+.admin-shell [class*="hover:bg-blue-50"]:hover,
+.admin-shell [class*="hover:bg-amber-50"]:hover,
+.admin-shell [class*="hover:bg-red-50"]:hover,
+.admin-shell [class*="hover:bg-slate-50"]:hover,
+.professor-shell [class*="hover:bg-[#EEF3FF]"]:hover,
+.professor-shell [class*="hover:bg-[#F8FAFD]"]:hover,
+.professor-shell [class*="hover:bg-[#F3F6FB]"]:hover,
+.professor-shell [class*="hover:bg-[#E5ECFB]"]:hover,
+.professor-shell [class*="hover:bg-blue-50"]:hover,
+.professor-shell [class*="hover:bg-amber-50"]:hover,
+.professor-shell [class*="hover:bg-red-50"]:hover,
+.professor-shell [class*="hover:bg-slate-50"]:hover {
+  background-color: #FFFFFF !important;
+  border-color: var(--ops-navy) !important;
+}
+
+.admin-shell [class~="opacity-60"],
+.admin-shell [class~="opacity-65"],
+.admin-shell [class~="opacity-70"],
+.admin-shell [class~="opacity-75"],
+.admin-shell [class~="opacity-78"],
+.admin-shell [class~="opacity-80"],
+.admin-shell [class~="opacity-85"],
+.admin-shell [class~="opacity-88"],
+.admin-shell [class~="opacity-90"],
+.professor-shell [class~="opacity-60"],
+.professor-shell [class~="opacity-65"],
+.professor-shell [class~="opacity-70"],
+.professor-shell [class~="opacity-75"],
+.professor-shell [class~="opacity-78"],
+.professor-shell [class~="opacity-80"],
+.professor-shell [class~="opacity-85"],
+.professor-shell [class~="opacity-88"],
+.professor-shell [class~="opacity-90"] {
+  opacity: 1 !important;
+}
+
 .admin-shell [class*="backdrop-blur"],
 .professor-shell [class*="backdrop-blur"] {
   -webkit-backdrop-filter: none !important;
@@ -955,6 +1055,15 @@ b {
 .admin-shell [data-slot="button"],
 .professor-shell [data-slot="button"] {
   border-radius: 0.5rem !important;
+}
+
+.admin-shell button,
+.admin-shell [role="button"],
+.admin-shell a[class*="rounded"],
+.professor-shell button,
+.professor-shell [role="button"],
+.professor-shell a[class*="rounded"] {
+  min-height: 2.75rem;
 }
 
 .admin-shell [data-slot="button"]:not([class*="border"]):not([class*="bg-white"]):not([class*="text-red"]),
@@ -1003,6 +1112,23 @@ b {
   }
 }
 
+@media (max-width: 767px) {
+  .admin-shell main [class*="md:hidden"] a[class*="text-primary"],
+  .admin-shell main [class*="md:hidden"] a[class*="text-foreground"],
+  .admin-shell main [class*="md:hidden"] a[class*="text-muted-foreground"] {
+    display: inline-flex !important;
+    min-height: 2.5rem;
+    max-width: 100%;
+    align-items: center;
+    line-height: 1.2;
+  }
+
+  .admin-shell main [class*="md:hidden"] a[class*="block"],
+  .admin-shell main [class*="md:hidden"] a[class*="truncate"] {
+    min-width: 0;
+  }
+}
+
 .admin-shell .grid,
 .professor-shell .grid,
 .client-shell .grid,
@@ -1037,7 +1163,7 @@ b {
 }
 
 .notification-action-grid [data-slot="button"] {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding-inline: 0.65rem;
   white-space: normal;
   line-height: 1.15;
