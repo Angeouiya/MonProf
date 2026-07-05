@@ -1953,9 +1953,17 @@ export function ReserverForm({
       </div>
 
       <div
-        className="fixed inset-x-3 z-40 rounded-lg border border-[#DDE6F7] bg-white p-1.5 sm:hidden"
+        className="fixed inset-x-3 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2 sm:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
+        <div className="mb-1.5 flex min-h-8 items-center justify-between gap-2 px-1">
+          <span className="min-w-0 truncate text-xs font-semibold text-[#111827]">
+            Étape {step + 1}/{STEPS.length} · {currentStepDetail.title}
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-[#111B4D]">
+            {pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           {step > 0 && (
             <Button type="button" variant="outline" onClick={back} disabled={submitting} className="h-11 w-11 shrink-0 rounded-lg p-0" aria-label="Retour">

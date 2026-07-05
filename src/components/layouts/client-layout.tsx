@@ -48,6 +48,7 @@ const mobileNavItems: ClientNavItem[] = [
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const currentSection = getCurrentSection(pathname);
   const hideMobileBottomNav = Boolean(
     pathname?.startsWith("/client/reserver")
     || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
@@ -73,8 +74,12 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           <Link href="/client" className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white">
             <BrandLogo size="sm" />
           </Link>
-          <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
-            Espace client
+          <div className="hidden min-w-0 flex-col min-[430px]:flex lg:hidden">
+            <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{currentSection.label}</span>
+            <span className="truncate text-[11px] font-medium leading-4 text-[#64748B]">{currentSection.hint}</span>
+          </div>
+          <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] lg:inline-flex">
+            {currentSection.label}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -321,4 +326,41 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "C";
+}
+
+function getCurrentSection(pathname: string | null) {
+  if (!pathname || pathname === "/client") {
+    return { label: "Tableau de bord", hint: "Suivi des cours" };
+  }
+  if (pathname.startsWith("/client/reserver")) {
+    return { label: "Réserver", hint: "Parcours sécurisé" };
+  }
+  if (pathname.startsWith("/client/rechercher")) {
+    return { label: "Professeurs", hint: "Recherche rapide" };
+  }
+  if (pathname.startsWith("/client/reservations")) {
+    return { label: "Réservations", hint: "Dossiers et paiements" };
+  }
+  if (pathname.startsWith("/client/cours")) {
+    return { label: "Cours", hint: "Séances à suivre" };
+  }
+  if (pathname.startsWith("/client/paiements")) {
+    return { label: "Paiements", hint: "PayDunya sécurisé" };
+  }
+  if (pathname.startsWith("/client/notifications")) {
+    return { label: "Notifications", hint: "Actions importantes" };
+  }
+  if (pathname.startsWith("/client/avis")) {
+    return { label: "Avis", hint: "Qualité des cours" };
+  }
+  if (pathname.startsWith("/client/support")) {
+    return { label: "Support", hint: "Aide et litiges" };
+  }
+  if (pathname.startsWith("/client/profil")) {
+    return { label: "Profil", hint: "Coordonnées client" };
+  }
+  if (pathname.startsWith("/client/parametres")) {
+    return { label: "Paramètres", hint: "Sécurité du compte" };
+  }
+  return { label: "Espace client", hint: "Compétence" };
 }

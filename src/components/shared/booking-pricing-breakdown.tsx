@@ -76,7 +76,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const adminProps = props as BookingPricingBreakdownAdminProps;
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 sm:p-4">
+    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D9E2F3] bg-white p-3 sm:p-4" data-client-pricing-breakdown>
       <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_minmax(12rem,auto)] min-[560px]:items-start">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -246,14 +246,14 @@ function PricingLine({
   strong?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+    <div className="grid items-start gap-1.5 min-[420px]:grid-cols-[minmax(0,1fr)_auto] min-[420px]:gap-3">
       <span className="min-w-0">
         <span className={strong ? "block font-semibold leading-snug text-[#111827]" : "block font-medium leading-snug text-[#64748B]"}>
           {label}
         </span>
         {detail && <span className="mt-0.5 block text-xs font-medium leading-snug text-[#64748B]">{detail}</span>}
       </span>
-      <span className={strong ? "whitespace-nowrap text-right font-semibold tabular-nums leading-snug text-[#111B4D]" : "whitespace-nowrap text-right font-semibold tabular-nums leading-snug text-[#111827]"}>
+      <span className={strong ? "font-semibold tabular-nums leading-snug text-[#111B4D] min-[420px]:whitespace-nowrap min-[420px]:text-right" : "font-semibold tabular-nums leading-snug text-[#111827] min-[420px]:whitespace-nowrap min-[420px]:text-right"}>
         {value}
       </span>
     </div>

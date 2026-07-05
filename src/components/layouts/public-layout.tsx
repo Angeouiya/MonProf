@@ -63,6 +63,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isClient = (session?.user as any)?.role === "CLIENT";
+  const hideMobileNav = shouldHidePublicMobileNav(pathname);
 
   return (
     <div className="public-shell flex min-h-screen flex-col bg-white">
@@ -218,7 +219,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="mt-auto border-t border-[#E3E8F2] bg-white pb-24 lg:pb-0">
+      <footer className={cn("mt-auto border-t border-[#E3E8F2] bg-white lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <div className="mb-8 rounded-lg border border-[#DDE6F7] bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -297,9 +298,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
-      <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />
+      {!hideMobileNav && <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />}
     </div>
   );
+}
+
+function shouldHidePublicMobileNav(pathname: string | null) {
+  if (!pathname) return false;
+  if (/^\/professeurs\/[^/]+/.test(pathname)) return true;
+  if (pathname.startsWith("/connexion")) return true;
+  if (pathname.startsWith("/inscription")) return true;
+  if (pathname.startsWith("/mot-de-passe-oublie")) return true;
+  if (pathname.startsWith("/reinitialiser-mot-de-passe")) return true;
+  return false;
 }
 
 function PublicMobileNav({

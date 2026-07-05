@@ -78,7 +78,7 @@ export function ClientMetricStrip({
         "client-metric-strip grid gap-2 bg-white",
         metrics.length === 1
           ? "grid-cols-1"
-          : metrics.length === 2
+        : metrics.length === 2
             ? "grid-cols-2"
             : "grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
@@ -299,6 +299,7 @@ export function ClientAppRail({
         "client-app-rail grid grid-cols-2 gap-2 bg-white min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
         className,
       )}
+      aria-label="Raccourcis client"
     >
       {items.map((item) => {
         const content = (

@@ -25,6 +25,9 @@ const ADMIN_BENEFITS = [
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
+const SHOW_DEMO_ACCOUNTS =
+  process.env.NODE_ENV !== "production" ||
+  process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true";
 
 function ConnexionContent() {
   const router = useRouter();
@@ -288,32 +291,33 @@ function ConnexionContent() {
             </div>
           </div>
 
-          {/* Compte démo */}
-          <div className="mt-6 rounded-lg border border-dashed border-[#DDE6F7] bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-              {isAdminAuth ? "Démonstration administrateur" : "Démonstration client"}
-            </p>
-            <div className="mt-3 grid gap-2">
-              <button
-                type="button"
-                onClick={isAdminAuth ? fillDemoAdmin : fillDemoClient}
-                className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
-              >
-                <div>
-                  <p className="font-semibold text-[#111827]">{isAdminAuth ? "Compte administrateur" : "Compte client"}</p>
-                  <p className="font-medium text-[#64748B]">{isAdminAuth ? "admin@monprof.ci · admin123" : "amon@demo.ci · client123"}</p>
-                </div>
-                <span className="inline-flex items-center gap-1 font-semibold text-[#111B4D]">
-                  Utiliser <ArrowRight className="h-3.5 w-3.5" />
-                </span>
-              </button>
+          {SHOW_DEMO_ACCOUNTS && (
+            <div className="mt-6 rounded-lg border border-dashed border-[#DDE6F7] bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                {isAdminAuth ? "Démonstration administrateur" : "Démonstration client"}
+              </p>
+              <div className="mt-3 grid gap-2">
+                <button
+                  type="button"
+                  onClick={isAdminAuth ? fillDemoAdmin : fillDemoClient}
+                  className="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
+                >
+                  <div>
+                    <p className="font-semibold text-[#111827]">{isAdminAuth ? "Compte administrateur" : "Compte client"}</p>
+                    <p className="font-medium text-[#64748B]">{isAdminAuth ? "admin@monprof.ci · admin123" : "amon@demo.ci · client123"}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 font-semibold text-[#111B4D]">
+                    Utiliser <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+              </div>
+              <p className="mt-3 text-xs font-medium leading-relaxed text-[#64748B]">
+                {isAdminAuth
+                  ? "Cliquez pour pré-remplir le formulaire administrateur. Un compte client ne peut pas accéder au dashboard admin."
+                  : "Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client."}
+              </p>
             </div>
-            <p className="mt-3 text-xs font-medium leading-relaxed text-[#64748B]">
-              {isAdminAuth
-                ? "Cliquez pour pré-remplir le formulaire administrateur. Un compte client ne peut pas accéder au dashboard admin."
-                : "Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client."}
-            </p>
-          </div>
+          )}
           </div>
         </div>
       </section>
