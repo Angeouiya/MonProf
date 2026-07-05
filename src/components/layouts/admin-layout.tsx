@@ -102,7 +102,7 @@ export function AdminLayout({
   return (
     <div className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
@@ -145,6 +145,7 @@ export function AdminLayout({
           />
         </div>
       </header>
+      <div className="h-14 shrink-0" aria-hidden="true" />
 
       <div className="flex flex-1">
         <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">

@@ -75,7 +75,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       "public-shell flex min-h-screen flex-col bg-white",
       hideMobileNav ? "public-shell--mobile-nav-hidden" : "public-shell--mobile-nav-visible",
     )}>
-      <header className="sticky top-0 z-50 w-full border-b border-[#E3E8F2] bg-white">
+      <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
@@ -216,6 +216,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </header>
+      <div className="h-18 shrink-0" aria-hidden="true" />
 
       {pathname !== "/" && (
         <div className="border-b border-[#E3E8F2] bg-white">
