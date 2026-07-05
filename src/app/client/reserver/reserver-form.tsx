@@ -804,7 +804,7 @@ export function ReserverForm({
                   size="sm"
                   maxSecondary={0}
                 />
-                <span className="hidden min-h-8 items-center gap-1.5 rounded-xl border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] min-[420px]:inline-flex">
+                <span className="hidden min-h-8 items-center gap-1.5 text-xs font-semibold text-[#111B4D] min-[420px]:inline-flex">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Paiement protégé
                 </span>

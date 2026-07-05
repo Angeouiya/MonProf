@@ -86,10 +86,10 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <p className="text-sm font-semibold text-[#111827]">Coût de la réservation</p>
             <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block">
               {isQuoteOnly
-                ? "Chiffrage manuel avant paiement. Aucun montant n'est encaissé avant validation admin."
+                ? "Chiffrage manuel avant paiement."
                 : audience === "client"
-                  ? "Le client voit uniquement le prix du cours, les frais utiles et le total PayDunya."
-                  : "Vue admin avec les éléments comptables internes."}
+                  ? "Séances de 2h, participants, déplacement et frais PayDunya."
+                  : "Vue admin avec éléments comptables internes."}
             </p>
           </div>
         </div>
@@ -135,8 +135,8 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
             <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
               {isGroup
-                ? "Le premier apprenant est inclus. Chaque apprenant supplémentaire ajoute 50% du prix de base."
-                : "Calcul individuel sur la formule sélectionnée."}
+                ? "Chaque apprenant supplémentaire ajoute 50% du prix de base."
+                : "Calcul individuel sur la formule choisie."}
             </p>
           </div>
           {!isQuoteOnly && (

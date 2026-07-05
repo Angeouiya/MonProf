@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 
 const fieldClassName = "mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
 const quickSearches = [
-  { label: "Maths Cocody", href: "/client/rechercher?q=math&commune=Cocody", detail: "Soutien" },
-  { label: "Anglais ligne", href: "/client/rechercher?q=anglais&format=ONLINE", detail: "Distance" },
-  { label: "Concours", href: "/client/rechercher?q=concours", detail: "Préparation" },
-  { label: "Adultes", href: "/client/rechercher?q=professionnel", detail: "Pro" },
-  { label: "Informatique", href: "/client/rechercher?q=informatique", detail: "Outils" },
-  { label: "Art métiers", href: "/client/rechercher?q=design", detail: "Pratique" },
+  { label: "Maths à Cocody", href: "/client/rechercher?q=math&commune=Cocody" },
+  { label: "Anglais en ligne", href: "/client/rechercher?q=anglais&format=ONLINE" },
+  { label: "Concours", href: "/client/rechercher?q=concours" },
+  { label: "Adultes", href: "/client/rechercher?q=professionnel" },
+  { label: "Informatique", href: "/client/rechercher?q=informatique" },
+  { label: "Art et métiers", href: "/client/rechercher?q=design" },
 ];
 
 export default async function RechercherPage({
@@ -131,18 +131,16 @@ export default async function RechercherPage({
           </Link>
         </div>
 
-        <div className="mt-2 grid grid-cols-3 gap-2 xl:grid-cols-6">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#E6EAF3] pt-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
           {quickSearches.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="group flex min-h-11 min-w-0 items-center justify-between gap-1.5 rounded-lg border border-[#DDE3EE] bg-white px-2.5 py-2 text-left transition hover:border-[#111B4D] hover:bg-white sm:px-3"
+              className="group inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#111827] transition hover:text-[#111B4D]"
             >
-              <span className="min-w-0">
-                <span className="block truncate text-[11px] font-semibold leading-4 text-[#111827] min-[420px]:text-xs sm:text-sm">{item.label}</span>
-                <span className="mt-0.5 hidden truncate text-[11px] font-medium text-[#64748B] sm:block">{item.detail}</span>
-              </span>
-              <Search className="hidden h-3.5 w-3.5 shrink-0 text-[#111B4D] transition group-hover:scale-105 min-[420px]:block" />
+              <span>{item.label}</span>
+              <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D] transition group-hover:translate-x-0.5" />
             </Link>
           ))}
         </div>

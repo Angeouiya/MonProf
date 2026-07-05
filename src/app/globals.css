@@ -742,6 +742,50 @@ b {
   backdrop-filter: none !important;
 }
 
+.client-shell [class*="rounded-3xl"]:not(.rounded-full),
+.client-shell [class*="rounded-2xl"]:not(.rounded-full),
+.client-shell [class*="rounded-\["]:not(.rounded-full) {
+  border-radius: 0.75rem !important;
+}
+
+.client-shell .rounded-full,
+.client-shell [class*="rounded-full"],
+.client-shell [data-professor-image-badge] {
+  border-radius: 9999px !important;
+}
+
+.client-shell [data-slot="button"] {
+  border-radius: 0.65rem !important;
+}
+
+.client-shell [data-slot="button"]:not([class*="border"]):not([class*="bg-white"]):not([class*="text-red"]) {
+  background-color: var(--client-navy) !important;
+  color: #FFFFFF !important;
+}
+
+.client-shell [data-slot="button"]:not([class*="bg-white"]):hover {
+  background-color: #182260 !important;
+}
+
+.client-shell section,
+.client-shell article,
+.client-shell [data-slot="card"],
+.client-shell .client-app-surface,
+.client-shell .client-page-header,
+.client-shell .client-focus-panel,
+.client-shell .client-record-card,
+.client-shell .client-metric-card,
+.client-shell .client-shortcut-card {
+  border-radius: 0.75rem !important;
+}
+
+.client-shell h1,
+.client-shell h2,
+.client-shell h3 {
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
 .client-shell a,
 .client-shell button,
 .client-shell input,
