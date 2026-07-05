@@ -636,15 +636,15 @@ b {
 
 .client-shell main {
   min-height: calc(100vh - 4.5rem);
+  width: 100%;
   background: #FFFFFF;
 }
 
 @media (max-width: 1023px) {
   .client-shell main.client-main-with-mobile-nav {
-    height: calc(100dvh - 10.5rem);
-    min-height: calc(100dvh - 10.5rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    min-height: calc(100dvh - 4rem);
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 }
 
