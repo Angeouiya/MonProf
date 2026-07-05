@@ -153,7 +153,7 @@ export default function CommentCaMarchePage() {
       {/* HEADER */}
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B] shadow-sm">
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
             <Link href="/" className="inline-flex min-h-11 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-[#111827]">Comment ça marche</span>
@@ -163,7 +163,7 @@ export default function CommentCaMarchePage() {
               <ShieldCheck className="h-3.5 w-3.5" />
               Réservation encadrée de bout en bout
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#111827] sm:text-5xl text-balance">
+            <h1 className="mt-5 text-3xl font-semibold text-[#111827] sm:text-4xl text-balance">
               Comment ça marche
             </h1>
             <p className="mt-4 text-base text-[#64748B] sm:text-lg">
@@ -174,14 +174,14 @@ export default function CommentCaMarchePage() {
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E2A78]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
               >
                 Trouver un professeur
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/tarifs"
-                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm transition hover:border-[#111B4D] hover:bg-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-5 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
               >
                 Comprendre les tarifs
               </Link>
@@ -193,11 +193,11 @@ export default function CommentCaMarchePage() {
       {/* RÉSUMÉ OPÉRATIONNEL */}
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Parcours client sécurisé</p>
-                <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#111827]">
+                <h2 className="mt-1 text-xl font-semibold text-[#111827]">
                   Une réservation claire avant, pendant et après le cours.
                 </h2>
               </div>
@@ -221,11 +221,11 @@ export default function CommentCaMarchePage() {
             {STEPS.map((s) => (
               <li
                 key={s.n}
-                className="group relative rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D] sm:p-6"
+                className="group relative rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D] sm:p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:gap-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-base font-semibold text-white shadow-sm">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-base font-semibold text-white">
                       {s.n}
                     </div>
                   </div>
@@ -255,7 +255,7 @@ export default function CommentCaMarchePage() {
               <UserCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Conseils pratiques
             </span>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
               Pour les parents
             </h2>
             <p className="mt-3 text-sm text-[#64748B] sm:text-base">
@@ -267,9 +267,9 @@ export default function CommentCaMarchePage() {
             {PARENT_TIPS.map((t) => (
               <div
                 key={t.title}
-                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D] sm:p-6"
+                className="rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D] sm:p-6"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <t.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-[#111827] sm:text-base">
@@ -292,7 +292,7 @@ export default function CommentCaMarchePage() {
               <ShieldCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Nos garanties
             </span>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
               Pourquoi nous faire confiance
             </h2>
             <p className="mt-3 text-sm text-[#64748B] sm:text-base">
@@ -304,9 +304,9 @@ export default function CommentCaMarchePage() {
             {TRUST.map((t) => (
               <div
                 key={t.title}
-                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 text-center shadow-sm transition hover:border-[#111B4D]"
+                className="rounded-lg border border-[#E3E8F2] bg-white p-5 text-center transition hover:border-[#111B4D]"
               >
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <t.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-[#111827]">
@@ -332,10 +332,10 @@ export default function CommentCaMarchePage() {
             ].map((s) => (
               <div
                 key={s.label}
-                className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-6 text-center shadow-sm"
+                className="rounded-lg border border-[#E3E8F2] bg-white p-6 text-center"
               >
                 <s.icon className="mx-auto h-6 w-6 text-[#111B4D]" />
-                <div className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
+                <div className="mt-3 text-3xl font-semibold text-[#111827]">
                   {s.kpi}
                 </div>
                 <p className="mt-1 text-sm text-[#64748B]">{s.label}</p>
@@ -348,9 +348,9 @@ export default function CommentCaMarchePage() {
       {/* CTA */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-8 text-center shadow-sm sm:p-12">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-8 text-center sm:p-12">
             <BadgeCheck className="mx-auto h-7 w-7 text-[#111B4D]" />
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="mt-4 text-2xl font-semibold text-[#111827] sm:text-3xl">
               Prêt à commencer ?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-[#64748B] sm:text-base">
@@ -360,14 +360,14 @@ export default function CommentCaMarchePage() {
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E2A78] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] sm:w-auto"
               >
                 Trouver un professeur
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/tarifs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white sm:w-auto"
               >
                 Voir les tarifs
               </Link>
@@ -391,8 +391,8 @@ function JourneySignal({
   text: string;
 }) {
   return (
-    <article className="min-w-0 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+    <article className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
         <Icon className="h-5 w-5" />
       </div>
       <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

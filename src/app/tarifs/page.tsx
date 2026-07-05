@@ -222,7 +222,7 @@ export default function TarifsPage() {
               <ShieldCheck className="h-3.5 w-3.5" />
               Fonds bloqués jusqu'à confirmation
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#111827] sm:text-5xl text-balance">
+            <h1 className="mt-5 text-3xl font-semibold text-[#111827] sm:text-4xl text-balance">
               Tarifs clairs, paiement sécurisé
             </h1>
             <p className="mt-4 text-base font-medium leading-7 text-[#64748B] sm:text-lg">
@@ -235,7 +235,7 @@ export default function TarifsPage() {
       {/* GRILLE TARIFAIRE OFFICIELLE */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+          <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
             Grille tarifaire officielle
           </h2>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B] sm:text-base">
@@ -260,10 +260,10 @@ export default function TarifsPage() {
             />
           </div>
 
-          <div className="mt-8 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3 sm:p-4">
+          <div className="mt-8 rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-4">
             <div className="grid gap-3 lg:hidden">
               {TIERS.map((t) => (
-                <article key={t.name} className="rounded-2xl border border-[#E3E8F2] bg-white p-4">
+                <article key={t.name} className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#111827]">{t.name}</p>
@@ -316,7 +316,7 @@ export default function TarifsPage() {
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Object.values(TRANSPORT_FEES).map((fee) => (
-              <div key={fee.key} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+              <div key={fee.key} className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <p className="text-sm font-semibold text-[#111827]">{fee.label}</p>
                 <p className="mt-2 text-lg font-semibold text-[#111B4D]">
                   {fee.amount === null ? "Sur devis" : formatFCFA(fee.amount)}
@@ -327,7 +327,7 @@ export default function TarifsPage() {
               </div>
             ))}
           </div>
-          <div className="mt-6 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+          <div className="mt-6 rounded-lg border border-[#E3E8F2] bg-white p-4">
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
                 <p className="text-sm font-semibold text-[#111B4D]">Calcul Grand Abidjan automatique</p>
@@ -341,11 +341,11 @@ export default function TarifsPage() {
                   <span>+{GRAND_ABIDJAN_AREAS.length - 10}</span>
                 </div>
               </div>
-              <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#56617F]">Exemples de routes proches</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {GRAND_ABIDJAN_NEAR_ROUTES.slice(0, 8).map(([from, to]) => (
-                    <p key={`${from}-${to}`} className="rounded-2xl border border-[#D6DEED] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]">
+                    <p key={`${from}-${to}`} className="rounded-lg border border-[#D6DEED] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]">
                       {from} {"->"} {to}
                     </p>
                   ))}
@@ -360,7 +360,7 @@ export default function TarifsPage() {
       <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
               Packs de cours
             </h2>
             <p className="mt-3 text-sm font-medium text-[#64748B] sm:text-base">
@@ -371,9 +371,9 @@ export default function TarifsPage() {
             {PACKS.map((p) => (
               <div
                 key={p.name}
-                className="flex flex-col rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D]"
+                className="flex flex-col rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D]"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <p.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-[#111827]">
@@ -410,7 +410,7 @@ export default function TarifsPage() {
               <ShieldCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Paiement sécurisé
             </span>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
               Paiement sécurisé PayDunya
             </h2>
             <p className="mt-3 text-sm font-medium text-[#64748B] sm:text-base">
@@ -422,12 +422,12 @@ export default function TarifsPage() {
             {PAYMENT_STEPS.map((s, i) => (
               <div
                 key={s.title}
-                className="relative rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D]"
+                className="relative rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D]"
               >
                 <div className="absolute right-4 top-4 text-3xl font-semibold tabular-nums text-[#E3E8F2]">
                   {i + 1}
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                   <s.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-sm font-semibold text-[#111827]">
@@ -451,13 +451,13 @@ export default function TarifsPage() {
                 <RefreshCw className="h-3.5 w-3.5 text-[#111B4D]" />
                 Annulation encadrée
               </span>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+              <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
                 Règles d'annulation de réservation
               </h2>
               <p className="mt-3 text-sm font-medium leading-relaxed text-[#64748B] sm:text-base">
                 Les frais dépendent du délai avant le cours. Le client voit la règle avant confirmation.
               </p>
-              <div className="mt-5 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 text-sm">
+              <div className="mt-5 rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm">
                 <div className="flex items-start gap-3">
                   <Clock className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
                   <p className="font-medium leading-6 text-[#64748B]">
@@ -474,13 +474,13 @@ export default function TarifsPage() {
                   const refundAmount = Math.max(0, CANCELLATION_EXAMPLE_AMOUNT - feeAmount);
 
                   return (
-                    <div key={rule.title} className={`rounded-[1.15rem] border p-5 ${rule.tone}`}>
+                    <div key={rule.title} className={`rounded-lg border p-5 ${rule.tone}`}>
                       <div className="flex items-center justify-between gap-3">
                         <h3 className="text-sm font-semibold">{rule.title}</h3>
                         <span className="text-xs font-semibold text-[#111B4D]">{rule.fee}</span>
                       </div>
                       <p className="mt-3 text-xs leading-relaxed">{rule.text}</p>
-                      <div className="mt-4 grid gap-2 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs">
+                      <div className="mt-4 grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs">
                         <div className="flex items-center justify-between gap-3">
                           <span className="font-medium text-[#56617F]">Exemple sur {formatFCFA(CANCELLATION_EXAMPLE_AMOUNT)}</span>
                           <span className="font-semibold">
@@ -511,7 +511,7 @@ export default function TarifsPage() {
               <HelpCircle className="h-3.5 w-3.5 text-[#111B4D]" />
               FAQ
             </span>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
               Questions fréquentes
             </h2>
           </div>
@@ -520,9 +520,9 @@ export default function TarifsPage() {
               <AccordionItem
                 key={i}
                 value={`item-${i}`}
-                className="rounded-2xl border border-[#E3E8F2] bg-white px-4"
+                className="rounded-lg border border-[#E3E8F2] bg-white px-4"
               >
-                <AccordionTrigger className="rounded-2xl bg-white px-1 text-left text-sm font-medium hover:bg-white hover:no-underline">
+                <AccordionTrigger className="rounded-lg bg-white px-1 text-left text-sm font-medium hover:bg-white hover:no-underline">
                   {item.q}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm font-medium leading-relaxed text-[#64748B]">
@@ -537,8 +537,8 @@ export default function TarifsPage() {
       {/* CTA */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-8 text-center sm:p-12">
-            <h2 className="text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-8 text-center sm:p-12">
+            <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
               Une question sur les tarifs ?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-[#64748B] sm:text-base">
@@ -547,14 +547,14 @@ export default function TarifsPage() {
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] sm:w-auto"
               >
                 Voir les professeurs
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#CAD7F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#CAD7F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:w-auto"
               >
                 Nous contacter
               </Link>
@@ -576,9 +576,9 @@ function TariffSignal({
   text: string;
 }) {
   return (
-    <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-[#56617F]">{label}</p>
-      <p className="mt-1 text-xl font-semibold tracking-tight text-[#111B4D]">{value}</p>
+      <p className="mt-1 text-xl font-semibold text-[#111B4D]">{value}</p>
       <p className="mt-1 text-sm font-medium leading-5 text-[#64748B]">{text}</p>
     </div>
   );

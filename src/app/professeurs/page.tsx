@@ -177,7 +177,7 @@ export default async function TeachersPage({
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Recherche guidée · profils vérifiés
               </div>
-              <h1 className="max-w-3xl text-[2rem] font-semibold leading-[1.08] tracking-tight text-[#111827] text-balance sm:text-4xl lg:text-5xl">
+              <h1 className="max-w-3xl text-[2rem] font-semibold leading-[1.08] text-[#111827] text-balance sm:text-4xl lg:text-4xl">
                 Trouvez le professeur idéal, au bon niveau et au bon moment.
               </h1>
               <p className="mt-3 max-w-2xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:text-base sm:leading-7">
@@ -354,7 +354,7 @@ export default async function TeachersPage({
                   action={
                     <Link
                       href="/professeurs"
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
                     >
                       Réinitialiser les filtres
                     </Link>
@@ -374,7 +374,7 @@ export default async function TeachersPage({
                       <Link
                         href={buildPaginationUrl(Math.max(1, page - 1))}
                         aria-disabled={page === 1}
-                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                        className={`inline-flex min-h-11 items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                           page === 1
                             ? "pointer-events-none border-[#E3E8F2] bg-white text-[#8892A8]"
                             : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
@@ -389,7 +389,7 @@ export default async function TeachersPage({
                       <Link
                         href={buildPaginationUrl(Math.min(totalPages, page + 1))}
                         aria-disabled={page === totalPages}
-                        className={`inline-flex min-h-11 items-center gap-1 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                        className={`inline-flex min-h-11 items-center gap-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                           page === totalPages
                             ? "pointer-events-none border-[#E3E8F2] bg-white text-[#8892A8]"
                             : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
@@ -460,7 +460,7 @@ function FiltersForm({
     <form
       method="GET"
       action="/professeurs"
-      className={compact ? "min-w-0" : "min-w-0 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5"}
+      className={compact ? "min-w-0" : "min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-5"}
     >
       {!compact && (
         <div className="mb-4 flex items-center justify-between">
@@ -564,7 +564,7 @@ function FiltersForm({
         <div className={compact ? "min-[560px]:self-end" : ""}>
           <button
             type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
           >
             Appliquer les filtres
           </button>

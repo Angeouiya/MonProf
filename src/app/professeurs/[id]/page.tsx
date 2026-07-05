@@ -117,7 +117,7 @@ export default async function TeacherDetailPage({
         <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
           <Link
             href="/professeurs"
-            className="mb-6 hidden min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
+            className="mb-6 hidden min-h-11 items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour à la liste
@@ -136,7 +136,7 @@ export default async function TeacherDetailPage({
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-col gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-[#111827] sm:text-4xl">
+                <h1 className="text-3xl font-semibold text-[#111827] sm:text-4xl">
                   {displayName}
                 </h1>
                 <ProfessorTrustBadges
@@ -194,14 +194,14 @@ export default async function TeacherDetailPage({
               <div className="mt-5 grid gap-2 sm:hidden">
                 <Link
                   href={reserveHref}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
                 >
                   <Calendar className="h-4 w-4" />
                   Réserver ce professeur
                 </Link>
                 <a
                   href="#disponibilites"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-[#C8D2E3] bg-white px-4 text-sm font-semibold text-[#111B4D]"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#C8D2E3] bg-white px-4 text-sm font-semibold text-[#111B4D]"
                 >
                   Voir les créneaux disponibles
                 </a>
@@ -216,11 +216,11 @@ export default async function TeacherDetailPage({
           </div>
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 sm:p-5">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#111827]">
+                  <h2 className="mt-1 text-xl font-semibold text-[#111827]">
                     Réserver {displayName} sans zone d'ombre.
                   </h2>
                 </div>
@@ -265,7 +265,7 @@ export default async function TeacherDetailPage({
               </div>
               <Link
                 href={reserveHref}
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
                 <Calendar className="h-4 w-4" />
                 Réserver ce professeur
@@ -358,7 +358,7 @@ export default async function TeacherDetailPage({
                   {teacher.subjects.map((s) => (
                     <span
                       key={s.subject.id}
-                      className={`inline-flex items-center gap-1 rounded-2xl border px-3 py-1.5 text-sm font-semibold ${
+                      className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold ${
                         s.isPrimary
                           ? "border-[#111B4D] bg-white text-[#111B4D]"
                           : "border-[#E3E8F2] bg-white text-[#111827]"
@@ -378,7 +378,7 @@ export default async function TeacherDetailPage({
                   {teacher.levels.map((l) => (
                     <span
                       key={l.level.id}
-                      className="inline-flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
+                      className="inline-flex items-center rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
                     >
                       {l.level.name}
                     </span>
@@ -403,7 +403,7 @@ export default async function TeacherDetailPage({
                       return (
                       <span
                         key={commune.id}
-                        className="inline-flex items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827]"
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111827]"
                       >
                         <MapPin className="h-3 w-3 text-[#64748B]" />
                         {commune.name}
@@ -431,7 +431,7 @@ export default async function TeacherDetailPage({
                       {WEEK_DAYS.map((day) => {
                         const availableSlots = TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]);
                         return (
-                          <div key={day.key} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3">
+                          <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                             <div className="flex items-center justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-[#111827]">{day.label}</p>
@@ -446,14 +446,14 @@ export default async function TeacherDetailPage({
                                 {availableSlots.map((slot) => (
                                   <span
                                     key={slot.key}
-                                    className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-[#111B4D] bg-white px-2 py-2 text-center text-xs font-semibold text-[#111B4D]"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#111B4D] bg-white px-2 py-2 text-center text-xs font-semibold text-[#111B4D]"
                                   >
                                     {slot.label}
                                   </span>
                                 ))}
                               </div>
                             ) : (
-                              <p className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
+                              <p className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
                                 Aucun créneau enregistré ce jour.
                               </p>
                             )}
@@ -464,20 +464,20 @@ export default async function TeacherDetailPage({
 
                     <div className="hidden xl:grid xl:gap-2">
                       <div className="grid grid-cols-[112px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs">
-                        <div className="flex items-center rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 font-semibold text-[#64748B]">
+                        <div className="flex items-center rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 font-semibold text-[#64748B]">
                           Jour
                         </div>
                         {TWO_HOUR_SLOTS.map((slot) => (
                           <div
                             key={slot.key}
-                             className="flex min-h-10 items-center justify-center rounded-2xl border border-[#E3E8F2] bg-white px-1 text-center font-semibold text-[#64748B]"
+                             className="flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-1 text-center font-semibold text-[#64748B]"
                           >
                             {slot.shortLabel}
                           </div>
                         ))}
                         {WEEK_DAYS.map((day) => (
                           <div key={day.key} className="contents">
-                            <div className="flex min-h-11 items-center rounded-2xl border border-[#111B4D] bg-white px-3 text-sm font-semibold text-[#111B4D]">
+                            <div className="flex min-h-11 items-center rounded-lg border border-[#111B4D] bg-white px-3 text-sm font-semibold text-[#111B4D]">
                               {day.label}
                             </div>
                             {TWO_HOUR_SLOTS.map((slot) => {
@@ -485,7 +485,7 @@ export default async function TeacherDetailPage({
                               return (
                                 <div
                                   key={slot.key}
-                                  className={`flex min-h-11 items-center justify-center rounded-2xl border text-center text-xs font-semibold ${
+                                  className={`flex min-h-11 items-center justify-center rounded-lg border text-center text-xs font-semibold ${
                                     available
                                       ? "border-[#111B4D] bg-white text-[#111B4D]"
                                       : "border-[#E3E8F2] bg-white text-[#94A3B8]"
@@ -549,7 +549,7 @@ export default async function TeacherDetailPage({
                 {/* Répartition des notes */}
                 {displayRating > 0 && (
                   <div className="mt-4 grid gap-4 sm:grid-cols-[200px_1fr]">
-                    <div className="flex flex-col items-center justify-center rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 text-center">
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-4 text-center">
                       <div className="text-4xl font-semibold text-[#111827]">
                         {displayRating.toFixed(1)}
                       </div>
@@ -618,7 +618,7 @@ export default async function TeacherDetailPage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B]">
+                  <p className="mt-4 rounded-lg border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B]">
                     Ce professeur n'a pas encore d'avis publié. Soyez le
                     premier à réserver et à laisser un avis après votre cours.
                   </p>
@@ -631,7 +631,7 @@ export default async function TeacherDetailPage({
               <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
                 <div className="mt-1">
-                  <span className="text-2xl font-semibold tracking-tight text-[#111827]">
+                  <span className="text-2xl font-semibold text-[#111827]">
                     <Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />
                   </span>
                   <p className="mt-1 text-sm font-medium text-[#64748B]">Séance de 2h, total confirmé avant paiement.</p>
@@ -662,7 +662,7 @@ export default async function TeacherDetailPage({
 
                 <Link
                   href={reserveHref}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
                 >
                   <Calendar className="h-4 w-4" />
                   Réserver ce professeur
@@ -753,7 +753,7 @@ function CardTitle({
 
 function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
     </div>
@@ -770,7 +770,7 @@ function DecisionPoint({
   value: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3">
+    <div className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         <span className="text-[#111B4D]">{icon}</span>
         {label}
@@ -782,7 +782,7 @@ function DecisionPoint({
 
 function TrustLine({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
+    <div className="flex items-start gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <span className="leading-5">{text}</span>
     </div>

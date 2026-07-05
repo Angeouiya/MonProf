@@ -113,7 +113,7 @@ export default function ContactPage() {
     <PublicLayout>
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B] shadow-sm">
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
             <Link href="/" className="inline-flex min-h-11 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-[#111827]">Contact</span>
@@ -124,7 +124,7 @@ export default function ContactPage() {
               <MessageSquare className="h-3.5 w-3.5" />
               Support humain et suivi administratif
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#111827] sm:text-5xl text-balance">
+            <h1 className="mt-5 text-3xl font-semibold text-[#111827] sm:text-4xl text-balance">
               Contactez-nous
             </h1>
             <p className="mt-4 text-base text-[#64748B] sm:text-lg">
@@ -137,9 +137,9 @@ export default function ContactPage() {
               <HeroMetric label="Zone" value="Abidjan" />
             </div>
           </div>
-          <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <div>
@@ -166,7 +166,7 @@ export default function ContactPage() {
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
             {/* FORMULAIRE */}
-            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm sm:p-6">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-5 sm:p-6">
               {success ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
@@ -189,9 +189,9 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="rounded-[1.15rem] border border-[#DDE6F7] bg-white p-4">
+                  <div className="rounded-lg border border-[#DDE6F7] bg-white p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Message structuré</p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#111827]">Décrivez votre besoin, nous orientons le dossier.</h2>
+                    <h2 className="mt-1 text-lg font-semibold text-[#111827]">Décrivez votre besoin, nous orientons le dossier.</h2>
                     <p className="mt-1 text-sm leading-6 text-[#394568]">
                       Plus votre demande est précise, plus notre équipe peut vous répondre vite : réservation concernée, professeur, matière, date ou moyen de paiement.
                     </p>
@@ -304,7 +304,7 @@ export default function ContactPage() {
 
             {/* INFOS CONTACT */}
             <aside className="space-y-4">
-              <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
                   <MessageSquare className="h-4 w-4 text-[#111B4D]" />
                   Coordonnées
@@ -369,7 +369,7 @@ export default function ContactPage() {
                 </ul>
               </div>
 
-              <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
                 <h3 className="text-sm font-semibold text-[#111827]">
                   Besoin d'aide rapide ?
                 </h3>
@@ -379,7 +379,7 @@ export default function ContactPage() {
                 </p>
                 <Link
                   href="/comment-ca-marche"
-                  className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] hover:border-[#111B4D]"
+                  className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] hover:border-[#111B4D]"
                 >
                   Voir comment ça marche
                   <ArrowRight className="h-3 w-3" />
@@ -395,7 +395,7 @@ export default function ContactPage() {
 
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[#E3E8F2] bg-white px-4 py-3 shadow-sm">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
     </div>
@@ -418,8 +418,8 @@ function ContactPathCard({
   const external = href.startsWith("tel:") || href.startsWith("mailto:");
 
   const content = (
-    <article className="group h-full rounded-[1.15rem] border border-[#E3E8F2] bg-white p-5 shadow-sm transition hover:border-[#111B4D]">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+    <article className="group h-full rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D]">
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
         <Icon className="h-5 w-5" />
       </div>
       <h2 className="mt-4 text-base font-semibold text-[#111827]">{title}</h2>

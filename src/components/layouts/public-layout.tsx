@@ -70,7 +70,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
-            className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-1.5 transition hover:bg-white"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white"
             onClick={() => setMobileOpen(false)}
           >
             <BrandLogo priority />
@@ -82,7 +82,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex min-h-11 items-center rounded-2xl px-4 text-sm font-semibold transition-colors",
+                  "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.href)
                     ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
                     : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
@@ -95,24 +95,24 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
           <div className="hidden items-center gap-2 lg:flex">
             {isClient && (
-              <Button asChild variant="outline" className="min-h-11 rounded-2xl border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+              <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href="/client">
                   <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
                 </Link>
               </Button>
             )}
             {isAdmin && (
-              <Button asChild variant="outline" className="min-h-11 rounded-2xl border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+              <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                 <Link href="/admin">Admin</Link>
               </Button>
             )}
             {!session && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
+              <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
                 <Link href="/connexion">Connexion</Link>
               </Button>
             )}
             {!session && (
-              <Button asChild className="min-h-11 rounded-2xl bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
+              <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
                 <Link href="/inscription">
                   Créer un compte
                   <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -120,14 +120,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </Button>
             )}
             {session && !isAdmin && !isClient && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-2xl px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
+              <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
                 <Link href="/connexion">Connexion</Link>
               </Button>
             )}
           </div>
 
           <button
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#CAD7F2] bg-white text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[#CAD7F2] bg-white text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Menu"
             aria-expanded={mobileOpen}
@@ -142,7 +142,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link
                 href="/professeurs"
                 onClick={() => setMobileOpen(false)}
-                className="flex min-h-14 items-center justify-between rounded-[1.15rem] border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
+                className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
               >
                 <span className="inline-flex items-center gap-2">
                   <Search className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    "inline-flex min-h-12 items-center rounded-2xl px-4 text-sm font-semibold transition",
+                    "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
                     pathname?.startsWith(link.href)
                       ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
                       : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
@@ -165,11 +165,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   {link.label}
                 </Link>
               ))}
-              <div className="mt-2 grid grid-cols-1 gap-2 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
                 {trustSignals.map((signal) => {
                   const Icon = signal.icon;
                   return (
-                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-2xl bg-white px-3 text-xs font-semibold text-[#111B4D]">
+                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#111B4D]">
                       <Icon className="h-4 w-4 shrink-0" />
                       <span>{signal.label}</span>
                     </div>
@@ -178,23 +178,23 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
                 {isClient && (
-                  <Button asChild variant="outline" className="min-h-12 w-full rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+                  <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                     <Link href="/client" onClick={() => setMobileOpen(false)}>
                       <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
                     </Link>
                   </Button>
                 )}
                 {isAdmin && (
-                  <Button asChild variant="outline" className="min-h-12 w-full rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+                  <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                     <Link href="/admin" onClick={() => setMobileOpen(false)}>Admin</Link>
                   </Button>
                 )}
                 {!session && (
                   <>
-                    <Button asChild variant="outline" className="min-h-12 w-full rounded-2xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+                    <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                       <Link href="/connexion" onClick={() => setMobileOpen(false)}>Connexion</Link>
                     </Button>
-                    <Button asChild className="min-h-12 w-full rounded-2xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                    <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                       <Link href="/inscription" onClick={() => setMobileOpen(false)}>
                         Créer un compte
                         <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -220,7 +220,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="mt-auto border-t border-[#E3E8F2] bg-white pb-24 lg:pb-0">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div className="mb-8 rounded-[1.15rem] border border-[#DDE6F7] bg-white p-4 sm:p-5">
+          <div className="mb-8 rounded-lg border border-[#DDE6F7] bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
@@ -231,7 +231,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Une plateforme ivoirienne pensée pour réserver un professeur, payer proprement et suivre chaque cours depuis un espace client clair.
                 </p>
               </div>
-              <Button asChild className="min-h-12 rounded-2xl bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
+              <Button asChild className="min-h-12 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
                 <Link href="/professeurs">
                   Trouver un professeur
                   <ArrowRight className="ml-1.5 h-4 w-4" />
