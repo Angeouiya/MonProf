@@ -1493,13 +1493,11 @@ b {
 
 .client-app-rail {
   align-items: stretch;
-  scrollbar-width: none;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 .client-app-rail .client-shortcut-card span {
-  overflow-wrap: normal;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .client-app-rail::-webkit-scrollbar {
@@ -1523,7 +1521,7 @@ b {
   min-width: 0;
 }
 
-@media (min-width: 360px) and (max-width: 579px) {
+@media (min-width: 430px) and (max-width: 759px) {
   .client-shell [data-client-pricing-facts] > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
@@ -1706,7 +1704,8 @@ b {
   }
 
   .client-app-rail .client-shortcut-card .text-\[10px\] {
-    font-size: 0.58rem !important;
+    font-size: 0.66rem !important;
+    line-height: 0.78rem !important;
   }
 
   .client-booking-form {

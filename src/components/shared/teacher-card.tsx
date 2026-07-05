@@ -35,13 +35,13 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
     <article
       data-client-teacher-card
       aria-label={`Professeur ${displayName}`}
-      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3.5 transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
+      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
     >
       <div className="flex min-w-0 items-start gap-3.5">
         <ProfessorImage
           photoUrl={teacher.photoUrl}
           name={displayName}
-          size={82}
+          size={72}
           shape="circle"
           verified={teacher.badgeVerified}
           className="mt-0.5"
@@ -52,14 +52,14 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
               <h3 className="line-clamp-1 text-[1.03rem] font-semibold leading-snug text-[#111827]">
                 {displayName}
               </h3>
-              <p className="mt-0.5 line-clamp-1 text-[13px] font-medium leading-5 text-[#64748B]">{teacher.jobTitle || "Professeur Compétence"}</p>
+              <p className="mt-0.5 hidden text-[13px] font-medium leading-5 text-[#64748B] min-[420px]:line-clamp-1">{teacher.jobTitle || "Professeur Compétence"}</p>
             </div>
             <ProfessorTrustBadges verified={teacher.badgeVerified} size="sm" maxSecondary={0} className="shrink-0" />
           </div>
 
           <div className="mt-2 grid gap-1.5 text-[12.5px] font-medium leading-5 text-[#475569]">
             <p className="line-clamp-1 font-semibold text-[#111827]">{primarySubject}</p>
-            <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
                 <span className="truncate">{commune}</span>
@@ -80,7 +80,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
           certifications={teacher.certifications}
           teachingAchievements={teacher.teachingAchievements}
           learnersCoached={teacher.learnersCoached}
-          className="mb-2 hidden min-[380px]:block"
+          className="mb-2 hidden lg:block"
         />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#475569]">
           {teacher.offersHome && (
@@ -98,7 +98,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
         </div>
       </div>
       <div className="mt-auto pt-3">
-        <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
+        <div className="mb-3 flex items-center justify-between gap-3 border-y border-[#E3E8F2] bg-white py-2.5">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
             <p className="mt-0.5 text-[1.05rem] font-semibold leading-tight text-[#111827]">
@@ -108,7 +108,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
           </div>
           <ArrowRight className="hidden h-4 w-4 shrink-0 text-[#111B4D] min-[380px]:block" />
         </div>
-        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#C8D2E3] bg-white px-3 text-sm text-[#111B4D] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
             <Link href={profileHref}>Voir profil</Link>
           </Button>

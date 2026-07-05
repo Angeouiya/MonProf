@@ -79,8 +79,8 @@ export function ClientMetricStrip({
         metrics.length === 1
           ? "grid-cols-1"
           : metrics.length === 2
-            ? "grid-cols-2"
-            : "grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
+            ? "grid-cols-1 min-[380px]:grid-cols-2"
+            : "grid-cols-1 min-[380px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
       )}
     >
@@ -88,7 +88,7 @@ export function ClientMetricStrip({
         <div
           key={`${metric.label}-${index}`}
           className={cn(
-            "client-metric-card flex min-h-18 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E1E7F2] bg-white px-3 py-3 sm:px-4",
+            "client-metric-card flex min-h-17 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-3 sm:min-h-18 sm:px-4",
             metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "col-span-2 lg:col-span-1",
           )}
         >
@@ -96,7 +96,7 @@ export function ClientMetricStrip({
             <p className="line-clamp-2 text-[9.5px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] min-[380px]:text-[10.5px]">{metric.label}</p>
             <div
               className={cn(
-                "mt-1 whitespace-normal break-normal text-[0.94rem] font-semibold leading-5 text-[#111827] [overflow-wrap:normal] sm:text-[1.08rem]",
+                "mt-1 whitespace-normal break-words text-[0.94rem] font-semibold leading-5 text-[#111827] [overflow-wrap:normal] sm:text-[1.08rem]",
                 metric.attention && "text-[#111B4D]",
               )}
             >
@@ -285,7 +285,7 @@ export function ClientCompactFacts({
   return (
     <dl
       className={cn(
-        "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-[#D8DEE9] [grid-template-columns:repeat(2,minmax(0,1fr))] min-[360px]:[grid-template-columns:repeat(3,minmax(0,1fr))]",
+        "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-white grid-cols-1 min-[380px]:grid-cols-2 min-[680px]:grid-cols-3",
         className,
       )}
     >
@@ -293,8 +293,8 @@ export function ClientCompactFacts({
         <div
           key={`${item.label}-${index}`}
           className={cn(
-            "min-w-0 bg-white px-3 py-2.5",
-            items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[360px]:col-span-1",
+            "min-w-0 border-b border-[#E6EAF3] bg-white px-3 py-2.5 last:border-b-0 min-[380px]:border-r min-[380px]:even:border-r-0 min-[680px]:[&:nth-child(3n)]:border-r-0",
+            items.length % 2 === 1 && index === items.length - 1 && "min-[380px]:col-span-2 min-[680px]:col-span-1",
             item.className,
           )}
         >
@@ -382,13 +382,13 @@ export function ClientAppRail({
   className?: string;
 }) {
   const gridClassName = items.length >= 5
-    ? "sm:grid-cols-3 min-[980px]:grid-cols-5"
-    : "sm:grid-cols-2 min-[920px]:grid-cols-4";
+    ? "grid-cols-2 min-[560px]:grid-cols-3 min-[980px]:grid-cols-5"
+    : "grid-cols-2 min-[720px]:grid-cols-4";
 
   return (
     <div
       className={cn(
-        "client-app-rail flex snap-x gap-2 overflow-x-auto bg-white pb-1 sm:grid sm:overflow-visible sm:pb-0",
+        "client-app-rail grid gap-2 bg-white",
         gridClassName,
         className,
       )}
@@ -434,7 +434,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-[4.05rem] min-w-[8.35rem] snap-start items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:min-w-0 sm:justify-between sm:px-2.5 sm:text-left",
+          "client-shortcut-card group flex min-h-[4.25rem] min-w-0 items-center justify-center rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:justify-between sm:px-3 sm:text-left",
           item.active
             ? "border-[#111B4D] bg-[#111B4D] text-white"
             : "text-[#111827] hover:border-[#111B4D] hover:bg-white",
