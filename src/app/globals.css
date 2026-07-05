@@ -1500,9 +1500,13 @@ b {
 }
 
 .client-tab-bar {
-  scrollbar-width: thin;
-  scrollbar-color: #CAD3E2 #FFFFFF;
+  scrollbar-width: none;
   overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.client-tab-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .client-mobile-drawer {
@@ -1542,10 +1546,6 @@ b {
 }
 
 @media (max-width: 374px) {
-  .client-app-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
   .client-metric-card {
     min-height: 4.75rem;
     padding: 0.65rem !important;
@@ -1572,6 +1572,9 @@ b {
 
 .client-app-rail {
   align-items: stretch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
 }
 
 .client-app-rail .client-shortcut-card span {
