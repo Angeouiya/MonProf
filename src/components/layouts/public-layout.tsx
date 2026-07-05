@@ -144,78 +144,77 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-
-        {mobileOpen && (
-          <div className="border-t border-[#E3E8F2] bg-white lg:hidden">
-            <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
+      </header>
+      {mobileOpen && (
+        <div className="fixed inset-x-0 top-[4.5rem] z-40 max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-b border-[#E3E8F2] bg-white lg:hidden">
+          <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
+            <Link
+              href="/professeurs"
+              onClick={() => setMobileOpen(false)}
+              className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Trouver un professeur
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            {navLinks.map((link) => (
               <Link
-                href="/professeurs"
+                key={link.href}
+                href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
+                className={cn(
+                  "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
+                  pathname?.startsWith(link.href)
+                    ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
+                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
+                )}
               >
-                <span className="inline-flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Trouver un professeur
-                </span>
-                <ArrowRight className="h-4 w-4" />
+                {link.label}
               </Link>
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
-                    pathname?.startsWith(link.href)
-                      ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
-                      : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
-                {trustSignals.map((signal) => {
-                  const Icon = signal.icon;
-                  return (
-                    <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#111B4D]">
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span>{signal.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
-                {isClient && (
+            ))}
+            <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
+              {trustSignals.map((signal) => {
+                const Icon = signal.icon;
+                return (
+                  <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#111B4D]">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{signal.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
+              {isClient && (
+                <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+                  <Link href="/client" onClick={() => setMobileOpen(false)}>
+                    <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
+                  </Link>
+                </Button>
+              )}
+              {isAdmin && (
+                <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+                  <Link href="/admin" onClick={() => setMobileOpen(false)}>Admin</Link>
+                </Button>
+              )}
+              {!session && (
+                <>
                   <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                    <Link href="/client" onClick={() => setMobileOpen(false)}>
-                      <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
+                    <Link href="/connexion" onClick={() => setMobileOpen(false)}>Connexion</Link>
+                  </Button>
+                  <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                    <Link href="/inscription" onClick={() => setMobileOpen(false)}>
+                      Créer un compte
+                      <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>
-                )}
-                {isAdmin && (
-                  <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                    <Link href="/admin" onClick={() => setMobileOpen(false)}>Admin</Link>
-                  </Button>
-                )}
-                {!session && (
-                  <>
-                    <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                      <Link href="/connexion" onClick={() => setMobileOpen(false)}>Connexion</Link>
-                    </Button>
-                    <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                      <Link href="/inscription" onClick={() => setMobileOpen(false)}>
-                        Créer un compte
-                        <ArrowRight className="ml-1.5 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </>
-                )}
-              </div>
-            </nav>
-          </div>
-        )}
-      </header>
+                </>
+              )}
+            </div>
+          </nav>
+        </div>
+      )}
       <div className="h-18 shrink-0" aria-hidden="true" />
 
       {pathname !== "/" && (
