@@ -138,43 +138,25 @@ export default function ProfilPage() {
       quartier !== (profile.quartier ?? "")
     ),
   );
-  const initials = (name || profile?.email || "Client")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "C";
 
   return (
     <div className="space-y-5">
-      <section className="client-page-header client-screen-header rounded-lg border border-[#DDE3EE] bg-white p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-xl font-semibold text-white">
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Compte client</p>
-              <h1 className="mt-1 break-words text-[1.7rem] font-semibold leading-tight text-[#0F172A] sm:text-4xl">
-                {name || "Client Compétence"}
-              </h1>
-              <p className="mt-1 break-words text-sm font-medium leading-6 text-[#52627A]">{profile?.email}</p>
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <div className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111B4D]">
-              <ShieldCheck className="h-4 w-4" />
-              Compte sécurisé
-            </div>
-            <Button asChild className="min-h-11 rounded-lg">
-              <Link href="/client/rechercher">
-                Trouver un professeur
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+      <ClientPageHeader
+        eyebrow="Compte client"
+        title={name || "Client Compétence"}
+        description={profile?.email}
+      >
+        <div className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111B4D]">
+          <ShieldCheck className="h-4 w-4" />
+          Compte sécurisé
         </div>
-      </section>
+        <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+          <Link href="/client/rechercher">
+            Trouver un professeur
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </ClientPageHeader>
 
       <ClientMetricStrip
         metrics={[
