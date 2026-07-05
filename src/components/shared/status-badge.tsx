@@ -97,7 +97,7 @@ export function BookingStatusBadge({ status, className, audience = "admin" }: { 
     ? (clientBookingStatusClasses[status] ?? "bg-white text-[#111B4D] border-[#E3E8F2]")
     : cfg.className;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap shadow-sm", statusClassName, className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap", statusClassName, className)}>
       {Icon && <Icon className="h-3 w-3" />}
       {label}
     </span>
@@ -117,7 +117,7 @@ export function PaymentStatusBadge({
 }) {
   if (quoteOnly) {
     return (
-      <span className={cn("inline-flex items-center gap-1.5 rounded-full border border-[#E3E8F2] bg-white px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#111B4D] shadow-sm", className)}>
+      <span className={cn("inline-flex items-center gap-1.5 rounded-full border border-[#E3E8F2] bg-white px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#111B4D]", className)}>
         <Clock className="h-3 w-3" />
         Sur devis
       </span>
@@ -130,7 +130,7 @@ export function PaymentStatusBadge({
     ? (clientPaymentStatusClasses[status] ?? "bg-white text-[#111B4D] border-[#E3E8F2]")
     : cfg.className;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap shadow-sm", statusClassName, className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap", statusClassName, className)}>
       {Icon && <Icon className="h-3 w-3" />}
       {label}
     </span>
@@ -152,7 +152,7 @@ export function TeacherStatusBadge({ status }: { status: string }) {
   };
   const cfg = map[status] ?? map.INACTIVE;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold shadow-sm", cfg.className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold", cfg.className)}>
       {cfg.label}
     </span>
   );

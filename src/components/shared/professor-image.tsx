@@ -85,7 +85,7 @@ export function ProfessorImage({
     >
       <span
         className={cn(
-          "relative block h-full w-full overflow-hidden border border-[#E3E8F2] bg-[#111B4D] shadow-sm",
+          "relative block h-full w-full overflow-hidden border border-[#E3E8F2] bg-[#111B4D]",
           shape === "circle" ? "rounded-full" : "rounded-2xl"
         )}
       >

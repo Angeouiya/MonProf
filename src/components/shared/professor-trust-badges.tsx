@@ -52,7 +52,7 @@ export function ProfessorTrustBadges({
       key: "premium",
       label: "Premium",
       icon: Award,
-      className: "border-[#1E2A78] bg-[#1E2A78] text-white shadow-sm",
+      className: "border-[#1E2A78] bg-[#1E2A78] text-white",
     },
     recommended && {
       key: "recommended",
@@ -90,7 +90,7 @@ export function ProfessorTrustBadges({
       {verified && (
         <span
           className={cn(
-            "inline-flex max-w-full min-w-0 items-center rounded-lg border border-[#111B4D] bg-[#111B4D] font-semibold uppercase tracking-wide text-white shadow-sm max-[360px]:px-2",
+            "inline-flex max-w-full min-w-0 items-center rounded-lg border border-[#111B4D] bg-[#111B4D] font-semibold uppercase tracking-wide text-white max-[360px]:px-2",
             styles.primary,
           )}
           title="Professeur certifié"

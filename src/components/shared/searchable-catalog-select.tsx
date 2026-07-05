@@ -112,7 +112,7 @@ export function SearchableCatalogSelect({
             variant="outline"
             aria-expanded={open}
             className={cn(
-              "min-h-11 w-full justify-between rounded-xl border-[#DDE6F7] bg-white px-3 text-left text-sm font-medium text-[#111827] shadow-none hover:border-[#111B4D] hover:bg-white",
+              "min-h-11 w-full justify-between rounded-xl border-[#DDE6F7] bg-white px-3 text-left text-sm font-medium text-[#111827] hover:border-[#111B4D] hover:bg-white",
               triggerClassName,
             )}
           >
@@ -168,7 +168,7 @@ export function SearchableCatalogSelect({
             <button
               type="button"
               onClick={() => choose("")}
-              className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] hover:bg-white hover:shadow-sm"
+              className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] hover:bg-white"
             >
               <X className="h-4 w-4" />
               Effacer la sélection
