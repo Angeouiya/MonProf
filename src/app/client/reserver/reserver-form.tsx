@@ -497,6 +497,30 @@ export function ReserverForm({
       })),
     }));
   }, [selectedCategoryCourses]);
+  const levelSelectionGroups = useMemo(() => [{
+    label: hasTeacherLevels ? `Niveaux de ${displayName}` : "Niveaux à configurer",
+    options: levels.map((level) => ({
+      value: level.name,
+      label: level.name,
+      keywords: level.slug,
+    })),
+  }], [displayName, hasTeacherLevels, levels]);
+  const subjectSelectionGroups = useMemo(() => [{
+    label: hasTeacherSubjects ? `Matières de ${displayName}` : "Matières à configurer",
+    options: subjects.map((subject) => ({
+      value: subject.name,
+      label: subject.name,
+      keywords: subject.slug,
+    })),
+  }], [displayName, hasTeacherSubjects, subjects]);
+  const communeSelectionGroups = useMemo(() => [{
+    label: "Communes du Grand Abidjan",
+    options: communes.map((commune) => ({
+      value: commune.name,
+      label: commune.name,
+      keywords: commune.name,
+    })),
+  }], [communes]);
   const safeCourseCatalogId = selectedCategoryCourseIds.has(form.courseCatalogId) ? form.courseCatalogId : "";
   const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === safeCourseCatalogId);
   const schoolProgramPayload = buildSchoolProgramSummary({
@@ -559,6 +583,9 @@ export function ReserverForm({
   const progressPercent = Math.round(((step + 1) / STEPS.length) * 100);
   const currentStepDetail = STEP_DETAILS[step] ?? STEP_DETAILS[0];
   const primarySubjectLabel = form.subjectName || teacher.subjects.find((subject) => subject.isPrimary)?.name || teacher.subjects[0]?.name || "Matière à choisir";
+  const teacherTrustSignal = teacher.rating > 0
+    ? `Note ${teacher.rating.toFixed(1)}/5 · ${teacher.commune ?? "Abidjan"}`
+    : `Certifié · ${teacher.commune ?? "Abidjan"}`;
   const hasScheduleDayMismatch = Boolean(
     form.startDate
     && selectedDays.length > 0
@@ -922,21 +949,22 @@ export function ReserverForm({
                 </div>
                 <div>
                   <Label htmlFor="levelName">{categoryCopy.levelLabel} *</Label>
-                  <select
+                  <SearchableCatalogSelect
                     id="levelName"
+                    name="levelName"
                     value={form.levelName}
-                    onChange={(e) => setForm((current) => ({
+                    onValueChange={(value) => setForm((current) => ({
                       ...current,
-                      levelName: e.target.value,
-                      preciseLevel: isSchoolContext(current.courseCategory) && isLyceeLevel(e.target.value) ? current.preciseLevel : "",
+                      levelName: value,
+                      preciseLevel: isSchoolContext(current.courseCategory) && isLyceeLevel(value) ? current.preciseLevel : "",
                     }))}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                    {levels.map((l) => (
-                      <option key={l.id} value={l.name}>{l.name}</option>
-                    ))}
-                  </select>
+                    placeholder={`Rechercher ${categoryCopy.levelLabel.toLowerCase()}`}
+                    searchPlaceholder="Tapez le niveau, profil, diplôme ou concours..."
+                    emptyLabel="Aucun niveau configuré pour ce professeur."
+                    allLabel="Aucun niveau choisi"
+                    groups={levelSelectionGroups}
+                    triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                  />
                   {teacher.levels.length > 0 ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#64748B]">
                       Niveaux couverts : {teacher.levels.join(", ")}
@@ -949,17 +977,18 @@ export function ReserverForm({
                 </div>
                 <div>
                   <Label htmlFor="subjectName">{categoryCopy.subjectLabel} *</Label>
-                  <select
+                  <SearchableCatalogSelect
                     id="subjectName"
+                    name="subjectName"
                     value={form.subjectName}
-                    onChange={(e) => update("subjectName", e.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.name}>{s.name}</option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => update("subjectName", value)}
+                    placeholder={`Rechercher ${categoryCopy.subjectLabel.toLowerCase()}`}
+                    searchPlaceholder="Tapez une matière, compétence ou module..."
+                    emptyLabel="Aucune matière configurée pour ce professeur."
+                    allLabel="Aucune matière choisie"
+                    groups={subjectSelectionGroups}
+                    triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                  />
                   {hasTeacherSubjects ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#64748B]">
                       Matières enseignées par {displayName}.
@@ -1229,17 +1258,18 @@ export function ReserverForm({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="commune">Commune *</Label>
-                    <select
+                    <SearchableCatalogSelect
                       id="commune"
+                      name="commune"
                       value={form.commune}
-                      onChange={(e) => update("commune", e.target.value)}
-                      className={FIELD_CLASS}
-                    >
-                      <option value="">Sélectionner...</option>
-                      {communes.map((c) => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => update("commune", value)}
+                      placeholder="Rechercher la commune"
+                      searchPlaceholder="Tapez Cocody, Yopougon, Marcory..."
+                      emptyLabel="Aucune commune disponible."
+                      allLabel="Aucune commune choisie"
+                      groups={communeSelectionGroups}
+                      triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                    />
                   </div>
                   <div>
                     <Label htmlFor="quartier">Quartier *</Label>
@@ -1631,7 +1661,7 @@ export function ReserverForm({
                   <p className="font-semibold text-[#111827]">{displayName}</p>
                   <p className="text-sm text-[#6B7280]">{teacher.jobTitle}</p>
                   <p className="text-xs text-[#6B7280]">
-                    Note {teacher.rating.toFixed(1)}/5 · {teacher.commune ?? "Abidjan"}
+                    {teacherTrustSignal}
                   </p>
                 </div>
               </div>
