@@ -16,6 +16,7 @@ import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-
 import { EmptyState } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
+import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
 
@@ -59,15 +60,7 @@ export default async function TeachersPage({
   const page = Math.max(1, Number(sp.page) || 1);
 
   // Build where clause (same logic as /api/teachers)
-  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] };
-  if (q) {
-    where.OR = [
-      { fullName: { contains: q } },
-      { professionalName: { contains: q } },
-      { jobTitle: { contains: q } },
-      { bio: { contains: q } },
-    ];
-  }
+  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(q)] };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
   if (level) where.levels = { some: { level: { slug: level } } };
   if (commune) where.zones = { some: { commune: { name: commune } } };

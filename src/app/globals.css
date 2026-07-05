@@ -242,6 +242,17 @@ b {
   -webkit-tap-highlight-color: transparent;
 }
 
+.app-topbar {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  flex-shrink: 0;
+  background: #FFFFFF !important;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 .public-shell section,
 .public-shell article,
 .public-shell div {

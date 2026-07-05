@@ -61,7 +61,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     <div className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       {/* Top bar (mobile + desktop) */}
-      <header className="client-app-topbar fixed inset-x-0 top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
+      <header className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"

@@ -6,6 +6,7 @@ import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { CalendarCheck, ChevronDown, SlidersHorizontal, Search, X } from "lucide-react";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
+import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
 
@@ -32,15 +33,7 @@ export default async function RechercherPage({
   const q = sp.q?.trim();
   const sort = sp.sort ?? "recommended";
 
-  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] };
-  if (q) {
-    where.OR = [
-      { fullName: { contains: q } },
-      { professionalName: { contains: q } },
-      { jobTitle: { contains: q } },
-      { bio: { contains: q } },
-    ];
-  }
+  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(q)] };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
   if (level) where.levels = { some: { level: { slug: level } } };
   if (commune) where.zones = { some: { commune: { name: commune } } };

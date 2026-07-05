@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,17 +15,9 @@ export async function GET(req: NextRequest) {
 
   const where: any = {
     status: "ACTIVE",
-    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(search)],
   };
 
-  if (search) {
-    where.OR = [
-      { fullName: { contains: search } },
-      { professionalName: { contains: search } },
-      { jobTitle: { contains: search } },
-      { bio: { contains: search } },
-    ];
-  }
   if (subject) {
     where.subjects = { some: { subject: { slug: subject } } };
   }

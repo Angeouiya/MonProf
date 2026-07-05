@@ -93,7 +93,7 @@ export function ProfessorLayout({
   return (
     <div className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
-      <header className="fixed inset-x-0 top-0 z-40 flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
+      <header className="app-topbar fixed inset-x-0 top-0 z-40 flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
