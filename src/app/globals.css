@@ -1260,6 +1260,42 @@ b {
   min-height: 4.75rem;
 }
 
+.client-sidebar-main-nav {
+  scrollbar-width: thin;
+  scrollbar-color: #CAD3E2 #FFFFFF;
+}
+
+.client-sidebar-main-nav::-webkit-scrollbar,
+.client-tab-bar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.client-sidebar-main-nav::-webkit-scrollbar-track,
+.client-tab-bar::-webkit-scrollbar-track {
+  background: #FFFFFF;
+}
+
+.client-sidebar-main-nav::-webkit-scrollbar-thumb,
+.client-tab-bar::-webkit-scrollbar-thumb {
+  background: #CAD3E2;
+  border-radius: 999px;
+}
+
+.client-sidebar-account {
+  background: #FFFFFF;
+}
+
+.client-tab-bar {
+  scrollbar-width: thin;
+  scrollbar-color: #CAD3E2 #FFFFFF;
+  overscroll-behavior-x: contain;
+}
+
+.client-mobile-drawer {
+  min-height: 100dvh;
+}
+
 @media (max-width: 374px) {
   .client-app-rail {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

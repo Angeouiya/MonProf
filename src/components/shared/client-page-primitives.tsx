@@ -214,7 +214,7 @@ export function ClientTabBar({
   return (
     <div
       className={cn(
-        "client-tab-bar grid grid-cols-1 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap",
+        "client-tab-bar flex gap-1.5 overflow-x-auto rounded-lg border border-[#DDE3EE] bg-white p-1.5",
         className,
       )}
     >
@@ -225,7 +225,7 @@ export function ClientTabBar({
             key={item.id}
             href={item.href}
             className={cn(
-              "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-semibold transition lg:w-auto lg:justify-start",
+              "flex min-h-11 min-w-[9.25rem] flex-none items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-semibold transition min-[720px]:min-w-0 min-[720px]:flex-1",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
@@ -293,10 +293,15 @@ export function ClientAppRail({
   }>;
   className?: string;
 }) {
+  const gridClassName = items.length >= 5
+    ? "grid-cols-2 min-[640px]:grid-cols-3 min-[980px]:grid-cols-5"
+    : "grid-cols-2 min-[560px]:grid-cols-4";
+
   return (
     <div
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-2 bg-white min-[560px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
+        "client-app-rail grid gap-2 bg-white",
+        gridClassName,
         className,
       )}
       aria-label="Raccourcis client"
