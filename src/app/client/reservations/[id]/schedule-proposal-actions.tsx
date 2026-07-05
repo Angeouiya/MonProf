@@ -74,7 +74,7 @@ export function ScheduleProposalActions({
   if (!pendingProposal && proposals.length === 0) return null;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white p-4">
+    <section className="overflow-hidden rounded-lg border border-[#DDE6F7] bg-white p-4">
       <div className="flex items-start gap-3 border-b border-[#E6EAF3] pb-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <CalendarClock className="h-5 w-5" />

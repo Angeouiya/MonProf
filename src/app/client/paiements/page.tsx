@@ -303,14 +303,14 @@ function PaymentEmptyState() {
           <ClientInfoPill label="Étape 3" value="Fonds sécurisés" />
         </div>
 
-        <div className="rounded-xl border border-[#E3E8F2] bg-white p-3">
+        <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
           <div className="flex items-center gap-2">
             <LockKeyhole className="h-4 w-4 text-[#111B4D]" />
             <p className="text-sm font-semibold text-[#111827]">Moyens acceptés sur PayDunya</p>
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[560px]:grid-cols-4">
             {ACTIVE_PAYMENT_METHODS.map((method) => (
-              <PaymentMethodLogo key={method} method={method} className="h-12 w-full min-w-0 rounded-xl" />
+              <PaymentMethodLogo key={method} method={method} className="h-12 w-full min-w-0 rounded-lg" />
             ))}
           </div>
           <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">

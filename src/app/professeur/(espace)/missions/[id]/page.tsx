@@ -66,7 +66,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             <h2 className="mt-3 text-2xl font-semibold tracking-normal text-[#111827]">{booking.subjectName}</h2>
             <p className="mt-1 text-sm font-bold text-[#64748B]">{booking.levelName} · {courseFormatLabel(booking.courseFormat)}</p>
             {booking.needDescription && (
-              <p className="mt-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
+              <p className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
                 {booking.needDescription}
               </p>
             )}
@@ -92,7 +92,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
               <DetailTile label="Commune client" value={[booking.client.commune, booking.client.quartier].filter(Boolean).join(" · ") || "Non renseignée"} />
               <DetailTile label="Objectif" value={booking.objective || "Objectif à préciser pendant le premier échange"} />
             </div>
-            <div className="mt-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+            <div className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-4">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
                 <div>
@@ -112,7 +112,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             ) : (
               <div className="mt-4 grid gap-3">
                 {booking.teacherTasks.map((task) => (
-                  <div key={task.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                  <div key={task.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                     <div className="flex flex-wrap gap-2">
                       <StatusPill status={task.priority} type="priority" />
                       <StatusPill status={task.status} type="task" />
@@ -161,7 +161,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
                     </div>
                     {proposal.reason && <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">{proposal.reason}</p>}
                     {proposal.clientResponse && (
-                      <p className="mt-2 rounded-xl border border-[#E6EAF3] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
+                      <p className="mt-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
                         Réponse client : {proposal.clientResponse}
                       </p>
                     )}

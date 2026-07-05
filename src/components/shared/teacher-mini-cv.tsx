@@ -58,13 +58,13 @@ export function TeacherMiniCv({
   return (
     <div className={cn("grid gap-4", className)}>
       {careerSummary && (
-        <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
+        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Résumé professionnel</p>
           <p className="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-[#111827]">{careerSummary}</p>
         </div>
       )}
       {!!learnersCoached && learnersCoached > 0 && (
-        <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
+        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
             <UsersRound className="h-4 w-4 text-[#111B4D]" />
             {learnersCoached}+ apprenants encadrés
@@ -84,7 +84,7 @@ function MiniCvSection({ icon, title, items }: { icon: React.ReactNode; title: s
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
       <p className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
         <span className="text-[#111B4D]">{icon}</span>
         {title}

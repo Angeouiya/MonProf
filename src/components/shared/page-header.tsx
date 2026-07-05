@@ -19,7 +19,7 @@ export function PageHeader({
   backLabel?: string;
 }) {
   return (
-    <div className={cn("page-header flex flex-col gap-4 rounded-xl border border-[#E3E8F2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5", className)}>
+    <div className={cn("page-header flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5", className)}>
       <div className="flex min-w-0 flex-col gap-3">
         {showBack && <BackButton fallbackHref={backHref} label={backLabel} />}
         <div className="min-w-0">
@@ -46,7 +46,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-xl border border-[#E3E8F2] bg-white p-8 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-8 text-center", className)}>
       {Icon && (
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] ring-1 ring-[#111B4D]">
           <Icon className="h-6 w-6 text-white" />

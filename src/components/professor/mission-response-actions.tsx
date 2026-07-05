@@ -77,7 +77,7 @@ export function MissionResponseActions({
 
   if (done) {
     return (
-      <div className="rounded-[1.15rem] border border-[#D7DEE9] bg-white p-4 text-sm font-bold text-[#111B4D]">
+      <div className="rounded-lg border border-[#D7DEE9] bg-white p-4 text-sm font-bold text-[#111B4D]">
         Merci, votre réponse a été transmise à l'administration.
       </div>
     );
@@ -114,7 +114,7 @@ export function MissionResponseActions({
           Problème
         </Button>
       </div>
-      <div className="rounded-[1.15rem] border border-[#D7DEE9] bg-white p-3">
+      <div className="rounded-lg border border-[#D7DEE9] bg-white p-3">
         <Button
           type="button"
           variant="ghost"

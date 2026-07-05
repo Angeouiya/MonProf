@@ -114,7 +114,7 @@ export function AdminLayout({
           </button>
           <Link href="/admin" className="flex min-w-0 items-center gap-2">
             <BrandLogo size="sm" />
-            <span className="hidden rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] sm:inline-flex">
+            <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] sm:inline-flex">
               Admin
             </span>
           </Link>
@@ -192,7 +192,7 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       <nav className="flex-1 space-y-4 overflow-y-auto p-3 lg:overflow-hidden">
         {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
-          <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3">
+          <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">Radar admin</p>
               <span className={cn(

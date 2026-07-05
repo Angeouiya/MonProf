@@ -434,7 +434,7 @@ export default async function ProfesseurDashboardPage() {
                 <Link
                   key={booking.id}
                   href={`/professeur/missions/${booking.id}`}
-                  className="grid gap-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] sm:grid-cols-[1fr_auto] sm:items-center"
+                  className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] sm:grid-cols-[1fr_auto] sm:items-center"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -520,8 +520,8 @@ function ProfessorControlStep({
     <Link
       href={href}
       className={urgent
-        ? "group rounded-[1.05rem] border border-[#111B4D] bg-white p-3 transition hover:border-[#111827]"
-        : "group rounded-[1.05rem] border border-[#E6EAF3] bg-white p-3 transition hover:border-[#111B4D]"
+        ? "group rounded-lg border border-[#111B4D] bg-white p-3 transition hover:border-[#111827]"
+        : "group rounded-lg border border-[#E6EAF3] bg-white p-3 transition hover:border-[#111B4D]"
       }
     >
       <div className="flex items-start justify-between gap-3">
@@ -546,7 +546,7 @@ function ProfessorQuickLink({
   return (
     <Link
       href={href}
-      className="group flex min-h-[4.45rem] flex-col justify-between rounded-xl border border-[#E6EAF3] bg-white px-2.5 py-2.5 transition hover:border-[#111B4D] sm:px-3 sm:py-3"
+      className="group flex min-h-[4.45rem] flex-col justify-between rounded-lg border border-[#E6EAF3] bg-white px-2.5 py-2.5 transition hover:border-[#111B4D] sm:px-3 sm:py-3"
     >
       <span className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</span>
       <span className="mt-2 flex items-center justify-between gap-2 text-sm font-semibold text-[#111827]">
@@ -575,7 +575,7 @@ function ProfessorActionTile({
   return (
     <Link
       href={href}
-      className="group grid min-h-40 gap-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D]"
+      className="group grid min-h-40 gap-4 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D]"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">

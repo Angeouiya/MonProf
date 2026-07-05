@@ -192,7 +192,7 @@ export function ClientNotificationCenter({
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9AAAD0]"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9AAAD0]"
                   aria-label="Effacer la recherche"
                 >
                   <X className="h-4 w-4" />
@@ -213,7 +213,7 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-10 w-full justify-center rounded-xl px-2 text-xs min-[420px]:px-3 sm:min-h-11 sm:text-sm lg:w-auto"
+                className="min-h-10 w-full justify-center rounded-lg px-2 text-xs min-[420px]:px-3 sm:min-h-11 sm:text-sm lg:w-auto"
               >
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
@@ -249,7 +249,7 @@ export function ClientNotificationCenter({
               <ClientRecordCard
                 key={notification.id}
                 data-client-notification-card
-                className={`overflow-hidden rounded-xl ${
+                className={`overflow-hidden rounded-lg ${
                   notification.read
                     ? "border-[#E3E8F2] bg-white"
                     : "border-[#111B4D] bg-white"
@@ -267,7 +267,7 @@ export function ClientNotificationCenter({
                         verified={booking.teacher.badgeVerified}
                       />
                     ) : (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#DDE6F7] bg-white text-[#111B4D]">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white text-[#111B4D]">
                         <Bell className="h-5 w-5" />
                       </div>
                     )}
@@ -293,7 +293,7 @@ export function ClientNotificationCenter({
 
                   <div className="grid shrink-0 grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
                     {href && (
-                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-xl sm:min-h-11 sm:rounded-lg">
+                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-lg sm:min-h-11 sm:rounded-lg">
                         <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
                       </Button>
                     )}
@@ -318,7 +318,7 @@ function PriorityNotificationCard({
 }) {
   if (!notification) {
     return (
-      <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
+      <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
             <CheckCircle2 className="h-5 w-5" />
@@ -339,12 +339,12 @@ function PriorityNotificationCard({
   const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
 
   return (
-    <div className={`overflow-hidden rounded-xl border p-3 sm:p-4 ${
+    <div className={`overflow-hidden rounded-lg border p-3 sm:p-4 ${
       urgent ? "border-[#111B4D] bg-white" : "border-[#DDE6F7] bg-white"
     }`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-w-0 gap-3">
-          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
             urgent ? "bg-[#111B4D] text-white" : "bg-[#111B4D] text-white"
           }`}>
             {urgent ? <AlertTriangle className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
@@ -389,7 +389,7 @@ function BookingNotificationPreview({ booking, teacherName }: { booking: Notific
   const timeLabel = booking.scheduledTime || booking.preferredTime || "Créneau à confirmer";
 
   return (
-    <div className="mt-2 rounded-xl border border-[#E3E8F2] bg-white p-2.5 sm:mt-3 sm:p-3">
+    <div className="mt-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 sm:mt-3 sm:p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{booking.reference}</p>
@@ -398,8 +398,8 @@ function BookingNotificationPreview({ booking, teacherName }: { booking: Notific
         <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(booking.paymentStatus)}</p>
       </div>
       <div className="mt-2 grid gap-2 text-xs font-semibold text-[#475569] min-[420px]:grid-cols-2">
-        <p className="line-clamp-1 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1.5">{teacherName}</p>
-        <p className="line-clamp-1 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1.5">{dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}</p>
+        <p className="line-clamp-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{teacherName}</p>
+        <p className="line-clamp-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}</p>
       </div>
       {booking.teacher.badgeVerified && (
         <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#111B4D]">

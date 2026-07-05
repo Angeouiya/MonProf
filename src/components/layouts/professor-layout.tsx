@@ -107,7 +107,7 @@ export function ProfessorLayout({
           <Link href="/professeur" className="flex min-h-11 items-center gap-2 rounded-lg px-1.5">
             <BrandLogo size="sm" />
           </Link>
-          <span className="hidden rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
+          <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
             Espace professeur
           </span>
         </div>
@@ -242,7 +242,7 @@ function SidebarContent({
         <p className="px-3 pb-2 pt-2 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
           Plateforme professeur
         </p>
-        <div className="mb-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3">
+        <div className="mb-3 rounded-lg border border-[#E6EAF3] bg-white p-3">
           <div className="flex items-center gap-3">
             <ProfessorImage photoUrl={photoUrl} name={teacherName} size="md" verified />
             <div className="min-w-0">
@@ -293,7 +293,7 @@ function SidebarContent({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                    "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
                     active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]",
                   )}
                 >
@@ -361,7 +361,7 @@ function MobileBottomNav({
 }) {
   return (
     <nav
-      className="fixed inset-x-3 z-40 rounded-[1.15rem] border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      className="fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation professeur mobile"
     >
@@ -373,7 +373,7 @@ function MobileBottomNav({
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-xs font-semibold transition-colors",
+                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D]",
               )}
               aria-current={active ? "page" : undefined}
@@ -425,7 +425,7 @@ function SidebarSignal({
       href={href}
       onClick={onNavigate}
       className={cn(
-        "flex min-h-10 items-center justify-between rounded-xl border px-2.5 text-xs font-semibold transition-colors",
+        "flex min-h-10 items-center justify-between rounded-lg border px-2.5 text-xs font-semibold transition-colors",
         active
           ? "border-[#111B4D] bg-[#111B4D] text-white"
           : "border-[#E6EAF3] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",

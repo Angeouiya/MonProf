@@ -163,13 +163,13 @@ export default async function ProfesseurPaiementsPage() {
             </div>
           </div>
           {payoutRequests.length === 0 ? (
-            <p className="mt-4 rounded-[1.15rem] border border-dashed border-[#D7DEE9] bg-white p-4 text-sm font-semibold leading-6 text-[#64748B]">
+            <p className="mt-4 rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-sm font-semibold leading-6 text-[#64748B]">
               Aucune demande envoyée pour le moment.
             </p>
           ) : (
             <div className="mt-4 grid gap-3">
               {payoutRequests.map((request) => (
-                <div key={request.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                <div key={request.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-mono text-xs font-semibold text-[#111B4D]">{request.reference}</p>
@@ -224,7 +224,7 @@ export default async function ProfesseurPaiementsPage() {
                 <Link
                   key={booking.id}
                   href={`/professeur/missions/${booking.id}`}
-                  className="grid gap-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] lg:grid-cols-[1fr_auto]"
+                  className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] lg:grid-cols-[1fr_auto]"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -256,7 +256,7 @@ export default async function ProfesseurPaiementsPage() {
           ) : (
             <div className="mt-4 space-y-3">
               {payouts.map((payout) => (
-                <div key={payout.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                <div key={payout.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#111827]">{payout.reference}</p>

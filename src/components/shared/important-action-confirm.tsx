@@ -124,9 +124,9 @@ export function ImportantActionNotice({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm", className)}>
+    <div className={cn("rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm", className)}>
       <div className="flex items-start gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <ShieldCheck className="h-4 w-4" />
         </span>
         <div className="min-w-0">

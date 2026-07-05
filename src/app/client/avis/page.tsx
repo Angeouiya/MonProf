@@ -212,7 +212,7 @@ export default async function AvisPage() {
                             <BookOpen className="h-4 w-4 shrink-0 text-[#111B4D]" />
                             <span className="min-w-0 truncate">{r.booking.subjectName} · {r.booking.levelName}</span>
                           </span>
-                          <span className="inline-flex min-h-8 w-fit items-center rounded-xl bg-[#111B4D] px-3 text-xs font-semibold text-white">
+                          <span className="inline-flex min-h-8 w-fit items-center rounded-lg bg-[#111B4D] px-3 text-xs font-semibold text-white">
                             {r.rating}/5
                           </span>
                         </div>

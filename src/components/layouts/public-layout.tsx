@@ -263,7 +263,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <ul className="mt-3 space-y-1 text-sm">
                 {footerPlatformLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="inline-flex min-h-10 items-center rounded-xl bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
+                    <Link href={link.href} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
                       {link.label}
                     </Link>
                   </li>
@@ -275,7 +275,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <ul className="mt-3 space-y-1 text-sm">
                 {footerAccountLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="inline-flex min-h-10 items-center rounded-xl bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
+                    <Link href={link.href} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
                       {link.label}
                     </Link>
                   </li>
@@ -320,7 +320,7 @@ function PublicMobileNav({
 
   return (
     <nav
-      className="public-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      className="public-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation publique mobile"
     >
@@ -336,7 +336,7 @@ function PublicMobileNav({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.7rem] font-semibold transition-colors",
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[0.7rem] font-semibold transition-colors",
                 active
                   ? "bg-[#111B4D] text-white"
                   : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D]",

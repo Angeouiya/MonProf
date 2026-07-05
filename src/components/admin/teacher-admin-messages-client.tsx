@@ -150,7 +150,7 @@ export function TeacherAdminMessagesClient({
           <Metric label="Non lus admin" value={unreadAdminCount} />
         </div>
 
-        <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
           <h3 className="text-base font-semibold text-[#111827]">Répondre à {teacherName}</h3>
           <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
             Le professeur recevra la réponse dans son espace et dans ses notifications.
@@ -243,7 +243,7 @@ export function TeacherAdminMessagesClient({
         </div>
       </div>
 
-      <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+      <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-semibold text-[#111827]">Historique des échanges</h3>
@@ -264,7 +264,7 @@ export function TeacherAdminMessagesClient({
               <article
                 key={item.id}
                 className={cn(
-                  "rounded-[1.15rem] border bg-white p-4",
+                  "rounded-lg border bg-white p-4",
                   item.sender === "TEACHER" && !item.readByAdminAt ? "border-[#111B4D]" : "border-[#E3E8F2]",
                 )}
               >
@@ -329,7 +329,7 @@ export function TeacherAdminMessagesClient({
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
       <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-normal text-[#111B4D]">{value}</p>
     </div>

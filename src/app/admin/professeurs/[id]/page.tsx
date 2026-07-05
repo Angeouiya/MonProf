@@ -509,7 +509,7 @@ export default async function ProfesseurDetailPage({
                 </span>
               )}
               {teacher.portalAccessEnabled && (
-                <Link href="/professeur/connexion" target="_blank" className="inline-flex min-h-10 items-center rounded-xl px-1 font-semibold text-primary hover:underline">
+                <Link href="/professeur/connexion" target="_blank" className="inline-flex min-h-10 items-center rounded-lg px-1 font-semibold text-primary hover:underline">
                   Ouvrir la connexion professeur
                 </Link>
               )}
@@ -1586,7 +1586,7 @@ export default async function ProfesseurDetailPage({
                           </p>
                         )}
                         {warning.evidenceUrl && (
-                          <Button asChild size="sm" variant="outline" className="w-fit rounded-xl bg-white">
+                          <Button asChild size="sm" variant="outline" className="w-fit rounded-lg bg-white">
                             <a href={warning.evidenceUrl} target="_blank" rel="noreferrer">
                               Ouvrir la preuve
                             </a>

@@ -92,7 +92,7 @@ export default async function ProfesseurMissionsPage() {
                     )}
                   </div>
 
-                  <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3">
+                  <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
                     {canRespond && mission ? (
                       <MissionResponseActions token={mission.token} compact />
                     ) : (

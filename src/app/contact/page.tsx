@@ -113,8 +113,8 @@ export default function ContactPage() {
     <PublicLayout>
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
-            <Link href="/" className="inline-flex min-h-11 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
+            <Link href="/" className="inline-flex min-h-11 items-center rounded-lg px-1 hover:text-[#111B4D]">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-[#111827]">Contact</span>
           </nav>
@@ -169,7 +169,7 @@ export default function ContactPage() {
             <div className="rounded-lg border border-[#E3E8F2] bg-white p-5 sm:p-6">
               {success ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                     <CheckCircle2 className="h-7 w-7" />
                   </div>
                   <h2 className="mt-4 text-lg font-semibold text-[#111827]">
@@ -288,7 +288,7 @@ export default function ContactPage() {
                   >
                     {submitting ? (
                       <>
-                        <span className="h-4 w-4 animate-spin rounded-xl border-2 border-[#CAD7F2] border-t-white" />
+                        <span className="h-4 w-4 animate-spin rounded-lg border-2 border-[#CAD7F2] border-t-white" />
                         Envoi en cours...
                       </>
                     ) : (
@@ -311,7 +311,7 @@ export default function ContactPage() {
                 </h2>
                 <ul className="mt-4 space-y-4 text-sm">
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Phone className="h-4 w-4" />
                     </div>
                     <div>
@@ -325,7 +325,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Mail className="h-4 w-4" />
                     </div>
                     <div>
@@ -339,7 +339,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <MapPin className="h-4 w-4" />
                     </div>
                     <div>
@@ -353,7 +353,7 @@ export default function ContactPage() {
                     </div>
                   </li>
                   <li className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <Clock className="h-4 w-4" />
                     </div>
                     <div>

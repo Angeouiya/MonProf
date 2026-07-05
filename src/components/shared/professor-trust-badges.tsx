@@ -107,7 +107,7 @@ export function ProfessorTrustBadges({
           <span
             key={badge.key}
             className={cn(
-              "inline-flex shrink-0 items-center rounded-xl border font-semibold uppercase tracking-wide",
+              "inline-flex shrink-0 items-center rounded-lg border font-semibold uppercase tracking-wide",
               styles.secondary,
               badge.className,
             )}

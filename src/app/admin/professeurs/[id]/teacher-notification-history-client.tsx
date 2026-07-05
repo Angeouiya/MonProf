@@ -238,7 +238,7 @@ function StatusActionButton({
       variant="outline"
       disabled={disabled || !!loadingStatus}
       onClick={() => onClick(notificationId, status)}
-      className="h-9 rounded-xl bg-white"
+      className="h-9 rounded-lg bg-white"
     >
       {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Icon className="mr-1.5 h-3.5 w-3.5" />}
       {label}

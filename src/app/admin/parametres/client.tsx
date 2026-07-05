@@ -165,7 +165,7 @@ function SettingField({
   return (
     <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
       <Label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <Icon className="h-3.5 w-3.5" />
         </span>
         {label}

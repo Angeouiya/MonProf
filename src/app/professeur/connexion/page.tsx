@@ -131,7 +131,7 @@ function ProfesseurConnexionContent() {
               </p>
             </div>
 
-            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-6">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-6">
               {error && (
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -196,7 +196,7 @@ function ProfesseurConnexionContent() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-[1.15rem] border border-dashed border-[#DDE6F7] bg-white p-4">
+            <div className="mt-5 rounded-lg border border-dashed border-[#DDE6F7] bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Démonstration professeur</p>
               <button
                 type="button"

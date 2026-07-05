@@ -118,7 +118,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
 
 export function TeacherCardSkeleton() {
   return (
-    <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
+    <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
       <div className="flex gap-4">
         <Skeleton className="h-20 w-20 shrink-0 rounded-full" />
         <div className="flex-1 space-y-2">

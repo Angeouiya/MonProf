@@ -31,7 +31,7 @@ export function StatCard({
     primary: "bg-[#111B4D] text-white",
   };
   return (
-    <div className={cn("premium-hover rounded-xl border p-4 sm:p-5", toneClasses[tone], className)}>
+    <div className={cn("premium-hover rounded-lg border p-4 sm:p-5", toneClasses[tone], className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>

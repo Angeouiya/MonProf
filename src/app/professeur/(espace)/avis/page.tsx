@@ -84,12 +84,12 @@ export default async function ProfesseurAvisPage() {
                 Cette note est attribuée par l'administration Compétence pour suivre la qualité, surtout avant que les avis clients soient nombreux.
               </p>
               {profile?.adminRatingNote && (
-                <p className="mt-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3 text-sm font-semibold leading-6 text-[#475569]">
+                <p className="mt-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-sm font-semibold leading-6 text-[#475569]">
                   {profile.adminRatingNote}
                 </p>
               )}
             </div>
-            <div className="rounded-[1.15rem] border border-[#111B4D] bg-white px-5 py-4 text-center">
+            <div className="rounded-lg border border-[#111B4D] bg-white px-5 py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note admin</p>
               <p className="mt-1 text-3xl font-semibold tracking-normal text-[#111B4D]">
                 {Number(profile?.adminRating ?? 0).toFixed(1)}/5
@@ -109,7 +109,7 @@ export default async function ProfesseurAvisPage() {
           ) : (
             <div className="mt-4 grid gap-3">
               {reviews.map((review) => (
-                <article key={review.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                <article key={review.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#111827]">{review.booking.subjectName} - {review.booking.levelName}</p>
@@ -132,7 +132,7 @@ export default async function ProfesseurAvisPage() {
             ) : (
               <div className="mt-4 space-y-3">
                 {warnings.map((warning) => (
-                  <div key={warning.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                  <div key={warning.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                     <div className="flex flex-wrap gap-2">
                       <span className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-800">{warningLabels[warning.level] ?? warning.level}</span>
                       {warning.booking && <span className="rounded-full border border-[#D7DEE9] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#111B4D]">{warning.booking.reference}</span>}
@@ -152,7 +152,7 @@ export default async function ProfesseurAvisPage() {
             ) : (
               <div className="mt-4 space-y-3">
                 {sanctions.map((sanction) => (
-                  <div key={sanction.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                  <div key={sanction.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                     <div className="flex flex-wrap gap-2">
                       <span className="rounded-full border border-red-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-red-700">{sanctionLabels[sanction.type] ?? sanction.type}</span>
                       <StatusPill status={sanction.status} />

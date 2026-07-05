@@ -246,7 +246,7 @@ export default async function ReservationDetailPage({
       />
 
       {returnedFromPayDunya && paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4">
+        <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Paiement PayDunya confirmé</p>
@@ -260,7 +260,7 @@ export default async function ReservationDetailPage({
       )}
 
       {returnedFromPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4">
+        <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
           <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Retour PayDunya enregistré</p>
@@ -273,7 +273,7 @@ export default async function ReservationDetailPage({
       )}
 
       {cancelledOnPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#E3E8F2] bg-white p-4">
+        <div className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
           <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Paiement PayDunya non finalisé</p>
@@ -285,7 +285,7 @@ export default async function ReservationDetailPage({
       )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-stretch">
-        <div className="order-2 rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-5 lg:order-1">
+        <div className="order-2 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5 lg:order-1">
           <div className="flex flex-col gap-4 min-[520px]:flex-row min-[520px]:items-center">
             <ProfessorImage photoUrl={booking.teacher.photoUrl} name={name} size="md" shape="circle" verified={booking.teacher.badgeVerified} />
             <div className="min-w-0 flex-1">
@@ -321,7 +321,7 @@ export default async function ReservationDetailPage({
           </div>
         </div>
 
-        <div className={`order-1 flex flex-col justify-between rounded-xl border p-4 sm:p-5 lg:order-2 ${clientSituation.className}`}>
+        <div className={`order-1 flex flex-col justify-between rounded-lg border p-4 sm:p-5 lg:order-2 ${clientSituation.className}`}>
           <div>
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white">
@@ -522,7 +522,7 @@ export default async function ReservationDetailPage({
 
 function ReservationStatusChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-left">
+    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-left">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-0.5 truncate text-sm font-semibold text-[#111B4D]">{value}</p>
     </div>

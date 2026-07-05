@@ -163,7 +163,7 @@ function ConnexionContent() {
               <div className="mt-8 grid gap-3">
                 {benefits.map((item) => (
                   <div key={item.title} className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white ring-1 ring-[#111B4D]">
                       <item.icon className="h-5 w-5" />
                     </div>
                     <div>
@@ -189,7 +189,7 @@ function ConnexionContent() {
               </p>
             </div>
 
-          <div className="rounded-[1.25rem] border border-[#E3E8F2] bg-white p-6">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-6">
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -239,7 +239,7 @@ function ConnexionContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -289,7 +289,7 @@ function ConnexionContent() {
           </div>
 
           {/* Compte démo */}
-          <div className="mt-6 rounded-[1.25rem] border border-dashed border-[#DDE6F7] bg-white p-4">
+          <div className="mt-6 rounded-lg border border-dashed border-[#DDE6F7] bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {isAdminAuth ? "Démonstration administrateur" : "Démonstration client"}
             </p>

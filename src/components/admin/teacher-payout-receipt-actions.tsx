@@ -159,22 +159,22 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; background: #f7f6fb; color: #111827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    main { width: min(760px, calc(100% - 32px)); margin: 24px auto; border: 1px solid #e7e5f2; border-radius: 24px; background: #fff; padding: 32px; }
+    main { width: min(760px, calc(100% - 32px)); margin: 24px auto; border: 1px solid #e7e5f2; border-radius: 8px; background: #fff; padding: 32px; }
     .brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e7e5f2; padding-bottom: 18px; }
     .brand h1 { margin: 0; color: #1E2A78; font-size: 24px; line-height: 1.15; }
     .brand p, .muted { color: #6b7280; }
     .pill { border: 1px solid #d8d5ee; border-radius: 999px; color: #1E2A78; font-size: 12px; font-weight: 800; padding: 8px 12px; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
-    .box { border: 1px solid #e7e5f2; border-radius: 18px; background: #fbfaff; padding: 14px; }
+    .box { border: 1px solid #e7e5f2; border-radius: 8px; background: #fbfaff; padding: 14px; }
     .box span { display: block; color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
     .box strong { display: block; margin-top: 6px; color: #111827; font-size: 15px; }
     .box.total { grid-column: 1 / -1; background: #eef2ff; border-color: #dbe4ff; }
     .box.total strong { color: #1E2A78; font-size: 26px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 14px; overflow: hidden; border-radius: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; overflow: hidden; border-radius: 8px; }
     th, td { border-bottom: 1px solid #e7e5f2; padding: 12px; text-align: left; font-size: 13px; }
     th { background: #f5f3ff; color: #4c1d95; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
     .amount { text-align: right; font-weight: 800; white-space: nowrap; }
-    .note { margin-top: 18px; border: 1px solid #fde68a; border-radius: 18px; background: #fffbeb; color: #78350f; padding: 14px; font-size: 13px; }
+    .note { margin-top: 18px; border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #78350f; padding: 14px; font-size: 13px; }
     footer { margin-top: 24px; color: #6b7280; font-size: 12px; line-height: 1.55; }
     @media print {
       body { background: #fff; }

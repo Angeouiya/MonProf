@@ -275,7 +275,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               client.bookings.map((b) => {
                 const teacherName = b.teacher.professionalName || b.teacher.fullName;
                 return (
-                  <div key={b.id} className="space-y-4 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                  <div key={b.id} className="space-y-4 rounded-lg border border-[#E6EAF3] bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <Link href={`/admin/reservations/${b.id}`} className="flex min-h-10 items-center font-mono text-xs font-bold text-primary">
@@ -421,7 +421,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               const teacher = communication.booking?.teacher;
               const teacherName = teacher?.professionalName || teacher?.fullName || "Professeur à confirmer";
               return (
-                <div key={communication.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                <div key={communication.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       {teacher ? (
@@ -493,7 +493,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               disputes.map((dispute) => {
                 const teacherName = dispute.booking.teacher.professionalName || dispute.booking.teacher.fullName;
                 return (
-                  <div key={dispute.id} className="rounded-[1.15rem] border border-red-200 bg-white p-4">
+                  <div key={dispute.id} className="rounded-lg border border-red-200 bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="line-clamp-2 text-sm font-bold text-foreground">{dispute.reason}</p>
@@ -543,7 +543,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               refundRequests.map((request) => {
                 const teacherName = request.booking.teacher.professionalName || request.booking.teacher.fullName;
                 return (
-                  <div key={request.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                  <div key={request.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-mono text-xs font-bold text-[#111B4D]">{request.reference}</p>
@@ -593,7 +593,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               reviews.map((review) => {
                 const teacherName = review.teacher.professionalName || review.teacher.fullName;
                 return (
-                  <div key={review.id} className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+                  <div key={review.id} className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <ProfessorImage photoUrl={review.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={review.teacher.badgeVerified} />
@@ -634,7 +634,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <p className="rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-center text-sm font-semibold text-[#64748B]">Aucune transaction.</p>
             ) : (
               txs.map((t) => (
-                <div key={t.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+                <div key={t.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-mono text-xs font-bold text-primary">{t.reference}</p>

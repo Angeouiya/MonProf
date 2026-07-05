@@ -158,7 +158,7 @@ export default async function SupportPage() {
                     <div className="min-w-0">
                       <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-center min-[460px]:gap-3">
                         <p className="text-sm font-semibold text-[#111827]">{d.booking.reference}</p>
-                        <p className="inline-flex w-fit rounded-xl border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">{statusLabel}</p>
+                        <p className="inline-flex w-fit rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">{statusLabel}</p>
                       </div>
                       <p className="mt-1 text-sm font-semibold text-[#111827]">{d.booking.subjectName} • {d.booking.levelName}</p>
                       <div className="mt-2 flex items-center gap-2 text-xs text-[#64748B]">

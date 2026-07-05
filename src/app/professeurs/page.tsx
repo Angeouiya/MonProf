@@ -184,16 +184,16 @@ export default async function TeachersPage({
                 Matières scolaires, université, adultes, concours, métiers techniques et art.
               </p>
             </div>
-            <div className="grid gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
+            <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
               <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111827]">Professeurs contrôlés</p>
                   <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Identité, diplôme et expérience vérifiés.</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#D6DEED] bg-white text-[#111B4D] lg:h-10 lg:w-10"><ShieldCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#D6DEED] bg-white text-[#111B4D] lg:h-10 lg:w-10"><ShieldCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111827]">Paiement rassurant</p>
                   <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Fonds bloqués jusqu'à confirmation du cours.</p>
@@ -203,13 +203,13 @@ export default async function TeachersPage({
           </div>
 
           {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-2 sm:mt-6 sm:flex-row">
+          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 sm:mt-6 sm:flex-row">
             <input
               type="search"
               name="q"
               defaultValue={q}
               placeholder="Matière, concours, adulte, art, technique, spécialité..."
-              className="min-h-12 flex-1 rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+              className="min-h-12 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
               style={{ minHeight: 48 }}
             />
             {/* Préserve les autres filtres */}
@@ -220,14 +220,14 @@ export default async function TeachersPage({
             {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#182260]"
+              className="inline-flex h-12 items-center justify-center rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#182260]"
             >
               Rechercher
             </button>
             {q && (
               <Link
                 href={buildPaginationUrl(1)}
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D6DEED] bg-white px-3 text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
+                className="inline-flex h-12 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-3 text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
                 title="Réinitialiser la recherche"
               >
                 <X className="h-4 w-4" />
@@ -240,7 +240,7 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-xl border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
+          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
             <p className="min-w-0 text-sm font-medium text-[#64748B]">
               <span className="font-semibold text-[#111827]">{total}</span>{" "}
               professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
@@ -251,8 +251,8 @@ export default async function TeachersPage({
               </Link>
             )}
           </div>
-          <details className="mb-4 rounded-[1rem] border border-[#E3E8F2] bg-white p-3 lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-sm font-semibold text-[#111827]">
+          <details className="mb-4 rounded-lg border border-[#E3E8F2] bg-white p-3 lg:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-sm font-semibold text-[#111827]">
               <span className="inline-flex items-center gap-2">
                 <Filter className="h-4 w-4 text-[#111B4D]" />
                 Filtres
@@ -326,7 +326,7 @@ export default async function TeachersPage({
 
             {/* RÉSULTATS */}
             <div>
-              <div className="mb-5 hidden flex-col gap-2 rounded-xl border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
+              <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
                 <p className="text-sm font-medium text-[#64748B]">
                   <span className="font-semibold text-[#111827]">{total}</span>{" "}
                   professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
@@ -510,7 +510,7 @@ function FiltersForm({
           <select
             name="commune"
             defaultValue={commune}
-            className="min-h-11 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+            className="min-h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
           >
             <option value="">Toutes les communes</option>
             {communes.map((item) => (
@@ -526,7 +526,7 @@ function FiltersForm({
             {FORMATS.map((item) => (
               <label
                 key={item.value || "all"}
-                className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-xs font-semibold transition ${
+                className={`flex h-10 cursor-pointer items-center justify-center rounded-lg border text-xs font-semibold transition ${
                   format === item.value
                     ? "border-[#111B4D] bg-[#111B4D] text-white"
                     : "border-[#D6DEED] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]"
@@ -549,7 +549,7 @@ function FiltersForm({
           <select
             name="sort"
             defaultValue={sort}
-            className="min-h-11 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+            className="min-h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
           >
             {SORTS.map((item) => (
               <option key={item.value} value={item.value}>

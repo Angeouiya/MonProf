@@ -81,7 +81,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+      <div className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Créneaux ouverts" value={selectedSlots} detail={`${selectedHours}h disponibles`} />
           <Metric label="Durée séance" value="2h" detail="Une séance = deux heures" />
@@ -99,15 +99,15 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
         {WEEK_DAYS.map((day) => {
           const dayCount = TWO_HOUR_SLOTS.filter((slot) => availability[day.key]?.[slot.key]).length;
           return (
-            <section key={day.key} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3">
+            <section key={day.key} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-[#111827]">{day.label}</p>
                   <p className="text-xs font-semibold text-[#64748B]">{dayCount} créneau(x) de 2h</p>
                 </div>
                 <div className="flex gap-1.5">
-                  <Button type="button" variant="outline" size="sm" className="rounded-xl bg-white px-2 text-[11px]" onClick={() => setDay(day.key, true)}>Tout</Button>
-                  <Button type="button" variant="ghost" size="sm" className="rounded-xl bg-white px-2 text-[11px]" onClick={() => setDay(day.key, false)}>Vider</Button>
+                  <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white px-2 text-[11px]" onClick={() => setDay(day.key, true)}>Tout</Button>
+                  <Button type="button" variant="ghost" size="sm" className="rounded-lg bg-white px-2 text-[11px]" onClick={() => setDay(day.key, false)}>Vider</Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3">
@@ -131,7 +131,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
         })}
       </div>
 
-      <div className="hidden overflow-hidden rounded-[1.15rem] border border-[#E6EAF3] bg-white md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-[#E6EAF3] bg-white md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#E6EAF3]">
@@ -152,14 +152,14 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
                       checked={!!availability[day.key]?.[slot.key]}
                       onCheckedChange={(value) => updateSlot(day.key, slot.key, !!value)}
                       aria-label={`${day.label} ${slot.shortLabel}`}
-                      className="size-10 rounded-xl"
+                      className="size-10 rounded-lg"
                     />
                   </td>
                 ))}
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1.5">
-                    <Button type="button" variant="outline" size="sm" className="rounded-xl bg-white px-2 text-[11px]" onClick={() => setDay(day.key, true)}>Tout</Button>
-                    <Button type="button" variant="ghost" size="sm" className="rounded-xl bg-white px-2 text-[11px]" onClick={() => setDay(day.key, false)}>Vider</Button>
+                    <Button type="button" variant="outline" size="sm" className="rounded-lg bg-white px-2 text-[11px]" onClick={() => setDay(day.key, true)}>Tout</Button>
+                    <Button type="button" variant="ghost" size="sm" className="rounded-lg bg-white px-2 text-[11px]" onClick={() => setDay(day.key, false)}>Vider</Button>
                   </div>
                 </td>
               </tr>
@@ -168,7 +168,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
         </table>
       </div>
 
-      <div className="sticky bottom-20 z-10 flex justify-end rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3 lg:bottom-3">
+      <div className="sticky bottom-20 z-10 flex justify-end rounded-lg border border-[#E6EAF3] bg-white p-3 lg:bottom-3">
         <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Enregistrer les disponibilités

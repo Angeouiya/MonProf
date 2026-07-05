@@ -97,8 +97,8 @@ const STEP_DETAILS = [
     description: "Contrôlez le dossier puis finalisez le paiement sur PayDunya.",
   },
 ] as const;
-const FIELD_CLASS = "mt-1.5 w-full rounded-xl border border-[#DDE6F7] bg-white py-2.5 pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
-const FIELD_CLASS_TALL = "mt-1.5 h-11 w-full rounded-xl border border-[#DDE6F7] bg-white pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
+const FIELD_CLASS = "mt-1.5 w-full rounded-lg border border-[#DDE6F7] bg-white py-2.5 pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
+const FIELD_CLASS_TALL = "mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
 const OBJECTIVES = [
   { value: "Devoir / soutien", label: "Devoir / soutien" },
   { value: "Remise à niveau", label: "Remise à niveau" },
@@ -783,9 +783,9 @@ export function ReserverForm({
 
   return (
     <div className="client-booking-form mx-auto w-full max-w-7xl space-y-3 pb-24 sm:pb-8">
-      <section className="client-booking-shell overflow-hidden rounded-xl border border-[#DDE6F7] bg-white">
+      <section className="client-booking-shell overflow-hidden rounded-lg border border-[#DDE6F7] bg-white">
         <div className="border-b border-[#E6EAF3] px-3 py-2 sm:px-5">
-          <BackButton fallbackHref="/client/rechercher" className="min-h-10 rounded-xl px-3" />
+          <BackButton fallbackHref="/client/rechercher" className="min-h-10 rounded-lg px-3" />
         </div>
         <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:items-center">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -812,7 +812,7 @@ export function ReserverForm({
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white">
+          <div className="rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
@@ -863,7 +863,7 @@ export function ReserverForm({
                   onClick={() => {
                     if (index <= step) setStep(index);
                   }}
-                  className={`min-h-10 rounded-xl border px-3 text-center text-xs font-semibold transition ${
+                  className={`min-h-10 rounded-lg border px-3 text-center text-xs font-semibold transition ${
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : complete
@@ -881,7 +881,7 @@ export function ReserverForm({
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Card className="client-booking-step-card overflow-hidden rounded-xl border-[#DDE6F7] bg-white">
+        <Card className="client-booking-step-card overflow-hidden rounded-lg border-[#DDE6F7] bg-white">
           <CardContent className="p-4 sm:p-6">
             <ImportantActionNotice
               title={reservationFormNotice.title}
@@ -971,7 +971,7 @@ export function ReserverForm({
                   )}
                 </div>
                 {isLyceeSelection && (
-                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
@@ -1027,22 +1027,22 @@ export function ReserverForm({
                   </p>
                 </div>
                 {selectedCatalogCourse && (
-                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">{selectedCatalogCourse.nom}</p>
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
-                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">
+                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
                         {pricing.isQuoteOnly ? "Tarif : sur devis administratif" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
                       </span>
-                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">
+                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
                         {pricing.isQuoteOnly ? "Montant final validé par l'administration" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
                       </span>
-                      <span className="rounded-xl border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
+                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
                     </div>
                   </div>
                 )}
                 {needsCustomSubjectDetail && (
-                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <Label htmlFor="customSubjectDetail">Précisez la matière ou le besoin *</Label>
                     <Textarea
                       id="customSubjectDetail"
@@ -1106,7 +1106,7 @@ export function ReserverForm({
                     type="button"
                     disabled={!teacher.offersHome}
                     onClick={() => update("courseFormat", "HOME")}
-                    className={`flex items-start gap-3 rounded-xl border p-4 text-left transition ${
+                    className={`flex items-start gap-3 rounded-lg border p-4 text-left transition ${
                       form.courseFormat === "HOME"
                         ? "border-[#111B4D] bg-white text-[#111B4D]"
                         : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
@@ -1122,7 +1122,7 @@ export function ReserverForm({
                     type="button"
                     disabled={!teacher.offersOnline}
                     onClick={() => update("courseFormat", "ONLINE")}
-                    className={`flex items-start gap-3 rounded-xl border p-4 text-left transition ${
+                    className={`flex items-start gap-3 rounded-lg border p-4 text-left transition ${
                       form.courseFormat === "ONLINE"
                         ? "border-[#111B4D] bg-white text-[#111B4D]"
                         : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
@@ -1176,7 +1176,7 @@ export function ReserverForm({
               </div>
 
               {form.groupType === "SMALL_GROUP" && (
-                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                   <div className="grid gap-4 sm:grid-cols-[1fr_220px] sm:items-end">
                     <div>
                       <Label htmlFor="participantsCount">Nombre de participants *</Label>
@@ -1206,7 +1206,7 @@ export function ReserverForm({
               )}
 
               {(form.courseCategory === "apprentissage_metier" || form.courseCategory === "formation_professionnelle") && (
-                <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 text-sm text-[#111827]">
+                <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#111827]">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     <span className="block font-semibold">Matériel obligatoire à la charge de l'apprenant</span>
@@ -1263,7 +1263,7 @@ export function ReserverForm({
                       Un repère clair aide l'administration et le professeur à confirmer rapidement la faisabilité du déplacement.
                     </p>
                   </div>
-                  <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3">
                       <InfoMini label="Base professeur" value={teacher.commune ?? "À confirmer"} />
@@ -1297,7 +1297,7 @@ export function ReserverForm({
 
               <Separator />
 
-              <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
                   <div>
                     <Label htmlFor="startDate" className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
@@ -1349,7 +1349,7 @@ export function ReserverForm({
                 </p>
                 <div className="mt-3 space-y-3 md:hidden">
                   {mobileAvailabilityDays.length === 0 && (
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                       <p className="font-semibold text-[#111B4D]">Choisissez d'abord une date</p>
                       <p className="mt-1 text-sm leading-6 text-[#64748B]">
                         Les créneaux mobiles s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
@@ -1360,10 +1360,10 @@ export function ReserverForm({
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
                     return (
-                      <div key={day.key} className="rounded-xl border border-[#E3E8F2] bg-white p-3">
+                      <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="font-semibold text-[#111B4D]">{day.label}</p>
-                          <span className="rounded-xl bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                          <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
                             {availableSlots.length} créneau{availableSlots.length > 1 ? "x" : ""}
                           </span>
                         </div>
@@ -1404,7 +1404,7 @@ export function ReserverForm({
                     );
                   })}
                 </div>
-                <div className="mt-3 hidden rounded-xl border border-[#E3E8F2] bg-white p-3 md:block">
+                <div className="mt-3 hidden rounded-lg border border-[#E3E8F2] bg-white p-3 md:block">
                   <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs lg:grid-cols-[112px_repeat(7,minmax(0,1fr))] lg:gap-2 lg:text-xs">
                     <div className="font-semibold text-[#64748B]">Jour</div>
                     {TWO_HOUR_SLOTS.map((slot) => (
@@ -1454,14 +1454,14 @@ export function ReserverForm({
                 {form.selectedTimeSlots.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {selectedTimeLabels.map((label) => (
-                      <span key={label} className="rounded-xl bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
+                      <span key={label} className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
                         {label}
                       </span>
                     ))}
                   </div>
                 )}
                 {sessionPreview.length > 0 && (
-                  <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de 2h</p>
@@ -1485,7 +1485,7 @@ export function ReserverForm({
                 )}
               </div>
 
-              <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                 <Label>Votre préférence horaire personnalisée</Label>
                 <p className="mt-1 text-sm text-[#64748B]">
                   Si les créneaux proposés ne conviennent pas parfaitement, indiquez le jour et l'heure souhaités.
@@ -1531,7 +1531,7 @@ export function ReserverForm({
                   </div>
                 </div>
                 {form.customDay && customTimeRange && (
-                  <div className="mt-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
+                  <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
@@ -1625,7 +1625,7 @@ export function ReserverForm({
               <StepIntro step="Étape 4" title="Récapitulatif" description="Relisez les informations qui seront enregistrées et transmises à l'administration." />
 
               {/* Carte prof */}
-              <div className="flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white p-4">
+              <div className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
                 <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-[#111827]">{displayName}</p>
@@ -1637,7 +1637,7 @@ export function ReserverForm({
               </div>
 
               {/* Récap */}
-              <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+              <div className="overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
                 <dl className="divide-y divide-[#EEF2F7] text-sm">
                   <Row label="Type client" value={form.clientType} />
                   <Row label="Catégorie" value={categoryLabel} />
@@ -1697,7 +1697,7 @@ export function ReserverForm({
                   isQuoteOnly={pricing.isQuoteOnly}
                 />
                 {sessionPreview.length > 0 && (
-                  <div className="rounded-xl border border-[#DDE6F7] bg-white p-3">
+                  <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
                     <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-end min-[460px]:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Séances prévues</p>
@@ -1711,7 +1711,7 @@ export function ReserverForm({
                     </div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {sessionPreview.map((session) => (
-                        <div key={session.label} className="rounded-xl border border-[#E3E8F2] bg-white px-3 py-2 text-xs text-[#111827]">
+                        <div key={session.label} className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs text-[#111827]">
                           <p className="font-semibold text-[#111827]">{session.label}</p>
                           <p className="mt-0.5 font-medium leading-5 text-[#111827]">{session.date}</p>
                           <p className="mt-0.5 font-semibold text-[#64748B]">{session.time}</p>
@@ -1720,7 +1720,7 @@ export function ReserverForm({
                     </div>
                   </div>
                 )}
-                <div className="flex items-start gap-2 rounded-xl border border-[#DDE6F7] bg-white p-3 text-xs font-medium leading-5 text-[#64748B]">
+                <div className="flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs font-medium leading-5 text-[#64748B]">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     {pricing.isQuoteOnly
@@ -1744,7 +1744,7 @@ export function ReserverForm({
               />
 
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
-                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                   <div className="flex items-start gap-3">
                     <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
                     <div className="min-w-0 flex-1">
@@ -1796,7 +1796,7 @@ export function ReserverForm({
               </div>
 
               {pricing.isQuoteOnly ? (
-                <div className="rounded-xl border border-[#E5E7EB] bg-white p-4">
+                <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                   <p className="text-sm font-semibold text-[#111827]">Validation admin requise</p>
                   <p className="mt-1 text-sm leading-6 text-[#6B7280]">
                     {pricing.quoteReason ?? "Ce dossier nécessite une estimation manuelle."} Aucun paiement ne sera encaissé à cette étape.
@@ -1808,13 +1808,13 @@ export function ReserverForm({
                   </div>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white">
+                <div className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">
                   <div className="grid gap-4 border-b border-[#E5E7EB] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
                         <PayDunyaMark />
-                        <span className="inline-flex min-h-8 items-center rounded-xl border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D]">
+                        <span className="inline-flex min-h-8 items-center rounded-lg border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D]">
                           Webhook sécurisé
                         </span>
                       </div>
@@ -1823,7 +1823,7 @@ export function ReserverForm({
                         PayDunya affichera les options disponibles, collectera les informations nécessaires et confirmera automatiquement le paiement à la plateforme.
                       </p>
                     </div>
-                    <div className="rounded-xl border border-[#DDE6F7] bg-white px-4 py-3 text-right">
+                    <div className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-right">
                       <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant PayDunya</p>
                       <p className="mt-1 text-2xl font-semibold text-[#111B4D]">{formatFCFA(totalPrice)}</p>
                     </div>
@@ -1882,7 +1882,7 @@ export function ReserverForm({
         </Card>
 
         <aside className="hidden space-y-4 xl:sticky xl:top-24 xl:block xl:self-start">
-          <div className="rounded-xl border border-[#DDE6F7] bg-white p-4">
+          <div className="rounded-lg border border-[#DDE6F7] bg-white p-4">
             <div className="flex items-center gap-3">
               <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
               <div className="min-w-0">
@@ -1891,7 +1891,7 @@ export function ReserverForm({
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#DDE6F7] bg-white p-3">
+            <div className="mt-4 rounded-lg border border-[#DDE6F7] bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Résumé instantané</p>
               <div className="mt-3 space-y-2">
                 <SummaryLine icon={<ClipboardList className="h-4 w-4" />} label="Besoin" value={primarySubjectLabel} />
@@ -1901,7 +1901,7 @@ export function ReserverForm({
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#111B4D] bg-[#111B4D] p-3 text-white">
+            <div className="mt-4 rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Montant client</p>
@@ -1923,12 +1923,12 @@ export function ReserverForm({
       </div>
 
       <div
-        className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-1.5 sm:hidden"
+        className="fixed inset-x-3 z-40 rounded-lg border border-[#DDE6F7] bg-white p-1.5 sm:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center gap-2">
           {step > 0 && (
-            <Button type="button" variant="outline" onClick={back} disabled={submitting} className="h-11 w-11 shrink-0 rounded-xl p-0" aria-label="Retour">
+            <Button type="button" variant="outline" onClick={back} disabled={submitting} className="h-11 w-11 shrink-0 rounded-lg p-0" aria-label="Retour">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
@@ -1936,7 +1936,7 @@ export function ReserverForm({
             type="button"
             onClick={handlePrimaryAction}
             disabled={primaryActionDisabled}
-            className="min-h-11 flex-1 rounded-xl bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]"
+            className="min-h-11 flex-1 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]"
           >
             <span className="truncate">{submitting ? "Traitement..." : primaryActionLabel}</span>
             {!submitting && !isFinalStep && <ArrowRight className="ml-2 h-4 w-4" />}
@@ -1978,7 +1978,7 @@ function InfoMini({ label, value }: { label: string; value: ReactNode }) {
 
 function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-[#E6EAF3] bg-white px-3 py-2">
+    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
@@ -1991,7 +1991,7 @@ function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; v
 function PayDunyaMark() {
   return (
     <span className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3" aria-label="PayDunya Checkout">
-      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-[11px] font-semibold text-white">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111B4D] text-[11px] font-semibold text-white">
         PD
       </span>
       <span className="text-sm font-semibold tracking-normal text-[#111827]">

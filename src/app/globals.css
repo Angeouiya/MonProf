@@ -40,12 +40,12 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: var(--radius);
 }
 
 /* Compétence - Identité premium bleu nuit, bleu pâle et champagne */
 :root {
-  --radius: 1rem;
+  --radius: 0.5rem;
   --foreground: #111827;
   --background: #FFFFFF;
   --card: #FFFFFF;
@@ -643,7 +643,7 @@ b {
 }
 
 .client-shell .page-header {
-  border-radius: 1.2rem;
+  border-radius: 0.5rem;
   border-color: #E3E8F2 !important;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.035) !important;
 }
@@ -745,7 +745,7 @@ b {
 .client-shell [class*="rounded-lg"]:not(.rounded-full),
 .client-shell [class*="rounded-lg"]:not(.rounded-full),
 .client-shell [class*="rounded-\["]:not(.rounded-full) {
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell .rounded-full,
@@ -755,7 +755,7 @@ b {
 }
 
 .client-shell [data-slot="button"] {
-  border-radius: 0.65rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell [data-slot="button"]:not([class*="border"]):not([class*="bg-white"]):not([class*="text-red"]) {
@@ -776,7 +776,7 @@ b {
 .client-shell .client-record-card,
 .client-shell .client-metric-card,
 .client-shell .client-shortcut-card {
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell h1,
@@ -931,13 +931,13 @@ b {
 
 .admin-shell [class*="rounded-lg"]:not(.rounded-full),
 .professor-shell [class*="rounded-lg"]:not(.rounded-full) {
-  border-radius: 1rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .admin-shell [class*="rounded-lg"]:not(.rounded-full),
 .professor-shell [class*="rounded-lg"]:not(.rounded-full),
 .professor-shell [class*="rounded-\["]:not(.rounded-full) {
-  border-radius: 0.875rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .admin-shell .rounded-full,
@@ -951,7 +951,7 @@ b {
 
 .admin-shell [data-slot="button"],
 .professor-shell [data-slot="button"] {
-  border-radius: 0.7rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .admin-shell [data-slot="button"]:not([class*="border"]):not([class*="bg-white"]):not([class*="text-red"]),
@@ -992,7 +992,7 @@ b {
   .professor-shell section,
   .professor-shell article,
   .professor-shell [data-slot="card"] {
-    border-radius: 0.9rem !important;
+    border-radius: 0.5rem !important;
   }
 
   .professor-shell [data-slot="button"] {
@@ -1132,7 +1132,7 @@ b {
   }
 
   .client-shell [data-slot="card"] {
-    border-radius: 1.25rem !important;
+    border-radius: 0.5rem !important;
   }
 
   .client-shell h1 {
@@ -1176,7 +1176,7 @@ b {
 }
 
 .client-shell [data-slot="button"] {
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
 }
 
 .client-shell [data-slot="button"]:not([class*="border"]):not([class*="bg-white"]) {
@@ -1298,19 +1298,19 @@ b {
 }
 
 .client-shell [data-client-teacher-card] [data-slot="button"] {
-  border-radius: 0.55rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell .client-tab-bar [data-slot="button"],
 .client-shell .client-tab-bar a,
 .client-shell .client-tab-bar button {
-  border-radius: 0.55rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell [class*="rounded-lg"]:not(.rounded-full),
 .client-shell [class*="rounded-lg"]:not(.rounded-full),
 .client-shell [class*="rounded-\["]:not(.rounded-full) {
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell [data-slot="button"],
@@ -1318,7 +1318,7 @@ b {
 .client-shell a[role="button"],
 .client-shell [class*="rounded-lg"][data-slot="button"],
 .client-shell [class*="rounded-lg"][data-slot="button"] {
-  border-radius: 0.65rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-shell .rounded-full,
@@ -1407,7 +1407,7 @@ b {
 .client-booking-form textarea,
 .client-booking-form [data-slot="select-trigger"] {
   min-height: 2.75rem;
-  border-radius: 0.85rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-booking-form textarea {
@@ -1415,7 +1415,7 @@ b {
 }
 
 .client-booking-form [class*="rounded-lg"] {
-  border-radius: 0.75rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-booking-form [data-slot="card-content"] {
@@ -1436,7 +1436,7 @@ b {
 .client-dispute-form textarea,
 .client-dispute-form input {
   min-height: 2.7rem;
-  border-radius: 0.85rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-dispute-form textarea {
@@ -1447,7 +1447,7 @@ b {
 .client-account-form input,
 .client-account-form select,
 .client-account-form textarea {
-  border-radius: 0.85rem !important;
+  border-radius: 0.5rem !important;
 }
 
 .client-account-form label {
@@ -1483,7 +1483,7 @@ b {
 
   .client-booking-form .client-booking-shell > div,
   .client-booking-form .client-booking-step-card {
-    border-radius: 0.9rem !important;
+    border-radius: 0.5rem !important;
   }
 
   .client-booking-form input,
@@ -1536,7 +1536,7 @@ b {
   }
 
   .client-page-header {
-    border-radius: 0.875rem !important;
+    border-radius: 0.5rem !important;
   }
 
   .client-screen-header {
@@ -1548,6 +1548,6 @@ b {
   .client-focus-panel,
   .client-shortcut-card,
   .client-info-pill {
-    border-radius: 0.875rem !important;
+    border-radius: 0.5rem !important;
   }
 }

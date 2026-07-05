@@ -112,7 +112,7 @@ export function SearchableCatalogSelect({
             variant="outline"
             aria-expanded={open}
             className={cn(
-              "min-h-11 w-full justify-between rounded-xl border-[#DDE6F7] bg-white px-3 text-left text-sm font-medium text-[#111827] hover:border-[#111B4D] hover:bg-white",
+              "min-h-11 w-full justify-between rounded-lg border-[#DDE6F7] bg-white px-3 text-left text-sm font-medium text-[#111827] hover:border-[#111B4D] hover:bg-white",
               triggerClassName,
             )}
           >

@@ -76,7 +76,7 @@ export function DisputeForm({
 
   return (
     <form onSubmit={submit} className="client-dispute-form space-y-3">
-      <div className="rounded-xl border border-[#DDE6F7] bg-white p-3 text-sm font-medium leading-5 text-[#111B4D]">
+      <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm font-medium leading-5 text-[#111B4D]">
         <div className="flex items-start gap-2">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
@@ -89,7 +89,7 @@ export function DisputeForm({
         <div className="space-y-1.5">
           <Label htmlFor="bookingId" className="text-sm font-semibold text-[#111827]">Réservation *</Label>
           <Select value={bookingId} onValueChange={setBookingId}>
-            <SelectTrigger id="bookingId" className="mt-1.5 min-h-11 w-full max-w-full min-w-0 rounded-xl border-[#DDE6F7] bg-white"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+            <SelectTrigger id="bookingId" className="mt-1.5 min-h-11 w-full max-w-full min-w-0 rounded-lg border-[#DDE6F7] bg-white"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
             <SelectContent>
               {bookings.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
@@ -103,7 +103,7 @@ export function DisputeForm({
         <div className="space-y-1.5">
           <Label htmlFor="reason" className="text-sm font-semibold text-[#111827]">Motif *</Label>
           <Select value={reason} onValueChange={setReason}>
-            <SelectTrigger id="reason" className="mt-1.5 min-h-11 w-full max-w-full min-w-0 rounded-xl border-[#DDE6F7] bg-white"><SelectValue /></SelectTrigger>
+            <SelectTrigger id="reason" className="mt-1.5 min-h-11 w-full max-w-full min-w-0 rounded-lg border-[#DDE6F7] bg-white"><SelectValue /></SelectTrigger>
             <SelectContent>
               {DISPUTE_REASONS.map((r) => (
                 <SelectItem key={r} value={r}>{r}</SelectItem>
@@ -114,7 +114,7 @@ export function DisputeForm({
       </div>
 
       {selectedBooking && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#DDE6F7] bg-white p-3" data-client-support-selected-booking>
+        <div className="flex items-center gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3" data-client-support-selected-booking>
           <ProfessorImage
             photoUrl={selectedBooking.teacherPhotoUrl}
             name={selectedBooking.teacherName}
@@ -142,11 +142,11 @@ export function DisputeForm({
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="Décrivez le problème : heure, échange avec le professeur, impact sur le cours..."
-          className="rounded-xl border-[#DDE6F7] bg-white leading-6"
+          className="rounded-lg border-[#DDE6F7] bg-white leading-6"
         />
       </div>
 
-      <Button type="submit" disabled={loading} className="min-h-11 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1A2565] sm:w-auto">
+      <Button type="submit" disabled={loading} className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1A2565] sm:w-auto">
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
         {loading ? "Envoi..." : "Envoyer le signalement"}
       </Button>

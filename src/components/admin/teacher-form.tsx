@@ -805,7 +805,7 @@ export function TeacherForm({
                       <th key={s.key} className="px-4 py-2 text-center">
                         <button
                           type="button"
-                          className="rounded-xl px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-violet-50 hover:text-violet-800"
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-violet-50 hover:text-violet-800"
                           onClick={() => setSlotAcrossDays(s.key, !WEEK_DAYS.every((day) => availability[day.key]?.[s.key]))}
                         >
                           {s.label}
@@ -836,10 +836,10 @@ export function TeacherForm({
                         ))}
                         <td className="py-2 text-right">
                           <div className="flex justify-end gap-1.5">
-                            <Button type="button" variant="outline" size="sm" className="h-8 rounded-xl px-2 text-[11px]" onClick={() => setDayAvailability(d.key, true)}>
+                            <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg px-2 text-[11px]" onClick={() => setDayAvailability(d.key, true)}>
                               Tout
                             </Button>
-                            <Button type="button" variant="ghost" size="sm" className="h-8 rounded-xl px-2 text-[11px]" onClick={() => setDayAvailability(d.key, false)}>
+                            <Button type="button" variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-[11px]" onClick={() => setDayAvailability(d.key, false)}>
                               Vider
                             </Button>
                           </div>

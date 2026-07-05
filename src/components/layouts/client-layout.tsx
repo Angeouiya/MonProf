@@ -63,7 +63,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       <header className="client-app-topbar sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
         <div className="flex items-center gap-3">
           <button
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Menu"
             aria-expanded={open}
@@ -82,13 +82,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             <ShieldCheck className="h-3.5 w-3.5" />
             PayDunya vérifié
           </div>
-          <Button asChild className="hidden min-h-11 rounded-xl bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] lg:inline-flex">
+          <Button asChild className="hidden min-h-11 rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] lg:inline-flex">
             <Link href="/client/rechercher">
               Trouver un professeur
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="relative hidden h-11 w-11 rounded-xl text-[#111B4D] hover:bg-white sm:inline-flex" aria-label="Notifications client">
+          <Button asChild variant="ghost" className="relative hidden h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white sm:inline-flex" aria-label="Notifications client">
             <Link href="/client/notifications">
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
@@ -98,7 +98,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               )}
             </Link>
           </Button>
-          <Button asChild variant="outline" className="hidden min-h-11 rounded-xl border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white xl:inline-flex">
+          <Button asChild variant="outline" className="hidden min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white xl:inline-flex">
             <Link href="/">Retour au site</Link>
           </Button>
           <ImportantActionConfirm
@@ -117,7 +117,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               <Button
                 variant="ghost"
                 title="Déconnexion"
-                className="hidden h-11 w-11 rounded-xl text-[#111B4D] hover:bg-white lg:inline-flex"
+                className="hidden h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white lg:inline-flex"
               >
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -139,7 +139,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] border-r border-[#E6EAF3] bg-white">
               <div className="flex min-h-16 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
-                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
+                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -189,7 +189,7 @@ function SidebarContent({
         <Link
           href="/client/rechercher"
           onClick={onNavigate}
-          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
+          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
         >
           <span className="inline-flex items-center gap-2">
             <Search className="h-4 w-4" />
@@ -205,7 +205,7 @@ function SidebarContent({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
+                "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
               )}
             >
@@ -275,7 +275,7 @@ function MobileBottomNav({
 }) {
   return (
     <nav
-      className="client-mobile-nav fixed inset-x-3 z-40 rounded-xl border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      className="client-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
@@ -287,7 +287,7 @@ function MobileBottomNav({
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 text-xs font-semibold transition-colors",
+                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
               )}
               aria-current={active ? "page" : undefined}

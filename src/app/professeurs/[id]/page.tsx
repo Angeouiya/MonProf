@@ -103,9 +103,9 @@ export default async function TeacherDetailPage({
       <div className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto hidden max-w-7xl px-4 py-3 sm:block sm:px-6 lg:px-8">
           <nav className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B]">
-            <Link href="/" className="inline-flex min-h-10 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
+            <Link href="/" className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
-            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-xl px-1 hover:text-[#111B4D]">Professeurs</Link>
+            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Professeurs</Link>
             <span>/</span>
             <span className="text-[#111827]">{displayName}</span>
           </nav>
@@ -123,7 +123,7 @@ export default async function TeacherDetailPage({
             Retour à la liste
           </Link>
 
-          <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-6">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <ProfessorImage
               photoUrl={teacher.photoUrl}
@@ -255,7 +255,7 @@ export default async function TeacherDetailPage({
               </p>
             </div>
 
-            <div className="hidden rounded-xl border border-[#111B4D] bg-white p-4 sm:p-5 lg:block">
+            <div className="hidden rounded-lg border border-[#111B4D] bg-white p-4 sm:p-5 lg:block">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Action recommandée</p>
               <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Démarrer la réservation guidée</h2>
               <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
@@ -628,7 +628,7 @@ export default async function TeacherDetailPage({
 
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
             <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
-              <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
                 <div className="mt-1">
                   <span className="text-2xl font-semibold text-[#111827]">
@@ -710,7 +710,7 @@ export default async function TeacherDetailPage({
           </div>
         </div>
       </section>
-      <div className="fixed inset-x-3 z-40 rounded-xl border border-[#DDE6F7] bg-white p-2 sm:hidden" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <div className="fixed inset-x-3 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2 sm:hidden" style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="min-w-0 px-2">
             <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
@@ -718,7 +718,7 @@ export default async function TeacherDetailPage({
           </div>
           <Link
             href={reserveHref}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111B4D] px-4 text-sm font-semibold text-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white"
           >
             Réserver
           </Link>
@@ -730,7 +730,7 @@ export default async function TeacherDetailPage({
 
 function Card({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <div id={id} className="min-w-0 scroll-mt-24 rounded-xl border border-[#E3E8F2] bg-white p-5 sm:p-6">
+    <div id={id} className="min-w-0 scroll-mt-24 rounded-lg border border-[#E3E8F2] bg-white p-5 sm:p-6">
       {children}
     </div>
   );
@@ -811,7 +811,7 @@ function PriceTile({
 }) {
   return (
     <div
-      className={`rounded-xl border p-4 text-center ${
+      className={`rounded-lg border p-4 text-center ${
         highlight
           ? "border-[#111B4D] bg-white"
           : "border-[#E3E8F2] bg-white"

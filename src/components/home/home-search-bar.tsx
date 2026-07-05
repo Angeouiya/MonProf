@@ -30,7 +30,7 @@ export function HomeSearchBar({
     <form
       method="GET"
       action="/professeurs"
-      className="mx-auto w-full max-w-5xl rounded-xl border border-[#DDE6F7] bg-white p-3 sm:p-4"
+      className="mx-auto w-full max-w-5xl rounded-lg border border-[#DDE6F7] bg-white p-3 sm:p-4"
     >
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
         <label className="min-w-0">

@@ -521,7 +521,7 @@ function ControlSpaceCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
@@ -543,7 +543,7 @@ function ControlSpaceCard({
           <Link
             key={item.label}
             href={item.href}
-            className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[#E6EAF3] bg-white px-3 py-2 text-sm transition hover:border-[#111B4D]"
+            className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-sm transition hover:border-[#111B4D]"
           >
             <span className="min-w-0 truncate font-medium text-[#475569]">{item.label}</span>
             <span className={item.attention ? "rounded-lg bg-[#111B4D] px-2 py-1 text-xs font-semibold text-white" : "rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs font-semibold text-[#111B4D]"}>
@@ -553,7 +553,7 @@ function ControlSpaceCard({
         ))}
       </div>
 
-      <Button asChild variant="outline" className="mt-4 min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D]">
+      <Button asChild variant="outline" className="mt-4 min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D]">
         <Link href={href}>
           {actionLabel}
           <ArrowRight className="h-4 w-4" />

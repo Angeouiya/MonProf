@@ -179,7 +179,7 @@ export function AvisClient({
     <div className="flex items-center justify-end gap-1.5">
       <Dialog open={treatmentOpen} onOpenChange={setTreatmentOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" disabled={loading} className="h-8 gap-1.5 rounded-xl px-2.5">
+          <Button variant="outline" size="sm" disabled={loading} className="h-8 gap-1.5 rounded-lg px-2.5">
             <ClipboardCheck className="h-4 w-4" />
             <span className="hidden lg:inline">Traiter</span>
           </Button>

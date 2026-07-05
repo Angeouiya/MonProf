@@ -117,7 +117,7 @@ export default async function ProfesseurMessagesPage() {
             {messages.map((message) => (
               <article
                 key={message.id}
-                className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4"
+                className="rounded-lg border border-[#E6EAF3] bg-white p-4"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">

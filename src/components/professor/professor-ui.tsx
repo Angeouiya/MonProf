@@ -92,7 +92,7 @@ export function ProfessorPageHeader({
       <div className="min-w-0">
         {showBack && (
           <div className="mb-2">
-            <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-xl px-3" />
+            <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg px-3" />
           </div>
         )}
         <h1 className="text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">{title}</h1>
@@ -125,7 +125,7 @@ export function ProfessorStatCard({
           : CalendarClock;
 
   return (
-    <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
@@ -150,7 +150,7 @@ export function PortalCard({
   id?: string;
 }) {
   return (
-    <section id={id} className={cn("rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 sm:p-5", className)}>
+    <section id={id} className={cn("rounded-lg border border-[#E6EAF3] bg-white p-4 sm:p-5", className)}>
       {children}
     </section>
   );
@@ -203,7 +203,7 @@ export function EmptyProfessorState({
   actionLabel?: string;
 }) {
   return (
-    <div className="rounded-[1.15rem] border border-dashed border-[#D7DEE9] bg-white p-6 text-center">
+    <div className="rounded-lg border border-dashed border-[#D7DEE9] bg-white p-6 text-center">
       <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
         <Info className="h-5 w-5" />
       </div>

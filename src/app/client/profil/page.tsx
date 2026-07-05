@@ -243,11 +243,11 @@ export default function ProfilPage() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="name">Nom complet *</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-xl border-[#DDE6F7]" />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]" />
               </div>
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" value={profile?.email ?? ""} disabled className="mt-1.5 h-11 rounded-xl border-[#DDE6F7] bg-white" />
+                <Input id="email" value={profile?.email ?? ""} disabled className="mt-1.5 h-11 rounded-lg border-[#DDE6F7] bg-white" />
                 <p className="mt-1 text-xs text-[#64748B]">L'email ne peut pas être modifié.</p>
               </div>
               <div>
@@ -256,7 +256,7 @@ export default function ProfilPage() {
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="mt-1.5 h-11 rounded-xl border-[#DDE6F7]"
+                  className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="+225 07 00 00 00 00"
                   inputMode="tel"
                 />
@@ -267,7 +267,7 @@ export default function ProfilPage() {
                   id="commune"
                   value={commune}
                   onChange={(e) => setCommune(e.target.value)}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
+                  className="mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
                 >
                   <option value="">— Aucune —</option>
                   {COMMUNES.map((c) => (
@@ -281,16 +281,16 @@ export default function ProfilPage() {
                   id="quartier"
                   value={quartier}
                   onChange={(e) => setQuartier(e.target.value)}
-                  className="mt-1.5 h-11 rounded-xl border-[#DDE6F7]"
+                  className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="Ex: Riviera Palmeraie"
                 />
               </div>
               </div>
-              <div className="rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
+              <div className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
                 <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
                 Ces informations restent privées et servent uniquement à organiser vos réservations.
               </div>
-              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-xl sm:w-auto">
+              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-lg sm:w-auto">
                 {savingInfo ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
                 ) : !profileDirty ? (
@@ -327,11 +327,11 @@ export default function ProfilPage() {
 function ProfileSkeleton() {
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-5">
+      <section className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)]">
-          <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 animate-pulse rounded-xl bg-[#E5E7EB]" />
+              <div className="h-14 w-14 animate-pulse rounded-lg bg-[#E5E7EB]" />
               <div className="flex-1 space-y-3">
                 <div className="h-3 w-36 animate-pulse rounded-full bg-[#E5E7EB]" />
                 <div className="h-7 w-4/5 animate-pulse rounded-full bg-[#E5E7EB]" />
@@ -344,7 +344,7 @@ function ProfileSkeleton() {
               ))}
             </div>
           </div>
-          <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
             <div className="h-3 w-28 animate-pulse rounded-full bg-[#E5E7EB]" />
             <div className="mt-3 h-6 w-3/4 animate-pulse rounded-full bg-[#E5E7EB]" />
             <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-[#E5E7EB]" />
@@ -358,7 +358,7 @@ function ProfileSkeleton() {
       </section>
       <div className="grid gap-3 md:grid-cols-3">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="h-28 animate-pulse rounded-xl border border-[#E3E8F2] bg-white" />
+          <div key={item} className="h-28 animate-pulse rounded-lg border border-[#E3E8F2] bg-white" />
         ))}
       </div>
     </div>

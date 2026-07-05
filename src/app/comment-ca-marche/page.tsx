@@ -153,8 +153,8 @@ export default function CommentCaMarchePage() {
       {/* HEADER */}
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-5 inline-flex min-h-11 items-center rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
-            <Link href="/" className="inline-flex min-h-11 items-center rounded-xl px-1 hover:text-[#111B4D]">Accueil</Link>
+          <nav className="mb-5 inline-flex min-h-11 items-center rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs text-[#64748B]">
+            <Link href="/" className="inline-flex min-h-11 items-center rounded-lg px-1 hover:text-[#111B4D]">Accueil</Link>
             <span className="mx-1.5">/</span>
             <span className="text-[#111827]">Comment ça marche</span>
           </nav>
@@ -251,7 +251,7 @@ export default function CommentCaMarchePage() {
       <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-medium text-[#64748B]">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-medium text-[#64748B]">
               <UserCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Conseils pratiques
             </span>
@@ -288,7 +288,7 @@ export default function CommentCaMarchePage() {
       <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-medium text-[#64748B]">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-medium text-[#64748B]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#111B4D]" />
               Nos garanties
             </span>

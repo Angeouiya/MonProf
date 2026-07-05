@@ -33,7 +33,7 @@ export default async function ProfesseurNotificationsPage() {
         ) : (
           <div className="grid gap-3">
             {notifications.map((notification) => (
-              <article key={notification.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+              <article key={notification.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -54,7 +54,7 @@ export default async function ProfesseurNotificationsPage() {
                   {notification.bookingId && (
                     <Link
                       href={`/professeur/missions/${notification.bookingId}`}
-                      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#D7DEE9] bg-white px-3 font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                      className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D7DEE9] bg-white px-3 font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
                     >
                       Voir la mission liée
                     </Link>

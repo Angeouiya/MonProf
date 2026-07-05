@@ -91,7 +91,7 @@ export function TeacherPayoutRequestForm({
   };
 
   return (
-    <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
+    <div className="rounded-lg border border-[#E6EAF3] bg-white p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
@@ -136,7 +136,7 @@ export function TeacherPayoutRequestForm({
             </SelectContent>
           </Select>
           <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2">
-            <PaymentMethodLogo method={method} className="h-9 min-w-20 rounded-xl" />
+            <PaymentMethodLogo method={method} className="h-9 min-w-20 rounded-lg" />
             <p className="text-xs font-semibold leading-5 text-[#64748B]">
               L'admin paiera uniquement via le moyen choisi après vérification.
             </p>

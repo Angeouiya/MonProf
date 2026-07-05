@@ -155,7 +155,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
     <PublicLayout>
       <section className="bg-white">
         <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(320px,430px)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-14">
-          <aside className="overflow-hidden rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 sm:p-6 lg:sticky lg:top-24">
+          <aside className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6 lg:sticky lg:top-24">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <ShieldCheck className="h-3.5 w-3.5" />
               Nouveau compte client
@@ -176,7 +176,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
             <div className="mt-6 space-y-3">
               {TRUST_POINTS.map((item) => (
                 <div key={item} className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
                   <p className="text-sm font-semibold text-[#111827]">{item}</p>
@@ -184,7 +184,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               ))}
             </div>
 
-            <div className="mt-5 rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
+            <div className="mt-5 rounded-lg border border-[#E3E8F2] bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Après création</p>
               <p className="mt-2 text-sm font-semibold leading-6 text-[#111827]">
                 Vous arrivez directement dans votre dashboard client pour retrouver vos réservations, cours, paiements et notifications.
@@ -193,7 +193,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
           </aside>
 
           <div className="w-full">
-            <div className="mb-5 rounded-[1.6rem] border border-[#E3E8F2] bg-white p-4 sm:p-5">
+            <div className="mb-5 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
@@ -213,7 +213,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               </div>
             </div>
 
-            <div className="rounded-[1.8rem] border border-[#E3E8F2] bg-white p-4 sm:p-6">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6">
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B]">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -324,7 +324,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -351,7 +351,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   <button
                     type="button"
                     onClick={() => setShowPwdConfirm((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
+                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
                     aria-label="Afficher/masquer"
                   >
                     {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -383,7 +383,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   const Icon = item.icon;
                   return (
                     <div key={item.title} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                         <Icon className="h-4 w-4" />
                       </div>
                       <p className="mt-2 text-sm font-semibold text-[#111827]">{item.title}</p>

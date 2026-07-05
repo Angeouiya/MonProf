@@ -144,7 +144,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           cancelLabel="Rester ici"
           onConfirm={onResumePayDunya}
           trigger={
-            <Button className="min-h-11 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "paydunya_checkout"}>
+            <Button className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "paydunya_checkout"}>
               <ExternalLink className="mr-2 h-4 w-4" />
               {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
             </Button>
@@ -152,7 +152,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
         />
         <Button
           variant="outline"
-          className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+          className="min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
           onClick={onVerifyPayDunya}
           disabled={loading === "paydunya_verify"}
         >
@@ -178,13 +178,13 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           cancelLabel="Revoir le dossier"
           onConfirm={onConfirmCourse}
           trigger={
-            <Button className="min-h-11 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "confirm"}>
+            <Button className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "confirm"}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
               {loading === "confirm" ? "Confirmation..." : "Confirmer le cours"}
             </Button>
           }
         />
-        <Button asChild variant="outline" className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+        <Button asChild variant="outline" className="min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
           <a href="#actions">Signaler un problème</a>
         </Button>
       </div>
@@ -193,7 +193,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
 
   return (
     <div className="mt-4">
-      <Button asChild variant="outline" className="min-h-11 w-full rounded-xl border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+      <Button asChild variant="outline" className="min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
         <a href="#actions">Voir les actions du dossier</a>
       </Button>
     </div>
@@ -450,7 +450,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   return (
-    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-3 sm:p-4">
+    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3 border-b border-[#E6EAF3] pb-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier</p>
@@ -461,7 +461,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         </span>
       </div>
       <div className="mt-3 space-y-3">
-        <div className={`rounded-xl border p-3 ${actionSummary.className}`}>
+        <div className={`rounded-lg border p-3 ${actionSummary.className}`}>
           <div className="flex items-start gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Situation actuelle</p>
@@ -802,19 +802,19 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-[#64748B]">{cancellationPolicy.description}</p>
                   <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Base de calcul</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.baseAmount)}</p>
                     </div>
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Frais d'annulation</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.feeAmount)}</p>
                     </div>
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Frais service</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.serviceFeeAmount)}</p>
                     </div>
-                    <div className="rounded-xl border border-[#E3E8F2] bg-white p-2">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Remboursement estimé</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.refundAmount)}</p>
                     </div>
