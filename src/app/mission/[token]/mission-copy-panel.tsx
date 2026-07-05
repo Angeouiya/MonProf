@@ -41,18 +41,18 @@ export function MissionCopyPanel({
   }
 
   return (
-    <Card className="border-blue-100 bg-white/92 shadow-sm">
+    <Card className="border-[#E3E8F2] bg-white">
       <CardHeader className="space-y-1">
         <CardTitle className="flex items-center gap-2 text-base">
-          <ClipboardCopy className="h-4 w-4 text-blue-700" />
+          <ClipboardCopy className="h-4 w-4 text-[#111B4D]" />
           Résumé opérationnel à copier
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm font-medium leading-6 text-[#64748B]">
           Utilisez ces messages uniquement pour organiser cette mission. Le lien reste privé et ne donne accès à aucun espace professeur complet.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="max-h-64 overflow-auto rounded-lg border border-violet-100 bg-violet-50/35 p-4 text-sm leading-relaxed text-foreground">
+        <div className="max-h-64 overflow-auto rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm leading-relaxed text-[#111827]">
           <pre className="whitespace-pre-wrap font-sans">{missionSummary}</pre>
         </div>
 
@@ -70,14 +70,14 @@ export function MissionCopyPanel({
             Copier admin
           </Button>
           {clientWhatsAppUrl ? (
-            <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-blue-100 text-blue-800 hover:bg-blue-50">
+            <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
               <a href={clientWhatsAppUrl} target="_blank" rel="noreferrer">
                 <MessageCircle className="mr-2 h-4 w-4" />
                 WhatsApp client
               </a>
             </Button>
           ) : supportWhatsAppUrl ? (
-            <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-blue-100 text-blue-800 hover:bg-blue-50">
+            <Button asChild variant="outline" className="h-11 justify-start rounded-lg border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
               <a href={supportWhatsAppUrl} target="_blank" rel="noreferrer">
                 <MessageCircle className="mr-2 h-4 w-4" />
                 WhatsApp admin

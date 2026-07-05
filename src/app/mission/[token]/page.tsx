@@ -98,10 +98,10 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
   ].filter(Boolean).join("\n");
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(246,199,107,0.20),transparent_35%),#F8F7FC] px-4 py-8">
+    <main className="min-h-screen bg-white px-4 py-8 text-[#111827]">
       <div className="mx-auto max-w-3xl space-y-5">
         <div className="text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-violet-100 bg-white/85 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-4 py-2 text-sm font-semibold text-[#111B4D]">
             <ShieldCheck className="h-4 w-4" /> Compétence - Mission professeur sécurisée
           </div>
           <div className="mt-5 flex justify-center">
@@ -113,8 +113,8 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               verified={mission.teacher.badgeVerified}
             />
           </div>
-          <h1 className="mt-5 text-3xl font-black tracking-normal text-foreground sm:text-4xl">{mission.title}</h1>
-          <p className="mt-2 text-muted-foreground">Bonjour {teacherName}, consultez les détails et confirmez votre disponibilité.</p>
+          <h1 className="mt-5 text-3xl font-semibold tracking-normal text-[#111827] sm:text-4xl">{mission.title}</h1>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">Bonjour {teacherName}, consultez les détails et confirmez votre disponibilité.</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -179,11 +179,11 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               <Info label="Lieu" value={locationLabel} icon={<MapPin className="h-4 w-4" />} />
             </div>
             {(booking.objective || booking.schoolProgram || booking.needDescription || booking.message) && (
-              <div className="sm:col-span-2 rounded-lg border border-amber-100 bg-amber-50/70 p-4 shadow-sm">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-900/70">
+              <div className="sm:col-span-2 rounded-lg border border-[#E3E8F2] bg-white p-4">
+                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                   <BookOpen className="h-4 w-4" /> Détails pédagogiques
                 </p>
-                <div className="mt-3 space-y-2 text-sm text-amber-950/85">
+                <div className="mt-3 space-y-2 text-sm text-[#111827]">
                   {booking.objective && <MissionText label="Objectif" value={booking.objective} />}
                   {booking.schoolProgram && <MissionText label="Programme / contexte" value={booking.schoolProgram} />}
                   {booking.needDescription && <MissionText label="Besoin précis" value={booking.needDescription} />}
@@ -215,7 +215,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                 </Button>
               )}
               {clientWhatsAppUrl ? (
-                <Button asChild variant="outline" className="h-11 rounded-lg border-blue-100 text-blue-800 hover:bg-blue-50">
+                <Button asChild variant="outline" className="h-11 rounded-lg border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                   <a href={clientWhatsAppUrl} target="_blank" rel="noreferrer">
                     <MessageCircle className="mr-2 h-4 w-4" />
                     WhatsApp client
@@ -228,9 +228,9 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                 </Button>
               )}
             </div>
-            <div className="rounded-lg border border-violet-100 bg-violet-50/55 p-4 text-sm">
-              <p><span className="font-semibold text-foreground">Client :</span> {booking.client.name}</p>
-              <p className="mt-1"><span className="font-semibold text-foreground">Téléphone :</span> {booking.client.phone || "Non renseigné"}</p>
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm text-[#111827]">
+              <p><span className="font-semibold">Client :</span> {booking.client.name}</p>
+              <p className="mt-1"><span className="font-semibold">Téléphone :</span> {booking.client.phone || "Non renseigné"}</p>
             </div>
           </CardContent>
         </Card>
@@ -238,15 +238,15 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
         <Card>
           <CardHeader><CardTitle>Consignes admin</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="rounded-lg border border-violet-100 bg-white/80 p-4 text-sm text-muted-foreground">
+            <p className="rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm font-medium leading-6 text-[#64748B]">
               {mission.instructions || "Merci de confirmer rapidement votre disponibilité et de contacter l'administration si une information manque."}
             </p>
             {locked && (
-              <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4 text-sm font-medium text-blue-900">
+              <div className="rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm font-semibold text-[#111B4D]">
                 Statut actuel : {statusLabel}. {mission.response ? `Votre message : ${mission.response}` : "Aucune action supplémentaire n'est nécessaire depuis ce lien."}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">Lien valide jusqu'au {formatDateTime(mission.expiresAt)}. Vous ne pouvez accéder qu'à cette mission.</p>
+            <p className="text-xs font-medium text-[#64748B]">Lien valide jusqu'au {formatDateTime(mission.expiresAt)}. Vous ne pouvez accéder qu'à cette mission.</p>
             <MissionActions token={token} disabled={locked} />
           </CardContent>
         </Card>
@@ -284,9 +284,9 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
                   </Button>
                 )}
               </div>
-              <div className="rounded-lg border border-violet-100 bg-violet-50/55 p-4 text-sm">
-                {supportPhone && <p><span className="font-semibold text-foreground">Téléphone :</span> {supportPhone}</p>}
-                {supportEmail && <p className="mt-1"><span className="font-semibold text-foreground">Email :</span> {supportEmail}</p>}
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 text-sm text-[#111827]">
+                {supportPhone && <p><span className="font-semibold">Téléphone :</span> {supportPhone}</p>}
+                {supportEmail && <p className="mt-1"><span className="font-semibold">Email :</span> {supportEmail}</p>}
               </div>
             </CardContent>
           </Card>
@@ -310,19 +310,19 @@ function MissionSignalCard({
   tone: "blue" | "violet" | "amber" | "red";
 }) {
   const toneClass = {
-    blue: "border-blue-100 bg-blue-50/80 text-blue-950",
-    violet: "border-violet-100 bg-violet-50/80 text-violet-950",
-    amber: "border-amber-100 bg-amber-50/85 text-amber-950",
-    red: "border-red-100 bg-red-50/85 text-red-950",
+    blue: "border-[#DDE6F7] bg-white text-[#111B4D]",
+    violet: "border-[#DDE6F7] bg-white text-[#111B4D]",
+    amber: "border-[#DDE6F7] bg-white text-[#111B4D]",
+    red: "border-[#E3E8F2] bg-white text-[#B42318]",
   }[tone];
   return (
-    <div className={`rounded-lg border p-4 shadow-sm ${toneClass}`}>
-      <p className="flex items-center gap-2 text-xs font-black uppercase tracking-wide opacity-70">
+    <div className={`rounded-lg border p-4 ${toneClass}`}>
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         {icon}
         {label}
       </p>
-      <p className="mt-2 text-sm font-black leading-snug">{value}</p>
-      <p className="mt-1 text-xs leading-relaxed opacity-75">{description}</p>
+      <p className="mt-2 text-sm font-semibold leading-snug">{value}</p>
+      <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748B]">{description}</p>
     </div>
   );
 }
@@ -341,19 +341,18 @@ function getMissionStatusLabel(status: string) {
 }
 
 function getMissionStatusTone(status: string) {
-  if (status === "CONFIRMED") return "border-blue-200 bg-blue-50 text-blue-800";
+  if (status === "CONFIRMED") return "border-[#111B4D] bg-[#111B4D] text-white";
   if (["UNAVAILABLE", "PROBLEM_REPORTED", "EXPIRED", "REPLACEMENT_RECOMMENDED"].includes(status)) {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-[#B42318] bg-white text-[#B42318]";
   }
-  if (status === "RELAUNCHED") return "border-amber-200 bg-amber-50 text-amber-800";
-  return "border-violet-200 bg-violet-50 text-violet-700";
+  return "border-[#DDE6F7] bg-white text-[#111B4D]";
 }
 
 function Info({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-violet-100 bg-white/80 p-4 shadow-sm">
-      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{icon}{label}</p>
-      <p className="mt-1 font-semibold text-foreground">{value || "—"}</p>
+    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{icon}{label}</p>
+      <p className="mt-1 font-semibold text-[#111827]">{value || "—"}</p>
     </div>
   );
 }
@@ -361,7 +360,7 @@ function Info({ label, value, icon }: { label: string; value: string; icon?: Rea
 function MissionText({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] font-bold uppercase tracking-wide text-amber-900/65">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-0.5 whitespace-pre-line font-medium">{value}</p>
     </div>
   );
