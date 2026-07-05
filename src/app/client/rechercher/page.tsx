@@ -11,6 +11,8 @@ import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 export const dynamic = "force-dynamic";
 
 const fieldClassName = "mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
+type SearchParams = { [k: string]: string | undefined };
+
 const quickSearches = [
   { label: "Maths à Cocody", href: "/client/rechercher?q=math&commune=Cocody" },
   { label: "Anglais en ligne", href: "/client/rechercher?q=anglais&format=ONLINE" },
@@ -23,7 +25,7 @@ const quickSearches = [
 export default async function RechercherPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [k: string]: string | undefined }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
   const subject = sp.subject;
@@ -67,15 +69,22 @@ export default async function RechercherPage({
   }));
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
+  const subjectLabel = subject ? subjects.find((item) => item.slug === subject)?.name ?? subject : "";
+  const levelLabel = level ? levels.find((item) => item.slug === level)?.name ?? level : "";
+  const formatLabel = format ? (format === "HOME" ? "À domicile" : "En ligne") : "";
+  const sortLabel = sort === "rating" ? "Mieux notés" : sort === "experience" ? "Expérience" : "";
   const activeFilters = [
-    q ? `Recherche : ${q}` : "",
-    subject ? `Matière : ${subjects.find((item) => item.slug === subject)?.name ?? subject}` : "",
-    level ? `Niveau : ${levels.find((item) => item.slug === level)?.name ?? level}` : "",
-    commune ? `Commune : ${commune}` : "",
-    format ? `Format : ${format === "HOME" ? "À domicile" : "En ligne"}` : "",
-    sort !== "recommended" ? `Tri : ${sort === "rating" ? "Mieux notés" : "Expérience"}` : "",
-  ].filter(Boolean);
+    q ? { key: "q", label: `Recherche : ${q}`, href: buildSearchHref(sp, { q: null }) } : null,
+    subject ? { key: "subject", label: `Matière : ${subjectLabel}`, href: buildSearchHref(sp, { subject: null }) } : null,
+    level ? { key: "level", label: `Niveau : ${levelLabel}`, href: buildSearchHref(sp, { level: null }) } : null,
+    commune ? { key: "commune", label: `Commune : ${commune}`, href: buildSearchHref(sp, { commune: null }) } : null,
+    format ? { key: "format", label: `Format : ${formatLabel}`, href: buildSearchHref(sp, { format: null }) } : null,
+    sort !== "recommended" ? { key: "sort", label: `Tri : ${sortLabel}`, href: buildSearchHref(sp, { sort: null }) } : null,
+  ].filter((filter): filter is { key: string; label: string; href: string } => Boolean(filter));
   const hasActiveFilters = activeFilters.length > 0;
+  const resultIntro = hasActiveFilters
+    ? `Résultats pour ${activeFilters.map((filter) => filter.label.replace(" : ", " ")).join(", ")}.`
+    : "Recherche libre sur les matières, niveaux, communes, concours, métiers et parcours professeur.";
 
   return (
     <div className="space-y-5">
@@ -111,9 +120,12 @@ export default async function RechercherPage({
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E6EAF3] pt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-            {formatCount(items.length, "profil")} disponible{items.length > 1 ? "s" : ""}
-          </p>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+              {formatCount(items.length, "profil")} disponible{items.length > 1 ? "s" : ""}
+            </p>
+            <p className="mt-1 max-w-3xl text-sm font-medium text-[#111827]">{resultIntro}</p>
+          </div>
           <Link
             href="/client/rechercher"
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111B4D]"
@@ -166,9 +178,15 @@ export default async function RechercherPage({
               <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 min-[620px]:flex-row min-[620px]:items-center min-[620px]:justify-between">
                 <div className="flex min-w-0 flex-wrap gap-2">
                   {activeFilters.map((filter) => (
-                    <span key={filter} className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
-                      {filter}
-                    </span>
+                    <Link
+                      key={filter.key}
+                      href={filter.href}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                      title={`Retirer le filtre ${filter.label}`}
+                    >
+                      <span>{filter.label}</span>
+                      <X className="h-3.5 w-3.5" />
+                    </Link>
                   ))}
                 </div>
                 <Link
@@ -285,11 +303,30 @@ export default async function RechercherPage({
           }
         />
         {items.length === 0 ? (
-          <EmptyState
-            icon={Search}
-            title="Aucun professeur ne correspond"
-            description="Essayez d'élargir vos critères de recherche."
-          />
+          <div className="space-y-4">
+            <EmptyState
+              icon={Search}
+              title="Aucun professeur ne correspond"
+              description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
+            />
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link
+                href="/client/rechercher"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+              >
+                Voir tous les professeurs
+              </Link>
+              {quickSearches.slice(0, 3).map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
@@ -304,4 +341,27 @@ export default async function RechercherPage({
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function buildSearchHref(
+  currentParams: SearchParams,
+  updates: Record<string, string | null | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const key of ["q", "subject", "level", "commune", "format", "sort"]) {
+    const value = currentParams[key];
+    if (!value || (key === "sort" && value === "recommended")) continue;
+    params.set(key, value);
+  }
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!value || (key === "sort" && value === "recommended")) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `/client/rechercher?${query}` : "/client/rechercher";
 }

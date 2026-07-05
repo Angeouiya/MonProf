@@ -20,24 +20,26 @@ export function splitTeacherSearchTerms(rawSearch?: string | null) {
 }
 
 function buildTeacherSearchOr(term: string) {
+  const textMatch = (value: string) => ({ contains: value, mode: "insensitive" as const });
+
   return [
-    { fullName: { contains: term } },
-    { professionalName: { contains: term } },
-    { jobTitle: { contains: term } },
-    { bio: { contains: term } },
-    { diploma: { contains: term } },
-    { careerSummary: { contains: term } },
-    { skills: { contains: term } },
-    { workHistory: { contains: term } },
-    { certifications: { contains: term } },
-    { teachingAchievements: { contains: term } },
-    { commune: { contains: term } },
-    { quartier: { contains: term } },
-    { subjects: { some: { subject: { name: { contains: term } } } } },
-    { subjects: { some: { subject: { slug: { contains: term } } } } },
-    { levels: { some: { level: { name: { contains: term } } } } },
-    { levels: { some: { level: { slug: { contains: term } } } } },
-    { zones: { some: { commune: { name: { contains: term } } } } },
-    { zones: { some: { commune: { zone: { contains: term } } } } },
+    { fullName: textMatch(term) },
+    { professionalName: textMatch(term) },
+    { jobTitle: textMatch(term) },
+    { bio: textMatch(term) },
+    { diploma: textMatch(term) },
+    { careerSummary: textMatch(term) },
+    { skills: textMatch(term) },
+    { workHistory: textMatch(term) },
+    { certifications: textMatch(term) },
+    { teachingAchievements: textMatch(term) },
+    { commune: textMatch(term) },
+    { quartier: textMatch(term) },
+    { subjects: { some: { subject: { name: textMatch(term) } } } },
+    { subjects: { some: { subject: { slug: textMatch(term) } } } },
+    { levels: { some: { level: { name: textMatch(term) } } } },
+    { levels: { some: { level: { slug: textMatch(term) } } } },
+    { zones: { some: { commune: { name: textMatch(term) } } } },
+    { zones: { some: { commune: { zone: textMatch(term) } } } },
   ];
 }
