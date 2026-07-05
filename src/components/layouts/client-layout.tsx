@@ -62,7 +62,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       {/* Top bar (mobile + desktop) */}
       <header className="client-app-topbar sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => setOpen(!open)}
@@ -71,12 +71,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white">
-            <BrandLogo size="sm" />
+          <Link href="/client" className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
+            <BrandLogo size="sm" compact className="lg:hidden" />
+            <BrandLogo size="sm" className="hidden lg:inline-flex" />
           </Link>
-          <div className="hidden min-w-0 flex-col min-[430px]:flex lg:hidden">
+          <div className="flex min-w-0 flex-col lg:hidden">
             <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{currentSection.label}</span>
-            <span className="truncate text-[11px] font-medium leading-4 text-[#64748B]">{currentSection.hint}</span>
+            <span className="hidden truncate text-[11px] font-medium leading-4 text-[#64748B] min-[360px]:block">{currentSection.hint}</span>
           </div>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] lg:inline-flex">
             {currentSection.label}
@@ -93,7 +94,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="relative hidden h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white sm:inline-flex" aria-label="Notifications client">
+          <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
             <Link href="/client/notifications">
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
@@ -141,12 +142,35 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         {open && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white">
+            <aside
+              className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu client"
+            >
               <div className="flex min-h-16 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
                 <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
                   <X className="h-5 w-5" />
                 </button>
+              </div>
+              <div className="border-b border-[#E6EAF3] bg-white px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Vous êtes dans</p>
+                <div className="mt-1 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold leading-5 text-[#111827]">{currentSection.label}</p>
+                    <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{currentSection.hint}</p>
+                  </div>
+                  {!!notificationCount && (
+                    <Link
+                      href="/client/notifications"
+                      onClick={() => setOpen(false)}
+                      className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D]"
+                    >
+                      {notificationCount > 99 ? "99+" : notificationCount}
+                    </Link>
+                  )}
+                </div>
               </div>
               <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={() => setOpen(false)} />
             </aside>
