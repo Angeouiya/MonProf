@@ -21,7 +21,7 @@ const sanctionLabels: Record<string, string> = {
 
 export default async function ProfesseurAvisPage() {
   const { teacher } = await requireTeacher();
-  const [profile, reviews, warnings, sanctions] = await Promise.all([
+  const [profile, reviews, warnings, sanctions] = await db.$transaction([
     db.teacher.findUnique({
       where: { id: teacher.id },
       select: {

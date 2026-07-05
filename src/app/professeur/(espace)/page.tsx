@@ -40,7 +40,7 @@ export default async function ProfesseurDashboardPage() {
     unreadAdminMessageCount,
     pendingScheduleProposalCount,
     pendingPayoutRequestCount,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.teacher.findUnique({
       where: { id: teacher.id },
       include: {

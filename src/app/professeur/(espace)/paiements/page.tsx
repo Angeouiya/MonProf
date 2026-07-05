@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfesseurPaiementsPage() {
   const { teacher } = await requireTeacher();
-  const [bookings, adjustments, payouts, payoutRequests] = await Promise.all([
+  const [bookings, adjustments, payouts, payoutRequests] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         teacherId: teacher.id,

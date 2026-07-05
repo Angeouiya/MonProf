@@ -54,7 +54,7 @@ export default async function ClientDashboardPage() {
     nextCourse,
     recentBookings,
     recommended,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.booking.count({ where: { clientId: user.id } }),
     db.booking.count({
       where: {

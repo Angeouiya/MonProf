@@ -54,7 +54,7 @@ export default async function RechercherPage({
     default: orderBy = [{ featured: "desc" }, { rating: "desc" }, { ratingCount: "desc" }]; break;
   }
 
-  const [teachers, subjects, levels, communes] = await Promise.all([
+  const [teachers, subjects, levels, communes] = await db.$transaction([
     db.teacher.findMany({
       where,
       orderBy,

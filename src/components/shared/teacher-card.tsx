@@ -31,31 +31,21 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
   return (
     <article
       data-client-teacher-card
-      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 shadow-sm transition-colors duration-200 hover:border-[#111B4D] sm:p-3.5"
+      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 shadow-sm transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
     >
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3.5">
         <ProfessorImage
           photoUrl={teacher.photoUrl}
           name={displayName}
-          size={68}
+          size={72}
           shape="circle"
           verified={teacher.badgeVerified}
         />
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="line-clamp-1 text-[1rem] font-semibold leading-snug text-[#111827]">
-                {displayName}
-              </h3>
-              <p className="mt-0.5 line-clamp-1 text-[13px] font-medium leading-5 text-[#64748B]">{teacher.jobTitle}</p>
-            </div>
-            {teacher.badgeVerified && (
-              <span className="inline-flex min-h-7 shrink-0 items-center gap-1 rounded-md border border-[#111B4D] bg-[#111B4D] px-2 py-0.5 text-[10.5px] font-semibold text-white">
-                <BadgeCheck className="h-3.5 w-3.5" />
-                Certifié
-              </span>
-            )}
-          </div>
+          <h3 className="line-clamp-1 text-[1rem] font-semibold leading-snug text-[#111827]">
+            {displayName}
+          </h3>
+          <p className="mt-0.5 line-clamp-1 text-[13px] font-medium leading-5 text-[#64748B]">{teacher.jobTitle}</p>
           <div className="mt-2 grid gap-1 text-[13px] leading-relaxed text-[#64748B]">
             <p className="line-clamp-1 font-semibold text-[#111827]">
               {teacher.primarySubject ?? "Matière à confirmer"}
@@ -67,6 +57,12 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
               <span className="font-semibold text-[#111827]">Note {displayRating.toFixed(1)}/5</span>
               <span> · {teacher.experienceYears} ans</span>
             </p>
+            {teacher.badgeVerified && (
+              <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#111B4D]">
+                <BadgeCheck className="h-3.5 w-3.5" />
+                Certifié
+              </p>
+            )}
           </div>
         </div>
       </div>

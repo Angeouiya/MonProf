@@ -9,7 +9,7 @@ export default async function ProfesseurProtectedLayout({ children }: { children
   const { teacher } = await requireTeacher();
   const teacherName = teacher.professionalName || teacher.fullName;
 
-  const [notificationCount, missionCount, taskCount, messageCount] = await Promise.all([
+  const [notificationCount, missionCount, taskCount, messageCount] = await db.$transaction([
     db.teacherNotification.count({
       where: {
         teacherId: teacher.id,

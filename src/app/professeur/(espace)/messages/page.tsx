@@ -34,7 +34,7 @@ const statusLabel: Record<string, string> = {
 export default async function ProfesseurMessagesPage() {
   const { teacher } = await requireTeacher();
 
-  const [messages, bookings] = await Promise.all([
+  const [messages, bookings] = await db.$transaction([
     db.teacherAdminMessage.findMany({
       where: { teacherId: teacher.id },
       include: {

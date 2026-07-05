@@ -51,7 +51,7 @@ export default async function ReservationsPage({
     },
     transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
   };
-  const [bookings, allBookings] = await Promise.all([
+  const [bookings, allBookings] = await db.$transaction([
     db.booking.findMany({
       where,
       orderBy: { createdAt: "desc" },

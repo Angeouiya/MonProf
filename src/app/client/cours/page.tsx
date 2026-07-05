@@ -39,7 +39,7 @@ export default async function CoursPage({
   const tabId = sp.tab ?? "avenir";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const [bookings, overviewBookings] = await Promise.all([
+  const [bookings, overviewBookings] = await db.$transaction([
     db.booking.findMany({
       where: { clientId: user.id, status: { in: tab.statuses as any } },
       orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],

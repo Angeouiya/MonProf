@@ -137,27 +137,25 @@ export default async function AdminDashboard() {
 
   const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
   const notificationBookingIds = Array.from(new Set(adminNotifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
-  const [notificationTeachers, notificationBookings] = await Promise.all([
-    notificationTeacherIds.length
-      ? db.teacher.findMany({
-          where: { id: { in: notificationTeacherIds } },
-          select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
-        })
-      : [],
-    notificationBookingIds.length
-      ? db.booking.findMany({
-          where: { id: { in: notificationBookingIds } },
-          select: {
-            id: true,
-            reference: true,
-            subjectName: true,
-            teacherId: true,
-            client: { select: { name: true } },
-            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-          },
-        })
-      : [],
-  ]);
+  const notificationTeachers = notificationTeacherIds.length
+    ? await db.teacher.findMany({
+        where: { id: { in: notificationTeacherIds } },
+        select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
+      })
+    : [];
+  const notificationBookings = notificationBookingIds.length
+    ? await db.booking.findMany({
+        where: { id: { in: notificationBookingIds } },
+        select: {
+          id: true,
+          reference: true,
+          subjectName: true,
+          teacherId: true,
+          client: { select: { name: true } },
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+        },
+      })
+    : [];
   const notificationTeachersById = new Map<string, NotificationTeacherLite>(
     notificationTeachers.map((teacher) => [teacher.id, teacher] as const),
   );

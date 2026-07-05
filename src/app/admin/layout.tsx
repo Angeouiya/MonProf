@@ -10,7 +10,7 @@ export default async function AdminRootLayout({ children }: { children: React.Re
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/connexion?from=/admin");
   if ((session.user as any).role !== "ADMIN") redirect("/");
-  const [notificationCount, urgentCount, teacherCount, paymentCount] = await Promise.all([
+  const [notificationCount, urgentCount, teacherCount, paymentCount] = await db.$transaction([
     db.notification.count({
       where: { userId: null, read: false, priority: { in: ["IMPORTANT", "URGENT", "CRITICAL"] } },
     }),
