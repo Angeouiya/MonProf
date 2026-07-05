@@ -94,7 +94,7 @@ export default async function RechercherPage({
         description="Tapez une matière, un concours, un métier ou une commune."
       />
 
-      <form className="client-app-surface rounded-lg border border-[#DDE3EE] bg-white p-3 shadow-sm sm:p-4">
+      <form className="client-app-surface rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
         <div className="grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="sr-only" htmlFor="client-search-query">Recherche</label>
@@ -112,7 +112,7 @@ export default async function RechercherPage({
           </div>
           <button
             type="submit"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#182260]"
           >
             <Search className="h-4 w-4" />
             Rechercher
@@ -267,7 +267,7 @@ export default async function RechercherPage({
               <div className="flex items-end sm:col-span-2 lg:col-span-3">
                 <button
                   type="submit"
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260] lg:max-w-56"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] lg:max-w-56"
                 >
                   <Search className="h-4 w-4" />
                   Appliquer

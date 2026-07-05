@@ -246,7 +246,7 @@ export default async function ReservationDetailPage({
       />
 
       {returnedFromPayDunya && paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Paiement PayDunya confirmé</p>
@@ -260,7 +260,7 @@ export default async function ReservationDetailPage({
       )}
 
       {returnedFromPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4">
           <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Retour PayDunya enregistré</p>
@@ -273,7 +273,7 @@ export default async function ReservationDetailPage({
       )}
 
       {cancelledOnPayDunya && !paymentConfirmed && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[#E3E8F2] bg-white p-4">
           <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Paiement PayDunya non finalisé</p>
@@ -285,7 +285,7 @@ export default async function ReservationDetailPage({
       )}
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-stretch">
-        <div className="order-2 rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5 lg:order-1">
+        <div className="order-2 rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-5 lg:order-1">
           <div className="flex flex-col gap-4 min-[520px]:flex-row min-[520px]:items-center">
             <ProfessorImage photoUrl={booking.teacher.photoUrl} name={name} size="md" shape="circle" verified={booking.teacher.badgeVerified} />
             <div className="min-w-0 flex-1">
@@ -321,10 +321,10 @@ export default async function ReservationDetailPage({
           </div>
         </div>
 
-        <div className={`order-1 flex flex-col justify-between rounded-xl border p-4 shadow-sm sm:p-5 lg:order-2 ${clientSituation.className}`}>
+        <div className={`order-1 flex flex-col justify-between rounded-xl border p-4 sm:p-5 lg:order-2 ${clientSituation.className}`}>
           <div>
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white">
                 {clientSituation.icon}
               </span>
               <div className="min-w-0">
@@ -446,7 +446,7 @@ export default async function ReservationDetailPage({
                     }`}>
                       {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
                     </span>
-                    <div className="flex flex-col gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
+                    <div className="flex flex-col gap-1 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
                       <p className={`text-sm font-semibold ${t.done ? "text-[#111827]" : "text-[#64748B]"}`}>{t.label}</p>
                       {t.date && t.done && (
                         <p className="text-xs font-semibold text-[#64748B] min-[480px]:shrink-0">{formatDate(t.date)}</p>
@@ -468,7 +468,7 @@ export default async function ReservationDetailPage({
               />
               <div className="space-y-2">
                 {visibleTransactions.map((tx) => (
-                  <div key={tx.id} className="flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm shadow-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
+                  <div key={tx.id} className="flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
                     <div>
                       <p className="font-mono text-xs font-semibold text-[#111827]">{tx.reference}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
@@ -522,7 +522,7 @@ export default async function ReservationDetailPage({
 
 function ReservationStatusChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-left shadow-sm">
+    <div className="min-w-0 rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-left">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-0.5 truncate text-sm font-semibold text-[#111B4D]">{value}</p>
     </div>
@@ -637,7 +637,7 @@ function ReservationHeroMetric({ icon, label, value }: { icon: ReactNode; label:
 
 function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm">
+    <div className="flex min-w-0 items-start gap-2 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
       {icon && <span className="mt-0.5 shrink-0 text-[#64748B]">{icon}</span>}
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

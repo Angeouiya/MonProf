@@ -90,7 +90,7 @@ function ProfesseurConnexionContent() {
         <div className="mx-auto grid min-h-[calc(100vh-90px)] max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_430px] lg:items-center lg:py-16">
           <div className="hidden lg:block">
             <div className="max-w-xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D] shadow-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D]">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Plateforme professeur légère
               </span>
@@ -106,7 +106,7 @@ function ProfesseurConnexionContent() {
                   "Aucune inscription publique professeur.",
                   "Les tarifs, sanctions et paiements restent contrôlés par l'administration.",
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-4">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">✓</span>
                     <p className="text-sm font-semibold text-[#111827]">{item}</p>
                   </div>
@@ -120,7 +120,7 @@ function ProfesseurConnexionContent() {
               <Link href="/" className="inline-flex justify-center">
                 <BrandLogo priority />
               </Link>
-              <div className="mx-auto mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
+              <div className="mx-auto mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
                 <Phone className="h-6 w-6" />
               </div>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">
@@ -131,9 +131,9 @@ function ProfesseurConnexionContent() {
               </p>
             </div>
 
-            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-6 shadow-sm">
+            <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-6">
               {error && (
-                <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700 shadow-sm">
+                <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -152,7 +152,7 @@ function ProfesseurConnexionContent() {
                       value={phone}
                       onChange={(event) => setPhone(event.target.value)}
                       placeholder="+225 07 00 00 00 00"
-                      className="h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm shadow-sm focus-visible:ring-[#9AAAD0]"
+                      className="h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]"
                     />
                   </div>
                 </div>
@@ -169,7 +169,7 @@ function ProfesseurConnexionContent() {
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       placeholder="••••••••"
-                      className="h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm shadow-sm focus-visible:ring-[#9AAAD0]"
+                      className="h-12 rounded-2xl border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]"
                     />
                     <button
                       type="button"
@@ -196,7 +196,7 @@ function ProfesseurConnexionContent() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-[1.15rem] border border-dashed border-[#DDE6F7] bg-white p-4 shadow-sm">
+            <div className="mt-5 rounded-[1.15rem] border border-dashed border-[#DDE6F7] bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Démonstration professeur</p>
               <button
                 type="button"

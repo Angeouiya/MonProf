@@ -251,8 +251,8 @@ export function ClientNotificationCenter({
                 data-client-notification-card
                 className={`overflow-hidden rounded-xl ${
                   notification.read
-                    ? "border-[#E3E8F2] bg-white shadow-sm"
-                    : "border-[#111B4D] bg-white shadow-sm"
+                    ? "border-[#E3E8F2] bg-white"
+                    : "border-[#111B4D] bg-white"
                 }`}
               >
                 <div className="relative flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
@@ -267,7 +267,7 @@ export function ClientNotificationCenter({
                         verified={booking.teacher.badgeVerified}
                       />
                     ) : (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#DDE6F7] bg-white text-[#111B4D] shadow-sm">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#DDE6F7] bg-white text-[#111B4D]">
                         <Bell className="h-5 w-5" />
                       </div>
                     )}
@@ -318,7 +318,7 @@ function PriorityNotificationCard({
 }) {
   if (!notification) {
     return (
-      <div className="rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-[#E3E8F2] bg-white p-4">
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
             <CheckCircle2 className="h-5 w-5" />
@@ -339,7 +339,7 @@ function PriorityNotificationCard({
   const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
 
   return (
-    <div className={`overflow-hidden rounded-xl border p-3 shadow-sm sm:p-4 ${
+    <div className={`overflow-hidden rounded-xl border p-3 sm:p-4 ${
       urgent ? "border-[#111B4D] bg-white" : "border-[#DDE6F7] bg-white"
     }`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -389,7 +389,7 @@ function BookingNotificationPreview({ booking, teacherName }: { booking: Notific
   const timeLabel = booking.scheduledTime || booking.preferredTime || "Créneau à confirmer";
 
   return (
-    <div className="mt-2 rounded-xl border border-[#E3E8F2] bg-white p-2.5 shadow-sm sm:mt-3 sm:p-3">
+    <div className="mt-2 rounded-xl border border-[#E3E8F2] bg-white p-2.5 sm:mt-3 sm:p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{booking.reference}</p>

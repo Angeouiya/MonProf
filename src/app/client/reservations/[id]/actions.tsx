@@ -450,13 +450,13 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   return (
-    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-3 shadow-sm sm:p-4">
+    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-3 sm:p-4">
       <div className="flex items-center justify-between gap-3 border-b border-[#E6EAF3] pb-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier</p>
           <h2 className="mt-0.5 text-base font-semibold leading-tight text-[#111827]">Actions rapides</h2>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm [&>svg]:text-white">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#111B4D] text-white [&>svg]:text-white">
           {actionSummary.icon}
         </span>
       </div>
@@ -790,7 +790,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm shadow-sm">
+                <div className="rounded-2xl border border-[#DDE6F7] bg-white p-3 text-sm">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-semibold text-[#111B4D]">{cancellationPolicy.label}</p>
@@ -821,7 +821,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569] shadow-sm">
+                <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs font-medium leading-5 text-[#475569]">
                   <p className="text-sm font-semibold text-[#111827]">Ce qui se passe après votre annulation</p>
                   <ul className="mt-2 space-y-2">
                     <li>La réservation est arrêtée et l'administration reçoit une notification pour contrôler le dossier.</li>
@@ -924,7 +924,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
           <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
                 <MessageSquare className="h-5 w-5" />
               </div>
               <DialogTitle className="text-xl font-semibold text-[#111827]">Laisser un avis</DialogTitle>

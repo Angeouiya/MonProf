@@ -109,7 +109,7 @@ export default async function ProfesseurAvisPage() {
           ) : (
             <div className="mt-4 grid gap-3">
               {reviews.map((review) => (
-                <article key={review.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 shadow-sm">
+                <article key={review.id} className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#111827]">{review.booking.subjectName} - {review.booking.levelName}</p>

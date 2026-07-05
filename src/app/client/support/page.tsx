@@ -178,7 +178,7 @@ export default async function SupportPage() {
                       </Link>
                     </Button>
                   </div>
-                  <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs shadow-sm">
+                  <div className="mt-3 rounded-2xl border border-[#E3E8F2] bg-white p-3 text-xs">
                     <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{d.reason}</span></p>
                     <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{d.description}</span></p>
                     {d.resolution && (

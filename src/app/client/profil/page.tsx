@@ -144,10 +144,10 @@ export default function ProfilPage() {
 
   return (
     <div className="space-y-5">
-      <section className="client-page-header client-screen-header rounded-lg border border-[#DDE3EE] bg-white p-4 shadow-sm sm:p-5">
+      <section className="client-page-header client-screen-header rounded-lg border border-[#DDE3EE] bg-white p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-xl font-semibold text-white shadow-sm">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-xl font-semibold text-white">
               {initials}
             </div>
             <div className="min-w-0">
@@ -327,7 +327,7 @@ export default function ProfilPage() {
 function ProfileSkeleton() {
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-4 shadow-sm sm:p-5">
+      <section className="overflow-hidden rounded-xl border border-[#E3E8F2] bg-white p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)]">
           <div className="rounded-xl border border-[#E3E8F2] bg-white p-5">
             <div className="flex items-center gap-4">
@@ -367,7 +367,7 @@ function ProfileSkeleton() {
 
 function ProfileInfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 shadow-sm">
+    <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

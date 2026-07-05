@@ -232,7 +232,7 @@ function PasswordField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={autoComplete}
-        className="h-11 rounded-2xl border-[#DDE6F7] bg-white text-sm shadow-sm focus-visible:ring-[#9AAAD0]"
+        className="h-11 rounded-2xl border-[#DDE6F7] bg-white text-sm focus-visible:ring-[#9AAAD0]"
         required
       />
     </div>

@@ -224,7 +224,7 @@ export default async function ProfesseurPaiementsPage() {
                 <Link
                   key={booking.id}
                   href={`/professeur/missions/${booking.id}`}
-                  className="grid gap-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 shadow-sm transition hover:border-[#111B4D] lg:grid-cols-[1fr_auto]"
+                  className="grid gap-3 rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] lg:grid-cols-[1fr_auto]"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">

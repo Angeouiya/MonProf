@@ -102,10 +102,10 @@ export function AdminLayout({
   return (
     <div className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 shadow-sm lg:px-6">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
-            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] bg-white text-[#111827] shadow-sm transition hover:border-[#111B4D] lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] lg:hidden"
             onClick={() => setOpen(!open)}
             aria-label="Menu"
             aria-expanded={open}
@@ -147,14 +147,14 @@ export function AdminLayout({
       </header>
 
       <div className="flex flex-1">
-        <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white shadow-sm lg:block">
+        <aside className="fixed left-0 top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
           <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} />
         </aside>
 
         {open && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] overflow-y-auto border-r border-[#E6EAF3] bg-white shadow-sm">
+            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] overflow-y-auto border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
                 <BrandLogo size="sm" />
                 <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
@@ -192,7 +192,7 @@ function SidebarContent({
     <div className="flex h-full flex-col">
       <nav className="flex-1 space-y-4 overflow-y-auto p-3 lg:overflow-hidden">
         {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
-          <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3 shadow-sm">
+          <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">Radar admin</p>
               <span className={cn(
@@ -226,7 +226,7 @@ function SidebarContent({
                       onClick={onNavigate}
                       className={cn(
                         "flex min-h-11 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
-                        active ? "bg-[#111B4D] text-white shadow-sm" : "bg-white text-[#475569] hover:text-[#111B4D] hover:shadow-sm"
+                        active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -245,7 +245,7 @@ function SidebarContent({
         ))}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-3 rounded-2xl border border-[#E6EAF3] bg-white px-3 py-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
             {(userName ?? "A")[0]?.toUpperCase()}
           </div>
@@ -277,7 +277,7 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
       variant="outline"
       size="sm"
       className={cn(
-        "hidden rounded-2xl border bg-white shadow-sm sm:inline-flex",
+        "hidden rounded-2xl border bg-white sm:inline-flex",
         summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-white" : "border-[#CAD7F2] text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
       )}
     >

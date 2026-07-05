@@ -76,7 +76,7 @@ export function DisputeForm({
 
   return (
     <form onSubmit={submit} className="client-dispute-form space-y-3">
-      <div className="rounded-xl border border-[#DDE6F7] bg-white p-3 text-sm font-medium leading-5 text-[#111B4D] shadow-sm">
+      <div className="rounded-xl border border-[#DDE6F7] bg-white p-3 text-sm font-medium leading-5 text-[#111B4D]">
         <div className="flex items-start gap-2">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
@@ -114,7 +114,7 @@ export function DisputeForm({
       </div>
 
       {selectedBooking && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#DDE6F7] bg-white p-3 shadow-sm" data-client-support-selected-booking>
+        <div className="flex items-center gap-3 rounded-xl border border-[#DDE6F7] bg-white p-3" data-client-support-selected-booking>
           <ProfessorImage
             photoUrl={selectedBooking.teacherPhotoUrl}
             name={selectedBooking.teacherName}

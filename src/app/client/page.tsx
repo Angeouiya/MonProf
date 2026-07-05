@@ -197,7 +197,7 @@ export default async function ClientDashboardPage() {
           <div className="mt-4">
             {nextCourse ? (
               <div className="space-y-4">
-                <div className="flex items-start gap-4 rounded-lg border border-[#E3E8F2] bg-white p-3 shadow-sm">
+                <div className="flex items-start gap-4 rounded-lg border border-[#E3E8F2] bg-white p-3">
                   <ProfessorImage
                     photoUrl={nextCourse.teacher.photoUrl}
                     name={nextCourse.teacher.professionalName || nextCourse.teacher.fullName}
@@ -344,7 +344,7 @@ export default async function ClientDashboardPage() {
                   <Link
                     key={`${t.id}-${index}`}
                     href={`/client/reserver?teacherId=${t.id}`}
-                    className="group flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 shadow-sm transition-all hover:border-[#111B4D]"
+                    className="group flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition-all hover:border-[#111B4D]"
                   >
                     <ProfessorImage photoUrl={t.photoUrl} name={displayName} size={54} shape="circle" verified={t.badgeVerified} />
                     <div className="min-w-0 flex-1">

@@ -77,7 +77,7 @@ export function ImportantActionConfirm({
         </AlertDialogHeader>
 
         {notices.length > 0 && (
-          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111827] shadow-sm">
+          <div className="rounded-2xl border border-[#E3E8F2] bg-white p-3 text-sm text-[#111827]">
             <div className="flex items-center gap-2 font-semibold text-[#111B4D]">
               <ShieldCheck className="h-4 w-4" />
               À vérifier avant de continuer
@@ -124,7 +124,7 @@ export function ImportantActionNotice({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm shadow-[0_8px_22px_rgba(15,23,42,0.035)]", className)}>
+    <div className={cn("rounded-xl border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm", className)}>
       <div className="flex items-start gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
           <ShieldCheck className="h-4 w-4" />

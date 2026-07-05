@@ -92,7 +92,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             <Link href="/client/notifications">
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white shadow-sm">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
                   {notificationCount > 99 ? "99+" : notificationCount}
                 </span>
               )}
@@ -189,7 +189,7 @@ function SidebarContent({
         <Link
           href="/client/rechercher"
           onClick={onNavigate}
-          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#182260]"
+          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
         >
           <span className="inline-flex items-center gap-2">
             <Search className="h-4 w-4" />
@@ -299,7 +299,7 @@ function MobileBottomNav({
               {item.href === "/client/notifications" && !!notificationCount && (
                 <span
                   className={cn(
-                    "absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-semibold shadow-sm",
+                    "absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-semibold",
                     active ? "bg-white text-[#111B4D]" : "bg-[#111B4D] text-white",
                   )}
                 >

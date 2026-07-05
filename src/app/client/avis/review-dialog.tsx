@@ -75,7 +75,7 @@ export function ReviewDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#111B4D] text-white">
             <MessageSquare className="h-5 w-5" />
           </div>
           <DialogTitle className="text-xl font-semibold text-[#111827]">Avis pour {teacherName}</DialogTitle>
