@@ -41,13 +41,13 @@ function clamp(value: number, min: number, max: number) {
 function resolveBadgeMetrics(imageSize: number) {
   const size =
     imageSize < 48
-      ? 16
+      ? 14
       : imageSize < 72
-        ? Math.round(imageSize * 0.34)
+        ? Math.round(imageSize * 0.3)
         : imageSize < 120
-          ? Math.round(imageSize * 0.3)
-          : Math.round(imageSize * 0.24);
-  const badgeSize = clamp(size, 16, 42);
+          ? Math.round(imageSize * 0.26)
+          : Math.round(imageSize * 0.22);
+  const badgeSize = clamp(size, 14, 38);
   const isCompact = imageSize < 64;
 
   return {
@@ -55,7 +55,7 @@ function resolveBadgeMetrics(imageSize: number) {
     iconSize: clamp(Math.round(badgeSize * 0.58), 9, 24),
     borderWidth: isCompact ? 2 : 3,
     haloWidth: isCompact ? 1 : 2,
-    offset: Math.round(badgeSize * 0.22),
+    offset: Math.round(badgeSize * 0.28),
   };
 }
 

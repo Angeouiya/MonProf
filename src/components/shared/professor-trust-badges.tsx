@@ -15,10 +15,10 @@ type ProfessorTrustBadgesProps = {
 const sizeClasses = {
   sm: {
     container: "gap-1.5",
-    primary: "min-h-6 px-2 py-0.5 text-[9.5px]",
-    secondary: "min-h-6 px-2 py-0.5 text-[9.5px]",
+    primary: "min-h-5 px-1.5 py-0.5 text-[9px]",
+    secondary: "min-h-5 px-1.5 py-0.5 text-[9px]",
     iconPrimary: "h-2.5 w-2.5",
-    iconSecondary: "h-3 w-3",
+    iconSecondary: "h-2.5 w-2.5",
   },
   md: {
     container: "gap-2",
@@ -95,7 +95,7 @@ export function ProfessorTrustBadges({
           )}
           title="Professeur certifié"
         >
-          <span className="mr-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white text-[#111B4D]">
+          <span className="mr-1 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-white text-[#111B4D]">
             <ShieldCheck className={cn("shrink-0", styles.iconPrimary)} />
           </span>
           <span className="min-w-0 truncate">Certifié</span>
