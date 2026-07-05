@@ -72,7 +72,7 @@ export function TeacherAdminMessagesClient({
   ), [focusMessageId, messages]);
   const [selectedId, setSelectedId] = useState(initialSelection?.id ?? "");
   const selected = messages.find((item) => item.id === selectedId) ?? null;
-  const [subject, setSubject] = useState(selected ? `Re: ${selected.subject.replace(/^Re:\s*/i, "")}` : "Message administration");
+  const [subject, setSubject] = useState(selected ? `Re: ${selected.subject.replace(/^Re:\s*/i, "")}` : "Message service client");
   const [message, setMessage] = useState("");
   const [bookingId, setBookingId] = useState(selected?.bookingId ?? "");
   const [priority, setPriority] = useState(selected?.priority ?? "IMPORTANT");

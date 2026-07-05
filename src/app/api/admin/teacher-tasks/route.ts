@@ -148,7 +148,7 @@ export async function PATCH(req: NextRequest) {
     `Statut : ${status}`,
     "",
     task.description,
-    note ? `\nNote admin : ${note}` : "",
+    note ? `\nNote service client : ${note}` : "",
   ].filter(Boolean).join("\n");
 
   await db.$transaction(async (tx) => {

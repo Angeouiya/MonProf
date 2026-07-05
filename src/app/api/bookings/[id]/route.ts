@@ -156,7 +156,7 @@ export async function GET(
   const userId = (session.user as any).id;
   const role = (session.user as any).role;
   if (role !== "CLIENT" && role !== "ADMIN") {
-    return NextResponse.json({ error: "Accès réservé aux clients et administrateurs." }, { status: 403 });
+    return NextResponse.json({ error: "Accès réservé aux clients et à l'équipe Compétence." }, { status: 403 });
   }
   const { id } = await params;
 
@@ -232,7 +232,7 @@ export async function PATCH(
   switch (action) {
     case "paydunya_checkout": {
       if (booking.isQuoteOnly) {
-        return NextResponse.json({ error: "Cette réservation est sur devis. Le paiement sera disponible après validation admin." }, { status: 400 });
+        return NextResponse.json({ error: "Cette réservation est sur devis. Le paiement sera disponible après validation du service client." }, { status: 400 });
       }
       if (booking.status !== "PENDING_PAYMENT" || booking.paymentStatus !== "FAILED") {
         return NextResponse.json({ error: "Cette réservation n'est pas en attente de paiement PayDunya." }, { status: 400 });
@@ -551,7 +551,7 @@ export async function PATCH(
           data: {
             userId: null,
             title: "Créneau refusé par le client",
-            message: `${booking.client.name} a refusé le créneau proposé par ${teacherName} pour ${booking.reference}. Remplacement ou annulation administrative à décider.`,
+            message: `${booking.client.name} a refusé le créneau proposé par ${teacherName} pour ${booking.reference}. Remplacement ou annulation par le service client à décider.`,
             type: "CLIENT_REJECTED_RESCHEDULE",
             recipientType: "ADMIN",
             channel: "INTERNAL",
@@ -571,7 +571,7 @@ export async function PATCH(
           data: {
             userId: booking.clientId,
             title: "Créneau refusé",
-            message: "Votre refus est transmis à l'administration. Vous pourrez choisir un autre professeur ou un autre créneau selon les options proposées.",
+            message: "Votre refus est transmis au service client. Vous pourrez choisir un autre professeur ou un autre créneau selon les options proposées.",
             type: "RESCHEDULE_REJECTED",
             recipientType: "CLIENT",
             channel: "INTERNAL",
@@ -590,7 +590,7 @@ export async function PATCH(
             teacherId: booking.teacherId,
             bookingId: booking.id,
             title: `Créneau refusé - ${booking.reference}`,
-            message: `Le client a refusé le créneau proposé (${formattedDate}, ${proposal.proposedTime}). L'administration décidera remplacement, annulation ou nouveau créneau.${cleanClientResponse ? `\nMessage client: ${cleanClientResponse}` : ""}`,
+            message: `Le client a refusé le créneau proposé (${formattedDate}, ${proposal.proposedTime}). Le service client décidera remplacement, annulation ou nouveau créneau.${cleanClientResponse ? `\nMessage client: ${cleanClientResponse}` : ""}`,
             channel: "PRIVATE_LINK",
             sent: true,
             status: "SENT",
@@ -808,7 +808,7 @@ export async function PATCH(
             `Motif : ${reason || "Annulation demandée par le client"}`,
             `Frais retenus côté client : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA`,
             `Frais service paiement non remboursés : ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA`,
-            "Ne vous présentez pas au cours sans nouvelle instruction de l'administration.",
+            "Ne vous présentez pas au cours sans nouvelle instruction du service client.",
           ].join("\n"),
           channel: "WHATSAPP",
           sent: false,

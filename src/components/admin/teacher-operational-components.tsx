@@ -118,8 +118,8 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   ANSWER_DISPUTE: "Répondre à un litige",
   SEND_DOCUMENT: "Envoyer un document",
   CONFIRM_RESCHEDULE: "Confirmer un report",
-  CONTACT_ADMIN: "Contacter l'administration",
-  ADMIN_ACTION: "Action administrative",
+  CONTACT_ADMIN: "Contacter le service client",
+  ADMIN_ACTION: "Action service client",
 };
 
 export function TeacherTaskCard({

@@ -105,7 +105,7 @@ export function ProfessorLayout({
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Link href="/professeur" className="flex min-h-11 items-center gap-2 rounded-lg px-1.5">
-            <BrandLogo size="sm" />
+            <BrandLogo size="sm" priority />
           </Link>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
             Espace professeur

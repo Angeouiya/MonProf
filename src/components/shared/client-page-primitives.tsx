@@ -33,6 +33,7 @@ export function ClientPageHeader({
 }) {
   return (
     <section
+      data-app-page-header
       data-client-page-header
       className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-0 sm:pb-4", className)}
     >

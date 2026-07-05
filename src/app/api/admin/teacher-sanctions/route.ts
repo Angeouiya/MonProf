@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       teacherId,
       bookingId: bookingId || null,
       title: `Sanction professeur - ${teacherSanctionTypeLabel(type)}`,
-      message: `${reason}${description ? `\n\n${description}` : ""}${financial ? "\n\nUne retenue financière est en attente de validation manuelle par l'administration." : ""}`,
+      message: `${reason}${description ? `\n\n${description}` : ""}${financial ? "\n\nUne retenue financière est en attente de validation manuelle par le service client." : ""}`,
       channel: "INTERNAL",
       sent: true,
       status: "SENT",

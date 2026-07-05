@@ -16,7 +16,7 @@ type OperationalActionBooking = {
 
 function buildTeacherMessage(teacherName: string, booking?: OperationalActionBooking | null) {
   if (!booking) {
-    return `Bonjour ${teacherName}, l'administration Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
+    return `Bonjour ${teacherName}, le service client Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
   }
   return [
     `Bonjour ${teacherName},`,
@@ -26,7 +26,7 @@ function buildTeacherMessage(teacherName: string, booking?: OperationalActionBoo
     `Réservation : ${booking.reference}`,
     `Cours : ${booking.subjectName}${booking.levelName ? ` - ${booking.levelName}` : ""}`,
     "",
-    "Répondez rapidement à l'administration si une information manque ou si vous êtes indisponible.",
+    "Répondez rapidement au service client si une information manque ou si vous êtes indisponible.",
   ].join("\n");
 }
 
@@ -83,7 +83,7 @@ export function OperationalTeacherActionsClient({
           teacherId,
           bookingId: booking.id,
           expiresInHours: 48,
-          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement à l'administration.",
+          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement au service client.",
         }),
       });
       const data = await res.json();

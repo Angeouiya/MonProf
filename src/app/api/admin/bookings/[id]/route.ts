@@ -250,7 +250,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
         const newTeacherId = body.newTeacherId;
         const reason = body.reason || "OTHER";
-        const details = body.details || "Remplacement décidé par l'administration.";
+        const details = body.details || "Remplacement décidé par le service client.";
         if (!newTeacherId) {
           return NextResponse.json({ error: "Nouveau professeur requis" }, { status: 400 });
         }
@@ -378,7 +378,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           "",
           `Motif : ${details}`,
           "",
-          "Merci de contacter l'administration si nécessaire.",
+          "Merci de contacter le service client si nécessaire.",
         ].join("\n");
         const missionToken = randomBytes(32).toString("hex");
         const missionUrl = `/mission/${missionToken}`;
@@ -390,7 +390,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           "Un cours vous a été attribué en remplacement.",
           "",
           `Client : ${booking.client.name}`,
-          `Contact : ${booking.client.phone ?? "à confirmer par l'administration"}`,
+          `Contact : ${booking.client.phone ?? "à confirmer par le service client"}`,
           `Cours : ${booking.subjectName}`,
           `Niveau : ${booking.levelName}`,
           `Date : ${dateLabel}`,
@@ -773,8 +773,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             paymentStatus: nextPaymentStatus,
             cancelledAt: now,
             cancelledBy: cancellationActor,
-            cancellationReason: body.reason || "Annulation administrative",
-            cancellationDetail: body.description || "Annulation décidée par l'administration.",
+            cancellationReason: body.reason || "Annulation par le service client",
+            cancellationDetail: body.description || "Annulation décidée par le service client.",
             cancellationWindow: policy.code,
             cancellationFeeRate: policy.feeRate,
             cancellationFeeAmount: policy.feeAmount,
@@ -839,7 +839,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               `Niveau : ${booking.levelName}`,
               `Motif : ${body.reason || "Non renseigné"}`,
               `Décision financière client : frais ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, frais service non remboursés ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA, remboursement ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
-              "Merci de ne pas vous présenter au cours sans nouvelle instruction de l'administration.",
+              "Merci de ne pas vous présenter au cours sans nouvelle instruction du service client.",
             ].join("\n"),
             channel: "WHATSAPP",
             sent: false,
@@ -886,7 +886,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             action: "Annulation réservation",
             entityType: "Booking",
             entityId: booking.id,
-            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation administrative"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
+            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation par le service client"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
             oldStatus: booking.status,
             newStatus: "CANCELLED",
           },
@@ -1012,7 +1012,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             error: "Impossible d'ouvrir un litige financier: aucun paiement PayDunya vérifié n'est rattaché à cette réservation.",
           }, { status: 409 });
         }
-        const reason = body.reason || "Litige ouvert par l'admin";
+        const reason = body.reason || "Litige ouvert par le service client";
         const description = body.description || "";
         await db.booking.update({
           where: { id },

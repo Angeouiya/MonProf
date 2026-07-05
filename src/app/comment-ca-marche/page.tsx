@@ -45,8 +45,8 @@ const STEPS = [
   {
     n: 5,
     icon: FileSearch,
-    title: "L'admin valide la réservation",
-    text: "Notre équipe administrative vérifie la disponibilité du professeur et confirme la réservation (généralement sous 24h).",
+    title: "Le service client valide la réservation",
+    text: "Notre service client vérifie la disponibilité du professeur et confirme la réservation (généralement sous 24h).",
   },
   {
     n: 6,
@@ -70,7 +70,7 @@ const STEPS = [
     n: 9,
     icon: HandCoins,
     title: "Le professeur est payé",
-    text: "L'administration clôture le cours et traite le paiement du professeur selon le processus interne de la plateforme.",
+    text: "Le service client clôture le cours et traite le paiement du professeur selon le processus interne de la plateforme.",
   },
 ];
 
@@ -111,7 +111,7 @@ const TRUST = [
   {
     icon: Headphones,
     title: "Support dédié",
-    text: "Une équipe administrative disponible par téléphone et e-mail, du lundi au samedi.",
+    text: "Un service client disponible par téléphone et e-mail, du lundi au samedi.",
   },
   {
     icon: Receipt,
@@ -142,7 +142,7 @@ const JOURNEY_SIGNALS = [
   {
     icon: Headphones,
     label: "Nous suivons",
-    title: "Admin, notification et support",
+    title: "Service client, notifications et support",
     text: "Le professeur est confirmé, le client est protégé, l'historique reste traçable.",
   },
 ];
@@ -355,7 +355,7 @@ export default function CommentCaMarchePage() {
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-[#64748B] sm:text-base">
               Trouvez le professeur idéal en quelques minutes. Paiement
-              sécurisé, professeur vérifié, suivi administratif inclus.
+              sécurisé, professeur vérifié, suivi service client inclus.
             </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link

@@ -74,10 +74,10 @@ export async function PATCH(
         message: [
           `Bonjour ${teacherName},`,
           "",
-          `Votre demande de paiement ${request.reference} de ${amountLabel} via ${paymentMethodLabel(request.method)} a été ${statusLabel} par l'administration Compétence.`,
+          `Votre demande de paiement ${request.reference} de ${amountLabel} via ${paymentMethodLabel(request.method)} a été ${statusLabel} par le service client Compétence.`,
           `Numéro déclaré : ${request.paymentPhone}`,
           "",
-          `Motif admin : ${adminNote}`,
+          `Motif service client : ${adminNote}`,
           "",
           "Vous pouvez corriger vos informations de paiement dans Paramètres puis envoyer une nouvelle demande si un montant reste payable.",
         ].join("\n"),

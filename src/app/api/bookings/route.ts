@@ -179,7 +179,7 @@ export async function GET(req: NextRequest) {
   const userId = (session.user as any).id;
   const role = (session.user as any).role;
   if (role !== "CLIENT" && role !== "ADMIN") {
-    return NextResponse.json({ error: "Accès réservé aux clients et administrateurs." }, { status: 403 });
+    return NextResponse.json({ error: "Accès réservé aux clients et à l'équipe Compétence." }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -395,13 +395,13 @@ export async function POST(req: NextRequest) {
   const extraParticipantCount = Math.max(0, normalizedParticipants - 1);
   const groupSurchargeAmount = Math.max(0, pricing.rawCourseAmount - basePrice);
   const groupPricingLine = pricing.isQuoteOnly
-    ? "Tarif sur devis: validation administrative requise."
+    ? "Tarif sur devis: validation du service client requise."
     : normalizedGroupType === "SMALL_GROUP"
       ? `Petit groupe: ${normalizedParticipants} participants, base ${basePrice.toLocaleString("fr-FR")} FCFA + ${extraParticipantCount} x 50% = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
       : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
   const transportLine = courseFormat === "HOME"
     ? pricing.isQuoteOnly
-      ? `Déplacement: ${pricing.transportRouteLabel ?? "trajet à confirmer"} - devis admin requis.`
+      ? `Déplacement: ${pricing.transportRouteLabel ?? "trajet à confirmer"} - devis service client requis.`
       : `Déplacement: ${pricing.transportRouteLabel ?? "Grand Abidjan"} - ${pricing.transportFee.toLocaleString("fr-FR")} FCFA (${pricing.transportRuleLabel ?? "matrice Grand Abidjan"}).`
     : "Déplacement: aucun frais pour le cours en ligne.";
   const paymentServiceLine = pricing.isQuoteOnly
@@ -516,7 +516,7 @@ export async function POST(req: NextRequest) {
         userId,
         title: pricing.isQuoteOnly ? "Demande de devis enregistrée" : "Brouillon de réservation - paiement requis",
         message: pricing.isQuoteOnly
-          ? `Votre demande pour le cours de ${canonicalSubjectName} avec ${profName} est enregistrée. ${startDateLine} L'administration vous proposera un devis clair avant tout paiement.`
+          ? `Votre demande pour le cours de ${canonicalSubjectName} avec ${profName} est enregistrée. ${startDateLine} Le service client vous proposera un devis clair avant tout paiement.`
           : `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que PayDunya n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
         type: pricing.isQuoteOnly ? "QUOTE_REQUESTED" : "PAYMENT_PENDING",
         recipientType: "CLIENT",

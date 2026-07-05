@@ -56,7 +56,7 @@ const ACCOUNT_BENEFITS = [
 ];
 
 const TRUST_POINTS = [
-  "Professeurs vérifiés par l'administration",
+  "Professeurs vérifiés par le service client",
   "Paiement bloqué jusqu'à confirmation",
   "Historique complet des cours et avis",
 ];

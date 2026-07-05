@@ -258,7 +258,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         data: {
           userId: mission.booking.clientId,
           title: "Professeur confirmé",
-          message: `${teacherName} a confirmé sa disponibilité pour votre cours de ${mission.booking.subjectName}. Votre réservation ${mission.booking.reference} reste suivie par l'administration Compétence.`,
+          message: `${teacherName} a confirmé sa disponibilité pour votre cours de ${mission.booking.subjectName}. Votre réservation ${mission.booking.reference} reste suivie par le service client Compétence.`,
           type: "TEACHER_CONFIRMED",
           recipientType: "CLIENT",
           recipientName: mission.booking.client.name,

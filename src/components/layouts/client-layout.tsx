@@ -87,8 +87,8 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Link href="/client" className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
-            <BrandLogo size="sm" compact className="lg:hidden" />
-            <BrandLogo size="sm" className="hidden lg:inline-flex" />
+            <BrandLogo size="sm" compact priority className="lg:hidden" />
+            <BrandLogo size="sm" priority className="hidden lg:inline-flex" />
           </Link>
           <div className="flex min-w-0 flex-col lg:hidden">
             <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{mobileSectionLabel}</span>

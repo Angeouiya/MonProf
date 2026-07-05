@@ -527,7 +527,7 @@ export function TeacherPayoutClient({
     if (request.status !== "PENDING") return;
     const defaultReason = action === "reject"
       ? "Demande rejetée : informations de paiement à corriger."
-      : "Demande annulée par l'administration.";
+      : "Demande annulée par le service client.";
     const adminNote = window.prompt("Motif à envoyer au professeur", defaultReason)?.trim();
     if (!adminNote) {
       toast.error("Le motif admin est obligatoire.");

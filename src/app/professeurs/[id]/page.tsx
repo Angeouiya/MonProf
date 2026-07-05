@@ -225,7 +225,7 @@ export default async function TeacherDetailPage({
                   </h2>
                 </div>
                 <span className="text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-                  Professeur suivi par l'administration
+                  Professeur suivi par le service client
                 </span>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -251,7 +251,7 @@ export default async function TeacherDetailPage({
                 />
               </div>
               <p className="mt-4 text-sm font-medium leading-6 text-[#64748B]">
-                Le client choisit une date, un créneau de 2h et son besoin. Le prix final est affiché avant paiement, puis la réservation est rattachée à ce professeur dans le suivi client et admin.
+                Le client choisit une date, un créneau de 2h et son besoin. Le prix final est affiché avant paiement, puis la réservation est rattachée à ce professeur dans le suivi client et service client.
               </p>
             </div>
 
@@ -261,7 +261,7 @@ export default async function TeacherDetailPage({
               <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
                 <TrustLine icon={<ShieldCheck className="h-4 w-4" />} text="Paiement sécurisé, fonds bloqués jusqu'à confirmation." />
                 <TrustLine icon={<Wallet className="h-4 w-4" />} text="Montant total affiché avant paiement, sans information interne." />
-                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation et support encadrés par l'administration." />
+                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation et support encadrés par le service client." />
               </div>
               <Link
                 href={reserveHref}
@@ -557,7 +557,7 @@ export default async function TeacherDetailPage({
                         Note moyenne
                       </div>
                       <p className="mt-1 text-xs font-medium text-[#64748B]">
-                        {totalReviews > 0 ? `${totalReviews} avis vérifiés` : "Note validée par l'administration"}
+                        {totalReviews > 0 ? `${totalReviews} avis vérifiés` : "Note validée par le service client"}
                       </p>
                     </div>
                     <div className="space-y-1.5">

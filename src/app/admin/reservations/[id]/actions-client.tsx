@@ -119,7 +119,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [availableTeachers, setAvailableTeachers] = useState<ReplacementSuggestion[]>([]);
   const [replacementLoading, setReplacementLoading] = useState(false);
   const [replacementReason, setReplacementReason] = useState("UNAVAILABLE");
-  const [replacementDetails, setReplacementDetails] = useState("Professeur indisponible, remplacement décidé par l'administration.");
+  const [replacementDetails, setReplacementDetails] = useState("Professeur indisponible, remplacement décidé par le service client.");
   const [clientMessage, setClientMessage] = useState("");
   const [oldTeacherMessage, setOldTeacherMessage] = useState("");
   const [newTeacherMessage, setNewTeacherMessage] = useState("");
@@ -129,7 +129,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [disputeDesc, setDisputeDesc] = useState("");
   const [cancelActor, setCancelActor] = useState<"ADMIN" | "TEACHER" | "CLIENT">("ADMIN");
   const [cancelReason, setCancelReason] = useState<(typeof CANCELLATION_REASONS)[number]>("Autre");
-  const [cancelDesc, setCancelDesc] = useState("Annulation décidée par l'administration.");
+  const [cancelDesc, setCancelDesc] = useState("Annulation décidée par le service client.");
   const [payTeacherMethod, setPayTeacherMethod] = useState("WAVE");
   const [payTeacherPhone, setPayTeacherPhone] = useState(booking.teacher.phone ?? "");
   const [refundExternalReference, setRefundExternalReference] = useState("");
@@ -293,7 +293,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       "",
       `Motif : ${replacementDetails}`,
       "",
-      "Merci de contacter l'administration si nécessaire.",
+      "Merci de contacter le service client si nécessaire.",
     ].join("\n"));
     setNewTeacherMessage([
       `Bonjour ${newTeacherName},`,
@@ -301,7 +301,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       "Un cours vous a été attribué en remplacement.",
       "",
       `Client : ${booking.client.name}`,
-      `Contact : ${booking.client.phone ?? "à confirmer par l'administration"}`,
+      `Contact : ${booking.client.phone ?? "à confirmer par le service client"}`,
       `Cours : ${booking.subjectName}`,
       `Niveau : ${booking.levelName}`,
       `Date : ${dateLabel}`,

@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
         data: {
           status: "CONFIRMED",
           confirmedAt: now,
-          response: `Confirmé par appel manuel admin : ${teacherName}.`,
+          response: `Confirmé par appel manuel service client : ${teacherName}.`,
         },
       });
       await tx.teacherTask.updateMany({
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId: booking.clientId,
           title: "Professeur confirmé",
-          message: `${teacherName} a confirmé par appel avec l'administration sa disponibilité pour votre cours de ${booking.subjectName}. Votre réservation ${booking.reference} reste suivie par Compétence.`,
+          message: `${teacherName} a confirmé par appel avec le service client sa disponibilité pour votre cours de ${booking.subjectName}. Votre réservation ${booking.reference} reste suivie par Compétence.`,
           type: "TEACHER_CONFIRMED",
           recipientType: "CLIENT",
           recipientName: booking.client.name,
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
             bookingId: booking.id,
             type: "ADMIN_ACTION",
             title: "Remplacement recommandé après appel",
-            description: `${teacherName} a indiqué être indisponible pour ${booking.reference}. L'administration doit avertir le client et choisir un remplaçant compatible.`,
+            description: `${teacherName} a indiqué être indisponible pour ${booking.reference}. Le service client doit avertir le client et choisir un remplaçant compatible.`,
             priority: "CRITICAL",
             status: "TODO",
             dueAt: now,

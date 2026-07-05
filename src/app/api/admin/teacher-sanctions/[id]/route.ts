@@ -94,11 +94,11 @@ export async function PATCH(
           `Bonjour ${sanction.teacher.professionalName || sanction.teacher.fullName},`,
           "",
           action === "apply"
-            ? "Une sanction a été validée par l'administration."
-            : "Une sanction en attente a été annulée par l'administration.",
+            ? "Une sanction a été validée par le service client."
+            : "Une sanction en attente a été annulée par le service client.",
           `Motif : ${sanction.reason}`,
           sanction.financial ? `Montant de retenue : ${sanction.amount.toLocaleString("fr-FR")} FCFA` : "",
-          sanction.financial ? `Décision admin : ${decisionNote}` : "",
+          sanction.financial ? `Décision service client : ${decisionNote}` : "",
         ].filter(Boolean).join("\n"),
         channel: "INTERNAL",
         sent: true,

@@ -13,7 +13,7 @@ const sections: LegalSection[] = [
     title: "Objet de la politique",
     body: [
       "La présente politique explique comment Compétence collecte, utilise, conserve, sécurise et partage les données personnelles nécessaires au fonctionnement de la plateforme de cours à domicile, cours en ligne, accompagnement professionnel, concours, métiers et formations.",
-      "Elle s'applique aux visiteurs, clients, parents, apprenants, professeurs gérés par l'administration, administrateurs, prospects, personnes qui contactent le support et toute personne utilisant les services Compétence.",
+      "Elle s'applique aux visiteurs, clients, parents, apprenants, professeurs suivis par le service client, équipe Compétence habilitée, prospects, personnes qui contactent le support et toute personne utilisant les services Compétence.",
       "Compétence s'engage à traiter les données de manière loyale, utile, proportionnée et conforme au cadre applicable en Côte d'Ivoire, notamment la loi n°2013-450 relative à la protection des données à caractère personnel.",
     ],
   },
@@ -35,22 +35,22 @@ const sections: LegalSection[] = [
       "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité.",
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
       "Données de paiement : montant payé, frais liés au moyen de paiement, référence PayDunya, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
-      "Données professeur : photo réelle obligatoire, identité, téléphone, email, matières, niveaux, disponibilités, mini-CV, expériences, notes administratives, avis, sanctions, paiements et demandes de paiement.",
-      "Données de communication : notifications, emails, messages support, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque l'administration les utilise.",
+      "Données professeur : photo réelle obligatoire, identité, téléphone, email, matières, niveaux, disponibilités, mini-CV, expériences, notes du service client, avis, sanctions, paiements et demandes de paiement.",
+      "Données de communication : notifications, emails, messages support, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
       "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes et preuves nécessaires à la lutte contre les faux paiements.",
     ],
   },
   {
     title: "Finalités du traitement",
     body: [
-      "Les données sont utilisées pour fournir le service, sécuriser les transactions, organiser les cours, permettre le suivi client, gérer les professeurs comme ressources opérationnelles internes et conserver une traçabilité administrative complète.",
+      "Les données sont utilisées pour fournir le service, sécuriser les transactions, organiser les cours, permettre le suivi client, gérer les professeurs comme ressources opérationnelles internes et conserver une traçabilité complète du service client.",
     ],
     bullets: [
       "Créer et sécuriser les comptes clients et accès professeurs.",
       "Afficher des professeurs réels, vérifiés et adaptés à la demande de l'utilisateur.",
       "Calculer les tarifs, frais de déplacement, frais de service, annulations, remboursements et sommes dues.",
       "Vérifier les paiements PayDunya côté serveur avant toute réservation active ou notification professeur.",
-      "Notifier les clients, professeurs et administrateurs sur les événements importants.",
+      "Notifier les clients, professeurs et l'équipe Compétence sur les événements importants.",
       "Gérer les litiges, sanctions, remplacements, avis, remboursements, paiements professeurs et journaux d'activité.",
       "Prévenir la fraude, les paiements non vérifiés, les abus, les contournements de plateforme et les comportements non professionnels.",
       "Améliorer l'ergonomie, la qualité du service, la sécurité et la performance de la plateforme.",
@@ -61,7 +61,7 @@ const sections: LegalSection[] = [
     body: [
       "Selon les situations, le traitement repose sur l'exécution du service demandé, l'acceptation des conditions d'utilisation, le consentement lorsque celui-ci est requis, les obligations légales ou l'intérêt légitime de Compétence à sécuriser son activité.",
       "Le consentement donné lors de l'inscription client est enregistré avec une date, une version juridique, l'adresse IP disponible et le navigateur utilisé. Le client peut demander des informations sur cette preuve d'acceptation auprès du support.",
-      "Le professeur n'a pas d'inscription publique autonome. Ses données sont collectées dans le cadre d'un processus d'enrôlement administratif, d'entretien, de vérification et d'activation interne par Compétence.",
+      "Le professeur n'a pas d'inscription publique autonome. Ses données sont collectées dans le cadre d'un processus d'enrôlement par le service client, d'entretien, de vérification et d'activation interne par Compétence.",
     ],
   },
   {
@@ -72,7 +72,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Le client peut recevoir les informations nécessaires sur le professeur choisi : nom public, photo, matière, contact lorsque la réservation est payée et confirmée, créneau et informations utiles au cours.",
       "Le professeur peut recevoir les informations nécessaires à la mission : client, contact client, matière, niveau, date, heure, lieu, format, consignes et montant net prévu.",
-      "Les administrateurs habilités accèdent aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
+      "L'équipe Compétence habilitée accède aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
       "PayDunya traite les informations strictement nécessaires au paiement. Le choix du moyen de paiement et la saisie des informations de paiement se font sur PayDunya.",
       "Des prestataires techniques peuvent intervenir pour l'hébergement, la base de données, l'email, les notifications ou la sécurité, dans la limite de leur mission.",
     ],
@@ -81,7 +81,7 @@ const sections: LegalSection[] = [
     title: "Paiements et remboursements",
     body: [
       "Aucune réservation active n'est créée tant que le paiement PayDunya n'est pas effectué et vérifié côté serveur. Une réservation non payée reste un brouillon ou une intention de réservation.",
-      "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions administratives.",
+      "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions du service client.",
       "Les demandes de paiement des professeurs sont suivies dans la comptabilité interne de Compétence. Un professeur doit saisir le montant demandé, le moyen de paiement et confirmer son numéro. Une erreur de numéro peut retarder ou empêcher le paiement.",
     ],
   },
@@ -96,7 +96,7 @@ const sections: LegalSection[] = [
   {
     title: "Sécurité",
     body: [
-      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle administratif des actions sensibles.",
+      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
       "L'utilisateur reste responsable de la confidentialité de ses identifiants. Tout accès suspect, perte de téléphone, erreur de numéro de paiement ou tentative de fraude doit être signalé rapidement au support.",
       "Aucun système n'étant invulnérable, Compétence peut suspendre temporairement une action, un paiement, une réservation ou un accès lorsqu'un risque de sécurité ou de fraude est détecté.",
     ],
@@ -137,7 +137,7 @@ export default function PolitiqueConfidentialitePage() {
     <LegalDocumentPage
       eyebrow="Données personnelles"
       title="Politique de confidentialité"
-      description="Ce document explique comment Compétence protège les données des clients, apprenants, professeurs et administrateurs dans le cadre des réservations, paiements, notifications, remboursements, avis et opérations internes."
+      description="Ce document explique comment Compétence protège les données des clients, apprenants, professeurs et de l'équipe Compétence dans le cadre des réservations, paiements, notifications, remboursements, avis et opérations internes."
       version={version}
       sections={sections}
     />

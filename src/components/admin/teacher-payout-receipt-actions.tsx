@@ -135,7 +135,7 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     "Réservations imputées :",
     ...allocationLines,
     "",
-    "Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par l'administration et doit être conservée avec la preuve opérateur si disponible.",
+    "Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par le service client et doit être conservée avec la preuve opérateur si disponible.",
   ].filter(Boolean).join("\n");
 }
 
@@ -205,7 +205,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
       <div class="box"><span>Méthode</span><strong>${escapeHtml(paymentMethodLabel(record.method))}</strong></div>
       ${record.paymentPhone ? `<div class="box"><span>Numéro payé</span><strong>${escapeHtml(record.paymentPhone)}</strong></div>` : ""}
       <div class="box"><span>Date</span><strong>${escapeHtml(formatDateTime(record.paidAt))}</strong></div>
-      <div class="box"><span>Enregistré par</span><strong>${escapeHtml(record.createdBy?.name ?? "Administration")}</strong></div>
+      <div class="box"><span>Enregistré par</span><strong>${escapeHtml(record.createdBy?.name ?? "Service client")}</strong></div>
       <div class="box"><span>Plateforme</span><strong>Compétence</strong></div>
     </section>
     <section>
@@ -217,7 +217,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
     </section>
     ${record.note ? `<section class="note"><strong>Note interne</strong><br />${escapeHtml(record.note)}</section>` : ""}
     <footer>
-      Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par l'administration et doit être conservée avec la preuve opérateur si disponible.
+      Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par le service client et doit être conservée avec la preuve opérateur si disponible.
     </footer>
   </main>
 </body>

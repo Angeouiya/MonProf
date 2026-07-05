@@ -140,7 +140,7 @@ function ConnexionContent() {
     : "Reprenez votre suivi de cours en toute confiance.";
   const heroDescription = isAdminAuth
     ? "Supervisez les professeurs, réservations, notifications, paiements bloqués, litiges et actions critiques depuis un espace de contrôle protégé."
-    : "Réservations, confirmations, paiements bloqués et suivi administratif restent centralisés dans un espace clair et protégé.";
+    : "Réservations, confirmations, paiements bloqués et suivi service client restent centralisés dans un espace clair et protégé.";
   const formTitle = isAdminAuth ? "Connexion administrateur" : "Connexion client";
   const formDescription = isAdminAuth
     ? "Accédez au dashboard admin, au centre opérationnel et à la comptabilité interne."
@@ -313,7 +313,7 @@ function ConnexionContent() {
               <p className="mt-3 text-xs font-medium leading-relaxed text-[#64748B]">
                 {isAdminAuth
                   ? "Cliquez pour pré-remplir le formulaire administrateur. Un compte client ne peut pas accéder au dashboard admin."
-                  : "Cliquez pour pré-remplir le formulaire client. Les accès administrateur restent séparés de l'expérience client."}
+                  : "Cliquez pour pré-remplir le formulaire client. Les accès de gestion interne restent séparés de l'expérience client."}
               </p>
             </div>
           )}

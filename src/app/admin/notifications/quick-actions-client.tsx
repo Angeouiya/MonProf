@@ -146,7 +146,7 @@ export function NotificationQuickActionsClient({
           teacherId: notification.teacherId,
           bookingId: notification.bookingId,
           expiresInHours: 48,
-          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement à l'administration.",
+          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement au service client.",
         }),
       });
       const data = await res.json();

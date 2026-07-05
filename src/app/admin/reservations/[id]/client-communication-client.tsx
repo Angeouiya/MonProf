@@ -166,7 +166,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
       "",
       ...common,
       "",
-      "Votre réservation reste suivie par l'administration et votre paiement reste sécurisé.",
+      "Votre réservation reste suivie par le service client et votre paiement reste sécurisé.",
     ].join("\n");
   }
   if (type === "PAYMENT") {
@@ -188,7 +188,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
       "",
       ...common,
       "",
-      "Votre confirmation permet à l'administration de finaliser le suivi et le paiement du professeur.",
+      "Votre confirmation permet au service client de finaliser le suivi et le paiement du professeur.",
     ].join("\n");
   }
   if (type === "DISPUTE") {
@@ -199,7 +199,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
       "",
       ...common,
       "",
-      "L'administration vous recontactera avec une décision ou une demande d'information complémentaire.",
+      "Le service client vous recontactera avec une décision ou une demande d'information complémentaire.",
     ].join("\n");
   }
   if (type === "RESCHEDULE") {
@@ -221,7 +221,7 @@ function buildMessage(type: string, booking: BookingCommunicationContext) {
       "",
       ...common,
       "",
-      "Merci de répondre rapidement afin que l'administration puisse traiter le dossier correctement.",
+      "Merci de répondre rapidement afin que le service client puisse traiter le dossier correctement.",
     ].join("\n");
   }
   return [

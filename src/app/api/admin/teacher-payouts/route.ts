@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
         message: [
           `Bonjour ${teacherName},`,
           "",
-          `Un paiement professeur de ${amount.toLocaleString("fr-FR")} FCFA a été enregistré par l'administration Compétence.`,
+          `Un paiement professeur de ${amount.toLocaleString("fr-FR")} FCFA a été enregistré par le service client Compétence.`,
           `Référence interne : ${reference}`,
           method ? `Méthode : ${paymentMethodLabel(method)}` : "",
           paymentPhone ? `Numéro payé : ${paymentPhone}` : "",

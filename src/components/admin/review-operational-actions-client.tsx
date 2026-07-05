@@ -116,7 +116,7 @@ export function ReviewOperationalActionsClient({
           level: warningLevelFromRating(rating),
           reason: "CLIENT_COMPLAINT",
           description: `Avis client ${rating}/5 sur ${bookingReference}. ${comment ? `Commentaire client: ${comment}` : "Aucun commentaire client."}`,
-          requestedAction: "Répondre à l'administration avec les explications et mesures correctives prévues.",
+          requestedAction: "Répondre au service client avec les explications et mesures correctives prévues.",
           responseDueAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
           adminOnly: false,
         }),

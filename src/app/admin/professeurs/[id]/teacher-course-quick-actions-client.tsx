@@ -103,7 +103,7 @@ function buildMissionMessage(teacherName: string, booking: TeacherCourseActionBo
     "",
     `Réservation : ${booking.reference}`,
     `Client : ${booking.clientName}`,
-    `Contact client : ${booking.clientPhone || "à confirmer par l'administration"}`,
+    `Contact client : ${booking.clientPhone || "à confirmer par le service client"}`,
     `Matière : ${booking.subjectName}`,
     `Niveau : ${booking.levelName}`,
     `Date / heure : ${formatCourseDate(booking)}`,
@@ -120,7 +120,7 @@ function buildMissionMessage(teacherName: string, booking: TeacherCourseActionBo
     "Consignes :",
     "- Confirmez rapidement votre disponibilité.",
     "- Contactez le client uniquement pour organiser le cours prévu.",
-    "- Prévenez immédiatement l'administration en cas de retard, indisponibilité, changement de lieu ou problème client.",
+    "- Prévenez immédiatement le service client en cas de retard, indisponibilité, changement de lieu ou problème client.",
     "- Après le cours, attendez la validation client/admin avant toute demande de paiement.",
   ].join("\n");
 }
@@ -136,7 +136,7 @@ function buildManualCallMessage(
     : "Le professeur indique être indisponible. Préparer un remplacement et avertir le client si nécessaire.";
 
   return [
-    "Appel manuel enregistré par l'administration Compétence.",
+    "Appel manuel enregistré par le service client Compétence.",
     `Réservation : ${booking.reference} - ${booking.subjectName} (${booking.levelName})`,
     `Professeur : ${teacherName}`,
     `Client : ${booking.clientName}`,
@@ -181,7 +181,7 @@ export function TeacherCourseQuickActionsClient({
           teacherId,
           bookingId: booking.id,
           expiresInHours: 48,
-          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement à l'administration.",
+          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible, signalez-le immédiatement au service client.",
         }),
       });
       const data = await res.json();

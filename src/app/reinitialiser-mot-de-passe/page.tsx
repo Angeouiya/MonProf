@@ -8,7 +8,7 @@ export default function ResetPasswordPage() {
     <main className="min-h-screen bg-white px-4 py-8 text-[#111827]">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-6 flex justify-center">
-          <BrandLogo size="lg" />
+          <BrandLogo size="lg" priority />
         </div>
         <section className="rounded-lg border border-[#E3E8F2] bg-white p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Sécurité client</p>

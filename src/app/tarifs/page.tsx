@@ -146,17 +146,17 @@ const CANCELLATION_RULES = [
     fee: "50%",
     feeRate: 50,
     manualReview: false,
-    text: "Annulation tardive. Le remboursement est partiel, sauf cas exceptionnel validé par l'administration.",
-    clientAction: "Le client peut ajouter une explication pour l'administration.",
+    text: "Annulation tardive. Le remboursement est partiel, sauf cas exceptionnel validé par le service client.",
+    clientAction: "Le client peut ajouter une explication pour le service client.",
     adminAction: "Contrôle manuel possible en cas de force majeure.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
   {
     title: "Cours commencé ou heure dépassée",
-    fee: "Dossier admin",
+    fee: "Dossier service client",
     feeRate: 100,
     manualReview: true,
-    text: "L'annulation n'est plus automatique. L'administration examine les preuves, la présence du client et la situation du professeur.",
+    text: "L'annulation n'est plus automatique. Le service client examine les preuves, la présence du client et la situation du professeur.",
     clientAction: "Le client doit expliquer la situation et ouvrir un suivi si nécessaire.",
     adminAction: "Décision manuelle : maintien, remboursement partiel, report ou litige.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
@@ -178,15 +178,15 @@ const CANCELLATION_EXAMPLE_AMOUNT = 20000;
 const FAQ = [
   {
     q: "Le prix affiché est-il le prix final ?",
-    a: "Oui pour les réservations à tarif fixe. Le prix est calculé automatiquement par la plateforme selon le besoin, le niveau, le système scolaire, le format, le pack et le déplacement. Pour les cas spéciaux, l'administration envoie un devis avant paiement.",
+    a: "Oui pour les réservations à tarif fixe. Le prix est calculé automatiquement par la plateforme selon le besoin, le niveau, le système scolaire, le format, le pack et le déplacement. Pour les cas spéciaux, le service client envoie un devis avant paiement.",
   },
   {
     q: "Quand le paiement est-il finalisé ?",
-    a: "Le paiement reste sécurisé pendant le suivi du cours. Une fois le cours confirmé, l'administration clôture la réservation selon le processus interne de la plateforme.",
+    a: "Le paiement reste sécurisé pendant le suivi du cours. Une fois le cours confirmé, le service client clôture la réservation selon le processus interne de la plateforme.",
   },
   {
     q: "Puis-je me faire rembourser si le cours n'a pas lieu ?",
-    a: "Oui. Si le professeur annule ou ne se présente pas, vous êtes intégralement remboursé. Si le client annule, les règles dépendent du délai avant le cours : gratuit avant 24h, frais de 25% entre 24h et 6h, frais de 50% à moins de 6h. Les cas exceptionnels sont examinés par l'administration.",
+    a: "Oui. Si le professeur annule ou ne se présente pas, vous êtes intégralement remboursé. Si le client annule, les règles dépendent du délai avant le cours : gratuit avant 24h, frais de 25% entre 24h et 6h, frais de 50% à moins de 6h. Les cas exceptionnels sont examinés par le service client.",
   },
   {
     q: "Que se passe-t-il en cas de litige ?",
@@ -332,7 +332,7 @@ export default function TarifsPage() {
               <div>
                 <p className="text-sm font-semibold text-[#111B4D]">Calcul Grand Abidjan automatique</p>
                 <p className="mt-2 text-sm leading-relaxed text-[#394568]">
-                  À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou devis admin.
+                  À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou devis service client.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-semibold text-[#111B4D]">
                   {GRAND_ABIDJAN_AREAS.slice(0, 10).map((area) => (

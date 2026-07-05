@@ -2484,3 +2484,327 @@ b {
     font-size: 0.62rem !important;
   }
 }
+
+/* Unified production polish: the three platforms read as one app, not three themed websites. */
+:where(.client-shell, .professor-shell, .admin-shell) {
+  --app-blue: #111B4D;
+  --app-blue-hover: #182260;
+  --app-ink: #111827;
+  --app-muted: #64748B;
+  --app-line: #D8DEE9;
+  --app-line-soft: #E6EAF3;
+  background: #FFFFFF !important;
+  color: var(--app-ink);
+  color-scheme: light;
+  letter-spacing: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  main,
+  section,
+  article,
+  aside,
+  nav,
+  header,
+  form,
+  fieldset,
+  div,
+  ul,
+  ol,
+  li
+) {
+  min-width: 0;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [data-app-page-header],
+  [data-slot="card"],
+  [data-slot="card-header"],
+  [data-slot="card-content"],
+  [data-client-surface],
+  [data-client-record-card],
+  [data-client-empty-state],
+  [data-client-focus-panel],
+  [data-client-metric-card],
+  [data-client-app-rail],
+  [data-client-shortcut-card],
+  [data-client-info-pill],
+  [data-client-compact-facts],
+  [data-client-compact-fact],
+  [data-professor-stat-card],
+  [data-professor-portal-card],
+  [data-professor-empty-state],
+  [data-professor-payout-request],
+  [data-professor-mini-counter],
+  [data-professor-sidebar-signal],
+  [data-admin-payout-preview],
+  [data-admin-payout-preview-item],
+  .premium-card,
+  .page-header
+) {
+  background-color: #FFFFFF !important;
+  border-color: var(--app-line) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) [data-app-page-header] {
+  padding-top: 0.25rem;
+  padding-bottom: 0.9rem;
+  border-top-color: transparent !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: var(--app-line-soft) !important;
+  border-radius: 0 !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) [data-app-page-header] :where(h1) {
+  color: var(--app-ink) !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) [data-app-page-header] :where(p, div) {
+  color: inherit;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  [data-slot="card-title"],
+  [data-slot="dialog-title"],
+  [data-slot="sheet-title"]
+) {
+  letter-spacing: 0 !important;
+  font-weight: 650 !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  p,
+  span,
+  small,
+  dd,
+  dt,
+  td,
+  th,
+  label
+) {
+  text-wrap: pretty;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  a,
+  button,
+  [role="button"],
+  [data-slot="button"]
+) {
+  touch-action: manipulation;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  input,
+  select,
+  textarea,
+  [data-slot="select-trigger"],
+  [cmdk-input]
+) {
+  min-height: 2.75rem;
+  border-color: var(--app-line) !important;
+  background-color: #FFFFFF !important;
+  color: var(--app-ink) !important;
+  box-shadow: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  input,
+  select,
+  textarea,
+  button,
+  a,
+  [role="button"],
+  [tabindex],
+  [data-slot="select-trigger"]
+):focus-visible {
+  outline: 2px solid var(--app-blue) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where([data-slot="button"]) {
+  min-height: 2.75rem;
+  border-radius: 0.5rem !important;
+  box-shadow: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="button"]:not([class*="border-red"]):not([class*="text-red"]):not([class*="bg-white"]):not([class*="bg-red"]):not([class*="bg-amber"]),
+  a[class*="bg-[#111B4D]"],
+  button[class*="bg-[#111B4D]"]
+) {
+  background-color: var(--app-blue) !important;
+  color: #FFFFFF !important;
+  background-image: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="button"]:not([class*="border-red"]):not([class*="text-red"]):not([class*="bg-white"]):not([class*="bg-red"]):not([class*="bg-amber"]):hover,
+  a[class*="bg-[#111B4D]"]:hover,
+  button[class*="bg-[#111B4D]"]:hover
+) {
+  background-color: var(--app-blue-hover) !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [class*="bg-gradient"],
+  [class*="from-"],
+  [class*="via-"],
+  [class*="to-"]
+) {
+  background-image: none !important;
+}
+
+:where(.professor-shell, .admin-shell) :where(
+  [class*="bg-white/"],
+  [class*="bg-slate-50"],
+  [class*="bg-slate-100"],
+  [class*="bg-gray-50"],
+  [class*="bg-gray-100"],
+  [class*="bg-zinc-50"],
+  [class*="bg-zinc-100"],
+  [class*="bg-neutral-50"],
+  [class*="bg-neutral-100"],
+  [class*="bg-blue-50"],
+  [class*="bg-blue-100"],
+  [class*="bg-sky-50"],
+  [class*="bg-sky-100"],
+  [class*="bg-cyan-50"],
+  [class*="bg-cyan-100"],
+  [class*="bg-indigo-50"],
+  [class*="bg-indigo-100"],
+  [class*="bg-violet-50"],
+  [class*="bg-violet-100"],
+  [class*="bg-purple-50"],
+  [class*="bg-purple-100"],
+  [class*="bg-amber-50"],
+  [class*="bg-amber-100"],
+  [class*="bg-yellow-50"],
+  [class*="bg-yellow-100"],
+  [class*="bg-orange-50"],
+  [class*="bg-orange-100"],
+  [class*="bg-red-50"],
+  [class*="bg-red-100"],
+  [class*="bg-emerald-50"],
+  [class*="bg-emerald-100"],
+  [class*="bg-green-50"],
+  [class*="bg-green-100"]
+) {
+  background-color: #FFFFFF !important;
+}
+
+:where(.professor-shell, .admin-shell) :where(
+  [class*="border-slate-"],
+  [class*="border-gray-"],
+  [class*="border-zinc-"],
+  [class*="border-blue-"],
+  [class*="border-sky-"],
+  [class*="border-cyan-"],
+  [class*="border-indigo-"],
+  [class*="border-violet-"],
+  [class*="border-purple-"],
+  [class*="border-amber-"],
+  [class*="border-yellow-"],
+  [class*="border-orange-"],
+  [class*="border-emerald-"],
+  [class*="border-green-"]
+) {
+  border-color: var(--app-line) !important;
+}
+
+:where(.professor-shell, .admin-shell) :where(
+  [class*="text-blue-"],
+  [class*="text-sky-"],
+  [class*="text-cyan-"],
+  [class*="text-indigo-"],
+  [class*="text-violet-"],
+  [class*="text-purple-"]
+) {
+  color: var(--app-blue) !important;
+}
+
+:where(.professor-shell, .admin-shell) :where(
+  [class*="shadow-"],
+  [class*="drop-shadow"]
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  .rounded-xl,
+  .rounded-2xl,
+  .rounded-3xl,
+  [class*="rounded-[1"]
+) {
+  border-radius: 0.5rem !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(.rounded-full, [class*="rounded-full"], [data-professor-image-badge]) {
+  border-radius: 9999px !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  table,
+  [role="table"]
+) {
+  border-color: var(--app-line) !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  .overflow-x-auto,
+  [data-radix-scroll-area-viewport]
+) {
+  scrollbar-width: thin;
+  scrollbar-color: #CAD3E2 #FFFFFF;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [data-client-mobile-nav],
+  [data-professor-mobile-nav],
+  .client-mobile-nav,
+  .professor-mobile-nav
+) {
+  border-color: var(--app-line) !important;
+  background-color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 1024px) {
+  :where(.client-shell, .professor-shell, .admin-shell) :where([data-client-content], [data-professor-content], [data-admin-content]) {
+    padding-top: 1.75rem !important;
+    padding-bottom: 2rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :where(.client-shell, .professor-shell, .admin-shell) :where([data-app-page-header]) {
+    padding-bottom: 0.75rem;
+  }
+
+  :where(.client-shell, .professor-shell, .admin-shell) :where([data-app-page-header] h1) {
+    font-size: clamp(1.35rem, 6vw, 1.72rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  :where(.client-shell, .professor-shell, .admin-shell) :where([data-slot="card-content"]) {
+    padding: 1rem !important;
+  }
+
+  :where(.client-shell, .professor-shell, .admin-shell) :where([data-slot="button"], button, a[role="button"]) {
+    min-height: 2.75rem;
+  }
+}

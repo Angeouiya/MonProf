@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
     booking.message ? `Message client : ${booking.message}` : "",
   ].filter(Boolean);
   const supportDetails = [
-    settings.support_phone ? `Téléphone admin : ${settings.support_phone}` : "",
-    settings.support_email ? `Email admin : ${settings.support_email}` : "",
+    settings.support_phone ? `Téléphone service client : ${settings.support_phone}` : "",
+    settings.support_email ? `Email service client : ${settings.support_email}` : "",
   ].filter(Boolean);
   const message = [
     `Bonjour ${teacherName},`,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     "",
     `Réservation : ${booking.reference}`,
     `Client : ${booking.client.name}`,
-    `Contact client : ${booking.client.phone ?? "à confirmer par l'administration"}`,
+    `Contact client : ${booking.client.phone ?? "à confirmer par le service client"}`,
     `Matière : ${booking.subjectName}`,
     `Niveau : ${booking.levelName}`,
     `Date : ${dateLabel}`,
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     ...(pedagogicalDetails.length ? ["", "Détails pédagogiques :", ...pedagogicalDetails] : []),
     "",
     instructions || "Merci de confirmer rapidement votre disponibilité.",
-    ...(supportDetails.length ? ["", "Contact administration :", ...supportDetails] : []),
+    ...(supportDetails.length ? ["", "Contact service client :", ...supportDetails] : []),
     "",
     `Lien mission sécurisé : ${absoluteMissionUrl}`,
   ].join("\n");

@@ -110,7 +110,7 @@ export default async function ProfesseurMessagesPage() {
         {messages.length === 0 ? (
           <EmptyProfessorState
             title="Aucun message pour le moment"
-            description="Lorsque vous contactez le service client ou qu'elle vous répond, l'historique apparaîtra ici."
+            description="Lorsque vous contactez le service client ou qu'il vous répond, l'historique apparaîtra ici."
           />
         ) : (
           <div className="grid gap-3">

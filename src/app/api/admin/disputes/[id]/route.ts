@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const activeDispute = dispute;
   const now = new Date();
   const teacherName = activeDispute.booking.teacher.professionalName || activeDispute.booking.teacher.fullName;
-  const decisionText = resolution?.trim() || activeDispute.resolution || "Décision enregistrée par l'administration.";
+  const decisionText = resolution?.trim() || activeDispute.resolution || "Décision enregistrée par le service client.";
   const verifiedClientPaymentExists = hasVerifiedPayDunyaClientPayment(activeDispute.booking);
 
   async function recordDecision(label: string, status: string, clientMessage: string) {
@@ -148,7 +148,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await recordDecision(
           "Litige résolu - paiement à libérer",
           "RESOLVED",
-          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} est clôturé. L'administration a validé la suite du traitement selon la décision enregistrée.`
+          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} est clôturé. Le service client a validé la suite du traitement selon la décision enregistrée.`
         );
         return NextResponse.json({ ok: true });
       case "refund": {
@@ -215,7 +215,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await recordDecision(
           "Litige rejeté",
           "REJECTED",
-          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} a été examiné et rejeté par l'administration. La décision est disponible dans votre réservation.`
+          `Bonjour ${dispute.booking.client.name}, votre litige sur ${dispute.booking.reference} a été examiné et rejeté par le service client. La décision est disponible dans votre réservation.`
         );
         return NextResponse.json({ ok: true });
       default:

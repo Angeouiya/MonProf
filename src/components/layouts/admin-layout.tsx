@@ -113,7 +113,7 @@ export function AdminLayout({
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Link href="/admin" className="flex min-w-0 items-center gap-2">
-            <BrandLogo size="sm" />
+            <BrandLogo size="sm" priority />
             <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] sm:inline-flex">
               Admin
             </span>

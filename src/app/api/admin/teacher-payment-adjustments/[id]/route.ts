@@ -111,12 +111,12 @@ export async function PATCH(
           `Bonjour ${teacherName},`,
           "",
           nextStatus === "APPLIED"
-            ? "Une retenue financière a été validée manuellement par l'administration."
-            : "Une retenue financière en attente a été annulée par l'administration.",
+            ? "Une retenue financière a été validée manuellement par le service client."
+            : "Une retenue financière en attente a été annulée par le service client.",
           `Motif : ${adjustment.reason}`,
           `Montant : ${adjustment.amount.toLocaleString("fr-FR")} FCFA`,
           adjustment.booking ? `Réservation : ${adjustment.booking.reference}` : "Portée : retenue globale",
-          `Décision admin : ${decisionNote}`,
+          `Décision service client : ${decisionNote}`,
         ].join("\n"),
         channel: "INTERNAL",
         sent: true,

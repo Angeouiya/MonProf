@@ -148,7 +148,7 @@ export function TeacherWhatsAppMessageClient({
       "",
       `Réservation : ${selected.reference}`,
       `Client : ${selected.clientName}`,
-      `Contact client : ${selected.clientPhone || "à confirmer par l'administration"}`,
+      `Contact client : ${selected.clientPhone || "à confirmer par le service client"}`,
       `Matière : ${selected.subjectName}`,
       `Niveau : ${selected.levelName}`,
       `Date / heure : ${dateLine}`,
@@ -169,7 +169,7 @@ export function TeacherWhatsAppMessageClient({
       "Consignes :",
       "- Confirmez rapidement votre disponibilité.",
       "- Contactez le client uniquement pour organiser le cours prévu.",
-      "- Prévenez immédiatement l'administration en cas de retard, indisponibilité, changement de lieu ou problème client.",
+      "- Prévenez immédiatement le service client en cas de retard, indisponibilité, changement de lieu ou problème client.",
       "- Après le cours, attendez la validation client/admin avant toute demande de paiement.",
     ].join("\n");
   }, [selected, teacherName]);
@@ -213,7 +213,7 @@ export function TeacherWhatsAppMessageClient({
       ...(lines.length ? lines : ["- Aucune réservation suivie pour le moment."]),
       bookings.length > lines.length ? `- +${bookings.length - lines.length} autre(s) réservation(s) visible(s) dans la fiche admin.` : "",
       "",
-      "Consigne admin : utiliser ce dossier pour appeler, relancer, remplacer ou préparer un paiement professeur. Toute décision financière doit rester validée manuellement dans l'administration.",
+      "Consigne service client : utiliser ce dossier pour appeler, relancer, remplacer ou préparer un paiement professeur. Toute décision financière doit rester validée manuellement par l'équipe Compétence.",
     ].filter(Boolean).join("\n");
   }, [bookings, teacherName]);
 
@@ -244,7 +244,7 @@ export function TeacherWhatsAppMessageClient({
           teacherId,
           bookingId: selected.id,
           expiresInHours: 48,
-          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible ou si une information manque, signalez-le immédiatement à l'administration.",
+          instructions: "Merci de confirmer rapidement votre disponibilité. Si vous êtes indisponible ou si une information manque, signalez-le immédiatement au service client.",
         }),
       });
       const data = await res.json();

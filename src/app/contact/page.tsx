@@ -32,7 +32,7 @@ const SUBJECTS = [
   "Question générale",
   "Aide pour réserver un cours",
   "Problème avec une réservation",
-  "Proposer un professeur à l'administration",
+  "Proposer un professeur au service client",
   "Partenariat école / entreprise",
   "Facturation",
   "Autre",
@@ -122,7 +122,7 @@ export default function ContactPage() {
           <div className="max-w-3xl">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <MessageSquare className="h-3.5 w-3.5" />
-              Support humain et suivi administratif
+              Support humain et suivi service client
             </span>
             <h1 className="mt-5 text-3xl font-semibold text-[#111827] sm:text-4xl text-balance">
               Contactez-nous

@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       data: {
         teacherId,
         bookingId: bookingId ?? replyTo?.bookingId ?? null,
-        title: `Message administration - ${subject}`,
+        title: `Message service client - ${subject}`,
         message,
         channel: "INTERNAL",
         sent: true,
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     await tx.adminActionLog.create({
       data: {
         adminId: admin.id,
-        action: "Message admin au professeur",
+        action: "Message service client au professeur",
         entityType: "TeacherAdminMessage",
         entityId: item.id,
         detail: `${admin.name} a envoyé un message à ${teacherName}${booking ? ` pour ${booking.reference}` : ""}. Sujet : ${subject}.`,

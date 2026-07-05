@@ -356,7 +356,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const teacherName = existingTeacher.professionalName || existingTeacher.fullName;
       const reason = typeof statusChangeReason === "string" && statusChangeReason.trim()
         ? statusChangeReason.trim()
-        : "Changement de statut effectué par l'administration.";
+        : "Changement de statut effectué par le service client.";
       const detail = `${admin.name} a changé le statut de ${teacherName} : ${statusLabel(existingTeacher.status)} → ${statusLabel(nextStatus)}. Motif : ${reason}`;
       const restrictive = isRestrictiveTeacherStatus(nextStatus);
       const taskCreates = restrictive
@@ -407,7 +407,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data: {
               teacherId: id,
               title: "Mise à jour de votre statut",
-              message: `Bonjour ${teacherName}, votre statut opérationnel est maintenant : ${statusLabel(nextStatus)}. Motif : ${reason}. Merci de contacter l'administration si nécessaire.`,
+              message: `Bonjour ${teacherName}, votre statut opérationnel est maintenant : ${statusLabel(nextStatus)}. Motif : ${reason}. Merci de contacter le service client si nécessaire.`,
               channel: "INTERNAL",
               sent: true,
               status: "SENT",
@@ -484,7 +484,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       data: {
         teacherId: id,
         title: "Suspension de votre profil",
-        message: `Bonjour ${teacherName}, votre profil professeur est suspendu. Merci de contacter l'administration si nécessaire.`,
+        message: `Bonjour ${teacherName}, votre profil professeur est suspendu. Merci de contacter le service client si nécessaire.`,
         channel: "INTERNAL",
         sent: true,
         status: "SENT",

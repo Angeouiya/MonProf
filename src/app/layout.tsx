@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Compétence — Professeurs vérifiés pour cours à domicile et en ligne",
   description:
-    "Plateforme ivoirienne de réservation de cours à domicile et en ligne avec des professeurs vérifiés, un paiement sécurisé et un suivi administratif complet.",
+    "Plateforme ivoirienne de réservation de cours à domicile et en ligne avec des professeurs vérifiés, un paiement sécurisé et un suivi service client complet.",
   keywords: [
     "cours à domicile",
     "Côte d'Ivoire",

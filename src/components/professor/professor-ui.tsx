@@ -88,7 +88,7 @@ export function ProfessorPageHeader({
   backLabel?: string;
 }) {
   return (
-    <div data-professor-page-header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div data-app-page-header data-professor-page-header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {showBack && (
           <div className="mb-2">

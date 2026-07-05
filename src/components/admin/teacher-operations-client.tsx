@@ -222,11 +222,11 @@ export function TeacherNotificationModal({ open, onOpenChange, teacherId, teache
   const selectedBooking = useMemo(() => bookings.find((b) => b.id === bookingId), [bookingId, bookings]);
   const defaultMessage = selectedBooking
     ? `Bonjour ${teacherName}, vous avez une nouvelle tâche liée au cours ${selectedBooking.subjectName} (${selectedBooking.levelName}). Merci de confirmer rapidement.`
-    : `Bonjour ${teacherName}, l'administration Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
+    : `Bonjour ${teacherName}, le service client Compétence vous contacte concernant vos missions en cours. Merci de répondre rapidement.`;
   const isManualCall = channel === "MANUAL_CALL";
   const callOutcomeLabel = callOutcomes.find((item) => item.value === callOutcome)?.label ?? callOutcome;
   const callMessage = [
-    `Appel manuel enregistré par l'administration Compétence.`,
+    `Appel manuel enregistré par le service client Compétence.`,
     selectedBooking ? `Réservation : ${selectedBooking.reference} - ${selectedBooking.subjectName} (${selectedBooking.levelName})` : "",
     `Professeur : ${teacherName}`,
     `Résultat : ${callOutcomeLabel}`,
@@ -316,7 +316,7 @@ export function TeacherWarningModal({ open, onOpenChange, teacherId, bookings, l
   const [reason, setReason] = useState("LATE_TO_COURSE");
   const [description, setDescription] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
-  const [requestedAction, setRequestedAction] = useState("Répondre à l'administration et confirmer les mesures correctives.");
+  const [requestedAction, setRequestedAction] = useState("Répondre au service client et confirmer les mesures correctives.");
   const [responseDueAt, setResponseDueAt] = useState("");
   const [visibility, setVisibility] = useState("send");
   const descriptionInvalid = description.trim().length > 0 && description.trim().length < 10;
@@ -641,17 +641,17 @@ function getInitialTeacherStatus(initialAction?: string, initialStatus?: string)
 
 function getDefaultStatusReason(status: string) {
   const reasons: Record<string, string> = {
-    ACTIVE: "Réactivation administrative après contrôle du dossier professeur.",
-    OBSERVATION: "Mise en observation qualité décidée par l'administration.",
+    ACTIVE: "Réactivation après contrôle du dossier professeur.",
+    OBSERVATION: "Mise en observation qualité décidée par le service client.",
     REPLACEABLE: "Statut remplaçable appliqué pour anticiper les missions sensibles.",
     TEMPORARILY_SUSPENDED: "Suspension temporaire décidée pour contrôle opérationnel.",
-    PERMANENTLY_SUSPENDED: "Suspension définitive décidée par l'administration.",
-    SUSPENDED: "Suspension décidée par l'administration.",
-    BLACKLISTED: "Blocage interne critique décidé par l'administration.",
-    INACTIVE: "Désactivation administrative du profil professeur.",
-    PENDING: "Profil remis en attente de vérification administrative.",
+    PERMANENTLY_SUSPENDED: "Suspension définitive décidée par le service client.",
+    SUSPENDED: "Suspension décidée par le service client.",
+    BLACKLISTED: "Blocage interne critique décidé par le service client.",
+    INACTIVE: "Désactivation du profil professeur.",
+    PENDING: "Profil remis en attente de vérification par le service client.",
   };
-  return reasons[status] ?? "Décision opérationnelle de l'administration.";
+  return reasons[status] ?? "Décision opérationnelle du service client.";
 }
 
 const teacherStatusPolicies: Record<string, {
@@ -674,7 +674,7 @@ const teacherStatusPolicies: Record<string, {
   },
   PENDING: {
     title: "Profil à valider",
-    description: "Le professeur reste en attente de vérification administrative.",
+    description: "Le professeur reste en attente de vérification par le service client.",
     effects: ["Non prioritaire pour les attributions", "Contrôle identité, matières, disponibilités et photo"],
     className: "border-amber-100 bg-amber-50/80 text-amber-950",
   },
