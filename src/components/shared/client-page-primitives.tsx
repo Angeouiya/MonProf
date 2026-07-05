@@ -32,18 +32,18 @@ export function ClientPageHeader({
   className?: string;
 }) {
   return (
-    <section className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-1 sm:pb-4 sm:pt-2", className)}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <section className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-0 sm:pb-4", className)}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex min-h-8 flex-wrap items-center gap-2">
-            {showBack && <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg px-3" />}
+            {showBack && <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg border-[#DDE6F7] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white" />}
             {eyebrow && (
               <span className="inline-flex min-h-8 items-center text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">
                 {eyebrow}
               </span>
             )}
           </div>
-          <h1 className="max-w-4xl text-[1.42rem] font-semibold leading-[1.08] tracking-normal text-[#0F172A] min-[420px]:text-2xl lg:text-[2rem]">
+          <h1 className="max-w-4xl text-[1.32rem] font-semibold leading-[1.08] tracking-normal text-[#0F172A] min-[420px]:text-[1.55rem] lg:text-[1.88rem]">
             {title}
           </h1>
           {description && (
@@ -88,7 +88,7 @@ export function ClientMetricStrip({
         <div
           key={`${metric.label}-${index}`}
           className={cn(
-            "client-metric-card flex min-h-17 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-3 sm:min-h-18 sm:px-4",
+            "client-metric-card flex min-h-16 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 sm:min-h-17 sm:px-4",
             metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "col-span-2 lg:col-span-1",
           )}
         >
@@ -96,7 +96,7 @@ export function ClientMetricStrip({
             <p className="line-clamp-2 text-[9.5px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] min-[380px]:text-[10.5px]">{metric.label}</p>
             <div
               className={cn(
-                "mt-1 whitespace-normal break-words text-[0.94rem] font-semibold leading-5 text-[#111827] [overflow-wrap:normal] sm:text-[1.08rem]",
+                "mt-1 whitespace-normal break-words text-[0.98rem] font-semibold leading-5 text-[#111827] [overflow-wrap:normal] sm:text-[1.12rem]",
                 metric.attention && "text-[#111B4D]",
               )}
             >
@@ -151,7 +151,7 @@ export function ClientSectionTitle({
     <div className="client-section-title flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-end min-[560px]:justify-between">
       <div className="min-w-0">
         {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{eyebrow}</p>}
-        <h2 className="text-base font-semibold leading-tight tracking-normal text-[#111827] sm:text-lg">{title}</h2>
+        <h2 className="text-[0.98rem] font-semibold leading-tight tracking-normal text-[#111827] sm:text-[1.08rem]">{title}</h2>
         {description && <div className="mt-1 line-clamp-2 max-w-2xl text-sm font-medium leading-6 text-[#64748B] sm:line-clamp-none">{description}</div>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -225,7 +225,7 @@ export function ClientTabBar({
             key={item.id}
             href={item.href}
             className={cn(
-              "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center text-sm font-semibold transition lg:flex-1 lg:px-3",
+              "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center text-sm font-semibold transition-colors lg:flex-1 lg:px-3",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
@@ -382,8 +382,8 @@ export function ClientAppRail({
   className?: string;
 }) {
   const gridClassName = items.length >= 5
-    ? "grid-cols-2 min-[560px]:grid-cols-3 min-[980px]:grid-cols-5"
-    : "grid-cols-2 min-[720px]:grid-cols-4";
+    ? "grid-cols-1 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 min-[980px]:grid-cols-5"
+    : "grid-cols-1 min-[360px]:grid-cols-2 min-[720px]:grid-cols-4";
 
   return (
     <div
@@ -434,7 +434,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-[4.25rem] min-w-0 items-center justify-center rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:justify-between sm:px-3 sm:text-left",
+          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:justify-between sm:px-3 sm:text-left",
           item.active
             ? "border-[#111B4D] bg-[#111B4D] text-white"
             : "text-[#111827] hover:border-[#111B4D] hover:bg-white",
