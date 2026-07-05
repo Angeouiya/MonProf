@@ -103,7 +103,7 @@ export default async function AdminPaiementsALibererPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {paymentRows.map(({ booking: b, paid, retained, remaining, partiallyPaid }) => (
-              <Card key={b.id} className="border-violet-100 bg-white/92 shadow-sm">
+              <Card key={b.id} className="border-violet-100 bg-white">
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -326,7 +326,7 @@ function MobileAmount({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
       <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       <Money
         amount={amount}

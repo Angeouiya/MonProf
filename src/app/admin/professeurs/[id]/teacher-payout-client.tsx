@@ -592,7 +592,7 @@ export function TeacherPayoutClient({
   };
 
   return (
-    <Card className="border-violet-100 shadow-sm">
+    <Card className="border-violet-100">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="text-base">Comptabilité interne professeur</CardTitle>
@@ -611,7 +611,7 @@ export function TeacherPayoutClient({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className={`rounded-3xl border p-4 shadow-sm ${accountingState.className}`}>
+        <div className={`rounded-3xl border p-4 ${accountingState.className}`}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -624,24 +624,24 @@ export function TeacherPayoutClient({
               </div>
               <p className="mt-3 text-lg font-black leading-snug">{accountingState.title}</p>
               <p className="mt-1 text-sm font-medium opacity-80">{accountingState.detail}</p>
-              <p className="mt-3 rounded-2xl border border-white/70 bg-white/55 px-3 py-2 text-sm font-semibold">
+              <p className="mt-3 rounded-2xl border border-white bg-white px-3 py-2 text-sm font-semibold">
                 {accountingState.action}
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-              <Button type="button" variant="outline" className="bg-white/80" onClick={copyAccountingDecision}>
+              <Button type="button" variant="outline" className="bg-white" onClick={copyAccountingDecision}>
                 <ClipboardCopy className="mr-1.5 h-4 w-4" />
                 Copier décision
               </Button>
               {teacherPaymentWhatsAppUrl ? (
-                <Button asChild type="button" variant="outline" className="border-blue-100 bg-white/80 text-blue-800 hover:bg-blue-50">
+                <Button asChild type="button" variant="outline" className="border-blue-100 bg-white text-blue-800 hover:bg-blue-50">
                   <a href={teacherPaymentWhatsAppUrl} target="_blank" rel="noreferrer">
                     <MessageCircle className="mr-1.5 h-4 w-4" />
                     WhatsApp professeur
                   </a>
                 </Button>
               ) : (
-                <Button type="button" variant="outline" className="bg-white/80" disabled>
+                <Button type="button" variant="outline" className="bg-white" disabled>
                   <MessageCircle className="mr-1.5 h-4 w-4" />
                   Téléphone absent
                 </Button>
@@ -705,7 +705,7 @@ export function TeacherPayoutClient({
         )}
 
         {payoutRequests.length > 0 && (
-          <div className="rounded-3xl border border-violet-100 bg-white/88 p-4 shadow-sm">
+          <div className="rounded-3xl border border-violet-100 bg-white p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Demandes de paiement reçues</p>
@@ -835,7 +835,7 @@ export function TeacherPayoutClient({
           </div>
           <div className="mt-4 grid gap-2">
             {payableRows.slice(0, 4).map((row) => (
-              <div key={row.id} className="flex flex-col gap-2 rounded-2xl border border-white/80 bg-white/85 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <div key={row.id} className="flex flex-col gap-2 rounded-2xl border border-white bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate font-mono text-xs font-bold text-primary">{row.reference}</p>
                   <p className="truncate font-semibold text-foreground">{row.subjectName} - {row.clientName}</p>
@@ -847,14 +847,14 @@ export function TeacherPayoutClient({
               </div>
             ))}
             {payableRows.length === 0 && (
-              <p className="rounded-2xl border border-dashed border-violet-100 bg-white/60 p-3 text-sm text-muted-foreground">
+              <p className="rounded-2xl border border-dashed border-violet-100 bg-white p-3 text-sm text-muted-foreground">
                 Aucun paiement immédiat. Les montants sont soit déjà soldés, soit encore bloqués, soit en contrôle.
               </p>
             )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-violet-100 bg-white/88 p-4 shadow-sm">
+        <div className="rounded-3xl border border-violet-100 bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-black text-foreground">Pilotage comptable filtré</p>
@@ -936,7 +936,7 @@ export function TeacherPayoutClient({
         </div>
 
         {dueAmount > 0 ? (
-          <div className="rounded-3xl border border-violet-100 bg-white/80 p-4">
+          <div className="rounded-3xl border border-violet-100 bg-white p-4">
             <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Saisir un versement réel au professeur</p>
@@ -965,15 +965,15 @@ export function TeacherPayoutClient({
                 </Button>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-blue-100 bg-white/85 p-3">
+                <div className="rounded-2xl border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">À verser maintenant</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(cleanAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-white/85 p-3">
+                <div className="rounded-2xl border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Plafond autorisé</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(payoutLimit)}</p>
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-white/85 p-3">
+                <div className="rounded-2xl border border-blue-100 bg-white p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Reste après opération</p>
                   <p className="mt-1 text-lg font-black text-blue-950">{formatFCFA(projectedRemainingAfterPayment)}</p>
                 </div>
@@ -1115,7 +1115,7 @@ export function TeacherPayoutClient({
           </div>
         )}
 
-        <div className="rounded-3xl border border-violet-100 bg-white/85 p-4 shadow-sm">
+        <div className="rounded-3xl border border-violet-100 bg-white p-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-black text-foreground">Relevé comptable chronologique</p>
@@ -1172,7 +1172,7 @@ export function TeacherPayoutClient({
           ) : (
             records.map((record) => {
               return (
-                <div key={record.id} className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+                <div key={record.id} className="rounded-3xl border border-violet-100 bg-white p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="font-mono text-sm font-bold text-foreground">{record.reference}</p>
@@ -1233,7 +1233,7 @@ function escapeCsvValue(value: string | number) {
 
 function MiniLedgerPill({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={strong ? "rounded-2xl border border-blue-200 bg-white px-3 py-2" : "rounded-2xl border border-blue-100 bg-white/75 px-3 py-2"}>
+    <div className={strong ? "rounded-2xl border border-blue-200 bg-white px-3 py-2" : "rounded-2xl border border-blue-100 bg-white px-3 py-2"}>
       <p className="text-[10px] font-bold uppercase tracking-wide text-blue-950/55">{label}</p>
       <p className={strong ? "mt-0.5 whitespace-nowrap text-sm font-black text-blue-950" : "mt-0.5 whitespace-nowrap text-sm font-bold text-blue-950/82"}>{value}</p>
     </div>
@@ -1264,7 +1264,7 @@ function AccountingControlTile({
 }) {
   const toneClass = {
     blue: "border-blue-100 bg-blue-50/80 text-blue-950",
-    violet: "border-violet-100 bg-white/80 text-violet-950",
+    violet: "border-violet-100 bg-white text-violet-950",
     amber: "border-amber-100 bg-amber-50/85 text-amber-950",
   }[tone];
   const iconClass = {

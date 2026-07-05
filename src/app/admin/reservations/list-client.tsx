@@ -76,7 +76,7 @@ export function ReservationsListClient({
   const reset = () => router.push("/admin/reservations");
 
   return (
-    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
+    <Card className="overflow-hidden border-violet-100 bg-white">
       <CardContent className="p-4">
         <form onSubmit={applyQ} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           <div className="sm:col-span-2 lg:col-span-2 xl:col-span-2">

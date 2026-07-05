@@ -145,7 +145,7 @@ export default async function AdminPaiementsPage({
               {txs.map((t) => {
                 const teacherName = t.teacher ? t.teacher.professionalName || t.teacher.fullName : "Professeur non attribué";
                 return (
-                  <Card key={t.id} className="border-violet-100 bg-white/92 shadow-sm">
+                  <Card key={t.id} className="border-violet-100 bg-white">
                     <CardContent className="space-y-4 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -186,19 +186,19 @@ export default async function AdminPaiementsPage({
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                           <Money amount={t.amount} className="mt-1 text-xs font-black" />
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Méthode</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{t.method ? paymentMethodLabel(t.method) : "—"}</p>
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Cours</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{t.booking?.subjectName ?? "—"}</p>
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(t.createdAt)}</p>
                         </div>
@@ -306,7 +306,7 @@ export default async function AdminPaiementsPage({
               teacherPayouts.map((payout) => {
                 const teacherName = payout.teacher.professionalName || payout.teacher.fullName;
                 return (
-                  <Card key={payout.id} className="border-violet-100 bg-white/92 shadow-sm">
+                  <Card key={payout.id} className="border-violet-100 bg-white">
                     <CardContent className="space-y-4 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -342,7 +342,7 @@ export default async function AdminPaiementsPage({
                             <Link
                               key={allocation.id}
                               href={`/admin/reservations/${allocation.booking.id}`}
-                              className="block rounded-2xl border border-violet-100 bg-white/85 px-3 py-2 text-xs text-foreground"
+                              className="block rounded-2xl border border-violet-100 bg-white px-3 py-2 text-xs text-foreground"
                             >
                               <span className="font-mono font-bold text-primary">{allocation.booking.reference}</span>
                               <span className="ml-1 text-muted-foreground">{allocation.booking.subjectName}</span>

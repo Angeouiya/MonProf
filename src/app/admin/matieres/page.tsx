@@ -66,7 +66,7 @@ export default async function AdminMatieresPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {categoryRows.map(({ subject: s, category }) => (
-                <Card key={s.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={s.id} className="border-violet-100 bg-white">
                   <CardContent className="flex items-center justify-between gap-3 p-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

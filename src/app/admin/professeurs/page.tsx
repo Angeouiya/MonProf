@@ -173,7 +173,7 @@ export default async function AdminProfesseursPage({
         communes={communes.map((c) => ({ id: c.id, name: c.name }))}
       />
 
-      <Card className={missingPhotoCount > 0 ? "border-amber-100 bg-amber-50/80 shadow-sm" : "border-blue-100 bg-blue-50/65 shadow-sm"}>
+      <Card className={missingPhotoCount > 0 ? "border-amber-100 bg-amber-50/80" : "border-blue-100 bg-blue-50/65"}>
         <CardContent className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex gap-3">
             <span className={missingPhotoCount > 0 ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700" : "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-700"}>
@@ -225,7 +225,7 @@ export default async function AdminProfesseursPage({
             {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, score }) => {
 
               return (
-                <Card key={t.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={t.id} className="border-violet-100 bg-white">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -297,19 +297,19 @@ export default async function AdminProfesseursPage({
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Cours réalisés</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{realized}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Total généré</p>
                         <Money amount={totalGenerated} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Réservations</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.bookings}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Avis</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.reviews}</p>
                       </div>

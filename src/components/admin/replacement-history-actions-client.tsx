@@ -37,7 +37,7 @@ export function ReplacementHistoryActionsClient({
       {availableTargets.map((target) => {
         const whatsAppUrl = buildWhatsAppUrl(target.phone, target.message || "");
         return (
-          <div key={target.label} className="flex flex-col gap-2 rounded-2xl border border-violet-100 bg-white/80 p-2 sm:flex-row sm:items-center sm:justify-between">
+          <div key={target.label} className="flex flex-col gap-2 rounded-2xl border border-violet-100 bg-white p-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-bold text-foreground">{target.label}</p>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => copyMessage(target)} className="h-8 rounded-xl">

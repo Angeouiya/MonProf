@@ -471,19 +471,19 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               <p className="font-semibold text-orange-950">{cancellationPolicy.label}</p>
               <p className="mt-1 text-sm text-orange-950/72">{cancellationPolicy.description}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                <div className="rounded-2xl border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Base de calcul</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.baseAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                <div className="rounded-2xl border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Frais retenus</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.feeAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                <div className="rounded-2xl border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Frais service</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.serviceFeeAmount)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2">
+                <div className="rounded-2xl border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Remboursement</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.refundAmount)}</p>
                 </div>
@@ -722,7 +722,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               </div>
             )}
             <Label>Professeur actuel</Label>
-            <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            <div className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-3 py-2 text-sm text-muted-foreground">
               <ProfessorImage
                 photoUrl={booking.teacher.photoUrl}
                 name={booking.teacher.professionalName || booking.teacher.fullName}
@@ -768,8 +768,8 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                   key={teacher.id}
                   type="button"
                   onClick={() => setNewTeacherId(teacher.id)}
-                  className={`rounded-3xl border p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                    newTeacherId === teacher.id ? "border-violet-300 bg-violet-50" : "border-violet-100 bg-white/85"
+                  className={`rounded-3xl border p-3 text-left transition hover:-translate-y-0.5 hover: ${
+                    newTeacherId === teacher.id ? "border-violet-300 bg-violet-50" : "border-violet-100 bg-white"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -804,7 +804,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
               ))}
             </div>
             {selectedReplacement && (
-              <div className="rounded-3xl border border-violet-100 bg-white/80 p-3 text-sm shadow-sm">
+              <div className="rounded-3xl border border-violet-100 bg-white p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-foreground">Résumé du remplacement</span>
                   <Badge variant="outline" className={selectedReplacement.financialImpact > 0 ? "border-amber-200 bg-amber-50 text-amber-800" : "border-blue-200 bg-blue-50 text-blue-800"}>

@@ -550,7 +550,7 @@ export default async function ProfesseurDetailPage({
         nextBooking={nextControlBooking}
       />
 
-      <Card className="overflow-hidden border-[#E3E8F2] bg-white shadow-sm">
+      <Card className="overflow-hidden border-[#E3E8F2] bg-white">
         <CardHeader className="border-b border-[#E3E8F2] bg-white">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -655,7 +655,7 @@ export default async function ProfesseurDetailPage({
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-3xl border border-violet-100 bg-white/85 p-4">
+            <div className="rounded-3xl border border-violet-100 bg-white p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-bold text-foreground">Prochaine mission liée à ce professeur</p>
@@ -726,7 +726,7 @@ export default async function ProfesseurDetailPage({
       </Card>
 
       <Tabs defaultValue={sp.tab || "infos"}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 border border-violet-100 bg-white/80 p-1 shadow-sm">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 border border-violet-100 bg-white p-1">
           <TabsTrigger value="infos">Informations</TabsTrigger>
           <TabsTrigger value="matieres">Matières & Niveaux</TabsTrigger>
           <TabsTrigger value="tarifs">Tarifs</TabsTrigger>
@@ -787,7 +787,7 @@ export default async function ProfesseurDetailPage({
                 {teacher.internalNote && (
                   <>
                     <Separator />
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-amber-800 shadow-sm">
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-amber-800">
                       <p className="text-xs font-medium">Note interne</p>
                       <p className="mt-1 text-sm">{teacher.internalNote}</p>
                     </div>
@@ -805,7 +805,7 @@ export default async function ProfesseurDetailPage({
                       {WEEK_DAYS.map((d) => {
                         const availableSlots = TWO_HOUR_SLOTS.filter((s) => !!availability[d.key]?.[s.key]);
                         return (
-                          <section key={d.key} className="rounded-3xl border border-violet-100 bg-white/90 p-3 shadow-sm">
+                          <section key={d.key} className="rounded-3xl border border-violet-100 bg-white p-3">
                             <div className="mb-2 flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-foreground">{d.label}</p>
                               <Badge variant="outline" className={availableSlots.length ? "border-blue-100 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-600"}>
@@ -888,7 +888,7 @@ export default async function ProfesseurDetailPage({
               <CardHeader><CardTitle className="text-base">Matières enseignées</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {teacher.subjects.map((s) => (
-                  <div key={s.subject.id} className="flex items-center justify-between rounded-2xl border border-violet-100 bg-white/80 px-3 py-2 shadow-sm">
+                  <div key={s.subject.id} className="flex items-center justify-between rounded-2xl border border-violet-100 bg-white px-3 py-2">
                     <span className="flex items-center gap-2 text-sm">
                       <BookOpen className="h-4 w-4 text-primary" /> {s.subject.name}
                     </span>
@@ -1030,7 +1030,7 @@ export default async function ProfesseurDetailPage({
         {/* COURS */}
         <TabsContent value="cours" className="space-y-4">
           {targetBooking && (
-            <Card className="border-[#1E2A78]/20 bg-blue-50/80 shadow-sm">
+            <Card className="border-[#1E2A78]/20 bg-blue-50/80">
               <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-black text-[#1E2A78]">Réservation ciblée depuis une notification</p>
@@ -1071,8 +1071,8 @@ export default async function ProfesseurDetailPage({
                         id={`booking-${b.id}`}
                         className={
                           b.id === targetBookingId
-                            ? "space-y-3 rounded-3xl border border-[#1E2A78]/35 bg-blue-50/85 p-4 shadow-[0_18px_50px_rgba(30,42,120,0.14)]"
-                            : "space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm"
+                            ? "space-y-3 rounded-3xl border border-[#1E2A78]/35 bg-blue-50/85 p-4"
+                            : "space-y-3 rounded-3xl border border-violet-100 bg-white p-4"
                         }
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -1087,11 +1087,11 @@ export default async function ProfesseurDetailPage({
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                          <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                             <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                             <Money amount={b.totalPrice} className="mt-1 text-xs font-black" />
                           </div>
-                          <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                          <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                             <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                             <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(b.scheduledDate ?? b.createdAt)}</p>
                           </div>
@@ -1210,7 +1210,7 @@ export default async function ProfesseurDetailPage({
           </Card>
 
           {targetLedgerRow && (
-            <Card className="border-[#1E2A78]/20 bg-blue-50/80 shadow-sm">
+            <Card className="border-[#1E2A78]/20 bg-blue-50/80">
               <CardContent className="space-y-4 p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
@@ -1230,11 +1230,11 @@ export default async function ProfesseurDetailPage({
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-7">
-                  <div className="rounded-2xl border border-blue-100 bg-white/85 px-3 py-2">
+                  <div className="rounded-2xl border border-blue-100 bg-white px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Statut réservation</p>
                     <div className="mt-2"><BookingStatusBadge status={targetLedgerRow.status} /></div>
                   </div>
-                  <div className="rounded-2xl border border-blue-100 bg-white/85 px-3 py-2">
+                  <div className="rounded-2xl border border-blue-100 bg-white px-3 py-2">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">Statut fonds</p>
                     <div className="mt-2"><PaymentStatusBadge status={targetLedgerRow.paymentStatus} /></div>
                   </div>
@@ -1245,7 +1245,7 @@ export default async function ProfesseurDetailPage({
                   <AmountTile label="Reste à traiter" amount={targetLedgerRow.remaining} danger={targetLedgerRow.remaining > 0} />
                 </div>
 
-                <p className="rounded-2xl border border-blue-100 bg-white/75 px-3 py-2 text-sm font-medium text-blue-950/75">
+                <p className="rounded-2xl border border-blue-100 bg-white px-3 py-2 text-sm font-medium text-blue-950/75">
                   {getTargetPaymentHint(targetLedgerRow)}
                 </p>
               </CardContent>
@@ -1271,8 +1271,8 @@ export default async function ProfesseurDetailPage({
                       key={row.id}
                       className={
                         row.id === targetBookingId
-                          ? "space-y-3 rounded-3xl border border-[#1E2A78]/35 bg-blue-50/85 p-4 shadow-[0_18px_50px_rgba(30,42,120,0.14)]"
-                          : "space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm"
+                          ? "space-y-3 rounded-3xl border border-[#1E2A78]/35 bg-blue-50/85 p-4"
+                          : "space-y-3 rounded-3xl border border-violet-100 bg-white p-4"
                       }
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1401,7 +1401,7 @@ export default async function ProfesseurDetailPage({
                       ? "border-slate-200 bg-slate-50 text-slate-700"
                       : "border-amber-200 bg-amber-50 text-amber-800";
                   return (
-                    <div key={adjustment.id} className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+                    <div key={adjustment.id} className="rounded-3xl border border-violet-100 bg-white p-4">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
@@ -1465,7 +1465,7 @@ export default async function ProfesseurDetailPage({
                   </p>
                 ) : (
                   teacher.transactions.map((t) => (
-                    <div key={t.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+                    <div key={t.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-mono text-xs font-bold text-primary">{t.reference}</p>
@@ -1475,19 +1475,19 @@ export default async function ProfesseurDetailPage({
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                           <Money amount={t.amount} className="mt-1 text-xs font-black" />
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Net prof</p>
                           <Money amount={t.teacherNet} className="mt-1 text-xs font-black" />
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Commission</p>
                           <Money amount={t.commission} className="mt-1 text-xs font-black" />
                         </div>
-                        <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                        <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                           <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                           <p className="mt-1 truncate text-xs font-bold text-foreground">{formatDate(t.createdAt)}</p>
                         </div>
@@ -1557,10 +1557,10 @@ export default async function ProfesseurDetailPage({
                   ].filter(Boolean).join("\n");
 
                   return (
-                    <div key={warning.id} className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm">
+                    <div key={warning.id} className="rounded-3xl border border-amber-100 bg-amber-50/60 p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="border-amber-200 bg-white/70 text-amber-800">{warningLevel}</Badge>
+                          <Badge variant="outline" className="border-amber-200 bg-white text-amber-800">{warningLevel}</Badge>
                           <Badge variant="outline" className={warning.adminOnly ? "border-slate-200 bg-slate-50 text-slate-700" : "border-blue-200 bg-blue-50 text-blue-800"}>
                             {warning.adminOnly ? "Interne admin" : warning.sentToTeacher ? "Envoyé au professeur" : "Non envoyé"}
                           </Badge>
@@ -1571,7 +1571,7 @@ export default async function ProfesseurDetailPage({
                       <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{warning.description}</p>
                       <div className="mt-3 grid gap-2">
                         {warning.booking && (
-                          <p className="rounded-2xl border border-amber-100 bg-white/70 px-3 py-2 text-xs text-muted-foreground">
+                          <p className="rounded-2xl border border-amber-100 bg-white px-3 py-2 text-xs text-muted-foreground">
                             Réservation {warning.booking.reference}
                           </p>
                         )}
@@ -1581,12 +1581,12 @@ export default async function ProfesseurDetailPage({
                           </p>
                         )}
                         {warning.responseDueAt && (
-                          <p className="rounded-2xl border border-violet-100 bg-white/70 px-3 py-2 text-xs text-muted-foreground">
+                          <p className="rounded-2xl border border-violet-100 bg-white px-3 py-2 text-xs text-muted-foreground">
                             Délai de réponse : {formatDateTime(warning.responseDueAt)}
                           </p>
                         )}
                         {warning.evidenceUrl && (
-                          <Button asChild size="sm" variant="outline" className="w-fit rounded-xl bg-white/80">
+                          <Button asChild size="sm" variant="outline" className="w-fit rounded-xl bg-white">
                             <a href={warning.evidenceUrl} target="_blank" rel="noreferrer">
                               Ouvrir la preuve
                             </a>
@@ -1609,10 +1609,10 @@ export default async function ProfesseurDetailPage({
                   const sanctionType = teacherSanctionTypeLabel(sanction.type);
                   const sanctionStatus = teacherSanctionStatusLabel(sanction.status);
                   return (
-                    <div key={sanction.id} className="rounded-3xl border border-red-100 bg-red-50/60 p-4 shadow-sm">
+                    <div key={sanction.id} className="rounded-3xl border border-red-100 bg-red-50/60 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Badge variant="outline" className="border-red-200 bg-white/70 text-red-700">{sanctionType}</Badge>
-                        <Badge variant="outline" className={sanction.status === "APPLIED" ? "border-red-200 bg-white/70 text-red-700" : sanction.status === "CANCELLED" ? "border-slate-200 bg-white/70 text-slate-700" : "border-amber-200 bg-white/70 text-amber-800"}>
+                        <Badge variant="outline" className="border-red-200 bg-white text-red-700">{sanctionType}</Badge>
+                        <Badge variant="outline" className={sanction.status === "APPLIED" ? "border-red-200 bg-white text-red-700" : sanction.status === "CANCELLED" ? "border-slate-200 bg-white text-slate-700" : "border-amber-200 bg-white text-amber-800"}>
                           {sanctionStatus}
                         </Badge>
                       </div>
@@ -1721,8 +1721,8 @@ export default async function ProfesseurDetailPage({
                     id={`review-${r.id}`}
                     className={
                       r.bookingId === targetBookingId
-                        ? "rounded-2xl border border-[#1E2A78]/35 bg-blue-50/85 p-3 shadow-[0_18px_50px_rgba(30,42,120,0.14)]"
-                        : "rounded-2xl border border-violet-100 bg-white/80 p-3 shadow-sm"
+                        ? "rounded-2xl border border-[#1E2A78]/35 bg-blue-50/85 p-3"
+                        : "rounded-2xl border border-violet-100 bg-white p-3"
                     }
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1808,7 +1808,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function PriceCard({ label, amount }: { label: string; amount: number }) {
   return (
-    <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 shadow-sm">
+    <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-lg font-semibold text-foreground"><Money amount={amount} /></p>
     </div>
@@ -1817,7 +1817,7 @@ function PriceCard({ label, amount }: { label: string; amount: number }) {
 
 function InfoBox({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
   return (
-    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/75 p-3 shadow-sm" : "rounded-2xl border border-violet-100 bg-white/80 p-3 shadow-sm"}>
+    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/75 p-3" : "rounded-2xl border border-violet-100 bg-white p-3"}>
       <p className={danger ? "text-xs text-red-900/70" : "text-xs text-muted-foreground"}>{label}</p>
       <p className={danger ? "mt-1 text-sm font-black text-red-950" : "mt-1 text-sm font-semibold text-foreground"}>{value}</p>
     </div>
@@ -1878,7 +1878,7 @@ function getReviewActionHint(rating: number, adminStatus: string) {
 
 function AmountMini({ label, amount, danger = false }: { label: string; amount: number; danger?: boolean }) {
   return (
-    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/50 px-3 py-2" : "rounded-2xl border border-violet-100 bg-white/85 px-3 py-2"}>
+    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/50 px-3 py-2" : "rounded-2xl border border-violet-100 bg-white px-3 py-2"}>
       <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       <Money amount={amount} className={danger ? "mt-1 text-xs font-black text-red-700" : "mt-1 text-xs font-black"} muted={amount === 0} />
     </div>
@@ -1887,7 +1887,7 @@ function AmountMini({ label, amount, danger = false }: { label: string; amount: 
 
 function AmountTile({ label, amount, danger = false, muted = false }: { label: string; amount: number; danger?: boolean; muted?: boolean }) {
   return (
-    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/70 px-3 py-2" : "rounded-2xl border border-blue-100 bg-white/85 px-3 py-2"}>
+    <div className={danger ? "rounded-2xl border border-red-100 bg-red-50/70 px-3 py-2" : "rounded-2xl border border-blue-100 bg-white px-3 py-2"}>
       <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">{label}</p>
       <Money amount={amount} className={danger ? "mt-2 text-sm font-black text-red-700" : "mt-2 text-sm font-black text-blue-950"} muted={muted} />
     </div>

@@ -273,7 +273,7 @@ export function TeacherWhatsAppMessageClient({
 
   if (bookings.length === 0) {
     return (
-      <Card className="border-violet-100 shadow-sm">
+      <Card className="border-violet-100">
         <CardHeader><CardTitle className="text-base">Message mission professeur</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           Aucune réservation récente à transmettre pour ce professeur.
@@ -283,7 +283,7 @@ export function TeacherWhatsAppMessageClient({
   }
 
   return (
-    <Card className="border-violet-100 shadow-sm">
+    <Card className="border-violet-100">
       <CardHeader>
         <CardTitle className="text-base">Message mission / WhatsApp professeur</CardTitle>
         <p className="text-sm text-muted-foreground">

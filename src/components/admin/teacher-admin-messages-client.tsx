@@ -150,7 +150,7 @@ export function TeacherAdminMessagesClient({
           <Metric label="Non lus admin" value={unreadAdminCount} />
         </div>
 
-        <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+        <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
           <h3 className="text-base font-semibold text-[#111827]">Répondre à {teacherName}</h3>
           <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
             Le professeur recevra la réponse dans son espace et dans ses notifications.
@@ -167,7 +167,7 @@ export function TeacherAdminMessagesClient({
                   if (item) choose(item);
                   else setSelectedId("");
                 }}
-                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] shadow-sm outline-none focus:border-[#111B4D]"
+                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
               >
                 <option value="">Nouveau message non lié</option>
                 {messages.map((item) => (
@@ -184,7 +184,7 @@ export function TeacherAdminMessagesClient({
                 id="admin-teacher-message-booking"
                 value={bookingId}
                 onChange={(event) => setBookingId(event.target.value)}
-                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] shadow-sm outline-none focus:border-[#111B4D]"
+                className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
               >
                 <option value="">Aucune réservation spécifique</option>
                 {bookings.map((booking) => (
@@ -212,7 +212,7 @@ export function TeacherAdminMessagesClient({
                   id="admin-teacher-message-priority"
                   value={priority}
                   onChange={(event) => setPriority(event.target.value)}
-                  className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] shadow-sm outline-none focus:border-[#111B4D]"
+                  className="min-h-11 w-full rounded-2xl border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
                 >
                   {priorities.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
@@ -243,7 +243,7 @@ export function TeacherAdminMessagesClient({
         </div>
       </div>
 
-      <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+      <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-semibold text-[#111827]">Historique des échanges</h3>
@@ -264,7 +264,7 @@ export function TeacherAdminMessagesClient({
               <article
                 key={item.id}
                 className={cn(
-                  "rounded-[1.15rem] border bg-white p-4 shadow-sm",
+                  "rounded-[1.15rem] border bg-white p-4",
                   item.sender === "TEACHER" && !item.readByAdminAt ? "border-[#111B4D]" : "border-[#E3E8F2]",
                 )}
               >
@@ -329,7 +329,7 @@ export function TeacherAdminMessagesClient({
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4 shadow-sm">
+    <div className="rounded-[1.15rem] border border-[#E3E8F2] bg-white p-4">
       <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight text-[#111B4D]">{value}</p>
     </div>

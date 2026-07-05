@@ -238,7 +238,7 @@ export function TeacherControlPanelClient({
   };
 
   return (
-    <Card className="overflow-hidden border-violet-100 bg-white/95 shadow-sm">
+    <Card className="overflow-hidden border-violet-100 bg-white">
       <CardHeader className="border-b border-violet-100 bg-violet-50/55">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -295,7 +295,7 @@ export function TeacherControlPanelClient({
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-3xl border border-violet-100 bg-white/88 p-4 shadow-sm">
+          <div className="rounded-3xl border border-violet-100 bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-black text-foreground">Chaîne agence du professeur</p>
@@ -315,7 +315,7 @@ export function TeacherControlPanelClient({
             </div>
           </div>
 
-          <div className="rounded-3xl border border-amber-100 bg-amber-50/65 p-4 shadow-sm">
+          <div className="rounded-3xl border border-amber-100 bg-amber-50/65 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-black text-amber-950">Contrôles avant attribution/paiement</p>
@@ -332,7 +332,7 @@ export function TeacherControlPanelClient({
           </div>
         </div>
 
-        <div className="rounded-3xl border border-blue-100 bg-white/90 p-4 shadow-sm">
+        <div className="rounded-3xl border border-blue-100 bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="flex items-center gap-2 text-sm font-black text-blue-950">
@@ -357,7 +357,7 @@ export function TeacherControlPanelClient({
         </div>
 
         {nextBooking && (
-          <div className="grid gap-3 rounded-3xl border border-violet-100 bg-white/88 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-3 rounded-3xl border border-violet-100 bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="min-w-0">
               <p className="font-mono text-xs font-bold text-primary">{nextBooking.reference}</p>
               <p className="mt-1 truncate text-sm font-black text-foreground">
@@ -416,7 +416,7 @@ function FlowStep({
 
 function ControlCheck({ label, value, danger }: { label: string; value: number; danger: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/82 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white bg-white px-3 py-2">
       <span className="text-sm font-semibold text-foreground">{label}</span>
       <Badge variant="outline" className={danger ? "border-red-200 bg-red-50 text-red-800" : "border-blue-200 bg-blue-50 text-blue-800"}>
         {value}

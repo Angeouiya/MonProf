@@ -146,7 +146,7 @@ export default async function AdminReservationsPage({
               const paymentVerified = hasVerifiedPayDunyaClientPayment(b);
               const risk = getReservationRisk(b.status, b.paymentStatus, b.scheduledDate ?? b.startDate, b.createdAt, now, paymentVerified);
               return (
-                <Card key={b.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={b.id} className="border-violet-100 bg-white">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

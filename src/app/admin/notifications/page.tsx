@@ -105,7 +105,7 @@ export default async function AdminNotificationsPage({
         <AdminUrgentAlertCard title="Professeurs à suivre" description="Notifications professeur en attente de confirmation." count={teacherPendingCount} />
       </div>
 
-      <Card className="overflow-hidden border-[#E3E8F2] bg-white shadow-sm">
+      <Card className="overflow-hidden border-[#E3E8F2] bg-white">
         <CardHeader className="border-b border-[#E3E8F2] bg-white">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>

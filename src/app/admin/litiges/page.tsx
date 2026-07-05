@@ -86,7 +86,7 @@ export default async function AdminLitigesPage({
         <>
           <div className="grid gap-3 md:hidden">
             {disputes.map((d) => (
-              <Card key={d.id} className="border-red-100 bg-white/92 shadow-sm">
+              <Card key={d.id} className="border-red-100 bg-white">
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -123,19 +123,19 @@ export default async function AdminLitigesPage({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Matière</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{d.booking.subjectName}</p>
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Montant</p>
                       <Money amount={d.booking.totalPrice} className="mt-1 text-xs font-black" />
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Ouvert par</p>
                       <p className="mt-1 truncate text-xs font-bold text-foreground">{d.openedBy.name}</p>
                     </div>
-                    <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                    <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                       <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                       <p className="mt-1 text-xs font-bold text-foreground">{timeAgo(d.createdAt)}</p>
                     </div>
@@ -261,7 +261,7 @@ function DisputeSummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${toneClass}`}>
+    <div className={`rounded-3xl border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

@@ -94,7 +94,7 @@ export default async function AdminFondsBloquesPage() {
               const risk = getBlockedRisk(b.status, b.createdAt, now);
 
               return (
-                <Card key={b.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={b.id} className="border-violet-100 bg-white">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -144,15 +144,15 @@ export default async function AdminFondsBloquesPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Montant client</p>
                         <Money amount={b.totalPrice} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Net professeur</p>
                         <Money amount={b.teacherNetAmount} className="mt-1 text-xs font-black" />
                       </div>
-                      <div className="col-span-2 rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="col-span-2 rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Bloqué depuis</p>
                         <p className="mt-1 text-xs font-bold text-foreground" title={formatDateTime(b.createdAt)}>{timeAgo(b.createdAt)}</p>
                       </div>

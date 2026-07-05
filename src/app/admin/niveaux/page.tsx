@@ -62,7 +62,7 @@ export default async function AdminNiveauxPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {levelRows.map(({ level: l, category }) => (
-                <Card key={l.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={l.id} className="border-violet-100 bg-white">
                   <CardContent className="flex items-center justify-between gap-3 p-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

@@ -115,7 +115,7 @@ export default async function AdminMessagesPage({
       ) : (
         <div className="space-y-3">
           {messages.map((m) => (
-            <Card key={m.id} className={m.handled ? "opacity-75" : "border-[#E3E8F2] bg-white shadow-sm"}>
+            <Card key={m.id} className={m.handled ? "opacity-75" : "border-[#E3E8F2] bg-white"}>
               <CardContent className="p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -137,7 +137,7 @@ export default async function AdminMessagesPage({
                   </div>
                   <MessagesClient message={{ id: m.id, handled: m.handled }} />
                 </div>
-                <div className="mt-3 rounded-2xl border border-violet-100 bg-white/75 p-3">
+                <div className="mt-3 rounded-2xl border border-violet-100 bg-white p-3">
                   <p className="text-xs font-medium text-muted-foreground">Sujet: {m.subject}</p>
                   <p className="mt-1 text-sm">{m.message}</p>
                 </div>
@@ -168,7 +168,7 @@ export default async function AdminMessagesPage({
               const teacherName = message.teacher.professionalName || message.teacher.fullName;
               const unread = message.sender === "TEACHER" && !message.readByAdminAt;
               return (
-                <Card key={message.id} className={unread ? "border-[#111B4D] bg-white shadow-sm" : "border-[#E3E8F2] bg-white shadow-sm"}>
+                <Card key={message.id} className={unread ? "border-[#111B4D] bg-white" : "border-[#E3E8F2] bg-white"}>
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
@@ -261,7 +261,7 @@ export default async function AdminMessagesPage({
               const teacher = communication.booking?.teacher;
               const teacherName = teacher?.professionalName || teacher?.fullName || "Professeur à confirmer";
               return (
-                <Card key={communication.id} className="border-violet-100 bg-white/95 shadow-sm">
+                <Card key={communication.id} className="border-violet-100 bg-white">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">

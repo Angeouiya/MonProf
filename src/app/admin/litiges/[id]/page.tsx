@@ -96,7 +96,7 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
             {dispute.resolution && (
               <>
                 <Separator />
-                <div className="rounded-2xl border border-violet-100 bg-white/75 p-3 shadow-sm">
+                <div className="rounded-2xl border border-violet-100 bg-white p-3">
                   <p className="text-xs font-medium text-muted-foreground">Résolution</p>
                   <p className="mt-1 text-sm">{dispute.resolution}</p>
                 </div>

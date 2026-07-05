@@ -52,7 +52,7 @@ export function TeacherSanctionActionsClient({
   };
 
   return (
-    <div className="mt-3 rounded-2xl border border-red-100 bg-white/80 p-3">
+    <div className="mt-3 rounded-2xl border border-red-100 bg-white p-3">
       {financial && (
         <div className="mb-3 space-y-2">
           <p className="text-xs font-medium text-red-800">

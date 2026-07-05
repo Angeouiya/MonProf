@@ -472,7 +472,7 @@ export function TeacherStatusModal({ open, onOpenChange, teacherName, bookingsCo
                 <p className="font-black">{selectedPolicy.title}</p>
                 <p className="mt-1 opacity-80">{selectedPolicy.description}</p>
               </div>
-              <span className="w-fit rounded-full border border-current/20 bg-white/55 px-2.5 py-1 text-xs font-bold">
+              <span className="w-fit rounded-full border border-current/20 bg-white px-2.5 py-1 text-xs font-bold">
                 {bookingsCount} réservation(s) suivie(s)
               </span>
             </div>

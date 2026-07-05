@@ -104,7 +104,7 @@ export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissi
   };
 
   return (
-    <Card className="border-violet-100 shadow-sm">
+    <Card className="border-violet-100">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="text-base">Suivi des liens mission privés</CardTitle>
@@ -128,7 +128,7 @@ export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissi
             const action = missionAction(mission);
             const ActionIcon = action?.icon;
             return (
-              <div key={mission.id} className="rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+              <div key={mission.id} className="rounded-3xl border border-violet-100 bg-white p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

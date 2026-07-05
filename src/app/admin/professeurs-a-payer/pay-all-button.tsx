@@ -241,7 +241,7 @@ export function PayAllTeacherButton({
 
 function PaymentPreview({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={strong ? "rounded-2xl border border-blue-200 bg-white p-3" : "rounded-2xl border border-blue-100 bg-white/80 p-3"}>
+    <div className={strong ? "rounded-2xl border border-blue-200 bg-white p-3" : "rounded-2xl border border-blue-100 bg-white p-3"}>
       <p className="text-[11px] font-bold uppercase tracking-wide text-blue-950/55">{label}</p>
       <p className={strong ? "mt-1 text-sm font-black text-blue-950" : "mt-1 text-sm font-bold text-blue-950"}>{value}</p>
     </div>

@@ -25,7 +25,7 @@ export function ClientsListClient({ q }: { q: string }) {
   };
 
   return (
-    <Card className="overflow-hidden border-[#E6EAF3] bg-white shadow-sm">
+    <Card className="overflow-hidden border-[#E6EAF3] bg-white">
       <CardContent className="p-4">
         <form onSubmit={apply} className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">

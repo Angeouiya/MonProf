@@ -125,7 +125,7 @@ export function ProfessorStatCard({
           : CalendarClock;
 
   return (
-    <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 shadow-sm">
+    <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
@@ -150,7 +150,7 @@ export function PortalCard({
   id?: string;
 }) {
   return (
-    <section id={id} className={cn("rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 shadow-sm sm:p-5", className)}>
+    <section id={id} className={cn("rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 sm:p-5", className)}>
       {children}
     </section>
   );

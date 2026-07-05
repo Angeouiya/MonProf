@@ -159,7 +159,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; background: #f7f6fb; color: #111827; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    main { width: min(760px, calc(100% - 32px)); margin: 24px auto; border: 1px solid #e7e5f2; border-radius: 24px; background: #fff; padding: 32px; box-shadow: 0 24px 70px rgba(30, 42, 120, 0.12); }
+    main { width: min(760px, calc(100% - 32px)); margin: 24px auto; border: 1px solid #e7e5f2; border-radius: 24px; background: #fff; padding: 32px; }
     .brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e7e5f2; padding-bottom: 18px; }
     .brand h1 { margin: 0; color: #1E2A78; font-size: 24px; line-height: 1.15; }
     .brand p, .muted { color: #6b7280; }
@@ -178,7 +178,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
     footer { margin-top: 24px; color: #6b7280; font-size: 12px; line-height: 1.55; }
     @media print {
       body { background: #fff; }
-      main { width: 100%; margin: 0; border-radius: 0; box-shadow: none; border: 0; }
+      main { width: 100%; margin: 0; border-radius: 0; border: 0; }
     }
     @media (max-width: 560px) {
       main { padding: 22px; }

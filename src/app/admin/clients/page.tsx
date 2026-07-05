@@ -77,7 +77,7 @@ export default async function AdminClientsPage({
         <StatCard label="À surveiller" value={clientsWithAction} icon={AlertTriangle} tone={clientsWithAction ? "danger" : "default"} />
       </div>
 
-      <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#64748B] shadow-sm">
+      <div className="rounded-[1.15rem] border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#64748B]">
         <p className="font-bold text-[#111827]">Portefeuille client suivi</p>
         <p className="mt-1">
           {clientsWithBooking} client(s) ont déjà réservé pour un volume sécurisé de <strong>{<Money amount={totalSecured} />}</strong>.
@@ -99,7 +99,7 @@ export default async function AdminClientsPage({
               const latestTeacherName = latest ? latest.teacher.professionalName || latest.teacher.fullName : null;
               const action = getClientActionLabel(c.bookings);
               return (
-                <Card key={c.id} className="border-[#E6EAF3] bg-white shadow-sm">
+                <Card key={c.id} className="border-[#E6EAF3] bg-white">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex min-w-0 items-start gap-3">
                       <Avatar className="h-12 w-12 shrink-0">

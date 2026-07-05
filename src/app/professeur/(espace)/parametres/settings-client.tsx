@@ -155,7 +155,7 @@ export function TeacherPaymentProfileSettingsForm({
           </Select>
         </div>
         <div className="flex items-end">
-          <PaymentMethodLogo method={method} className="h-11 w-full rounded-2xl shadow-none" />
+          <PaymentMethodLogo method={method} className="h-11 w-full rounded-2xl" />
         </div>
       </div>
 

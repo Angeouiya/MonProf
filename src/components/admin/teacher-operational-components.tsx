@@ -55,7 +55,7 @@ export function TeacherStatusBadge({ status, className }: { status: string; clas
   };
   const cfg = map[status] ?? map.INACTIVE;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold shadow-sm", cfg.className, className)}>
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold", cfg.className, className)}>
       {cfg.label}
     </span>
   );
@@ -71,13 +71,13 @@ export function TeacherQualityScore({ score }: { score: number }) {
     red: "border border-red-200 bg-white text-red-900",
   }[tone];
   return (
-    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Score qualité</p>
           <p className="mt-1 text-sm text-muted-foreground">{qualityScoreLabel(score)}</p>
         </div>
-        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-black shadow-sm", color)}>
+        <div className={cn("flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-black", color)}>
           {score}
         </div>
       </div>
@@ -152,7 +152,7 @@ export function TeacherTaskCard({
   const priorityLabel = TASK_PRIORITY_LABELS[task.priority] ?? task.priority;
   const statusLabel = TASK_STATUS_LABELS[task.status] ?? task.status;
   return (
-    <div className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+    <div className="rounded-3xl border border-violet-100 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Badge variant="outline" className="mb-2 border-slate-200 bg-slate-50 text-slate-700">{typeLabel}</Badge>
@@ -203,7 +203,7 @@ export function OperationalAlertCard({
     blue: "border-[#CAD7F2] bg-white text-[#111B4D]",
   }[tone];
   const content = (
-    <div className={cn("rounded-3xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md", styles)}>
+    <div className={cn("rounded-3xl border p-4 transition hover:-translate-y-0.5 hover:", styles)}>
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
@@ -242,7 +242,7 @@ export function TeacherPaymentSummary({
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
       {items.map((item) => (
-        <div key={item.label} className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+        <div key={item.label} className="rounded-3xl border border-violet-100 bg-white p-4">
           <item.icon className={cn("h-5 w-5", item.tone)} />
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</p>
           <p className="mt-1 text-lg font-bold text-foreground">{formatFCFA(item.value)}</p>
@@ -272,7 +272,7 @@ export function ReplacementHistoryTable({
             </p>
           ) : (
             replacements.map((replacement) => (
-              <div key={replacement.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+              <div key={replacement.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-xs font-bold text-primary">{replacement.booking.reference}</p>
@@ -287,7 +287,7 @@ export function ReplacementHistoryTable({
                   {replacement.financialImpact !== 0 ? ` Impact financier : ${formatFCFA(replacement.financialImpact)}.` : ""}
                 </p>
                 <div className="grid gap-2">
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                     <p className="text-[11px] font-medium text-muted-foreground">Ancien professeur</p>
                     <TeacherReplacementPerson teacher={replacement.oldTeacher} tone="muted" />
                   </div>
@@ -435,7 +435,7 @@ export function AdminActionLog({ logs }: { logs: AdminActionLog[] }) {
             </p>
           ) : (
             logs.map((log) => (
-              <div key={log.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+              <div key={log.id} className="space-y-3 rounded-3xl border border-violet-100 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-foreground">{log.action}</p>

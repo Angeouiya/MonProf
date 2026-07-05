@@ -111,7 +111,7 @@ export function TeacherNotificationHistoryClient({
             const expanded = expandedId === notification.id;
             const whatsAppUrl = buildWhatsAppUrl(teacherPhone, notification.message);
             return (
-              <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white/92 p-4 shadow-sm">
+              <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -238,7 +238,7 @@ function StatusActionButton({
       variant="outline"
       disabled={disabled || !!loadingStatus}
       onClick={() => onClick(notificationId, status)}
-      className="h-9 rounded-xl bg-white/80"
+      className="h-9 rounded-xl bg-white"
     >
       {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Icon className="mr-1.5 h-3.5 w-3.5" />}
       {label}

@@ -51,7 +51,7 @@ export function ParametresClient({
   };
 
   return (
-    <Card className="max-w-6xl overflow-hidden border-[#E3E8F2] bg-white shadow-sm">
+    <Card className="max-w-6xl overflow-hidden border-[#E3E8F2] bg-white">
       <CardHeader className="border-b border-[#E3E8F2] bg-white">
         <CardTitle className="flex items-center gap-2 text-base">
           <Settings className="h-4 w-4 text-[#111B4D]" />
@@ -74,7 +74,7 @@ export function ParametresClient({
           </SettingField>
         </div>
 
-        <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+        <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#111827]">
@@ -163,7 +163,7 @@ function SettingField({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+    <div className="rounded-3xl border border-[#E3E8F2] bg-white p-4">
       <Label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
         <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#111B4D] text-white">
           <Icon className="h-3.5 w-3.5" />

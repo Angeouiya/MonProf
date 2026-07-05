@@ -121,7 +121,7 @@ export default async function SuiviProfesseursPage() {
       <div className="grid gap-3 md:hidden">
         {teacherRows.map(({ teacher, primary, realized, late, criticalTasks, openTasks, cancelled, disputes, blocked, paid, toPay, activeBooking, score, risk, decision }) => {
           return (
-            <Card key={teacher.id} className="border-violet-100 bg-white/92 shadow-sm">
+            <Card key={teacher.id} className="border-violet-100 bg-white">
               <CardContent className="space-y-4 p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -157,35 +157,35 @@ export default async function SuiviProfesseursPage() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Cours</p>
                     <p className="mt-1 font-black tabular-nums">{teacher.bookings.length}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Réalisés</p>
                     <p className="mt-1 font-black tabular-nums">{realized}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Retards</p>
                     <p className="mt-1 font-black tabular-nums">{late}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Tâches</p>
                     <p className="mt-1 font-black tabular-nums">{openTasks}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Annul.</p>
                     <p className="mt-1 font-black tabular-nums">{cancelled}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Litiges</p>
                     <p className="mt-1 font-black tabular-nums">{disputes}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Avert.</p>
                     <p className="mt-1 font-black tabular-nums">{teacher.warnings.length}</p>
                   </div>
-                  <div className="rounded-2xl border border-violet-100 bg-white/85 px-2 py-2">
+                  <div className="rounded-2xl border border-violet-100 bg-white px-2 py-2">
                     <p className="text-[11px] text-muted-foreground">Critiques</p>
                     <p className="mt-1 font-black tabular-nums">{criticalTasks}</p>
                   </div>
@@ -366,7 +366,7 @@ function SummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${toneClass}`}>
+    <div className={`rounded-3xl border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

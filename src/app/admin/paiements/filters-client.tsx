@@ -26,7 +26,7 @@ export function PaiementsFiltersClient({ filters }: { filters: { method: string;
   const reset = () => router.push("/admin/paiements");
 
   return (
-    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
+    <Card className="overflow-hidden border-violet-100 bg-white">
       <CardContent className="p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>

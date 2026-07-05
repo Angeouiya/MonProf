@@ -227,7 +227,7 @@ export function DisputeOperationalActionsClient({
   }
 
   return (
-    <Card className="border-red-100 bg-red-50/20 shadow-sm">
+    <Card className="border-red-100 bg-red-50/20">
       <CardHeader>
         <CardTitle className="text-base">Décisions opérationnelles liées au litige</CardTitle>
         <p className="mt-1 text-sm text-muted-foreground">

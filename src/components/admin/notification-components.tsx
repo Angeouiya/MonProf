@@ -121,7 +121,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
         {linkedTeacher ? (
           <ProfessorImage photoUrl={linkedTeacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={linkedTeacher.badgeVerified} />
         ) : (
-          <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-sm", notification.priority === "CRITICAL" ? "border-red-200 bg-red-50 text-red-700" : notification.read ? "border-slate-200 bg-white text-muted-foreground" : "border-violet-200 bg-violet-100 text-violet-700")}>
+          <div className={cn("mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border", notification.priority === "CRITICAL" ? "border-red-200 bg-red-50 text-red-700" : notification.read ? "border-slate-200 bg-white text-muted-foreground" : "border-violet-200 bg-violet-100 text-violet-700")}>
             {notification.priority === "CRITICAL" ? <ShieldAlert className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
           </div>
         )}
@@ -134,7 +134,7 @@ export function NotificationItem({ notification, action }: { notification: Notif
           </div>
           <p className="mt-1 line-clamp-3 break-words text-sm text-muted-foreground">{notification.message}</p>
           {booking && (
-            <div className="mt-3 min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3 shadow-sm">
+            <div className="mt-3 min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">{booking.reference}</Badge>
                 <Badge variant="outline">{courseFormatLabel(booking.courseFormat)}</Badge>
@@ -203,7 +203,7 @@ export function NotificationHistoryTable({ notifications }: { notifications: Not
       <CardHeader><CardTitle className="text-base">Historique des notifications</CardTitle></CardHeader>
       <CardContent className="space-y-3 p-4 md:hidden">
         {notifications.map((notification) => (
-          <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+          <div key={notification.id} className="rounded-3xl border border-violet-100 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
                 {(notification.teacher || notification.booking?.teacher) && (
@@ -313,7 +313,7 @@ export function NotificationHistoryTable({ notifications }: { notifications: Not
 
 export function AdminUrgentAlertCard({ title, description, count }: { title: string; description: string; count: number }) {
   return (
-    <div className={cn("rounded-3xl border p-4 shadow-sm", count ? "border-red-100 bg-red-50/80 text-red-800" : "border-violet-100 bg-white/80 text-foreground")}>
+    <div className={cn("rounded-3xl border p-4", count ? "border-red-100 bg-red-50/80 text-red-800" : "border-violet-100 bg-white text-foreground")}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-semibold">{title}</p>

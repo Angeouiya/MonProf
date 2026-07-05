@@ -305,7 +305,7 @@ export function ClientCommunicationClient({
   };
 
   return (
-    <Card className="border-violet-100 shadow-sm">
+    <Card className="border-violet-100">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <CardTitle className="text-base">Communication client</CardTitle>
@@ -351,7 +351,7 @@ export function ClientCommunicationClient({
             {communications.map((item) => {
               const historyWhatsAppUrl = buildWhatsAppUrl(booking.client.phone, item.content);
               return (
-                <div key={item.id} className="rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm">
+                <div key={item.id} className="rounded-3xl border border-violet-100 bg-white p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -372,12 +372,12 @@ export function ClientCommunicationClient({
                     {item.content}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => copyHistoryMessage(item.content)} className="rounded-xl bg-white/80">
+                    <Button type="button" size="sm" variant="outline" onClick={() => copyHistoryMessage(item.content)} className="rounded-xl bg-white">
                       <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" />
                       Copier
                     </Button>
                     {historyWhatsAppUrl ? (
-                      <Button asChild size="sm" variant="outline" className="rounded-xl border-blue-100 bg-white/80 text-blue-800 hover:bg-blue-50">
+                      <Button asChild size="sm" variant="outline" className="rounded-xl border-blue-100 bg-white text-blue-800 hover:bg-blue-50">
                         <a href={historyWhatsAppUrl} target="_blank" rel="noreferrer">
                           <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
                           WhatsApp

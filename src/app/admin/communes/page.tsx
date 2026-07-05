@@ -22,7 +22,7 @@ export default async function AdminCommunesPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Communes & quartiers" description={`${communes.length} commune(s)`} />
-      <Card className="border-violet-100 bg-white/95 shadow-sm">
+      <Card className="border-violet-100 bg-white">
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -52,7 +52,7 @@ export default async function AdminCommunesPage() {
               <p className="text-xs font-bold uppercase tracking-wide text-blue-950/55">Routes proches à {formatFCFA(TRANSPORT_FEES.NEAR_COMMUNE.amount)}</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {GRAND_ABIDJAN_NEAR_ROUTES.slice(0, 12).map(([from, to]) => (
-                  <p key={`${from}-${to}`} className="rounded-2xl border border-blue-100 bg-white/85 px-3 py-2 text-xs font-semibold text-blue-950">
+                  <p key={`${from}-${to}`} className="rounded-2xl border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-950">
                     {from} {"->"} {to}
                   </p>
                 ))}
@@ -70,7 +70,7 @@ export default async function AdminCommunesPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {communes.map((c) => (
-              <Card key={c.id} className="border-violet-100 bg-white/92 shadow-sm">
+              <Card key={c.id} className="border-violet-100 bg-white">
                 <CardContent className="flex items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-foreground">{c.name}</p>

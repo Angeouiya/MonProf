@@ -204,7 +204,7 @@ export default async function AdminDashboard() {
         </Button>
       </PageHeader>
 
-      <Card className="border-[#E3E8F2] bg-white shadow-sm">
+      <Card className="border-[#E3E8F2] bg-white">
         <CardHeader className="space-y-1">
           <CardTitle className="text-base">Synchronisation des trois espaces</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -517,7 +517,7 @@ function ControlSpaceCard({
   const attentionCount = items.reduce((sum, item) => sum + (item.attention ? item.value : 0), 0);
 
   return (
-    <section className="rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-[#E3E8F2] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

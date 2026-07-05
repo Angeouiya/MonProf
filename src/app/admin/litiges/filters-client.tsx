@@ -21,7 +21,7 @@ export function LitigesFiltersClient({ status }: { status: string }) {
   };
 
   return (
-    <Card className="overflow-hidden border-violet-100 bg-white/85 shadow-xl shadow-violet-900/10 backdrop-blur">
+    <Card className="overflow-hidden border-violet-100 bg-white">
       <CardContent className="p-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <div>

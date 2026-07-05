@@ -56,7 +56,6 @@ function resolveBadgeMetrics(imageSize: number) {
     borderWidth: isCompact ? 2 : 3,
     haloWidth: isCompact ? 1 : 2,
     offset: Math.round(badgeSize * 0.22),
-    shadow: "0 0 0 0 #FFFFFF",
   };
 }
 
@@ -137,7 +136,7 @@ export function ProfessorImage({
             right: -badge.offset,
             bottom: -badge.offset,
             borderWidth: badge.borderWidth,
-            boxShadow: `0 0 0 ${badge.haloWidth}px #FFFFFF`,
+            outline: `${badge.haloWidth}px solid #FFFFFF`,
           }}
           title="Professeur certifié"
           aria-label="Professeur certifié"

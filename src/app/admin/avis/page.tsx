@@ -114,7 +114,7 @@ export default async function AdminAvisPage({
               const teacherName = r.teacher.professionalName || r.teacher.fullName;
               const severity = reviewSeverity(r.rating);
               return (
-                <Card key={r.id} className="border-violet-100 bg-white/92 shadow-sm">
+                <Card key={r.id} className="border-violet-100 bg-white">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -174,12 +174,12 @@ export default async function AdminAvisPage({
                     )}
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Cours</p>
                         <p className="mt-1 truncate text-xs font-bold text-foreground">{r.booking.subjectName}</p>
                         <p className="truncate text-[11px] text-muted-foreground">{r.booking.levelName}</p>
                       </div>
-                      <div className="rounded-2xl border border-violet-100 bg-white/85 px-3 py-2">
+                      <div className="rounded-2xl border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Date</p>
                         <p className="mt-1 text-xs font-bold text-foreground">{formatDate(r.createdAt)}</p>
                         <Link href={`/admin/reservations/${r.booking.id}`} className="block truncate text-[11px] font-medium text-primary">
@@ -336,7 +336,7 @@ function ReviewSummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${toneClass}`}>
+    <div className={`rounded-3xl border p-4 ${toneClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>

@@ -21,12 +21,12 @@ export function TeacherWarningActionsClient({
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      <Button type="button" size="sm" variant="outline" onClick={copyMessage} className="rounded-xl bg-white/80">
+      <Button type="button" size="sm" variant="outline" onClick={copyMessage} className="rounded-xl bg-white">
         <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" />
         Copier message
       </Button>
       {whatsAppUrl ? (
-        <Button asChild size="sm" variant="outline" className="rounded-xl border-blue-100 bg-white/80 text-blue-800 hover:bg-blue-50">
+        <Button asChild size="sm" variant="outline" className="rounded-xl border-blue-100 bg-white text-blue-800 hover:bg-blue-50">
           <a href={whatsAppUrl} target="_blank" rel="noreferrer">
             <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
             WhatsApp
