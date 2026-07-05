@@ -79,8 +79,8 @@ export function ClientMetricStrip({
         metrics.length === 1
           ? "grid-cols-1"
           : metrics.length === 2
-            ? "grid-cols-1 min-[380px]:grid-cols-2"
-            : "grid-cols-1 min-[380px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
+            ? "grid-cols-2"
+            : "grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
       )}
     >
@@ -435,14 +435,14 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid snap-x snap-mandatory auto-cols-[minmax(7.6rem,1fr)] grid-flow-col gap-1 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#D8DEE9] bg-white p-1 [scrollbar-width:none] min-[390px]:auto-cols-[minmax(8.25rem,1fr)] min-[720px]:auto-cols-auto min-[720px]:grid-flow-row min-[720px]:overflow-visible [&::-webkit-scrollbar]:hidden",
+        "client-app-rail grid grid-cols-2 gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid-flow-row min-[720px]:overflow-visible",
         desktopGridClassName,
         className,
       )}
       aria-label="Raccourcis client"
       role="navigation"
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const content = (
           <>
             <span className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
@@ -481,7 +481,8 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-14 min-w-[7.6rem] snap-start items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] sm:justify-between sm:px-3 sm:text-left min-[390px]:min-w-[8.25rem] min-[720px]:min-w-0",
+          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] sm:justify-between sm:px-3 sm:text-left min-[720px]:min-h-14",
+          items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
