@@ -65,43 +65,58 @@ export default async function AdminProfesseursPage({
   }
   if (andFilters.length) where.AND = andFilters;
 
-  const [teachers, subjects, communes, totalTeachersCount, missingPhotoCount, activeMissingPhotoCount] = await Promise.all([
-    db.teacher.findMany({
-      where,
-      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-      include: {
-        subjects: { include: { subject: true } },
-        zones: { include: { commune: true } },
-        bookings: {
-          orderBy: { createdAt: "desc" },
-          take: 200,
-          select: {
-            id: true,
-            status: true,
-            paymentStatus: true,
-            totalPrice: true,
-            totalClientPays: true,
-            teacherNetAmount: true,
-            teacherPaidAmount: true,
-            paydunyaStatus: true,
-            paydunyaVerifiedAt: true,
-            transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
-          },
+  const teachers = await db.teacher.findMany({
+    where,
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    include: {
+      subjects: { include: { subject: true } },
+      zones: { include: { commune: true } },
+      bookings: {
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          status: true,
+          paymentStatus: true,
+          totalPrice: true,
+          totalClientPays: true,
+          teacherNetAmount: true,
+          teacherPaidAmount: true,
+          paydunyaStatus: true,
+          paydunyaVerifiedAt: true,
+          transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
         },
-        tasks: { orderBy: { createdAt: "desc" }, take: 50 },
-        warnings: { orderBy: { createdAt: "desc" }, take: 50 },
-        sanctions: { orderBy: { createdAt: "desc" }, take: 50 },
-        oldReplacements: { orderBy: { createdAt: "desc" }, take: 50 },
-        paymentAdjustments: { orderBy: { createdAt: "desc" }, take: 50 },
-        _count: { select: { bookings: true, reviews: true } },
       },
-    }),
-    db.subject.findMany({ orderBy: { name: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-    db.teacher.count(),
-    db.teacher.count({ where: { OR: [{ photoUrl: null }, { photoUrl: "" }] } }),
-    db.teacher.count({ where: { status: "ACTIVE", OR: [{ photoUrl: null }, { photoUrl: "" }] } }),
-  ]);
+      tasks: { orderBy: { createdAt: "desc" }, take: 50 },
+      warnings: { orderBy: { createdAt: "desc" }, take: 50 },
+      sanctions: { orderBy: { createdAt: "desc" }, take: 50 },
+      oldReplacements: { orderBy: { createdAt: "desc" }, take: 50 },
+      paymentAdjustments: { orderBy: { createdAt: "desc" }, take: 50 },
+      _count: { select: { bookings: true, reviews: true } },
+    },
+  });
+
+  const subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
+  const communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+  const [photoStats] = await db.$queryRaw<Array<{
+    totalTeachersCount: number;
+    missingPhotoCount: number;
+    activeMissingPhotoCount: number;
+  }>>`
+    SELECT
+      COUNT(*)::int AS "totalTeachersCount",
+      COUNT(*) FILTER (
+        WHERE "photoUrl" IS NULL OR "photoUrl" = ''
+      )::int AS "missingPhotoCount",
+      COUNT(*) FILTER (
+        WHERE "status" = 'ACTIVE'
+          AND ("photoUrl" IS NULL OR "photoUrl" = '')
+      )::int AS "activeMissingPhotoCount"
+    FROM competence."Teacher"
+  `;
+  const totalTeachersCount = photoStats?.totalTeachersCount ?? 0;
+  const missingPhotoCount = photoStats?.missingPhotoCount ?? 0;
+  const activeMissingPhotoCount = photoStats?.activeMissingPhotoCount ?? 0;
 
   // Compute totals per teacher
   const teacherIds = teachers.map((t) => t.id);

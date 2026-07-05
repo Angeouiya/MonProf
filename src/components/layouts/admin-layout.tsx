@@ -152,9 +152,9 @@ export function AdminLayout({
         </aside>
 
         {open && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] overflow-y-auto border-r border-[#E6EAF3] bg-white">
+            <aside className="admin-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
                 <BrandLogo size="sm" />
                 <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] text-[#111827] transition hover:border-[#111B4D]">
@@ -166,8 +166,8 @@ export function AdminLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-x-hidden lg:ml-72">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <main className="min-w-0 flex-1 overflow-x-hidden lg:ml-72">
+          <div className="mx-auto w-full max-w-[86rem] px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
     </div>
@@ -189,8 +189,8 @@ function SidebarContent({
 }) {
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
   return (
-    <div className="flex h-full flex-col">
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3 lg:overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col">
+      <nav className="admin-sidebar-main-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
         {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
           <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
             <div className="flex items-center justify-between gap-2">

@@ -10,32 +10,40 @@ export default async function AdminRootLayout({ children }: { children: React.Re
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/connexion?from=/admin");
   if ((session.user as any).role !== "ADMIN") redirect("/");
-  const [notificationCount, urgentCount, teacherCount, paymentCount] = await db.$transaction([
-    db.notification.count({
-      where: { userId: null, read: false, priority: { in: ["IMPORTANT", "URGENT", "CRITICAL"] } },
-    }),
-    db.notification.count({
-      where: { userId: null, read: false, priority: { in: ["URGENT", "CRITICAL"] } },
-    }),
-    db.notification.count({
-      where: {
-        userId: null,
-        status: { in: ["CREATED", "SENT", "RELAUNCHED", "EXPIRED"] },
-        OR: [{ recipientType: "TEACHER" }, { teacherId: { not: null } }],
-      },
-    }),
-    db.notification.count({
-      where: {
-        userId: null,
-        read: false,
-        OR: [
-          { type: { contains: "PAY" } },
-          { type: { contains: "PAYMENT" } },
-          { type: { contains: "FUNDS" } },
-        ],
-      },
-    }),
-  ]);
+  const [summary] = await db.$queryRaw<Array<{
+    notificationCount: number;
+    urgentCount: number;
+    teacherCount: number;
+    paymentCount: number;
+  }>>`
+    SELECT
+      COUNT(*) FILTER (
+        WHERE "userId" IS NULL
+          AND "read" = false
+          AND "priority" IN ('IMPORTANT', 'URGENT', 'CRITICAL')
+      )::int AS "notificationCount",
+      COUNT(*) FILTER (
+        WHERE "userId" IS NULL
+          AND "read" = false
+          AND "priority" IN ('URGENT', 'CRITICAL')
+      )::int AS "urgentCount",
+      COUNT(*) FILTER (
+        WHERE "userId" IS NULL
+          AND "status" IN ('CREATED', 'SENT', 'RELAUNCHED', 'EXPIRED')
+          AND ("recipientType" = 'TEACHER' OR "teacherId" IS NOT NULL)
+      )::int AS "teacherCount",
+      COUNT(*) FILTER (
+        WHERE "userId" IS NULL
+          AND "read" = false
+          AND ("type" ILIKE '%PAY%' OR "type" ILIKE '%PAYMENT%' OR "type" ILIKE '%FUNDS%')
+      )::int AS "paymentCount"
+    FROM competence."Notification"
+  `;
+
+  const notificationCount = summary?.notificationCount ?? 0;
+  const urgentCount = summary?.urgentCount ?? 0;
+  const teacherCount = summary?.teacherCount ?? 0;
+  const paymentCount = summary?.paymentCount ?? 0;
 
   return (
     <AdminLayout

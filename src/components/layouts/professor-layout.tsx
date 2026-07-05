@@ -177,9 +177,9 @@ export function ProfessorLayout({
         </aside>
 
         {open && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-[19rem] max-w-[88%] border-r border-[#E6EAF3] bg-white">
+            <aside className="professor-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex min-h-18 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
                 <button
@@ -205,7 +205,7 @@ export function ProfessorLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
+        <main className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
           <div className="mx-auto w-full max-w-7xl px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </div>
@@ -237,8 +237,8 @@ function SidebarContent({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col">
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3 lg:overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col">
+      <nav className="professor-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3">
         <p className="px-3 pb-2 pt-2 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
           Plateforme professeur
         </p>

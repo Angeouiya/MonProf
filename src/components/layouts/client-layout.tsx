@@ -140,7 +140,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside
               className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"
@@ -180,7 +180,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         {/* Main */}
         <main
           className={cn(
-            "flex-1 overflow-x-hidden lg:ml-72 lg:pb-0",
+            "min-w-0 flex-1 overflow-x-hidden lg:ml-72 lg:pb-0",
             hideMobileBottomNav
               ? "pb-8"
               : "client-main-with-mobile-nav pb-6"

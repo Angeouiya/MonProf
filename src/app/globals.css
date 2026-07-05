@@ -1386,23 +1386,31 @@ b {
   min-height: 4.75rem;
 }
 
-.client-sidebar-main-nav {
+.client-sidebar-main-nav,
+.professor-sidebar-main-nav,
+.admin-sidebar-main-nav {
   scrollbar-width: thin;
   scrollbar-color: #CAD3E2 #FFFFFF;
 }
 
 .client-sidebar-main-nav::-webkit-scrollbar,
+.professor-sidebar-main-nav::-webkit-scrollbar,
+.admin-sidebar-main-nav::-webkit-scrollbar,
 .client-tab-bar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .client-sidebar-main-nav::-webkit-scrollbar-track,
+.professor-sidebar-main-nav::-webkit-scrollbar-track,
+.admin-sidebar-main-nav::-webkit-scrollbar-track,
 .client-tab-bar::-webkit-scrollbar-track {
   background: #FFFFFF;
 }
 
 .client-sidebar-main-nav::-webkit-scrollbar-thumb,
+.professor-sidebar-main-nav::-webkit-scrollbar-thumb,
+.admin-sidebar-main-nav::-webkit-scrollbar-thumb,
 .client-tab-bar::-webkit-scrollbar-thumb {
   background: #CAD3E2;
   border-radius: 999px;
@@ -1420,6 +1428,38 @@ b {
 
 .client-mobile-drawer {
   min-height: 100dvh;
+}
+
+.professor-mobile-drawer,
+.admin-mobile-drawer {
+  min-height: 100dvh;
+}
+
+.professor-shell,
+.admin-shell {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.professor-shell h1,
+.professor-shell h2,
+.professor-shell h3,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3 {
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
+.professor-shell [data-slot="button"],
+.admin-shell [data-slot="button"] {
+  box-shadow: none !important;
+}
+
+.professor-shell article,
+.professor-shell section,
+.admin-shell article,
+.admin-shell section {
+  scroll-margin-top: 5rem;
 }
 
 @media (max-width: 374px) {

@@ -46,94 +46,91 @@ export default async function AdminDashboard() {
   const start30d = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [
-    totalClients, totalTeachers, activeTeachers, newBookings7d, paidBookings,
-    todayBookings, blockedFundsAgg, toReleaseAgg, teachersToPayAgg,
-    openDisputes, allTimeCommissionAgg, monthCommissionAgg, totalPaidToTeachersAgg,
-    recentPaidBookings, pendingReleaseBookings, openDisputeList, adminNotifications,
-    draftPayDunyaBookings, paidBookingsAwaitingAdmin, pendingTeacherConfirmations,
-    pendingScheduleProposals, teacherMessagesWaitingAdmin, pendingPayoutRequests,
-    pendingRefundRequests,
-  ] = await db.$transaction([
-    db.user.count({ where: { role: "CLIENT" } }),
-    db.teacher.count(),
-    db.teacher.count({ where: { status: "ACTIVE" } }),
-    db.booking.count({ where: { createdAt: { gte: start7d } } }),
-    db.booking.count({ where: verifiedPayDunyaBookingWhere({ status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } }) }),
-    db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24*60*60*1000) } } }),
-    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
-      select: {
-        id: true,
-        teacherId: true,
-        teacherNetAmount: true,
-        teacherPaidAmount: true,
-        paymentStatus: true,
-        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
-      },
+  const totalClients = await db.user.count({ where: { role: "CLIENT" } });
+  const totalTeachers = await db.teacher.count();
+  const activeTeachers = await db.teacher.count({ where: { status: "ACTIVE" } });
+  const newBookings7d = await db.booking.count({ where: { createdAt: { gte: start7d } } });
+  const paidBookings = await db.booking.count({
+    where: verifiedPayDunyaBookingWhere({ status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } }),
+  });
+  const todayBookings = await db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24*60*60*1000) } } });
+  const blockedFundsAgg = await db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } });
+  const toReleaseAgg = await db.booking.findMany({
+    where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+    select: {
+      id: true,
+      teacherId: true,
+      teacherNetAmount: true,
+      teacherPaidAmount: true,
+      paymentStatus: true,
+      teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+    },
+  });
+  const openDisputes = await db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } });
+  const allTimeCommissionAgg = await db.booking.aggregate({
+    where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
+    _sum: { commissionAmount: true },
+  });
+  const monthCommissionAgg = await db.booking.aggregate({
+    where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }),
+    _sum: { commissionAmount: true },
+  });
+  const totalPaidToTeachersAgg = await db.teacherPayoutRecord.aggregate({ where: { status: "PAID" }, _sum: { amount: true } });
+  const recentPaidBookings = await db.booking.findMany({
+    where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
+    include: { client: { select: { name: true } }, teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } } },
+    orderBy: { createdAt: "desc" }, take: 5,
+  });
+  const pendingReleaseBookings = await db.booking.findMany({
+    where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+    include: {
+      client: { select: { name: true } },
+      teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } },
+      teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+    },
+    orderBy: { clientValidatedAt: "desc" }, take: 5,
+  });
+  const openDisputeList = await db.dispute.findMany({
+    where: { status: { in: ["OPEN","INVESTIGATING"] } },
+    include: { booking: { select: { reference: true } }, openedBy: { select: { name: true } } },
+    orderBy: { createdAt: "desc" }, take: 5,
+  });
+  const adminNotifications = await db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 });
+  const draftPayDunyaBookings = await db.booking.count({
+    where: {
+      status: "PENDING_PAYMENT",
+      OR: [
+        { paydunyaVerifiedAt: null },
+        { paydunyaStatus: { notIn: ["COMPLETED", "CONFIRMED", "SUCCESS"] } },
+      ],
+    },
+  });
+  const paidBookingsAwaitingAdmin = await db.booking.count({
+    where: verifiedPayDunyaBookingWhere({
+      status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] },
     }),
-    db.booking.findMany({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }), select: { teacherId: true }, distinct: ["teacherId"] }),
-    db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
-    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }), _sum: { commissionAmount: true } }),
-    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }), _sum: { commissionAmount: true } }),
-    db.teacherPayoutRecord.aggregate({ where: { status: "PAID" }, _sum: { amount: true } }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
-      include: { client: { select: { name: true } }, teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } } },
-      orderBy: { createdAt: "desc" }, take: 5,
-    }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
-      include: {
-        client: { select: { name: true } },
-        teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } },
-        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
-      },
-      orderBy: { clientValidatedAt: "desc" }, take: 5,
-    }),
-    db.dispute.findMany({
-      where: { status: { in: ["OPEN","INVESTIGATING"] } },
-      include: { booking: { select: { reference: true } }, openedBy: { select: { name: true } } },
-      orderBy: { createdAt: "desc" }, take: 5,
-    }),
-    db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
-    db.booking.count({
-      where: {
-        status: "PENDING_PAYMENT",
-        OR: [
-          { paydunyaVerifiedAt: null },
-          { paydunyaStatus: { notIn: ["COMPLETED", "CONFIRMED", "SUCCESS"] } },
-        ],
-      },
-    }),
-    db.booking.count({
-      where: verifiedPayDunyaBookingWhere({
-        status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] },
-      }),
-    }),
-    db.teacherMissionLink.count({
-      where: {
-        status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
-        expiresAt: { gte: now },
-        booking: { is: verifiedPayDunyaBookingWhere() },
-      },
-    }),
-    db.bookingScheduleProposal.count({
-      where: {
-        status: "PENDING",
-        booking: { is: verifiedPayDunyaBookingWhere() },
-      },
-    }),
-    db.teacherAdminMessage.count({
-      where: {
-        sender: "TEACHER",
-        status: { in: ["OPEN", "WAITING_ADMIN"] },
-      },
-    }),
-    db.teacherPayoutRequest.count({ where: { status: "PENDING" } }),
-    db.clientRefundRequest.count({ where: { status: { in: ["PENDING", "APPROVED"] } } }),
-  ]);
+  });
+  const pendingTeacherConfirmations = await db.teacherMissionLink.count({
+    where: {
+      status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+      expiresAt: { gte: now },
+      booking: { is: verifiedPayDunyaBookingWhere() },
+    },
+  });
+  const pendingScheduleProposals = await db.bookingScheduleProposal.count({
+    where: {
+      status: "PENDING",
+      booking: { is: verifiedPayDunyaBookingWhere() },
+    },
+  });
+  const teacherMessagesWaitingAdmin = await db.teacherAdminMessage.count({
+    where: {
+      sender: "TEACHER",
+      status: { in: ["OPEN", "WAITING_ADMIN"] },
+    },
+  });
+  const pendingPayoutRequests = await db.teacherPayoutRequest.count({ where: { status: "PENDING" } });
+  const pendingRefundRequests = await db.clientRefundRequest.count({ where: { status: { in: ["PENDING", "APPROVED"] } } });
 
   const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
   const notificationBookingIds = Array.from(new Set(adminNotifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
