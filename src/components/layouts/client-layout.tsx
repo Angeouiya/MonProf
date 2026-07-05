@@ -432,7 +432,7 @@ function MobileBottomNav({
 }) {
   return (
     <nav
-      className="client-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      className="client-mobile-nav fixed inset-x-2 z-40 rounded-lg border border-[#E1E7F2] bg-white px-1.5 py-1.5 min-[390px]:inset-x-3 min-[390px]:px-2 min-[390px]:py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
@@ -444,7 +444,7 @@ function MobileBottomNav({
               key={item.href}
               href={item.href}
               className={cn(
-                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-semibold transition-colors",
+                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-semibold transition-colors min-[390px]:px-1",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
               )}
               aria-current={active ? "page" : undefined}

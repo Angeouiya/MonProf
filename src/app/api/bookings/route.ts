@@ -514,10 +514,10 @@ export async function POST(req: NextRequest) {
     await tx.notification.create({
       data: {
         userId,
-        title: pricing.isQuoteOnly ? "Demande de devis enregistrée" : "Paiement PayDunya à finaliser",
+        title: pricing.isQuoteOnly ? "Demande de devis enregistrée" : "Brouillon de réservation - paiement requis",
         message: pricing.isQuoteOnly
           ? `Votre demande pour le cours de ${canonicalSubjectName} avec ${profName} est enregistrée. ${startDateLine} L'administration vous proposera un devis clair avant tout paiement.`
-          : `Votre réservation pour le cours de ${canonicalSubjectName} avec ${profName} est prête. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
+          : `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que PayDunya n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
         type: pricing.isQuoteOnly ? "QUOTE_REQUESTED" : "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,

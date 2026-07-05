@@ -32,7 +32,10 @@ export function ClientPageHeader({
   className?: string;
 }) {
   return (
-    <section className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-0 sm:pb-4", className)}>
+    <section
+      data-client-page-header
+      className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-0 sm:pb-4", className)}
+    >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex min-h-8 flex-wrap items-center gap-2">
@@ -74,6 +77,7 @@ export function ClientMetricStrip({
 }) {
   return (
     <div
+      data-client-metric-strip
       className={cn(
         "client-metric-strip grid gap-2 bg-white",
         metrics.length === 1
@@ -87,6 +91,7 @@ export function ClientMetricStrip({
       {metrics.map((metric, index) => (
         <div
           key={`${metric.label}-${index}`}
+          data-client-metric-card
           className={cn(
             "client-metric-card flex min-h-16 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 sm:min-h-17 sm:px-4",
             metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[380px]:col-span-2 lg:col-span-1",
@@ -127,6 +132,7 @@ export function ClientSurface({
   return (
     <section
       {...props}
+      data-client-surface
       className={cn(
         "client-app-surface border-t border-[#E6EAF3] bg-white",
         compact ? "py-3 sm:py-4" : "py-4 sm:py-5",
@@ -155,6 +161,7 @@ export function ClientEmptyState({
 }) {
   return (
     <div
+      data-client-empty-state
       className={cn(
         "client-empty-state flex min-w-0 flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-center",
         compact ? "px-4 py-5" : "px-4 py-8 sm:px-6 sm:py-10",
@@ -189,7 +196,7 @@ export function ClientSectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="client-section-title flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-end min-[560px]:justify-between">
+    <div data-client-section-title className="client-section-title flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-end min-[560px]:justify-between">
       <div className="min-w-0">
         {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{eyebrow}</p>}
         <h2 className="text-[0.98rem] font-semibold leading-tight tracking-normal text-[#111827] sm:text-[1.08rem]">{title}</h2>
@@ -216,7 +223,7 @@ export function ClientFocusPanel({
   className?: string;
 }) {
   return (
-    <section className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 sm:p-4", className)}>
+    <section data-client-focus-panel className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 sm:p-4", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 gap-3">
           {Icon && (
@@ -254,6 +261,7 @@ export function ClientTabBar({
 }) {
   return (
     <div
+      data-client-tab-bar
       className={cn(
         "client-tab-bar flex snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain scroll-px-1 rounded-lg border border-[#DDE3EE] bg-white p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
@@ -265,6 +273,7 @@ export function ClientTabBar({
           <Link
             key={item.id}
             href={item.href}
+            data-client-tab-item
             className={cn(
               "flex min-h-11 min-w-[7.75rem] shrink-0 snap-start items-center justify-center rounded-lg px-2.5 py-2 text-center text-sm font-semibold transition-colors lg:min-w-0 lg:flex-1 lg:px-3",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
@@ -300,7 +309,7 @@ export function ClientInfoPill({
   strong?: boolean;
 }) {
   return (
-    <div className={cn("client-info-pill min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2", className)}>
+    <div data-client-info-pill className={cn("client-info-pill min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2", className)}>
       <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-[#64748B]">{label}</p>
       <div className={cn("mt-0.5 break-words text-sm font-semibold leading-5", strong ? "text-[#111B4D]" : "text-[#111827]")}>
         {value || "—"}
@@ -325,6 +334,7 @@ export function ClientCompactFacts({
 }) {
   return (
     <dl
+      data-client-compact-facts
       className={cn(
         "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-white grid-cols-1 min-[380px]:grid-cols-2 min-[680px]:grid-cols-3",
         className,
@@ -333,6 +343,7 @@ export function ClientCompactFacts({
       {items.map((item, index) => (
         <div
           key={`${item.label}-${index}`}
+          data-client-compact-fact
           className={cn(
             "min-w-0 border-b border-[#E6EAF3] bg-white px-3 py-2.5 last:border-b-0 min-[380px]:border-r min-[380px]:even:border-r-0 min-[680px]:[&:nth-child(3n)]:border-r-0",
             items.length % 2 === 1 && index === items.length - 1 && "min-[380px]:col-span-2 min-[680px]:col-span-1",

@@ -809,12 +809,12 @@ export function ReserverForm({
   };
 
   return (
-    <div className="client-booking-form mx-auto w-full max-w-7xl space-y-3 pb-36 sm:pb-8">
-      <section className="client-booking-shell overflow-hidden rounded-lg border border-[#DDE6F7] bg-white">
+    <div className="client-booking-form client-booking-flow mx-auto w-full max-w-7xl space-y-3 pb-36 sm:pb-8">
+      <section className="client-booking-shell min-w-0 overflow-hidden rounded-lg border border-[#DDE6F7] bg-white">
         <div className="border-b border-[#E6EAF3] px-3 py-2 sm:px-5">
           <BackButton fallbackHref="/client/rechercher" className="min-h-10 rounded-lg px-3" />
         </div>
-        <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:items-center">
+        <div className="client-booking-hero grid min-w-0 gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)] lg:items-center">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size={64} shape="circle" verified={teacher.badgeVerified} />
             <div className="min-w-0">
@@ -839,7 +839,7 @@ export function ReserverForm({
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
+          <div className="client-booking-total-card rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
@@ -857,7 +857,7 @@ export function ReserverForm({
           </div>
         </div>
 
-        <div className="border-t border-[#E6EAF3] px-3 py-3 sm:px-5 sm:py-4">
+        <div className="client-booking-progress border-t border-[#E6EAF3] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#111827]">Étape {step + 1} sur {STEPS.length} · {currentStepDetail.title}</p>
@@ -872,7 +872,7 @@ export function ReserverForm({
             />
           </div>
           <div
-            className="mt-3 grid grid-cols-5 gap-1.5 lg:hidden"
+            className="client-booking-progress-grid mt-3 grid grid-cols-5 gap-1.5 lg:hidden"
             aria-label="Progression mobile"
           >
             {STEPS.map((stepLabel, index) => {
@@ -913,7 +913,7 @@ export function ReserverForm({
               );
             })}
           </div>
-          <div className="mt-3 hidden grid-cols-5 gap-2 lg:grid">
+          <div className="client-booking-progress-grid mt-3 hidden grid-cols-5 gap-2 lg:grid">
             {STEPS.map((stepLabel, index) => {
               const complete = index < step;
               const active = index === step;
@@ -941,8 +941,8 @@ export function ReserverForm({
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Card className="client-booking-step-card overflow-hidden rounded-lg border-[#DDE6F7] bg-white">
+      <div className="client-booking-workspace grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <Card className="client-booking-step-card client-booking-step-panel min-w-0 overflow-hidden rounded-lg border-[#DDE6F7] bg-white">
           <CardContent className="p-4 sm:p-6">
             <ImportantActionNotice
               title={reservationFormNotice.title}
@@ -1945,7 +1945,7 @@ export function ReserverForm({
         </CardContent>
         </Card>
 
-        <aside className="hidden space-y-4 xl:sticky xl:top-24 xl:block xl:self-start">
+        <aside className="client-booking-side-summary hidden space-y-4 xl:block xl:self-start">
           <div className="rounded-lg border border-[#DDE6F7] bg-white p-4">
             <div className="flex items-center gap-3">
               <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
@@ -1987,7 +1987,7 @@ export function ReserverForm({
       </div>
 
       <div
-        className="fixed inset-x-3 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2.5 sm:hidden"
+        className="client-booking-mobile-action fixed inset-x-2 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2.5 min-[390px]:inset-x-3 sm:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mb-2 space-y-1.5 px-1">

@@ -219,7 +219,7 @@ function PricingFact({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
+    <div data-client-pricing-fact className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
       {icon && (
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8DEE9] text-[#111B4D]">
           {icon}

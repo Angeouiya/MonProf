@@ -1925,3 +1925,221 @@ b {
     border-radius: 0.5rem !important;
   }
 }
+
+/* Client app hardening pass: white app surfaces, stable mobile grids, no decorative shadow. */
+.client-shell,
+.client-app-root,
+.client-shell main,
+.client-content {
+  background: #FFFFFF !important;
+}
+
+.public-shell {
+  overflow-x: clip;
+}
+
+.public-shell :where(header, main, footer, footer *, [data-client-teacher-card]) {
+  min-width: 0;
+}
+
+.client-shell :where(
+  .client-booking-flow,
+  .client-booking-workspace,
+  .client-booking-step-panel,
+  .client-booking-side-summary,
+  .client-booking-progress,
+  .client-booking-progress-grid,
+  [data-client-page-header],
+  [data-client-surface],
+  [data-client-empty-state],
+  [data-client-focus-panel],
+  [data-client-metric-strip],
+  [data-client-metric-card],
+  [data-client-tab-bar],
+  [data-client-tab-item],
+  [data-client-info-pill],
+  [data-client-compact-facts],
+  [data-client-compact-fact],
+  [data-client-pricing-breakdown],
+  [data-client-pricing-total],
+  [data-client-pricing-facts],
+  [data-client-pricing-fact],
+  [data-client-pricing-detail]
+) {
+  min-width: 0;
+}
+
+.client-shell :where(
+  [data-client-page-header],
+  [data-client-surface],
+  [data-client-empty-state],
+  [data-client-focus-panel],
+  [data-client-metric-card],
+  [data-client-tab-bar],
+  [data-client-info-pill],
+  [data-client-compact-facts],
+  [data-client-pricing-breakdown],
+  [data-client-pricing-fact],
+  .client-booking-shell,
+  .client-booking-step-card,
+  .client-booking-mobile-action,
+  .client-mobile-nav
+) {
+  background-color: #FFFFFF !important;
+  border-color: #D8DEE9 !important;
+  box-shadow: none !important;
+}
+
+.client-shell :where(input, select, textarea, button, a, [role="button"], [data-slot="select-trigger"]):focus-visible {
+  outline: 2px solid #111B4D !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+
+.client-shell :where(input, select, textarea, [data-slot="select-trigger"]):focus {
+  box-shadow: none !important;
+}
+
+.client-mobile-nav,
+.client-booking-mobile-action {
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.client-booking-shell {
+  overflow: clip;
+}
+
+.client-booking-progress-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.client-booking-progress-grid > button {
+  overflow: hidden;
+}
+
+.client-booking-workspace {
+  align-items: start;
+}
+
+.client-booking-side-summary {
+  scroll-margin-top: calc(var(--app-topbar-height) + 1rem);
+}
+
+.client-shell [data-client-pricing-breakdown] {
+  width: 100%;
+}
+
+.client-shell [data-client-pricing-total] {
+  overflow: hidden;
+}
+
+.client-shell [data-client-pricing-fact] {
+  min-height: 4.9rem;
+}
+
+.client-shell [data-client-pricing-fact] svg,
+.client-shell [data-client-pricing-breakdown] svg {
+  flex-shrink: 0;
+}
+
+.client-shell [data-client-pricing-detail] {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1280px) {
+  .client-booking-side-summary {
+    position: sticky;
+    top: calc(var(--app-topbar-height) + 1.25rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .client-content {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .client-booking-flow {
+    margin-inline: 0 !important;
+  }
+
+  .client-booking-hero {
+    gap: 0.75rem !important;
+  }
+
+  .client-booking-total-card {
+    padding: 0.8rem !important;
+  }
+
+  .client-booking-progress {
+    padding: 0.75rem !important;
+  }
+
+  .client-booking-progress-grid {
+    gap: 0.35rem !important;
+  }
+
+  .client-booking-progress-grid > button {
+    min-height: 3rem !important;
+    padding-left: 0.35rem !important;
+    padding-right: 0.35rem !important;
+  }
+
+  .client-shell [data-client-pricing-breakdown] {
+    padding: 0.85rem !important;
+  }
+
+  .client-shell [data-client-pricing-facts] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .client-shell [data-client-pricing-total] {
+    padding: 0.85rem 1rem !important;
+  }
+
+  .client-shell [data-client-pricing-total] p:nth-child(2) {
+    font-size: 1.55rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .client-booking-mobile-action {
+    padding: 0.65rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .client-content {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+  }
+
+  .client-mobile-nav {
+    inset-inline: 0.5rem !important;
+  }
+
+  .client-mobile-nav a {
+    min-height: 3.05rem !important;
+  }
+
+  .client-mobile-nav svg {
+    width: 0.95rem !important;
+    height: 0.95rem !important;
+  }
+
+  .client-mobile-nav span {
+    font-size: 0.62rem !important;
+  }
+
+  .client-booking-progress-grid > button {
+    min-height: 2.75rem !important;
+  }
+
+  .client-booking-progress-grid > button span:last-child {
+    display: none !important;
+  }
+
+  .client-booking-mobile-action {
+    inset-inline: 0.5rem !important;
+  }
+}

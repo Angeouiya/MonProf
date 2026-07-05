@@ -255,8 +255,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="grid gap-7 md:grid-cols-[1.1fr_0.75fr_0.75fr_0.8fr_1fr]">
-            <div>
+          <div className="grid min-w-0 gap-7 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.8fr)_minmax(0,1fr)]">
+            <div className="min-w-0">
               <BrandLogo />
               <p className="mt-3 max-w-sm text-sm font-medium leading-6 text-[#64748B]">
                 Plateforme ivoirienne de réservation de cours à domicile et en ligne, avec des professeurs vérifiés et un paiement sécurisé.
@@ -273,7 +273,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 })}
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-sm font-semibold text-[#111827]">Plateforme</h4>
               <ul className="mt-3 space-y-1 text-sm">
                 {footerPlatformLinks.map((link) => (
@@ -285,7 +285,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </ul>
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-sm font-semibold text-[#111827]">Compte</h4>
               <ul className="mt-3 space-y-1 text-sm">
                 {footerAccountLinks.map((link) => (
@@ -297,7 +297,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </ul>
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-sm font-semibold text-[#111827]">Cadre légal</h4>
               <ul className="mt-3 space-y-1 text-sm">
                 {footerLegalLinks.map((link) => (
@@ -309,7 +309,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 ))}
               </ul>
             </div>
-            <div>
+            <div className="min-w-0">
               <h4 className="text-sm font-semibold text-[#111827]">Contact</h4>
               <ul className="mt-3 space-y-2 text-sm font-semibold text-[#64748B]">
                 <li className="flex min-h-10 items-center gap-2"><Phone className="h-4 w-4 text-[#111B4D]" /> +225 27 22 00 00 00</li>
