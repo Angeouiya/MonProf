@@ -382,13 +382,13 @@ export function ClientAppRail({
   className?: string;
 }) {
   const gridClassName = items.length >= 5
-    ? "grid-cols-2 min-[640px]:grid-cols-3 min-[980px]:grid-cols-5"
-    : "grid-cols-2 min-[560px]:grid-cols-4";
+    ? "sm:grid-cols-3 min-[980px]:grid-cols-5"
+    : "sm:grid-cols-2 min-[920px]:grid-cols-4";
 
   return (
     <div
       className={cn(
-        "client-app-rail grid gap-2 bg-white",
+        "client-app-rail flex snap-x gap-2 overflow-x-auto bg-white pb-1 sm:grid sm:overflow-visible sm:pb-0",
         gridClassName,
         className,
       )}
@@ -434,7 +434,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-[4.15rem] items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-16 sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
+          "client-shortcut-card group flex min-h-[4.05rem] min-w-[8.35rem] snap-start items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:min-w-0 sm:justify-between sm:px-2.5 sm:text-left",
           item.active
             ? "border-[#111B4D] bg-[#111B4D] text-white"
             : "text-[#111827] hover:border-[#111B4D] hover:bg-white",

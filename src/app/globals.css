@@ -1453,10 +1453,17 @@ b {
 
 .client-app-rail {
   align-items: stretch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .client-app-rail .client-shortcut-card span {
   overflow-wrap: normal;
+}
+
+.client-app-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .client-shell [data-client-pricing-breakdown] {
