@@ -381,14 +381,20 @@ export function ClientAppRail({
   }>;
   className?: string;
 }) {
-  const gridClassName = items.length >= 5
-    ? "grid-cols-1 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 min-[980px]:grid-cols-5"
-    : "grid-cols-1 min-[360px]:grid-cols-2 min-[720px]:grid-cols-4";
+  const gridClassName = items.length === 1
+    ? "grid-cols-1"
+    : items.length === 2
+      ? "grid-cols-2"
+      : items.length === 3
+        ? "grid-cols-1 min-[420px]:grid-cols-3"
+        : items.length >= 5
+          ? "grid-cols-2 min-[620px]:grid-cols-3 min-[980px]:grid-cols-5"
+          : "grid-cols-2 min-[720px]:grid-cols-4";
 
   return (
     <div
       className={cn(
-        "client-app-rail grid gap-2 bg-white",
+        "client-app-rail grid gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1",
         gridClassName,
         className,
       )}
@@ -401,8 +407,8 @@ export function ClientAppRail({
             <span className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md sm:h-9 sm:w-9",
-                  item.active ? "bg-white text-[#111B4D]" : "bg-[#111B4D] text-white",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:h-9 sm:w-9",
+                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white text-[#111B4D] group-hover:border-[#111B4D]",
                 )}
               >
                 {item.icon && <item.icon className="h-4 w-4" />}
@@ -434,16 +440,21 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-2 text-center transition-colors sm:min-h-14 sm:justify-between sm:px-3 sm:text-left",
+          "client-shortcut-card group flex min-h-14 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors sm:justify-between sm:px-3 sm:text-left",
           item.active
-            ? "border-[#111B4D] bg-[#111B4D] text-white"
-            : "text-[#111827] hover:border-[#111B4D] hover:bg-white",
+            ? "bg-[#111B4D] text-white"
+            : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
         );
         const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">{content}</span>;
 
         if (isInternalHref(item.href)) {
           return (
-            <Link key={`${item.label}-${item.href}`} href={item.href} className={itemClassName}>
+            <Link
+              key={`${item.label}-${item.href}`}
+              href={item.href}
+              className={itemClassName}
+              aria-current={item.active ? "page" : undefined}
+            >
               {inner}
             </Link>
           );
