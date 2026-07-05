@@ -193,6 +193,17 @@ function ProfesseurConnexionContent() {
                 <p className="mt-1">
                   Ce portail ne permet pas de créer un compte professeur. Aucun code SMS n'est envoyé : le numéro sert uniquement d'identifiant et l'accès est activé ou désactivé par l'administration.
                 </p>
+                <p className="mt-2">
+                  Avant l'activation des identifiants, le professeur doit lire et accepter le cadre Compétence présenté par l'administration :{" "}
+                  <Link href="/conditions-utilisation" className="font-semibold text-[#111B4D] hover:underline">
+                    conditions d'utilisation
+                  </Link>{" "}
+                  et{" "}
+                  <Link href="/politique-confidentialite" className="font-semibold text-[#111B4D] hover:underline">
+                    politique de confidentialité
+                  </Link>
+                  .
+                </p>
               </div>
             </div>
 

@@ -81,7 +81,7 @@ export function TeacherPayoutRequestForm({
         toast.error(data.error || "Impossible d'envoyer la demande.");
         return;
       }
-      toast.success("Demande de paiement envoyée à l'administration.");
+      toast.success("Demande de paiement envoyée. Traitement prévu entre 1h et 72h après contrôle admin.");
       setAmount("");
       setNote("");
       router.refresh();
@@ -97,6 +97,9 @@ export function TeacherPayoutRequestForm({
           <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
             Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle admin.
+          </p>
+          <p className="mt-2 rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
+            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par l'administration entre 1 heure et 72 heures ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
           </p>
           {payoutInstructions && (
             <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">

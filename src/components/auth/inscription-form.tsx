@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -71,6 +72,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
   const [showPwd, setShowPwd] = useState(false);
   const [showPwdConfirm, setShowPwdConfirm] = useState(false);
   const [commune, setCommune] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -110,6 +112,10 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       setError("Les mots de passe ne correspondent pas.");
       return;
     }
+    if (!legalAccepted) {
+      setError("Vous devez accepter les conditions générales d'utilisation et la politique de confidentialité pour créer un compte.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -123,6 +129,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
           password: form.password,
           commune: commune || undefined,
           quartier: form.quartier.trim() || undefined,
+          legalAccepted,
         }),
       });
       const data = await res.json();
@@ -356,6 +363,28 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   >
                     {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#DDE6F7] bg-white p-3.5">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="legalAccepted"
+                    checked={legalAccepted}
+                    onCheckedChange={(checked) => setLegalAccepted(checked === true)}
+                    className="mt-1 h-5 w-5"
+                  />
+                  <label htmlFor="legalAccepted" className="text-sm font-medium leading-6 text-[#475569]">
+                    J'ai lu et j'accepte les{" "}
+                    <Link href="/conditions-utilisation" target="_blank" className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                      conditions générales d'utilisation
+                    </Link>{" "}
+                    ainsi que la{" "}
+                    <Link href="/politique-confidentialite" target="_blank" className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                      politique de confidentialité
+                    </Link>
+                    . En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes support sont traités pour assurer le service Compétence.
+                  </label>
                 </div>
               </div>
 

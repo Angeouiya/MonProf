@@ -10,11 +10,18 @@ const schema = z.object({
   password: z.string().min(6, "Mot de passe trop court (6 caractères min.)"),
   commune: z.string().optional(),
   quartier: z.string().optional(),
+  legalAccepted: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  if (body.legalAccepted !== true) {
+    return NextResponse.json(
+      { error: "Vous devez accepter les conditions d'utilisation et la politique de confidentialité." },
+      { status: 400 }
+    );
+  }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
