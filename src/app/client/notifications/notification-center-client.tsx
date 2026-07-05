@@ -170,6 +170,7 @@ export function ClientNotificationCenter({
   }, [bookingsById, filter, notifications, query]);
   const activeFilterLabel = filterOptions.find((option) => option.key === filter)?.label ?? "Toutes";
   const hasQuery = query.trim().length > 0;
+  const hasActiveRefinement = hasQuery || filter !== "all";
 
   return (
     <div className="space-y-4">
@@ -178,8 +179,8 @@ export function ClientNotificationCenter({
         booking={priorityNotification?.bookingId ? bookingsById.get(priorityNotification.bookingId) ?? null : null}
       />
 
-      <ClientSurface compact className="space-y-3">
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto] lg:items-center">
+      <ClientSurface compact className="space-y-3" data-client-notification-filterbar>
+          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto_auto] lg:items-center">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
               <Input
@@ -203,8 +204,23 @@ export function ClientNotificationCenter({
               <Filter className="h-4 w-4" />
               {activeFilterLabel} · {formatCount(filteredNotifications.length, "résultat")}
             </div>
+            {hasActiveRefinement && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setFilter("all");
+                  setQuery("");
+                }}
+                className="min-h-10 rounded-lg text-xs lg:min-h-11"
+              >
+                <X className="mr-1.5 h-3.5 w-3.5" />
+                Réinitialiser
+              </Button>
+            )}
           </div>
-          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap">
+          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtres notifications">
             {filterOptions.map((option) => (
               <Button
                 key={option.key}
@@ -213,7 +229,7 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-10 w-full justify-center rounded-lg px-2 text-xs min-[420px]:px-3 sm:min-h-11 sm:text-sm lg:w-auto"
+                className="min-h-10 shrink-0 justify-center rounded-lg px-3 text-xs sm:min-h-11 sm:text-sm"
               >
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>

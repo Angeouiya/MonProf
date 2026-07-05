@@ -118,13 +118,15 @@ export function ClientSurface({
   children,
   className,
   compact = false,
+  ...props
 }: {
   children: ReactNode;
   className?: string;
   compact?: boolean;
-}) {
+} & Omit<ComponentPropsWithoutRef<"section">, "className">) {
   return (
     <section
+      {...props}
       className={cn(
         "client-app-surface border-t border-[#E6EAF3] bg-white",
         compact ? "py-3 sm:py-4" : "py-4 sm:py-5",
