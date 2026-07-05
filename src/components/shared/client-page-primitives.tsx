@@ -32,7 +32,7 @@ export function ClientPageHeader({
   className?: string;
 }) {
   return (
-    <section className={cn("client-page-header client-screen-header overflow-hidden rounded-lg border border-[#DDE3EE] bg-white px-3.5 py-3 sm:px-5 sm:py-4", className)}>
+    <section className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-1 sm:pb-4 sm:pt-2", className)}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex min-h-8 flex-wrap items-center gap-2">
@@ -296,7 +296,7 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#DDE3EE] bg-[#DDE3EE] p-px min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
+        "client-app-rail grid grid-cols-2 gap-2 bg-white min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
         className,
       )}
     >
@@ -339,10 +339,10 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
+        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
           item.active
-            ? "bg-[#111B4D] text-white"
-            : "text-[#111827] hover:bg-white",
+            ? "border-[#111B4D] bg-[#111B4D] text-white"
+            : "text-[#111827] hover:border-[#111B4D] hover:bg-white",
         );
         const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">{content}</span>;
 

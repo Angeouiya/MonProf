@@ -1207,17 +1207,6 @@ b {
   outline: none !important;
 }
 
-.client-page-header,
-.client-focus-panel,
-.client-record-card,
-.client-shortcut-card,
-.client-tab-bar,
-.client-info-pill,
-.client-metric-card {
-  outline: 1px solid rgba(255, 255, 255, 0.9);
-  outline-offset: -2px;
-}
-
 .client-page-header {
   position: relative;
 }
@@ -1250,7 +1239,7 @@ b {
   .client-shell [data-client-teacher-card]:hover {
     border-color: var(--client-navy) !important;
     box-shadow: none !important;
-    transform: translateY(-1px);
+    transform: none;
   }
 }
 
