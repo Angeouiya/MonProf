@@ -131,18 +131,22 @@ export default async function RechercherPage({
           </Link>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#E6EAF3] pt-3">
-          <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
-          {quickSearches.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-[#111827] transition hover:text-[#111B4D]"
-            >
-              <span>{item.label}</span>
-              <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-            </Link>
-          ))}
+        <div className="mt-3 border-t border-[#E6EAF3] pt-3">
+          <div className="flex flex-col gap-2 min-[700px]:flex-row min-[700px]:items-center">
+            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
+            <div className="grid grid-cols-2 gap-2 min-[560px]:grid-cols-3 min-[900px]:flex min-[900px]:flex-wrap">
+              {quickSearches.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group inline-flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[900px]:justify-center"
+                >
+                  <span className="truncate">{item.label}</span>
+                  <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
 
         <details className="mt-3 rounded-lg border border-[#E3E8F2] bg-white" open={hasActiveFilters}>
