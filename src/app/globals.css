@@ -191,17 +191,16 @@ input[type="radio"].sr-only {
     background-image: none;
   }
   .premium-card {
-    border: 1px solid rgba(231, 229, 242, 0.9);
+    border: 1px solid #E3E8F2;
     background: #FFFFFF;
-    box-shadow: 0 18px 45px rgba(30, 42, 120, 0.08);
+    box-shadow: none;
   }
   .premium-hover {
-    transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+    transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
   }
   .premium-hover:hover {
-    transform: translateY(-3px);
-    border-color: rgba(30, 42, 120, 0.22);
-    box-shadow: 0 24px 60px rgba(30, 42, 120, 0.13);
+    border-color: #111B4D;
+    box-shadow: none;
   }
   .text-balance {
     text-wrap: balance;
