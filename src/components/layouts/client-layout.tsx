@@ -50,6 +50,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const router = useRouter();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const currentSection = getCurrentSection(pathname);
   const hideMobileBottomNav = Boolean(
     pathname?.startsWith("/client/reserver")
@@ -64,6 +65,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     const formData = new FormData(event.currentTarget);
     const query = String(formData.get("q") ?? "").trim();
     router.push(query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher");
+    setMobileSearchOpen(false);
   }
 
   return (
@@ -74,7 +76,10 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
-            onClick={() => setOpen(!open)}
+            onClick={() => {
+              setMobileSearchOpen(false);
+              setOpen(!open);
+            }}
             aria-label="Menu"
             aria-expanded={open}
           >
@@ -125,6 +130,20 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white lg:hidden"
+            aria-label={mobileSearchOpen ? "Fermer la recherche" : "Rechercher un professeur"}
+            aria-expanded={mobileSearchOpen}
+            aria-controls="client-mobile-search-panel"
+            onClick={() => {
+              setOpen(false);
+              setMobileSearchOpen((value) => !value);
+            }}
+          >
+            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </Button>
           <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
             <Link href="/client/notifications">
               <Bell className="h-5 w-5" />
@@ -162,6 +181,50 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           />
         </div>
       </header>
+      {mobileSearchOpen && !open && (
+        <div id="client-mobile-search-panel" className="fixed inset-x-0 top-16 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
+          <form
+            key={`mobile-${searchParams.get("q") ?? "empty-search"}`}
+            onSubmit={submitQuickSearch}
+            className="flex min-h-12 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3"
+            role="search"
+            aria-label="Recherche rapide mobile de professeur"
+          >
+            <Search className="h-4 w-4 shrink-0 text-[#111B4D]" />
+            <input
+              name="q"
+              defaultValue={searchParams.get("q") ?? ""}
+              placeholder="Matière, niveau, commune..."
+              className="min-h-10 min-w-0 flex-1 border-0 bg-white text-base font-medium text-[#111827] outline-none placeholder:text-[#64748B]"
+              aria-label="Rechercher un professeur depuis le mobile"
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] px-3 text-xs font-semibold text-white"
+            >
+              OK
+            </button>
+          </form>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Recherches rapides">
+            {[
+              { label: "Maths", href: "/client/rechercher?q=math" },
+              { label: "Cocody", href: "/client/rechercher?q=Cocody" },
+              { label: "Concours", href: "/client/rechercher?q=concours" },
+              { label: "Adultes", href: "/client/rechercher?q=professionnel" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileSearchOpen(false)}
+                className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D]"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="h-16 shrink-0" aria-hidden="true" />
 
       <div className="flex flex-1">
