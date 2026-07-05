@@ -182,7 +182,7 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-1 overflow-hidden p-3">
         <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
@@ -224,17 +224,17 @@ function SidebarContent({
         })}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
-        <div className="rounded-xl border border-[#E6EAF3] bg-white p-3">
+        <div className="rounded-xl border border-[#E6EAF3] bg-white p-3 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
               {getInitials(userName ?? "Client")}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
-              <p className="truncate text-xs font-semibold text-[#64748B]">Compte client vérifié</p>
+              <p className="truncate text-xs font-medium text-[#64748B]">Espace personnel</p>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#E6EAF3] pt-3">
             {accountNavItems.map((item) => {
               const active = isActive(item);
               return (
@@ -242,23 +242,22 @@ function SidebarContent({
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-10 items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition-colors",
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : "border-[#E1E7F2] bg-white text-[#111B4D] hover:border-[#111B4D]",
+                    "inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold transition-colors",
+                    active ? "text-[#111B4D]" : "text-[#64748B] hover:text-[#111B4D]",
                   )}
                 >
                   <item.icon className="h-3.5 w-3.5" />
-                  <span className="truncate">{item.label}</span>
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
           </div>
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
-            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-              <span>Paiement protégé jusqu'à validation.</span>
-          </div>
+          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium leading-5 text-[#64748B]">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
+            Paiement protégé jusqu'à validation.
+          </p>
         </div>
       </div>
     </div>

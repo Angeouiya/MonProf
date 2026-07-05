@@ -1285,11 +1285,12 @@ b {
 }
 
 .client-app-rail .client-shortcut-card {
-  min-height: 4.35rem;
+  min-height: 4.1rem;
+  box-shadow: none !important;
 }
 
 .client-app-rail .client-shortcut-card > span {
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 .client-shell [data-client-teacher-card] {
@@ -1448,9 +1449,9 @@ b {
 @media (max-width: 640px) {
   .client-app-rail .client-shortcut-card {
     height: auto;
-    min-height: 5.35rem;
+    min-height: 4.15rem;
     overflow: visible;
-    padding: 0.6rem !important;
+    padding: 0.5rem !important;
   }
 
   .client-app-rail .client-shortcut-card .text-\[10px\] {

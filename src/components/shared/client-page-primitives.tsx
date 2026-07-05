@@ -296,7 +296,7 @@ export function ClientAppRail({
   return (
     <div
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-2 min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
+        "client-app-rail grid grid-cols-2 gap-1.5 rounded-lg border border-[#E3E8F2] bg-white p-1.5 shadow-sm min-[680px]:grid-cols-4 xl:[grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]",
         className,
       )}
     >
@@ -306,8 +306,8 @@ export function ClientAppRail({
             <span className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
               <span
                 className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9",
-                  item.active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#111B4D]",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md sm:h-9 sm:w-9",
+                  item.active ? "bg-[#111B4D] text-white" : "bg-white text-[#111B4D]",
                 )}
               >
                 {item.icon && <item.icon className="h-4 w-4" />}
@@ -333,10 +333,10 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-        "client-shortcut-card group flex min-h-[4.95rem] items-center justify-center rounded-lg bg-white px-2.5 py-2.5 text-center shadow-sm transition-colors min-[430px]:min-h-[4.85rem] sm:min-h-16 sm:justify-between sm:px-3 sm:text-left",
+        "client-shortcut-card group flex min-h-[4.3rem] items-center justify-center rounded-md bg-white px-2 py-2 text-center transition-colors min-[430px]:min-h-[4.15rem] sm:min-h-14 sm:justify-between sm:px-2.5 sm:text-left",
           item.active
-            ? "border border-[#111B4D] text-[#111827] hover:border-[#111B4D]"
-            : "border border-[#E3E8F2] text-[#111827] hover:border-[#111B4D]",
+            ? "text-[#111827] ring-1 ring-[#111B4D]"
+            : "text-[#111827] hover:ring-1 hover:ring-[#111B4D]",
         );
         const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">{content}</span>;
 
