@@ -236,7 +236,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside
               className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"

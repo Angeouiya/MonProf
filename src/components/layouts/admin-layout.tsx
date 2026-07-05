@@ -153,7 +153,7 @@ export function AdminLayout({
         </aside>
 
         {open && (
-          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
+          <div className="fixed inset-x-0 bottom-0 top-14 z-30 overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside className="admin-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
