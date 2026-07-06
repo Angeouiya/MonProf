@@ -1,9 +1,30 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { ClientEmptyState, ClientPageHeader, ClientSectionTitle, ClientSurface } from "@/components/shared/client-page-primitives";
+import {
+  ClientAppRail,
+  ClientEmptyState,
+  ClientInfoPill,
+  ClientMetricStrip,
+  ClientPageHeader,
+  ClientProcessTracker,
+  ClientSectionTitle,
+  ClientSurface,
+} from "@/components/shared/client-page-primitives";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
-import { CalendarCheck, ChevronDown, SlidersHorizontal, Search, X } from "lucide-react";
+import {
+  BookOpenCheck,
+  CalendarCheck,
+  ChevronDown,
+  LifeBuoy,
+  MapPin,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
@@ -84,6 +105,10 @@ export default async function RechercherPage({
   const resultIntro = hasActiveFilters
     ? `Résultats pour ${activeFilters.map((filter) => filter.label.replace(" : ", " ")).join(", ")}.`
     : "Recherche libre sur les matières, niveaux, communes, concours, métiers et parcours professeur.";
+  const homeCount = items.filter((teacher) => teacher.offersHome).length;
+  const onlineCount = items.filter((teacher) => teacher.offersOnline).length;
+  const certifiedCount = items.filter((teacher) => teacher.badgeVerified).length;
+  const primaryActionHref = items.length > 0 ? "#resultats-professeurs" : "#filtres-professeurs";
 
   return (
     <div className="space-y-5">
@@ -93,7 +118,36 @@ export default async function RechercherPage({
         description="Tapez une matière, un concours, un métier ou une commune."
       />
 
-      <form className="rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
+      <ClientMetricStrip
+        metrics={[
+          { icon: UserRound, label: "Profils", value: items.length, attention: items.length === 0 },
+          { icon: ShieldCheck, label: "Certifiés", value: certifiedCount },
+          { icon: MapPin, label: "Domicile", value: homeCount },
+          { icon: BookOpenCheck, label: "En ligne", value: onlineCount },
+        ]}
+      />
+
+      <ClientAppRail
+        items={[
+          { href: "/client/rechercher", icon: Search, label: "Recherche", value: "Professeurs", active: true },
+          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
+          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: "PayDunya" },
+          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide" },
+        ]}
+      />
+
+      <SearchCommandCenter
+        resultCount={items.length}
+        activeFilterCount={activeFilters.length}
+        hasQuery={Boolean(q)}
+        subjectLabel={subjectLabel}
+        levelLabel={levelLabel}
+        commune={commune ?? ""}
+        formatLabel={formatLabel}
+        primaryActionHref={primaryActionHref}
+      />
+
+      <form id="filtres-professeurs" className="scroll-mt-24 rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
         <div className="grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="sr-only" htmlFor="client-search-query">Recherche</label>
@@ -296,7 +350,7 @@ export default async function RechercherPage({
         </details>
       </form>
 
-      <ClientSurface className="space-y-4">
+      <ClientSurface id="resultats-professeurs" className="scroll-mt-24 space-y-4">
         <ClientSectionTitle
           title={formatCount(items.length, "professeur trouvé", "professeurs trouvés")}
           description={hasActiveFilters ? "Résultats adaptés à vos critères." : "Choisissez un professeur pour réserver directement."}
@@ -344,6 +398,123 @@ export default async function RechercherPage({
         )}
       </ClientSurface>
     </div>
+  );
+}
+
+function SearchCommandCenter({
+  resultCount,
+  activeFilterCount,
+  hasQuery,
+  subjectLabel,
+  levelLabel,
+  commune,
+  formatLabel,
+  primaryActionHref,
+}: {
+  resultCount: number;
+  activeFilterCount: number;
+  hasQuery: boolean;
+  subjectLabel: string;
+  levelLabel: string;
+  commune: string;
+  formatLabel: string;
+  primaryActionHref: string;
+}) {
+  const hasContext = hasQuery || activeFilterCount > 0;
+  const bestContext = [
+    subjectLabel || null,
+    levelLabel || null,
+    commune || null,
+    formatLabel || null,
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-search-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(19rem,0.8fr)]">
+        <div className="space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex flex-col gap-4 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Recherche intelligente</p>
+              <h2 className="mt-1 text-lg font-semibold leading-tight text-[#111827]">
+                {resultCount > 0 ? "Des professeurs prêts à réserver" : "Élargissez les critères pour trouver un profil"}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
+                {hasContext
+                  ? "La recherche combine matière, niveau, commune, format et texte libre pour garder des résultats exploitables."
+                  : "Décrivez simplement le besoin : matière, concours, compétence professionnelle, commune ou format."}
+              </p>
+            </div>
+            <a
+              href={primaryActionHref}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] min-[520px]:w-fit"
+            >
+              {resultCount > 0 ? "Voir les profils" : "Ajuster les filtres"}
+            </a>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="Résultats" value={formatCount(resultCount, "profil")} strong={resultCount > 0} />
+            <ClientInfoPill label="Filtres actifs" value={activeFilterCount || "Aucun"} strong={activeFilterCount > 0} />
+            <ClientInfoPill label="Contexte" value={bestContext || "Recherche libre"} strong={Boolean(bestContext)} />
+            <ClientInfoPill label="Séance" value="2h par cours" strong />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              {
+                label: "Saisir le besoin",
+                state: hasQuery || activeFilterCount > 0 ? "done" : "current",
+                hint: "Matière, concours, métier, commune ou objectif.",
+              },
+              {
+                label: "Affiner sans effort",
+                state: activeFilterCount > 0 ? "done" : hasQuery ? "current" : "pending",
+                hint: "Matière, niveau, zone, format et tri.",
+              },
+              {
+                label: "Réserver le bon professeur",
+                state: resultCount > 0 ? "current" : "pending",
+                hint: "Photo réelle, certification, tarif indicatif et accès profil.",
+              },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#E6EAF3] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Décision rapide</p>
+              <h3 className="mt-1 text-base font-semibold leading-tight text-[#111827]">
+                {resultCount > 0 ? "Comparez, puis réservez directement" : "Retirez un filtre ou essayez une recherche large"}
+              </h3>
+              <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
+                Les cartes affichent uniquement des professeurs actifs avec photo, pour garder une expérience crédible et nette.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <a
+                href={primaryActionHref}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+              >
+                {resultCount > 0 ? "Comparer maintenant" : "Ouvrir les filtres"}
+              </a>
+              <Link
+                href="/client/service-client"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#CAD7F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+              >
+                Besoin d'aide
+              </Link>
+            </div>
+            <div className="mt-auto rounded-lg border border-[#E3E8F2] bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-[#111827]">
+                Le prix affiché reste indicatif. Le total final est confirmé dans la réservation avant PayDunya.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
 
