@@ -154,7 +154,16 @@ export default async function ClientDashboardPage() {
         </Button>
       </ClientPageHeader>
 
+      <ClientDashboardMobileSummary
+        nextCourse={nextCourse}
+        pendingValidation={pendingValidation[0] ?? null}
+        blockedFundsAmount={blockedFundsAmount}
+        upcomingBookings={upcomingBookings}
+        completedBookings={completedBookings}
+      />
+
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: ShieldCheck, label: "Sécurisés", value: <Money amount={blockedFundsAmount} /> },
           { icon: BookOpen, label: "Cours", value: `${upcomingBookings} à venir` },
@@ -174,7 +183,7 @@ export default async function ClientDashboardPage() {
       />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <ClientSurface>
+        <ClientSurface className="max-md:hidden">
           <ClientSectionTitle
             title={nextCourse ? "Dossier prioritaire" : "Démarrer"}
             description={nextCourse ? "Le cours le plus proche à suivre." : `${totalBookings} demande${totalBookings > 1 ? "s" : ""} dans votre historique.`}
@@ -354,6 +363,123 @@ export default async function ClientDashboardPage() {
       </ClientSurface>
     </div>
   );
+}
+
+type DashboardTeacher = {
+  id: string;
+  fullName: string;
+  professionalName: string | null;
+  photoUrl: string | null;
+  badgeVerified: boolean;
+  jobTitle?: string | null;
+};
+
+type DashboardNextCourse = {
+  id: string;
+  subjectName: string;
+  levelName: string;
+  scheduledDate: Date | null;
+  startDate: Date | null;
+  scheduledTime: string | null;
+  preferredTime: string;
+  totalClientPays: number;
+  totalPrice: number;
+  teacher: DashboardTeacher;
+} | null;
+
+type DashboardPendingValidation = {
+  id: string;
+  subjectName: string;
+  levelName: string;
+  teacher: DashboardTeacher;
+} | null;
+
+function ClientDashboardMobileSummary({
+  nextCourse,
+  pendingValidation,
+  blockedFundsAmount,
+  upcomingBookings,
+  completedBookings,
+}: {
+  nextCourse: DashboardNextCourse;
+  pendingValidation: DashboardPendingValidation;
+  blockedFundsAmount: number;
+  upcomingBookings: number;
+  completedBookings: number;
+}) {
+  const focusTeacher = pendingValidation?.teacher ?? nextCourse?.teacher ?? null;
+  const focusTeacherName = focusTeacher ? focusTeacher.professionalName || focusTeacher.fullName : "";
+  const isConfirmation = Boolean(pendingValidation);
+  const actionHref = pendingValidation
+    ? `/client/reservations/${pendingValidation.id}?action=confirm`
+    : nextCourse
+      ? `/client/reservations/${nextCourse.id}`
+      : "/client/rechercher";
+  const actionLabel = pendingValidation ? "Confirmer" : nextCourse ? "Dossier" : "Réserver";
+  const title = pendingValidation
+    ? "Cours à confirmer"
+    : nextCourse
+      ? nextCourse.subjectName
+      : "Aucun cours planifié";
+  const hint = pendingValidation
+    ? `${pendingValidation.subjectName} · ${pendingValidation.levelName} · ${focusTeacherName}`
+    : nextCourse
+      ? `${focusTeacherName} · ${formatDashboardCourseDate(nextCourse)} · ${nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer"}`
+      : "Choisissez un professeur, une date et un créneau. Le paiement reste sécurisé.";
+
+  return (
+    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-dashboard-mobile-summary>
+      <div className="flex min-w-0 items-start gap-3">
+        {focusTeacher ? (
+          <ProfessorImage
+            photoUrl={focusTeacher.photoUrl}
+            name={focusTeacherName}
+            size={46}
+            shape="circle"
+            verified={focusTeacher.badgeVerified}
+          />
+        ) : (
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+            <Search className="h-5 w-5" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">
+            {isConfirmation ? "Action requise" : nextCourse ? "Prochain cours" : "Démarrage"}
+          </p>
+          <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{title}</h2>
+          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
+        </div>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ClientInfoPill label="Fonds" value={formatFCFACompact(blockedFundsAmount)} strong={blockedFundsAmount > 0} />
+        <ClientInfoPill label="À venir" value={upcomingBookings} strong={upcomingBookings > 0} />
+        <ClientInfoPill label="Terminés" value={completedBookings} strong={completedBookings > 0} />
+      </div>
+
+      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-dashboard-action-rail aria-label="Actions rapides client">
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="/client/rechercher">Réserver</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="/client/paiements">Paiements</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="/client/service-client">Aide</Link>
+        </Button>
+      </div>
+    </ClientSurface>
+  );
+}
+
+function formatDashboardCourseDate(course: NonNullable<DashboardNextCourse>) {
+  if (course.scheduledDate) return formatDate(course.scheduledDate);
+  if (course.startDate) return formatDate(course.startDate);
+  return "Date à confirmer";
 }
 
 type DashboardBookingLine = {

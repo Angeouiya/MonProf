@@ -2339,6 +2339,8 @@ b {
   [data-client-mobile-nav],
   [data-client-app-rail],
   [data-client-shortcut-card],
+  [data-client-dashboard-mobile-summary],
+  [data-client-dashboard-action-rail],
   [data-client-reservation-mobile-priority],
   [data-client-reservation-filter-rail],
   [data-client-reservation-card-facts],
@@ -2418,17 +2420,17 @@ b {
   scroll-padding-inline: 0.75rem;
 }
 
-.client-shell :where([data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   scroll-padding-inline: 0.75rem;
 }
 
-.client-shell :where([data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail])::-webkit-scrollbar {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail])::-webkit-scrollbar {
   display: none;
 }
 
-.client-shell :where([data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) > * {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) > * {
   scroll-snap-align: start;
 }
 
@@ -2477,6 +2479,21 @@ b {
 }
 
 .client-shell [data-client-support-mobile-priority] [data-client-info-pill] div {
+  font-size: 0.7rem !important;
+  line-height: 0.95rem !important;
+}
+
+.client-shell [data-client-dashboard-mobile-summary] [data-client-info-pill] {
+  padding-inline: 0.5rem !important;
+  padding-block: 0.45rem !important;
+}
+
+.client-shell [data-client-dashboard-mobile-summary] [data-client-info-pill] p {
+  font-size: 0.56rem !important;
+  line-height: 0.72rem !important;
+}
+
+.client-shell [data-client-dashboard-mobile-summary] [data-client-info-pill] div {
   font-size: 0.7rem !important;
   line-height: 0.95rem !important;
 }
