@@ -41,13 +41,15 @@ export function TeacherPayoutReceiptActions({
   teacherPhone,
   record,
   compact = false,
+  issuerLabel,
 }: {
   teacherName: string;
   teacherPhone?: string | null;
   record: PayoutReceiptRecord;
   compact?: boolean;
+  issuerLabel?: string;
 }) {
-  const receipt = buildPayoutReceiptText(teacherName, record);
+  const receipt = buildPayoutReceiptText(teacherName, record, issuerLabel);
   const whatsAppUrl = buildWhatsAppUrl(teacherPhone, receipt);
 
   const copyReceipt = async () => {
@@ -63,14 +65,14 @@ export function TeacherPayoutReceiptActions({
       return;
     }
 
-    printWindow.document.write(buildPayoutReceiptHtml(teacherName, record));
+    printWindow.document.write(buildPayoutReceiptHtml(teacherName, record, issuerLabel));
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
   };
 
   const downloadReceipt = () => {
-    const blob = new Blob([buildPayoutReceiptHtml(teacherName, record)], { type: "text/html;charset=utf-8" });
+    const blob = new Blob([buildPayoutReceiptHtml(teacherName, record, issuerLabel)], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -113,7 +115,8 @@ export function TeacherPayoutReceiptActions({
   );
 }
 
-function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord) {
+function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord, issuerLabel?: string) {
+  const issuer = issuerLabel ?? record.createdBy?.name ?? "Service client";
   const allocationLines = record.allocations.length
     ? record.allocations.map((allocation) => (
         `- ${allocation.booking.reference} | ${allocation.booking.subjectName} (${allocation.booking.levelName}) : ${formatFCFA(allocation.amount)}`
@@ -129,7 +132,7 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     record.paymentPhone ? `Numéro de paiement : ${record.paymentPhone}` : "",
     `Statut : ${record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé"}`,
     `Date : ${formatDateTime(record.paidAt)}`,
-    record.createdBy?.name ? `Enregistré par : ${record.createdBy.name}` : "",
+    `Enregistré par : ${issuer}`,
     record.note ? `Note interne : ${record.note}` : "",
     "",
     "Réservations imputées :",
@@ -139,7 +142,8 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
   ].filter(Boolean).join("\n");
 }
 
-function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord) {
+function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord, issuerLabel?: string) {
+  const issuer = issuerLabel ?? record.createdBy?.name ?? "Service client";
   const rows = record.allocations.length
     ? record.allocations.map((allocation) => `
       <tr>
@@ -205,7 +209,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
       <div class="box"><span>Méthode</span><strong>${escapeHtml(paymentMethodLabel(record.method))}</strong></div>
       ${record.paymentPhone ? `<div class="box"><span>Numéro payé</span><strong>${escapeHtml(record.paymentPhone)}</strong></div>` : ""}
       <div class="box"><span>Date</span><strong>${escapeHtml(formatDateTime(record.paidAt))}</strong></div>
-      <div class="box"><span>Enregistré par</span><strong>${escapeHtml(record.createdBy?.name ?? "Service client")}</strong></div>
+      <div class="box"><span>Enregistré par</span><strong>${escapeHtml(issuer)}</strong></div>
       <div class="box"><span>Plateforme</span><strong>Compétence</strong></div>
     </section>
     <section>

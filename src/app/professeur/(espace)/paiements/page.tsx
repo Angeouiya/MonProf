@@ -205,6 +205,7 @@ export default async function ProfesseurPaiementsPage() {
                           teacherName={teacher.professionalName || teacher.fullName}
                           teacherPhone={teacher.phone}
                           record={request.payoutRecord}
+                          issuerLabel="Service client"
                         />
                       </div>
                     </div>
@@ -292,6 +293,7 @@ export default async function ProfesseurPaiementsPage() {
                       teacherName={teacher.professionalName || teacher.fullName}
                       teacherPhone={teacher.phone}
                       record={payout}
+                      issuerLabel="Service client"
                     />
                   </div>
                 </div>
