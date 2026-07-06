@@ -208,7 +208,17 @@ export default async function CoursPage({
         description="Suivez uniquement les cours activés après validation serveur PayDunya. Les demandes non payées restent séparées."
       />
 
+      <CourseMobilePriorityCard
+        nextCourse={nextCourseAction}
+        activeCourseCount={activeCourseCount}
+        confirmationCount={confirmationCount}
+        pendingCount={pendingCourseBookings.length}
+        protectedAmount={protectedAmount}
+        fallbackCourseHref={fallbackCourseHref}
+      />
+
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: BookOpen, label: "Actifs", value: activeCourseCount },
           { icon: Calendar, label: "À venir", value: tabCounts.avenir ?? 0 },
@@ -226,15 +236,17 @@ export default async function CoursPage({
         ]}
       />
 
-      <CourseCommandCenter
-        nextCourse={nextCourseAction}
-        activeCourseCount={activeCourseCount}
-        upcomingCount={tabCounts.avenir ?? 0}
-        currentCount={tabCounts.encours ?? 0}
-        confirmationCount={confirmationCount}
-        pendingCount={pendingCourseBookings.length}
-        protectedAmount={protectedAmount}
-      />
+      <div className="max-md:hidden">
+        <CourseCommandCenter
+          nextCourse={nextCourseAction}
+          activeCourseCount={activeCourseCount}
+          upcomingCount={tabCounts.avenir ?? 0}
+          currentCount={tabCounts.encours ?? 0}
+          confirmationCount={confirmationCount}
+          pendingCount={pendingCourseBookings.length}
+          protectedAmount={protectedAmount}
+        />
+      </div>
 
       {pendingCourseBookings.length > 0 && (
         <PendingCoursesPanel bookings={pendingCourseBookings} />
@@ -277,6 +289,74 @@ type CourseCommandCenterProps = {
   pendingCount: number;
   protectedAmount: number;
 };
+
+function CourseMobilePriorityCard({
+  nextCourse,
+  activeCourseCount,
+  confirmationCount,
+  pendingCount,
+  protectedAmount,
+  fallbackCourseHref,
+}: {
+  nextCourse: CourseCommandCenterProps["nextCourse"];
+  activeCourseCount: number;
+  confirmationCount: number;
+  pendingCount: number;
+  protectedAmount: number;
+  fallbackCourseHref: string;
+}) {
+  const actionHref = nextCourse
+    ? `/client/reservations/${nextCourse.id}${nextCourse.needsConfirmation ? "?action=confirm" : ""}`
+    : pendingCount > 0
+      ? fallbackCourseHref
+      : "/client/rechercher";
+  const actionLabel = nextCourse
+    ? nextCourse.needsConfirmation ? "Confirmer" : "Ouvrir"
+    : pendingCount > 0 ? "Finaliser" : "Réserver";
+  const title = nextCourse
+    ? `${nextCourse.subjectName} · ${nextCourse.levelName}`
+    : pendingCount > 0
+      ? `${pendingCount} demande${pendingCount > 1 ? "s" : ""} à finaliser`
+      : "Aucun cours actif";
+  const description = nextCourse
+    ? `${nextCourse.teacherName} · ${nextCourse.dateLabel} · ${nextCourse.timeLabel}`
+    : pendingCount > 0
+      ? "Aucun professeur n'est notifié avant paiement PayDunya vérifié."
+      : "Choisissez un professeur et un créneau pour démarrer.";
+
+  return (
+    <ClientSurface compact className="space-y-3 rounded-lg border border-[#D8DEE9] p-3 md:hidden" data-client-course-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {confirmationCount > 0 ? <MessageSquare className="h-4 w-4" /> : nextCourse ? <BookOpen className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#111B4D]">Priorité cours</p>
+          <h2 className="mt-0.5 break-words text-base font-semibold leading-5 text-[#111827]">{title}</h2>
+          <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[#52627A]">{description}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5">
+        <ClientInfoPill label="Actifs" value={activeCourseCount} strong={activeCourseCount > 0} />
+        <ClientInfoPill label="À confirmer" value={confirmationCount} strong={confirmationCount > 0} />
+        <ClientInfoPill label="Protégé" value={<Money amount={protectedAmount} />} strong={protectedAmount > 0} />
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
+        <p className="min-w-0 text-xs font-semibold leading-5 text-[#52627A]">
+          {nextCourse?.stepLabel || (pendingCount > 0 ? "Paiement requis" : "Nouveau cours")}
+        </p>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>
+            {actionLabel}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+    </ClientSurface>
+  );
+}
 
 function CourseCommandCenter({
   nextCourse,

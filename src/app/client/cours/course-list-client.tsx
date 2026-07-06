@@ -115,7 +115,10 @@ export function CourseListClient({
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-1.5 min-[460px]:grid-cols-3 min-[760px]:flex min-[760px]:flex-wrap min-[760px]:justify-end">
+        <div
+          data-client-course-filter-rail
+          className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-0.5 min-[760px]:mx-0 min-[760px]:flex-wrap min-[760px]:justify-end min-[760px]:overflow-visible min-[760px]:px-0 min-[760px]:pb-0"
+        >
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -124,7 +127,7 @@ export function CourseListClient({
                 type="button"
                 onClick={() => setFilter(item.id)}
                 className={cn(
-                  "min-h-10 rounded-lg border px-3 text-xs font-semibold transition-colors",
+                  "min-h-10 min-w-[7.5rem] shrink-0 snap-start rounded-lg border px-3 text-xs font-semibold transition-colors min-[760px]:min-w-0",
                   active
                     ? "border-[#111B4D] bg-[#111B4D] text-white"
                     : "border-[#D8DEE9] bg-white text-[#111827] hover:border-[#111B4D]",
@@ -141,7 +144,7 @@ export function CourseListClient({
 
       <div
         data-client-course-summary
-        className="grid gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
+        className="hidden gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 md:grid lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
       >
         <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
           <CourseSummaryTile label="Affichés" value={filteredCourses.length} />
