@@ -250,12 +250,12 @@ function ReservationMobilePriorityCard({
     ? toConfirmCount > 0 ? "Confirmer" : "Ouvrir"
     : draftCount > 0 ? "Brouillons" : "Réserver";
   const title = priority
-    ? priority.reference
+    ? `${priority.subjectName} · ${priority.levelName}`
     : draftCount > 0
       ? `${draftCount} paiement(s) à finaliser`
       : "Nouveau cours";
   const hint = priority
-    ? `${priority.subjectName} · ${priority.levelName} · ${priority.dateLabel}`
+    ? `${priority.reference} · ${priority.dateLabel} · ${priority.timeLabel}`
     : draftCount > 0
       ? "Aucun professeur n'est notifié avant paiement PayDunya vérifié."
       : "Choisissez un professeur et une séance de 2h.";
@@ -268,7 +268,7 @@ function ReservationMobilePriorityCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Action prioritaire</p>
-          <h2 className="mt-0.5 truncate text-base font-semibold leading-6 text-[#111827]">{title}</h2>
+          <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{title}</h2>
           <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
         </div>
         <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
@@ -276,9 +276,9 @@ function ReservationMobilePriorityCard({
         </Button>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <ClientInfoPill label="Non réservés" value={draftCount} strong={draftCount > 0} />
+        <ClientInfoPill label="Brouillons" value={draftCount} strong={draftCount > 0} />
         <ClientInfoPill label="À confirmer" value={toConfirmCount} strong={toConfirmCount > 0} />
-        <ClientInfoPill label="Sécurisé" value={formatFCFA(securedAmount)} strong={securedAmount > 0} />
+        <ClientInfoPill label="Fonds" value={formatFCFA(securedAmount)} strong={securedAmount > 0} />
       </div>
     </ClientSurface>
   );
