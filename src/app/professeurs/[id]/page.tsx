@@ -124,7 +124,7 @@ export default async function TeacherDetailPage({
           </Link>
 
           <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <div className="flex flex-col gap-6 min-[640px]:flex-row min-[640px]:items-start">
             <ProfessorImage
               photoUrl={teacher.photoUrl}
               name={displayName}
@@ -208,7 +208,7 @@ export default async function TeacherDetailPage({
               </div>
             </div>
           </div>
-          <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 min-[760px]:grid-cols-3">
             <MiniStat label="Cours attribués" value={teacher._count.bookings} />
             <MiniStat label="Avis vérifiés" value={totalReviews} />
             <MiniStat label="Prix indicatif" value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />} />
@@ -217,7 +217,7 @@ export default async function TeacherDetailPage({
 
           <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
             <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
                   <h2 className="mt-1 text-xl font-semibold text-[#111827]">
@@ -228,7 +228,7 @@ export default async function TeacherDetailPage({
                   Professeur suivi par le service client
                 </span>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
                 <DecisionPoint
                   icon={<BookOpen className="h-4 w-4" />}
                   label="Matières"
@@ -296,7 +296,7 @@ export default async function TeacherDetailPage({
                 <CardTitle icon={<Award className="h-4 w-4" />}>
                   Expérience & diplômes
                 </CardTitle>
-                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <div className="mt-3 grid gap-4 min-[680px]:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Années d'expérience
@@ -516,7 +516,7 @@ export default async function TeacherDetailPage({
                 <CardTitle icon={<Wallet className="h-4 w-4" />}>
                   Tarifs
                 </CardTitle>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid gap-3 min-[760px]:grid-cols-3">
                   <PriceTile
                     label="Prix indicatif"
                     value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />}
@@ -548,7 +548,7 @@ export default async function TeacherDetailPage({
 
                 {/* Répartition des notes */}
                 {displayRating > 0 && (
-                  <div className="mt-4 grid gap-4 sm:grid-cols-[200px_1fr]">
+                  <div className="mt-4 grid gap-4 min-[760px]:grid-cols-[200px_1fr]">
                     <div className="flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-4 text-center">
                       <div className="text-4xl font-semibold text-[#111827]">
                         {displayRating.toFixed(1)}

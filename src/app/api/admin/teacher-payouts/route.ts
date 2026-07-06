@@ -280,7 +280,7 @@ export async function POST(req: NextRequest) {
         where: { id: payoutRequest.id },
         data: {
           status: "PAID",
-          adminNote: `Versement enregistré par ${admin.name}. Reçu ${record.reference}. Numéro déclaré : ${paymentPhone}.`,
+          adminNote: `Versement enregistré par le service client Compétence. Reçu ${record.reference}. Numéro déclaré : ${paymentPhone}.`,
           reviewedAt: now,
           reviewedById: admin.id,
           payoutRecordId: record.id,

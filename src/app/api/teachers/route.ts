@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       : t.adminRatingPublic && t.adminRating > 0
         ? t.adminRating
         : t.rating,
-    displayRatingSource: t.ratingCount > 0 ? "CLIENT_REVIEWS" : t.adminRatingPublic && t.adminRating > 0 ? "ADMIN_PLATFORM" : "NONE",
+    displayRatingSource: t.ratingCount > 0 ? "CLIENT_REVIEWS" : t.adminRatingPublic && t.adminRating > 0 ? "SERVICE_CLIENT" : "NONE",
     id: t.id,
     fullName: t.fullName,
     professionalName: t.professionalName,

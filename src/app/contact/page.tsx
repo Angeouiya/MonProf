@@ -131,7 +131,7 @@ export default function ContactPage() {
               Une question, un problème, une demande de partenariat ? Notre
               équipe vous répond sous 48h ouvrées.
             </p>
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 min-[760px]:grid-cols-3">
               <HeroMetric label="Réponse" value="24-48h" />
               <HeroMetric label="Service client" value="Lun-Sam" />
               <HeroMetric label="Zone" value="Abidjan" />
@@ -196,7 +196,7 @@ export default function ContactPage() {
                       Plus votre demande est précise, plus notre équipe peut vous répondre vite : réservation concernée, professeur, matière, date ou moyen de paiement.
                     </p>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 min-[680px]:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="name">
                         Nom complet <span className="text-destructive">*</span>
@@ -228,7 +228,7 @@ export default function ContactPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 min-[680px]:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="phone">Téléphone</Label>
                       <Input
@@ -283,7 +283,7 @@ export default function ContactPage() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full sm:w-auto"
+                    className="w-full min-[640px]:w-auto"
                     disabled={submitting}
                   >
                     {submitting ? (

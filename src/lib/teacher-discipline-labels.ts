@@ -17,7 +17,7 @@ export const teacherWarningReasonLabels: Record<string, string> = {
   CLIENT_COMPLAINT: "Plainte client",
   UNJUSTIFIED_REFUSAL: "Refus injustifié de mission",
   LACK_OF_AVAILABILITY: "Manque de disponibilité",
-  ADMIN_INSTRUCTIONS_NOT_RESPECTED: "Non-respect des consignes admin",
+  ADMIN_INSTRUCTIONS_NOT_RESPECTED: "Non-respect des consignes du service client",
   OTHER: "Autre motif",
 };
 

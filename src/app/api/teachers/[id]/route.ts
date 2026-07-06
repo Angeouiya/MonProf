@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     adminRating: teacher.adminRating,
     adminRatingPublic: teacher.adminRatingPublic,
     displayRating,
-    displayRatingSource: teacher.ratingCount > 0 ? "CLIENT_REVIEWS" : teacher.adminRatingPublic && teacher.adminRating > 0 ? "ADMIN_PLATFORM" : "NONE",
+    displayRatingSource: teacher.ratingCount > 0 ? "CLIENT_REVIEWS" : teacher.adminRatingPublic && teacher.adminRating > 0 ? "SERVICE_CLIENT" : "NONE",
     reviewsCount: teacher._count.reviews,
     bookingsCount: teacher._count.bookings,
     badges: {

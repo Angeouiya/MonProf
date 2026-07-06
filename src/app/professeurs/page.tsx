@@ -196,7 +196,7 @@ export default async function TeachersPage({
           </div>
 
           {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 sm:mt-6 sm:flex-row">
+          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 sm:mt-6 min-[640px]:flex-row">
             <input
               type="search"
               name="q"
@@ -355,7 +355,7 @@ export default async function TeachersPage({
                 />
               ) : (
                 <>
-                  <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-2">
+                  <div className="grid min-w-0 gap-4 min-[680px]:grid-cols-2 xl:grid-cols-2">
                     {items.map((t, index) => (
                       <TeacherCard key={`${t.id}-${index}`} teacher={t as any} />
                     ))}

@@ -68,7 +68,7 @@ export default async function ProfesseurAvisPage() {
         <ProfessorStatCard
           label="Note service client"
           value={Number(profile?.adminRating ?? 0) > 0 ? `${Number(profile?.adminRating ?? 0).toFixed(1)}/5` : "Non noté"}
-          detail={profile?.adminRatingPublic ? "Peut servir de note visible au démarrage" : "Note interne de suivi"}
+          detail={profile?.adminRatingPublic ? "Peut servir de note visible au démarrage" : "Note de suivi service client"}
           icon="check"
         />
         <ProfessorStatCard label="Score qualité" value={`${profile?.qualityScore ?? 0}/100`} detail="Calculé par le service client" icon="calendar" />

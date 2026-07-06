@@ -171,7 +171,7 @@ export default function CommentCaMarchePage() {
               parcours complet en 9 étapes. Simple, transparent et sécurisé
               pour les parents comme pour les professeurs.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 min-[640px]:flex-row">
               <Link
                 href="/professeurs"
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
@@ -194,7 +194,7 @@ export default function CommentCaMarchePage() {
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Parcours client sécurisé</p>
                 <h2 className="mt-1 text-xl font-semibold text-[#111827]">
@@ -205,7 +205,7 @@ export default function CommentCaMarchePage() {
                 Sans paiement direct au professeur
               </span>
             </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-5 grid gap-3 min-[680px]:grid-cols-2 lg:grid-cols-4">
               {JOURNEY_SIGNALS.map((item) => (
                 <JourneySignal key={item.title} {...item} />
               ))}
@@ -223,8 +223,8 @@ export default function CommentCaMarchePage() {
                 key={s.n}
                 className="group relative rounded-lg border border-[#E3E8F2] bg-white p-5 transition hover:border-[#111B4D] sm:p-6"
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:gap-2">
+                <div className="flex flex-col gap-4 min-[640px]:flex-row min-[640px]:items-start">
+                  <div className="flex items-center gap-3 sm:flex-col min-[640px]:items-center sm:gap-2">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-base font-semibold text-white">
                       {s.n}
                     </div>
@@ -263,7 +263,7 @@ export default function CommentCaMarchePage() {
               réservé sur Compétence.
             </p>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          <div className="mt-10 grid gap-5 min-[680px]:grid-cols-2">
             {PARENT_TIPS.map((t) => (
               <div
                 key={t.title}
@@ -300,7 +300,7 @@ export default function CommentCaMarchePage() {
               chaque cours de bout en bout.
             </p>
           </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-5 min-[680px]:grid-cols-2 lg:grid-cols-4">
             {TRUST.map((t) => (
               <div
                 key={t.title}
@@ -324,7 +324,7 @@ export default function CommentCaMarchePage() {
       {/* STATS */}
       <section className="border-t border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-5 min-[760px]:grid-cols-3">
             {[
               { kpi: "9", label: "étapes claires du parcours client", icon: CalendarCheck },
               { kpi: "100%", label: "professeurs vérifiés avant publication", icon: BadgeCheck },
@@ -357,17 +357,17 @@ export default function CommentCaMarchePage() {
               Trouvez le professeur idéal en quelques minutes. Paiement
               sécurisé, professeur vérifié, suivi service client inclus.
             </p>
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 min-[640px]:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] min-[640px]:w-auto"
               >
                 Trouver un professeur
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/tarifs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white min-[640px]:w-auto"
               >
                 Voir les tarifs
               </Link>

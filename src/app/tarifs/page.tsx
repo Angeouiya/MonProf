@@ -128,7 +128,7 @@ const CANCELLATION_RULES = [
     manualReview: false,
     text: "Annulation gratuite. Le montant payé est remboursable intégralement.",
     clientAction: "Le client peut annuler sereinement depuis son espace.",
-    adminAction: "Remboursement complet ou report selon le choix du client.",
+    serviceClientAction: "Remboursement complet ou report selon le choix du client.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
   {
@@ -138,7 +138,7 @@ const CANCELLATION_RULES = [
     manualReview: false,
     text: "Annulation proche du cours. Des frais de préparation et de mobilisation peuvent être retenus.",
     clientAction: "Le client voit le montant estimé avant confirmation de l'annulation.",
-    adminAction: "Historique conservé, remboursement partiel à traiter.",
+    serviceClientAction: "Historique conservé, remboursement partiel à traiter.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
   {
@@ -148,7 +148,7 @@ const CANCELLATION_RULES = [
     manualReview: false,
     text: "Annulation tardive. Le remboursement est partiel, sauf cas exceptionnel validé par le service client.",
     clientAction: "Le client peut ajouter une explication pour le service client.",
-    adminAction: "Contrôle manuel possible en cas de force majeure.",
+    serviceClientAction: "Contrôle manuel possible en cas de force majeure.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
   {
@@ -158,7 +158,7 @@ const CANCELLATION_RULES = [
     manualReview: true,
     text: "L'annulation n'est plus automatique. Le service client examine les preuves, la présence du client et la situation du professeur.",
     clientAction: "Le client doit expliquer la situation et ouvrir un suivi si nécessaire.",
-    adminAction: "Décision manuelle : maintien, remboursement partiel, report ou litige.",
+    serviceClientAction: "Décision manuelle : maintien, remboursement partiel, report ou litige.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
   {
@@ -168,7 +168,7 @@ const CANCELLATION_RULES = [
     manualReview: false,
     text: "Le client n'est pas pénalisé. Compétence propose un remplacement, un report ou un remboursement.",
     clientAction: "Le client conserve sa protection paiement.",
-    adminAction: "Remplacement, report ou remboursement complet selon le dossier.",
+    serviceClientAction: "Remplacement, report ou remboursement complet selon le dossier.",
     tone: "border-[#E3E8F2] bg-white text-[#111B4D]",
   },
 ];
@@ -242,7 +242,7 @@ export default function TarifsPage() {
             Le prix dépend du besoin, du niveau, du format et du déplacement. Le minimum 7 500 F reste réservé aux cas simples.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 min-[760px]:grid-cols-3">
             <TariffSignal
               label="Prix minimum"
               value={formatFCFA(7500)}
@@ -314,7 +314,7 @@ export default function TarifsPage() {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-3 min-[680px]:grid-cols-2 lg:grid-cols-4">
             {Object.values(TRANSPORT_FEES).map((fee) => (
               <div key={fee.key} className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <p className="text-sm font-semibold text-[#111827]">{fee.label}</p>
@@ -343,7 +343,7 @@ export default function TarifsPage() {
               </div>
               <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#56617F]">Exemples de routes proches</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="mt-3 grid gap-2 min-[680px]:grid-cols-2">
                   {GRAND_ABIDJAN_NEAR_ROUTES.slice(0, 8).map(([from, to]) => (
                     <p key={`${from}-${to}`} className="rounded-lg border border-[#D6DEED] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]">
                       {from} {"->"} {to}
@@ -367,7 +367,7 @@ export default function TarifsPage() {
               Une séance pour tester, un pack pour progresser régulièrement.
             </p>
           </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="mt-6 grid gap-4 min-[680px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {PACKS.map((p) => (
               <div
                 key={p.name}
@@ -418,7 +418,7 @@ export default function TarifsPage() {
             </p>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-4 min-[680px]:grid-cols-2 lg:grid-cols-4">
             {PAYMENT_STEPS.map((s, i) => (
               <div
                 key={s.title}
@@ -468,7 +468,7 @@ export default function TarifsPage() {
               </div>
             </div>
             <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 min-[680px]:grid-cols-2">
                 {CANCELLATION_RULES.map((rule) => {
                   const feeAmount = Math.round((CANCELLATION_EXAMPLE_AMOUNT * rule.feeRate) / 100);
                   const refundAmount = Math.max(0, CANCELLATION_EXAMPLE_AMOUNT - feeAmount);
@@ -544,17 +544,17 @@ export default function TarifsPage() {
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-[#64748B] sm:text-base">
               Notre équipe répond sur les tarifs, les packs et le paiement sécurisé.
             </p>
-            <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-7 flex flex-col items-center justify-center gap-3 min-[640px]:flex-row">
               <Link
                 href="/professeurs"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-6 text-sm font-semibold text-white transition hover:bg-[#1E2A78] min-[640px]:w-auto"
               >
                 Voir les professeurs
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#CAD7F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:w-auto"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#CAD7F2] bg-white px-6 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] min-[640px]:w-auto"
               >
                 Nous contacter
               </Link>
