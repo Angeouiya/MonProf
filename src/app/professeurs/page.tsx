@@ -355,7 +355,7 @@ export default async function TeachersPage({
                 />
               ) : (
                 <>
-                  <div className="grid min-w-0 gap-4 min-[680px]:grid-cols-2 xl:grid-cols-2">
+                  <div className="grid min-w-0 gap-4 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3">
                     {items.map((t, index) => (
                       <TeacherCard key={`${t.id}-${index}`} teacher={t as any} />
                     ))}

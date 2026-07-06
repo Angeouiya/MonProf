@@ -3090,3 +3090,287 @@ b {
     min-width: 8.8rem !important;
   }
 }
+
+/* Production finish: client/public app feel, sober OpenAI-style surfaces. */
+:root {
+  --competence-blue: #111B4D;
+  --competence-blue-hover: #1E2A78;
+  --competence-ink: #111827;
+  --competence-muted: #64748B;
+  --competence-line: #E3E8F2;
+  --competence-soft-line: #DDE6F7;
+}
+
+:where(.public-shell, .client-shell) {
+  background: #FFFFFF !important;
+  color: var(--competence-ink) !important;
+  letter-spacing: 0 !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  [class*="bg-gradient"],
+  [class*="from-"],
+  [class*="via-"],
+  [class*="to-"]
+) {
+  background-image: none !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  .bg-clip-text,
+  [class*="text-transparent"]
+) {
+  color: var(--competence-ink) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  [class*="shadow"],
+  [class*="drop-shadow"],
+  [class*="ring-"][class*="/"]
+) {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  [class*="bg-white/"],
+  [class*="bg-slate-50"],
+  [class*="bg-slate-100"],
+  [class*="bg-gray-50"],
+  [class*="bg-gray-100"],
+  [class*="bg-zinc-50"],
+  [class*="bg-zinc-100"],
+  [class*="bg-neutral-50"],
+  [class*="bg-neutral-100"],
+  [class*="bg-blue-50"],
+  [class*="bg-indigo-50"],
+  [class*="bg-violet-50"],
+  [class*="bg-purple-50"],
+  [class*="bg-amber-50"],
+  [class*="bg-yellow-50"],
+  [class*="bg-orange-50"],
+  [class*="bg-green-50"],
+  [class*="bg-emerald-50"]
+) {
+  background-color: #FFFFFF !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  .rounded-xl,
+  .rounded-2xl,
+  .rounded-3xl,
+  [class*="rounded-[1"]
+) {
+  border-radius: 0.5rem !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  button,
+  a[role="button"],
+  [data-slot="button"]
+) {
+  min-height: 2.75rem;
+  border-radius: 0.5rem !important;
+  font-weight: 620 !important;
+  letter-spacing: 0 !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  [data-slot="button"]:not([class*="bg-white"]):not([class*="border"]):not([class*="text-red"]):not([class*="bg-red"]),
+  button[class*="bg-[#111B4D]"],
+  a[class*="bg-[#111B4D]"],
+  button[class*="bg-blue"],
+  a[class*="bg-blue"]
+) {
+  background-color: var(--competence-blue) !important;
+  background-image: none !important;
+  color: #FFFFFF !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  button[class*="bg-[#111B4D]"]:hover,
+  a[class*="bg-[#111B4D]"]:hover,
+  button[class*="bg-blue"]:hover,
+  a[class*="bg-blue"]:hover
+) {
+  background-color: var(--competence-blue-hover) !important;
+}
+
+:where(.public-shell, .client-shell) :where(
+  input,
+  select,
+  textarea,
+  [data-slot="select-trigger"],
+  [cmdk-input]
+) {
+  min-height: 2.75rem;
+  border-color: var(--competence-soft-line) !important;
+  background-color: #FFFFFF !important;
+  color: var(--competence-ink) !important;
+  font-weight: 500;
+}
+
+:where(.public-shell, .client-shell) :where(
+  article,
+  [data-slot="card"],
+  [data-client-teacher-card],
+  [data-client-reservation-card],
+  [data-client-course-card],
+  [data-client-payment-card],
+  [data-client-notification-card],
+  [data-client-support-dispute-card],
+  [data-client-review-card],
+  .client-booking-shell,
+  .client-booking-step-panel
+) {
+  background-color: #FFFFFF !important;
+  border-color: var(--competence-line) !important;
+  box-shadow: none !important;
+}
+
+[data-client-teacher-card] {
+  isolation: isolate;
+}
+
+[data-client-teacher-card] [data-professor-image-badge] {
+  transform: translate(16%, 16%);
+}
+
+[data-client-teacher-card] h3,
+.client-shell h1,
+.client-shell h2,
+.client-shell h3,
+.public-shell h1,
+.public-shell h2,
+.public-shell h3 {
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
+.client-shell [data-client-main],
+.public-shell main {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.client-shell [data-client-content] {
+  max-width: min(100%, 86rem) !important;
+}
+
+.client-shell [data-client-sidebar],
+.client-shell [data-client-topbar],
+.public-shell .app-topbar {
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+}
+
+.client-shell [data-client-mobile-nav] {
+  background: #FFFFFF !important;
+  border-color: var(--competence-line) !important;
+  left: max(0.5rem, env(safe-area-inset-left)) !important;
+  right: max(0.5rem, env(safe-area-inset-right)) !important;
+}
+
+.client-shell [data-client-mobile-nav] a {
+  min-width: 0;
+}
+
+.client-shell [data-client-mobile-nav] svg {
+  flex-shrink: 0;
+}
+
+.client-shell [data-client-mobile-layer] > button {
+  opacity: 0.78;
+}
+
+.client-shell :where([data-client-payment-method-rail], [data-client-dashboard-action-rail], [data-client-support-action-rail], [data-client-quick-search-rail]) {
+  scrollbar-width: none;
+}
+
+.client-shell :where([data-client-payment-method-rail], [data-client-dashboard-action-rail], [data-client-support-action-rail], [data-client-quick-search-rail])::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .public-shell,
+  .client-shell {
+    font-size: 15px;
+  }
+
+  .public-shell section,
+  .client-shell section {
+    overflow-x: clip;
+  }
+
+  .public-shell :where(h1, .text-4xl, .text-5xl, .text-6xl),
+  .client-shell :where(h1, .text-4xl, .text-5xl, .text-6xl) {
+    font-size: clamp(1.65rem, 8vw, 2.2rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .public-shell :where(p, li),
+  .client-shell :where(p, li) {
+    line-height: 1.5;
+  }
+
+  [data-client-teacher-card] {
+    padding: 0.85rem !important;
+  }
+
+  [data-client-teacher-card] [data-professor-image-badge] {
+    transform: translate(12%, 12%);
+  }
+
+  .client-shell :where(
+    [data-client-reservation-card],
+    [data-client-course-card],
+    [data-client-payment-card],
+    [data-client-notification-card],
+    [data-client-review-card],
+    [data-client-support-dispute-card]
+  ) {
+    padding: 0.9rem !important;
+  }
+
+  .client-shell :where(table, thead, tbody, tr, th, td) {
+    max-width: 100%;
+  }
+
+  .client-shell :where(.overflow-x-auto) {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .client-booking-workspace,
+  .client-booking-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .client-booking-mobile-action {
+    border-color: var(--competence-line) !important;
+    background: #FFFFFF !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .client-shell [data-client-mobile-nav] {
+    inset-inline: 0.35rem !important;
+    padding-inline: 0.25rem !important;
+  }
+
+  .client-shell [data-client-mobile-nav] a {
+    min-height: 2.9rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .client-shell [data-client-mobile-nav] span {
+    font-size: 0.62rem !important;
+  }
+
+  [data-client-teacher-card] {
+    padding: 0.75rem !important;
+  }
+}
