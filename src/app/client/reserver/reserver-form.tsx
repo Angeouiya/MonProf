@@ -867,7 +867,7 @@ export function ReserverForm({
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
             <div
-              className="h-full rounded-full bg-[#111B4D] transition-colors duration-300"
+              className="h-full rounded-full bg-[#111B4D] transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -921,15 +921,18 @@ export function ReserverForm({
                 <button
                   key={stepLabel}
                   type="button"
+                  disabled={index > step}
+                  aria-current={active ? "step" : undefined}
+                  aria-label={`Étape ${index + 1}: ${stepLabel}`}
                   onClick={() => {
                     if (index <= step) setStep(index);
                   }}
-                  className={`min-h-10 rounded-lg border px-3 text-center text-xs font-semibold transition ${
+                  className={`min-h-10 rounded-lg border px-3 text-center text-xs font-semibold transition-colors ${
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : complete
                         ? "border-[#111B4D] bg-white text-[#111B4D]"
-                        : "cursor-default border-[#E6EAF3] bg-white text-[#64748B]"
+                        : "cursor-default border-[#E6EAF3] bg-white text-[#64748B] disabled:pointer-events-none"
                   }`}
                 >
                   {complete ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : null}
