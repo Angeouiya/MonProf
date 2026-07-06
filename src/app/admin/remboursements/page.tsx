@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDateTime, formatFCFA } from "@/lib/format";
 import { cancellationActorLabel, cancellationWindowLabel } from "@/lib/cancellation-policy";
 import { paymentMethodLabel } from "@/lib/platform-labels";
+import { AdminRefundProcessButton } from "./refund-process-button";
 
 export const dynamic = "force-dynamic";
 
@@ -327,7 +328,24 @@ export default async function AdminRefundsPage({
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <AdminRefundProcessButton
+                                bookingId={booking.id}
+                                bookingReference={booking.reference}
+                                refundAmount={booking.cancellationRefundAmount}
+                                serviceFeeAmount={booking.paymentServiceFeeAmount}
+                                teacherPenaltyAmount={booking.cancellationPenaltyTeacherAmount}
+                                platformPenaltyAmount={booking.cancellationPenaltyPlatformAmount}
+                                refundRequest={refundRequest ? {
+                                  reference: refundRequest.reference,
+                                  amount: refundRequest.amount,
+                                  method: refundRequest.method,
+                                  paymentPhone: refundRequest.paymentPhone,
+                                  accountName: refundRequest.accountName,
+                                  status: refundRequest.status,
+                                  externalReference: refundRequest.externalReference,
+                                } : null}
+                              />
                               <Button asChild size="sm" variant="outline" className="rounded-lg">
                                 <Link href={`/admin/reservations/${booking.id}`}>
                                   <ExternalLink className="mr-1.5 h-4 w-4" />
@@ -413,7 +431,25 @@ function RefundMobileCard({ booking }: { booking: RefundBookingRow }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
+          <AdminRefundProcessButton
+            bookingId={booking.id}
+            bookingReference={booking.reference}
+            refundAmount={booking.cancellationRefundAmount}
+            serviceFeeAmount={booking.paymentServiceFeeAmount}
+            teacherPenaltyAmount={booking.cancellationPenaltyTeacherAmount}
+            platformPenaltyAmount={booking.cancellationPenaltyPlatformAmount}
+            refundRequest={refundRequest ? {
+              reference: refundRequest.reference,
+              amount: refundRequest.amount,
+              method: refundRequest.method,
+              paymentPhone: refundRequest.paymentPhone,
+              accountName: refundRequest.accountName,
+              status: refundRequest.status,
+              externalReference: refundRequest.externalReference,
+            } : null}
+            className="w-full"
+          />
           <Button asChild variant="outline" className="rounded-lg">
             <Link href={`/admin/reservations/${booking.id}`}>Ouvrir dossier</Link>
           </Button>
