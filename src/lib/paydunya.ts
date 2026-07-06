@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
+import { db } from "@/lib/db";
 import { PAYDUNYA_CI_CHANNELS } from "@/lib/payment-methods";
 
 type PayDunyaCheckoutInput = {
@@ -56,6 +57,7 @@ type PayDunyaConfirmedInvoice = {
 
 type PayDunyaConfig = {
   masterKey: string;
+  publicKey?: string;
   privateKey: string;
   token: string;
   mode: "sandbox" | "live";
@@ -65,6 +67,20 @@ type PayDunyaConfig = {
   storeLogoUrl: string;
 };
 
+const PAYDUNYA_SETTING_KEYS = {
+  masterKey: "paydunya_master_key",
+  publicKey: "paydunya_public_key",
+  privateKey: "paydunya_private_key",
+  token: "paydunya_token",
+  mode: "paydunya_mode",
+  storeName: "paydunya_store_name",
+  storeTagline: "paydunya_store_tagline",
+  storePhone: "paydunya_store_phone",
+  storeLogoUrl: "paydunya_store_logo_url",
+} as const;
+
+let payDunyaConfigCache: { expiresAt: number; value: PayDunyaConfig | null } | null = null;
+
 export function getPayDunyaPublicBaseUrl(req: NextRequest) {
   return (
     process.env.NEXT_PUBLIC_APP_URL
@@ -73,31 +89,44 @@ export function getPayDunyaPublicBaseUrl(req: NextRequest) {
   ).replace(/\/$/, "");
 }
 
-export function getPayDunyaConfig(): PayDunyaConfig | null {
-  const masterKey = process.env.PAYDUNYA_MASTER_KEY;
-  const privateKey = process.env.PAYDUNYA_PRIVATE_KEY;
-  const token = process.env.PAYDUNYA_TOKEN;
+export async function getPayDunyaConfig(): Promise<PayDunyaConfig | null> {
+  if (payDunyaConfigCache && payDunyaConfigCache.expiresAt > Date.now()) {
+    return payDunyaConfigCache.value;
+  }
 
-  if (!masterKey || !privateKey || !token) return null;
+  const settings = await getPayDunyaSettings();
+  const masterKey = configValue(settings, PAYDUNYA_SETTING_KEYS.masterKey, "PAYDUNYA_MASTER_KEY");
+  const publicKey = configValue(settings, PAYDUNYA_SETTING_KEYS.publicKey, "PAYDUNYA_PUBLIC_KEY");
+  const privateKey = configValue(settings, PAYDUNYA_SETTING_KEYS.privateKey, "PAYDUNYA_PRIVATE_KEY");
+  const token = configValue(settings, PAYDUNYA_SETTING_KEYS.token, "PAYDUNYA_TOKEN");
 
-  return {
+  if (!masterKey || !privateKey || !token) {
+    payDunyaConfigCache = { expiresAt: Date.now() + 30_000, value: null };
+    return null;
+  }
+
+  const config: PayDunyaConfig = {
     masterKey,
+    publicKey,
     privateKey,
     token,
-    mode: process.env.PAYDUNYA_MODE === "live" ? "live" : "sandbox",
-    storeName: process.env.PAYDUNYA_STORE_NAME || "Compétence",
-    storeTagline: process.env.PAYDUNYA_STORE_TAGLINE || "Cours à domicile et en ligne en Côte d'Ivoire",
-    storePhone: process.env.PAYDUNYA_STORE_PHONE || "",
-    storeLogoUrl: process.env.PAYDUNYA_STORE_LOGO_URL || "",
+    mode: configValue(settings, PAYDUNYA_SETTING_KEYS.mode, "PAYDUNYA_MODE") === "live" ? "live" : "sandbox",
+    storeName: configValue(settings, PAYDUNYA_SETTING_KEYS.storeName, "PAYDUNYA_STORE_NAME") || "Compétence",
+    storeTagline: configValue(settings, PAYDUNYA_SETTING_KEYS.storeTagline, "PAYDUNYA_STORE_TAGLINE") || "Cours à domicile et en ligne en Côte d'Ivoire",
+    storePhone: configValue(settings, PAYDUNYA_SETTING_KEYS.storePhone, "PAYDUNYA_STORE_PHONE") || "",
+    storeLogoUrl: configValue(settings, PAYDUNYA_SETTING_KEYS.storeLogoUrl, "PAYDUNYA_STORE_LOGO_URL") || "",
   };
+
+  payDunyaConfigCache = { expiresAt: Date.now() + 60_000, value: config };
+  return config;
 }
 
-export function isPayDunyaConfigured() {
-  return Boolean(getPayDunyaConfig());
+export async function isPayDunyaConfigured() {
+  return Boolean(await getPayDunyaConfig());
 }
 
 export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput): Promise<PayDunyaCheckoutResult> {
-  const config = getPayDunyaConfig();
+  const config = await getPayDunyaConfig();
   if (!config) {
     return { configured: false, checkoutUrl: null, token: null };
   }
@@ -194,17 +223,22 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   };
 }
 
-export function verifyPayDunyaHash(hash?: string | null) {
-  const config = getPayDunyaConfig();
+export async function verifyPayDunyaHash(hash?: string | null) {
+  const config = await getPayDunyaConfig();
   if (!config || !hash) return false;
-  const expected = createHash("sha512").update(config.masterKey).digest("hex");
+  return verifyPayDunyaHashWithMasterKey(config.masterKey, hash);
+}
+
+function verifyPayDunyaHashWithMasterKey(masterKey: string, hash?: string | null) {
+  if (!hash) return false;
+  const expected = createHash("sha512").update(masterKey).digest("hex");
   const received = hash.trim().toLowerCase();
   if (!/^[a-f0-9]{128}$/.test(received)) return false;
   return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(received, "hex"));
 }
 
 export async function confirmPayDunyaInvoice(invoiceToken: string): Promise<PayDunyaConfirmedInvoice> {
-  const config = getPayDunyaConfig();
+  const config = await getPayDunyaConfig();
   if (!config) {
     return emptyPayDunyaConfirmation({
       configured: false,
@@ -256,10 +290,26 @@ export async function confirmPayDunyaInvoice(invoiceToken: string): Promise<PayD
     customData,
     responseText: firstNonEmptyString(raw.response_text, raw.description) ?? undefined,
     failReason: firstNonEmptyString(raw.fail_reason, raw.errors?.message, raw.errors?.description) ?? undefined,
-    hashValid: responseHash ? verifyPayDunyaHash(responseHash) : false,
+    hashValid: responseHash ? verifyPayDunyaHashWithMasterKey(config.masterKey, responseHash) : false,
     hashProvided: Boolean(responseHash),
     raw,
   };
+}
+
+async function getPayDunyaSettings() {
+  try {
+    const rows = await db.setting.findMany({
+      where: { key: { in: Object.values(PAYDUNYA_SETTING_KEYS) } },
+      select: { key: true, value: true },
+    });
+    return new Map(rows.map((row) => [row.key, row.value.trim()]));
+  } catch {
+    return new Map<string, string>();
+  }
+}
+
+function configValue(settings: Map<string, string>, settingKey: string, envKey: string) {
+  return settings.get(settingKey) || process.env[envKey]?.trim() || "";
 }
 
 function emptyPayDunyaConfirmation(input: {

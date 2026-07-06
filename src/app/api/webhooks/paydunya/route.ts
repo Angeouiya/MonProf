@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const data = asRecord(payload.data) ?? payload;
   const hash = firstString(data.hash);
 
-  if (!verifyPayDunyaHash(hash)) {
+  if (!(await verifyPayDunyaHash(hash))) {
     return NextResponse.json({ error: "Signature PayDunya invalide." }, { status: 401 });
   }
 
