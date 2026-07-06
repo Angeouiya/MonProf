@@ -4,13 +4,10 @@ import { getSessionUser } from "@/lib/session";
 import {
   ClientCompactFacts,
   ClientAppRail,
-  ClientEmptyState,
   ClientFocusPanel,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
-  ClientRecordAmount,
-  ClientRecordCard,
   ClientRecordStatusLine,
   ClientSurface,
   ClientTabBar,
@@ -18,10 +15,11 @@ import {
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Money } from "@/components/shared/money";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatFCFA } from "@/lib/format";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { BookOpen, ArrowRight, Clock, Calendar, CheckCircle2, MessageSquare, WalletCards, Search, LockKeyhole, ExternalLink } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { CourseListClient, type ClientCourseListItem } from "./course-list-client";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +128,52 @@ export default async function CoursPage({
   const protectedAmount = overviewBookings
     .reduce((sum, booking) => sum + (booking.totalClientPays || booking.totalPrice), 0);
   const activeCourseCount = overviewBookings.length;
+  const fallbackCourseHref = pendingCourseBookings[0]
+    ? `/client/reservations/${pendingCourseBookings[0].id}?payment=pending`
+    : "/client/rechercher";
+  const courseItems: ClientCourseListItem[] = bookings.map((b) => {
+    const name = b.teacher.professionalName || b.teacher.fullName;
+    const step = getCourseStep(b.status, b.paymentStatus);
+    const courseDate = b.scheduledDate ? formatDate(b.scheduledDate) : b.startDate ? `${formatDate(b.startDate)} demandée` : "À planifier";
+    const courseTime = b.scheduledTime || b.preferredTime || "Créneau à confirmer";
+    const formatLabel = b.courseFormat === "HOME" ? "À domicile" : "En ligne";
+    const amountLabel = formatFCFA(b.totalClientPays || b.totalPrice);
+    const actionKind = getCourseActionKind(b.status, b.paymentStatus);
+    const dateLabelName = b.scheduledDate ? "Date" : "Date souhaitée";
+    const searchText = normalizeCourseSearch([
+      b.reference,
+      b.subjectName,
+      b.levelName,
+      name,
+      b.teacher.jobTitle || "Professeur",
+      courseDate,
+      courseTime,
+      formatLabel,
+      amountLabel,
+      step.label,
+      step.hint,
+      "PayDunya confirmé",
+    ].join(" "));
+
+    return {
+      id: b.id,
+      subjectName: b.subjectName,
+      levelName: b.levelName,
+      teacherName: name,
+      teacherPhotoUrl: b.teacher.photoUrl,
+      teacherJobTitle: b.teacher.jobTitle,
+      teacherBadgeVerified: b.teacher.badgeVerified,
+      amountLabel,
+      dateLabel: courseDate,
+      dateLabelName,
+      timeLabel: courseTime,
+      formatLabel,
+      stepLabel: step.label,
+      stepHint: step.hint,
+      actionKind,
+      searchText,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -194,77 +238,26 @@ export default async function CoursPage({
         }))}
       />
 
-      {bookings.length === 0 ? (
-        <ClientEmptyState
-          icon={BookOpen}
-          title="Aucun cours vérifié dans cette catégorie"
-          description="Un cours apparaît ici seulement après paiement PayDunya confirmé côté serveur."
-          action={
-            <Button asChild size="sm" className="min-h-11 rounded-lg">
-              <Link href={pendingCourseBookings[0] ? `/client/reservations/${pendingCourseBookings[0].id}?payment=pending` : "/client/rechercher"}>
-                {pendingCourseBookings[0] ? "Finaliser une demande" : "Réserver un cours"}
-              </Link>
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
-          {bookings.map((b) => {
-            const name = b.teacher.professionalName || b.teacher.fullName;
-            const step = getCourseStep(b.status, b.paymentStatus);
-            const courseDate = b.scheduledDate ? formatDate(b.scheduledDate) : b.startDate ? `${formatDate(b.startDate)} demandée` : "À planifier";
-            const courseTime = b.scheduledTime || b.preferredTime || "Créneau à confirmer";
-            const formatLabel = b.courseFormat === "HOME" ? "À domicile" : "En ligne";
-            const amountLabel = <Money amount={b.totalClientPays || b.totalPrice} />;
-            return (
-              <ClientRecordCard key={b.id} data-client-course-card>
-                <div className="p-3.5 sm:p-5">
-                  <div className="grid gap-3 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <ProfessorImage photoUrl={b.teacher.photoUrl} name={name} size={58} shape="circle" verified={b.teacher.badgeVerified} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{step.label}</p>
-                        <h2 className="mt-0.5 break-words text-base font-semibold leading-6 text-[#111827]">
-                          {b.subjectName} · {b.levelName}
-                        </h2>
-                        <p className="mt-0.5 break-words text-xs font-semibold leading-5 text-[#64748B]">
-                          {name} · {b.teacher.jobTitle || "Professeur"}
-                        </p>
-                      </div>
-                    </div>
-                    <ClientRecordAmount label="Protégé" value={amountLabel} className="min-[520px]:min-w-36 min-[520px]:text-right" />
-                  </div>
-
-                  <ClientCompactFacts
-                    className="mt-3"
-                    items={[
-                      { label: b.scheduledDate ? "Date" : "Date souhaitée", value: courseDate },
-                      { label: "Créneau", value: courseTime },
-                      { label: "Format", value: formatLabel },
-                      { label: "Paiement", value: "Vérifié serveur", strong: true },
-                    ]}
-                  />
-
-                  <ClientRecordStatusLine className="mt-3" label={step.label} hint={step.hint} aside="PayDunya confirmé" />
-
-                  <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
-                    <p className="text-xs font-medium leading-5 text-[#64748B]">
-                      Cours rattaché à {name}. Le lien en ligne et les actions sont disponibles dans le dossier.
-                    </p>
-                    <Button asChild size="sm" className="min-h-11 w-full rounded-lg">
-                      <Link href={`/client/reservations/${b.id}`}>
-                        Voir le dossier <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </ClientRecordCard>
-            );
-          })}
-        </div>
-      )}
+      <CourseListClient courses={courseItems} fallbackHref={fallbackCourseHref} />
     </div>
   );
+}
+
+function getCourseActionKind(status: BookingStatus, paymentStatus: PaymentStatus): ClientCourseListItem["actionKind"] {
+  if (status === "PENDING_CLIENT_VALIDATION") return "action";
+  if (status === "IN_PROGRESS") return "current";
+  if (["COURSE_DONE", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(status) || paymentStatus === "TEACHER_PAID") return "closed";
+  if (["CONFIRMED", "ASSIGNED", "PENDING_ADMIN_VALIDATION"].includes(status)) return "upcoming";
+  return "all";
+}
+
+function normalizeCourseSearch(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 type PendingCourseBooking = {
