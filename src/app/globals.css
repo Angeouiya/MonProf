@@ -1674,6 +1674,28 @@ b {
   border-radius: 0.5rem !important;
 }
 
+.client-shell [data-client-search-form] {
+  contain: layout paint;
+}
+
+.client-shell [data-client-quick-search-rail] {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-padding-inline: 0.75rem;
+}
+
+.client-shell [data-client-quick-search-rail]::-webkit-scrollbar {
+  display: none;
+}
+
+.client-shell [data-client-quick-search-rail] > * {
+  scroll-snap-align: start;
+}
+
+.client-shell [data-client-search-mobile-summary] > * {
+  min-width: 0;
+}
+
 .client-shell .client-tab-bar [data-slot="button"],
 .client-shell .client-tab-bar a,
 .client-shell .client-tab-bar button {
@@ -2905,5 +2927,9 @@ b {
 
   .client-shell [data-client-shortcut-card] {
     min-width: 8.1rem !important;
+  }
+
+  .client-shell [data-client-quick-search-rail] > * {
+    min-width: 8.8rem !important;
   }
 }

@@ -119,6 +119,7 @@ export default async function RechercherPage({
       />
 
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: UserRound, label: "Profils", value: items.length, attention: items.length === 0 },
           { icon: ShieldCheck, label: "Certifiés", value: certifiedCount },
@@ -147,7 +148,11 @@ export default async function RechercherPage({
         primaryActionHref={primaryActionHref}
       />
 
-      <form id="filtres-professeurs" className="scroll-mt-24 rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4">
+      <form
+        id="filtres-professeurs"
+        data-client-search-form
+        className="scroll-mt-24 rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4"
+      >
         <div className="grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="sr-only" htmlFor="client-search-query">Recherche</label>
@@ -172,7 +177,18 @@ export default async function RechercherPage({
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E6EAF3] pt-3">
+        <div data-client-search-mobile-summary className="mt-2 grid grid-cols-2 gap-2 md:hidden">
+          <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Résultats</p>
+            <p className="mt-0.5 text-sm font-semibold text-[#111827]">{formatCount(items.length, "profil")}</p>
+          </div>
+          <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Filtres</p>
+            <p className="mt-0.5 text-sm font-semibold text-[#111827]">{activeFilters.length || "Aucun"}</p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E6EAF3] pt-3 max-md:hidden">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {formatCount(items.length, "profil")} disponible{items.length > 1 ? "s" : ""}
@@ -191,14 +207,15 @@ export default async function RechercherPage({
           <div className="flex flex-col gap-2 min-[820px]:flex-row min-[820px]:items-center">
             <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-[#64748B]">Recherches fréquentes</span>
             <div
-              className="grid grid-cols-1 gap-1.5 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 min-[820px]:flex min-[820px]:flex-wrap"
+              data-client-quick-search-rail
+              className="flex snap-x gap-2 overflow-x-auto pb-1 min-[820px]:flex-wrap min-[820px]:overflow-visible min-[820px]:pb-0"
               aria-label="Recherches fréquentes"
             >
               {quickSearches.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group inline-flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm font-semibold leading-4 text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:justify-center"
+                  className="group inline-flex min-h-11 min-w-[10rem] snap-start items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm font-semibold leading-4 text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:min-w-0 min-[820px]:justify-center"
                 >
                   <span className="min-w-0">{item.label}</span>
                   <Search className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
@@ -390,7 +407,7 @@ export default async function RechercherPage({
             </div>
           </div>
         ) : (
-          <div className="grid min-w-0 gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 gap-3 min-[720px]:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
               <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}`} />
             ))}
@@ -429,7 +446,7 @@ function SearchCommandCenter({
   ].filter(Boolean).join(" · ");
 
   return (
-    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-search-command-center>
+    <ClientSurface compact className="hidden overflow-hidden rounded-lg border border-[#DDE3EE] p-0 md:block" data-client-search-command-center>
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(19rem,0.8fr)]">
         <div className="space-y-4 p-4 min-[640px]:p-5">
           <div className="flex flex-col gap-4 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
@@ -459,25 +476,27 @@ function SearchCommandCenter({
             <ClientInfoPill label="Séance" value="2h par cours" strong />
           </div>
 
-          <ClientProcessTracker
-            steps={[
-              {
-                label: "Saisir le besoin",
-                state: hasQuery || activeFilterCount > 0 ? "done" : "current",
-                hint: "Matière, concours, métier, commune ou objectif.",
-              },
-              {
-                label: "Affiner sans effort",
-                state: activeFilterCount > 0 ? "done" : hasQuery ? "current" : "pending",
-                hint: "Matière, niveau, zone, format et tri.",
-              },
-              {
-                label: "Réserver le bon professeur",
-                state: resultCount > 0 ? "current" : "pending",
-                hint: "Photo réelle, certification, tarif indicatif et accès profil.",
-              },
-            ]}
-          />
+          <div className="hidden lg:block">
+            <ClientProcessTracker
+              steps={[
+                {
+                  label: "Saisir le besoin",
+                  state: hasQuery || activeFilterCount > 0 ? "done" : "current",
+                  hint: "Matière, concours, métier, commune ou objectif.",
+                },
+                {
+                  label: "Affiner sans effort",
+                  state: activeFilterCount > 0 ? "done" : hasQuery ? "current" : "pending",
+                  hint: "Matière, niveau, zone, format et tri.",
+                },
+                {
+                  label: "Réserver le bon professeur",
+                  state: resultCount > 0 ? "current" : "pending",
+                  hint: "Photo réelle, certification, tarif indicatif et accès profil.",
+                },
+              ]}
+            />
+          </div>
         </div>
 
         <aside className="border-t border-[#E6EAF3] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
