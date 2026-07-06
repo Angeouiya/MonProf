@@ -204,7 +204,7 @@ export default async function RechercherPage({
               </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 min-[680px]:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Matière</label>
                 <SearchableCatalogSelect
@@ -282,7 +282,7 @@ export default async function RechercherPage({
                   <option value="experience">Expérience</option>
                 </select>
               </div>
-              <div className="flex items-end sm:col-span-2 lg:col-span-3">
+              <div className="flex items-end min-[680px]:col-span-2 lg:col-span-3">
                 <button
                   type="submit"
                   className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] lg:max-w-56"
@@ -336,7 +336,7 @@ export default async function RechercherPage({
             </div>
           </div>
         ) : (
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
               <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}`} />
             ))}

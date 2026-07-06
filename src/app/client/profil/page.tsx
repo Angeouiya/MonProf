@@ -234,7 +234,7 @@ export default function ProfilPage() {
               description="Nom, téléphone et zone de cours."
             />
             <form onSubmit={saveInfo} className="client-account-form space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
+              <div className="grid gap-3 min-[640px]:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="name">Nom complet *</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]" />
@@ -332,7 +332,7 @@ function ProfileSkeleton() {
                 <div className="h-4 w-full animate-pulse rounded-full bg-[#E5E7EB]" />
               </div>
             </div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+            <div className="mt-5 grid gap-2 min-[760px]:grid-cols-3">
               {[0, 1, 2].map((item) => (
                 <div key={item} className="h-20 animate-pulse rounded-lg border border-[#E3E8F2] bg-[#E5E7EB]" />
               ))}

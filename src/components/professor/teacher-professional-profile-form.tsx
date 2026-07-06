@@ -149,7 +149,7 @@ export function TeacherProfessionalProfileForm({
         </FieldCounter>
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_14rem] sm:items-end">
+      <div className="grid gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[720px]:grid-cols-[minmax(0,1fr)_14rem] min-[640px]:items-end">
         <div>
           <Label htmlFor="teacher-learners-coached">Nombre d'apprenants encadrés</Label>
           <Input

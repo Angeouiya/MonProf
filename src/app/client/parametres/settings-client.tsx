@@ -54,7 +54,7 @@ export function ClientPasswordSettingsForm() {
       <PasswordField id="client-new-password" label="Nouveau mot de passe" value={newPassword} onChange={setNewPassword} autoComplete="new-password" />
       <PasswordField id="client-confirm-password" label="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" />
 
-      <div data-client-password-rules className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-xs font-semibold leading-5 text-[#64748B] sm:grid-cols-3">
+      <div data-client-password-rules className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-3">
         {rules.map((rule) => (
           <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>
             <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />

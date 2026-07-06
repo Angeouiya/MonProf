@@ -34,7 +34,7 @@ export default async function ProfesseurNotificationsPage() {
           <div className="grid gap-3">
             {notifications.map((notification) => (
               <article key={notification.id} className="rounded-lg border border-[#E6EAF3] bg-white p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -44,7 +44,7 @@ export default async function ProfesseurNotificationsPage() {
                     </div>
                     <p className="mt-3 whitespace-pre-line text-sm font-semibold leading-6 text-[#475569]">{notification.message}</p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                  <div className="flex shrink-0 flex-wrap gap-2 min-[640px]:justify-end">
                     <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">{notification.channel}</Badge>
                     <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">{notificationDeliveryStatusLabel(notification.status)}</Badge>
                   </div>

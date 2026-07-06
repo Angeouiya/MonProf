@@ -75,7 +75,7 @@ export default async function ProfesseurMessagesPage() {
         )}
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 min-[760px]:grid-cols-3">
         <ProfessorStatCard label="Messages ouverts" value={openMessages} detail="Échanges non clôturés" icon="clock" />
         <ProfessorStatCard label="Réponses service client non lues" value={unreadAdminMessages} detail="À consulter rapidement" icon="alert" />
         <ProfessorStatCard label="Réponses attendues" value={waitingAdmin} detail="Le service client doit répondre" icon="calendar" />
@@ -97,7 +97,7 @@ export default async function ProfesseurMessagesPage() {
       </PortalCard>
 
       <PortalCard>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[#111827]">Historique des échanges</h2>
             <p className="text-sm font-medium text-[#64748B]">Messages envoyés et réponses du service client.</p>
@@ -119,7 +119,7 @@ export default async function ProfesseurMessagesPage() {
                 key={message.id}
                 className="rounded-lg border border-[#E6EAF3] bg-white p-4"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">

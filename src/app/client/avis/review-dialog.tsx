@@ -83,7 +83,7 @@ export function ReviewDialog({
             Votre retour aide les autres clients à choisir ce professeur.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 min-[560px]:grid-cols-2">
           <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
               <ShieldCheck className="h-4 w-4 text-[#111B4D]" />

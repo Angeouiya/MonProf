@@ -306,7 +306,7 @@ export function ClientNotificationCenter({
                     </div>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
+                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[520px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
                     {href && (
                       <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-lg sm:min-h-11 sm:rounded-lg">
                         <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>

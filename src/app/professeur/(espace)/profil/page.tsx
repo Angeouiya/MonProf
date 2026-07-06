@@ -50,7 +50,7 @@ export default async function ProfesseurProfilPage() {
           <p className="mt-1 text-sm font-bold text-[#64748B]">{profile.jobTitle}</p>
           <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-[#475569]">{profile.bio}</p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 min-[760px]:grid-cols-3">
             <ContactTile icon={<Phone className="h-4 w-4" />} label="Téléphone" value={profile.phone} />
             <ContactTile icon={<Mail className="h-4 w-4" />} label="Email" value={profile.email || "Non renseigné"} />
             <ContactTile icon={<MapPin className="h-4 w-4" />} label="Commune" value={[profile.commune, profile.quartier].filter(Boolean).join(" · ") || "Non renseignée"} />

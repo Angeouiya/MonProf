@@ -63,7 +63,7 @@ export default async function ProfesseurAvisPage() {
         description="Suivi qualité visible sur votre fiche professeur : avis clients publiés, score qualité et décisions du service client."
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-4">
         <ProfessorStatCard label="Note moyenne" value={`${Number(profile?.rating ?? 0).toFixed(1)}/5`} detail={`${profile?.ratingCount ?? 0} avis publié(s)`} icon="check" />
         <ProfessorStatCard
           label="Note service client"

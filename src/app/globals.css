@@ -2328,6 +2328,32 @@ b {
   min-width: 0;
 }
 
+@media (max-width: 639px) {
+  .client-shell [data-client-metric-card] {
+    flex: 0 0 auto;
+    min-width: 9.25rem !important;
+  }
+}
+
+@media (min-width: 380px) and (max-width: 639px) {
+  .client-shell [data-client-metric-card] {
+    min-width: 10rem !important;
+  }
+}
+
+@media (max-width: 719px) {
+  .client-shell [data-client-shortcut-card] {
+    flex: 0 0 auto;
+    min-width: 8.5rem !important;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 719px) {
+  .client-shell [data-client-shortcut-card] {
+    min-width: 9.25rem !important;
+  }
+}
+
 .client-shell :where(
   [data-client-app-rail],
   [data-client-shortcut-card],

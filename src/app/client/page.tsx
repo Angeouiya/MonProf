@@ -202,7 +202,7 @@ export default async function ClientDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="grid gap-2 text-sm sm:grid-cols-2">
+                <div className="grid gap-2 text-sm min-[560px]:grid-cols-2">
                   <ClientInfoPill
                     label={nextCourse.scheduledDate ? "Date prévue" : "Date souhaitée"}
                     value={nextCourse.scheduledDate ? formatDate(nextCourse.scheduledDate) : nextCourse.startDate ? formatDate(nextCourse.startDate) : "À planifier"}
@@ -211,7 +211,7 @@ export default async function ClientDashboardPage() {
                   <ClientInfoPill label="Format" value={nextCourse.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
                   <ClientInfoPill label="Montant" value={<Money amount={nextCourse.totalClientPays || nextCourse.totalPrice} />} strong />
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
                   <p className="text-sm font-semibold text-[#111B4D]">Statut : {formatClientBookingStatus(nextCourse.status)}</p>
                   <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-lg sm:w-auto">
                     <Link href={`/client/reservations/${nextCourse.id}`}>Voir détails</Link>
@@ -324,7 +324,7 @@ export default async function ClientDashboardPage() {
           {recommended.length === 0 ? (
             <ClientEmptyState icon={Search} title="Aucun professeur recommandé" compact />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 min-[560px]:grid-cols-2 xl:grid-cols-3">
               {recommended.map((t, index) => {
                 const displayName = t.professionalName || t.fullName;
                 const primarySubject = t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name;

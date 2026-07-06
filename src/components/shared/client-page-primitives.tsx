@@ -80,12 +80,12 @@ export function ClientMetricStrip({
     <div
       data-client-metric-strip
       className={cn(
-        "client-metric-strip grid gap-2 bg-white",
+        "client-metric-strip flex gap-2 overflow-x-auto bg-white pb-1 min-[640px]:grid min-[640px]:overflow-visible min-[640px]:pb-0",
         metrics.length === 1
           ? "grid-cols-1"
-          : metrics.length === 2
-            ? "grid-cols-1 min-[380px]:grid-cols-2"
-            : "grid-cols-1 min-[380px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
+        : metrics.length === 2
+            ? "grid-cols-1 min-[640px]:grid-cols-2"
+            : "grid-cols-1 min-[640px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
       )}
     >
@@ -94,8 +94,8 @@ export function ClientMetricStrip({
           key={`${metric.label}-${index}`}
           data-client-metric-card
           className={cn(
-            "client-metric-card flex min-h-16 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 sm:min-h-17 sm:px-4",
-            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[380px]:col-span-2 lg:col-span-1",
+            "client-metric-card flex min-h-16 min-w-[9.25rem] items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 min-[380px]:min-w-[10rem] min-[640px]:min-w-0 sm:min-h-17 sm:px-4",
+            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[640px]:col-span-2 lg:col-span-1",
           )}
         >
           <div className="min-w-0">
@@ -225,7 +225,7 @@ export function ClientFocusPanel({
 }) {
   return (
     <section data-client-focus-panel className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 sm:p-4", className)}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
         <div className="flex min-w-0 gap-3">
           {Icon && (
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -238,7 +238,7 @@ export function ClientFocusPanel({
             {description && <div className="mt-1 break-words text-sm font-medium leading-5 text-[#52627A]">{description}</div>}
           </div>
         </div>
-        {action && <div className="shrink-0 sm:min-w-48">{action}</div>}
+        {action && <div className="shrink-0 min-[640px]:min-w-48">{action}</div>}
       </div>
     </section>
   );
@@ -337,7 +337,7 @@ export function ClientCompactFacts({
     <dl
       data-client-compact-facts
       className={cn(
-        "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-white grid-cols-1 min-[380px]:grid-cols-2 min-[680px]:grid-cols-3",
+        "client-compact-facts grid overflow-hidden rounded-lg border border-[#D8DEE9] bg-white grid-cols-1 min-[520px]:grid-cols-2 min-[760px]:grid-cols-3",
         className,
       )}
     >
@@ -346,8 +346,8 @@ export function ClientCompactFacts({
           key={`${item.label}-${index}`}
           data-client-compact-fact
           className={cn(
-            "min-w-0 border-b border-[#E6EAF3] bg-white px-3 py-2.5 last:border-b-0 min-[380px]:border-r min-[380px]:even:border-r-0 min-[680px]:[&:nth-child(3n)]:border-r-0",
-            items.length % 2 === 1 && index === items.length - 1 && "min-[380px]:col-span-2 min-[680px]:col-span-1",
+            "min-w-0 border-b border-[#E6EAF3] bg-white px-3 py-2.5 last:border-b-0 min-[520px]:border-r min-[520px]:even:border-r-0 min-[760px]:[&:nth-child(3n)]:border-r-0",
+            items.length % 2 === 1 && index === items.length - 1 && "min-[520px]:col-span-2 min-[760px]:col-span-1",
             item.className,
           )}
         >
@@ -519,7 +519,7 @@ export function ClientAppRail({
     <div
       data-client-app-rail
       className={cn(
-        "client-app-rail grid grid-cols-1 gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[360px]:grid-cols-2 min-[720px]:grid-flow-row min-[720px]:overflow-visible",
+        "client-app-rail flex gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid min-[720px]:grid-flow-row min-[720px]:overflow-visible",
         desktopGridClassName,
         className,
       )}
@@ -529,17 +529,17 @@ export function ClientAppRail({
       {items.map((item, index) => {
         const content = (
           <>
-            <span className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start">
+            <span className="flex w-full items-center justify-center gap-2 min-[720px]:w-auto min-[720px]:justify-start">
               <span
                 className={cn(
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors sm:h-9 sm:w-9",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors min-[720px]:h-9 min-[720px]:w-9",
                   item.active ? "border-white bg-white text-[#111B4D]" : "border-[#111B4D] bg-[#111B4D] text-white",
                 )}
               >
-                {item.icon && <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                {item.icon && <item.icon className="h-3.5 w-3.5 min-[720px]:h-4 min-[720px]:w-4" />}
               </span>
             </span>
-            <span className="min-w-0 text-center sm:flex-1 sm:text-left">
+            <span className="min-w-0 text-center min-[720px]:flex-1 min-[720px]:text-left">
               <span className={cn(
                 "block truncate text-[10px] font-semibold uppercase leading-3 tracking-wide min-[380px]:text-[10.5px]",
                 item.active ? "text-white" : "text-[#64748B]",
@@ -547,7 +547,7 @@ export function ClientAppRail({
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 hidden text-[0.72rem] font-semibold leading-4 min-[430px]:line-clamp-1 sm:text-sm sm:leading-5",
+                "mt-0.5 hidden text-[0.72rem] font-semibold leading-4 min-[430px]:line-clamp-1 min-[720px]:text-sm min-[720px]:leading-5",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -565,13 +565,13 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] sm:justify-between sm:px-3 sm:text-left min-[720px]:min-h-14",
+          "client-shortcut-card group flex min-h-16 min-w-[8.5rem] items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[390px]:min-w-[9.25rem] min-[720px]:min-h-14 min-[720px]:min-w-0 min-[720px]:justify-between min-[720px]:px-3 min-[720px]:text-left",
           items.length % 2 === 1 && index === items.length - 1 && "min-[360px]:col-span-2 min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
         );
-        const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-3">{content}</span>;
+        const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 min-[720px]:flex-row min-[720px]:gap-3">{content}</span>;
 
         if (isInternalHref(item.href)) {
           return (

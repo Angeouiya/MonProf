@@ -112,7 +112,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
             {isAdmin && (
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/admin">Admin</Link>
+                <Link href="/admin">Service client</Link>
               </Button>
             )}
             {!session && (
@@ -201,7 +201,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               )}
               {isAdmin && (
                 <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href="/admin" onClick={() => setMobileOpen(false)}>Admin</Link>
+                  <Link href="/admin" onClick={() => setMobileOpen(false)}>Service client</Link>
                 </Button>
               )}
               {!session && (
@@ -353,7 +353,7 @@ function PublicMobileNav({
   isAdmin: boolean;
 }) {
   const accountLink = isAdmin
-    ? { href: "/admin", label: "Admin", icon: LayoutDashboard }
+    ? { href: "/admin", label: "Service client", icon: LayoutDashboard }
     : isClient
       ? { href: "/client", label: "Espace", icon: LayoutDashboard }
       : { href: "/connexion", label: "Compte", icon: GraduationCap };

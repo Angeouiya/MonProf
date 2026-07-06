@@ -954,7 +954,7 @@ export function ReserverForm({
             {step === 0 && (
             <div className="space-y-5">
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 min-[720px]:grid-cols-2">
                 <div>
                   <Label htmlFor="clientType">Type de client *</Label>
                   <select
@@ -1035,7 +1035,7 @@ export function ReserverForm({
                 </div>
                 {isLyceeSelection && (
                   <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 min-[720px]:grid-cols-2">
                       <div>
                         <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
                         <select
@@ -1133,7 +1133,7 @@ export function ReserverForm({
                   ))}
                 </select>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 min-[720px]:grid-cols-2">
                 <div className="sm:col-span-2">
                   <Label htmlFor="schoolProgram">{categoryCopy.programLabel}</Label>
                   <Input
@@ -1164,7 +1164,7 @@ export function ReserverForm({
               <StepIntro step="Étape 2" title="Format du cours" description="Choisissez le mode, le type de cours et le nombre de participants." />
               <div>
                 <Label>Mode de cours *</Label>
-                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                <div className="mt-2 grid gap-3 min-[720px]:grid-cols-2">
                   <button
                     type="button"
                     disabled={!teacher.offersHome}
@@ -1211,7 +1211,7 @@ export function ReserverForm({
                       participantsCount: v === "SMALL_GROUP" ? clampGroupParticipants(current.participantsCount) : 1,
                     }));
                   }}
-                  className="mt-2 grid gap-3 sm:grid-cols-2"
+                  className="mt-2 grid gap-3 min-[720px]:grid-cols-2"
                 >
                   <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
                     form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
@@ -1257,7 +1257,7 @@ export function ReserverForm({
                       className="h-11 rounded-lg bg-white"
                     />
                   </div>
-                  <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                  <div className="mt-3 grid gap-2 text-sm min-[760px]:grid-cols-3">
                     <InfoMini label="Base" value={formatFCFA(basePrice)} />
                     <InfoMini label="Par participant en plus" value={`+${formatFCFA(surchargePerExtraParticipant)}`} />
                     <InfoMini label="Total formule groupe" value={formatFCFA(courseFormulaAmount)} />
@@ -1289,7 +1289,7 @@ export function ReserverForm({
               <StepIntro step="Étape 3" title="Lieu et disponibilité" description="Choisissez une date, un lieu et un créneau de 2h compatible avec le professeur." />
 
               {form.courseFormat === "HOME" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 min-[720px]:grid-cols-2">
                   <div>
                     <Label htmlFor="commune">Commune *</Label>
                     <SearchableCatalogSelect
@@ -1329,7 +1329,7 @@ export function ReserverForm({
                   </div>
                   <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-2 min-[760px]:grid-cols-3">
                       <InfoMini label="Base professeur" value={teacher.commune ?? "À confirmer"} />
                       <InfoMini label="Commune client" value={form.commune || "À sélectionner"} />
                       <InfoMini
@@ -1526,7 +1526,7 @@ export function ReserverForm({
                 )}
                 {sessionPreview.length > 0 && (
                   <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-col gap-1 min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de 2h</p>
                         <p className="text-xs leading-5 text-[#6B7280]">
@@ -1535,7 +1535,7 @@ export function ReserverForm({
                       </div>
                       <span className="text-xs font-semibold text-[#111B4D]">{formatCount(selectedPackSessions, "séance")}, {totalHours}h</span>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="mt-3 grid gap-2 min-[720px]:grid-cols-2 lg:grid-cols-3">
                       {sessionPreview.map((session) => (
                         <div key={session.label} className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm">
                           <p className="font-semibold text-[#111827]">{session.label}</p>
@@ -1620,7 +1620,7 @@ export function ReserverForm({
                 <RadioGroup
                   value={form.packType}
                   onValueChange={(v) => update("packType", v as PackType)}
-                  className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                  className="mt-2 grid gap-2 min-[720px]:grid-cols-2 lg:grid-cols-3"
                 >
                   {PACK_OPTIONS.map((p) => {
                     const optionPricing = calculateBookingPricing({
@@ -1773,7 +1773,7 @@ export function ReserverForm({
                         {sessionPreview.length} séance{sessionPreview.length > 1 ? "s" : ""}
                       </span>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 min-[720px]:grid-cols-2">
                       {sessionPreview.map((session) => (
                         <div key={session.label} className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs text-[#111827]">
                           <p className="font-semibold text-[#111827]">{session.label}</p>
@@ -1817,7 +1817,7 @@ export function ReserverForm({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-2 min-[720px]:grid-cols-2">
                     <SummaryLine icon={<CalendarDays className="h-4 w-4" />} label="Date de première séance" value={selectedStartDateLabel || "Date obligatoire"} />
                     <SummaryLine icon={<Clock3 className="h-4 w-4" />} label="Créneau demandé" value={preferredTimeSummary.join(" ; ") || "Créneau obligatoire"} />
                     <SummaryLine icon={form.courseFormat === "HOME" ? <Home className="h-4 w-4" /> : <Video className="h-4 w-4" />} label="Format" value={form.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
@@ -1914,7 +1914,7 @@ export function ReserverForm({
           )}
 
           {/* Navigation */}
-          <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 sm:flex min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
             {step > 0 ? (
               <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-lg sm:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />

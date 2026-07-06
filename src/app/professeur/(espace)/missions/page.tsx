@@ -71,14 +71,14 @@ export default async function ProfesseurMissionsPage() {
                     <p className="mt-2 text-base font-semibold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
                     <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">{booking.objective || booking.needDescription || "Besoin client transmis par le service client."}</p>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid gap-2 min-[680px]:grid-cols-2 lg:grid-cols-4">
                       <MissionInfo icon={<CalendarDays className="h-4 w-4" />} label="Date" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />
                       <MissionInfo label="Heure" value={booking.scheduledTime || booking.preferredTime} />
                       <MissionInfo label="Format" value={courseFormatLabel(booking.courseFormat)} />
                       <MissionInfo label="Net prévu" value={formatFCFA(booking.teacherNetAmount || booking.totalTeacherReceives)} />
                     </div>
 
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 min-[680px]:grid-cols-2">
                       <MissionInfo icon={<Phone className="h-4 w-4" />} label="Client" value={`${booking.client.name}${booking.client.phone ? ` · ${booking.client.phone}` : ""}`} />
                       <MissionInfo icon={<MapPin className="h-4 w-4" />} label="Lieu" value={booking.courseFormat === "ONLINE" ? "En ligne" : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" · ") || "Adresse à confirmer"} />
                     </div>

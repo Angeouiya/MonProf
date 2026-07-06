@@ -94,13 +94,13 @@ export function MissionResponseActions({
         disabled={disabled}
         className="rounded-lg border-[#D7DEE9] bg-white"
       />
-      <div className="flex flex-col gap-1 text-xs font-semibold text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-1 text-xs font-semibold text-[#64748B] min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
         <p className={responseTooLong ? "font-bold text-red-600" : ""}>
           {cleanResponse.length}/{MAX_RESPONSE_LENGTH} caractères
         </p>
         <p>Obligatoire si vous êtes indisponible, signalez un problème ou proposez un autre créneau.</p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 min-[760px]:grid-cols-3">
         <Button disabled={disabled || !!loading} onClick={() => send("confirm")} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Confirmer
@@ -127,7 +127,7 @@ export function MissionResponseActions({
         </Button>
         {showReschedule && (
           <div className="mt-3 space-y-3 border-t border-[#E6EAF3] pt-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 min-[680px]:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="proposalDate">Date proposée</Label>
                 <Input

@@ -74,7 +74,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
 
           <PortalCard>
             <h3 className="text-base font-semibold text-[#111827]">Planning et lieu</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
               <DetailTile icon={<CalendarDays className="h-4 w-4" />} label="Date prévue" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />
               <DetailTile label="Heure" value={booking.scheduledTime || booking.preferredTime} />
               <DetailTile label="Nombre de séances" value={`${booking.sessionsCount} séance(s) de 2h`} />
@@ -86,7 +86,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
 
           <PortalCard>
             <h3 className="text-base font-semibold text-[#111827]">Client et consignes</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
               <DetailTile icon={<Phone className="h-4 w-4" />} label="Client" value={booking.client.name} />
               <DetailTile label="Contact client" value={booking.client.phone || "À confirmer par le service client"} />
               <DetailTile label="Commune client" value={[booking.client.commune, booking.client.quartier].filter(Boolean).join(" · ") || "Non renseignée"} />

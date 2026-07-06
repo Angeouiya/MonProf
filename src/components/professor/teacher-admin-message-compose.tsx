@@ -127,7 +127,7 @@ export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOpti
         <p className="text-xs font-semibold text-[#64748B]">{message.trim().length}/2500 caractères</p>
       </div>
 
-      <Button type="submit" disabled={loading} className="min-h-12 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-fit">
+      <Button type="submit" disabled={loading} className="min-h-12 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
         Envoyer au service client
       </Button>

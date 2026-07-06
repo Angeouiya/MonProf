@@ -323,7 +323,7 @@ function CourseTrustPanel({
 function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] }) {
   return (
     <ClientSurface compact className="space-y-3 p-4">
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-2 min-[560px]:flex-row min-[560px]:items-end min-[560px]:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Demandes non actives</p>
           <h2 className="text-lg font-semibold leading-6 text-[#111827]">À finaliser avant réservation</h2>

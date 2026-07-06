@@ -99,7 +99,7 @@ function ProfesseurConnexionContent() {
                 Gérez vos missions sans dashboard compliqué.
               </h1>
               <p className="mt-4 max-w-lg text-base leading-7 text-[#475569]">
-                Consultez vos cours, confirmez vos disponibilités, suivez vos paiements et recevez les consignes de le service client Compétence depuis une interface mobile-first.
+                Consultez vos cours, confirmez vos disponibilités, suivez vos paiements et recevez les consignes du service client Compétence depuis une interface mobile-first.
               </p>
               <div className="mt-8 grid gap-3">
                 {[

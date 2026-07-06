@@ -88,17 +88,17 @@ export function ProfessorPageHeader({
   backLabel?: string;
 }) {
   return (
-    <div data-app-page-header data-professor-page-header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div data-app-page-header data-professor-page-header className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
       <div className="min-w-0">
         {showBack && (
           <div className="mb-2">
             <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg px-3" />
           </div>
         )}
-        <h1 className="text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">{title}</h1>
+        <h1 className="text-[1.38rem] font-semibold leading-[1.08] tracking-normal text-[#111827] min-[420px]:text-2xl lg:text-3xl">{title}</h1>
         {description && <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">{description}</p>}
       </div>
-      {action && <div data-professor-page-action className="min-w-0 shrink-0">{action}</div>}
+      {action && <div data-professor-page-action className="grid w-full min-w-0 gap-2 min-[520px]:w-auto min-[520px]:grid-flow-col min-[640px]:shrink-0">{action}</div>}
     </div>
   );
 }
@@ -125,11 +125,11 @@ export function ProfessorStatCard({
           : CalendarClock;
 
   return (
-    <div data-professor-stat-card className="rounded-lg border border-[#E6EAF3] bg-white p-4">
+    <div data-professor-stat-card className="min-w-0 rounded-lg border border-[#E6EAF3] bg-white p-3.5 min-[520px]:p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-2 break-words text-2xl font-semibold leading-tight tracking-normal text-[#111B4D]">{value}</p>
+          <p className="mt-2 break-words text-[1.35rem] font-semibold leading-tight tracking-normal text-[#111B4D] min-[420px]:text-2xl">{value}</p>
         </div>
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white">
           <Icon className="h-5 w-5" />
@@ -150,7 +150,7 @@ export function PortalCard({
   id?: string;
 }) {
   return (
-    <section id={id} data-professor-portal-card className={cn("rounded-lg border border-[#E6EAF3] bg-white p-4 sm:p-5", className)}>
+    <section id={id} data-professor-portal-card className={cn("rounded-lg border border-[#E6EAF3] bg-white p-3.5 min-[640px]:p-5", className)}>
       {children}
     </section>
   );
@@ -184,9 +184,9 @@ export function StatusPill({ status, type = "booking" }: { status: string; type?
 
 export function InfoLine({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
-    <div data-professor-info-line className="flex items-start justify-between gap-3 border-b border-[#EEF2F7] py-2 last:border-0">
+    <div data-professor-info-line className="flex flex-col gap-1 border-b border-[#EEF2F7] py-2 last:border-0 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between min-[420px]:gap-3">
       <span className="min-w-0 text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</span>
-      <span className="min-w-0 text-right text-sm font-bold text-[#111827]">{value || "—"}</span>
+      <span className="min-w-0 break-words text-sm font-bold text-[#111827] min-[420px]:text-right">{value || "—"}</span>
     </div>
   );
 }

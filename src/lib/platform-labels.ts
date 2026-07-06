@@ -66,7 +66,7 @@ export const priorityLabels: Record<string, string> = {
 export const notificationRecipientLabels: Record<string, string> = {
   CLIENT: "Client",
   TEACHER: "Professeur",
-  ADMIN: "Administration",
+  ADMIN: "Service client",
 };
 
 export const notificationChannelLabels: Record<string, string> = {

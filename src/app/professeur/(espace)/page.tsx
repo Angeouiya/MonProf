@@ -248,7 +248,7 @@ export default async function ProfesseurDashboardPage() {
         </div>
       </PortalCard>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-4">
         <ProfessorStatCard label="Cours aujourd'hui" value={verifiedTodayBookings.length} detail="Séances prévues sur la journée" icon="calendar" />
         <ProfessorStatCard label="Missions à confirmer" value={verifiedPendingMissions.length} detail="Répondez rapidement pour éviter les relances" icon="clock" />
         <ProfessorStatCard label="Tâches ouvertes" value={verifiedOpenTasks.length} detail="Demandes du service client en attente" icon="alert" />
@@ -256,7 +256,7 @@ export default async function ProfesseurDashboardPage() {
       </div>
 
       <PortalCard>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
           <div>
             <p className="text-base font-semibold text-[#111827]">Espace professeur opérationnel complet</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
@@ -328,7 +328,7 @@ export default async function ProfesseurDashboardPage() {
             urgent={!profileReady || !payoutProfileReady}
           />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-3">
           <ProfessorActionTile
             href="/professeur/missions"
             icon={BookOpenCheck}
@@ -382,7 +382,7 @@ export default async function ProfesseurDashboardPage() {
         </div>
       </PortalCard>
 
-      <PortalCard className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <PortalCard className="grid gap-3 min-[720px]:grid-cols-[minmax(0,1fr)_auto] min-[640px]:items-center">
         <div>
           <p className="text-base font-semibold text-[#111827]">
             {payoutProfileReady ? "Coordonnées de paiement configurées" : "Coordonnées de paiement à compléter"}
@@ -420,7 +420,7 @@ export default async function ProfesseurDashboardPage() {
                 <Link
                   key={booking.id}
                   href={`/professeur/missions/${booking.id}`}
-                  className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] sm:grid-cols-[1fr_auto] sm:items-center"
+                  className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center"
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2">

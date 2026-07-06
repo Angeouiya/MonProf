@@ -112,7 +112,7 @@ export default async function ProfesseurPaiementsPage() {
         description="Suivi de votre comptabilité interne : montants nets, paiements enregistrés et reçus de paiement."
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-6">
         <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Somme nette professeur sur les cours suivis" icon="wallet" />
         <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
         <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
@@ -150,7 +150,7 @@ export default async function ProfesseurPaiementsPage() {
         />
 
         <PortalCard>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
             <div>
               <h2 className="text-base font-semibold text-[#111827]">Demandes de paiement</h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
@@ -192,7 +192,7 @@ export default async function ProfesseurPaiementsPage() {
                   )}
                   {request.payoutRecord && (
                     <div className="mt-3 rounded-lg border border-[#D7DEE9] bg-white p-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Facture liée</p>
                           <p className="mt-1 font-mono text-sm font-semibold text-[#111827]">{request.payoutRecord.reference}</p>

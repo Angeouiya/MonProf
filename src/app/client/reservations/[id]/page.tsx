@@ -338,7 +338,7 @@ export default async function ReservationDetailPage({
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-4 grid gap-2 min-[560px]:grid-cols-2 xl:grid-cols-4">
             <ReservationHeroMetric
               icon={<Calendar className="h-4 w-4" />}
               label={confirmedDate ? "Date confirmée" : "Date demandée"}
@@ -390,7 +390,7 @@ export default async function ReservationDetailPage({
               description="Matière, niveau, format et consignes du dossier."
             />
             <div className="space-y-3 text-sm">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 min-[560px]:grid-cols-2">
                 <DetailRow icon={null} label="Matière" value={booking.subjectName} />
                 <DetailRow icon={null} label="Niveau" value={booking.levelName} />
                 <DetailRow icon={<Calendar className="h-4 w-4" />} label="Jours" value={preferredDaysLabel} />
@@ -433,7 +433,7 @@ export default async function ReservationDetailPage({
                 description="Règle appliquée, frais retenus et montant estimé."
               />
               <div className="space-y-3 text-sm">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 min-[560px]:grid-cols-2">
                   <DetailRow icon={<AlertTriangle className="h-4 w-4" />} label="Motif" value={booking.cancellationReason || "Annulation demandée"} />
                   <DetailRow icon={<Calendar className="h-4 w-4" />} label="Date d'annulation" value={booking.cancelledAt ? formatDateTime(booking.cancelledAt) : "—"} />
                   <DetailRow icon={<Clock className="h-4 w-4" />} label="Règle appliquée" value={cancellationWindowLabel(booking.cancellationWindow)} />
@@ -449,7 +449,7 @@ export default async function ReservationDetailPage({
                     <p className="mt-1 whitespace-pre-line text-sm font-semibold text-[#111827]">{booking.cancellationDetail}</p>
                   </div>
                 )}
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 min-[560px]:grid-cols-2">
                   <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                     <p className="text-xs text-[#64748B]">Frais retenus</p>
                     <p className="mt-1 text-lg font-semibold text-[#111827]"><Money amount={booking.cancellationFeeAmount} /></p>

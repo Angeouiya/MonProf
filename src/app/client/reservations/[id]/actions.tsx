@@ -715,7 +715,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 min-[560px]:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="refundPhone">Numéro de dépôt</Label>
                     <Input
@@ -791,7 +791,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               </DialogHeader>
               <div className="space-y-4">
                 <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-2 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
                     <div>
                       <p className="font-semibold text-[#111B4D]">{cancellationPolicy.label}</p>
                       <p className="mt-1 text-xs font-semibold text-[#64748B]">{cancellationPolicySummary(cancellationPolicy)}</p>
@@ -801,7 +801,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     </span>
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-[#64748B]">{cancellationPolicy.description}</p>
-                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="mt-3 grid gap-2 text-xs min-[520px]:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
                       <p className="text-[#64748B]">Base de calcul</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.baseAmount)}</p>
@@ -932,7 +932,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 Votre retour aide les autres clients et permet au service client de suivre la qualité du cours.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 min-[560px]:grid-cols-2">
               <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-[#111827]">
                   <ShieldCheck className="h-4 w-4 text-[#111B4D]" />

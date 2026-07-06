@@ -82,12 +82,12 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
   return (
     <div className="space-y-5">
       <div className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 min-[760px]:grid-cols-3">
           <Metric label="Créneaux ouverts" value={selectedSlots} detail={`${selectedHours}h disponibles`} />
           <Metric label="Durée séance" value="2h" detail="Une séance = deux heures" />
           <Metric label="Validation" value="Service client" detail="Chaque mise à jour est historisée" />
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:w-[360px]">
+        <div className="grid gap-2 min-[680px]:grid-cols-2 lg:w-[360px]">
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekdays")}>Jours ouvrés</Button>
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekends")}>Week-end</Button>
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("evenings")}>Soirs</Button>
@@ -169,7 +169,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
       </div>
 
       <div className="sticky bottom-20 z-10 flex justify-end rounded-lg border border-[#E6EAF3] bg-white p-3 lg:bottom-3">
-        <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
+        <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Enregistrer les disponibilités
         </Button>

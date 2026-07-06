@@ -92,7 +92,7 @@ export function TeacherPayoutRequestForm({
 
   return (
     <div data-professor-payout-request className="rounded-lg border border-[#E6EAF3] bg-white p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
         <div>
           <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
@@ -194,7 +194,7 @@ export function TeacherPayoutRequestForm({
         </p>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
           <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
           <span>{pendingRequested > 0 ? `${formatFCFA(pendingRequested)} déjà demandé et en attente.` : "Aucune demande en attente."}</span>
