@@ -49,10 +49,16 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
         <img
           src="/images/payments/mtn-momo.svg"
           alt=""
-          className="h-[94%] w-auto max-w-[94%] object-contain"
+          className="h-full w-auto max-w-[42%] object-contain"
           aria-hidden="true"
           loading="lazy"
         />
+        <span
+          className="ml-1.5 text-[13px] font-black leading-none tracking-normal text-[#111827]"
+          aria-hidden="true"
+        >
+          MoMo
+        </span>
       </span>
     );
   }
@@ -65,7 +71,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
           alt=""
           width={512}
           height={512}
-          className="h-full w-auto max-w-[94%] object-contain"
+          className="h-full w-full object-cover"
           aria-hidden="true"
         />
       </span>
