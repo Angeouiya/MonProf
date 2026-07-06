@@ -4,9 +4,10 @@ import { getSessionUser } from "@/lib/session";
 import {
   ClientAppRail,
   ClientEmptyState,
-  ClientFocusPanel,
+  ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientSectionTitle,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import {
   LifeBuoy, Mail, Phone, AlertTriangle, ShieldCheck, CheckCircle2, FileText,
-  ArrowRight,
+  ArrowRight, Clock3,
 } from "lucide-react";
 import { DisputeForm } from "./dispute-form";
 import { SupportHistoryClient, type ClientSupportDisputeItem } from "./support-history-client";
@@ -121,21 +122,6 @@ export default async function SupportPage() {
         ]}
       />
 
-      <ClientFocusPanel
-        eyebrow={focus.eyebrow}
-        title={focus.title}
-        description={focus.description}
-        icon={LifeBuoy}
-        action={
-          <Button asChild variant="outline" className="min-h-11 w-full rounded-lg">
-            <Link href="/client/reservations">
-              Mes cours
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        }
-      />
-
       <ClientAppRail
         items={[
           { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige", active: true },
@@ -145,8 +131,25 @@ export default async function SupportPage() {
         ]}
       />
 
+      <SupportCommandCenter
+        focus={focus}
+        eligibleCount={bookableForDispute.length}
+        openCount={openDisputes.length}
+        resolvedCount={resolvedDisputes.length}
+        latestDispute={disputeItems[0] ?? null}
+        priorityBooking={bookableForDispute[0]
+          ? {
+              id: bookableForDispute[0].id,
+              reference: bookableForDispute[0].reference,
+              subjectName: bookableForDispute[0].subjectName,
+              levelName: bookableForDispute[0].levelName,
+              teacherName: bookableForDispute[0].teacher.professionalName || bookableForDispute[0].teacher.fullName,
+            }
+          : null}
+      />
+
       {/* Ouvrir un litige */}
-      <ClientSurface className="space-y-4">
+      <ClientSurface id="signaler-cours" className="scroll-mt-24 space-y-4">
         <ClientSectionTitle
           title={
             <span className="inline-flex items-center gap-2">
@@ -196,14 +199,14 @@ function buildSupportFocus({
     return {
       eyebrow: "Dossier en cours",
       title: `${formatCount(openCount, "signalement")} suivi par l'équipe`,
-      description: "Suivez l'avancement depuis l'historique ou ouvrez la réservation liée.",
+      description: "Ouvrez le dossier lié et suivez la décision du service client sans perdre la trace.",
     };
   }
   if (eligibleCount > 0) {
     return {
       eyebrow: "Cours protégé",
       title: "Un cours peut être signalé si nécessaire",
-      description: "Le dossier reste rattaché au professeur, à la réservation et aux échanges.",
+      description: "Choisissez la réservation concernée, ajoutez le contexte, puis envoyez un signalement précis.",
     };
   }
   return {
@@ -211,6 +214,135 @@ function buildSupportFocus({
     title: "Aucun signalement à traiter",
     description: "Vos réservations restent accessibles si vous devez contacter le service client.",
   };
+}
+
+type SupportFocus = ReturnType<typeof buildSupportFocus>;
+
+function SupportCommandCenter({
+  focus,
+  eligibleCount,
+  openCount,
+  resolvedCount,
+  latestDispute,
+  priorityBooking,
+}: {
+  focus: SupportFocus;
+  eligibleCount: number;
+  openCount: number;
+  resolvedCount: number;
+  latestDispute: ClientSupportDisputeItem | null;
+  priorityBooking: {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+    teacherName: string;
+  } | null;
+}) {
+  const hasOpen = openCount > 0;
+  const canSignal = eligibleCount > 0;
+  const actionHref = hasOpen && latestDispute
+    ? `/client/reservations/${latestDispute.booking.id}`
+    : canSignal
+      ? "#signaler-cours"
+      : "/client/reservations";
+  const actionLabel = hasOpen
+    ? "Ouvrir le dossier"
+    : canSignal
+      ? "Signaler un cours"
+      : "Voir mes cours";
+  const latestLabel = latestDispute
+    ? `${latestDispute.booking.reference} · ${latestDispute.statusLabel}`
+    : priorityBooking
+      ? `${priorityBooking.reference} · éligible`
+      : "Aucun dossier actif";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-support-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {hasOpen ? <AlertTriangle className="h-5 w-5" /> : canSignal ? <ShieldCheck className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">{focus.eyebrow}</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">{focus.title}</h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">{focus.description}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="À signaler" value={eligibleCount} strong={eligibleCount > 0} />
+            <ClientInfoPill label="En cours" value={openCount} strong={openCount > 0} />
+            <ClientInfoPill label="Clos" value={resolvedCount} strong={resolvedCount > 0} />
+            <ClientInfoPill label="Dernier suivi" value={latestLabel} strong={Boolean(latestDispute)} />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              {
+                label: "Cours identifié",
+                hint: canSignal || hasOpen ? "Réservation reliée au dossier." : "Aucun cours à signaler.",
+                state: hasOpen || canSignal ? "done" : "current",
+              },
+              {
+                label: "Signalement clair",
+                hint: "Motif, contexte et professeur restent traçables.",
+                state: hasOpen ? "done" : canSignal ? "current" : "pending",
+              },
+              {
+                label: "Décision suivie",
+                hint: "Historique, remboursement ou clôture si nécessaire.",
+                state: resolvedCount > 0 ? "done" : hasOpen ? "current" : "pending",
+              },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+                  <Clock3 className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Action prioritaire</p>
+                  <p className="text-xs font-medium leading-5 text-[#64748B]">
+                    {hasOpen ? "Suivre le dossier en cours" : canSignal ? "Préparer un signalement précis" : "Consulter vos réservations"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                  {hasOpen ? "Signalement ouvert" : canSignal ? "Réservation éligible" : "Centre calme"}
+                </p>
+                <p className="mt-1 text-base font-semibold leading-6 text-[#111827]">
+                  {latestDispute?.booking.reference || priorityBooking?.reference || "Aucun dossier actif"}
+                </p>
+                <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                  {latestDispute
+                    ? `${latestDispute.reason} · ${latestDispute.booking.teacherName}`
+                    : priorityBooking
+                      ? `${priorityBooking.subjectName} · ${priorityBooking.levelName} · ${priorityBooking.teacherName}`
+                      : "Vos prochains échanges avec le service client apparaîtront ici."}
+                </p>
+              </div>
+            </div>
+
+            <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+              <Link href={actionHref}>
+                {actionLabel}
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
+  );
 }
 
 function getDisputeStatusKind(status: string): ClientSupportDisputeItem["statusKind"] {
