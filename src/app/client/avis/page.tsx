@@ -15,10 +15,11 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import {
-  ArrowRight, BookOpen, CalendarCheck, CalendarDays, ClipboardCheck, LifeBuoy, MessageSquare, Search, ShieldCheck,
+  ArrowRight, CalendarCheck, ClipboardCheck, LifeBuoy, MessageSquare, Search, ShieldCheck,
 } from "lucide-react";
 import { ReviewDialog } from "./review-dialog";
 import { REVIEWABLE_BOOKING_STATUSES } from "@/lib/review-policy";
+import { ReviewHistoryClient, type ClientReviewHistoryItem } from "./review-history-client";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,26 @@ export default async function AvisPage() {
   const primaryReviewTeacherName = primaryReviewBooking
     ? primaryReviewBooking.teacher.professionalName || primaryReviewBooking.teacher.fullName
     : "";
+  const reviewHistory: ClientReviewHistoryItem[] = myReviews.map((review) => ({
+    id: review.id,
+    rating: review.rating,
+    comment: review.comment,
+    createdAt: review.createdAt.toISOString(),
+    teacher: {
+      id: review.teacher.id,
+      fullName: review.teacher.fullName,
+      professionalName: review.teacher.professionalName,
+      photoUrl: review.teacher.photoUrl,
+      jobTitle: review.teacher.jobTitle,
+      badgeVerified: review.teacher.badgeVerified,
+    },
+    booking: {
+      id: review.booking.id,
+      reference: review.booking.reference,
+      subjectName: review.booking.subjectName,
+      levelName: review.booking.levelName,
+    },
+  }));
 
   return (
     <div className="space-y-6">
@@ -181,55 +202,7 @@ export default async function AvisPage() {
       {/* Mes avis */}
       <section className="space-y-3">
         <ClientSectionTitle title="Historique" description={`${myReviews.length} avis publié${myReviews.length > 1 ? "s" : ""}`} />
-        {myReviews.length === 0 ? (
-          <ClientEmptyState
-            icon={BookOpen}
-            title="Aucun avis publié"
-            description="Vos avis apparaîtront ici une fois publiés."
-          />
-        ) : (
-          <div className="grid gap-3 xl:grid-cols-2">
-            {myReviews.map((r) => {
-              const name = r.teacher.professionalName || r.teacher.fullName;
-              return (
-                <ClientRecordCard key={r.id} data-client-review-card>
-                  <div className="p-3.5 sm:p-4">
-                    <div className="flex items-start gap-3">
-                      <ProfessorImage photoUrl={r.teacher.photoUrl} name={name} size={56} shape="circle" verified={r.teacher.badgeVerified} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-col gap-1 min-[520px]:flex-row min-[520px]:items-start min-[520px]:justify-between">
-                          <div className="min-w-0">
-                            <p className="break-words text-[15px] font-semibold leading-5 text-[#111827]">{name}</p>
-                            <p className="break-words text-xs font-medium text-[#64748B]">{r.teacher.jobTitle || "Professeur Compétence"}</p>
-                          </div>
-                          <span className="flex w-fit items-center gap-1.5 text-xs font-semibold text-[#64748B]">
-                            <CalendarDays className="h-3.5 w-3.5" />
-                            {formatDate(r.createdAt)}
-                          </span>
-                        </div>
-                        <div className="mt-3 flex flex-col gap-2 text-xs font-medium text-[#475569] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <BookOpen className="h-4 w-4 shrink-0 text-[#111B4D]" />
-                            <span className="min-w-0 truncate">{r.booking.subjectName} · {r.booking.levelName}</span>
-                          </span>
-                          <span className="inline-flex min-h-8 w-fit items-center rounded-lg bg-[#111B4D] px-3 text-xs font-semibold text-white">
-                            {r.rating}/5
-                          </span>
-                        </div>
-                        {r.comment && (
-                          <p className="mt-3 line-clamp-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm leading-6 text-[#111827]">{r.comment}</p>
-                        )}
-                        <Button asChild size="sm" variant="outline" className="mt-3 min-h-11 w-full rounded-lg min-[460px]:w-auto">
-                          <Link href={`/client/reservations/${r.booking.id}`}>Voir le dossier</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </ClientRecordCard>
-              );
-            })}
-          </div>
-        )}
+        <ReviewHistoryClient reviews={reviewHistory} />
       </section>
     </div>
   );
