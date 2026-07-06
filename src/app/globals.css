@@ -2339,6 +2339,9 @@ b {
   [data-client-mobile-nav],
   [data-client-app-rail],
   [data-client-shortcut-card],
+  [data-client-reservation-mobile-priority],
+  [data-client-reservation-filter-rail],
+  [data-client-reservation-card-facts],
   [data-client-record-amount],
   [data-client-record-status-line],
   [data-client-notification-card],
@@ -2401,6 +2404,39 @@ b {
 
 .client-shell :where([data-client-payment-card], [data-client-notification-card], [data-client-reservation-card]) {
   overflow-wrap: anywhere;
+}
+
+.client-shell [data-client-reservation-filter-rail] {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-padding-inline: 0.75rem;
+}
+
+.client-shell [data-client-reservation-filter-rail]::-webkit-scrollbar {
+  display: none;
+}
+
+.client-shell [data-client-reservation-filter-rail] > * {
+  scroll-snap-align: start;
+}
+
+.client-shell [data-client-reservation-card-facts] > * {
+  min-width: 0;
+}
+
+.client-shell [data-client-reservation-mobile-priority] [data-client-info-pill] {
+  padding-inline: 0.55rem !important;
+  padding-block: 0.45rem !important;
+}
+
+.client-shell [data-client-reservation-mobile-priority] [data-client-info-pill] p {
+  font-size: 0.56rem !important;
+  line-height: 0.72rem !important;
+}
+
+.client-shell [data-client-reservation-mobile-priority] [data-client-info-pill] div {
+  font-size: 0.72rem !important;
+  line-height: 0.95rem !important;
 }
 
 .client-shell :where([data-client-payment-card] a, [data-client-notification-card] a, [data-client-reservation-card] a) {

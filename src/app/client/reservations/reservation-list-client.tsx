@@ -14,7 +14,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  ClientCompactFacts,
   ClientEmptyState,
   ClientRecordAmount,
   ClientRecordCard,
@@ -95,7 +94,7 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
       <ClientSectionTitle
         eyebrow="Dossiers"
         title="Recherche rapide"
-        description="Retrouvez une réservation par référence, professeur, matière, date ou statut."
+        description="Référence, professeur, matière, date ou statut."
         action={<span className="text-sm font-semibold text-[#111B4D]">{filteredReservations.length} affiché(s)</span>}
       />
 
@@ -112,7 +111,10 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-1.5 min-[460px]:grid-cols-3 min-[760px]:flex min-[760px]:flex-wrap min-[760px]:justify-end">
+        <div
+          data-client-reservation-filter-rail
+          className="flex snap-x gap-2 overflow-x-auto pb-1 min-[760px]:flex-wrap min-[760px]:justify-end min-[760px]:overflow-visible min-[760px]:pb-0"
+        >
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -121,7 +123,7 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
                 type="button"
                 onClick={() => setFilter(item.id)}
                 className={cn(
-                  "min-h-10 rounded-lg border px-3 text-xs font-semibold transition-colors",
+                  "min-h-10 min-w-[7.6rem] snap-start rounded-lg border px-3 text-xs font-semibold transition-colors min-[760px]:min-w-0",
                   active
                     ? "border-[#111B4D] bg-[#111B4D] text-white"
                     : "border-[#D8DEE9] bg-white text-[#111827] hover:border-[#111B4D]",
@@ -138,7 +140,7 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
 
       <div
         data-client-reservation-summary
-        className="grid gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
+        className="hidden gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 md:grid lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
       >
         <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
           <ReservationSummaryTile label="Affichées" value={filteredReservations.length} />
@@ -255,14 +257,14 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
           <ClientRecordAmount value={reservation.amountLabel} className="min-[560px]:min-w-36 min-[560px]:text-right" />
         </div>
 
-        <ClientCompactFacts
-          className="mt-3"
-          items={[
-            { label: "Date", value: reservation.dateLabel },
-            { label: "Créneau", value: reservation.timeLabel },
-            { label: "Format", value: reservation.formatLabel },
-          ]}
-        />
+        <dl
+          data-client-reservation-card-facts
+          className="mt-3 grid grid-cols-3 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white"
+        >
+          <ReservationFact label="Date" value={reservation.dateLabel} />
+          <ReservationFact label="Créneau" value={reservation.timeLabel} />
+          <ReservationFact label="Format" value={reservation.formatLabel} />
+        </dl>
 
         <div className="mt-3 grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
           <ClientRecordStatusLine
@@ -279,6 +281,15 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
         </div>
       </div>
     </ClientRecordCard>
+  );
+}
+
+function ReservationFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 border-r border-[#E6EAF3] bg-white px-2.5 py-2 last:border-r-0 min-[420px]:px-3">
+      <dt className="truncate text-[9.5px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] min-[420px]:text-[10px]">{label}</dt>
+      <dd className="mt-1 line-clamp-2 min-h-8 break-words text-[11.5px] font-semibold leading-4 text-[#111827] min-[420px]:text-xs">{value}</dd>
+    </div>
   );
 }
 

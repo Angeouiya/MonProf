@@ -178,6 +178,7 @@ export default async function ReservationsPage({
       />
 
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: Lock, label: "Sécurisés", value: formatFCFA(securedAmount) },
           { icon: WalletCards, label: "Non réservés", value: draftBookings.length, attention: draftBookings.length > 0 },
@@ -207,6 +208,13 @@ export default async function ReservationsPage({
         securedAmount={securedAmount}
       />
 
+      <ReservationMobilePriorityCard
+        priority={priorityAction}
+        draftCount={draftBookings.length}
+        toConfirmCount={toConfirmBookings.length}
+        securedAmount={securedAmount}
+      />
+
       <ClientTabBar
         activeId={tabId}
         items={TABS.map((t) => ({
@@ -219,6 +227,60 @@ export default async function ReservationsPage({
 
       <ReservationListClient reservations={reservationItems} />
     </div>
+  );
+}
+
+function ReservationMobilePriorityCard({
+  priority,
+  draftCount,
+  toConfirmCount,
+  securedAmount,
+}: {
+  priority: ReservationCommandCenterProps["priority"];
+  draftCount: number;
+  toConfirmCount: number;
+  securedAmount: number;
+}) {
+  const actionHref = priority
+    ? `/client/reservations/${priority.id}`
+    : draftCount > 0
+      ? "/client/reservations?tab=brouillons"
+      : "/client/rechercher";
+  const actionLabel = priority
+    ? toConfirmCount > 0 ? "Confirmer" : "Ouvrir"
+    : draftCount > 0 ? "Brouillons" : "Réserver";
+  const title = priority
+    ? priority.reference
+    : draftCount > 0
+      ? `${draftCount} paiement(s) à finaliser`
+      : "Nouveau cours";
+  const hint = priority
+    ? `${priority.subjectName} · ${priority.levelName} · ${priority.dateLabel}`
+    : draftCount > 0
+      ? "Aucun professeur n'est notifié avant paiement PayDunya vérifié."
+      : "Choisissez un professeur et une séance de 2h.";
+
+  return (
+    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-reservation-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {toConfirmCount > 0 ? <MessageSquare className="h-5 w-5" /> : draftCount > 0 ? <AlertTriangle className="h-5 w-5" /> : <CalendarCheck className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Action prioritaire</p>
+          <h2 className="mt-0.5 truncate text-base font-semibold leading-6 text-[#111827]">{title}</h2>
+          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
+        </div>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ClientInfoPill label="Non réservés" value={draftCount} strong={draftCount > 0} />
+        <ClientInfoPill label="À confirmer" value={toConfirmCount} strong={toConfirmCount > 0} />
+        <ClientInfoPill label="Sécurisé" value={formatFCFA(securedAmount)} strong={securedAmount > 0} />
+      </div>
+    </ClientSurface>
   );
 }
 
@@ -267,7 +329,7 @@ function ReservationCommandCenter({
     : hasDrafts ? "Voir les brouillons" : "Trouver un professeur";
 
   return (
-    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-reservation-command-center>
+    <ClientSurface compact className="hidden overflow-hidden rounded-lg border border-[#DDE3EE] p-0 md:block" data-client-reservation-command-center>
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
         <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
           <div className="flex min-w-0 gap-3">
