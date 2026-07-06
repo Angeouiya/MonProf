@@ -459,6 +459,6 @@ function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   };
 }
 
-function formatCount(count: number, singular: string, plural = `${singular}s`) {
+function formatCount(count: number, singular: string, plural = singular.endsWith("s") ? singular : `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }

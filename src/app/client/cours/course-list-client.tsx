@@ -2,7 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, FilterX, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  CalendarCheck,
+  CheckCircle2,
+  Clock3,
+  FilterX,
+  Search,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 import {
   ClientCompactFacts,
   ClientEmptyState,
@@ -74,6 +85,13 @@ export function CourseListClient({
 
   const activeFilter = FILTERS.find((item) => item.id === filter) ?? FILTERS[0];
   const hasSearch = query.trim().length > 0 || filter !== "all";
+  const visibleActionCount = filteredCourses.filter((course) => course.actionKind === "action").length;
+  const visibleCurrentCount = filteredCourses.filter((course) => course.actionKind === "current").length;
+  const visibleUpcomingCount = filteredCourses.filter((course) => course.actionKind === "upcoming").length;
+  const priorityCourse = filteredCourses.find((course) => course.actionKind === "action")
+    ?? filteredCourses.find((course) => course.actionKind === "current")
+    ?? filteredCourses.find((course) => course.actionKind === "upcoming")
+    ?? filteredCourses[0];
 
   return (
     <ClientSurface data-client-course-list className="space-y-4">
@@ -121,6 +139,40 @@ export function CourseListClient({
         </div>
       </div>
 
+      <div
+        data-client-course-summary
+        className="grid gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
+      >
+        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
+          <CourseSummaryTile label="Affichés" value={filteredCourses.length} />
+          <CourseSummaryTile label="À confirmer" value={visibleActionCount} attention={visibleActionCount > 0} />
+          <CourseSummaryTile
+            label={visibleCurrentCount > 0 ? "En cours" : "À venir"}
+            value={visibleCurrentCount > 0 ? visibleCurrentCount : visibleUpcomingCount}
+            attention={visibleCurrentCount > 0}
+          />
+        </div>
+        {priorityCourse ? (
+          <Link
+            href={`/client/reservations/${priorityCourse.id}`}
+            className="group flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#111B4D]"
+          >
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Accès rapide</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-[#111827]">{priorityCourse.subjectName}</p>
+              <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{priorityCourse.stepLabel} · {priorityCourse.dateLabel}</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white transition-colors group-hover:bg-[#1E2A78]">
+              <ArrowRight className="h-4 w-4" />
+            </span>
+          </Link>
+        ) : (
+          <div className="flex min-h-16 items-center rounded-lg border border-dashed border-[#D8DEE9] bg-white px-3 py-2.5 text-sm font-semibold text-[#64748B]">
+            Aucun cours dans cette vue.
+          </div>
+        )}
+      </div>
+
       {hasSearch && (
         <div className="flex flex-col gap-2 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
           <p className="text-sm font-medium leading-5 text-[#52627A]">
@@ -166,8 +218,11 @@ export function CourseListClient({
 }
 
 function CourseCard({ course }: { course: ClientCourseListItem }) {
+  const actionMeta = getCourseActionMeta(course.actionKind);
+  const ActionIcon = actionMeta.icon;
+
   return (
-    <ClientRecordCard data-client-course-card>
+    <ClientRecordCard data-client-course-card data-action-kind={course.actionKind}>
       <div className="p-3.5 sm:p-5">
         <div className="grid gap-3 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start">
           <div className="flex min-w-0 items-start gap-3">
@@ -179,7 +234,18 @@ function CourseCard({ course }: { course: ClientCourseListItem }) {
               verified={course.teacherBadgeVerified}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{course.stepLabel}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{course.stepLabel}</p>
+                <span
+                  className={cn(
+                    "inline-flex min-h-7 items-center gap-1 rounded-lg border bg-white px-2 text-[11px] font-semibold",
+                    actionMeta.className,
+                  )}
+                >
+                  <ActionIcon className="h-3.5 w-3.5" />
+                  {actionMeta.label}
+                </span>
+              </div>
               <h2 className="mt-0.5 break-words text-base font-semibold leading-6 text-[#111827]">
                 {course.subjectName} · {course.levelName}
               </h2>
@@ -209,13 +275,76 @@ function CourseCard({ course }: { course: ClientCourseListItem }) {
           </p>
           <Button asChild size="sm" className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <Link href={`/client/reservations/${course.id}`}>
-              Voir le dossier <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              {actionMeta.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>
       </div>
     </ClientRecordCard>
   );
+}
+
+function CourseSummaryTile({
+  label,
+  value,
+  attention,
+}: {
+  label: string;
+  value: number;
+  attention?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
+      <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">{label}</p>
+      <p className={cn("mt-1 text-lg font-semibold leading-6", attention ? "text-[#111B4D]" : "text-[#111827]")}>{value}</p>
+    </div>
+  );
+}
+
+function getCourseActionMeta(actionKind: ClientCourseListItem["actionKind"]): {
+  label: string;
+  ctaLabel: string;
+  icon: LucideIcon;
+  className: string;
+} {
+  if (actionKind === "action") {
+    return {
+      label: "Action requise",
+      ctaLabel: "Confirmer",
+      icon: AlertTriangle,
+      className: "border-[#111B4D] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "current") {
+    return {
+      label: "En cours",
+      ctaLabel: "Suivre",
+      icon: Clock3,
+      className: "border-[#111B4D] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "upcoming") {
+    return {
+      label: "À venir",
+      ctaLabel: "Préparer",
+      icon: CalendarCheck,
+      className: "border-[#D8DEE9] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "closed") {
+    return {
+      label: "Terminé",
+      ctaLabel: "Consulter",
+      icon: CheckCircle2,
+      className: "border-[#D8DEE9] text-[#111B4D]",
+    };
+  }
+  return {
+    label: "Vérifié",
+    ctaLabel: "Dossier",
+    icon: ShieldCheck,
+    className: "border-[#D8DEE9] text-[#111B4D]",
+  };
 }
 
 function normalize(value: string) {
