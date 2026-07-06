@@ -22,7 +22,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
           alt=""
           width={230}
           height={101}
-          className="h-8 w-auto max-w-[92%] object-contain"
+          className="h-[82%] w-auto max-w-[94%] object-contain"
           aria-hidden="true"
         />
       </span>
@@ -35,7 +35,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
         <img
           src="/images/payments/orange-money.svg"
           alt=""
-          className="h-7 w-auto max-w-[94%] object-contain"
+          className="h-[72%] w-auto max-w-[94%] object-contain"
           aria-hidden="true"
           loading="lazy"
         />
@@ -49,7 +49,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
         <img
           src="/images/payments/mtn-momo.svg"
           alt=""
-          className="h-9 w-auto max-w-[78%] object-contain"
+          className="h-[94%] w-auto max-w-[94%] object-contain"
           aria-hidden="true"
           loading="lazy"
         />
@@ -65,7 +65,7 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
           alt=""
           width={512}
           height={512}
-          className="h-9 w-auto max-w-[86%] object-contain"
+          className="h-full w-auto max-w-[94%] object-contain"
           aria-hidden="true"
         />
       </span>
