@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function MarkAdminMessagesRead({ enabled }: { enabled: boolean }) {
+export function MarkServiceClientMessagesRead({ enabled }: { enabled: boolean }) {
   const router = useRouter();
 
   useEffect(() => {

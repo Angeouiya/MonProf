@@ -11,8 +11,8 @@ import {
   ProfessorPageHeader,
   ProfessorStatCard,
 } from "@/components/professor/professor-ui";
-import { TeacherAdminMessageCompose } from "@/components/professor/teacher-admin-message-compose";
-import { MarkAdminMessagesRead } from "@/components/professor/mark-admin-messages-read";
+import { TeacherServiceClientMessageCompose } from "@/components/professor/teacher-admin-message-compose";
+import { MarkServiceClientMessagesRead } from "@/components/professor/mark-admin-messages-read";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,6 @@ export default async function ProfesseurMessagesPage() {
       where: { teacherId: teacher.id },
       include: {
         booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
-        admin: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -55,13 +54,13 @@ export default async function ProfesseurMessagesPage() {
     }),
   ]);
 
-  const unreadAdminMessages = messages.filter((message) => message.sender === "ADMIN" && !message.readByTeacherAt).length;
-  const waitingAdmin = messages.filter((message) => message.status === "WAITING_ADMIN").length;
+  const unreadServiceClientMessages = messages.filter((message) => message.sender === "ADMIN" && !message.readByTeacherAt).length;
+  const waitingServiceClient = messages.filter((message) => message.status === "WAITING_ADMIN").length;
   const openMessages = messages.filter((message) => !["RESOLVED", "CLOSED"].includes(message.status)).length;
 
   return (
     <div className="space-y-6">
-      <MarkAdminMessagesRead enabled={unreadAdminMessages > 0} />
+      <MarkServiceClientMessagesRead enabled={unreadServiceClientMessages > 0} />
       <ProfessorPageHeader
         title="Messages avec le service client"
         description="Contactez le service client Compétence pour une mission, un paiement, une disponibilité ou une situation urgente. Chaque échange est enregistré dans votre fiche."
@@ -77,8 +76,8 @@ export default async function ProfesseurMessagesPage() {
 
       <div className="grid gap-3 min-[760px]:grid-cols-3">
         <ProfessorStatCard label="Messages ouverts" value={openMessages} detail="Échanges non clôturés" icon="clock" />
-        <ProfessorStatCard label="Réponses service client non lues" value={unreadAdminMessages} detail="À consulter rapidement" icon="alert" />
-        <ProfessorStatCard label="Réponses attendues" value={waitingAdmin} detail="Le service client doit répondre" icon="calendar" />
+        <ProfessorStatCard label="Réponses service client non lues" value={unreadServiceClientMessages} detail="À consulter rapidement" icon="alert" />
+        <ProfessorStatCard label="Réponses attendues" value={waitingServiceClient} detail="Le service client doit répondre" icon="calendar" />
       </div>
 
       <PortalCard id="nouveau-message" className="scroll-mt-24">
@@ -93,7 +92,7 @@ export default async function ProfesseurMessagesPage() {
             </p>
           </div>
         </div>
-        <TeacherAdminMessageCompose bookings={bookings} />
+        <TeacherServiceClientMessageCompose bookings={bookings} />
       </PortalCard>
 
       <PortalCard>

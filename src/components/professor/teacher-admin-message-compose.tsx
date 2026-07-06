@@ -23,7 +23,7 @@ const priorities = [
   { value: "CRITICAL", label: "Critique" },
 ];
 
-export function TeacherAdminMessageCompose({ bookings }: { bookings: BookingOption[] }) {
+export function TeacherServiceClientMessageCompose({ bookings }: { bookings: BookingOption[] }) {
   const router = useRouter();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");

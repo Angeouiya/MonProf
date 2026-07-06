@@ -109,7 +109,7 @@ export default async function ProfesseurPaiementsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paiements"
-        description="Suivi de votre comptabilité interne : montants nets, paiements enregistrés et reçus de paiement."
+        description="Suivi de vos paiements : montants nets, versements enregistrés et reçus de paiement."
       />
 
       <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-6">

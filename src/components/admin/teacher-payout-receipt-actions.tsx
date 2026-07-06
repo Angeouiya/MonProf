@@ -133,7 +133,7 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     `Statut : ${record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé"}`,
     `Date : ${formatDateTime(record.paidAt)}`,
     `Enregistré par : ${issuer}`,
-    record.note ? `Note interne : ${record.note}` : "",
+    record.note ? `Note service client : ${record.note}` : "",
     "",
     "Réservations imputées :",
     ...allocationLines,
@@ -219,7 +219,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
         <tbody>${rows}</tbody>
       </table>
     </section>
-    ${record.note ? `<section class="note"><strong>Note interne</strong><br />${escapeHtml(record.note)}</section>` : ""}
+    ${record.note ? `<section class="note"><strong>Note service client</strong><br />${escapeHtml(record.note)}</section>` : ""}
     <footer>
       Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par le service client et doit être conservée avec la preuve opérateur si disponible.
     </footer>
