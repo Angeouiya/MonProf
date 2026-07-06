@@ -491,17 +491,17 @@ export default async function ReservationDetailPage({
               <div className="space-y-2">
                 {visibleTransactions.map((tx) => (
                   <div key={tx.id} className="flex flex-col gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
-                    <div>
-                      <p className="font-mono text-xs font-semibold text-[#111827]">{tx.reference}</p>
+                    <div className="min-w-0">
+                      <p className="break-all font-mono text-xs font-semibold leading-5 text-[#111827]">{tx.reference}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
                         {tx.type === "CLIENT_PAYMENT" ? "Paiement sécurisé" :
                           tx.type === "REFUND" ? "Remboursement" : "Transaction"}
                         {" • "}{formatDate(tx.createdAt)}
                       </p>
                     </div>
-                    <div className="min-[460px]:text-right">
+                    <div className="min-w-0 min-[460px]:shrink-0 min-[460px]:text-right">
                       <p className="font-semibold text-[#111827]"><Money amount={tx.amount} /></p>
-                      <p className="mt-1 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(tx.status)}</p>
+                      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#111B4D]">{formatClientPaymentStatus(tx.status)}</p>
                     </div>
                   </div>
                 ))}
@@ -544,9 +544,9 @@ export default async function ReservationDetailPage({
 
 function ReservationStatusChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-left">
+    <div className="min-h-16 min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-left">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-semibold text-[#111B4D]">{value}</p>
+      <p className="mt-0.5 break-words text-sm font-semibold leading-5 text-[#111B4D]">{value}</p>
     </div>
   );
 }
