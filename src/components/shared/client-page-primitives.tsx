@@ -160,27 +160,31 @@ export function ClientEmptyState({
   className?: string;
   compact?: boolean;
 }) {
+  const body = description ?? "Les informations utiles apparaîtront ici dès qu'un dossier sera prêt.";
+
   return (
     <div
       data-client-empty-state
       className={cn(
-        "client-empty-state flex min-w-0 flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-center",
-        compact ? "px-4 py-5" : "px-4 py-8 min-[640px]:px-6 min-[640px]:py-10",
+        "client-empty-state relative isolate flex min-w-0 overflow-hidden rounded-lg border border-[#E3E8F2] bg-white text-left",
+        compact ? "px-4 py-4" : "px-4 py-6 min-[640px]:px-6 min-[640px]:py-7",
         className,
       )}
     >
-      {Icon && (
-        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-          <Icon className="h-5 w-5" />
-        </span>
-      )}
-      <h2 className="max-w-md text-base font-semibold leading-6 text-[#111827]">{title}</h2>
-      {description && (
-        <div className="mt-1 max-w-md text-sm font-medium leading-6 text-[#64748B]">
-          {description}
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        {Icon && (
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+            <Icon className="h-5 w-5" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <h2 className="max-w-xl text-base font-semibold leading-6 text-[#111827]">{title}</h2>
+          <div className="mt-1 max-w-xl text-sm font-medium leading-6 text-[#52627A]">
+            {body}
+          </div>
+          {action && <div className="mt-4 grid w-full gap-2 min-[520px]:flex min-[520px]:w-auto min-[520px]:flex-wrap">{action}</div>}
         </div>
-      )}
-      {action && <div className="mt-4 grid w-full max-w-xs gap-2 min-[640px]:w-auto min-[640px]:max-w-none">{action}</div>}
+      </div>
     </div>
   );
 }

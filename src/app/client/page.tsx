@@ -332,7 +332,17 @@ export default async function ClientDashboardPage() {
         />
         <div className="mt-4">
           {recommended.length === 0 ? (
-            <ClientEmptyState icon={Search} title="Aucun professeur recommandé" compact />
+            <ClientEmptyState
+              icon={Search}
+              title="Trouvez votre professeur"
+              description="Recherchez par matière, niveau, commune ou concours. Le paiement active la réservation seulement après validation PayDunya."
+              compact
+              action={(
+                <Button asChild className="min-h-11 rounded-lg">
+                  <Link href="/client/rechercher">Rechercher</Link>
+                </Button>
+              )}
+            />
           ) : (
             <div className="grid gap-3 min-[560px]:grid-cols-2 xl:grid-cols-3">
               {recommended.map((t, index) => {

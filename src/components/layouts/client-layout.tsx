@@ -288,7 +288,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             "min-w-0 flex-1 overflow-x-hidden lg:ml-72 lg:pb-0",
             hideMobileBottomNav
               ? "pb-8"
-              : "client-main-with-mobile-nav pb-28"
+              : "client-main-with-mobile-nav pb-40"
           )}
         >
           <div data-client-content className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">

@@ -4225,3 +4225,33 @@ b {
     gap: 0.75rem;
   }
 }
+
+/* Client platform refinement: app-like empty states, compact and readable on mobile. */
+.client-shell [data-client-empty-state] {
+  min-height: 8.75rem;
+}
+
+.client-shell [data-client-empty-state]::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0.25rem;
+  background: #111B4D;
+}
+
+.client-shell [data-client-empty-state] :where(a, button, [data-slot="button"]) {
+  width: 100%;
+}
+
+@media (min-width: 520px) {
+  .client-shell [data-client-empty-state] :where(a, button, [data-slot="button"]) {
+    width: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .client-shell [data-client-empty-state] {
+    min-height: auto;
+  }
+}
