@@ -120,7 +120,7 @@ export function MissionResponseActions({
           variant="ghost"
           disabled={disabled || !!loading}
           onClick={() => setShowReschedule((value) => !value)}
-          className="min-h-11 w-full justify-start rounded-lg px-3 text-[#111B4D] hover:bg-[#F8FAFC]"
+          className="min-h-11 w-full justify-start rounded-lg border border-[#D7DEE9] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
         >
           <CalendarClock className="h-4 w-4" />
           Proposer un autre créneau
