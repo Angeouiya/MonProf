@@ -89,7 +89,7 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-1.5 min-[460px]:grid-cols-3 min-[760px]:flex min-[760px]:flex-wrap min-[760px]:justify-end">
+        <div className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-0.5 min-[760px]:flex-wrap min-[760px]:justify-end min-[760px]:overflow-visible min-[760px]:pb-0" data-client-support-filter-rail>
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -98,7 +98,7 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
                 type="button"
                 onClick={() => setFilter(item.id)}
                 className={cn(
-                  "min-h-10 rounded-lg border px-3 text-xs font-semibold transition-colors",
+                  "min-h-10 min-w-[8.25rem] shrink-0 snap-start rounded-lg border px-3 text-xs font-semibold transition-colors min-[760px]:min-w-0",
                   active
                     ? "border-[#111B4D] bg-[#111B4D] text-white"
                     : "border-[#D8DEE9] bg-white text-[#111827] hover:border-[#111B4D]",

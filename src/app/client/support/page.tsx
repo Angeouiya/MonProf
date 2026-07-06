@@ -115,6 +115,7 @@ export default async function SupportPage() {
       />
 
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: ShieldCheck, label: "Éligibles", value: eligibleBookings.length },
           { icon: AlertTriangle, label: "En cours", value: openDisputes.length, attention: openDisputes.length > 0 },
@@ -131,7 +132,7 @@ export default async function SupportPage() {
         ]}
       />
 
-      <SupportCommandCenter
+      <SupportMobilePriorityCard
         focus={focus}
         eligibleCount={bookableForDispute.length}
         openCount={openDisputes.length}
@@ -147,6 +148,25 @@ export default async function SupportPage() {
             }
           : null}
       />
+
+      <div className="max-md:hidden">
+        <SupportCommandCenter
+          focus={focus}
+          eligibleCount={bookableForDispute.length}
+          openCount={openDisputes.length}
+          resolvedCount={resolvedDisputes.length}
+          latestDispute={disputeItems[0] ?? null}
+          priorityBooking={bookableForDispute[0]
+            ? {
+                id: bookableForDispute[0].id,
+                reference: bookableForDispute[0].reference,
+                subjectName: bookableForDispute[0].subjectName,
+                levelName: bookableForDispute[0].levelName,
+                teacherName: bookableForDispute[0].teacher.professionalName || bookableForDispute[0].teacher.fullName,
+              }
+            : null}
+        />
+      </div>
 
       {/* Ouvrir un litige */}
       <ClientSurface id="signaler-cours" className="scroll-mt-24 space-y-4">
@@ -217,6 +237,79 @@ function buildSupportFocus({
 }
 
 type SupportFocus = ReturnType<typeof buildSupportFocus>;
+
+function SupportMobilePriorityCard({
+  focus,
+  eligibleCount,
+  openCount,
+  resolvedCount,
+  latestDispute,
+  priorityBooking,
+}: {
+  focus: SupportFocus;
+  eligibleCount: number;
+  openCount: number;
+  resolvedCount: number;
+  latestDispute: ClientSupportDisputeItem | null;
+  priorityBooking: {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+    teacherName: string;
+  } | null;
+}) {
+  const hasOpen = openCount > 0;
+  const canSignal = eligibleCount > 0;
+  const actionHref = hasOpen && latestDispute
+    ? `/client/reservations/${latestDispute.booking.id}`
+    : canSignal
+      ? "#signaler-cours"
+      : "/client/reservations";
+  const actionLabel = hasOpen ? "Suivre" : canSignal ? "Signaler" : "Dossiers";
+  const title = latestDispute?.booking.reference || priorityBooking?.reference || focus.title;
+  const hint = latestDispute
+    ? `${latestDispute.reason} · ${latestDispute.booking.teacherName}`
+    : priorityBooking
+      ? `${priorityBooking.subjectName} · ${priorityBooking.levelName}`
+      : focus.description;
+
+  return (
+    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-support-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {hasOpen ? <AlertTriangle className="h-5 w-5" /> : canSignal ? <ShieldCheck className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">{focus.eyebrow}</p>
+          <h2 className="mt-0.5 line-clamp-3 text-sm font-semibold leading-5 text-[#111827]">{title}</h2>
+          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
+        </div>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ClientInfoPill label="Éligibles" value={eligibleCount} strong={eligibleCount > 0} />
+        <ClientInfoPill label="En cours" value={openCount} strong={openCount > 0} />
+        <ClientInfoPill label="Clos" value={resolvedCount} strong={resolvedCount > 0} />
+      </div>
+
+      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-support-action-rail aria-label="Actions service client">
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="/client/reservations">Réservations</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="/client/paiements">Paiements</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+          <Link href="mailto:contact@competence.ci">Email</Link>
+        </Button>
+      </div>
+    </ClientSurface>
+  );
+}
 
 function SupportCommandCenter({
   focus,
