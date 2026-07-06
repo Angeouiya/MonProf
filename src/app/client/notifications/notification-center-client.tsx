@@ -227,7 +227,11 @@ export function ClientNotificationCenter({
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-1.5 min-[520px]:grid-cols-4 lg:grid-cols-7" aria-label="Filtres notifications">
+          <div
+            data-client-notification-filter-rail
+            className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-0.5 min-[900px]:mx-0 min-[900px]:grid min-[900px]:grid-cols-7 min-[900px]:overflow-visible min-[900px]:px-0 min-[900px]:pb-0"
+            aria-label="Filtres notifications"
+          >
             {filterOptions.map((option) => (
               <Button
                 key={option.key}
@@ -236,7 +240,7 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-11 min-w-0 justify-center rounded-lg px-2 text-xs sm:px-3"
+                className="min-h-11 min-w-[8rem] shrink-0 snap-start justify-center rounded-lg px-2 text-xs min-[900px]:min-w-0 sm:px-3"
               >
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
@@ -366,7 +370,7 @@ function PriorityNotificationCard({
 }) {
   if (!notification) {
     return (
-      <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+      <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 max-md:hidden" data-client-notification-priority-card>
         <div className="flex items-start gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-[#111B4D] ring-1 ring-[#DDE6F7]">
             <CheckCircle2 className="h-5 w-5" />
@@ -389,7 +393,7 @@ function PriorityNotificationCard({
   return (
     <div className={`overflow-hidden rounded-lg border p-3 sm:p-4 ${
       urgent ? "border-[#111B4D] bg-white" : "border-[#DDE6F7] bg-white"
-    }`}>
+    } max-md:hidden`} data-client-notification-priority-card>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="flex min-w-0 gap-3">
           <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${

@@ -2359,6 +2359,9 @@ b {
   [data-client-support-mobile-priority],
   [data-client-support-filter-rail],
   [data-client-support-action-rail],
+  [data-client-notification-mobile-priority],
+  [data-client-notification-filter-rail],
+  [data-client-notification-priority-card],
   [data-client-record-amount],
   [data-client-record-status-line],
   [data-client-notification-card],
@@ -2429,17 +2432,17 @@ b {
   scroll-padding-inline: 0.75rem;
 }
 
-.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail], [data-client-notification-filter-rail]) {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   scroll-padding-inline: 0.75rem;
 }
 
-.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail])::-webkit-scrollbar {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail], [data-client-notification-filter-rail])::-webkit-scrollbar {
   display: none;
 }
 
-.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail]) > * {
+.client-shell :where([data-client-dashboard-action-rail], [data-client-reservation-filter-rail], [data-client-course-filter-rail], [data-client-review-filter-rail], [data-client-payment-filter-rail], [data-client-payment-method-rail], [data-client-support-filter-rail], [data-client-support-action-rail], [data-client-notification-filter-rail]) > * {
   scroll-snap-align: start;
 }
 
@@ -2525,6 +2528,21 @@ b {
 .client-shell [data-client-support-mobile-priority] [data-client-info-pill] div {
   font-size: 0.7rem !important;
   line-height: 0.95rem !important;
+}
+
+.client-shell [data-client-notification-mobile-priority] [data-client-info-pill] {
+  padding-inline: 0.5rem !important;
+  padding-block: 0.45rem !important;
+}
+
+.client-shell [data-client-notification-mobile-priority] [data-client-info-pill] p {
+  font-size: 0.54rem !important;
+  line-height: 0.7rem !important;
+}
+
+.client-shell [data-client-notification-mobile-priority] [data-client-info-pill] div {
+  font-size: 0.68rem !important;
+  line-height: 0.92rem !important;
 }
 
 .client-shell [data-client-dashboard-mobile-summary] [data-client-info-pill] {

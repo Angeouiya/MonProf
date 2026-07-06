@@ -97,7 +97,17 @@ export default async function ClientNotificationsPage() {
         <ClientNotificationActions mode="all" />
       </ClientPageHeader>
 
+      <NotificationMobilePriorityCard
+        notification={priorityNotification}
+        booking={priorityBooking}
+        unreadCount={unreadCount}
+        urgentCount={urgentCount}
+        paymentCount={paymentCount}
+        bookingCount={bookingCount}
+      />
+
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: Bell, label: "Non lues", value: unreadCount },
           { icon: AlertTriangle, label: "Urgentes", value: urgentCount, attention: urgentCount > 0 },
@@ -115,14 +125,16 @@ export default async function ClientNotificationsPage() {
         ]}
       />
 
-      <NotificationCommandCenter
-        notification={priorityNotification}
-        booking={priorityBooking}
-        totalCount={notifications.length}
-        unreadCount={unreadCount}
-        urgentCount={urgentCount}
-        paymentCount={paymentCount}
-      />
+      <div className="max-md:hidden">
+        <NotificationCommandCenter
+          notification={priorityNotification}
+          booking={priorityBooking}
+          totalCount={notifications.length}
+          unreadCount={unreadCount}
+          urgentCount={urgentCount}
+          paymentCount={paymentCount}
+        />
+      </div>
 
       <ClientNotificationCenter notifications={serializedNotifications} bookings={serializedBookings} />
     </div>
@@ -167,6 +179,67 @@ type NotificationCommandCenterProps = {
   urgentCount: number;
   paymentCount: number;
 };
+
+function NotificationMobilePriorityCard({
+  notification,
+  booking,
+  unreadCount,
+  urgentCount,
+  paymentCount,
+  bookingCount,
+}: {
+  notification: NotificationCommandCenterProps["notification"];
+  booking: NotificationCommandCenterProps["booking"];
+  unreadCount: number;
+  urgentCount: number;
+  paymentCount: number;
+  bookingCount: number;
+}) {
+  const hasUrgent = urgentCount > 0;
+  const hasUnread = unreadCount > 0;
+  const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || null;
+  const href = getClientNotificationHref(notification, booking?.id);
+  const actionLabel = notification
+    ? notification.actionLabel || (booking ? "Ouvrir" : "Lire")
+    : "Réserver";
+  const title = booking?.reference || notification?.title || "Aucune notification active";
+  const hint = booking
+    ? `${teacherName || "Professeur Compétence"} · ${booking.subjectName} · ${booking.levelName}`
+    : notification?.message || "Vos confirmations, paiements et messages importants apparaîtront ici.";
+
+  return (
+    <ClientSurface compact className="space-y-3 rounded-lg border border-[#D8DEE9] p-3 md:hidden" data-client-notification-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {hasUrgent ? <AlertTriangle className="h-4 w-4" /> : hasUnread ? <Bell className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#111B4D]">Priorité notifications</p>
+          <h2 className="mt-0.5 break-words text-base font-semibold leading-5 text-[#111827]">{title}</h2>
+          <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[#52627A]">{hint}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5">
+        <ClientInfoPill label="Non lues" value={unreadCount} strong={unreadCount > 0} />
+        <ClientInfoPill label="Urgentes" value={urgentCount} strong={urgentCount > 0} />
+        <ClientInfoPill label="Paiements" value={paymentCount} strong={paymentCount > 0} />
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
+        <p className="min-w-0 text-xs font-semibold leading-5 text-[#52627A]">
+          {bookingCount > 0 ? formatCount(bookingCount, "dossier") : notification ? priorityLabel(notification.priority) : "Centre à jour"}
+        </p>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={href}>
+            {actionLabel}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+    </ClientSurface>
+  );
+}
 
 function NotificationCommandCenter({
   notification,
