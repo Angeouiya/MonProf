@@ -13,7 +13,7 @@ import {
 import { AlertTriangle, Banknote, CheckCircle2, Clock, Phone, ShieldAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { formatDate, formatFCFA } from "@/lib/format";
-import { getTeacherAdjustedPayable, getTeacherFinancialSettlement, isTeacherPartiallyPaid } from "@/lib/teacher-payments";
+import { getTeacherAdjustedPayable, getTeacherFinancialSettlement, isCancellationPenaltyPayout, isTeacherPartiallyPaid } from "@/lib/teacher-payments";
 import { paymentMethodLabel } from "@/lib/platform-labels";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { PayAllTeacherButton } from "./pay-all-button";
@@ -24,7 +24,16 @@ export const dynamic = "force-dynamic";
 export default async function AdminProfesseursAPayerPage() {
   await requireAdmin();
   const rawBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+    where: verifiedPayDunyaBookingWhere({
+      OR: [
+        { paymentStatus: "TO_PAY_TEACHER" },
+        {
+          status: { in: ["CANCELLED", "REFUNDED"] },
+          paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+          cancellationPenaltyTeacherAmount: { gt: 0 },
+        },
+      ],
+    }),
     include: {
       teacher: {
         select: {
@@ -55,10 +64,12 @@ export default async function AdminProfesseursAPayerPage() {
       const settlement = getTeacherFinancialSettlement(booking, booking.teacher.paymentAdjustments);
       return {
         booking,
+        payableAmount: settlement.payableAmount,
         paid: settlement.paid,
         retained: settlement.retained,
         remaining: settlement.remaining,
         partiallyPaid: isTeacherPartiallyPaid(booking) || settlement.retained > 0,
+        cancellationPenalty: isCancellationPenaltyPayout(booking),
       };
     })
     .filter((row) => row.remaining > 0);
@@ -126,6 +137,7 @@ export default async function AdminProfesseursAPayerPage() {
         <div className="space-y-4">
           {groups.map((g) => {
             const hasPartial = g.rows.some((row) => row.partiallyPaid);
+            const hasCancellationPenalty = g.rows.some((row) => row.cancellationPenalty);
             const hasPendingRetention = g.pendingRetentions > 0;
             return (
             <Card key={g.teacher.id}>
@@ -143,7 +155,7 @@ export default async function AdminProfesseursAPayerPage() {
                       {g.teacher.professionalName || g.teacher.fullName}
                     </Link>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span>{g.rows.length} cours avec reste dû</span>
+                      <span>{g.rows.length} ligne(s) avec reste dû</span>
                       {g.teacher.phone && (
                         <span className="inline-flex items-center gap-1">
                           <Phone className="h-3.5 w-3.5" />
@@ -153,6 +165,7 @@ export default async function AdminProfesseursAPayerPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {hasPartial && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">Paiement partiel / retenue</Badge>}
+                      {hasCancellationPenalty && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">Indemnité annulation</Badge>}
                       {hasPendingRetention && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Retenue à valider</Badge>}
                       {g.retainedTotal > 0 && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Retenu {formatFCFA(g.retainedTotal)}</Badge>}
                     </div>
@@ -197,7 +210,7 @@ export default async function AdminProfesseursAPayerPage() {
             </CardHeader>
               <CardContent className="p-4 md:hidden">
                 <div className="grid gap-3">
-                  {g.rows.map(({ booking: b, paid, retained, remaining, partiallyPaid }) => (
+                  {g.rows.map(({ booking: b, payableAmount, paid, retained, remaining, partiallyPaid, cancellationPenalty }) => (
                     <div key={b.id} className="rounded-lg border border-violet-100 bg-white p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -210,6 +223,9 @@ export default async function AdminProfesseursAPayerPage() {
                           </p>
                           {partiallyPaid && (
                             <p className="mt-1 text-[11px] font-semibold text-amber-700">Partiel / retenue</p>
+                          )}
+                          {cancellationPenalty && (
+                            <p className="mt-1 text-[11px] font-semibold text-blue-800">Indemnité annulation : {formatFCFA(payableAmount)}</p>
                           )}
                         </div>
                         <div className="flex shrink-0 flex-col gap-2">
@@ -244,11 +260,12 @@ export default async function AdminProfesseursAPayerPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {g.rows.map(({ booking: b, paid, retained, remaining, partiallyPaid }) => (
+                    {g.rows.map(({ booking: b, payableAmount, paid, retained, remaining, partiallyPaid, cancellationPenalty }) => (
                       <TableRow key={b.id}>
                         <TableCell className="font-mono text-xs">
                           <Link href={`/admin/reservations/${b.id}`} className="text-primary hover:underline">{b.reference}</Link>
                           {partiallyPaid && <p className="mt-1 text-[11px] font-semibold text-amber-700">Partiel</p>}
+                          {cancellationPenalty && <p className="mt-1 text-[11px] font-semibold text-blue-800">Indemnité {formatFCFA(payableAmount)}</p>}
                         </TableCell>
                         <TableCell className="text-sm">{b.client.name}</TableCell>
                         <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">

@@ -61,6 +61,10 @@ type AccountingLedgerRow = {
   paymentStatus: string;
   status: string;
   teacherNetAmount: number;
+  payableAmount: number;
+  cancellationPenaltyTeacherAmount?: number;
+  cancellationPenaltyPlatformAmount?: number;
+  isCancellationPenalty?: boolean;
   paid: number;
   retained: number;
   remaining: number;
@@ -111,6 +115,12 @@ const ACCOUNTING_FILTERS = [
   { value: "FAILED", label: "Échec" },
 ];
 
+function isPayableLedgerRow(row: AccountingLedgerRow) {
+  if (row.paymentStatus === "TO_PAY_TEACHER") return true;
+  return Boolean(row.isCancellationPenalty)
+    && ["PARTIALLY_REFUNDED", "RETAINED"].includes(row.paymentStatus);
+}
+
 export function TeacherPayoutClient({
   teacherId,
   teacherName,
@@ -147,7 +157,7 @@ export function TeacherPayoutClient({
     () => targetBookingId ? ledgerRows.find((row) => row.id === targetBookingId) ?? null : null,
     [ledgerRows, targetBookingId],
   );
-  const targetPayableRow = targetRow && targetRow.paymentStatus === "TO_PAY_TEACHER" && targetRow.remaining > 0 ? targetRow : null;
+  const targetPayableRow = targetRow && isPayableLedgerRow(targetRow) && targetRow.remaining > 0 ? targetRow : null;
   const payoutLimit = targetPayableRow ? targetPayableRow.remaining : dueAmount;
   const initialRequest = payoutRequests.find((request) => request.id === targetPayoutRequestId && request.status === "PENDING" && request.amount <= payoutLimit) ?? null;
   const [amount, setAmount] = useState(initialRequest ? String(initialRequest.amount) : payoutLimit > 0 ? String(payoutLimit) : "");
@@ -182,7 +192,7 @@ export function TeacherPayoutClient({
   const canSubmit = cleanAmount > 0 && cleanAmount <= payoutLimit && !requestAmountMismatch && !requestMethodMismatch && !phoneInvalid && !phoneConfirmationMismatch && !referenceTooLong && !noteTooLong && !loading;
   const projectedRemainingAfterPayment = Math.max(0, payoutLimit - Math.min(cleanAmount, payoutLimit));
   const payableRows = useMemo(
-    () => ledgerRows.filter((row) => row.remaining > 0 && row.paymentStatus === "TO_PAY_TEACHER"),
+    () => ledgerRows.filter((row) => row.remaining > 0 && isPayableLedgerRow(row)),
     [ledgerRows],
   );
   const blockedRows = useMemo(
@@ -217,7 +227,7 @@ export function TeacherPayoutClient({
   const filteredLedgerTotals = useMemo(() => (
     filteredLedgerRows.reduce(
       (acc, row) => ({
-        net: acc.net + row.teacherNetAmount,
+        net: acc.net + row.payableAmount,
         paid: acc.paid + row.paid,
         retained: acc.retained + row.retained,
         remaining: acc.remaining + row.remaining,
@@ -390,7 +400,7 @@ export function TeacherPayoutClient({
 
   const copyDetailedAccountingReport = async () => {
     const line = (row: AccountingLedgerRow) => (
-      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | net ${formatFCFA(row.teacherNetAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)} | ${row.paymentStatus}`
+      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${row.isCancellationPenalty ? "indemnité annulation" : "payable"} ${formatFCFA(row.payableAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)} | ${row.paymentStatus}`
     );
     const report = [
       `Grand livre professeur - ${teacherName}`,
@@ -417,7 +427,7 @@ export function TeacherPayoutClient({
 
   const copyFilteredLedgerReport = async () => {
     const line = (row: AccountingLedgerRow) => (
-      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${formatDateTime(row.scheduledDate)} | ${ACCOUNTING_STATUS_LABELS[row.paymentStatus] ?? row.paymentStatus} | net ${formatFCFA(row.teacherNetAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)}`
+      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${formatDateTime(row.scheduledDate)} | ${ACCOUNTING_STATUS_LABELS[row.paymentStatus] ?? row.paymentStatus} | payable ${formatFCFA(row.payableAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)}`
     );
     const report = [
       `Relevé filtré professeur - ${teacherName}`,
@@ -467,7 +477,8 @@ export function TeacherPayoutClient({
       "date",
       "statut_reservation",
       "statut_fonds",
-      "net_professeur",
+      "montant_payable",
+      "net_cours_initial",
       "deja_paye",
       "retenu",
       "reste_du",
@@ -480,6 +491,7 @@ export function TeacherPayoutClient({
       new Date(row.scheduledDate).toLocaleString("fr-FR"),
       row.status,
       row.paymentStatus,
+      row.payableAmount,
       row.teacherNetAmount,
       row.paid,
       row.retained,
@@ -898,7 +910,7 @@ export function TeacherPayoutClient({
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <FilteredLedgerMetric label="Lignes" value={`${filteredLedgerRows.length}`} />
-            <FilteredLedgerMetric label="Net prof" value={formatFCFA(filteredLedgerTotals.net)} />
+            <FilteredLedgerMetric label="Payable" value={formatFCFA(filteredLedgerTotals.net)} />
             <FilteredLedgerMetric label="Déjà payé" value={formatFCFA(filteredLedgerTotals.paid)} />
             <FilteredLedgerMetric label="Retenu" value={formatFCFA(filteredLedgerTotals.retained)} danger={filteredLedgerTotals.retained > 0} />
             <FilteredLedgerMetric label="Reste dû" value={formatFCFA(filteredLedgerTotals.remaining)} danger={filteredLedgerTotals.remaining > 0} />
@@ -913,6 +925,11 @@ export function TeacherPayoutClient({
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {row.levelName} · {formatDateTime(row.scheduledDate)}
                   </p>
+                  {row.isCancellationPenalty && (
+                    <p className="mt-1 text-xs font-semibold text-blue-800">
+                      Indemnité annulation : {formatFCFA(row.payableAmount)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
                   <Badge variant="outline" className={row.paymentStatus === "TO_PAY_TEACHER" ? "border-amber-200 bg-amber-50 text-amber-800" : row.paymentStatus === "BLOCKED" ? "border-violet-200 bg-violet-50 text-violet-800" : "border-blue-200 bg-blue-50 text-blue-800"}>

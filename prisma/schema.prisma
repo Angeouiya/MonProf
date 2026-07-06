@@ -91,74 +91,74 @@ model Commune {
 // PROFESSEUR (fiche interne gérée par l'admin)
 // ============================================================
 model Teacher {
-  id                   String             @id @default(cuid())
+  id                     String             @id @default(cuid())
   // Identité
-  fullName             String
-  professionalName     String?
-  photoUrl             String?
-  phone                String
-  email                String?
-  commune              String?
-  quartier             String?
-  addressHint          String?
+  fullName               String
+  professionalName       String?
+  photoUrl               String?
+  phone                  String
+  email                  String?
+  commune                String?
+  quartier               String?
+  addressHint            String?
   // Accès léger à la plateforme professeur, activé uniquement par l'admin
-  portalAccessEnabled  Boolean            @default(false)
-  portalPhone          String?            @unique
-  portalPasswordHash   String?
-  portalLastLoginAt    DateTime?
-  defaultPayoutMethod   PaymentMethod?
-  defaultPayoutPhone    String?
-  payoutInstructions    String?
+  portalAccessEnabled    Boolean            @default(false)
+  portalPhone            String?            @unique
+  portalPasswordHash     String?
+  portalLastLoginAt      DateTime?
+  defaultPayoutMethod    PaymentMethod?
+  defaultPayoutPhone     String?
+  payoutInstructions     String?
   // Pédagogie
-  jobTitle             String
-  bio                  String
-  experienceYears      Int                @default(0)
-  diploma              String?
-  cvUrl                String?
-  careerSummary        String?
-  skills               String?
-  workHistory          String?
-  certifications       String?
-  teachingAchievements String?
-  learnersCoached      Int                @default(0)
-  profileType          TeacherProfileType @default(ENSEIGNANT)
+  jobTitle               String
+  bio                    String
+  experienceYears        Int                @default(0)
+  diploma                String?
+  cvUrl                  String?
+  careerSummary          String?
+  skills                 String?
+  workHistory            String?
+  certifications         String?
+  teachingAchievements   String?
+  learnersCoached        Int                @default(0)
+  profileType            TeacherProfileType @default(ENSEIGNANT)
   // Statut & visibilité
-  status               TeacherStatus      @default(PENDING)
-  featured             Boolean            @default(false)
-  qualityScore         Int                @default(85)
-  lastActivityAt       DateTime?
-  operationalComment   String?
-  adminRating          Float              @default(0) // 0..5, note plateforme/admin
-  adminRatingNote      String?
-  adminRatingPublic    Boolean            @default(true)
-  adminRatingUpdatedAt DateTime?
+  status                 TeacherStatus      @default(PENDING)
+  featured               Boolean            @default(false)
+  qualityScore           Int                @default(85)
+  lastActivityAt         DateTime?
+  operationalComment     String?
+  adminRating            Float              @default(0) // 0..5, note plateforme/admin
+  adminRatingNote        String?
+  adminRatingPublic      Boolean            @default(true)
+  adminRatingUpdatedAt   DateTime?
   adminRatingUpdatedById String?
   // Évaluation interne (gérée par admin)
-  rating               Float              @default(0) // 0..5
-  ratingCount          Int                @default(0)
+  rating                 Float              @default(0) // 0..5
+  ratingCount            Int                @default(0)
   // Badges
-  badgeVerified        Boolean            @default(true)
-  badgeRecommended     Boolean            @default(false)
-  badgeNew             Boolean            @default(true)
-  badgePopular         Boolean            @default(false)
-  badgePremium         Boolean            @default(false)
-  internalNote         String?
+  badgeVerified          Boolean            @default(true)
+  badgeRecommended       Boolean            @default(false)
+  badgeNew               Boolean            @default(true)
+  badgePopular           Boolean            @default(false)
+  badgePremium           Boolean            @default(false)
+  internalNote           String?
   // Format
-  offersHome           Boolean            @default(true)
-  offersOnline         Boolean            @default(true)
-  offersGroup          Boolean            @default(false)
+  offersHome             Boolean            @default(true)
+  offersOnline           Boolean            @default(true)
+  offersGroup            Boolean            @default(false)
   // Tarification (FCFA)
-  pricePerHour         Int                @default(10000)
-  pricePerSession      Int                @default(10000)
-  pricePack4           Int                @default(38000)
-  pricePack8           Int                @default(72000)
-  commissionRate       Int                @default(30) // %
-  pricingTier          PricingTier        @default(STANDARD)
+  pricePerHour           Int                @default(10000)
+  pricePerSession        Int                @default(10000)
+  pricePack4             Int                @default(38000)
+  pricePack8             Int                @default(72000)
+  commissionRate         Int                @default(30) // %
+  pricingTier            PricingTier        @default(STANDARD)
   // Disponibilités (JSON: {mon:{morning,afternoon,evening}, ...})
-  availability         String?
+  availability           String?
   // Métadonnées
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   subjects           TeacherSubject[]
   levels             TeacherLevel[]
@@ -244,89 +244,93 @@ model TeacherZone {
 // RÉSERVATION (Booking)
 // ============================================================
 model Booking {
-  id                       String         @id @default(cuid())
-  reference                String         @unique // MP-XXXX
-  clientId                 String
-  teacherId                String
+  id                                String         @id @default(cuid())
+  reference                         String         @unique // MP-XXXX
+  clientId                          String
+  teacherId                         String
   // Détails cours
-  subjectName              String
-  levelName                String
-  objective                String?
-  clientType               String?
-  courseCategory           String?
-  schoolSystem             String?
-  preciseLevel             String?
-  courseCatalogId          String?
-  courseCatalogName        String?
-  schoolProgram            String? // Programme scolaire (ex: "Programme officiel CI", "Edexcel", etc.)
-  needDescription          String? // Description du besoin
-  courseFormat             CourseFormat
-  groupType                GroupType      @default(INDIVIDUAL)
-  participantsCount        Int            @default(1)
-  commune                  String?
-  quartier                 String?
-  addressHint              String?
-  onlineLink               String?
+  subjectName                       String
+  levelName                         String
+  objective                         String?
+  clientType                        String?
+  courseCategory                    String?
+  schoolSystem                      String?
+  preciseLevel                      String?
+  courseCatalogId                   String?
+  courseCatalogName                 String?
+  schoolProgram                     String? // Programme scolaire (ex: "Programme officiel CI", "Edexcel", etc.)
+  needDescription                   String? // Description du besoin
+  courseFormat                      CourseFormat
+  groupType                         GroupType      @default(INDIVIDUAL)
+  participantsCount                 Int            @default(1)
+  commune                           String?
+  quartier                          String?
+  addressHint                       String?
+  onlineLink                        String?
   // Créneau
-  preferredDays            String // JSON: ["samedi","dimanche"]
-  preferredTime            String // "15h-17h"
-  startDate                DateTime? // Date de début souhaitée
-  scheduledDate            DateTime?
-  scheduledTime            String?
-  sessionsCount            Int            @default(1)
-  packType                 PackType       @default(SINGLE)
-  message                  String?
+  preferredDays                     String // JSON: ["samedi","dimanche"]
+  preferredTime                     String // "15h-17h"
+  startDate                         DateTime? // Date de début souhaitée
+  scheduledDate                     DateTime?
+  scheduledTime                     String?
+  sessionsCount                     Int            @default(1)
+  packType                          PackType       @default(SINGLE)
+  message                           String?
   // Montants (FCFA)
-  unitPrice                Int
-  totalPrice               Int
-  priceTierKey             String?
-  courseAmount             Int            @default(0)
-  commissionRate           Int            @default(30)
-  commissionAmount         Int            @default(0)
-  teacherRate              Int            @default(70)
-  teacherPayoutAmount      Int            @default(0)
-  transportFee             Int            @default(0)
-  transportFeeKey          String?
-  materialFee              Int            @default(0)
-  discountAmount           Int            @default(0)
-  paymentServiceFeeRate    Int            @default(0) // basis points, ex: 300 = 3%
-  paymentServiceFeeAmount  Int            @default(0)
-  paymentServiceFeeLabel   String?
-  totalClientPays          Int            @default(0)
-  totalTeacherReceives     Int            @default(0)
-  isQuoteOnly              Boolean        @default(false)
-  pricingSnapshot          String?
-  teacherNetAmount         Int            @default(0)
-  teacherPaidAmount        Int            @default(0)
+  unitPrice                         Int
+  totalPrice                        Int
+  priceTierKey                      String?
+  courseAmount                      Int            @default(0)
+  commissionRate                    Int            @default(30)
+  commissionAmount                  Int            @default(0)
+  teacherRate                       Int            @default(70)
+  teacherPayoutAmount               Int            @default(0)
+  transportFee                      Int            @default(0)
+  transportFeeKey                   String?
+  materialFee                       Int            @default(0)
+  discountAmount                    Int            @default(0)
+  paymentServiceFeeRate             Int            @default(0) // basis points, ex: 300 = 3%
+  paymentServiceFeeAmount           Int            @default(0)
+  paymentServiceFeeLabel            String?
+  totalClientPays                   Int            @default(0)
+  totalTeacherReceives              Int            @default(0)
+  isQuoteOnly                       Boolean        @default(false)
+  pricingSnapshot                   String?
+  teacherNetAmount                  Int            @default(0)
+  teacherPaidAmount                 Int            @default(0)
   // Statuts
-  status                   BookingStatus  @default(PENDING_PAYMENT)
-  paymentStatus            PaymentStatus  @default(FAILED)
-  paymentMethod            PaymentMethod?
+  status                            BookingStatus  @default(PENDING_PAYMENT)
+  paymentStatus                     PaymentStatus  @default(FAILED)
+  paymentMethod                     PaymentMethod?
   // PayDunya anti-fraude et rapprochement serveur-à-serveur
-  paydunyaToken            String?        @unique
-  paydunyaCheckoutUrl      String?
-  paydunyaStatus           String?
-  paydunyaReceiptUrl       String?
-  paydunyaVerifiedAt       DateTime?
-  paydunyaLastCheckedAt    DateTime?
-  paydunyaFailureReason    String?
-  paydunyaLastPayload      String?
+  paydunyaToken                     String?        @unique
+  paydunyaCheckoutUrl               String?
+  paydunyaStatus                    String?
+  paydunyaReceiptUrl                String?
+  paydunyaVerifiedAt                DateTime?
+  paydunyaLastCheckedAt             DateTime?
+  paydunyaFailureReason             String?
+  paydunyaLastPayload               String?
   // Méta
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
-  confirmedAt              DateTime?
-  assignedAt               DateTime?
-  courseDoneAt             DateTime?
-  clientValidatedAt        DateTime?
-  teacherPaidAt            DateTime?
-  cancelledAt              DateTime?
-  cancelledBy              String?
-  cancellationReason       String?
-  cancellationDetail       String?
-  cancellationWindow       String?
-  cancellationFeeRate      Int            @default(0)
-  cancellationFeeAmount    Int            @default(0)
-  cancellationRefundAmount Int            @default(0)
+  createdAt                         DateTime       @default(now())
+  updatedAt                         DateTime       @updatedAt
+  confirmedAt                       DateTime?
+  assignedAt                        DateTime?
+  courseDoneAt                      DateTime?
+  clientValidatedAt                 DateTime?
+  teacherPaidAt                     DateTime?
+  cancelledAt                       DateTime?
+  cancelledBy                       String?
+  cancellationReason                String?
+  cancellationDetail                String?
+  cancellationWindow                String?
+  cancellationFeeRate               Int            @default(0)
+  cancellationFeeAmount             Int            @default(0)
+  cancellationPenaltyTeacherRate    Int            @default(0)
+  cancellationPenaltyTeacherAmount  Int            @default(0)
+  cancellationPenaltyPlatformRate   Int            @default(0)
+  cancellationPenaltyPlatformAmount Int            @default(0)
+  cancellationRefundAmount          Int            @default(0)
 
   client                    User                       @relation(fields: [clientId], references: [id])
   teacher                   Teacher                    @relation(fields: [teacherId], references: [id])

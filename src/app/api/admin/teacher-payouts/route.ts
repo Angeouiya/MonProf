@@ -5,6 +5,7 @@ import { generateReference } from "@/lib/format";
 import { getSessionUser } from "@/lib/session";
 import { ACTIVE_PAYMENT_METHODS, isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { getTeacherPayableAmount, isCancellationPenaltyPayout } from "@/lib/teacher-payments";
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
 const MAX_REFERENCE_LENGTH = 80;
@@ -67,13 +68,27 @@ export async function POST(req: NextRequest) {
       fullName: true,
       professionalName: true,
       bookings: {
-        where: { paymentStatus: "TO_PAY_TEACHER" },
+        where: {
+          OR: [
+            { paymentStatus: "TO_PAY_TEACHER" },
+            {
+              status: { in: ["CANCELLED", "REFUNDED"] },
+              paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+              cancellationPenaltyTeacherAmount: { gt: 0 },
+            },
+          ],
+        },
         orderBy: [{ clientValidatedAt: "asc" }, { createdAt: "asc" }],
         select: {
           id: true,
           reference: true,
           teacherNetAmount: true,
           teacherPaidAmount: true,
+          teacherPaidAt: true,
+          cancellationPenaltyTeacherAmount: true,
+          cancellationPenaltyTeacherRate: true,
+          cancellationPenaltyPlatformAmount: true,
+          cancellationPenaltyPlatformRate: true,
           paymentStatus: true,
           paymentMethod: true,
           totalClientPays: true,
@@ -150,8 +165,9 @@ export async function POST(req: NextRequest) {
   const dueBookings = teacher.bookings
     .filter((booking) => hasVerifiedPayDunyaClientPayment(booking))
     .map((booking) => {
-      const paid = Math.max(0, booking.teacherPaidAmount);
-      const grossRemaining = Math.max(0, booking.teacherNetAmount - paid);
+      const payableAmount = getTeacherPayableAmount(booking);
+      const paid = Math.min(payableAmount, Math.max(0, booking.teacherPaidAmount));
+      const grossRemaining = Math.max(0, payableAmount - paid);
       const bookingRetention = teacher.paymentAdjustments
         .filter((adjustment) => adjustment.bookingId === booking.id)
         .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
@@ -160,6 +176,7 @@ export async function POST(req: NextRequest) {
       const retainedAmount = Math.min(grossRemaining, bookingRetention + globalRetention);
       return {
         ...booking,
+        payableAmount,
         paid,
         retainedAmount,
         remaining: Math.max(0, grossRemaining - retainedAmount),
@@ -226,16 +243,21 @@ export async function POST(req: NextRequest) {
     for (const booking of dueBookings) {
       const allocated = allocatedByBooking.get(booking.id) ?? 0;
       const newPaid = booking.teacherPaidAmount + allocated;
-      const fullyPaid = newPaid + booking.retainedAmount >= booking.teacherNetAmount;
+      const fullyPaid = newPaid + booking.retainedAmount >= booking.payableAmount;
+      const cancellationPenaltyPayout = isCancellationPenaltyPayout(booking);
       if (allocated <= 0 && !fullyPaid) continue;
 
       await tx.booking.update({
         where: { id: booking.id },
         data: {
           teacherPaidAmount: newPaid,
-          paymentStatus: fullyPaid ? "TEACHER_PAID" : "TO_PAY_TEACHER",
-          status: fullyPaid ? "TEACHER_PAID" : booking.status,
-          teacherPaidAt: fullyPaid ? now : null,
+          paymentStatus: cancellationPenaltyPayout
+            ? booking.paymentStatus
+            : fullyPaid ? "TEACHER_PAID" : "TO_PAY_TEACHER",
+          status: cancellationPenaltyPayout
+            ? booking.status
+            : fullyPaid ? "TEACHER_PAID" : booking.status,
+          teacherPaidAt: fullyPaid ? now : booking.teacherPaidAt,
         },
       });
       if (allocated > 0) {
@@ -255,7 +277,7 @@ export async function POST(req: NextRequest) {
           },
         });
       }
-      if (fullyPaid) {
+      if (fullyPaid && !cancellationPenaltyPayout) {
         await tx.transaction.updateMany({
           where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
           data: { status: "TEACHER_PAID", paidAt: now },

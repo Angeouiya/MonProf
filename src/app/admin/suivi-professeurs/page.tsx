@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TeacherQualityScore, TeacherStatusBadge } from "@/components/admin/teacher-operational-components";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
-import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount } from "@/lib/teacher-payments";
+import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { AlertTriangle, Bell, ClipboardList, Eye, RefreshCw, ShieldAlert, Siren, UserX, Wallet } from "lucide-react";
 
@@ -48,8 +48,8 @@ export default async function SuiviProfesseursPage() {
     const blocked = verifiedBookings.filter((booking) => booking.paymentStatus === "BLOCKED").reduce((sum, booking) => sum + booking.teacherNetAmount, 0);
     const paid = verifiedBookings.reduce((sum, booking) => sum + getTeacherPaidAmount(booking), 0);
     const grossToPay = verifiedBookings
-      .filter((booking) => booking.paymentStatus === "TO_PAY_TEACHER")
-      .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking), 0);
+      .filter(isTeacherPayableStatus)
+      .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, teacher.paymentAdjustments), 0);
     const toPay = getTeacherAdjustedPayable(grossToPay, teacher.paymentAdjustments);
     const activeBooking = teacher.bookings.find((booking) => activeStatuses.includes(booking.status));
     const score = computeTeacherQualityScore({

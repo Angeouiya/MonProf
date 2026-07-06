@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
-import { getTeacherRemainingAmount } from "@/lib/teacher-payments";
+import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { disputeStatusLabel } from "@/lib/platform-labels";
 import { verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 
@@ -56,12 +56,23 @@ export default async function AdminDashboard() {
   const todayBookings = await db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24*60*60*1000) } } });
   const blockedFundsAgg = await db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } });
   const toReleaseAgg = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+    where: verifiedPayDunyaBookingWhere({
+      OR: [
+        { paymentStatus: "TO_PAY_TEACHER" },
+        {
+          status: { in: ["CANCELLED", "REFUNDED"] },
+          paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+          cancellationPenaltyTeacherAmount: { gt: 0 },
+        },
+      ],
+    }),
     select: {
       id: true,
+      status: true,
       teacherId: true,
       teacherNetAmount: true,
       teacherPaidAmount: true,
+      cancellationPenaltyTeacherAmount: true,
       paymentStatus: true,
       teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
     },
@@ -82,7 +93,16 @@ export default async function AdminDashboard() {
     orderBy: { createdAt: "desc" }, take: 5,
   });
   const pendingReleaseBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
+    where: verifiedPayDunyaBookingWhere({
+      OR: [
+        { paymentStatus: "TO_PAY_TEACHER" },
+        {
+          status: { in: ["CANCELLED", "REFUNDED"] },
+          paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+          cancellationPenaltyTeacherAmount: { gt: 0 },
+        },
+      ],
+    }),
     include: {
       client: { select: { name: true } },
       teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } },
@@ -179,14 +199,14 @@ export default async function AdminDashboard() {
   const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
   const toRelease = toReleaseAgg.reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments), 0);
   const teachersToPay = new Set(
-    toReleaseAgg.filter((booking) => getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0).map((booking) => booking.teacherId)
+    toReleaseAgg.filter((booking) => isTeacherPayableStatus(booking) && getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0).map((booking) => booking.teacherId)
   ).size;
   const totalCommission = allTimeCommissionAgg._sum.commissionAmount ?? 0;
   const monthCommission = monthCommissionAgg._sum.commissionAmount ?? 0;
   const totalPaidToTeachers = totalPaidToTeachersAgg._sum.amount ?? 0;
   const pendingReleaseRows = pendingReleaseBookings
     .map((booking) => ({ booking, remaining: getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) }))
-    .filter((row) => row.remaining > 0);
+    .filter((row) => isTeacherPayableStatus(row.booking) && row.remaining > 0);
 
   return (
     <div className="space-y-6">

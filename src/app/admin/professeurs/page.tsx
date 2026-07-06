@@ -18,7 +18,7 @@ import { ProfesseursListClient } from "./list-client";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
-import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount } from "@/lib/teacher-payments";
+import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +82,7 @@ export default async function AdminProfesseursPage({
           totalClientPays: true,
           teacherNetAmount: true,
           teacherPaidAmount: true,
+          cancellationPenaltyTeacherAmount: true,
           paydunyaStatus: true,
           paydunyaVerifiedAt: true,
           transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
@@ -141,7 +142,7 @@ export default async function AdminProfesseursPage({
       .reduce((sum, booking) => sum + booking.teacherNetAmount, 0);
     const paid = verifiedBookings.reduce((sum, booking) => sum + getTeacherPaidAmount(booking), 0);
     const grossToPay = verifiedBookings
-      .filter((booking) => booking.paymentStatus === "TO_PAY_TEACHER")
+      .filter(isTeacherPayableStatus)
       .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, t.paymentAdjustments), 0);
     const toPay = getTeacherAdjustedPayable(grossToPay, t.paymentAdjustments);
     const lateTasks = t.tasks.filter((task) => task.status === "LATE").length;

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -22,6 +24,16 @@ export async function GET() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const paidOperationalStatuses = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID", "DISPUTED"] as const;
   const financialStatuses = ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] as const;
+  const payableTeacherWhere = {
+    OR: [
+      { paymentStatus: "TO_PAY_TEACHER" },
+      {
+        status: { in: ["CANCELLED", "REFUNDED"] },
+        paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+        cancellationPenaltyTeacherAmount: { gt: 0 },
+      },
+    ],
+  } satisfies Prisma.BookingWhereInput;
   const paymentProofInclude = {
     transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
   };
@@ -57,8 +69,8 @@ export async function GET() {
       include: paymentProofInclude,
     }),
     db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
-      include: paymentProofInclude,
+      where: verifiedPayDunyaBookingWhere(payableTeacherWhere),
+      include: { teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } }, ...paymentProofInclude },
     }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: [...financialStatuses] as any } }),
@@ -76,8 +88,8 @@ export async function GET() {
       take: 5,
     }),
     db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: "TO_PAY_TEACHER" }),
-      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } }, ...paymentProofInclude },
+      where: verifiedPayDunyaBookingWhere(payableTeacherWhere),
+      include: { client: { select: { name: true } }, teacher: { select: { professionalName: true, fullName: true } }, teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } }, ...paymentProofInclude },
       orderBy: { clientValidatedAt: "desc" },
       take: 5,
     }),
@@ -91,8 +103,8 @@ export async function GET() {
   ]);
   const paidBookings = paidBookingRows.filter(hasVerifiedPayDunyaClientPayment).length;
   const blockedFunds = blockedFundRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.totalClientPays, 0);
-  const strictToReleaseRows = toReleaseRows.filter(hasVerifiedPayDunyaClientPayment);
-  const toRelease = strictToReleaseRows.reduce((sum, booking) => sum + booking.teacherNetAmount, 0);
+  const strictToReleaseRows = toReleaseRows.filter((booking) => hasVerifiedPayDunyaClientPayment(booking) && isTeacherPayableStatus(booking));
+  const toRelease = strictToReleaseRows.reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments), 0);
   const teachersToPay = new Set(strictToReleaseRows.map((booking) => booking.teacherId)).size;
   const totalCommission = allTimeCommissionRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.commissionAmount, 0);
   const monthCommission = monthCommissionRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.commissionAmount, 0);

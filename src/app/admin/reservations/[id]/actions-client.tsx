@@ -25,7 +25,7 @@ import {
 import { formatFCFA } from "@/lib/format";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { getTeacherRemainingAmount } from "@/lib/teacher-payments";
-import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPolicy } from "@/lib/cancellation-policy";
+import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 
 type Booking = {
   id: string;
@@ -139,6 +139,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0);
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount }, new Date(), cancelActor);
+  const cancellationPenaltySplit = getCancellationPenaltySplit(cancellationPolicy, cancelActor);
   const normalizedPayTeacherPhone = normalizePaymentPhone(payTeacherPhone);
   const payTeacherPhoneInvalid = normalizedPayTeacherPhone.length < 8 || normalizedPayTeacherPhone.length > 20;
   const latestRefundRequest = booking.clientRefundRequests?.[0] ?? null;
@@ -486,6 +487,24 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                 <div className="rounded-lg border border-white bg-white px-3 py-2">
                   <p className="text-[11px] font-medium text-muted-foreground">Remboursement</p>
                   <p className="mt-1 text-sm font-black text-foreground">{formatFCFA(cancellationPolicy.refundAmount)}</p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-lg border border-white bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#111B4D]">Répartition de la pénalité</p>
+                <p className="mt-1 text-sm text-muted-foreground">{cancellationPenaltySplit.description}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">Part professeur</p>
+                    <p className="mt-1 text-sm font-black text-foreground">
+                      {formatFCFA(cancellationPenaltySplit.teacherAmount)} · {cancellationPenaltySplit.teacherRate}%
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">Part plateforme</p>
+                    <p className="mt-1 text-sm font-black text-foreground">
+                      {formatFCFA(cancellationPenaltySplit.platformAmount)} · {cancellationPenaltySplit.platformRate}%
+                    </p>
+                  </div>
                 </div>
               </div>
               <p className="mt-2 text-xs font-semibold text-orange-900">{cancellationPolicySummary(cancellationPolicy)}</p>

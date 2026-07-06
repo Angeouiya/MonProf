@@ -180,6 +180,18 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             <Detail icon={CheckCircle2} label="Motif" value={booking.cancellationReason ?? "—"} />
             <AmountBox label="Frais retenus" value={booking.cancellationFeeAmount} tone="warning" sub={`${booking.cancellationFeeRate}%`} />
             <AmountBox label="Remboursement client" value={booking.cancellationRefundAmount} tone="primary" />
+            <AmountBox
+              label="Part professeur"
+              value={booking.cancellationPenaltyTeacherAmount}
+              tone={booking.cancellationPenaltyTeacherAmount > 0 ? "primary" : "success"}
+              sub={`${booking.cancellationPenaltyTeacherRate}% pénalité`}
+            />
+            <AmountBox
+              label="Part plateforme"
+              value={booking.cancellationPenaltyPlatformAmount}
+              tone={booking.cancellationPenaltyPlatformAmount > 0 ? "warning" : "success"}
+              sub={`${booking.cancellationPenaltyPlatformRate}% pénalité`}
+            />
             {booking.cancellationDetail && (
               <div className="rounded-lg border border-orange-100 bg-white p-3 sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Détail</p>
@@ -198,7 +210,18 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               <AmountBox label="Montant à déposer" value={booking.cancellationRefundAmount} tone="primary" />
               <AmountBox label="Frais service non remboursés" value={booking.paymentServiceFeeAmount} tone={booking.paymentServiceFeeAmount > 0 ? "warning" : "success"} />
               <AmountBox label="Frais annulation" value={booking.cancellationFeeAmount} tone={booking.cancellationFeeAmount > 0 ? "danger" : "success"} />
+              <AmountBox label="Professeur à compenser" value={booking.cancellationPenaltyTeacherAmount} tone={booking.cancellationPenaltyTeacherAmount > 0 ? "primary" : "success"} />
             </div>
+            {booking.cancellationPenaltyTeacherAmount > 0 && (
+              <div className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-muted-foreground">
+                  La part professeur est traitée dans la comptabilité interne du professeur, avec reçu et déduction automatique après versement.
+                </p>
+                <Button asChild variant="outline" className="shrink-0">
+                  <Link href={`/admin/professeurs/${booking.teacher.id}?tab=paiements&bookingId=${booking.id}`}>Ouvrir comptabilité</Link>
+                </Button>
+              </div>
+            )}
             {booking.clientRefundRequests.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border bg-white p-4 text-sm text-muted-foreground">
                 Le client n'a pas encore renseigné le numéro de remboursement.

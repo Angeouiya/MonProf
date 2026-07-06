@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { DisputeStatus } from "@prisma/client";
 import { generateReference } from "@/lib/format";
-import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPolicy } from "@/lib/cancellation-policy";
+import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parsePricingSnapshot } from "@/lib/pricing";
 import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
@@ -82,6 +82,10 @@ function publicBookingDetailPayload(booking: any) {
     cancellationWindow: booking.cancellationWindow,
     cancellationFeeRate: booking.cancellationFeeRate,
     cancellationFeeAmount: booking.cancellationFeeAmount,
+    cancellationPenaltyTeacherRate: booking.cancellationPenaltyTeacherRate,
+    cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
+    cancellationPenaltyPlatformRate: booking.cancellationPenaltyPlatformRate,
+    cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
     cancellationRefundAmount: booking.cancellationRefundAmount,
     cancellationReason: booking.cancellationReason,
     cancellationDetail: booking.cancellationDetail,
@@ -716,6 +720,7 @@ export async function PATCH(
         : null;
       const paidAmount = paidAggregate?._sum.amount ?? 0;
       const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, "CLIENT");
+      const penaltySplit = getCancellationPenaltySplit(policy, "CLIENT");
       const paymentStatus = !wasPaid
         ? booking.paymentStatus
         : policy.refundAmount <= 0
@@ -735,6 +740,10 @@ export async function PATCH(
           cancellationWindow: policy.code,
           cancellationFeeRate: policy.feeRate,
           cancellationFeeAmount: policy.feeAmount,
+          cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
+          cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
+          cancellationPenaltyPlatformRate: penaltySplit.platformRate,
+          cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
           cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
         },
       });
@@ -748,7 +757,7 @@ export async function PATCH(
         data: {
           userId: null,
           title: "Réservation annulée",
-          message: `Le client a annulé la réservation ${booking.reference}. ${cancellationPolicySummary(policy)}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+          message: `Le client a annulé la réservation ${booking.reference}. ${cancellationPolicySummary(policy)}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Part professeur: ${penaltySplit.teacherAmount.toLocaleString("fr-FR")} FCFA. Part plateforme: ${penaltySplit.platformAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
           type: "BOOKING_CANCELLED",
           recipientType: "ADMIN",
           channel: "INTERNAL",
@@ -807,6 +816,8 @@ export async function PATCH(
             `Niveau : ${booking.levelName}`,
             `Motif : ${reason || "Annulation demandée par le client"}`,
             `Frais retenus côté client : ${policy.feeAmount.toLocaleString("fr-FR")} FCFA`,
+            `Part professeur prévue : ${penaltySplit.teacherAmount.toLocaleString("fr-FR")} FCFA`,
+            `Part plateforme : ${penaltySplit.platformAmount.toLocaleString("fr-FR")} FCFA`,
             `Frais service paiement non remboursés : ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA`,
             "Ne vous présentez pas au cours sans nouvelle instruction du service client.",
           ].join("\n"),
@@ -837,7 +848,7 @@ export async function PATCH(
           action: "Annulation client réservation",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Client a annulé ${booking.reference}. Motif: ${reason || "Non renseigné"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${wasPaid ? policy.refundAmount : 0} FCFA. Tâche professeur créée pour information.`,
+          detail: `Client a annulé ${booking.reference}. Motif: ${reason || "Non renseigné"}. Frais: ${policy.feeAmount} FCFA. Part professeur: ${penaltySplit.teacherAmount} FCFA. Part plateforme: ${penaltySplit.platformAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${wasPaid ? policy.refundAmount : 0} FCFA. Tâche professeur créée pour information.`,
           oldStatus: booking.status,
           newStatus: "CANCELLED",
         },

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateReference } from "@/lib/format";
-import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPolicy } from "@/lib/cancellation-policy";
+import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   PLATFORM_COMMISSION_PERCENT,
@@ -759,6 +759,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           : null;
         const paidAmount = paidAggregate?._sum.amount ?? 0;
         const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, cancellationActor);
+        const penaltySplit = getCancellationPenaltySplit(policy, cancellationActor);
         const nextPaymentStatus = !wasPaid
           ? booking.paymentStatus
           : policy.refundAmount <= 0
@@ -778,6 +779,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             cancellationWindow: policy.code,
             cancellationFeeRate: policy.feeRate,
             cancellationFeeAmount: policy.feeAmount,
+            cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
+            cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
+            cancellationPenaltyPlatformRate: penaltySplit.platformRate,
+            cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
             cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
           },
         });
@@ -791,7 +796,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             userId: null,
             title: "Réservation annulée",
-            message: `La réservation ${booking.reference} a été annulée par ${cancellationActor}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+            message: `La réservation ${booking.reference} a été annulée par ${cancellationActor}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA. Part professeur: ${penaltySplit.teacherAmount.toLocaleString("fr-FR")} FCFA. Part plateforme: ${penaltySplit.platformAmount.toLocaleString("fr-FR")} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA. Remboursement: ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
             type: "BOOKING_CANCELLED",
             recipientType: "ADMIN",
             channel: "INTERNAL",
@@ -838,7 +843,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               `Cours : ${booking.subjectName}`,
               `Niveau : ${booking.levelName}`,
               `Motif : ${body.reason || "Non renseigné"}`,
-              `Décision financière client : frais ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, frais service non remboursés ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA, remboursement ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+              `Décision financière client : frais ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, part professeur ${penaltySplit.teacherAmount.toLocaleString("fr-FR")} FCFA, part plateforme ${penaltySplit.platformAmount.toLocaleString("fr-FR")} FCFA, frais service non remboursés ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA, remboursement ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
               "Merci de ne pas vous présenter au cours sans nouvelle instruction du service client.",
             ].join("\n"),
             channel: "WHATSAPP",
@@ -886,7 +891,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             action: "Annulation réservation",
             entityType: "Booking",
             entityId: booking.id,
-            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation par le service client"}. Frais: ${policy.feeAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
+            detail: `Réservation annulée (${cancellationActor}). Motif: ${body.reason || "Annulation par le service client"}. Frais: ${policy.feeAmount} FCFA. Part professeur: ${penaltySplit.teacherAmount} FCFA. Part plateforme: ${penaltySplit.platformAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA. Remboursement: ${policy.refundAmount} FCFA.`,
             oldStatus: booking.status,
             newStatus: "CANCELLED",
           },
@@ -963,6 +968,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             link: `/admin/reservations/${id}`,
           },
         });
+        if ((booking.cancellationPenaltyTeacherAmount || 0) > 0) {
+          await db.notification.create({
+            data: {
+              userId: null,
+              title: "Indemnité professeur à traiter",
+              message: `Après remboursement client de ${booking.reference}, une indemnité professeur de ${booking.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est disponible. Part plateforme sur pénalité: ${booking.cancellationPenaltyPlatformAmount.toLocaleString("fr-FR")} FCFA.`,
+              type: "TEACHER_PAYOUT",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "CREATED",
+              priority: "IMPORTANT",
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              link: `/admin/professeurs/${booking.teacherId}?tab=paiements&bookingId=${booking.id}`,
+              actionLabel: "Ouvrir comptabilité",
+            },
+          });
+          await db.teacherNotification.create({
+            data: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              title: `Indemnité annulation - ${booking.reference}`,
+              message: `Le service client a traité le remboursement de la réservation ${booking.reference}. Une indemnité professeur de ${booking.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est visible dans votre comptabilité et pourra être demandée selon le solde disponible.`,
+              channel: "INTERNAL",
+              sent: false,
+              status: "PENDING",
+            },
+          });
+        }
         await db.notification.create({
           data: {
             userId: booking.clientId,

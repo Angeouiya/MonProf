@@ -3,7 +3,7 @@ import { ArrowRight, Bell, BookOpenCheck, CalendarClock, ClipboardList, CreditCa
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { getTeacherRemainingAmount } from "@/lib/teacher-payments";
+import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
@@ -113,13 +113,24 @@ export default async function ProfesseurDashboardPage() {
   const paymentBookings = await db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({
       teacherId: teacher.id,
-      teacherNetAmount: { gt: 0 },
-      status: { notIn: ["CANCELLED", "REFUNDED"] },
+      OR: [
+        {
+          teacherNetAmount: { gt: 0 },
+          status: { notIn: ["CANCELLED", "REFUNDED"] },
+        },
+        {
+          status: { in: ["CANCELLED", "REFUNDED"] },
+          paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+          cancellationPenaltyTeacherAmount: { gt: 0 },
+        },
+      ],
     }),
     select: {
       id: true,
+      status: true,
       teacherNetAmount: true,
       teacherPaidAmount: true,
+      cancellationPenaltyTeacherAmount: true,
       paymentStatus: true,
       totalClientPays: true,
       totalPrice: true,
@@ -162,7 +173,7 @@ export default async function ProfesseurDashboardPage() {
     sum + getTeacherRemainingAmount(booking, adjustments)
   ), 0);
   const readyToRequestAmount = verifiedPaymentBookings
-    .filter((booking) => booking.paymentStatus === "TO_PAY_TEACHER")
+    .filter(isTeacherPayableStatus)
     .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, adjustments), 0);
   const blockedTeacherAmount = verifiedPaymentBookings
     .filter((booking) => booking.paymentStatus === "BLOCKED")

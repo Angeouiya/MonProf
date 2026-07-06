@@ -49,7 +49,7 @@ import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, PRICE_TIERS, parsePricing
 import { AvisClient } from "@/app/admin/avis/client";
 import { formatFCFA, formatDate, formatDateTime, timeAgo } from "@/lib/format";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
-import { getTeacherAdjustedPayable, getTeacherAdjustmentAmount, getTeacherFinancialSettlement } from "@/lib/teacher-payments";
+import { getTeacherAdjustedPayable, getTeacherAdjustmentAmount, getTeacherFinancialSettlement, isCancellationPenaltyPayout, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
@@ -229,7 +229,7 @@ export default async function ProfesseurDetailPage({
   const validBookings = teacher.bookings.filter(hasVerifiedPayDunyaClientPayment);
   const totalGenerated = validBookings.reduce((s, b) => s + b.totalPrice, 0);
   const totalCommission = validBookings.reduce((s, b) => s + b.commissionAmount, 0);
-  const totalNet = validBookings.reduce((s, b) => s + b.teacherNetAmount, 0);
+  const totalNet = validBookings.reduce((s, b) => s + getTeacherFinancialSettlement(b, teacher.paymentAdjustments).payableAmount, 0);
   const totalTransportFees = validBookings.reduce((s, b) => s + b.transportFee, 0);
   const totalTeacherCourseShare = validBookings.reduce((s, b) => {
     const courseShare = b.teacherPayoutAmount || Math.max(0, b.teacherNetAmount - b.transportFee);
@@ -237,10 +237,12 @@ export default async function ProfesseurDetailPage({
   }, 0);
   const blockedFunds = validBookings.filter((b) => b.paymentStatus === "BLOCKED").reduce((s, b) => s + b.teacherNetAmount, 0);
   const validatedFunds = validBookings.filter((b) => b.paymentStatus === "VALIDATED").reduce((s, b) => s + b.teacherNetAmount, 0);
-  const paidForBooking = (b: (typeof teacher.bookings)[number]) => hasVerifiedPayDunyaClientPayment(b) ? b.teacherPaidAmount || (b.paymentStatus === "TEACHER_PAID" ? b.teacherNetAmount : 0) : 0;
+  const paidForBooking = (b: (typeof teacher.bookings)[number]) => hasVerifiedPayDunyaClientPayment(b)
+    ? getTeacherFinancialSettlement(b, teacher.paymentAdjustments).paid
+    : 0;
   const toPay = validBookings
-    .filter((b) => b.paymentStatus === "TO_PAY_TEACHER")
-    .reduce((s, b) => s + Math.max(0, b.teacherNetAmount - paidForBooking(b)), 0);
+    .filter(isTeacherPayableStatus)
+    .reduce((s, b) => s + getTeacherFinancialSettlement(b, teacher.paymentAdjustments).remaining, 0);
   const alreadyPaid = validBookings.reduce((s, b) => s + paidForBooking(b), 0);
   const appliedAdjustments = getTeacherAdjustmentAmount(teacher.paymentAdjustments, "APPLIED");
   const pendingAdjustments = getTeacherAdjustmentAmount(teacher.paymentAdjustments, "PENDING");
@@ -312,6 +314,9 @@ export default async function ProfesseurDetailPage({
       transportFee: booking.transportFee,
       transportRouteLabel: pricingSnapshot?.transportRouteLabel ?? null,
       teacherNetAmount: booking.teacherNetAmount,
+      payableAmount: settlement.remaining + settlement.paid + settlement.retained,
+      cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
+      cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
       paidAmount: settlement.paid,
@@ -341,6 +346,9 @@ export default async function ProfesseurDetailPage({
       participantsCount: booking.participantsCount,
       sessionsCount: booking.sessionsCount,
       teacherNetAmount: booking.teacherNetAmount,
+      payableAmount: settlement.remaining + settlement.paid + settlement.retained,
+      cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
+      cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
       paidAmount: settlement.paid,
@@ -380,7 +388,7 @@ export default async function ProfesseurDetailPage({
     const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
     const settlement = paymentVerified
       ? getTeacherFinancialSettlement(booking, teacher.paymentAdjustments)
-      : { paid: 0, retained: 0, remaining: 0, settled: true };
+      : { payableAmount: 0, paid: 0, retained: 0, remaining: 0, settled: true };
     const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
     return {
       id: booking.id,
@@ -396,13 +404,17 @@ export default async function ProfesseurDetailPage({
       transportFee: booking.transportFee,
       transportRouteLabel: pricingSnapshot?.transportRouteLabel ?? null,
       teacherNetAmount: booking.teacherNetAmount,
+      payableAmount: settlement.payableAmount,
+      cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
+      cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
+      isCancellationPenalty: isCancellationPenaltyPayout(booking),
       paid: settlement.paid,
       retained: settlement.retained,
       remaining: settlement.remaining,
       scheduledDate: booking.scheduledDate ?? booking.createdAt,
     };
   });
-  const payableLedgerRows = ledgerRows.filter((row) => row.paymentStatus === "TO_PAY_TEACHER" && row.remaining > 0);
+  const payableLedgerRows = ledgerRows.filter((row) => isTeacherPayableStatus(row) && row.remaining > 0);
   const blockedLedgerRows = ledgerRows.filter((row) => row.paymentStatus === "BLOCKED" && row.remaining > 0);
   const validatedLedgerRows = ledgerRows.filter((row) => row.paymentStatus === "VALIDATED" && row.remaining > 0);
   const retainedLedgerAmount = ledgerRows.reduce((sum, row) => sum + row.retained, 0);
@@ -1240,7 +1252,10 @@ export default async function ProfesseurDetailPage({
                   </div>
                   <AmountTile label="Part cours" amount={targetLedgerRow.teacherCourseShare} />
                   <AmountTile label="Déplacement" amount={targetLedgerRow.transportFee} muted={targetLedgerRow.transportFee === 0} />
-                  <AmountTile label="Net professeur" amount={targetLedgerRow.teacherNetAmount} />
+                  <AmountTile
+                    label={targetLedgerRow.isCancellationPenalty ? "Indemnité annulation" : "Montant payable"}
+                    amount={targetLedgerRow.payableAmount}
+                  />
                   <AmountTile label="Déjà payé" amount={targetLedgerRow.paid} muted={targetLedgerRow.paid === 0} />
                   <AmountTile label="Reste à traiter" amount={targetLedgerRow.remaining} danger={targetLedgerRow.remaining > 0} />
                 </div>
@@ -1288,7 +1303,8 @@ export default async function ProfesseurDetailPage({
                       <div className="grid grid-cols-2 gap-2">
                         <AmountMini label="Part cours" amount={row.teacherCourseShare} />
                         <AmountMini label="Déplacement" amount={row.transportFee} />
-                        <AmountMini label="Net prof" amount={row.teacherNetAmount} />
+                        <AmountMini label={row.isCancellationPenalty ? "Indemnité" : "Payable"} amount={row.payableAmount} />
+                        {row.isCancellationPenalty && <AmountMini label="Net initial" amount={row.teacherNetAmount} />}
                         <AmountMini label="Déjà payé" amount={row.paid} />
                         <AmountMini label="Retenu" amount={row.retained} danger={row.retained > 0} />
                         <AmountMini label="Reste dû" amount={row.remaining} danger={row.remaining > 0} />
@@ -1311,7 +1327,7 @@ export default async function ProfesseurDetailPage({
                       <TableHead>Statut fonds</TableHead>
                       <TableHead className="text-right hidden xl:table-cell">Part cours</TableHead>
                       <TableHead className="text-right hidden xl:table-cell">Dépl.</TableHead>
-                      <TableHead className="text-right">Net prof</TableHead>
+                      <TableHead className="text-right">Payable</TableHead>
                       <TableHead className="text-right">Payé</TableHead>
                       <TableHead className="text-right">Retenu</TableHead>
                       <TableHead className="text-right">Reste</TableHead>
@@ -1339,7 +1355,12 @@ export default async function ProfesseurDetailPage({
                         <TableCell><PaymentStatusBadge status={row.paymentStatus} /></TableCell>
                         <TableCell className="text-right hidden xl:table-cell"><Money amount={row.teacherCourseShare} className="text-sm" /></TableCell>
                         <TableCell className="text-right hidden xl:table-cell"><Money amount={row.transportFee} className="text-sm" muted={row.transportFee === 0} /></TableCell>
-                        <TableCell className="text-right"><Money amount={row.teacherNetAmount} className="text-sm font-medium" /></TableCell>
+                        <TableCell className="text-right">
+                          <Money amount={row.payableAmount} className="text-sm font-medium" />
+                          {row.isCancellationPenalty && (
+                            <p className="mt-0.5 text-[11px] font-semibold text-blue-800">Indemnité annulation</p>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right"><Money amount={row.paid} className="text-sm" muted={row.paid === 0} /></TableCell>
                         <TableCell className="text-right"><Money amount={row.retained} className="text-sm" muted={row.retained === 0} /></TableCell>
                         <TableCell className="text-right"><Money amount={row.remaining} className="text-sm font-bold" muted={row.remaining === 0} /></TableCell>
@@ -1894,7 +1915,10 @@ function AmountTile({ label, amount, danger = false, muted = false }: { label: s
   );
 }
 
-function getTargetPaymentHint(row: { paymentStatus: string; remaining: number; retained: number }) {
+function getTargetPaymentHint(row: { paymentStatus: string; remaining: number; retained: number; isCancellationPenalty?: boolean }) {
+  if (row.isCancellationPenalty && row.remaining > 0) {
+    return "Indemnité d'annulation payable : vérifier que le remboursement client est traité ou que les fonds sont retenus, puis enregistrer le versement professeur.";
+  }
   if (row.paymentStatus === "BLOCKED") {
     return "Fonds encore bloqués : vérifier réalisation du cours, confirmation client et absence de litige avant tout versement.";
   }

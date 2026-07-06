@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { requireAdminApi } from "@/lib/admin-api";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { getTeacherFinancialSettlement, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { isActivePaymentMethod } from "@/lib/payment-methods";
@@ -96,14 +97,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     disputed: bookings.filter((b) => b.status === "DISPUTED").length,
     uniqueClients: new Set(bookings.map((b) => b.clientId)).size,
   };
+  const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
   const finance = {
-    totalGenerated: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.totalPrice, 0),
-    totalCommission: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.commissionAmount, 0),
-    totalNet: bookings.filter(hasVerifiedPayDunyaClientPayment).reduce((s, b) => s + b.teacherNetAmount, 0),
-    blockedFunds: bookings.filter((b) => b.paymentStatus === "BLOCKED" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
-    validatedFunds: bookings.filter((b) => b.paymentStatus === "VALIDATED" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
-    toPay: bookings.filter((b) => b.paymentStatus === "TO_PAY_TEACHER" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
-    alreadyPaid: bookings.filter((b) => b.paymentStatus === "TEACHER_PAID" && hasVerifiedPayDunyaClientPayment(b)).reduce((s, b) => s + b.teacherNetAmount, 0),
+    totalGenerated: verifiedBookings.reduce((s, b) => s + b.totalPrice, 0),
+    totalCommission: verifiedBookings.reduce((s, b) => s + b.commissionAmount, 0),
+    totalNet: verifiedBookings.reduce((s, b) => s + getTeacherFinancialSettlement(b).payableAmount, 0),
+    blockedFunds: verifiedBookings.filter((b) => b.paymentStatus === "BLOCKED").reduce((s, b) => s + b.teacherNetAmount, 0),
+    validatedFunds: verifiedBookings.filter((b) => b.paymentStatus === "VALIDATED").reduce((s, b) => s + b.teacherNetAmount, 0),
+    toPay: verifiedBookings.filter(isTeacherPayableStatus).reduce((s, b) => s + getTeacherFinancialSettlement(b).remaining, 0),
+    alreadyPaid: verifiedBookings.reduce((s, b) => s + getTeacherFinancialSettlement(b).paid, 0),
   };
 
   return NextResponse.json({

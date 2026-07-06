@@ -13,6 +13,15 @@ export type CancellationPolicyResult = {
   scheduledAt: Date | null;
 };
 
+export type CancellationPenaltySplit = {
+  teacherRate: number;
+  platformRate: number;
+  teacherAmount: number;
+  platformAmount: number;
+  label: string;
+  description: string;
+};
+
 type BookingLike = {
   totalPrice: number;
   paymentServiceFeeAmount?: number | null;
@@ -120,6 +129,25 @@ export function cancellationPolicySummary(policy: CancellationPolicyResult) {
   return `Frais d'annulation : ${policy.feeRate}%`;
 }
 
+export function getCancellationPenaltySplit(
+  policy: CancellationPolicyResult,
+  actor: CancellationActor = "CLIENT",
+): CancellationPenaltySplit {
+  if (policy.feeAmount <= 0 || actor !== "CLIENT") {
+    return splitResult(0, policy.feeAmount, "Aucune répartition professeur", "La pénalité client n'est pas attribuée au professeur dans ce cas.");
+  }
+
+  if (policy.code === "MODERATE") {
+    return splitResult(60, policy.feeAmount, "Répartition proche du cours", "60% de la pénalité compense la mobilisation du professeur, 40% reste plateforme.");
+  }
+
+  if (policy.code === "LATE" || policy.code === "NO_SHOW") {
+    return splitResult(70, policy.feeAmount, "Répartition tardive", "70% de la pénalité compense la disponibilité bloquée du professeur, 30% reste plateforme.");
+  }
+
+  return splitResult(0, policy.feeAmount, "Aucune répartition professeur", "La fenêtre d'annulation ne déclenche pas de compensation professeur.");
+}
+
 function result(
   code: CancellationPolicyResult["code"],
   label: string,
@@ -142,6 +170,26 @@ function result(
     refundAmount: Math.max(0, baseAmount - feeAmount),
     hoursBeforeCourse,
     scheduledAt,
+  };
+}
+
+function splitResult(
+  teacherRate: number,
+  feeAmount: number,
+  label: string,
+  description: string,
+): CancellationPenaltySplit {
+  const safeFeeAmount = Math.max(0, Math.round(feeAmount));
+  const safeTeacherRate = Math.max(0, Math.min(100, Math.round(teacherRate)));
+  const teacherAmount = Math.min(safeFeeAmount, Math.round((safeFeeAmount * safeTeacherRate) / 100));
+  const platformAmount = Math.max(0, safeFeeAmount - teacherAmount);
+  return {
+    teacherRate: safeTeacherRate,
+    platformRate: Math.max(0, 100 - safeTeacherRate),
+    teacherAmount,
+    platformAmount,
+    label,
+    description,
   };
 }
 

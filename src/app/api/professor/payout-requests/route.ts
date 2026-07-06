@@ -55,14 +55,25 @@ export async function POST(req: NextRequest) {
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         teacherId: teacher.id,
-        teacherNetAmount: { gt: 0 },
-        paymentStatus: "TO_PAY_TEACHER",
-        status: { notIn: ["CANCELLED", "REFUNDED"] },
+        OR: [
+          {
+            teacherNetAmount: { gt: 0 },
+            paymentStatus: "TO_PAY_TEACHER",
+            status: { notIn: ["CANCELLED", "REFUNDED"] },
+          },
+          {
+            status: { in: ["CANCELLED", "REFUNDED"] },
+            paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+            cancellationPenaltyTeacherAmount: { gt: 0 },
+          },
+        ],
       }),
       select: {
         id: true,
+        status: true,
         teacherNetAmount: true,
         teacherPaidAmount: true,
+        cancellationPenaltyTeacherAmount: true,
         paymentStatus: true,
         totalClientPays: true,
         totalPrice: true,
