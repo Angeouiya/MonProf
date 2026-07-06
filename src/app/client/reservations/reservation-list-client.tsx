@@ -2,7 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, FilterX, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarCheck,
+  CheckCircle2,
+  Clock3,
+  FilterX,
+  Search,
+  ShieldCheck,
+  type LucideIcon,
+} from "lucide-react";
 import {
   ClientCompactFacts,
   ClientEmptyState,
@@ -73,6 +83,12 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
 
   const activeFilter = FILTERS.find((item) => item.id === filter) ?? FILTERS[0];
   const hasSearch = query.trim().length > 0 || filter !== "all";
+  const visibleActionCount = filteredReservations.filter((reservation) => reservation.actionKind === "action").length;
+  const visibleIssueCount = filteredReservations.filter((reservation) => reservation.actionKind === "issue").length;
+  const visibleSecuredCount = filteredReservations.filter((reservation) => reservation.actionKind === "secured").length;
+  const priorityReservation = filteredReservations.find((reservation) => reservation.actionKind === "action")
+    ?? filteredReservations.find((reservation) => reservation.actionKind === "issue")
+    ?? filteredReservations[0];
 
   return (
     <ClientSurface data-client-reservations-list className="space-y-4">
@@ -118,6 +134,40 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
             );
           })}
         </div>
+      </div>
+
+      <div
+        data-client-reservation-summary
+        className="grid gap-2 rounded-lg border border-[#D8DEE9] bg-white p-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,auto)] lg:items-stretch"
+      >
+        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
+          <ReservationSummaryTile label="Affichées" value={filteredReservations.length} />
+          <ReservationSummaryTile label="À traiter" value={visibleActionCount} attention={visibleActionCount > 0} />
+          <ReservationSummaryTile
+            label={visibleIssueCount > 0 ? "En suivi" : "Sécurisées"}
+            value={visibleIssueCount > 0 ? visibleIssueCount : visibleSecuredCount}
+            attention={visibleIssueCount > 0}
+          />
+        </div>
+        {priorityReservation ? (
+          <Link
+            href={`/client/reservations/${priorityReservation.id}`}
+            className="group flex min-h-16 min-w-0 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#111B4D]"
+          >
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Accès rapide</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-[#111827]">{priorityReservation.reference}</p>
+              <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{priorityReservation.stepLabel}</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white transition-colors group-hover:bg-[#1E2A78]">
+              <ArrowRight className="h-4 w-4" />
+            </span>
+          </Link>
+        ) : (
+          <div className="flex min-h-16 items-center rounded-lg border border-dashed border-[#D8DEE9] bg-white px-3 py-2.5 text-sm font-semibold text-[#64748B]">
+            Aucun dossier dans cette vue.
+          </div>
+        )}
       </div>
 
       {hasSearch && (
@@ -166,9 +216,11 @@ export function ReservationListClient({ reservations }: { reservations: ClientRe
 
 function ReservationCard({ reservation }: { reservation: ClientReservationListItem }) {
   const teacherName = reservation.teacher.professionalName || reservation.teacher.fullName;
+  const actionMeta = getActionMeta(reservation.actionKind);
+  const ActionIcon = actionMeta.icon;
 
   return (
-    <ClientRecordCard data-client-reservation-card>
+    <ClientRecordCard data-client-reservation-card data-action-kind={reservation.actionKind}>
       <div className="p-3.5 sm:p-4">
         <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:items-start">
           <div className="flex min-w-0 items-start gap-3">
@@ -180,7 +232,18 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
               verified={reservation.teacher.badgeVerified}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{reservation.reference}</p>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{reservation.reference}</p>
+                <span
+                  className={cn(
+                    "inline-flex min-h-7 items-center gap-1 rounded-lg border bg-white px-2 text-[11px] font-semibold",
+                    actionMeta.className,
+                  )}
+                >
+                  <ActionIcon className="h-3.5 w-3.5" />
+                  {actionMeta.label}
+                </span>
+              </div>
               <h2 className="mt-0.5 break-words text-base font-semibold leading-6 text-[#111827]">
                 {reservation.subjectName} · {reservation.levelName}
               </h2>
@@ -208,15 +271,78 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
             hint={reservation.stepHint}
             aside={reservation.paymentLabel}
           />
-          <Button asChild size="sm" className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[620px]:min-w-28">
+          <Button asChild size="sm" className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[620px]:min-w-32">
             <Link href={`/client/reservations/${reservation.id}`}>
-              Détails <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              {actionMeta.ctaLabel} <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>
       </div>
     </ClientRecordCard>
   );
+}
+
+function ReservationSummaryTile({
+  label,
+  value,
+  attention,
+}: {
+  label: string;
+  value: number;
+  attention?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5">
+      <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">{label}</p>
+      <p className={cn("mt-1 text-lg font-semibold leading-6", attention ? "text-[#111B4D]" : "text-[#111827]")}>{value}</p>
+    </div>
+  );
+}
+
+function getActionMeta(actionKind: ClientReservationListItem["actionKind"]): {
+  label: string;
+  ctaLabel: string;
+  icon: LucideIcon;
+  className: string;
+} {
+  if (actionKind === "action") {
+    return {
+      label: "Action requise",
+      ctaLabel: "Agir",
+      icon: AlertTriangle,
+      className: "border-[#111B4D] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "secured") {
+    return {
+      label: "Sécurisé",
+      ctaLabel: "Suivre",
+      icon: ShieldCheck,
+      className: "border-[#D8DEE9] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "closed") {
+    return {
+      label: "Clos",
+      ctaLabel: "Consulter",
+      icon: CheckCircle2,
+      className: "border-[#D8DEE9] text-[#111B4D]",
+    };
+  }
+  if (actionKind === "issue") {
+    return {
+      label: "Suivi service client",
+      ctaLabel: "Suivre",
+      icon: Clock3,
+      className: "border-[#111B4D] text-[#111B4D]",
+    };
+  }
+  return {
+    label: "Dossier",
+    ctaLabel: "Détails",
+    icon: CalendarCheck,
+    className: "border-[#D8DEE9] text-[#111B4D]",
+  };
 }
 
 function normalize(value: string) {
