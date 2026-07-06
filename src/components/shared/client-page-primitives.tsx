@@ -284,11 +284,11 @@ export function ClientTabBar({
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
-            <span className="truncate">{item.label}</span>
+            <span className="min-w-0 truncate">{item.label}</span>
             {typeof item.count === "number" && (
               <span
                 className={cn(
-                  "ml-2 rounded-lg px-2 py-0.5 text-xs font-semibold",
+                  "ml-2 shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold",
                   active ? "bg-white text-[#111B4D]" : "border border-[#E3E8F2] bg-white text-[#111B4D]",
                 )}
               >

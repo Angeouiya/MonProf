@@ -4492,3 +4492,109 @@ b {
     grid-column: auto;
   }
 }
+
+/* Client app interaction pass: fast, solid, readable controls on phone-sized screens. */
+.client-shell :where(
+  a,
+  button,
+  [role="button"],
+  [data-slot="button"],
+  [data-client-tab-item],
+  [data-client-shortcut-card],
+  [data-client-mobile-nav] a
+) {
+  transition-duration: 120ms !important;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+@media (max-width: 719px) {
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) > * {
+    flex: initial !important;
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: none !important;
+  }
+
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-support-action-rail],
+    [data-client-quick-search-rail]
+  ) :where(a, button, [data-slot="button"]) {
+    justify-content: center !important;
+    white-space: normal !important;
+  }
+
+  .client-shell :where(
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail]
+  ) :where(a, button, [data-slot="button"]) {
+    min-height: 2.75rem !important;
+    padding-inline: 0.6rem !important;
+    text-align: center !important;
+    white-space: normal !important;
+  }
+
+  .client-shell [data-client-payment-method-rail] :where(img, svg) {
+    max-inline-size: 100% !important;
+  }
+
+  .client-shell .client-booking-progress-grid {
+    scroll-snap-type: x proximity !important;
+  }
+
+  .client-shell .client-booking-progress-grid > button {
+    transition-duration: 120ms !important;
+  }
+}
+
+@media (min-width: 520px) and (max-width: 719px) {
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

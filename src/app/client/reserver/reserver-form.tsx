@@ -867,7 +867,7 @@ export function ReserverForm({
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
             <div
-              className="h-full rounded-full bg-[#111B4D] transition-all duration-300"
+              className="h-full rounded-full bg-[#111B4D] transition-[width] duration-150"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -2004,7 +2004,7 @@ export function ReserverForm({
           </div>
           <div className="h-1 overflow-hidden rounded-full bg-[#E5E7EB]" aria-hidden="true">
             <div
-              className="h-full rounded-full bg-[#111B4D] transition-all"
+              className="h-full rounded-full bg-[#111B4D] transition-[width] duration-150"
               style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
             />
           </div>
