@@ -28,12 +28,13 @@ export function HomeSearchBar({
 
   return (
     <form
+      data-home-search-form
       method="GET"
       action="/professeurs"
-      className="mx-auto w-full max-w-5xl rounded-lg border border-[#DDE6F7] bg-white p-3 sm:p-4"
+      className="mx-auto w-full max-w-5xl rounded-lg border border-[#DDE6F7] bg-white p-2.5 sm:p-4"
     >
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
-        <label className="min-w-0">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
+        <label className="col-span-2 min-w-0 lg:col-auto">
           <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
             Recherche
           </span>
@@ -97,13 +98,13 @@ export function HomeSearchBar({
         <Button
           type="submit"
           size="lg"
-          className="min-h-12 w-full rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto"
+          className="min-h-12 w-full rounded-lg bg-[#111B4D] px-3 text-sm font-semibold text-white hover:bg-[#1E2A78] lg:mt-[1.45rem] lg:w-auto lg:px-5"
         >
           <Search className="h-4 w-4" />
           Rechercher
         </Button>
       </div>
-      <div className="mt-3 flex flex-col gap-1.5 border-t border-[#EEF2F7] pt-3 text-xs font-semibold text-[#64748B] min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
+      <div className="mt-3 hidden flex-col gap-1.5 border-t border-[#EEF2F7] pt-3 text-xs font-semibold text-[#64748B] min-[560px]:flex min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
         <span>Cours à domicile ou en ligne</span>
         <span>Séances de 2h, réservation au moins 24h avant</span>
         <span>Paiement PayDunya protégé</span>
