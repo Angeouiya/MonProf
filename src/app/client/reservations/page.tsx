@@ -2,24 +2,18 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientCompactFacts,
-  ClientEmptyState,
   ClientFocusPanel,
   ClientAppRail,
   ClientMetricStrip,
   ClientPageHeader,
-  ClientRecordAmount,
-  ClientRecordCard,
-  ClientRecordStatusLine,
   ClientTabBar,
 } from "@/components/shared/client-page-primitives";
-import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatDate } from "@/lib/format";
 import { CalendarCheck, ArrowRight, Lock, MessageSquare, Wallet, Search, WalletCards } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
-import { cn } from "@/lib/utils";
+import { ReservationListClient, type ClientReservationListItem } from "./reservation-list-client";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +97,59 @@ export default async function ReservationsPage({
         ? `${formatDate(priorityBooking.startDate)} demandée`
         : "Date à confirmer"
     : "";
+  const reservationItems: ClientReservationListItem[] = visibleBookings.map((b) => {
+    const name = b.teacher.professionalName || b.teacher.fullName;
+    const paymentVerified = hasVerifiedPayDunyaClientPayment(b);
+    const nextStep = getClientReservationStep(b.status, b.paymentStatus, paymentVerified);
+    const paymentLabel = getClientPaymentLabel(b.paymentStatus, b.isQuoteOnly);
+    const bookingDate = b.scheduledDate
+      ? formatDate(b.scheduledDate)
+      : b.startDate
+        ? `${formatDate(b.startDate)} demandée`
+        : "Date à confirmer";
+    const bookingTime = b.scheduledTime || b.preferredTime || "Créneau à confirmer";
+    const formatLabel = b.courseFormat === "HOME" ? "À domicile" : "En ligne";
+    const amountLabel = b.isQuoteOnly ? "Sur devis" : formatFCFA(b.totalClientPays || b.totalPrice);
+    const actionKind = getReservationActionKind(b.status, b.paymentStatus, paymentVerified);
+    const searchText = normalizeReservationSearch([
+      b.reference,
+      b.subjectName,
+      b.levelName,
+      name,
+      b.teacher.jobTitle || "Professeur",
+      bookingDate,
+      bookingTime,
+      formatLabel,
+      amountLabel,
+      nextStep.label,
+      nextStep.hint,
+      paymentLabel,
+    ].join(" "));
+
+    return {
+      id: b.id,
+      reference: b.reference,
+      subjectName: b.subjectName,
+      levelName: b.levelName,
+      teacher: {
+        fullName: b.teacher.fullName,
+        professionalName: b.teacher.professionalName,
+        photoUrl: b.teacher.photoUrl,
+        jobTitle: b.teacher.jobTitle,
+        badgeVerified: b.teacher.badgeVerified,
+      },
+      amountLabel,
+      dateLabel: bookingDate,
+      timeLabel: bookingTime,
+      formatLabel,
+      stepLabel: nextStep.label,
+      stepHint: nextStep.hint,
+      stepClassName: nextStep.className,
+      paymentLabel,
+      actionKind,
+      searchText,
+    };
+  });
 
   return (
     <div className="space-y-5">
@@ -158,81 +205,28 @@ export default async function ReservationsPage({
         }))}
       />
 
-      {visibleBookings.length === 0 ? (
-        <ClientEmptyState
-          icon={CalendarCheck}
-          title="Aucune réservation"
-          description="Vous n'avez pas encore réservé de cours."
-          action={
-            <Button asChild size="sm">
-              <Link href="/client/rechercher">Réserver un cours</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-3">
-          {visibleBookings.map((b) => {
-            const name = b.teacher.professionalName || b.teacher.fullName;
-            const paymentVerified = hasVerifiedPayDunyaClientPayment(b);
-            const nextStep = getClientReservationStep(b.status, b.paymentStatus, paymentVerified);
-            const paymentLabel = getClientPaymentLabel(b.paymentStatus, b.isQuoteOnly);
-            const bookingDate = b.scheduledDate
-              ? formatDate(b.scheduledDate)
-              : b.startDate
-                ? `${formatDate(b.startDate)} demandée`
-                : "Date à confirmer";
-            const bookingTime = b.scheduledTime || b.preferredTime || "Créneau à confirmer";
-            const formatLabel = b.courseFormat === "HOME" ? "À domicile" : "En ligne";
-            const amountLabel = b.isQuoteOnly ? "Sur devis" : formatFCFA(b.totalClientPays || b.totalPrice);
-            return (
-              <ClientRecordCard key={b.id} data-client-reservation-card>
-                <div className="p-3.5 sm:p-4">
-                  <div className="grid gap-3 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:items-start">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <ProfessorImage photoUrl={b.teacher.photoUrl} name={name} size={58} shape="circle" verified={b.teacher.badgeVerified} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{b.reference}</p>
-                        <h2 className="mt-0.5 break-words text-base font-semibold leading-6 text-[#111827]">
-                          {b.subjectName} · {b.levelName}
-                        </h2>
-                        <p className="mt-0.5 break-words text-xs font-semibold leading-5 text-[#64748B]">
-                          {name} · {b.teacher.jobTitle || "Professeur"}
-                        </p>
-                      </div>
-                    </div>
-                    <ClientRecordAmount value={amountLabel} className="min-[560px]:min-w-36 min-[560px]:text-right" />
-                  </div>
-
-                  <ClientCompactFacts
-                    className="mt-3"
-                    items={[
-                      { label: "Date", value: bookingDate },
-                      { label: "Créneau", value: bookingTime },
-                      { label: "Format", value: formatLabel },
-                    ]}
-                  />
-
-                  <div className="mt-3 grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
-                    <ClientRecordStatusLine
-                      className={cn(nextStep.className)}
-                      label={nextStep.label}
-                      hint={nextStep.hint}
-                      aside={paymentLabel}
-                    />
-                    <Button asChild size="sm" className="min-h-11 rounded-lg min-[620px]:min-w-28">
-                      <Link href={`/client/reservations/${b.id}`}>
-                        Détails <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </ClientRecordCard>
-            );
-          })}
-        </div>
-      )}
+      <ReservationListClient reservations={reservationItems} />
     </div>
   );
+}
+
+function getReservationActionKind(status: BookingStatus, paymentStatus: PaymentStatus, paymentVerified: boolean): ClientReservationListItem["actionKind"] {
+  if (status === "PENDING_PAYMENT" && !paymentVerified) return "action";
+  if (status === "PENDING_CLIENT_VALIDATION") return "action";
+  if (paymentStatus === "FAILED") return "action";
+  if (["CANCELLED", "REFUNDED", "DISPUTED"].includes(status) || ["DISPUTED", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "RETAINED"].includes(paymentStatus)) return "issue";
+  if (["VALIDATED_BY_CLIENT", "TEACHER_PAID"].includes(status) || paymentStatus === "TEACHER_PAID") return "closed";
+  if (paymentVerified || ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER"].includes(paymentStatus)) return "secured";
+  return "all";
+}
+
+function normalizeReservationSearch(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function getClientPaymentLabel(status: PaymentStatus, quoteOnly: boolean) {
