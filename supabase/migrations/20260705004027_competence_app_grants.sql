@@ -28,24 +28,34 @@ DECLARE
   policy_name TEXT;
 BEGIN
   FOR table_record IN
-    SELECT tablename
+    SELECT tablename, tableowner
     FROM pg_tables
     WHERE schemaname = 'competence'
   LOOP
     policy_name := 'competence_app_all_' || table_record.tablename;
 
-    IF NOT EXISTS (
-      SELECT 1
-      FROM pg_policies
-      WHERE schemaname = 'competence'
-        AND tablename = table_record.tablename
-        AND policyname = policy_name
-    ) THEN
+    IF table_record.tableowner = current_user AND NOT EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'competence'
+          AND tablename = table_record.tablename
+          AND policyname = policy_name
+      ) THEN
+      EXECUTE format(
+        'ALTER TABLE competence.%I ENABLE ROW LEVEL SECURITY',
+        table_record.tablename
+      );
+
       EXECUTE format(
         'CREATE POLICY %I ON competence.%I FOR ALL TO competence_app USING (true) WITH CHECK (true)',
         policy_name,
         table_record.tablename
       );
+    ELSIF table_record.tableowner <> current_user THEN
+      RAISE NOTICE 'Skipping RLS policy for competence.% because owner is %, current user is %',
+        table_record.tablename,
+        table_record.tableowner,
+        current_user;
     END IF;
   END LOOP;
 END $$;
