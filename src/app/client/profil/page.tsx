@@ -72,11 +72,10 @@ export default function ProfilPage() {
       .finally(() => setLoadingProfile(false));
   }, []);
 
-  async function saveInfo(e: React.FormEvent) {
-    e.preventDefault();
+  async function persistInfo() {
     if (!name.trim()) {
       toast.error("Le nom est requis");
-      return;
+      return false;
     }
     setSavingInfo(true);
     try {
@@ -93,7 +92,7 @@ export default function ProfilPage() {
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Erreur");
-        return;
+        return false;
       }
       toast.success("Profil mis à jour");
       if (data.user) {
@@ -106,11 +105,26 @@ export default function ProfilPage() {
       if (updateSession) {
         await updateSession({ name: name.trim() });
       }
+      return true;
     } catch {
       toast.error("Erreur réseau");
+      return false;
     } finally {
       setSavingInfo(false);
     }
+  }
+
+  async function saveInfo(e: React.FormEvent) {
+    e.preventDefault();
+    await persistInfo();
+  }
+
+  function resetInfo() {
+    if (!profile) return;
+    setName(profile.name ?? "");
+    setPhone(profile.phone ?? "");
+    setCommune(profile.commune ?? "");
+    setQuartier(profile.quartier ?? "");
   }
 
   if (loadingProfile) {
@@ -175,6 +189,46 @@ export default function ProfilPage() {
         ]}
       />
 
+      {profileDirty && (
+        <div
+          data-client-profile-unsaved
+          className="sticky top-16 z-30 rounded-lg border border-[#111B4D] bg-white p-3 shadow-[0_16px_40px_rgba(17,27,77,0.10)]"
+        >
+          <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#111827]">Modifications en attente</p>
+              <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
+                Enregistrez vos coordonnées pour que les prochaines réservations utilisent les bonnes informations.
+              </p>
+            </div>
+            <div className="grid gap-2 min-[420px]:grid-cols-2 min-[640px]:flex min-[640px]:shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetInfo}
+                disabled={savingInfo}
+                className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void persistInfo()}
+                disabled={savingInfo || !name.trim()}
+                className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+                data-client-profile-sticky-save
+              >
+                {savingInfo ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
+                ) : (
+                  <><Save className="mr-2 h-4 w-4" /> Enregistrer</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className="space-y-4">
           <ClientSurface compact>
@@ -233,11 +287,11 @@ export default function ProfilPage() {
               }
               description="Nom, téléphone et zone de cours."
             />
-            <form onSubmit={saveInfo} className="client-account-form space-y-3">
+            <form onSubmit={saveInfo} className="client-account-form space-y-3" data-client-profile-form>
               <div className="grid gap-3 min-[640px]:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="name">Nom complet *</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]" />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]" data-client-profile-name />
               </div>
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="email">Email</Label>
@@ -253,6 +307,7 @@ export default function ProfilPage() {
                   className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="+225 07 00 00 00 00"
                   inputMode="tel"
+                  data-client-profile-phone
                 />
               </div>
               <div>
@@ -262,6 +317,7 @@ export default function ProfilPage() {
                   value={commune}
                   onChange={(e) => setCommune(e.target.value)}
                   className="mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
+                  data-client-profile-commune
                 >
                   <option value="">— Aucune —</option>
                   {COMMUNES.map((c) => (
@@ -277,6 +333,7 @@ export default function ProfilPage() {
                   onChange={(e) => setQuartier(e.target.value)}
                   className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="Ex: Riviera Palmeraie"
+                  data-client-profile-quartier
                 />
               </div>
               </div>
@@ -284,7 +341,7 @@ export default function ProfilPage() {
                 <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
                 Ces informations restent privées et servent uniquement à organiser vos réservations.
               </div>
-              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
+              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-lg min-[640px]:w-auto" data-client-profile-save>
                 {savingInfo ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
                 ) : !profileDirty ? (
