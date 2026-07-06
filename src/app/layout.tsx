@@ -17,7 +17,10 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://competence.ci";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "Compétence — Professeurs vérifiés pour cours à domicile et en ligne",
   description:
     "Plateforme ivoirienne de réservation de cours à domicile et en ligne avec des professeurs vérifiés, un paiement sécurisé et un suivi service client complet.",
@@ -31,6 +34,9 @@ export const metadata: Metadata = {
     "Compétence",
   ],
   authors: [{ name: "Compétence" }],
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/images/brand/competence-icon.png",
     shortcut: "/images/brand/competence-icon.png",
