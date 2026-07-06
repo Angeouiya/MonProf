@@ -9,16 +9,20 @@ type PaymentMethodLogoProps = {
 
 export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps) {
   const label = paymentMethodLabel(method);
+  const shellClassName = cn(
+    "inline-flex h-11 min-w-24 items-center justify-center overflow-hidden rounded-lg border border-[#D7DEE9] bg-white px-2.5",
+    className,
+  );
 
   if (method === "WAVE") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center overflow-hidden rounded-lg border border-[#E3E8F2] bg-[#26BCEB] px-2", className)} aria-label={label}>
+      <span data-payment-method-logo className={shellClassName} aria-label={label}>
         <Image
-          src="/images/payments/wave-logo.webp"
+          src="/images/payments/wave-mobile-money.png"
           alt=""
-          width={520}
-          height={225}
-          className="h-9 w-auto max-w-full object-contain"
+          width={230}
+          height={101}
+          className="h-8 w-auto max-w-[92%] object-contain"
           aria-hidden="true"
         />
       </span>
@@ -27,39 +31,41 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
 
   if (method === "ORANGE_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
-        <svg viewBox="0 0 104 34" className="h-8 w-full" aria-hidden="true">
-          <rect x="3" y="3" width="28" height="28" rx="5" fill="#FF7900" />
-          <text x="8" y="25" fill="#fff" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="800">orange</text>
-          <text x="38" y="15" fill="#111827" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="800">Orange</text>
-          <text x="38" y="27" fill="#FF7900" fontFamily="Arial, sans-serif" fontSize="11" fontWeight="800">Money</text>
-        </svg>
+      <span data-payment-method-logo className={shellClassName} aria-label={label}>
+        <img
+          src="/images/payments/orange-money.svg"
+          alt=""
+          className="h-7 w-auto max-w-[94%] object-contain"
+          aria-hidden="true"
+          loading="lazy"
+        />
       </span>
     );
   }
 
   if (method === "MTN_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3", className)} aria-label={label}>
-        <svg viewBox="0 0 102 34" className="h-8 w-full" aria-hidden="true">
-          <rect width="102" height="34" rx="17" fill="#FFCC00" />
-          <ellipse cx="33" cy="17" rx="24" ry="11" fill="none" stroke="#111827" strokeWidth="2" />
-          <text x="18" y="21" fill="#111827" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="900">MTN</text>
-          <text x="61" y="21" fill="#111827" fontFamily="Arial, sans-serif" fontSize="10" fontWeight="800">Money</text>
-        </svg>
+      <span data-payment-method-logo className={shellClassName} aria-label={label}>
+        <img
+          src="/images/payments/mtn-momo.svg"
+          alt=""
+          className="h-9 w-auto max-w-[78%] object-contain"
+          aria-hidden="true"
+          loading="lazy"
+        />
       </span>
     );
   }
 
   if (method === "MOOV_MONEY") {
     return (
-      <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2", className)} aria-label={label}>
+      <span data-payment-method-logo className={shellClassName} aria-label={label}>
         <Image
-          src="/images/payments/moov-money-logo.webp"
+          src="/images/payments/moov-money-flooz.png"
           alt=""
-          width={520}
-          height={315}
-          className="h-9 w-auto max-w-full object-contain"
+          width={512}
+          height={512}
+          className="h-9 w-auto max-w-[86%] object-contain"
           aria-hidden="true"
         />
       </span>
