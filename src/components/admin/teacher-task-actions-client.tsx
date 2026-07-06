@@ -72,7 +72,7 @@ export function TeacherTaskActionsClient({
     "",
     task.description,
     note.trim() ? "" : null,
-    note.trim() ? `Note admin : ${note.trim()}` : null,
+    note.trim() ? `Note service client : ${note.trim()}` : null,
   ].filter(Boolean).join("\n"), [note, task.description, task.dueAt, task.priority, task.status, task.title, teacherName]);
   const whatsAppUrl = buildWhatsAppUrl(teacherPhone, taskMessage);
 
@@ -111,11 +111,11 @@ export function TeacherTaskActionsClient({
           value={note}
           onChange={(event) => setNote(event.target.value)}
           maxLength={560}
-          placeholder="Note de suivi admin optionnelle avant changement de statut ou relance..."
+          placeholder="Note de suivi service client optionnelle avant changement de statut ou relance..."
           className="min-h-20 rounded-lg text-sm"
         />
         <p className={noteTooLong ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
-          {note.trim().length}/500 caractères. Cette note est ajoutée au message professeur et au journal admin.
+          {note.trim().length}/500 caractères. Cette note est ajoutée au message professeur et au journal de suivi.
         </p>
       </div>
 

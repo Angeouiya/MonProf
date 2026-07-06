@@ -358,7 +358,7 @@ export function TeacherWarningModal({ open, onOpenChange, teacherId, bookings, l
               onValueChange={setVisibility}
               items={[
                 { value: "send", label: "Envoyer au professeur" },
-                { value: "admin", label: "Note interne admin seulement" },
+                { value: "admin", label: "Note interne service client seulement" },
               ]}
             />
           </div>
@@ -462,7 +462,7 @@ export function TeacherStatusModal({ open, onOpenChange, teacherName, bookingsCo
         </DialogHeader>
         <div className="space-y-3">
           <FieldSelect label="Nouveau statut" value={status} onValueChange={setStatus} items={teacherStatuses} />
-          <TextField label="Motif admin" value={reason} onChange={setReason} rows={4} />
+          <TextField label="Motif service client" value={reason} onChange={setReason} rows={4} />
           <p className={reasonInvalid ? "text-xs font-medium text-red-700" : "text-xs text-muted-foreground"}>
             {reasonLength}/700 caractères. Minimum 10 caractères pour conserver une décision exploitable.
           </p>
@@ -558,7 +558,7 @@ const taskTypes = [
   { value: "JUSTIFY_DELAY", label: "Justifier un retard" },
   { value: "ANSWER_DISPUTE", label: "Répondre à un litige" },
   { value: "SEND_DOCUMENT", label: "Envoyer un document" },
-  { value: "CONTACT_ADMIN", label: "Contacter admin" },
+  { value: "CONTACT_ADMIN", label: "Contacter le service client" },
 ];
 
 const priorities = [
@@ -681,12 +681,12 @@ const teacherStatusPolicies: Record<string, {
   OBSERVATION: {
     title: "Surveillance qualité",
     description: "Le professeur reste utilisable mais doit être suivi avec attention.",
-    effects: ["Notification admin de suivi", "À surveiller sur retards, avis, litiges et confirmations"],
+    effects: ["Notification service client de suivi", "À surveiller sur retards, avis, litiges et confirmations"],
     className: "border-amber-100 bg-amber-50/80 text-amber-950",
   },
   REPLACEABLE: {
     title: "Remplacement à anticiper",
-    description: "Le professeur peut rester sur certains dossiers, mais l'admin doit préparer des alternatives.",
+    description: "Le professeur peut rester sur certains dossiers, mais le service client doit préparer des alternatives.",
     effects: ["Réservations à ouvrir avec prudence", "Remplaçants compatibles à vérifier avant le cours"],
     className: "border-violet-100 bg-violet-50/80 text-violet-950",
   },
@@ -698,7 +698,7 @@ const teacherStatusPolicies: Record<string, {
   },
   TEMPORARILY_SUSPENDED: {
     title: "Suspension temporaire",
-    description: "Le professeur sort du flux normal jusqu'à décision admin.",
+    description: "Le professeur sort du flux normal jusqu'à décision du service client.",
     effects: ["Nouvelles attributions bloquées", "Tâches critiques créées pour vérifier/remplacer les cours actifs"],
     className: "border-red-100 bg-red-50/85 text-red-900",
   },
@@ -711,7 +711,7 @@ const teacherStatusPolicies: Record<string, {
   SUSPENDED: {
     title: "Suspension",
     description: "Le professeur ne doit plus recevoir de mission tant que le statut n'est pas rétabli.",
-    effects: ["Profil retiré côté client", "Réservations actives signalées à l'admin"],
+    effects: ["Profil retiré côté client", "Réservations actives signalées au service client"],
     className: "border-red-100 bg-red-50/85 text-red-900",
   },
   BLACKLISTED: {

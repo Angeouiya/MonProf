@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: null,
         title: `Message envoyé au professeur - ${subject}`,
-        message: `${admin.name} a répondu à ${teacherName} : ${message}`,
+        message: `Le service client a répondu à ${teacherName} : ${message}`,
         type: "ADMIN_TEACHER_MESSAGE",
         recipientType: "TEACHER",
         recipientName: teacherName,
