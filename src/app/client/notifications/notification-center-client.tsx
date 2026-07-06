@@ -138,7 +138,7 @@ export function ClientNotificationCenter({
     );
   }, [notifications]);
   const filteredNotifications = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = normalize(query);
     return notifications.filter((notification) => {
       const booking = notification.bookingId ? bookingsById.get(notification.bookingId) ?? null : null;
       const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "";
@@ -146,15 +146,20 @@ export function ClientNotificationCenter({
         notification.title,
         notification.message,
         notification.type,
+        notificationTypeLabel(notification.type),
         notification.priority,
+        priorityLabel(notification.priority),
         notification.status,
+        statusLabel[notification.status] ?? notification.status,
+        notificationChannelLabel(notification.channel),
         booking?.reference,
         booking?.subjectName,
         booking?.levelName,
         teacherName,
-      ].filter(Boolean).join(" ").toLowerCase();
+        booking ? formatClientPaymentStatus(booking.paymentStatus) : "",
+      ].filter(Boolean).join(" ");
 
-      const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
+      const matchesQuery = !normalizedQuery || normalize(searchable).includes(normalizedQuery);
       const matchesFilter =
         filter === "all" ||
         (filter === "unread" && !notification.read) ||
@@ -167,6 +172,7 @@ export function ClientNotificationCenter({
       return matchesQuery && matchesFilter;
     });
   }, [bookingsById, filter, notifications, query]);
+  const groupedNotifications = useMemo(() => groupNotificationsByDate(filteredNotifications), [filteredNotifications]);
   const activeFilterLabel = filterOptions.find((option) => option.key === filter)?.label ?? "Toutes";
   const hasQuery = query.trim().length > 0;
   const hasActiveRefinement = hasQuery || filter !== "all";
@@ -187,6 +193,7 @@ export function ClientNotificationCenter({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Rechercher professeur, paiement, réservation..."
                 className="h-12 rounded-lg border-[#D8DEE9] bg-white pl-9 pr-10 text-sm font-medium focus:border-[#111B4D] focus:ring-[#111B4D]"
+                data-client-notification-search
               />
               {hasQuery && (
                 <button
@@ -254,74 +261,99 @@ export function ClientNotificationCenter({
       ) : filteredNotifications.length === 0 ? (
         <ClientEmptyState icon={Search} title="Aucun résultat" description="Essayez un autre filtre ou une autre recherche." compact />
       ) : (
-        <div className="space-y-2.5" aria-live="polite">
-          {filteredNotifications.map((notification) => {
-            const booking = notification.bookingId ? bookingsById.get(notification.bookingId) ?? null : null;
-            const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur Compétence";
-            const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
-            const actionLabel = notification.actionLabel || (booking ? "Voir réservation" : "Ouvrir");
-            const showPriorityLabel = ["URGENT", "CRITICAL", "IMPORTANT"].includes(notification.priority);
-            return (
-              <ClientRecordCard
-                key={notification.id}
-                data-client-notification-card
-                className={`overflow-hidden rounded-lg ${
-                  notification.read
-                    ? "border-[#E3E8F2] bg-white"
-                    : "border-[#111B4D] bg-white"
-                }`}
-              >
-                <div className="relative grid gap-3 p-3 min-[720px]:grid-cols-[minmax(0,1fr)_12rem] min-[720px]:items-start sm:p-4">
-                  {!notification.read && <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#111B4D] sm:inset-y-4" />}
-                  <div className="flex min-w-0 gap-3 pl-1">
-                    {booking ? (
-                      <ProfessorImage
-                        photoUrl={booking.teacher.photoUrl}
-                        name={teacherName}
-                        size={44}
-                        shape="circle"
-                        verified={booking.teacher.badgeVerified}
-                      />
-                    ) : (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white text-[#111B4D]">
-                        <Bell className="h-5 w-5" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {!notification.read && <span className="h-2.5 w-2.5 rounded-full bg-[#111B4D]" aria-label="Notification non lue" />}
-                        <h2 className="min-w-0 text-sm font-semibold leading-5 text-[#111827]">{notification.title}</h2>
-                        {!notification.read && <span className="text-xs font-semibold text-[#111B4D]">Nouveau</span>}
-                        {showPriorityLabel && <span className="text-xs font-semibold text-[#111B4D]">{priorityLabel(notification.priority)}</span>}
-                      </div>
-                      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#64748B]">
-                        {notificationTypeLabel(notification.type)} · {notificationChannelLabel(notification.channel)} · {statusLabel[notification.status] ?? notification.status}
-                      </p>
-                      <p className="mt-2 line-clamp-3 whitespace-pre-line break-words text-sm leading-5 text-[#475569] sm:leading-6">{notification.message}</p>
-                      {booking && <BookingNotificationPreview booking={booking} teacherName={teacherName} />}
-                      <p className="mt-2 break-words text-xs font-medium leading-5 text-[#64748B]">
-                        {formatDateTime(notification.createdAt)} · {timeAgo(notification.createdAt)}
-                        {notification.readAt ? ` · lu le ${formatDateTime(notification.readAt)}` : ""}
-                        {notification.confirmedAt ? ` · confirmé le ${formatDateTime(notification.confirmedAt)}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid min-w-0 shrink-0 grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
-                    {href && (
-                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-11 w-full rounded-lg">
-                        <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
-                      </Button>
-                    )}
-                    <ClientNotificationActions mode="row" id={notification.id} read={notification.read} status={notification.status} />
-                  </div>
-                </div>
-              </ClientRecordCard>
-            );
-          })}
+        <div className="space-y-4" aria-live="polite" data-client-notification-results>
+          {groupedNotifications.map((group) => (
+            <section key={group.key} data-client-notification-group className="space-y-2.5">
+              <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[#E3E8F2] bg-white pb-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{group.label}</h2>
+                <span className="rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                  {formatCount(group.items.length, "message")}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {group.items.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    booking={notification.bookingId ? bookingsById.get(notification.bookingId) ?? null : null}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function NotificationCard({
+  notification,
+  booking,
+}: {
+  notification: ClientNotification;
+  booking: NotificationBooking | null;
+}) {
+  const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur Compétence";
+  const href = notification.link || (booking ? `/client/reservations/${booking.id}` : null);
+  const actionLabel = notification.actionLabel || (booking ? "Voir réservation" : "Ouvrir");
+  const showPriorityLabel = ["URGENT", "CRITICAL", "IMPORTANT"].includes(notification.priority);
+
+  return (
+    <ClientRecordCard
+      data-client-notification-card
+      className={`overflow-hidden rounded-lg ${
+        notification.read
+          ? "border-[#E3E8F2] bg-white"
+          : "border-[#111B4D] bg-white"
+      }`}
+    >
+      <div className="relative grid gap-3 p-3 min-[720px]:grid-cols-[minmax(0,1fr)_12rem] min-[720px]:items-start sm:p-4">
+        {!notification.read && <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#111B4D] sm:inset-y-4" />}
+        <div className="flex min-w-0 gap-3 pl-1">
+          {booking ? (
+            <ProfessorImage
+              photoUrl={booking.teacher.photoUrl}
+              name={teacherName}
+              size={44}
+              shape="circle"
+              verified={booking.teacher.badgeVerified}
+            />
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white text-[#111B4D]">
+              <Bell className="h-5 w-5" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {!notification.read && <span className="h-2.5 w-2.5 rounded-full bg-[#111B4D]" aria-label="Notification non lue" />}
+              <h2 className="min-w-0 text-sm font-semibold leading-5 text-[#111827]">{notification.title}</h2>
+              {!notification.read && <span className="text-xs font-semibold text-[#111B4D]">Nouveau</span>}
+              {showPriorityLabel && <span className="text-xs font-semibold text-[#111B4D]">{priorityLabel(notification.priority)}</span>}
+            </div>
+            <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#64748B]">
+              {notificationTypeLabel(notification.type)} · {notificationChannelLabel(notification.channel)} · {statusLabel[notification.status] ?? notification.status}
+            </p>
+            <p className="mt-2 line-clamp-3 whitespace-pre-line break-words text-sm leading-5 text-[#475569] sm:leading-6">{notification.message}</p>
+            {booking && <BookingNotificationPreview booking={booking} teacherName={teacherName} />}
+            <p className="mt-2 break-words text-xs font-medium leading-5 text-[#64748B]">
+              {formatDateTime(notification.createdAt)} · {timeAgo(notification.createdAt)}
+              {notification.readAt ? ` · lu le ${formatDateTime(notification.readAt)}` : ""}
+              {notification.confirmedAt ? ` · confirmé le ${formatDateTime(notification.confirmedAt)}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid min-w-0 shrink-0 grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
+          {href && (
+            <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-11 w-full rounded-lg">
+              <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
+            </Button>
+          )}
+          <ClientNotificationActions mode="row" id={notification.id} read={notification.read} status={notification.status} />
+        </div>
+      </div>
+    </ClientRecordCard>
   );
 }
 
@@ -431,6 +463,53 @@ function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function groupNotificationsByDate(notifications: ClientNotification[]) {
+  const groups: Array<{ key: string; label: string; items: ClientNotification[] }> = [];
+
+  for (const notification of notifications) {
+    const date = new Date(notification.createdAt);
+    const key = Number.isNaN(date.getTime()) ? "unknown" : date.toISOString().slice(0, 10);
+    let group = groups.find((item) => item.key === key);
+    if (!group) {
+      group = {
+        key,
+        label: getNotificationDateLabel(date),
+        items: [],
+      };
+      groups.push(group);
+    }
+    group.items.push(notification);
+  }
+
+  return groups;
+}
+
+function getNotificationDateLabel(date: Date) {
+  if (Number.isNaN(date.getTime())) return "Date à confirmer";
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (isSameCalendarDay(date, today)) return "Aujourd'hui";
+  if (isSameCalendarDay(date, yesterday)) return "Hier";
+  return formatDate(date);
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
 function formatClientPaymentStatus(status: string) {
   return clientPaymentStatusLabel[status] ?? "Suivi paiement";
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
