@@ -52,13 +52,13 @@ export const cancellationWindowLabels: Record<CancellationPolicyResult["code"], 
   LATE: "Annulation tardive",
   NO_SHOW: "Cours commencé ou dépassé",
   UNSCHEDULED: "Cours non encore planifié",
-  ADMIN_OVERRIDE: "Annulation administrative",
+  ADMIN_OVERRIDE: "Annulation service client",
   TEACHER_FAULT: "Annulation côté professeur",
 };
 
 export const cancellationActorLabels: Record<CancellationActor, string> = {
   CLIENT: "Client",
-  ADMIN: "Administration",
+  ADMIN: "Service client",
   TEACHER: "Professeur",
 };
 
@@ -85,11 +85,11 @@ export function getCancellationPolicy(booking: BookingLike, now = new Date(), ac
   const baseAmount = Math.max(0, grossAmount - serviceFeeAmount);
 
   if (actor === "ADMIN") {
-    return result("ADMIN_OVERRIDE", "Annulation administrative", "L'administration annule ou arbitre manuellement. Aucun frais client n'est appliqué par défaut.", 0, baseAmount, serviceFeeAmount, null, null);
+    return result("ADMIN_OVERRIDE", "Annulation service client", "Le service client annule ou arbitre manuellement. Aucun frais client n'est appliqué par défaut.", 0, baseAmount, serviceFeeAmount, null, null);
   }
 
   if (actor === "TEACHER") {
-    return result("TEACHER_FAULT", "Annulation côté professeur", "Le client n'est pas pénalisé. L'administration propose un remplacement, un report ou un remboursement.", 0, baseAmount, serviceFeeAmount, null, null);
+    return result("TEACHER_FAULT", "Annulation côté professeur", "Le client n'est pas pénalisé. Le service client propose un remplacement, un report ou un remboursement.", 0, baseAmount, serviceFeeAmount, null, null);
   }
 
   const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime);
@@ -100,11 +100,11 @@ export function getCancellationPolicy(booking: BookingLike, now = new Date(), ac
   const hoursBeforeCourse = (scheduledAt.getTime() - now.getTime()) / HOUR_MS;
 
   if (hoursBeforeCourse <= 0) {
-    return result("NO_SHOW", "Cours déjà commencé ou dépassé", "Le cours est déjà commencé ou dépassé. Le dossier doit être examiné par l'administration.", 100, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+    return result("NO_SHOW", "Cours déjà commencé ou dépassé", "Le cours est déjà commencé ou dépassé. Le dossier doit être examiné par le service client.", 100, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
   }
 
   if (hoursBeforeCourse < 6) {
-    return result("LATE", "Annulation tardive", "Moins de 6h avant le cours : 50% du montant est retenu, sauf décision exceptionnelle de l'administration.", 50, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+    return result("LATE", "Annulation tardive", "Moins de 6h avant le cours : 50% du montant est retenu, sauf décision exceptionnelle du service client.", 50, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
   }
 
   if (hoursBeforeCourse < 24) {

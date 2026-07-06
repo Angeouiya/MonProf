@@ -49,7 +49,7 @@ export const LYCEE_LEVEL_OPTIONS: Record<SchoolSystem, string[]> = {
     "Seconde", "Première générale", "Terminale générale", "Première technologique", "Terminale technologique",
   ],
   international: ["Seconde internationale", "Première internationale", "Terminale internationale", "Programme autre"],
-  autre: ["Niveau lycée autre", "Programme spécialisé", "À préciser avec l'administration"],
+  autre: ["Niveau lycée autre", "Programme spécialisé", "À préciser avec le service client"],
 };
 
 export const FRENCH_LYCEE_SPECIALTIES = [

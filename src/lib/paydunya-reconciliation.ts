@@ -365,7 +365,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
                 `Nombre de séance(s) : ${booking.sessionsCount}`,
                 `Montant net prévu : ${booking.teacherNetAmount.toLocaleString("fr-FR")} FCFA`,
                 "",
-                "Merci de confirmer rapidement votre disponibilité ou de signaler un problème à l'administration.",
+                "Merci de confirmer rapidement votre disponibilité ou de signaler un problème au service client.",
               ].join("\n"),
               channel: "WHATSAPP",
               sent: false,
@@ -410,7 +410,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
       verified: false,
       status: "rejected",
       action: "rejected",
-      message: "Statut PayDunya contradictoire sur une réservation déjà payée. Contrôle admin requis.",
+      message: "Statut PayDunya contradictoire sur une réservation déjà payée. Contrôle service client requis.",
     };
   }
 

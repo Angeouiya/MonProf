@@ -382,7 +382,7 @@ export function calculateGrandAbidjanTransportFee({
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       routeLabel,
-      ruleLabel: "Commune professeur ou client manquante : validation admin requise.",
+      ruleLabel: "Commune professeur ou client manquante : validation service client requise.",
       coveredByTeacherZone,
       isGrandAbidjanRoute: false,
       isQuoteOnly: true,
@@ -629,7 +629,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const quoteReason = tier.amount === null
     ? tier.description
     : pack.sessions === null
-      ? "Pack personnalisé à chiffrer par l'administration."
+      ? "Pack personnalisé à chiffrer par le service client."
       : undefined;
 
   if (isQuoteOnly) {
