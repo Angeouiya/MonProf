@@ -7,6 +7,7 @@ import {
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientRecordCard,
   ClientSectionTitle,
   ClientSurface,
@@ -92,6 +93,14 @@ export default async function AvisPage() {
       levelName: review.booking.levelName,
     },
   }));
+  const averageRating = myReviews.length
+    ? myReviews.reduce((sum, review) => sum + review.rating, 0) / myReviews.length
+    : 0;
+  const lowRatingCount = myReviews.filter((review) => review.rating <= 3).length;
+  const latestReview = myReviews[0] ?? null;
+  const latestReviewTeacherName = latestReview
+    ? latestReview.teacher.professionalName || latestReview.teacher.fullName
+    : "";
 
   return (
     <div className="space-y-6">
@@ -116,6 +125,22 @@ export default async function AvisPage() {
           { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau professeur" },
           { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Qualité et litige" },
         ]}
+      />
+
+      <ReviewCommandCenter
+        pendingCount={bookingsToReview.length}
+        publishedCount={myReviews.length}
+        averageRating={averageRating}
+        lowRatingCount={lowRatingCount}
+        primaryReviewBooking={primaryReviewBooking}
+        primaryReviewTeacherName={primaryReviewTeacherName}
+        latestReview={latestReview ? {
+          teacherName: latestReviewTeacherName,
+          subjectName: latestReview.booking.subjectName,
+          levelName: latestReview.booking.levelName,
+          rating: latestReview.rating,
+          bookingId: latestReview.booking.id,
+        } : null}
       />
 
       <section className="space-y-3">
@@ -205,5 +230,132 @@ export default async function AvisPage() {
         <ReviewHistoryClient reviews={reviewHistory} />
       </section>
     </div>
+  );
+}
+
+type ReviewCommandCenterProps = {
+  pendingCount: number;
+  publishedCount: number;
+  averageRating: number;
+  lowRatingCount: number;
+  primaryReviewBooking: ReviewCommandCenterBooking | null;
+  primaryReviewTeacherName: string;
+  latestReview: {
+    teacherName: string;
+    subjectName: string;
+    levelName: string;
+    rating: number;
+    bookingId: string;
+  } | null;
+};
+
+type ReviewCommandCenterBooking = {
+  id: string;
+  reference: string;
+  subjectName: string;
+  levelName: string;
+};
+
+function ReviewCommandCenter({
+  pendingCount,
+  publishedCount,
+  averageRating,
+  lowRatingCount,
+  primaryReviewBooking,
+  primaryReviewTeacherName,
+  latestReview,
+}: ReviewCommandCenterProps) {
+  const hasPending = Boolean(primaryReviewBooking);
+  const averageLabel = averageRating > 0 ? `${averageRating.toFixed(1)}/5` : "Aucun avis";
+  const qualityLabel = lowRatingCount > 0 ? `${lowRatingCount} à suivre` : "Qualité stable";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-review-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {hasPending ? <ClipboardCheck className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Suivi qualité</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">
+                {hasPending ? "Un retour qualité est attendu." : "Vos avis sont à jour."}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                {hasPending
+                  ? "Notez le cours terminé pour aider les autres clients et permettre au service client de suivre la qualité du professeur."
+                  : "Votre historique qualité reste relié aux professeurs et aux réservations concernées."}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="À donner" value={pendingCount} strong={pendingCount > 0} />
+            <ClientInfoPill label="Envoyés" value={publishedCount} strong={publishedCount > 0} />
+            <ClientInfoPill label="Moyenne" value={averageLabel} strong={averageRating > 0} />
+            <ClientInfoPill label="Signal qualité" value={qualityLabel} strong={lowRatingCount > 0} />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              { label: "Cours terminé", hint: "Le dossier devient évaluable après validation.", state: hasPending || publishedCount > 0 ? "done" : "pending" },
+              { label: "Avis client", hint: "Note, commentaire et contexte du cours.", state: hasPending ? "current" : publishedCount > 0 ? "done" : "pending" },
+              { label: "Suivi qualité", hint: "Le service client garde la traçabilité.", state: publishedCount > 0 ? "done" : hasPending ? "pending" : "current" },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Action prioritaire</p>
+              {primaryReviewBooking ? (
+                <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                  <p className="text-base font-semibold leading-6 text-[#111827]">{primaryReviewTeacherName}</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                    {primaryReviewBooking.subjectName} · {primaryReviewBooking.levelName}
+                  </p>
+                  <p className="mt-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                    {primaryReviewBooking.reference}
+                  </p>
+                </div>
+              ) : latestReview ? (
+                <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                  <p className="text-base font-semibold leading-6 text-[#111827]">{latestReview.teacherName}</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                    {latestReview.subjectName} · {latestReview.levelName}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#111B4D]">Dernière note : {latestReview.rating}/5</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                  <p className="text-base font-semibold leading-6 text-[#111827]">Aucun cours à noter</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">Réservez un cours pour construire votre historique qualité.</p>
+                </div>
+              )}
+            </div>
+
+            {primaryReviewBooking ? (
+              <ReviewDialog bookingId={primaryReviewBooking.id} teacherName={primaryReviewTeacherName} triggerClassName="mt-0" />
+            ) : latestReview ? (
+              <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                <Link href={`/client/reservations/${latestReview.bookingId}`}>
+                  Ouvrir le dernier dossier
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                <Link href="/client/rechercher">
+                  Trouver un professeur
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
