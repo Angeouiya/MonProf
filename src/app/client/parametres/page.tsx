@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Bell, CalendarCheck, CheckCircle2, LifeBuoy, Lock, Mail, ShieldCheck, User, UserCog } from "lucide-react";
+import { ArrowRight, Bell, CheckCircle2, Lock, Mail, ShieldCheck, UserCog } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireClient } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -67,15 +66,6 @@ export default async function ClientParametresPage() {
           { icon: Mail, label: "Récupération", value: recoveryReady ? "Email sécurisé" : "Email requis", attention: !recoveryReady },
           { icon: Bell, label: "Alertes", value: unreadNotifications, attention: unreadNotifications > 0 },
           { icon: Lock, label: "OTP", value: "Non utilisé" },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées" },
-          { href: "/client/parametres", icon: UserCog, label: "Sécurité", value: "Mot de passe", active: true },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
-          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide compte" },
         ]}
       />
 
