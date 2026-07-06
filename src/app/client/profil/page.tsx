@@ -6,8 +6,10 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ClientAppRail,
+  ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientSectionTitle,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
@@ -189,6 +191,20 @@ export default function ProfilPage() {
         ]}
       />
 
+      <ProfileCommandCenter
+        name={name}
+        email={profile?.email ?? ""}
+        phone={phone}
+        commune={commune}
+        quartier={quartier}
+        completion={profileCompletion}
+        missingItems={missingProfileItems}
+        dirty={profileDirty}
+        saving={savingInfo}
+        onSave={() => void persistInfo()}
+        onReset={resetInfo}
+      />
+
       {profileDirty && (
         <div
           data-client-profile-unsaved
@@ -231,7 +247,7 @@ export default function ProfilPage() {
 
       <div className="grid gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <aside className="space-y-4">
-          <ClientSurface compact>
+          <ClientSurface compact id="coordonnees">
               <ClientSectionTitle
                 eyebrow="Identité"
                 title="Informations clés"
@@ -372,6 +388,128 @@ export default function ProfilPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ProfileCommandCenter({
+  name,
+  email,
+  phone,
+  commune,
+  quartier,
+  completion,
+  missingItems,
+  dirty,
+  saving,
+  onSave,
+  onReset,
+}: {
+  name: string;
+  email: string;
+  phone: string;
+  commune: string;
+  quartier: string;
+  completion: number;
+  missingItems: string[];
+  dirty: boolean;
+  saving: boolean;
+  onSave: () => void;
+  onReset: () => void;
+}) {
+  const isReady = completion >= 100;
+  const areaLabel = [commune, quartier].filter(Boolean).join(" · ") || "Adresse à compléter";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-profile-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {dirty ? <Save className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Centre compte</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">
+                {dirty ? "Des coordonnées attendent validation." : isReady ? "Votre profil est prêt." : "Complétez les informations utiles."}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                {dirty
+                  ? "Enregistrez pour que les prochaines réservations, confirmations et suivis utilisent les bonnes informations."
+                  : "Ces données restent privées et servent à confirmer rapidement les cours à domicile, en ligne et les échanges avec le service client."}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="Complétude" value={`${completion}%`} strong={completion >= 75} />
+            <ClientInfoPill label="Téléphone" value={phone || "À renseigner"} strong={Boolean(phone)} />
+            <ClientInfoPill label="Zone" value={areaLabel} strong={Boolean(commune && quartier)} />
+            <ClientInfoPill label="Email" value={email || "Compte client"} strong={Boolean(email)} />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              { label: "Identité", hint: name ? "Nom renseigné." : "Nom complet requis.", state: name ? "done" : "current" },
+              { label: "Contact", hint: phone ? "Téléphone prêt pour le suivi." : "Ajoutez un numéro joignable.", state: phone ? "done" : name ? "current" : "pending" },
+              { label: "Zone", hint: commune && quartier ? "Adresse exploitable pour les cours." : "Commune et quartier accélèrent les confirmations.", state: commune && quartier ? "done" : phone ? "current" : "pending" },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Action prioritaire</p>
+              <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                <p className="text-base font-semibold leading-6 text-[#111827]">
+                  {dirty ? "Enregistrer les changements" : missingItems.length > 0 ? "Profil à compléter" : "Profil opérationnel"}
+                </p>
+                {missingItems.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {missingItems.map((item) => (
+                      <span key={item} className="rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">Vos coordonnées sont prêtes pour les réservations.</p>
+                )}
+              </div>
+            </div>
+
+            {dirty ? (
+              <div className="grid gap-2">
+                <Button
+                  type="button"
+                  onClick={onSave}
+                  disabled={saving || !name.trim()}
+                  className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+                >
+                  {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</> : <><Save className="mr-2 h-4 w-4" /> Enregistrer</>}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onReset}
+                  disabled={saving}
+                  className="min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+                >
+                  Annuler
+                </Button>
+              </div>
+            ) : (
+              <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                <Link href={missingItems.length > 0 ? "/client/profil#coordonnees" : "/client/rechercher"}>
+                  {missingItems.length > 0 ? "Compléter le profil" : "Trouver un professeur"}
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
 
