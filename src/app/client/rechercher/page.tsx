@@ -179,14 +179,14 @@ export default async function RechercherPage({
             {hasActiveFilters && (
               <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 min-[620px]:flex-row min-[620px]:items-center min-[620px]:justify-between">
                 <div
-                  className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[620px]:mx-0 min-[620px]:flex-wrap min-[620px]:overflow-visible min-[620px]:px-0 min-[620px]:pb-0"
+                  className="grid min-w-0 grid-cols-1 gap-1.5 min-[430px]:grid-cols-2 min-[720px]:flex min-[720px]:flex-wrap"
                   aria-label="Filtres actifs"
                 >
                   {activeFilters.map((filter) => (
                     <Link
                       key={filter.key}
                       href={filter.href}
-                      className="inline-flex min-h-9 max-w-[16rem] shrink-0 snap-start items-center gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D] min-[620px]:max-w-none"
+                      className="inline-flex min-h-9 min-w-0 items-center justify-between gap-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D] min-[720px]:justify-center"
                       title={`Retirer le filtre ${filter.label}`}
                     >
                       <span className="truncate">{filter.label}</span>
@@ -315,12 +315,12 @@ export default async function RechercherPage({
               description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
             />
             <div
-              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[720px]:mx-0 min-[720px]:flex-wrap min-[720px]:justify-center min-[720px]:overflow-visible min-[720px]:px-0 min-[720px]:pb-0"
+              className="grid gap-2 min-[520px]:grid-cols-2 min-[840px]:grid-cols-4"
               aria-label="Suggestions de recherche"
             >
               <Link
                 href="/client/rechercher"
-                className="inline-flex min-h-11 min-w-[10rem] shrink-0 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] sm:min-w-0"
+                className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-center text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
                 Voir tous les professeurs
               </Link>
@@ -328,7 +328,7 @@ export default async function RechercherPage({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="inline-flex min-h-11 min-w-[9rem] shrink-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:min-w-0"
+                  className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-center text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
                 >
                   {item.label}
                 </Link>
