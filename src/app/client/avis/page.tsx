@@ -111,6 +111,7 @@ export default async function AvisPage() {
       />
 
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: ClipboardCheck, label: "À donner", value: bookingsToReview.length, attention: bookingsToReview.length > 0 },
           { icon: MessageSquare, label: "Envoyés", value: myReviews.length },
@@ -127,7 +128,7 @@ export default async function AvisPage() {
         ]}
       />
 
-      <ReviewCommandCenter
+      <ReviewMobilePriorityCard
         pendingCount={bookingsToReview.length}
         publishedCount={myReviews.length}
         averageRating={averageRating}
@@ -143,7 +144,25 @@ export default async function AvisPage() {
         } : null}
       />
 
-      <section className="space-y-3">
+      <div className="max-md:hidden">
+        <ReviewCommandCenter
+          pendingCount={bookingsToReview.length}
+          publishedCount={myReviews.length}
+          averageRating={averageRating}
+          lowRatingCount={lowRatingCount}
+          primaryReviewBooking={primaryReviewBooking}
+          primaryReviewTeacherName={primaryReviewTeacherName}
+          latestReview={latestReview ? {
+            teacherName: latestReviewTeacherName,
+            subjectName: latestReview.booking.subjectName,
+            levelName: latestReview.booking.levelName,
+            rating: latestReview.rating,
+            bookingId: latestReview.booking.id,
+          } : null}
+        />
+      </div>
+
+      <section id="avis-a-evaluer" className="scroll-mt-24 space-y-3">
         <ClientSectionTitle
           title="À évaluer"
           description={bookingsToReview.length > 0 ? `${bookingsToReview.length} retour${bookingsToReview.length > 1 ? "s" : ""} qualité attendu${bookingsToReview.length > 1 ? "s" : ""}` : "Tout est à jour"}
@@ -255,6 +274,68 @@ type ReviewCommandCenterBooking = {
   subjectName: string;
   levelName: string;
 };
+
+function ReviewMobilePriorityCard({
+  pendingCount,
+  publishedCount,
+  averageRating,
+  lowRatingCount,
+  primaryReviewBooking,
+  primaryReviewTeacherName,
+  latestReview,
+}: ReviewCommandCenterProps) {
+  const hasPending = Boolean(primaryReviewBooking);
+  const averageLabel = averageRating > 0 ? `${averageRating.toFixed(1)}/5` : "Aucune";
+  const actionHref = primaryReviewBooking
+    ? "#avis-a-evaluer"
+    : latestReview
+      ? `/client/reservations/${latestReview.bookingId}`
+      : "/client/rechercher";
+  const actionLabel = primaryReviewBooking ? "Noter" : latestReview ? "Dossier" : "Réserver";
+  const title = primaryReviewBooking
+    ? primaryReviewTeacherName
+    : latestReview
+      ? latestReview.teacherName
+      : "Aucun avis en attente";
+  const hint = primaryReviewBooking
+    ? `${primaryReviewBooking.subjectName} · ${primaryReviewBooking.levelName} · ${primaryReviewBooking.reference}`
+    : latestReview
+      ? `Dernière note ${latestReview.rating}/5 · ${latestReview.subjectName}`
+      : "Vos prochains cours terminés apparaîtront ici.";
+
+  return (
+    <ClientSurface compact className="space-y-3 rounded-lg border border-[#D8DEE9] p-3 md:hidden" data-client-review-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {hasPending ? <ClipboardCheck className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#111B4D]">Priorité qualité</p>
+          <h2 className="mt-0.5 break-words text-base font-semibold leading-5 text-[#111827]">{title}</h2>
+          <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[#52627A]">{hint}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5">
+        <ClientInfoPill label="À donner" value={pendingCount} strong={pendingCount > 0} />
+        <ClientInfoPill label="Envoyés" value={publishedCount} strong={publishedCount > 0} />
+        <ClientInfoPill label="Moyenne" value={averageLabel} strong={averageRating > 0} />
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
+        <p className="min-w-0 text-xs font-semibold leading-5 text-[#52627A]">
+          {lowRatingCount > 0 ? `${lowRatingCount} retour(s) à suivre` : hasPending ? "Avis attendu" : "Qualité à jour"}
+        </p>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>
+            {actionLabel}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+    </ClientSurface>
+  );
+}
 
 function ReviewCommandCenter({
   pendingCount,

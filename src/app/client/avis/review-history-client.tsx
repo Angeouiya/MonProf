@@ -144,7 +144,11 @@ export function ReviewHistoryClient({ reviews }: { reviews: ClientReviewHistoryI
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 min-[560px]:grid-cols-4" aria-label="Filtres avis">
+        <div
+          data-client-review-filter-rail
+          className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-0.5 min-[760px]:mx-0 min-[760px]:grid min-[760px]:grid-cols-4 min-[760px]:overflow-visible min-[760px]:px-0 min-[760px]:pb-0"
+          aria-label="Filtres avis"
+        >
           {filterOptions.map((option) => (
             <Button
               key={option.key}
@@ -153,7 +157,7 @@ export function ReviewHistoryClient({ reviews }: { reviews: ClientReviewHistoryI
               variant={filter === option.key ? "default" : "outline"}
               onClick={() => setFilter(option.key)}
               aria-pressed={filter === option.key}
-              className="min-h-11 min-w-0 justify-center rounded-lg px-2 text-xs"
+              className="min-h-11 min-w-[7rem] shrink-0 snap-start justify-center rounded-lg px-2 text-xs min-[760px]:min-w-0"
             >
               <span className="min-w-0 truncate">{option.label}</span>
               <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
