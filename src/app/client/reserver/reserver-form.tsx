@@ -1324,7 +1324,7 @@ export function ReserverForm({
                       rows={2}
                     />
                     <p className="mt-1 text-xs text-[#64748B]">
-                      Un repère clair aidu service client et le professeur à confirmer rapidement la faisabilité du déplacement.
+                      Un repère clair aide le service client et le professeur à confirmer rapidement la faisabilité du déplacement.
                     </p>
                   </div>
                   <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">

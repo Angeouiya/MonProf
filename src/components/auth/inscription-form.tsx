@@ -50,7 +50,7 @@ const ACCOUNT_BENEFITS = [
   },
   {
     icon: MessageSquareText,
-    title: "Support traçable",
+    title: "Service client traçable",
     text: "Notifications, confirmations, avis et litiges gardent un historique clair.",
   },
 ];

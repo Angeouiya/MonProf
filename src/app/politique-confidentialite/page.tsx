@@ -21,7 +21,7 @@ const sections: LegalSection[] = [
     title: "Responsable du traitement et contact",
     body: [
       "Le responsable du traitement est l'éditeur de la plateforme Compétence. Les demandes relatives aux données personnelles peuvent être adressées au support de la plateforme.",
-      "Contact opérationnel : support@competence.ci. Adresse de référence : Abidjan, Côte d'Ivoire. Lorsque l'identité juridique complète de l'éditeur est finalisée, elle remplace automatiquement cette mention dans les documents contractuels.",
+      "Contact opérationnel : contact@competence.ci. Adresse de référence : Abidjan, Côte d'Ivoire. Lorsque l'identité juridique complète de l'éditeur est finalisée, elle remplace automatiquement cette mention dans les documents contractuels.",
       "Compétence peut demander une preuve d'identité avant de traiter une demande sensible afin d'éviter toute divulgation frauduleuse.",
     ],
   },
@@ -105,7 +105,7 @@ const sections: LegalSection[] = [
     title: "Droits des personnes concernées",
     body: [
       "Sous réserve des limites légales et de la nécessité de conserver certaines preuves, une personne concernée peut demander l'accès à ses données, leur rectification, leur suppression, la limitation du traitement, l'opposition à certains traitements ou le retrait d'un consentement lorsque celui-ci est la base du traitement.",
-      "Une demande peut être adressée à support@competence.ci. Compétence peut refuser ou différer une demande lorsqu'elle porte atteinte à la sécurité, à la prévention de la fraude, à une obligation légale, à un litige en cours ou aux droits d'une autre personne.",
+      "Une demande peut être adressée à contact@competence.ci. Compétence peut refuser ou différer une demande lorsqu'elle porte atteinte à la sécurité, à la prévention de la fraude, à une obligation légale, à un litige en cours ou aux droits d'une autre personne.",
       "En Côte d'Ivoire, les personnes concernées peuvent également se renseigner auprès de l'Autorité de Protection des données à caractère personnel.",
     ],
   },

@@ -66,7 +66,7 @@ export default async function ProfesseurAvisPage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ProfessorStatCard label="Note moyenne" value={`${Number(profile?.rating ?? 0).toFixed(1)}/5`} detail={`${profile?.ratingCount ?? 0} avis publié(s)`} icon="check" />
         <ProfessorStatCard
-          label="Note plateforme"
+          label="Note service client"
           value={Number(profile?.adminRating ?? 0) > 0 ? `${Number(profile?.adminRating ?? 0).toFixed(1)}/5` : "Non noté"}
           detail={profile?.adminRatingPublic ? "Peut servir de note visible au démarrage" : "Note interne de suivi"}
           icon="check"
@@ -78,8 +78,8 @@ export default async function ProfesseurAvisPage() {
       {Number(profile?.adminRating ?? 0) > 0 && (
         <PortalCard>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div>
-              <p className="text-base font-semibold text-[#111827]">Évaluation plateforme</p>
+          <div>
+              <p className="text-base font-semibold text-[#111827]">Évaluation service client</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
                 Cette note est attribuée par le service client Compétence pour suivre la qualité, surtout avant que les avis clients soient nombreux.
               </p>

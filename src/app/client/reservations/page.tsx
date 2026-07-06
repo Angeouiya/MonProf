@@ -299,8 +299,8 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   }
   if (["CANCELLED", "REFUNDED", "DISPUTED"].includes(status)) {
     return {
-      label: "Suivi support",
-      hint: "Le support garde l'historique et traite la situation selon le dossier.",
+      label: "Suivi service client",
+      hint: "Le service client garde l'historique et traite la situation selon le dossier.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }

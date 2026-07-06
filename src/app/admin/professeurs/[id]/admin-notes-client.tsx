@@ -68,7 +68,7 @@ export function AdminTeacherNotesClient({
       <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Label>Note plateforme / admin</Label>
+            <Label>Note service client / interne</Label>
             <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
               Cette note est donnée par l'administration. Elle peut servir de note publique au démarrage, avant les vrais avis clients.
             </p>

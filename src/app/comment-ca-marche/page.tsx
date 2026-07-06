@@ -110,7 +110,7 @@ const TRUST = [
   },
   {
     icon: Headphones,
-    title: "Support dédié",
+    title: "Service client dédié",
     text: "Un service client disponible par téléphone et e-mail, du lundi au samedi.",
   },
   {

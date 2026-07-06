@@ -93,7 +93,7 @@ export default async function AvisPage() {
           { href: "/client/avis", icon: MessageSquare, label: "Avis", value: `${myReviews.length} publié(s)`, active: true },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Cours terminés" },
           { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau professeur" },
-          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Qualité et litige" },
+          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Qualité et litige" },
         ]}
       />
 

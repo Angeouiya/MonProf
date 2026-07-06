@@ -171,7 +171,7 @@ export default function ProfilPage() {
           { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées", active: true },
           { href: "/client/parametres", icon: Settings, label: "Sécurité", value: "Mot de passe" },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
-          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Aide compte" },
+          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Aide compte" },
         ]}
       />
 
@@ -181,7 +181,7 @@ export default function ProfilPage() {
               <ClientSectionTitle
                 eyebrow="Identité"
                 title="Informations clés"
-                description="Données utilisées pour les réservations et le support."
+                description="Données utilisées pour les réservations et le service client."
               />
               <div className="mt-5 space-y-2">
                 <ProfileInfoLine icon={Mail} label="Email" value={profile?.email ?? "—"} />
@@ -198,7 +198,7 @@ export default function ProfilPage() {
                   <div className="h-full rounded-full bg-[#111B4D]" style={{ width: `${profileCompletion}%` }} />
                 </div>
                 <p className="mt-2 text-xs leading-5 text-[#64748B]">
-                  Un profil complet rend les confirmations plus rapides pour les cours à domicile et les suivis support.
+                  Un profil complet rend les confirmations plus rapides pour les cours à domicile et les suivis du service client.
                 </p>
               </div>
 
@@ -304,11 +304,11 @@ export default function ProfilPage() {
                   Besoin d'aide sur votre compte ?
                 </p>
                 <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
-                  Pour une adresse, un numéro ou une réservation sensible, le support garde une trace claire de vos demandes.
+                  Pour une adresse, un numéro ou une réservation sensible, le service client garde une trace claire de vos demandes.
                 </p>
               </div>
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/client/support">Contacter le support</Link>
+                <Link href="/client/support">Contacter le service client</Link>
               </Button>
             </div>
           </ClientSurface>

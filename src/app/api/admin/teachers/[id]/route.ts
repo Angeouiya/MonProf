@@ -303,7 +303,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             action: "Évaluation qualité professeur modifiée",
             entityType: "Teacher",
             entityId: id,
-            detail: `${admin.name} a mis à jour l'évaluation de ${teacherName}. Note plateforme : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
+            detail: `${admin.name} a mis à jour l'évaluation de ${teacherName}. Note service client : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
             oldStatus: `rating=${Number(existingTeacher.adminRating || 0).toFixed(1)};score=${existingTeacher.qualityScore}`,
             newStatus: `rating=${Number(nextRating || 0).toFixed(1)};score=${nextScore}`,
           },
@@ -312,7 +312,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             teacherId: id,
             title: "Évaluation qualité mise à jour",
-            message: `Bonjour ${teacherName}, votre suivi qualité Compétence a été mis à jour. Note plateforme : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
+            message: `Bonjour ${teacherName}, votre suivi qualité Compétence a été mis à jour. Note service client : ${Number(nextRating || 0).toFixed(1)}/5. Score qualité : ${nextScore}/100.`,
             channel: "INTERNAL",
             sent: true,
             status: "SENT",

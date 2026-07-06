@@ -49,15 +49,15 @@ const CONTACT_PATHS = [
   {
     icon: Phone,
     title: "Besoin urgent",
-    text: "Appelez le support si une réservation du jour, une adresse ou un paiement bloque.",
+    text: "Appelez le service client si une réservation du jour, une adresse ou un paiement bloque.",
     href: "tel:+2252722000000",
-    action: "Appeler le support",
+    action: "Appeler le service client",
   },
   {
     icon: Mail,
     title: "Dossier détaillé",
     text: "Envoyez une demande structurée pour partenariat, facturation ou situation spécifique.",
-    href: "mailto:support@competence.ci",
+    href: "mailto:contact@competence.ci",
     action: "Écrire un email",
   },
 ];
@@ -122,7 +122,7 @@ export default function ContactPage() {
           <div className="max-w-3xl">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <MessageSquare className="h-3.5 w-3.5" />
-              Support humain et suivi service client
+              Service client humain et suivi opérationnel
             </span>
             <h1 className="mt-5 text-3xl font-semibold text-[#111827] sm:text-4xl text-balance">
               Contactez-nous
@@ -133,7 +133,7 @@ export default function ContactPage() {
             </p>
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               <HeroMetric label="Réponse" value="24-48h" />
-              <HeroMetric label="Support" value="Lun-Sam" />
+              <HeroMetric label="Service client" value="Lun-Sam" />
               <HeroMetric label="Zone" value="Abidjan" />
             </div>
           </div>
@@ -331,7 +331,7 @@ export default function ContactPage() {
                     <div>
                       <p className="text-xs text-[#64748B]">Email</p>
                       <p className="font-medium text-[#111827]">
-                        support@competence.ci
+                        contact@competence.ci
                       </p>
                       <p className="text-xs text-[#64748B]">
                         Réponse sous 48h

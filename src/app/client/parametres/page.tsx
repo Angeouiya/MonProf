@@ -34,7 +34,7 @@ export default function ClientParametresPage() {
           { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées" },
           { href: "/client/parametres", icon: UserCog, label: "Sécurité", value: "Mot de passe", active: true },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
-          { href: "/client/support", icon: LifeBuoy, label: "Support", value: "Aide compte" },
+          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Aide compte" },
         ]}
       />
 

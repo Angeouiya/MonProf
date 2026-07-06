@@ -77,7 +77,7 @@ export default async function TeacherDetailPage({
     : teacher.adminRatingPublic && teacher.adminRating > 0
       ? teacher.adminRating
       : teacher.rating;
-  const displayRatingLabel = totalReviews > 0 ? "Avis" : "Note plateforme";
+  const displayRatingLabel = totalReviews > 0 ? "Avis" : "Note service client";
   const availableSlotCount = WEEK_DAYS.reduce(
     (total, day) => total + TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]).length,
     0,

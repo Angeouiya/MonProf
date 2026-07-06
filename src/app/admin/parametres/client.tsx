@@ -70,7 +70,7 @@ export function ParametresClient({
             <Input value={values.support_phone ?? ""} onChange={(e) => set("support_phone", e.target.value)} placeholder="+225 27 22 00 00 00" />
           </SettingField>
           <SettingField icon={Mail} label="Email support">
-            <Input type="email" value={values.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="support@competence.ci" />
+            <Input type="email" value={values.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="contact@competence.ci" />
           </SettingField>
         </div>
 

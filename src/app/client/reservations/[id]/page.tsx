@@ -279,7 +279,7 @@ export default async function ReservationDetailPage({
           },
           {
             label: "Assistance",
-            value: hasBlockingClientState(booking.status, booking.paymentStatus, booking.disputes.length) ? "Suivi prioritaire" : "Support client",
+            value: hasBlockingClientState(booking.status, booking.paymentStatus, booking.disputes.length) ? "Suivi prioritaire" : "Service client",
             icon: LifeBuoy,
             href: "/client/support",
           },
@@ -428,7 +428,7 @@ export default async function ReservationDetailPage({
           {isCancelled && (
             <ClientSurface className="space-y-4">
               <ClientSectionTitle
-                eyebrow="Support"
+                eyebrow="Service client"
                 title="Annulation et remboursement"
                 description="Règle appliquée, frais retenus et montant estimé."
               />
@@ -566,7 +566,7 @@ function getClientSituation({
 }) {
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
-      title: "Support en traitement",
+      title: "Service client en traitement",
       description: "Votre paiement reste protégé pendant l'analyse.",
       icon: <AlertTriangle className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",

@@ -115,7 +115,7 @@ const PAYMENT_STEPS = [
   },
   {
     icon: ShieldCheck,
-    title: "Support",
+    title: "Service client",
     text: "En cas de problème, le dossier reste traçable.",
   },
 ];
@@ -190,11 +190,11 @@ const FAQ = [
   },
   {
     q: "Que se passe-t-il en cas de litige ?",
-    a: "Vous pouvez ouvrir un litige depuis votre espace client avant de valider le cours. Notre support examine la situation sous 48h et arbitre. En cas de problème avéré, vous êtes remboursé et le professeur n'est pas payé.",
+    a: "Vous pouvez ouvrir un litige depuis votre espace client avant de valider le cours. Le service client examine la situation sous 48h et arbitre. En cas de problème avéré, vous êtes remboursé et le professeur n'est pas payé.",
   },
   {
     q: "Les packs sont-ils remboursables ?",
-    a: "Les séances déjà réalisées dans un pack ne sont pas remboursables. Les séances non réalisées peuvent faire l'objet d'un remboursement au prorata ou d'un report, après ouverture d'un litige ou contact avec le support. Les remises pack sont déjà intégrées au prix payé.",
+    a: "Les séances déjà réalisées dans un pack ne sont pas remboursables. Les séances non réalisées peuvent faire l'objet d'un remboursement au prorata ou d'un report, après ouverture d'un litige ou contact avec le service client. Les remises pack sont déjà intégrées au prix payé.",
   },
   {
     q: "Puis-je payer directement le professeur ?",

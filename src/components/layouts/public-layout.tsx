@@ -313,7 +313,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <h4 className="text-sm font-semibold text-[#111827]">Contact</h4>
               <ul className="mt-3 space-y-2 text-sm font-semibold text-[#64748B]">
                 <li className="flex min-h-10 items-center gap-2"><Phone className="h-4 w-4 text-[#111B4D]" /> +225 27 22 00 00 00</li>
-                <li className="flex min-h-10 items-center gap-2"><Mail className="h-4 w-4 text-[#111B4D]" /> support@competence.ci</li>
+                <li className="flex min-h-10 items-center gap-2"><Mail className="h-4 w-4 text-[#111B4D]" /> contact@competence.ci</li>
                 <li className="flex min-h-10 items-center gap-2"><MapPin className="h-4 w-4 text-[#111B4D]" /> Cocody, Abidjan</li>
               </ul>
             </div>

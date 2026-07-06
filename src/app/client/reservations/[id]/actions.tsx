@@ -268,7 +268,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
     }
     const ok = await callAction("open_dispute", { reason: disputeReason, description: disputeDesc });
     if (ok) {
-      toast.success("Litige ouvert. Notre support vous recontacte.");
+      toast.success("Litige ouvert. Le service client vous recontacte.");
       setDisputeOpen(false);
       setDisputeDesc("");
       router.refresh();
@@ -531,7 +531,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               Litige en cours
             </div>
             <p className="mt-1 text-xs">
-              Notre support traite votre litige. Vous serez recontacté sous 24-48h.
+              Le service client traite votre litige. Vous serez recontacté sous 24-48h.
             </p>
             {hasDispute && (
               <div className="mt-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs">
@@ -830,7 +830,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     {cancellationPolicy.refundAmount > 0 ? (
                       <li>Après annulation, vous devrez renseigner le moyen, le numéro et le titulaire du compte de remboursement.</li>
                     ) : (
-                      <li>Aucun remboursement automatique n'est prévu selon la règle affichée. Le dossier peut être réexaminé par le support.</li>
+                      <li>Aucun remboursement automatique n'est prévu selon la règle affichée. Le dossier peut être réexaminé par le service client.</li>
                     )}
                     <li>Des annulations répétées ou tardives peuvent être revues par le service client pour protéger les professeurs et les clients.</li>
                   </ul>
@@ -854,7 +854,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     rows={3}
                     value={cancelDesc}
                     onChange={(event) => setCancelDesc(event.target.value)}
-                    placeholder="Précisez votre situation pour aider l'équipe support."
+                    placeholder="Précisez votre situation pour aider le service client."
                   />
                 </div>
                 <label htmlFor="cancelAcknowledged" className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
@@ -1042,8 +1042,8 @@ function getForegroundNotice({
   }
   if (hasDispute || status === "DISPUTED") {
     return {
-      title: "Dossier sensible : suivi support",
-      description: "Le support traite le dossier. Gardez vos informations et justificatifs prêts pour faciliter la décision.",
+      title: "Dossier sensible : suivi service client",
+      description: "Le service client traite le dossier. Gardez vos informations et justificatifs prêts pour faciliter la décision.",
     };
   }
   if (canCancel) {
@@ -1076,7 +1076,7 @@ function getActionSummary({
 }) {
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
-      title: "Support Compétence en cours",
+      title: "Service client Compétence en cours",
       description: "Le dossier est suivi par le service client. Votre paiement reste protégé pendant l'analyse.",
       icon: <AlertTriangle className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",

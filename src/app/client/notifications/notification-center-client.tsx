@@ -243,7 +243,7 @@ export function ClientNotificationCenter({
         <ClientEmptyState
           icon={Bell}
           title="Aucune notification"
-          description="Votre centre est calme. Les validations, paiements, confirmations de cours et messages du support apparaîtront ici."
+          description="Votre centre est calme. Les validations, paiements, confirmations de cours et messages du service client apparaîtront ici."
           action={
             <Button asChild size="sm" className="min-h-11 rounded-lg">
               <Link href="/client/rechercher">Trouver un professeur <ArrowRight className="h-4 w-4" /></Link>

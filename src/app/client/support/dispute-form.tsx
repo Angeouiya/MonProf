@@ -64,7 +64,7 @@ export function DisputeForm({
         toast.error(data.error || "Erreur");
         return;
       }
-      toast.success("Litige ouvert. Notre support vous recontacte sous 24-48h.");
+      toast.success("Litige ouvert. Le service client vous recontacte sous 24-48h.");
       setDescription("");
       router.refresh();
     } catch {

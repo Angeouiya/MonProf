@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 const ACCOUNT_BENEFITS = [
   { icon: CalendarCheck, title: "Réservations suivies", text: "Dates, créneaux, professeur choisi et statut restent centralisés." },
   { icon: WalletCards, title: "Paiements protégés", text: "Vos fonds restent sécurisés jusqu'à confirmation du cours." },
-  { icon: ShieldCheck, title: "Support traçable", text: "Avis, litiges et messages sont reliés à votre historique client." },
+  { icon: ShieldCheck, title: "Service client traçable", text: "Avis, litiges et messages sont reliés à votre historique client." },
 ];
 
 const ADMIN_BENEFITS = [

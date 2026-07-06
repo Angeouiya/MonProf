@@ -184,7 +184,12 @@ export default async function ProfesseurPaiementsPage() {
                     {request.reviewedAt && <InfoLine label="Traitée" value={formatDateTime(request.reviewedAt)} />}
                   </div>
                   {request.note && <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">{request.note}</p>}
-                  {request.adminNote && <p className="mt-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">{request.adminNote}</p>}
+                  {request.adminNote && (
+                    <div className="mt-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-[#111B4D]">Note du service client</p>
+                      <p>{request.adminNote}</p>
+                    </div>
+                  )}
                   {request.payoutRecord && (
                     <div className="mt-3 rounded-lg border border-[#D7DEE9] bg-white p-3">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

@@ -101,7 +101,7 @@ export default async function AdminMessagesPage({
       <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client, ${teacherAdminMessages.length} échange(s) professeur`}>
         <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-          Support client
+          Service client
         </Badge>
         {unreadTeacherMessages > 0 && (
           <Badge variant="outline" className="border-[#111B4D] bg-white text-[#111B4D]">

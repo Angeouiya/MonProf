@@ -72,7 +72,7 @@ export default async function SupportPage() {
     <div className="space-y-6">
       <ClientPageHeader
         eyebrow="Assistance"
-        title="Support et litiges"
+        title="Service client et litiges"
         description="Une aide claire pour suivre vos cours, protéger votre paiement et garder une trace de chaque décision."
       />
 
@@ -101,8 +101,8 @@ export default async function SupportPage() {
 
       <ClientAppRail
         items={[
-          { href: "tel:+22527220000", icon: Phone, label: "Appeler", value: "Support direct", active: true },
-          { href: "mailto:support@competence.ci", icon: Mail, label: "Email", value: "Trace écrite" },
+          { href: "tel:+22527220000", icon: Phone, label: "Appeler", value: "Service client direct", active: true },
+          { href: "mailto:contact@competence.ci", icon: Mail, label: "Email", value: "Trace écrite" },
           { href: "/client/reservations", icon: FileText, label: "Dossiers", value: "Réservations" },
           { href: "/client/notifications", icon: ShieldCheck, label: "Suivi", value: "Notifications" },
         ]}
@@ -141,7 +141,7 @@ export default async function SupportPage() {
 
       {/* Mes litiges */}
       <ClientSurface className="space-y-4">
-        <ClientSectionTitle title={`Historique (${myDisputes.length})`} description="Dossiers ouverts et décisions de support." />
+        <ClientSectionTitle title={`Historique (${myDisputes.length})`} description="Dossiers ouverts et décisions du service client." />
           {myDisputes.length === 0 ? (
             <ClientEmptyState
               icon={CheckCircle2}
@@ -222,6 +222,6 @@ function buildSupportFocus({
   return {
     eyebrow: "Tout est clair",
     title: "Aucun signalement à traiter",
-    description: "Vos réservations restent accessibles si vous devez contacter le support.",
+    description: "Vos réservations restent accessibles si vous devez contacter le service client.",
   };
 }
