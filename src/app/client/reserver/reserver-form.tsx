@@ -1980,7 +1980,7 @@ export function ReserverForm({
 
             <div className="mt-4 space-y-2 text-xs font-medium leading-5 text-[#64748B]">
               <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Réservation rattachée au professeur choisi.</p>
-              <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au suivi service clientistrateur.</p>
+              <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au suivi service client.</p>
             </div>
           </div>
         </aside>

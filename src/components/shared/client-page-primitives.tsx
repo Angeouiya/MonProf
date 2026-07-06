@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import Link from "next/link";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/shared/back-button";
 
@@ -418,6 +418,77 @@ export function ClientRecordCard({
     <article {...props} className={cn("client-record-card overflow-hidden rounded-lg border border-[#DDE3EE] bg-white transition-colors hover:border-[#111B4D]", className)}>
       {children}
     </article>
+  );
+}
+
+export type ClientProcessStep = {
+  label: ReactNode;
+  date?: ReactNode;
+  hint?: ReactNode;
+  state: "done" | "current" | "pending";
+};
+
+export function ClientProcessTracker({
+  steps,
+  className,
+}: {
+  steps: ClientProcessStep[];
+  className?: string;
+}) {
+  return (
+    <ol
+      data-client-process-tracker
+      className={cn(
+        "client-process-tracker grid gap-2 min-[560px]:grid-cols-2 xl:grid-cols-3",
+        className,
+      )}
+    >
+      {steps.map((step, index) => {
+        const done = step.state === "done";
+        const current = step.state === "current";
+
+        return (
+          <li
+            key={index}
+            data-client-process-step
+            data-state={step.state}
+            className={cn(
+              "min-w-0 rounded-lg border bg-white p-3",
+              current ? "border-[#111B4D]" : "border-[#D8DEE9]",
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <span
+                className={cn(
+                  "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+                  done || current
+                    ? "border-[#111B4D] bg-[#111B4D] text-white"
+                    : "border-[#D8DEE9] bg-white text-[#64748B]",
+                )}
+                aria-hidden="true"
+              >
+                {done ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={cn("text-sm font-semibold leading-5", done || current ? "text-[#111827]" : "text-[#64748B]")}>
+                  {step.label}
+                </p>
+                {step.hint && (
+                  <div className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">
+                    {step.hint}
+                  </div>
+                )}
+                {step.date && (
+                  <p className="mt-2 text-xs font-semibold leading-5 text-[#111B4D]">
+                    {step.date}
+                  </p>
+                )}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

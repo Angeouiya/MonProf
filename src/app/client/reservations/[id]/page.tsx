@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/session";
 import {
   ClientAppRail,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientSectionTitle,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
@@ -217,6 +218,17 @@ export default async function ReservationDetailPage({
   const timelineDescription = canShowOperationalProgress
     ? "Chaque étape reste visible jusqu'à la clôture du cours."
     : "Aucune étape opérationnelle ne démarre tant que PayDunya n'a pas confirmé le paiement côté serveur.";
+  const firstPendingTimelineIndex = timeline.findIndex((step) => !step.done);
+  const processSteps = timeline.map((step, index) => ({
+    label: step.label,
+    date: step.done && step.date ? formatDate(step.date) : undefined,
+    hint: getTimelineStepHint(step.label, canShowOperationalProgress),
+    state: step.done
+      ? "done" as const
+      : index === firstPendingTimelineIndex
+        ? "current" as const
+        : "pending" as const,
+  }));
   const isCancelled = booking.status === "CANCELLED" || booking.status === "REFUNDED";
   const clientSituation = getClientSituation({
     status: booking.status,
@@ -282,7 +294,7 @@ export default async function ReservationDetailPage({
             <p className="mt-1 leading-6 text-[#64748B]">
               Votre paiement de <strong className="text-[#111827]"><Money amount={displayTotalPrice} /></strong> a été reçu
               et est gardé bloqué jusqu'à la confirmation du cours. Date demandée : <strong className="text-[#111827]">{dateShownToClient ? formatDate(dateShownToClient) : "à confirmer"}</strong>.
-              Le service clientistrateur valide votre réservation prochainement.
+              Le service client valide votre réservation prochainement.
             </p>
           </div>
         </div>
@@ -465,26 +477,7 @@ export default async function ReservationDetailPage({
               title="Suivi de la réservation"
               description={timelineDescription}
             />
-            <div>
-              <ol className="relative space-y-4 pl-6">
-                <span className="absolute left-[7px] top-1 bottom-1 w-px bg-[#DDE6F7]" />
-                {timeline.map((t, i) => (
-                  <li key={i} className="relative">
-                    <span className={`absolute -left-[1.4rem] top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-background ${
-                      t.done ? "bg-[#111B4D]" : "border border-[#DDE6F7] bg-white"
-                    }`}>
-                      {t.done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
-                    </span>
-                    <div className="flex flex-col gap-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
-                      <p className={`text-sm font-semibold ${t.done ? "text-[#111827]" : "text-[#64748B]"}`}>{t.label}</p>
-                      {t.date && t.done && (
-                        <p className="text-xs font-semibold text-[#64748B] min-[480px]:shrink-0">{formatDate(t.date)}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <ClientProcessTracker steps={processSteps} />
           </ClientSurface>
 
           {/* Transactions */}
@@ -718,4 +711,18 @@ function formatSchoolProgramDisplay(value?: string | null) {
     .filter(Boolean);
 
   return parts.length > 0 ? parts.join(" · ") : value.trim();
+}
+
+function getTimelineStepHint(label: string, canShowOperationalProgress: boolean) {
+  if (!canShowOperationalProgress) {
+    if (label.includes("Paiement")) return "À faire sur PayDunya";
+    if (label.includes("Validation")) return "Après confirmation serveur";
+    return "En attente du paiement";
+  }
+  if (label.includes("Paiement")) return "Vérifié côté serveur";
+  if (label.includes("Validée")) return "Disponibilité suivie";
+  if (label.includes("Cours effectué")) return "Déclaré après séance";
+  if (label.includes("client")) return "Action client";
+  if (label.includes("clôturé")) return "Historique conservé";
+  return "Dossier créé";
 }
