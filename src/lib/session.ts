@@ -33,7 +33,7 @@ export async function requireClient() {
 
 export async function requireAdmin() {
   const u = await getSessionUser();
-  if (!u) redirect("/connexion?from=/admin");
+  if (!u) redirect("/admin/connexion");
   if (u.role === "TEACHER") redirect("/professeur");
   if (u.role !== "ADMIN") redirect("/");
   return u;
