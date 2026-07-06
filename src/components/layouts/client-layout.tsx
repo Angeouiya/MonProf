@@ -29,7 +29,7 @@ const navItems: ClientNavItem[] = [
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
   { href: "/client/notifications", label: "Notifications", icon: Bell },
   { href: "/client/avis", label: "Avis", icon: MessageSquare },
-  { href: "/client/support", label: "Service client", icon: LifeBuoy },
+  { href: "/client/service-client", label: "Service client", icon: LifeBuoy },
 ];
 
 const accountNavItems: ClientNavItem[] = [
@@ -508,7 +508,7 @@ function getCurrentSection(pathname: string | null) {
   if (pathname.startsWith("/client/avis")) {
     return { label: "Avis", hint: "Qualité des cours" };
   }
-  if (pathname.startsWith("/client/support")) {
+  if (pathname.startsWith("/client/service-client") || pathname.startsWith("/client/support")) {
     return { label: "Service client", mobileLabel: "Aide", hint: "Aide et litiges" };
   }
   if (pathname.startsWith("/client/profil")) {

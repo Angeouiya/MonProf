@@ -84,8 +84,8 @@ export function ClientMetricStrip({
         metrics.length === 1
           ? "grid-cols-1"
           : metrics.length === 2
-            ? "grid-cols-2"
-            : "grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
+            ? "grid-cols-1 min-[380px]:grid-cols-2"
+            : "grid-cols-1 min-[380px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
       )}
     >
@@ -264,7 +264,7 @@ export function ClientTabBar({
     <div
       data-client-tab-bar
       className={cn(
-        "client-tab-bar grid grid-cols-2 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[520px]:grid-cols-3 lg:flex lg:flex-nowrap",
+        "client-tab-bar grid grid-cols-1 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-nowrap",
         className,
       )}
     >
@@ -519,7 +519,7 @@ export function ClientAppRail({
     <div
       data-client-app-rail
       className={cn(
-        "client-app-rail grid grid-cols-2 gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid-flow-row min-[720px]:overflow-visible",
+        "client-app-rail grid grid-cols-1 gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[360px]:grid-cols-2 min-[720px]:grid-flow-row min-[720px]:overflow-visible",
         desktopGridClassName,
         className,
       )}
@@ -566,7 +566,7 @@ export function ClientAppRail({
 
         const itemClassName = cn(
           "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] sm:justify-between sm:px-3 sm:text-left min-[720px]:min-h-14",
-          items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[720px]:col-span-1",
+          items.length % 2 === 1 && index === items.length - 1 && "min-[360px]:col-span-2 min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",

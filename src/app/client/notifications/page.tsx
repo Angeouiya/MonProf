@@ -92,7 +92,7 @@ export default async function ClientNotificationsPage() {
           { href: "/client/notifications", icon: Bell, label: "Centre", value: "Tous les messages", active: true },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: formatCount(bookingCount, "suivi") },
           { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatCount(paymentCount, "alerte") },
-          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
+          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
         ]}
       />
 

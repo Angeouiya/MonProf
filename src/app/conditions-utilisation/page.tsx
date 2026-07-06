@@ -75,7 +75,7 @@ const sections: LegalSection[] = [
   {
     title: "Annulation, remboursement et pénalités",
     body: [
-      "Toute annulation doit être demandée depuis l'espace prévu ou par le support, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
+      "Toute annulation doit être demandée depuis l'espace prévu ou par le service client, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
       "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais du moyen de paiement, de la préparation déjà engagée, du comportement des parties, du litige éventuel et de la politique d'annulation en vigueur.",
       "Lorsque l'annulation est imputable au professeur ou à Compétence, le client peut se voir proposer un remplacement, un report, un autre créneau ou un remboursement selon la situation.",
       "Des annulations répétées, tardives ou abusives peuvent entraîner des pénalités, une limitation du compte ou un contrôle renforcé par le service client.",
@@ -163,7 +163,7 @@ const sections: LegalSection[] = [
     title: "Droit applicable et règlement des différends",
     body: [
       "Les présentes conditions sont soumises au droit applicable en Côte d'Ivoire.",
-      "En cas de différend, les parties doivent d'abord rechercher une solution amiable via le support Compétence. À défaut, le litige peut être porté devant les juridictions compétentes d'Abidjan, sauf disposition impérative contraire.",
+      "En cas de différend, les parties doivent d'abord rechercher une solution amiable via le service client Compétence. À défaut, le litige peut être porté devant les juridictions compétentes d'Abidjan, sauf disposition impérative contraire.",
     ],
   },
 ];

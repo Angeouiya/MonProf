@@ -261,7 +261,7 @@ export default async function TeacherDetailPage({
               <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
                 <TrustLine icon={<ShieldCheck className="h-4 w-4" />} text="Paiement sécurisé, fonds bloqués jusqu'à confirmation." />
                 <TrustLine icon={<Wallet className="h-4 w-4" />} text="Montant total affiché avant paiement, sans information interne." />
-                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation et support encadrés par le service client." />
+                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation encadrée par le service client." />
               </div>
               <Link
                 href={reserveHref}
@@ -701,7 +701,7 @@ export default async function TeacherDetailPage({
                     <Luggage className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                     <span>
                       <strong className="text-[#111827]">Litige</strong> traité par notre
-                      support sous 48h.
+                      service client sous 48h.
                     </span>
                   </div>
                 </div>

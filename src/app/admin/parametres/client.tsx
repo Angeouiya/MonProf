@@ -66,10 +66,10 @@ export function ParametresClient({
           <SettingField icon={BadgePercent} label="Commission par défaut (%)">
             <Input type="number" min={0} max={100} value={values.default_commission ?? String(PLATFORM_COMMISSION_PERCENT)} onChange={(e) => set("default_commission", e.target.value)} />
           </SettingField>
-          <SettingField icon={Smartphone} label="Téléphone support">
+          <SettingField icon={Smartphone} label="Téléphone service client">
             <Input value={values.support_phone ?? ""} onChange={(e) => set("support_phone", e.target.value)} placeholder="+225 27 22 00 00 00" />
           </SettingField>
-          <SettingField icon={Mail} label="Email support">
+          <SettingField icon={Mail} label="Email service client">
             <Input type="email" value={values.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="contact@competence.ci" />
           </SettingField>
         </div>
@@ -128,7 +128,7 @@ export function ParametresClient({
               <Headphones className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-foreground">Ces informations apparaissent dans les parcours support.</p>
+              <p className="text-sm font-bold text-foreground">Ces informations apparaissent dans les parcours de service client.</p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 Gardez-les à jour pour éviter les ruptures de confiance lors des réservations, litiges et demandes de paiement.
               </p>

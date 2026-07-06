@@ -168,7 +168,7 @@ export default async function ClientDashboardPage() {
           { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Choisir un professeur", active: true },
           { href: "/client/cours", icon: BookOpen, label: "Cours", value: `${upcomingBookings} actif${upcomingBookings > 1 ? "s" : ""}` },
           { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatFCFACompact(blockedFundsAmount) },
-          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
+          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
         ]}
       />
 

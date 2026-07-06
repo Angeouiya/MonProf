@@ -112,7 +112,7 @@ export default async function PaiementsPage() {
           { href: "/client/paiements", icon: ReceiptText, label: "Historique", value: `${transactions.length} mouvement(s)`, active: true },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations liées" },
           { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau cours" },
-          { href: "/client/support", icon: ShieldCheck, label: "Sécurité", value: "Litige ou remboursement" },
+          { href: "/client/service-client", icon: ShieldCheck, label: "Sécurité", value: "Litige ou remboursement" },
         ]}
       />
 
@@ -327,7 +327,7 @@ function PaymentTrustPanel() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           {ACTIVE_PAYMENT_METHODS.map((method) => (
             <PaymentMethodLogo key={method} method={method} className="h-12 w-full min-w-0 rounded-lg" />
           ))}

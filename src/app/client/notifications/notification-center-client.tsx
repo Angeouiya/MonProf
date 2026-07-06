@@ -219,7 +219,7 @@ export function ClientNotificationCenter({
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-1 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap" aria-label="Filtres notifications">
+          <div className="grid grid-cols-1 gap-1 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap" aria-label="Filtres notifications">
             {filterOptions.map((option) => (
               <Button
                 key={option.key}

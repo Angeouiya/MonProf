@@ -285,7 +285,7 @@ function ConnexionContent() {
               <p>
                 {isAdminAuth
                   ? "Vous arrivez directement sur le dashboard administrateur avec le contrôle des professeurs, paiements, litiges et notifications."
-                  : "Vous retrouvez vos réservations, cours, paiements, notifications et demandes support dans un seul espace."}
+                  : "Vous retrouvez vos réservations, cours, paiements, notifications et demandes au service client dans un seul espace."}
               </p>
             </div>
           </div>

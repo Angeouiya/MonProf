@@ -383,7 +383,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     <Link href="/politique-confidentialite" target="_blank" className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
                       politique de confidentialité
                     </Link>
-                    . En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes support sont traités pour assurer le service Compétence.
+                    . En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes au service client sont traités pour assurer le service Compétence.
                   </label>
                 </div>
               </div>

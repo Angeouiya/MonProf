@@ -281,7 +281,7 @@ export default async function ReservationDetailPage({
             label: "Assistance",
             value: hasBlockingClientState(booking.status, booking.paymentStatus, booking.disputes.length) ? "Suivi prioritaire" : "Service client",
             icon: LifeBuoy,
-            href: "/client/support",
+            href: "/client/service-client",
           },
         ]}
       />

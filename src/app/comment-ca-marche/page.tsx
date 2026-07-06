@@ -93,7 +93,7 @@ const PARENT_TIPS = [
   {
     icon: MessageSquare,
     title: "Validez le cours après chaque séance",
-    text: "La validation déclenche le paiement du professeur. Si un problème survient, ouvrez un litige avant de valider : notre support intervient sous 48h.",
+    text: "La validation déclenche le paiement du professeur. Si un problème survient, ouvrez un litige avant de valider : notre service client intervient sous 48h.",
   },
 ];
 
@@ -142,7 +142,7 @@ const JOURNEY_SIGNALS = [
   {
     icon: Headphones,
     label: "Nous suivons",
-    title: "Service client, notifications et support",
+    title: "Service client et notifications",
     text: "Le professeur est confirmé, le client est protégé, l'historique reste traçable.",
   },
 ];

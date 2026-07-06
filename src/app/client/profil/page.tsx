@@ -171,7 +171,7 @@ export default function ProfilPage() {
           { href: "/client/profil", icon: User, label: "Profil", value: "Coordonnées", active: true },
           { href: "/client/parametres", icon: Settings, label: "Sécurité", value: "Mot de passe" },
           { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
-          { href: "/client/support", icon: LifeBuoy, label: "Service client", value: "Aide compte" },
+          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide compte" },
         ]}
       />
 
@@ -308,7 +308,7 @@ export default function ProfilPage() {
                 </p>
               </div>
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/client/support">Contacter le service client</Link>
+                <Link href="/client/service-client">Contacter le service client</Link>
               </Button>
             </div>
           </ClientSurface>
