@@ -41,7 +41,7 @@ export function ClientNotificationActions({
 
   if (mode === "all") {
     return (
-      <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-10 self-start rounded-lg px-3 text-xs min-[460px]:min-h-11 min-[460px]:text-sm">
+      <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-11 w-full rounded-lg px-3 text-xs min-[460px]:w-auto min-[460px]:text-sm">
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
         Tout marquer lu
       </Button>
@@ -52,25 +52,25 @@ export function ClientNotificationActions({
   const confirmed = status === "CONFIRMED";
 
   return (
-    <div className="flex w-full flex-col gap-2 min-[640px]:w-auto min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-end">
+    <div className="grid w-full grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
       {!confirmed && (
         <Button
           variant="default"
           size="sm"
           onClick={() => patch({ id, action: "confirm" }, "Notification confirmée")}
           disabled={loading}
-          className="min-h-11 w-full rounded-lg min-[640px]:w-auto"
+          className="min-h-11 w-full rounded-lg"
         >
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
           Confirmer réception
         </Button>
       )}
       <Button
-        variant={read ? "outline" : "secondary"}
+        variant="outline"
         size="sm"
         onClick={() => patch({ id, read: !read }, read ? "Notification remise en non lue" : "Notification marquée comme lue")}
         disabled={loading}
-        className="min-h-11 w-full rounded-lg min-[640px]:w-auto"
+        className="min-h-11 w-full rounded-lg"
       >
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : read ? <Bell className="mr-1.5 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
         {read ? "Remettre non lue" : "Marquer lue"}

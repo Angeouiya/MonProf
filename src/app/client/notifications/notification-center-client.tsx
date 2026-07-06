@@ -178,30 +178,31 @@ export function ClientNotificationCenter({
         booking={priorityNotification?.bookingId ? bookingsById.get(priorityNotification.bookingId) ?? null : null}
       />
 
-      <ClientSurface compact className="space-y-3" data-client-notification-filterbar>
-          <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto_auto] lg:items-center">
+      <ClientSurface compact className="space-y-3 rounded-lg border border-[#DDE3EE] p-2.5 min-[640px]:p-3.5" data-client-notification-filterbar>
+          <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto_auto] lg:items-center">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher une réservation, un professeur, un paiement..."
-                className="h-11 rounded-lg border-[#E3E8F2] pl-9 pr-10 focus:border-[#9AAAD0] focus:ring-[#DDE6F7]"
+                placeholder="Rechercher professeur, paiement, réservation..."
+                className="h-12 rounded-lg border-[#D8DEE9] bg-white pl-9 pr-10 text-sm font-medium focus:border-[#111B4D] focus:ring-[#111B4D]"
               />
               {hasQuery && (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9AAAD0]"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111B4D]"
                   aria-label="Effacer la recherche"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </label>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+            <div className="flex min-h-11 items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               <Filter className="h-4 w-4" />
-              {activeFilterLabel} · {formatCount(filteredNotifications.length, "résultat")}
+              <span className="min-w-0 truncate">{activeFilterLabel}</span>
+              <span className="shrink-0 text-[#111B4D]">{filteredNotifications.length}</span>
             </div>
             {hasActiveRefinement && (
               <Button
@@ -212,14 +213,14 @@ export function ClientNotificationCenter({
                   setFilter("all");
                   setQuery("");
                 }}
-                className="min-h-10 rounded-lg text-xs lg:min-h-11"
+                className="min-h-11 w-full rounded-lg text-xs lg:w-auto"
               >
                 <X className="mr-1.5 h-3.5 w-3.5" />
                 Réinitialiser
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-1 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-wrap" aria-label="Filtres notifications">
+          <div className="grid grid-cols-2 gap-1.5 min-[520px]:grid-cols-4 lg:grid-cols-7" aria-label="Filtres notifications">
             {filterOptions.map((option) => (
               <Button
                 key={option.key}
@@ -228,7 +229,7 @@ export function ClientNotificationCenter({
                 variant={filter === option.key ? "default" : "outline"}
                 onClick={() => setFilter(option.key)}
                 aria-pressed={filter === option.key}
-                className="min-h-10 min-w-0 justify-center rounded-lg px-2 text-xs sm:min-h-11 sm:px-3 sm:text-sm"
+                className="min-h-11 min-w-0 justify-center rounded-lg px-2 text-xs sm:px-3"
               >
                 <span className="min-w-0 truncate">{option.label}</span>
                 <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>
@@ -253,7 +254,7 @@ export function ClientNotificationCenter({
       ) : filteredNotifications.length === 0 ? (
         <ClientEmptyState icon={Search} title="Aucun résultat" description="Essayez un autre filtre ou une autre recherche." compact />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-2.5" aria-live="polite">
           {filteredNotifications.map((notification) => {
             const booking = notification.bookingId ? bookingsById.get(notification.bookingId) ?? null : null;
             const teacherName = booking?.teacher.professionalName || booking?.teacher.fullName || "Professeur Compétence";
@@ -270,9 +271,9 @@ export function ClientNotificationCenter({
                     : "border-[#111B4D] bg-white"
                 }`}
               >
-                <div className="relative flex flex-col gap-3 p-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between sm:p-4">
+                <div className="relative grid gap-3 p-3 min-[720px]:grid-cols-[minmax(0,1fr)_12rem] min-[720px]:items-start sm:p-4">
                   {!notification.read && <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#111B4D] sm:inset-y-4" />}
-                  <div className="flex min-w-0 gap-3">
+                  <div className="flex min-w-0 gap-3 pl-1">
                     {booking ? (
                       <ProfessorImage
                         photoUrl={booking.teacher.photoUrl}
@@ -287,18 +288,18 @@ export function ClientNotificationCenter({
                       </div>
                     )}
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         {!notification.read && <span className="h-2.5 w-2.5 rounded-full bg-[#111B4D]" aria-label="Notification non lue" />}
                         <h2 className="min-w-0 text-sm font-semibold leading-5 text-[#111827]">{notification.title}</h2>
                         {!notification.read && <span className="text-xs font-semibold text-[#111B4D]">Nouveau</span>}
                         {showPriorityLabel && <span className="text-xs font-semibold text-[#111B4D]">{priorityLabel(notification.priority)}</span>}
                       </div>
-                      <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                      <p className="mt-1 break-words text-xs font-semibold leading-5 text-[#64748B]">
                         {notificationTypeLabel(notification.type)} · {notificationChannelLabel(notification.channel)} · {statusLabel[notification.status] ?? notification.status}
                       </p>
-                      <p className="mt-2 line-clamp-2 whitespace-pre-line text-sm leading-5 text-[#475569] sm:line-clamp-4 sm:leading-6">{notification.message}</p>
+                      <p className="mt-2 line-clamp-3 whitespace-pre-line break-words text-sm leading-5 text-[#475569] sm:leading-6">{notification.message}</p>
                       {booking && <BookingNotificationPreview booking={booking} teacherName={teacherName} />}
-                      <p className="mt-2 line-clamp-1 text-xs font-medium text-[#64748B]">
+                      <p className="mt-2 break-words text-xs font-medium leading-5 text-[#64748B]">
                         {formatDateTime(notification.createdAt)} · {timeAgo(notification.createdAt)}
                         {notification.readAt ? ` · lu le ${formatDateTime(notification.readAt)}` : ""}
                         {notification.confirmedAt ? ` · confirmé le ${formatDateTime(notification.confirmedAt)}` : ""}
@@ -306,9 +307,9 @@ export function ClientNotificationCenter({
                     </div>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[520px]:grid-cols-2 min-[720px]:flex min-[720px]:min-w-44 min-[720px]:flex-col">
+                  <div className="grid min-w-0 shrink-0 grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
                     {href && (
-                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-lg sm:min-h-11 sm:rounded-lg">
+                      <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-11 w-full rounded-lg">
                         <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>
                       </Button>
                     )}
@@ -368,18 +369,18 @@ function PriorityNotificationCard({
             <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
               {urgent ? "À traiter en priorité" : notification.read ? "Dernière information" : "Nouvelle information"}
             </p>
-            <h2 className="mt-1 line-clamp-2 text-base font-semibold tracking-normal text-[#111827] sm:text-lg">{notification.title}</h2>
-            <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#64748B] sm:leading-6">{notification.message}</p>
-            <div className="mt-2 flex flex-col gap-1 text-xs font-semibold text-[#111B4D] min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-3">
+            <h2 className="mt-1 line-clamp-2 break-words text-base font-semibold tracking-normal text-[#111827] sm:text-lg">{notification.title}</h2>
+            <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-[#64748B] sm:leading-6">{notification.message}</p>
+            <div className="mt-2 flex flex-col gap-1 text-xs font-semibold text-[#111B4D] min-[520px]:flex-row min-[520px]:flex-wrap min-[520px]:items-center min-[520px]:gap-x-3">
               <span>Priorité : {priorityLabel(notification.priority)}</span>
               <span>Type : {notificationTypeLabel(notification.type)}</span>
-              {booking && <span>Réservation : {booking.reference} - {teacherName}</span>}
+              {booking && <span className="break-words">Réservation : {booking.reference} - {teacherName}</span>}
             </div>
           </div>
         </div>
         <div className="flex flex-col gap-2 lg:min-w-56">
           {href && (
-            <Button asChild size="sm" className="h-11 rounded-lg">
+            <Button asChild size="sm" className="h-11 w-full rounded-lg">
               <Link href={href}>
                 {notification.actionLabel || "Ouvrir le dossier"}
                 <ArrowRight className="h-4 w-4" />
@@ -405,16 +406,16 @@ function BookingNotificationPreview({ booking, teacherName }: { booking: Notific
 
   return (
     <div className="mt-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 sm:mt-3 sm:p-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 min-[520px]:flex-row min-[520px]:items-start min-[520px]:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{booking.reference}</p>
-          <p className="mt-1 text-sm font-semibold text-[#111827]">{booking.subjectName} · {booking.levelName}</p>
+          <p className="mt-1 break-words text-sm font-semibold text-[#111827]">{booking.subjectName} · {booking.levelName}</p>
         </div>
-        <p className="shrink-0 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(booking.paymentStatus)}</p>
+        <p className="w-fit shrink-0 rounded-lg border border-[#D8DEE9] bg-white px-2 py-1 text-xs font-semibold text-[#111B4D]">{formatClientPaymentStatus(booking.paymentStatus)}</p>
       </div>
       <div className="mt-2 grid gap-2 text-xs font-semibold text-[#475569] min-[420px]:grid-cols-2">
-        <p className="line-clamp-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{teacherName}</p>
-        <p className="line-clamp-1 rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}</p>
+        <p className="break-words rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{teacherName}</p>
+        <p className="break-words rounded-lg border border-[#E3E8F2] bg-white px-3 py-1.5">{dateLabel ? `${dateLabel} · ${timeLabel}` : timeLabel}</p>
       </div>
       {booking.teacher.badgeVerified && (
         <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#111B4D]">
