@@ -2291,11 +2291,17 @@ b {
   .professor-shell [data-professor-portal-card],
   .professor-shell [data-professor-payout-request],
   .admin-shell [data-admin-payout-preview] {
-    padding: 0.9rem !important;
+    padding: 0.75rem !important;
   }
 
-  .professor-shell [data-professor-stat-card] p:nth-child(2) {
+  .professor-shell [data-professor-stat-card] > div p:nth-child(2) {
     font-size: 1.35rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .professor-shell [data-professor-stat-card] > p {
+    font-size: 0.72rem !important;
+    line-height: 1.05rem !important;
   }
 }
 
