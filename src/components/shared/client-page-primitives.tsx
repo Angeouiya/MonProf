@@ -313,7 +313,7 @@ export function ClientInfoPill({
     <div data-client-info-pill className={cn("client-info-pill min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2", className)}>
       <p className="text-[11px] font-semibold uppercase leading-4 tracking-wide text-[#64748B]">{label}</p>
       <div className={cn("mt-0.5 break-words text-sm font-semibold leading-5", strong ? "text-[#111B4D]" : "text-[#111827]")}>
-        {value || "—"}
+        {value ?? "—"}
       </div>
     </div>
   );
@@ -360,7 +360,7 @@ export function ClientCompactFacts({
               item.strong && "text-[#111B4D]",
             )}
           >
-            {item.value || "—"}
+            {item.value ?? "—"}
           </dd>
         </div>
       ))}
@@ -380,7 +380,7 @@ export function ClientRecordAmount({
   return (
     <div data-client-record-amount className={cn("min-w-0 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5", className)}>
       <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B]">{label}</p>
-      <div className="mt-1 break-words text-sm font-semibold leading-5 text-[#111B4D]">{value || "—"}</div>
+      <div className="mt-1 break-words text-sm font-semibold leading-5 text-[#111B4D]">{value ?? "—"}</div>
     </div>
   );
 }
