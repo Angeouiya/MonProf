@@ -8,6 +8,7 @@ import {
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientRecordStatusLine,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
@@ -17,7 +18,7 @@ import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatDate } from "@/lib/format";
 import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
-import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3 } from "lucide-react";
+import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { clientPaymentChannelLabel } from "@/lib/client-payment-display";
 import { PaymentHistoryClient, type ClientPaymentHistoryItem } from "./payment-history-client";
@@ -90,6 +91,7 @@ export default async function PaiementsPage() {
     .reduce((sum, t) => sum + t.amount, 0);
   const secureTransactions = transactions.filter((t) => t.type === "CLIENT_PAYMENT" && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(t.status));
   const lastSecureTransaction = secureTransactions[0] ?? transactions[0] ?? null;
+  const priorityPendingBooking = pendingPaymentBookings[0] ?? null;
   const paymentHistory: ClientPaymentHistoryItem[] = transactions.map((transaction) => ({
     id: transaction.id,
     reference: transaction.reference,
@@ -140,6 +142,15 @@ export default async function PaiementsPage() {
         ]}
       />
 
+      <PaymentCommandCenter
+        totalDepense={totalDepense}
+        fondsBloques={fondsBloques}
+        totalRembourse={totalRembourse}
+        pendingCount={pendingPaymentBookings.length}
+        priorityPendingBooking={priorityPendingBooking}
+        lastSecureTransaction={lastSecureTransaction}
+      />
+
       <PaymentTrustPanel />
 
       {pendingPaymentBookings.length > 0 && (
@@ -184,6 +195,139 @@ export default async function PaiementsPage() {
         </ClientSurface>
       )}
     </div>
+  );
+}
+
+type PaymentCommandCenterProps = {
+  totalDepense: number;
+  fondsBloques: number;
+  totalRembourse: number;
+  pendingCount: number;
+  priorityPendingBooking: PendingPaymentBooking | null;
+  lastSecureTransaction: {
+    amount: number;
+    method: string | null;
+    createdAt: Date;
+    booking: {
+      id: string;
+      reference: string;
+      subjectName: string;
+      levelName: string;
+    };
+  } | null;
+};
+
+function PaymentCommandCenter({
+  totalDepense,
+  fondsBloques,
+  totalRembourse,
+  pendingCount,
+  priorityPendingBooking,
+  lastSecureTransaction,
+}: PaymentCommandCenterProps) {
+  const pendingBooking = priorityPendingBooking;
+  const hasPending = Boolean(pendingBooking);
+  const latestLabel = lastSecureTransaction
+    ? `${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
+    : "Aucun mouvement confirmé";
+  const actionHref = pendingBooking
+    ? `/client/reservations/${pendingBooking.id}?payment=pending`
+    : lastSecureTransaction
+      ? `/client/reservations/${lastSecureTransaction.booking.id}`
+      : "/client/rechercher";
+  const actionLabel = pendingBooking
+    ? "Payer via PayDunya"
+    : lastSecureTransaction
+      ? "Ouvrir le dernier dossier"
+      : "Trouver un professeur";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-payment-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {hasPending ? <Clock3 className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Vue paiement</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">
+                {hasPending ? "Un paiement attend votre action." : "Vos paiements confirmés sont suivis."}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                {hasPending
+                  ? "Finalisez le paiement sur PayDunya pour activer la réservation. Aucun professeur n'est notifié avant la confirmation serveur."
+                  : "Chaque mouvement affiché ici provient d'un paiement ou remboursement rattaché à une réservation vérifiée."}
+              </p>
+            </div>
+          </div>
+
+          <ClientCompactFacts
+            items={[
+              { label: "Montant sécurisé", value: <Money amount={fondsBloques} />, strong: fondsBloques > 0 },
+              { label: "Total payé", value: <Money amount={totalDepense} />, strong: totalDepense > 0 },
+              { label: "Remboursé", value: <Money amount={totalRembourse} />, strong: totalRembourse > 0 },
+              { label: "Dernier suivi", value: latestLabel, strong: Boolean(lastSecureTransaction) },
+            ]}
+          />
+
+          <ClientProcessTracker
+            steps={[
+              { label: "PayDunya", hint: "Paiement hors plateforme Compétence.", state: lastSecureTransaction ? "done" : hasPending ? "current" : "pending" },
+              { label: "Confirmation serveur", hint: "Activation uniquement après preuve PayDunya.", state: lastSecureTransaction ? "done" : "pending" },
+              { label: "Fonds sécurisés", hint: "Suivi du cours, remboursement ou clôture.", state: fondsBloques > 0 ? "current" : lastSecureTransaction ? "done" : "pending" },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Règle claire</p>
+                  <p className="text-xs font-medium leading-5 text-[#64748B]">Numéro et moyen choisis uniquement sur PayDunya.</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Action prioritaire</p>
+                <p className="mt-1 text-base font-semibold leading-6 text-[#111827]">
+                  {pendingBooking
+                    ? pendingBooking.reference
+                    : lastSecureTransaction
+                      ? lastSecureTransaction.booking.reference
+                      : "Nouvelle réservation"}
+                </p>
+                <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                  {pendingBooking
+                    ? `${pendingBooking.subjectName} · ${pendingBooking.levelName}`
+                    : lastSecureTransaction
+                      ? `${lastSecureTransaction.booking.subjectName} · ${lastSecureTransaction.booking.levelName}`
+                      : "Choisissez un professeur pour démarrer un paiement sécurisé."}
+                </p>
+              </div>
+            </div>
+
+            <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+              <Link href={actionHref}>
+                {actionLabel}
+                <ExternalLink className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+
+            <p className="text-xs font-medium leading-5 text-[#64748B]">
+              {pendingCount > 0
+                ? `${pendingCount} dossier(s) attendent encore PayDunya.`
+                : "Aucun dossier en attente de paiement."}
+            </p>
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
 
