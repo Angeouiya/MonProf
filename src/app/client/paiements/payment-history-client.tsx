@@ -74,7 +74,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = normalize(query);
     return transactions.filter((transaction) => {
       const teacherName = transaction.booking.teacher.professionalName || transaction.booking.teacher.fullName;
       const category = getClientPaymentFilter(transaction.type, transaction.status);
@@ -86,11 +86,16 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
         teacherName,
         clientPaymentChannelLabel(transaction.method),
         getClientTransactionStatusLabel(transaction.type, transaction.status),
-      ].join(" ").toLowerCase();
+        getPaymentHint(transaction.type, transaction.status),
+        courseDateLabel(transaction),
+        formatDate(transaction.createdAt),
+        String(transaction.amount),
+      ].join(" ");
 
-      return (filter === "all" || category === filter) && (!normalizedQuery || searchable.includes(normalizedQuery));
+      return (filter === "all" || category === filter) && (!normalizedQuery || normalize(searchable).includes(normalizedQuery));
     });
   }, [filter, query, transactions]);
+  const groupedTransactions = useMemo(() => groupTransactionsByDate(filteredTransactions), [filteredTransactions]);
 
   const activeFilter = filterOptions.find((option) => option.key === filter)?.label ?? "Tous";
   const hasRefinement = filter !== "all" || query.trim().length > 0;
@@ -106,6 +111,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Rechercher professeur, référence, matière..."
               className="h-12 rounded-lg border-[#D8DEE9] bg-white pl-9 pr-10 text-sm font-medium focus:border-[#111B4D] focus:ring-[#111B4D]"
+              data-client-payment-search
             />
             {query.trim().length > 0 && (
               <button
@@ -164,7 +170,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
       {filteredTransactions.length === 0 ? (
         <ClientEmptyState icon={Search} title="Aucun mouvement trouvé" description="Essayez un autre filtre, une référence ou le nom du professeur." compact />
       ) : (
-        <div aria-live="polite">
+        <div aria-live="polite" data-client-payment-results>
           <div className="hidden xl:block">
             <table className="w-full text-sm">
               <thead>
@@ -179,17 +185,41 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
                   <th className="px-4 py-3 text-right font-semibold">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E3E8F2]">
-                {filteredTransactions.map((transaction) => (
-                  <PaymentDesktopRow key={transaction.id} transaction={transaction} />
-                ))}
-              </tbody>
+              {groupedTransactions.map((group) => (
+                <tbody key={group.key} className="divide-y divide-[#E3E8F2]" data-client-payment-group>
+                  <tr>
+                    <td colSpan={8} className="border-b border-[#E3E8F2] bg-white px-4 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{group.label}</span>
+                        <span className="rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                          {formatCount(group.items.length, "mouvement")}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  {group.items.map((transaction) => (
+                    <PaymentDesktopRow key={transaction.id} transaction={transaction} />
+                  ))}
+                </tbody>
+              ))}
             </table>
           </div>
 
-          <div className="divide-y divide-[#E3E8F2] xl:hidden">
-            {filteredTransactions.map((transaction) => (
-              <PaymentMobileCard key={transaction.id} transaction={transaction} />
+          <div className="space-y-4 p-3 xl:hidden">
+            {groupedTransactions.map((group) => (
+              <section key={group.key} className="space-y-2.5" data-client-payment-group>
+                <div className="flex min-h-9 items-center justify-between gap-3 border-b border-[#E3E8F2] bg-white pb-2">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{group.label}</h2>
+                  <span className="rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
+                    {formatCount(group.items.length, "mouvement")}
+                  </span>
+                </div>
+                <div className="divide-y divide-[#E3E8F2] overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">
+                  {group.items.map((transaction) => (
+                    <PaymentMobileCard key={transaction.id} transaction={transaction} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>
@@ -307,4 +337,55 @@ function courseDateLabel(transaction: ClientPaymentHistoryItem) {
   if (transaction.booking.scheduledDate) return formatDate(transaction.booking.scheduledDate);
   if (transaction.booking.startDate) return `${formatDate(transaction.booking.startDate)} demandée`;
   return "Date à confirmer";
+}
+
+function groupTransactionsByDate(transactions: ClientPaymentHistoryItem[]) {
+  const groups: Array<{ key: string; label: string; items: ClientPaymentHistoryItem[] }> = [];
+
+  for (const transaction of transactions) {
+    const date = new Date(transaction.createdAt);
+    const key = Number.isNaN(date.getTime()) ? "unknown" : date.toISOString().slice(0, 10);
+    let group = groups.find((item) => item.key === key);
+    if (!group) {
+      group = {
+        key,
+        label: getPaymentDateLabel(date),
+        items: [],
+      };
+      groups.push(group);
+    }
+    group.items.push(transaction);
+  }
+
+  return groups;
+}
+
+function getPaymentDateLabel(date: Date) {
+  if (Number.isNaN(date.getTime())) return "Date à confirmer";
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (isSameCalendarDay(date, today)) return "Aujourd'hui";
+  if (isSameCalendarDay(date, yesterday)) return "Hier";
+  return formatDate(date);
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function formatCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
