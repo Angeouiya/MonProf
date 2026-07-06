@@ -19,7 +19,7 @@ const ACCOUNT_BENEFITS = [
 
 const ADMIN_BENEFITS = [
   { icon: ClipboardCheck, title: "Pilotage opérationnel", text: "Réservations, remplacements, urgences et tâches professeurs sont centralisés." },
-  { icon: Users, title: "Contrôle professeurs", text: "Fiches internes, statuts, sanctions, paiements et historiques restent sous contrôle admin." },
+  { icon: Users, title: "Contrôle professeurs", text: "Fiches internes, statuts, sanctions, paiements et historiques restent suivis par le service client." },
   { icon: Bell, title: "Notifications critiques", text: "Alertes, relances PayDunya, litiges et actions à traiter sont visibles dès l'entrée." },
 ];
 

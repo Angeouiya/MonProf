@@ -101,10 +101,10 @@ export default async function SupportPage() {
 
       <ClientAppRail
         items={[
-          { href: "tel:+22527220000", icon: Phone, label: "Appeler", value: "Service client direct", active: true },
+          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige", active: true },
+          { href: "tel:+22527220000", icon: Phone, label: "Appeler", value: "Contact direct" },
           { href: "mailto:contact@competence.ci", icon: Mail, label: "Email", value: "Trace écrite" },
           { href: "/client/reservations", icon: FileText, label: "Dossiers", value: "Réservations" },
-          { href: "/client/notifications", icon: ShieldCheck, label: "Suivi", value: "Notifications" },
         ]}
       />
 

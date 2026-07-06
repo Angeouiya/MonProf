@@ -80,12 +80,12 @@ export function ClientMetricStrip({
     <div
       data-client-metric-strip
       className={cn(
-        "client-metric-strip flex gap-2 overflow-x-auto bg-white pb-1 min-[640px]:grid min-[640px]:overflow-visible min-[640px]:pb-0",
+        "client-metric-strip grid gap-2 bg-white",
         metrics.length === 1
           ? "grid-cols-1"
         : metrics.length === 2
-            ? "grid-cols-1 min-[640px]:grid-cols-2"
-            : "grid-cols-1 min-[640px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
+            ? "grid-cols-1 min-[360px]:grid-cols-2"
+            : "grid-cols-1 min-[360px]:grid-cols-2 lg:grid-flow-col lg:auto-cols-fr lg:grid-cols-none",
         className,
       )}
     >
@@ -94,8 +94,8 @@ export function ClientMetricStrip({
           key={`${metric.label}-${index}`}
           data-client-metric-card
           className={cn(
-            "client-metric-card flex min-h-16 min-w-[9.25rem] items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 min-[380px]:min-w-[10rem] min-[640px]:min-w-0 sm:min-h-17 sm:px-4",
-            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[640px]:col-span-2 lg:col-span-1",
+            "client-metric-card flex min-h-16 min-w-0 items-center justify-between gap-2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 sm:min-h-17 sm:px-4",
+            metrics.length > 1 && metrics.length % 2 === 1 && index === metrics.length - 1 && "min-[360px]:col-span-2 lg:col-span-1",
           )}
         >
           <div className="min-w-0">
@@ -505,22 +505,22 @@ export function ClientAppRail({
   }>;
   className?: string;
 }) {
-  const desktopGridClassName = items.length === 1
-    ? "min-[720px]:grid-cols-1"
+  const railGridClassName = items.length === 1
+    ? "grid-cols-1"
     : items.length === 2
-      ? "min-[720px]:grid-cols-2"
+      ? "grid-cols-1 min-[360px]:grid-cols-2"
       : items.length === 3
-        ? "min-[720px]:grid-cols-3"
+        ? "grid-cols-2 min-[720px]:grid-cols-3"
         : items.length >= 5
-          ? "min-[720px]:grid-cols-3 min-[1100px]:grid-cols-5"
-          : "min-[720px]:grid-cols-4";
+          ? "grid-cols-2 min-[720px]:grid-cols-3 min-[1100px]:grid-cols-5"
+          : "grid-cols-2 min-[720px]:grid-cols-4";
 
   return (
     <div
       data-client-app-rail
       className={cn(
-        "client-app-rail flex gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid min-[720px]:grid-flow-row min-[720px]:overflow-visible",
-        desktopGridClassName,
+        "client-app-rail grid gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid-flow-row",
+        railGridClassName,
         className,
       )}
       aria-label="Raccourcis client"
@@ -565,8 +565,8 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-16 min-w-[8.5rem] items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[390px]:min-w-[9.25rem] min-[720px]:min-h-14 min-[720px]:min-w-0 min-[720px]:justify-between min-[720px]:px-3 min-[720px]:text-left",
-          items.length % 2 === 1 && index === items.length - 1 && "min-[360px]:col-span-2 min-[720px]:col-span-1",
+          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[720px]:min-h-14 min-[720px]:justify-between min-[720px]:px-3 min-[720px]:text-left",
+          items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",

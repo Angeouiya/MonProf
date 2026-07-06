@@ -18,7 +18,7 @@ import { formatDate } from "@/lib/format";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
-  ShieldCheck, BookOpen, Bell, WalletCards, LifeBuoy,
+  ShieldCheck, BookOpen, Bell, WalletCards, LifeBuoy, LayoutDashboard,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -165,7 +165,8 @@ export default async function ClientDashboardPage() {
 
       <ClientAppRail
         items={[
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Choisir un professeur", active: true },
+          { href: "/client", icon: LayoutDashboard, label: "Accueil", value: "Vue générale", active: true },
+          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Choisir un professeur" },
           { href: "/client/cours", icon: BookOpen, label: "Cours", value: `${upcomingBookings} actif${upcomingBookings > 1 ? "s" : ""}` },
           { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatFCFACompact(blockedFundsAmount) },
           { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },

@@ -1034,7 +1034,7 @@ export function ReserverForm({
                   )}
                 </div>
                 {isLyceeSelection && (
-                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-4 min-[720px]:grid-cols-2">
                       <div>
                         <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
@@ -1070,7 +1070,7 @@ export function ReserverForm({
                     </p>
                   </div>
                 )}
-                <div className="sm:col-span-2">
+                <div className="min-[720px]:col-span-2">
                   <Label htmlFor="courseCatalogId">Cours catalogue conseillé</Label>
                   <SearchableCatalogSelect
                     id="courseCatalogId"
@@ -1090,7 +1090,7 @@ export function ReserverForm({
                   </p>
                 </div>
                 {selectedCatalogCourse && (
-                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">{selectedCatalogCourse.nom}</p>
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
@@ -1105,7 +1105,7 @@ export function ReserverForm({
                   </div>
                 )}
                 {needsCustomSubjectDetail && (
-                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <Label htmlFor="customSubjectDetail">Précisez la matière ou le besoin *</Label>
                     <Textarea
                       id="customSubjectDetail"
@@ -1134,7 +1134,7 @@ export function ReserverForm({
                 </select>
               </div>
               <div className="grid gap-4 min-[720px]:grid-cols-2">
-                <div className="sm:col-span-2">
+                <div className="min-[720px]:col-span-2">
                   <Label htmlFor="schoolProgram">{categoryCopy.programLabel}</Label>
                   <Input
                     id="schoolProgram"
@@ -1314,7 +1314,7 @@ export function ReserverForm({
                       placeholder="Ex: Riviera Palmeraie"
                     />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="min-[720px]:col-span-2">
                     <Label htmlFor="addressHint">Repère / adresse approximative *</Label>
                     <Textarea
                       id="addressHint"
@@ -1327,7 +1327,7 @@ export function ReserverForm({
                       Un repère clair aide le service client et le professeur à confirmer rapidement la faisabilité du déplacement.
                     </p>
                   </div>
-                  <div className="sm:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
                     <div className="mt-3 grid gap-2 min-[760px]:grid-cols-3">
                       <InfoMini label="Base professeur" value={teacher.commune ?? "À confirmer"} />
@@ -1582,7 +1582,7 @@ export function ReserverForm({
                       className="mt-1.5 h-11 rounded-lg"
                     />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="min-[720px]:col-span-2">
                     <Label htmlFor="customTimeRequest" className="text-xs font-semibold text-[#64748B]">Précision optionnelle</Label>
                     <Textarea
                       id="customTimeRequest"
