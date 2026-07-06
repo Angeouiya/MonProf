@@ -6,13 +6,14 @@ import { ShieldCheck } from "lucide-react";
 import { ParametresClient } from "./client";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { getNotificationProviderStatus } from "@/lib/notification-delivery";
+import { settingsForClient } from "@/lib/settings-security";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminParametresPage() {
   await requireAdmin();
   const rows = await db.setting.findMany();
-  const settings: Record<string, string> = {
+  const defaults: Record<string, string> = {
     platform_name: "Compétence",
     default_commission: String(PLATFORM_COMMISSION_PERCENT),
     support_phone: "",
@@ -21,7 +22,7 @@ export default async function AdminParametresPage() {
     notification_delivery_enabled: "true",
     notification_from_name: "Compétence",
   };
-  for (const r of rows) settings[r.key] = r.value;
+  const settings = settingsForClient(rows, defaults);
   const providerStatus = getNotificationProviderStatus();
 
   return (

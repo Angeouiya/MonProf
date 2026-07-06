@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { editableSettingsFromClient, settingsForClient } from "@/lib/settings-security";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -13,9 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const rows = await db.setting.findMany();
-  const settings: Record<string, string> = {};
-  for (const r of rows) settings[r.key] = r.value;
-  return NextResponse.json({ settings });
+  return NextResponse.json({ settings: settingsForClient(rows) });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -23,12 +22,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const body = await req.json();
-  for (const [key, value] of Object.entries(body)) {
+  const editableSettings = editableSettingsFromClient(body);
+  for (const [key, value] of Object.entries(editableSettings)) {
     const exists = await db.setting.findUnique({ where: { key } });
     if (exists) {
-      await db.setting.update({ where: { key }, data: { value: String(value) } });
+      await db.setting.update({ where: { key }, data: { value } });
     } else {
-      await db.setting.create({ data: { key, value: String(value) } });
+      await db.setting.create({ data: { key, value } });
     }
   }
   return NextResponse.json({ ok: true });
