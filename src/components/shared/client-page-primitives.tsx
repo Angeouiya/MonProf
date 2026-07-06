@@ -136,7 +136,7 @@ export function ClientSurface({
       data-client-surface
       className={cn(
         "client-app-surface border-t border-[#E6EAF3] bg-white",
-        compact ? "py-3 sm:py-4" : "py-4 sm:py-5",
+        compact ? "py-3 min-[640px]:py-4" : "py-4 min-[640px]:py-5",
         className,
       )}
     >
@@ -165,7 +165,7 @@ export function ClientEmptyState({
       data-client-empty-state
       className={cn(
         "client-empty-state flex min-w-0 flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-center",
-        compact ? "px-4 py-5" : "px-4 py-8 sm:px-6 sm:py-10",
+        compact ? "px-4 py-5" : "px-4 py-8 min-[640px]:px-6 min-[640px]:py-10",
         className,
       )}
     >
@@ -180,7 +180,7 @@ export function ClientEmptyState({
           {description}
         </div>
       )}
-      {action && <div className="mt-4 grid w-full max-w-xs gap-2 sm:w-auto sm:max-w-none">{action}</div>}
+      {action && <div className="mt-4 grid w-full max-w-xs gap-2 min-[640px]:w-auto min-[640px]:max-w-none">{action}</div>}
     </div>
   );
 }
@@ -224,7 +224,7 @@ export function ClientFocusPanel({
   className?: string;
 }) {
   return (
-    <section data-client-focus-panel className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 sm:p-4", className)}>
+    <section data-client-focus-panel className={cn("client-focus-panel rounded-lg border border-[#DDE3EE] bg-white p-3.5 min-[640px]:p-4", className)}>
       <div className="flex flex-col gap-4 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
         <div className="flex min-w-0 gap-3">
           {Icon && (

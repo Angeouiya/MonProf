@@ -35,7 +35,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
     <article
       data-client-teacher-card
       aria-label={`Professeur ${displayName}`}
-      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 transition-colors duration-200 hover:border-[#111B4D] sm:p-4"
+      className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 transition-colors duration-200 hover:border-[#111B4D] min-[640px]:p-4"
     >
       <div className="flex min-w-0 items-start gap-3.5">
         <ProfessorImage

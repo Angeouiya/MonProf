@@ -76,7 +76,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const adminProps = props as BookingPricingBreakdownAdminProps;
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white p-3 sm:p-4" data-client-pricing-breakdown>
+    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white p-3 min-[640px]:p-4" data-client-pricing-breakdown>
       <div className="grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_minmax(13rem,auto)] min-[620px]:items-start">
         <div className="order-2 flex min-w-0 items-start gap-3 min-[620px]:order-1">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">

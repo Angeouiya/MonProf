@@ -213,7 +213,7 @@ export default async function ClientDashboardPage() {
                 </div>
                 <div className="flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
                   <p className="text-sm font-semibold text-[#111B4D]">Statut : {formatClientBookingStatus(nextCourse.status)}</p>
-                  <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-lg sm:w-auto">
+                  <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
                     <Link href={`/client/reservations/${nextCourse.id}`}>Voir détails</Link>
                   </Button>
                 </div>

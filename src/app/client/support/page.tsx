@@ -154,7 +154,7 @@ export default async function SupportPage() {
               const name = d.booking.teacher.professionalName || d.booking.teacher.fullName;
               return (
                 <ClientRecordCard key={d.id} data-client-support-dispute-card className="p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-center min-[460px]:gap-3">
                         <p className="text-sm font-semibold text-[#111827]">{d.booking.reference}</p>
@@ -172,7 +172,7 @@ export default async function SupportPage() {
                         <span className="min-w-0 break-words">{name} • {formatDate(d.createdAt)}</span>
                       </div>
                     </div>
-                    <Button asChild variant="outline" size="sm" className="w-full rounded-lg sm:w-auto">
+                    <Button asChild variant="outline" size="sm" className="w-full rounded-lg min-[640px]:w-auto">
                       <Link href={`/client/reservations/${d.booking.id}`}>
                         Ouvrir <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Link>

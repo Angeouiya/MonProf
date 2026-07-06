@@ -413,7 +413,7 @@ function buildTeacherProfileExtras(t: (typeof TEACHERS)[number]) {
 
   return {
     learnersCoached: coached,
-    careerSummary: `${t.professionalName} accompagne des apprenants à ${t.commune} et dans le Grand Abidjan depuis ${t.experienceYears} ans. Son profil est orienté ${primarySubject}, avec une approche pratique, structurée et suivie par l'administration Compétence.`,
+    careerSummary: `${t.professionalName} accompagne des apprenants à ${t.commune} et dans le Grand Abidjan depuis ${t.experienceYears} ans. Son profil est orienté ${primarySubject}, avec une approche pratique, structurée et suivie par le service client Compétence.`,
     skills: [
       `${primarySubject} - accompagnement ciblé`,
       ...secondarySubjects,
@@ -429,13 +429,13 @@ function buildTeacherProfileExtras(t: (typeof TEACHERS)[number]) {
     ].join("\n"),
     certifications: [
       t.diploma,
-      "Identité, photo et profil vérifiés par l'administration Compétence",
+      "Identité, photo et profil vérifiés par le service client Compétence",
       "Références pédagogiques contrôlées en interne",
     ].filter(Boolean).join("\n"),
     teachingAchievements: [
       `${coached}+ apprenants encadrés en suivi individuel ou groupe restreint`,
       "Méthode centrée sur les objectifs, exercices guidés et progression mesurable",
-      "Historique de réservations, avis et paiements suivi dans le dashboard administrateur",
+      "Historique de réservations, avis et paiements suivi par le service client Compétence",
     ].join("\n"),
   };
 }

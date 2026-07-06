@@ -284,7 +284,7 @@ export default function ProfilPage() {
                 <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
                 Ces informations restent privées et servent uniquement à organiser vos réservations.
               </div>
-              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-lg sm:w-auto">
+              <Button type="submit" disabled={savingInfo || !profileDirty || !name.trim()} className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
                 {savingInfo ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</>
                 ) : !profileDirty ? (

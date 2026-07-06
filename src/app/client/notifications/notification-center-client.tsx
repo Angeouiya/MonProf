@@ -270,7 +270,7 @@ export function ClientNotificationCenter({
                     : "border-[#111B4D] bg-white"
                 }`}
               >
-                <div className="relative flex flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
+                <div className="relative flex flex-col gap-3 p-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between sm:p-4">
                   {!notification.read && <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[#111B4D] sm:inset-y-4" />}
                   <div className="flex min-w-0 gap-3">
                     {booking ? (
@@ -306,7 +306,7 @@ export function ClientNotificationCenter({
                     </div>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[520px]:grid-cols-2 sm:flex sm:min-w-44 sm:flex-col">
+                  <div className="grid shrink-0 grid-cols-1 gap-2 min-[520px]:grid-cols-2 min-[720px]:flex min-[720px]:min-w-44 min-[720px]:flex-col">
                     {href && (
                       <Button asChild variant={notification.read ? "outline" : "default"} size="sm" className="min-h-10 w-full rounded-lg sm:min-h-11 sm:rounded-lg">
                         <Link href={href}>{actionLabel} <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></Link>

@@ -52,14 +52,14 @@ export function ClientNotificationActions({
   const confirmed = status === "CONFIRMED";
 
   return (
-    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+    <div className="flex w-full flex-col gap-2 min-[640px]:w-auto min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-end">
       {!confirmed && (
         <Button
           variant="default"
           size="sm"
           onClick={() => patch({ id, action: "confirm" }, "Notification confirmée")}
           disabled={loading}
-          className="min-h-11 w-full rounded-lg sm:w-auto"
+          className="min-h-11 w-full rounded-lg min-[640px]:w-auto"
         >
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
           Confirmer réception
@@ -70,7 +70,7 @@ export function ClientNotificationActions({
         size="sm"
         onClick={() => patch({ id, read: !read }, read ? "Notification remise en non lue" : "Notification marquée comme lue")}
         disabled={loading}
-        className="min-h-11 w-full rounded-lg sm:w-auto"
+        className="min-h-11 w-full rounded-lg min-[640px]:w-auto"
       >
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : read ? <Bell className="mr-1.5 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
         {read ? "Remettre non lue" : "Marquer lue"}

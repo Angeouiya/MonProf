@@ -276,7 +276,7 @@ export default async function PaiementsPage() {
         </ClientSurface>
       ) : (
         <ClientSurface compact className="p-4">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Historique vérifié</p>
               <h2 className="mt-1 text-base font-semibold leading-6 text-[#111827]">Aucun paiement serveur confirmé</h2>
@@ -340,7 +340,7 @@ function PaymentTrustPanel() {
 function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] }) {
   return (
     <ClientSurface compact className="space-y-3 p-4">
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">À finaliser</p>
           <h2 className="text-lg font-semibold leading-6 text-[#111827]">Paiements PayDunya en attente</h2>

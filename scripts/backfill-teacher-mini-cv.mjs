@@ -36,7 +36,7 @@ async function main() {
       where: { id: teacher.id },
       data: {
         learnersCoached,
-        careerSummary: teacher.careerSummary || `${teacher.professionalName || teacher.fullName} accompagne des apprenants à ${teacher.commune || "Abidjan"} et dans le Grand Abidjan depuis ${teacher.experienceYears || 1} ans. Son profil est orienté ${primary}, avec une méthode pratique et suivie par l'administration Compétence.`,
+        careerSummary: teacher.careerSummary || `${teacher.professionalName || teacher.fullName} accompagne des apprenants à ${teacher.commune || "Abidjan"} et dans le Grand Abidjan depuis ${teacher.experienceYears || 1} ans. Son profil est orienté ${primary}, avec une méthode pratique et suivie par le service client Compétence.`,
         skills: teacher.skills || lines([
           `${primary} - accompagnement ciblé`,
           ...secondary,
@@ -52,13 +52,13 @@ async function main() {
         ]),
         certifications: teacher.certifications || lines([
           teacher.diploma,
-          "Identité, photo et profil vérifiés par l'administration Compétence",
+          "Identité, photo et profil vérifiés par le service client Compétence",
           "Références pédagogiques contrôlées en interne",
         ]),
         teachingAchievements: teacher.teachingAchievements || lines([
           `${learnersCoached}+ apprenants encadrés en suivi individuel ou groupe restreint`,
           "Méthode centrée sur les objectifs, exercices guidés et progression mesurable",
-          "Historique de réservations, avis et paiements suivi dans le dashboard administrateur",
+          "Historique de réservations, avis et paiements suivi par le service client Compétence",
         ]),
       },
     });

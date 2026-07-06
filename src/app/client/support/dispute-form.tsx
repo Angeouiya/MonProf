@@ -146,7 +146,7 @@ export function DisputeForm({
         />
       </div>
 
-      <Button type="submit" disabled={loading} className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1A2565] sm:w-auto">
+      <Button type="submit" disabled={loading} className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1A2565] min-[640px]:w-auto">
         {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
         {loading ? "Envoi..." : "Envoyer le signalement"}
       </Button>

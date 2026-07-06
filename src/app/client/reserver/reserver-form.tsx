@@ -1240,7 +1240,7 @@ export function ReserverForm({
 
               {form.groupType === "SMALL_GROUP" && (
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                  <div className="grid gap-4 sm:grid-cols-[1fr_220px] sm:items-end">
+                  <div className="grid gap-4 min-[720px]:grid-cols-[1fr_220px] min-[640px]:items-end">
                     <div>
                       <Label htmlFor="participantsCount">Nombre de participants *</Label>
                       <p className="mt-1 text-sm text-[#64748B]">
@@ -1555,7 +1555,7 @@ export function ReserverForm({
                   Si les créneaux proposés ne conviennent pas parfaitement, indiquez le jour et l'heure souhaités.
                   Le service client vérifiera avec le professeur avant confirmation.
                 </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_180px]">
+                <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px]">
                   <div>
                     <Label htmlFor="customDay" className="text-xs font-semibold text-[#64748B]">Jour souhaité</Label>
                     <select
@@ -1596,7 +1596,7 @@ export function ReserverForm({
                 </div>
                 {form.customDay && customTimeRange && (
                   <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="grid gap-3 min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
                         <p className="mt-1 text-sm leading-6 text-[#6B7280]">
@@ -1914,22 +1914,22 @@ export function ReserverForm({
           )}
 
           {/* Navigation */}
-          <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 sm:flex min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
+          <div className="mt-6 hidden flex-col-reverse gap-3 border-t border-[#E3E8F2] pt-4 min-[720px]:flex min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
             {step > 0 ? (
-              <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-lg sm:w-auto">
+              <Button type="button" variant="outline" onClick={back} disabled={submitting} className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Retour
               </Button>
             ) : (
-              <span className="hidden sm:block" />
+              <span className="hidden min-[720px]:block" />
             )}
             {step < STEPS.length - 1 ? (
-              <Button type="button" onClick={next} className="min-h-11 w-full rounded-lg sm:w-auto">
+              <Button type="button" onClick={next} className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
                 Continuer
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={submit} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg sm:w-auto">
+              <Button type="button" onClick={submit} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg min-[640px]:w-auto">
                 {submitting ? (
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
@@ -1987,7 +1987,7 @@ export function ReserverForm({
       </div>
 
       <div
-        className="client-booking-mobile-action fixed inset-x-2 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2.5 min-[390px]:inset-x-3 sm:hidden"
+        className="client-booking-mobile-action fixed inset-x-2 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2.5 min-[390px]:inset-x-3 min-[720px]:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mb-2 space-y-1.5 px-1">
@@ -2039,9 +2039,9 @@ export function ReserverForm({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-1 px-4 py-3 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] sm:gap-4">
+    <div className="grid gap-1 px-4 py-3 min-[720px]:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] sm:gap-4">
       <dt className="min-w-0 text-[#6B7280]">{label}</dt>
-      <dd className="min-w-0 break-words font-semibold text-[#111827] sm:text-right">{value}</dd>
+      <dd className="min-w-0 break-words font-semibold text-[#111827] min-[720px]:text-right">{value}</dd>
     </div>
   );
 }

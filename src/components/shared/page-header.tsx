@@ -19,7 +19,7 @@ export function PageHeader({
   backLabel?: string;
 }) {
   return (
-    <div data-app-page-header className={cn("page-header flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5", className)}>
+    <div data-app-page-header className={cn("page-header flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between min-[640px]:p-5", className)}>
       <div className="flex min-w-0 flex-col gap-3">
         {showBack && <BackButton fallbackHref={backHref} label={backLabel} />}
         <div className="min-w-0">

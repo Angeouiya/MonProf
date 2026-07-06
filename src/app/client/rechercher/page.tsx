@@ -315,7 +315,7 @@ export default async function RechercherPage({
               description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
             />
             <div
-              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0"
+              className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[720px]:mx-0 min-[720px]:flex-wrap min-[720px]:justify-center min-[720px]:overflow-visible min-[720px]:px-0 min-[720px]:pb-0"
               aria-label="Suggestions de recherche"
             >
               <Link
