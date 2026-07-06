@@ -4010,3 +4010,218 @@ b {
     transform: scale(0.88);
   }
 }
+
+/* 3% production refinement: solid OpenAI-like app UI on all three platforms. */
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) {
+  --competence-navy: #111B4D;
+  --competence-navy-hover: #182260;
+  --competence-text: #111827;
+  --competence-muted: #5B667A;
+  --competence-border: #DDE3EE;
+  --competence-soft-border: #E6EAF3;
+  --competence-radius: 0.5rem;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [class*="bg-white/"],
+  [class*="bg-transparent"],
+  [class*="bg-slate-50"],
+  [class*="bg-slate-100"],
+  [class*="bg-gray-50"],
+  [class*="bg-gray-100"],
+  [class*="bg-zinc-50"],
+  [class*="bg-zinc-100"],
+  [class*="bg-neutral-50"],
+  [class*="bg-neutral-100"],
+  [class*="bg-stone-50"],
+  [class*="bg-stone-100"],
+  [class*="bg-blue-50"],
+  [class*="bg-blue-100"],
+  [class*="bg-sky-50"],
+  [class*="bg-sky-100"],
+  [class*="bg-cyan-50"],
+  [class*="bg-cyan-100"],
+  [class*="bg-indigo-50"],
+  [class*="bg-indigo-100"],
+  [class*="bg-violet-50"],
+  [class*="bg-violet-100"],
+  [class*="bg-purple-50"],
+  [class*="bg-purple-100"],
+  [class*="bg-fuchsia-50"],
+  [class*="bg-fuchsia-100"],
+  [class*="bg-pink-50"],
+  [class*="bg-pink-100"],
+  [class*="bg-rose-50"],
+  [class*="bg-rose-100"],
+  [class*="bg-amber-50"],
+  [class*="bg-amber-100"],
+  [class*="bg-yellow-50"],
+  [class*="bg-yellow-100"],
+  [class*="bg-orange-50"],
+  [class*="bg-orange-100"],
+  [class*="bg-red-50"],
+  [class*="bg-red-100"],
+  [class*="bg-emerald-50"],
+  [class*="bg-emerald-100"],
+  [class*="bg-green-50"],
+  [class*="bg-green-100"],
+  [class*="bg-teal-50"],
+  [class*="bg-teal-100"]
+) {
+  background-color: #FFFFFF !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [class*="bg-gradient"],
+  [class*="from-"],
+  [class*="via-"],
+  [class*="to-"]
+) {
+  background-image: none !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="card"],
+  article,
+  section[class*="border"],
+  aside[class*="border"],
+  [class*="rounded-2xl"],
+  [class*="rounded-3xl"],
+  [data-client-teacher-card],
+  [data-client-record-card],
+  [data-client-metric-card],
+  [data-client-payment-card],
+  [data-client-reservation-card],
+  [data-client-course-card],
+  [data-client-notification-card],
+  [data-client-review-card],
+  [data-client-support-dispute-card]
+) {
+  border-radius: var(--competence-radius) !important;
+  border-color: var(--competence-border) !important;
+  background-color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  .app-topbar,
+  [data-client-topbar],
+  [data-professor-topbar],
+  [data-admin-topbar],
+  [data-client-sidebar],
+  [data-professor-sidebar],
+  [data-admin-sidebar],
+  [data-client-mobile-nav],
+  .public-mobile-nav
+) {
+  background-color: #FFFFFF !important;
+  border-color: var(--competence-soft-border) !important;
+  box-shadow: 0 1px 0 rgba(17, 27, 77, 0.06) !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="button"]:not([class*="bg-white"]):not([class*="border-[#D7DEE9]"]):not([class*="border-[#CAD7F2]"]):not([class*="text-red"]),
+  button[class*="bg-[#111B4D]"],
+  a[class*="bg-[#111B4D]"],
+  button[class*="bg-blue"],
+  a[class*="bg-blue"],
+  button[class*="bg-violet"],
+  a[class*="bg-violet"],
+  button[class*="bg-indigo"],
+  a[class*="bg-indigo"]
+) {
+  background-color: var(--competence-navy) !important;
+  background-image: none !important;
+  border-color: var(--competence-navy) !important;
+  color: #FFFFFF !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="button"]:not([class*="bg-white"]):not([class*="border-[#D7DEE9]"]):not([class*="border-[#CAD7F2]"]):not([class*="text-red"]):hover,
+  button[class*="bg-[#111B4D]"]:hover,
+  a[class*="bg-[#111B4D]"]:hover,
+  button[class*="bg-blue"]:hover,
+  a[class*="bg-blue"]:hover,
+  button[class*="bg-violet"]:hover,
+  a[class*="bg-violet"]:hover,
+  button[class*="bg-indigo"]:hover,
+  a[class*="bg-indigo"]:hover
+) {
+  background-color: var(--competence-navy-hover) !important;
+  border-color: var(--competence-navy-hover) !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  [data-slot="badge"],
+  [class*="rounded-full"][class*="border"],
+  [class*="rounded-lg"][class*="border"]
+) {
+  backdrop-filter: none !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  [data-slot="card-title"]
+) {
+  color: var(--competence-text) !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
+:where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+  p,
+  li,
+  span,
+  label,
+  [data-slot="card-description"]
+) {
+  letter-spacing: 0 !important;
+}
+
+:where(.client-shell, .professor-shell, .admin-shell) :where(
+  [data-client-content],
+  [data-professor-content],
+  [data-admin-content]
+) {
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+@media (max-width: 720px) {
+  :where(.public-shell, .client-shell, .professor-shell, .admin-shell) {
+    --competence-radius: 0.5rem;
+  }
+
+  :where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+    h1,
+    .text-4xl,
+    .text-5xl,
+    .text-6xl
+  ) {
+    font-size: clamp(1.7rem, 8vw, 2.25rem) !important;
+    line-height: 1.05 !important;
+  }
+
+  :where(.public-shell, .client-shell, .professor-shell, .admin-shell) :where(
+    [data-slot="card-content"],
+    [data-slot="card-header"]
+  ) {
+    padding: 1rem !important;
+  }
+
+  :where(.client-shell, .professor-shell, .admin-shell) :where(
+    [data-client-record-card],
+    [data-client-payment-card],
+    [data-client-reservation-card],
+    [data-client-course-card],
+    [data-client-notification-card],
+    [data-client-review-card],
+    [data-client-support-dispute-card]
+  ) {
+    display: grid;
+    gap: 0.75rem;
+  }
+}
