@@ -316,8 +316,8 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav data-client-sidebar-nav className="client-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3" aria-label="Navigation principale client">
-        <p className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-[#64748B]">
+      <nav data-client-sidebar-nav className="client-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-hidden p-3" aria-label="Navigation principale client">
+        <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
         <Link
@@ -339,6 +339,7 @@ function SidebarContent({
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
+              data-client-sidebar-link
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
@@ -358,10 +359,10 @@ function SidebarContent({
           );
         })}
       </nav>
-      <div data-client-sidebar-account className="client-sidebar-account border-t border-[#E6EAF3] p-3">
+      <div data-client-sidebar-account className="client-sidebar-account shrink-0 border-t border-[#E6EAF3] p-3">
         <div className="bg-white p-1">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
               {getInitials(userName ?? "Client")}
             </div>
             <div className="min-w-0 flex-1">
@@ -369,7 +370,7 @@ function SidebarContent({
               <p className="truncate text-xs font-medium text-[#64748B]">Espace personnel</p>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-3" aria-label="Compte client">
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2" aria-label="Compte client">
             {accountNavItems.map((item) => {
               const active = isActive(item);
               return (
@@ -379,7 +380,7 @@ function SidebarContent({
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors",
+                    "inline-flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors",
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : "border-[#E3E8F2] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]",
@@ -406,14 +407,14 @@ function SidebarContent({
             trigger={
               <button
                 type="button"
-                className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                className="mt-2 flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Déconnexion
               </button>
             }
           />
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium leading-5 text-[#64748B]">
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium leading-4 text-[#64748B]">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
             Paiement protégé jusqu'à validation.
           </p>

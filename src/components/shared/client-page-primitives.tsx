@@ -264,7 +264,7 @@ export function ClientTabBar({
     <div
       data-client-tab-bar
       className={cn(
-        "client-tab-bar grid grid-cols-1 gap-1.5 rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[360px]:grid-cols-2 min-[520px]:grid-cols-3 lg:flex lg:flex-nowrap",
+        "client-tab-bar flex snap-x snap-mandatory gap-1.5 overflow-x-auto rounded-lg border border-[#DDE3EE] bg-white p-1.5 lg:snap-none lg:flex-nowrap lg:overflow-visible",
         className,
       )}
     >
@@ -276,7 +276,7 @@ export function ClientTabBar({
             href={item.href}
             data-client-tab-item
             className={cn(
-              "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:flex-1 lg:px-3",
+              "flex min-h-11 min-w-[8.25rem] snap-start items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:min-w-0 lg:flex-1 lg:snap-none lg:px-3",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
@@ -519,7 +519,7 @@ export function ClientAppRail({
     <div
       data-client-app-rail
       className={cn(
-        "client-app-rail grid gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid-flow-row",
+        "client-app-rail hidden gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid min-[720px]:grid-flow-row",
         railGridClassName,
         className,
       )}
@@ -565,7 +565,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-16 min-w-0 items-center justify-center rounded-lg px-2.5 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[720px]:min-h-14 min-[720px]:justify-between min-[720px]:px-3 min-[720px]:text-left",
+          "client-shortcut-card group flex min-h-14 min-w-0 items-center justify-between rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
           items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"

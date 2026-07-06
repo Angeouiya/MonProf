@@ -2834,3 +2834,76 @@ b {
     min-height: 2.75rem;
   }
 }
+
+/* Client app shell tranche: mobile rails, fixed sidebar, no cramped cards. */
+.client-shell [data-client-metric-strip],
+.client-shell [data-client-tab-bar],
+.client-shell [data-client-app-rail] {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-padding-inline: 0.75rem;
+}
+
+.client-shell [data-client-metric-strip]::-webkit-scrollbar,
+.client-shell [data-client-tab-bar]::-webkit-scrollbar,
+.client-shell [data-client-app-rail]::-webkit-scrollbar {
+  display: none;
+}
+
+.client-shell [data-client-metric-card],
+.client-shell [data-client-tab-item],
+.client-shell [data-client-shortcut-card] {
+  scroll-snap-align: start;
+}
+
+.client-shell [data-client-sidebar],
+.client-shell [data-client-sidebar-nav] {
+  overflow: hidden !important;
+}
+
+@media (max-height: 760px) and (min-width: 1024px) {
+  .client-shell [data-client-sidebar-nav] {
+    padding-block: 0.55rem !important;
+  }
+
+  .client-shell [data-client-sidebar-link] {
+    min-height: 2.35rem !important;
+    padding-block: 0.42rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  .client-shell [data-client-sidebar-account] {
+    padding-block: 0.6rem !important;
+  }
+
+  .client-shell [data-client-sidebar-account] p:last-of-type {
+    display: none;
+  }
+}
+
+@media (max-width: 719px) {
+  .client-shell [data-client-metric-strip],
+  .client-shell [data-client-app-rail] {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .client-shell [data-client-tab-bar] {
+    display: flex !important;
+    grid-template-columns: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .client-shell [data-client-metric-card] {
+    min-width: 8.85rem !important;
+  }
+
+  .client-shell [data-client-tab-item] {
+    min-width: 7.65rem !important;
+  }
+
+  .client-shell [data-client-shortcut-card] {
+    min-width: 8.1rem !important;
+  }
+}
