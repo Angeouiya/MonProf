@@ -147,7 +147,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 min-[560px]:grid-cols-5" aria-label="Filtres paiements">
+        <div className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-0.5 min-[720px]:grid min-[720px]:snap-none min-[720px]:grid-cols-5 min-[720px]:overflow-visible min-[720px]:pb-0" aria-label="Filtres paiements" data-client-payment-filter-rail>
           {filterOptions.map((option) => (
             <Button
               key={option.key}
@@ -156,7 +156,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
               variant={filter === option.key ? "default" : "outline"}
               onClick={() => setFilter(option.key)}
               aria-pressed={filter === option.key}
-              className="min-h-11 min-w-0 justify-center rounded-lg px-2 text-xs"
+              className="min-h-11 min-w-[8.5rem] shrink-0 snap-start justify-center rounded-lg px-2 text-xs min-[720px]:min-w-0 min-[720px]:shrink"
             >
               <span className="min-w-0 truncate">{option.label}</span>
               <span className={filter === option.key ? "shrink-0 rounded-md bg-white px-1.5 py-0.5 text-xs text-[#111B4D]" : "shrink-0 rounded-md border border-[#E3E8F2] bg-white px-1.5 py-0.5 text-xs text-[#64748B]"}>

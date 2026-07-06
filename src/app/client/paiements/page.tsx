@@ -16,7 +16,7 @@ import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
-import { formatFCFA, formatDate } from "@/lib/format";
+import { formatFCFA, formatFCFAShort, formatDate } from "@/lib/format";
 import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
 import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
@@ -125,6 +125,7 @@ export default async function PaiementsPage() {
       />
 
       <ClientMetricStrip
+        className="max-md:hidden"
         metrics={[
           { icon: WalletCards, label: "Dépensé", value: formatFCFA(totalDepense) },
           { icon: Wallet, label: "Bloqués", value: formatFCFA(fondsBloques), attention: fondsBloques > 0 },
@@ -142,7 +143,7 @@ export default async function PaiementsPage() {
         ]}
       />
 
-      <PaymentCommandCenter
+      <PaymentMobilePriorityCard
         totalDepense={totalDepense}
         fondsBloques={fondsBloques}
         totalRembourse={totalRembourse}
@@ -151,7 +152,20 @@ export default async function PaiementsPage() {
         lastSecureTransaction={lastSecureTransaction}
       />
 
-      <PaymentTrustPanel />
+      <div className="max-md:hidden">
+        <PaymentCommandCenter
+          totalDepense={totalDepense}
+          fondsBloques={fondsBloques}
+          totalRembourse={totalRembourse}
+          pendingCount={pendingPaymentBookings.length}
+          priorityPendingBooking={priorityPendingBooking}
+          lastSecureTransaction={lastSecureTransaction}
+        />
+      </div>
+
+      <div className="max-md:hidden">
+        <PaymentTrustPanel />
+      </div>
 
       {pendingPaymentBookings.length > 0 && (
         <PendingPaymentsPanel bookings={pendingPaymentBookings} />
@@ -159,6 +173,7 @@ export default async function PaiementsPage() {
 
       {lastSecureTransaction && (
         <ClientFocusPanel
+          className="max-md:hidden"
           icon={ReceiptText}
           eyebrow="Dernier mouvement"
           title={<Money amount={lastSecureTransaction.amount} />}
@@ -195,6 +210,72 @@ export default async function PaiementsPage() {
         </ClientSurface>
       )}
     </div>
+  );
+}
+
+function PaymentMobilePriorityCard({
+  totalDepense,
+  fondsBloques,
+  totalRembourse,
+  pendingCount,
+  priorityPendingBooking,
+  lastSecureTransaction,
+}: PaymentCommandCenterProps) {
+  const pendingBooking = priorityPendingBooking;
+  const hasPending = Boolean(pendingBooking);
+  const actionHref = pendingBooking
+    ? `/client/reservations/${pendingBooking.id}?payment=pending`
+    : lastSecureTransaction
+      ? `/client/reservations/${lastSecureTransaction.booking.id}`
+      : "/client/rechercher";
+  const actionLabel = pendingBooking ? "Payer" : lastSecureTransaction ? "Dossier" : "Réserver";
+  const title = pendingBooking
+    ? pendingBooking.reference
+    : lastSecureTransaction
+      ? lastSecureTransaction.booking.reference
+      : "Paiement sécurisé";
+  const hint = pendingBooking
+    ? `${pendingBooking.subjectName} · ${pendingBooking.levelName}`
+    : lastSecureTransaction
+      ? `${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
+      : "PayDunya active la réservation uniquement après confirmation serveur.";
+
+  return (
+    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-payment-mobile-priority>
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          {hasPending ? <Clock3 className="h-5 w-5" /> : fondsBloques > 0 ? <LockKeyhole className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">
+            {hasPending ? "Action prioritaire" : "Suivi paiements"}
+          </p>
+          <h2 className="mt-0.5 truncate text-base font-semibold leading-6 text-[#111827]">{title}</h2>
+          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
+        </div>
+        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ClientInfoPill label="Payé" value={formatFCFAShort(totalDepense)} strong={totalDepense > 0} />
+        <ClientInfoPill label="Bloqué" value={formatFCFAShort(fondsBloques)} strong={fondsBloques > 0} />
+        <ClientInfoPill label="Attente" value={pendingCount} strong={pendingCount > 0} />
+      </div>
+
+      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-payment-method-rail aria-label="Moyens PayDunya disponibles">
+        {ACTIVE_PAYMENT_METHODS.map((method) => (
+          <PaymentMethodLogo key={method} method={method} className="h-10 w-28 shrink-0 rounded-lg" />
+        ))}
+      </div>
+
+      {totalRembourse > 0 && (
+        <p className="mt-2 text-xs font-semibold text-[#111B4D]">
+          Remboursé : {formatFCFA(totalRembourse)}
+        </p>
+      )}
+    </ClientSurface>
   );
 }
 
