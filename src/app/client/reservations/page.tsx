@@ -2,15 +2,17 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientFocusPanel,
   ClientAppRail,
+  ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
+  ClientSurface,
   ClientTabBar,
 } from "@/components/shared/client-page-primitives";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatDate } from "@/lib/format";
-import { CalendarCheck, ArrowRight, Lock, MessageSquare, Wallet, Search, WalletCards } from "lucide-react";
+import { AlertTriangle, CalendarCheck, ArrowRight, CheckCircle2, Clock3, Lock, MessageSquare, ShieldCheck, Wallet, Search, WalletCards } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { ReservationListClient, type ClientReservationListItem } from "./reservation-list-client";
@@ -97,6 +99,22 @@ export default async function ReservationsPage({
         ? `${formatDate(priorityBooking.startDate)} demandée`
         : "Date à confirmer"
     : "";
+  const priorityAction = priorityBooking
+    ? {
+        id: priorityBooking.id,
+        reference: priorityBooking.reference,
+        teacherName: priorityTeacherName,
+        subjectName: priorityBooking.subjectName,
+        levelName: priorityBooking.levelName,
+        dateLabel: priorityDate,
+        timeLabel: priorityBooking.scheduledTime || priorityBooking.preferredTime || "Créneau à confirmer",
+        stepLabel: priorityStep?.label ?? "Dossier en cours",
+        stepHint: priorityStep?.hint ?? "Compétence suit la réservation.",
+        verified: hasVerifiedPayDunyaClientPayment(priorityBooking),
+      }
+    : null;
+  const activeSecuredCount = securedBookings.filter((booking) => !["CANCELLED", "REFUNDED", "DISPUTED", "TEACHER_PAID"].includes(booking.status)).length;
+  const completedCount = allBookings.filter((booking) => ["VALIDATED_BY_CLIENT", "TEACHER_PAID"].includes(booking.status)).length;
   const reservationItems: ClientReservationListItem[] = visibleBookings.map((b) => {
     const name = b.teacher.professionalName || b.teacher.fullName;
     const paymentVerified = hasVerifiedPayDunyaClientPayment(b);
@@ -178,21 +196,15 @@ export default async function ReservationsPage({
         ]}
       />
 
-      <ClientFocusPanel
-        icon={CalendarCheck}
-        eyebrow="Prochaine action"
-        title={priorityBooking ? priorityStep?.label : "Aucune action"}
-        description={priorityBooking
-          ? `${priorityBooking.reference} · ${priorityTeacherName} · ${priorityDate}`
-          : "Réservez un cours pour afficher votre prochain dossier."}
-        action={
-          <Button asChild className="min-h-11 w-full rounded-lg" size="sm">
-            <Link href={priorityBooking ? `/client/reservations/${priorityBooking.id}` : "/client/rechercher"}>
-              {priorityBooking ? "Ouvrir le dossier" : "Trouver un professeur"}
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        }
+      <ReservationCommandCenter
+        priority={priorityAction}
+        totalCount={allBookings.length}
+        draftCount={draftBookings.length}
+        securedCount={activeSecuredCount}
+        blockedCount={blockedBookings.length}
+        toConfirmCount={toConfirmBookings.length}
+        completedCount={completedCount}
+        securedAmount={securedAmount}
       />
 
       <ClientTabBar
@@ -207,6 +219,160 @@ export default async function ReservationsPage({
 
       <ReservationListClient reservations={reservationItems} />
     </div>
+  );
+}
+
+type ReservationCommandCenterProps = {
+  priority: {
+    id: string;
+    reference: string;
+    teacherName: string;
+    subjectName: string;
+    levelName: string;
+    dateLabel: string;
+    timeLabel: string;
+    stepLabel: string;
+    stepHint: string;
+    verified: boolean;
+  } | null;
+  totalCount: number;
+  draftCount: number;
+  securedCount: number;
+  blockedCount: number;
+  toConfirmCount: number;
+  completedCount: number;
+  securedAmount: number;
+};
+
+function ReservationCommandCenter({
+  priority,
+  totalCount,
+  draftCount,
+  securedCount,
+  blockedCount,
+  toConfirmCount,
+  completedCount,
+  securedAmount,
+}: ReservationCommandCenterProps) {
+  const hasDrafts = draftCount > 0;
+  const hasConfirmation = toConfirmCount > 0;
+  const hasSecured = securedCount > 0 || blockedCount > 0;
+  const actionHref = priority
+    ? `/client/reservations/${priority.id}`
+    : hasDrafts
+      ? "/client/reservations?tab=brouillons"
+      : "/client/rechercher";
+  const actionLabel = priority
+    ? hasConfirmation ? "Confirmer le cours" : "Ouvrir le dossier"
+    : hasDrafts ? "Voir les brouillons" : "Trouver un professeur";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-reservation-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {hasConfirmation ? <MessageSquare className="h-5 w-5" /> : hasDrafts ? <AlertTriangle className="h-5 w-5" /> : hasSecured ? <ShieldCheck className="h-5 w-5" /> : <CalendarCheck className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Pilotage réservation</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">
+                {hasConfirmation
+                  ? "Un cours attend votre validation."
+                  : hasDrafts
+                    ? "Des brouillons ne sont pas encore réservés."
+                    : hasSecured
+                      ? "Vos réservations sécurisées sont suivies."
+                      : "Prêt à réserver un nouveau cours."}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                {hasDrafts
+                  ? "Une réservation devient active uniquement après confirmation serveur PayDunya. Aucun professeur n'est notifié avant paiement vérifié."
+                  : "Les dossiers affichés ici relient professeur, date, paiement, validation client et suivi service client."}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="Dossiers" value={totalCount} strong={totalCount > 0} />
+            <ClientInfoPill label="Non réservés" value={draftCount} strong={draftCount > 0} />
+            <ClientInfoPill label="À confirmer" value={toConfirmCount} strong={toConfirmCount > 0} />
+            <ClientInfoPill label="Montant sécurisé" value={formatFCFA(securedAmount)} strong={securedAmount > 0} />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              {
+                label: "PayDunya vérifié",
+                hint: hasDrafts ? `${draftCount} brouillon(s) à finaliser.` : "Aucun brouillon bloquant.",
+                state: hasDrafts ? "current" : totalCount > 0 ? "done" : "pending",
+              },
+              {
+                label: "Cours suivi",
+                hint: securedCount > 0 ? `${securedCount} dossier(s) actif(s).` : "Réservez pour démarrer le suivi.",
+                state: securedCount > 0 ? "current" : totalCount > 0 ? "done" : "pending",
+              },
+              {
+                label: "Validation client",
+                hint: hasConfirmation ? `${toConfirmCount} cours à valider.` : `${completedCount} dossier(s) clôturé(s).`,
+                state: hasConfirmation ? "current" : completedCount > 0 ? "done" : "pending",
+              },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+                  <Clock3 className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Action prioritaire</p>
+                  <p className="text-xs font-medium leading-5 text-[#64748B]">
+                    {priority ? priority.stepLabel : hasDrafts ? "Finaliser un paiement" : "Choisir un professeur"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                  {priority ? "Dossier lié" : hasDrafts ? "Brouillon à vérifier" : "Nouveau cours"}
+                </p>
+                <p className="mt-1 text-base font-semibold leading-6 text-[#111827]">
+                  {priority?.reference || (hasDrafts ? `${draftCount} paiement(s) non finalisé(s)` : "Aucun dossier actif")}
+                </p>
+                <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                  {priority
+                    ? `${priority.teacherName} · ${priority.subjectName} · ${priority.levelName} · ${priority.dateLabel} · ${priority.timeLabel}`
+                    : hasDrafts
+                      ? "Ouvrez les brouillons pour reprendre le paiement PayDunya."
+                      : "Lancez une recherche pour réserver une séance de 2h."}
+                </p>
+              </div>
+
+              {priority && (
+                <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Statut</p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-[#111827]">{priority.stepHint}</p>
+                  <p className="mt-2 inline-flex min-h-7 items-center rounded-lg border border-[#D8DEE9] bg-white px-2 text-xs font-semibold text-[#111B4D]">
+                    {priority.verified ? "Paiement serveur vérifié" : "Paiement non activé"}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+              <Link href={actionHref}>
+                {actionLabel}
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
 
