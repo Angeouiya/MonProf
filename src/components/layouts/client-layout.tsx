@@ -41,8 +41,15 @@ const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/client/rechercher", label: "Profs", icon: Search },
   { href: "/client/reservations", label: "Réserv.", icon: CalendarCheck },
-  { href: "/client/paiements", label: "Payer", icon: WalletCards },
+  { href: "/client/paiements", label: "Paiement", icon: WalletCards },
   { href: "/client/notifications", label: "Alertes", icon: Bell },
+];
+
+const quickSearchItems = [
+  { label: "Maths", href: "/client/rechercher?q=math" },
+  { label: "Cocody", href: "/client/rechercher?q=Cocody" },
+  { label: "Concours", href: "/client/rechercher?q=concours" },
+  { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
@@ -207,18 +214,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               OK
             </button>
           </form>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Recherches rapides">
-            {[
-              { label: "Maths", href: "/client/rechercher?q=math" },
-              { label: "Cocody", href: "/client/rechercher?q=Cocody" },
-              { label: "Concours", href: "/client/rechercher?q=concours" },
-              { label: "Adultes", href: "/client/rechercher?q=professionnel" },
-            ].map((item) => (
+          <div className="mt-2 grid grid-cols-2 gap-2 min-[430px]:grid-cols-4" aria-label="Recherches rapides">
+            {quickSearchItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileSearchOpen(false)}
-                className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D]"
+                className="inline-flex min-h-9 min-w-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-center text-xs font-semibold text-[#111B4D]"
               >
                 {item.label}
               </Link>
@@ -237,10 +239,15 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         {/* Sidebar mobile (drawer) */}
         {open && (
           <div data-client-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
-            <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default bg-[#050B24]"
+              onClick={() => setOpen(false)}
+              aria-label="Fermer le menu client"
+            />
             <aside
               data-client-mobile-drawer
-              className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col border-r border-[#E6EAF3] bg-white"
+              className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white"
               role="dialog"
               aria-modal="true"
               aria-label="Menu client"
@@ -331,6 +338,7 @@ function SidebarContent({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
