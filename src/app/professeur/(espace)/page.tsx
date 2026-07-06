@@ -132,7 +132,7 @@ export default async function ProfesseurDashboardPage() {
     where: { teacherId: teacher.id },
     select: { bookingId: true, amount: true, status: true },
   });
-  const unreadAdminMessageCount = await db.teacherAdminMessage.count({
+  const unreadServiceClientMessageCount = await db.teacherAdminMessage.count({
     where: {
       teacherId: teacher.id,
       sender: "ADMIN",
@@ -205,7 +205,7 @@ export default async function ProfesseurDashboardPage() {
         <ProfessorQuickLink
           href="/professeur/messages"
           label="Service client"
-          value={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} non lu(s)` : "Écrire"}
+          value={unreadServiceClientMessageCount > 0 ? `${unreadServiceClientMessageCount} non lu(s)` : "Écrire"}
         />
         <ProfessorQuickLink href="/professeur/avis" label="Avis & qualité" value={`${fullTeacher?.qualityScore ?? 0}/100`} />
         <ProfessorQuickLink href="/professeur/profil" label="Profil & mini-CV" value={profileReady ? "Complet" : "À compléter"} />
@@ -295,9 +295,9 @@ export default async function ProfesseurDashboardPage() {
           <ProfessorControlStep
             href="/professeur/messages"
             label="Service client"
-            value={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} non lu(s)` : "Disponible"}
+            value={unreadServiceClientMessageCount > 0 ? `${unreadServiceClientMessageCount} non lu(s)` : "Disponible"}
             detail="Contacter le service client avec historique."
-            urgent={unreadAdminMessageCount > 0}
+            urgent={unreadServiceClientMessageCount > 0}
           />
           <ProfessorControlStep
             href="/professeur/paiements"
@@ -360,9 +360,9 @@ export default async function ProfesseurDashboardPage() {
             href="/professeur/messages"
             icon={MessageSquareText}
             title="Échanger avec le service client"
-            detail={unreadAdminMessageCount > 0 ? `${unreadAdminMessageCount} message(s) du service client à consulter.` : "Écrivez au service client pour une mission, un paiement ou un incident."}
-            state={unreadAdminMessageCount > 0 ? "Réponse attendue" : "Disponible"}
-            urgent={unreadAdminMessageCount > 0}
+            detail={unreadServiceClientMessageCount > 0 ? `${unreadServiceClientMessageCount} message(s) du service client à consulter.` : "Écrivez au service client pour une mission, un paiement ou un incident."}
+            state={unreadServiceClientMessageCount > 0 ? "Réponse attendue" : "Disponible"}
+            urgent={unreadServiceClientMessageCount > 0}
           />
           <ProfessorActionTile
             href="/professeur/avis"

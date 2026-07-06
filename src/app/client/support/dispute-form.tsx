@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { Loader2, Send, ShieldCheck } from "lucide-react";
+import { Loader2, Search, Send, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const DISPUTE_REASONS = [
   "Professeur absent",
@@ -34,6 +36,7 @@ export function DisputeForm({
 }) {
   const router = useRouter();
   const [bookingId, setBookingId] = useState(bookings[0]?.id ?? "");
+  const [bookingQuery, setBookingQuery] = useState("");
   const [reason, setReason] = useState(DISPUTE_REASONS[0]);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +44,16 @@ export function DisputeForm({
     () => bookings.find((booking) => booking.id === bookingId) ?? bookings[0],
     [bookingId, bookings],
   );
+  const filteredBookings = useMemo(() => {
+    const normalizedQuery = normalize(bookingQuery);
+    if (!normalizedQuery) return bookings;
+    return bookings.filter((booking) => normalize([
+      booking.reference,
+      booking.subjectName,
+      booking.levelName,
+      booking.teacherName,
+    ].join(" ")).includes(normalizedQuery));
+  }, [bookingQuery, bookings]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,19 +98,57 @@ export function DisputeForm({
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="space-y-1.5">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(16rem,0.9fr)]">
+        <div className="space-y-2">
           <Label htmlFor="bookingId" className="text-sm font-semibold text-[#111827]">Réservation *</Label>
-          <Select value={bookingId} onValueChange={setBookingId}>
-            <SelectTrigger id="bookingId" className="mt-1.5 min-h-11 w-full max-w-full min-w-0 rounded-lg border-[#DDE6F7] bg-white"><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
-            <SelectContent>
-              {bookings.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.reference} — {b.subjectName} {b.levelName} ({b.teacherName})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="relative block">
+            <span className="sr-only">Rechercher une réservation à signaler</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+            <Input
+              id="bookingId"
+              value={bookingQuery}
+              onChange={(event) => setBookingQuery(event.target.value)}
+              placeholder="Référence, matière, professeur..."
+              className="h-11 rounded-lg border-[#DDE6F7] bg-white pl-9"
+            />
+          </label>
+          <div className="grid max-h-[18rem] gap-2 overflow-y-auto rounded-lg border border-[#E3E8F2] bg-white p-2" data-client-dispute-booking-list>
+            {filteredBookings.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-[#DDE6F7] bg-white p-3 text-sm font-semibold text-[#64748B]">
+                Aucune réservation trouvée.
+              </p>
+            ) : (
+              filteredBookings.map((booking) => {
+                const active = booking.id === bookingId;
+                return (
+                  <button
+                    key={booking.id}
+                    type="button"
+                    onClick={() => setBookingId(booking.id)}
+                    className={cn(
+                      "flex min-w-0 items-center gap-3 rounded-lg border p-2 text-left transition-colors",
+                      active ? "border-[#111B4D] bg-[#111B4D] text-white" : "border-[#E3E8F2] bg-white text-[#111827] hover:border-[#111B4D]",
+                    )}
+                    aria-pressed={active}
+                  >
+                    <ProfessorImage
+                      photoUrl={booking.teacherPhotoUrl}
+                      name={booking.teacherName}
+                      size="sm"
+                      shape="circle"
+                      verified={Boolean(booking.teacherBadgeVerified)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn("block truncate text-sm font-semibold", active ? "text-white" : "text-[#111827]")}>{booking.reference}</span>
+                      <span className={cn("block truncate text-xs font-medium", active ? "text-white/80" : "text-[#64748B]")}>
+                        {booking.subjectName} · {booking.levelName} · {booking.teacherName}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -156,4 +207,13 @@ export function DisputeForm({
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

@@ -71,9 +71,9 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
     <form onSubmit={submit} className="grid gap-4">
       <div className="grid gap-3 md:grid-cols-[1fr_220px]">
         <div className="space-y-1.5">
-          <Label htmlFor="teacher-admin-subject">Sujet</Label>
+          <Label htmlFor="teacher-service-client-subject">Sujet</Label>
           <Input
-            id="teacher-admin-subject"
+            id="teacher-service-client-subject"
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
             maxLength={140}
@@ -82,9 +82,9 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="teacher-admin-priority">Priorité</Label>
+          <Label htmlFor="teacher-service-client-priority">Priorité</Label>
           <select
-            id="teacher-admin-priority"
+            id="teacher-service-client-priority"
             value={priority}
             onChange={(event) => setPriority(event.target.value)}
             className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
@@ -97,9 +97,9 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="teacher-admin-booking">Mission liée</Label>
+        <Label htmlFor="teacher-service-client-booking">Mission liée</Label>
         <select
-          id="teacher-admin-booking"
+          id="teacher-service-client-booking"
           value={bookingId}
           onChange={(event) => setBookingId(event.target.value)}
           className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
@@ -114,9 +114,9 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="teacher-admin-message">Message au service client</Label>
+        <Label htmlFor="teacher-service-client-message">Message au service client</Label>
         <Textarea
-          id="teacher-admin-message"
+          id="teacher-service-client-message"
           rows={5}
           value={message}
           onChange={(event) => setMessage(event.target.value)}

@@ -7,11 +7,9 @@ import {
   ClientFocusPanel,
   ClientMetricStrip,
   ClientPageHeader,
-  ClientRecordCard,
   ClientSectionTitle,
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
-import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import {
@@ -19,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { DisputeForm } from "./dispute-form";
+import { SupportHistoryClient, type ClientSupportDisputeItem } from "./support-history-client";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +65,44 @@ export default async function SupportPage() {
   const focus = buildSupportFocus({
     eligibleCount: bookableForDispute.length,
     openCount: openDisputes.length,
+  });
+  const disputeItems: ClientSupportDisputeItem[] = myDisputes.map((dispute) => {
+    const statusLabel = DISPUTE_STATUS_LABELS[dispute.status] ?? DISPUTE_STATUS_LABELS.OPEN;
+    const teacherName = dispute.booking.teacher.professionalName || dispute.booking.teacher.fullName;
+    const createdAtLabel = formatDate(dispute.createdAt);
+    const statusKind = getDisputeStatusKind(dispute.status);
+    const searchText = normalizeSupportSearch([
+      statusLabel,
+      dispute.reason,
+      dispute.description,
+      dispute.resolution ?? "",
+      createdAtLabel,
+      dispute.booking.reference,
+      dispute.booking.subjectName,
+      dispute.booking.levelName,
+      teacherName,
+    ].join(" "));
+
+    return {
+      id: dispute.id,
+      status: dispute.status,
+      statusLabel,
+      statusKind,
+      reason: dispute.reason,
+      description: dispute.description,
+      resolution: dispute.resolution,
+      createdAtLabel,
+      booking: {
+        id: dispute.booking.id,
+        reference: dispute.booking.reference,
+        subjectName: dispute.booking.subjectName,
+        levelName: dispute.booking.levelName,
+        teacherName,
+        teacherPhotoUrl: dispute.booking.teacher.photoUrl,
+        teacherBadgeVerified: dispute.booking.teacher.badgeVerified,
+      },
+      searchText,
+    };
   });
 
   return (
@@ -139,57 +176,7 @@ export default async function SupportPage() {
           )}
       </ClientSurface>
 
-      {/* Mes litiges */}
-      <ClientSurface className="space-y-4">
-        <ClientSectionTitle title={`Historique (${myDisputes.length})`} description="Dossiers ouverts et décisions du service client." />
-          {myDisputes.length === 0 ? (
-            <ClientEmptyState
-              icon={CheckCircle2}
-              title="Aucun dossier"
-              description="Les signalements apparaîtront ici avec leur statut."
-            />
-          ) : (
-            myDisputes.map((d) => {
-              const statusLabel = DISPUTE_STATUS_LABELS[d.status] ?? DISPUTE_STATUS_LABELS.OPEN;
-              const name = d.booking.teacher.professionalName || d.booking.teacher.fullName;
-              return (
-                <ClientRecordCard key={d.id} data-client-support-dispute-card className="p-4">
-                  <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-center min-[460px]:gap-3">
-                        <p className="text-sm font-semibold text-[#111827]">{d.booking.reference}</p>
-                        <p className="inline-flex w-fit rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">{statusLabel}</p>
-                      </div>
-                      <p className="mt-1 text-sm font-semibold text-[#111827]">{d.booking.subjectName} • {d.booking.levelName}</p>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-[#64748B]">
-                        <ProfessorImage
-                          photoUrl={d.booking.teacher.photoUrl}
-                          name={name}
-                          size={32}
-                          shape="circle"
-                          verified={d.booking.teacher.badgeVerified}
-                        />
-                        <span className="min-w-0 break-words">{name} • {formatDate(d.createdAt)}</span>
-                      </div>
-                    </div>
-                    <Button asChild variant="outline" size="sm" className="w-full rounded-lg min-[640px]:w-auto">
-                      <Link href={`/client/reservations/${d.booking.id}`}>
-                        Ouvrir <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                  <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs">
-                    <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{d.reason}</span></p>
-                    <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{d.description}</span></p>
-                    {d.resolution && (
-                      <p className="mt-1"><span className="font-semibold text-[#111827]">Décision :</span> <span className="text-[#64748B]">{d.resolution}</span></p>
-                    )}
-                  </div>
-                </ClientRecordCard>
-              );
-            })
-          )}
-      </ClientSurface>
+      <SupportHistoryClient disputes={disputeItems} />
     </div>
   );
 }
@@ -224,4 +211,20 @@ function buildSupportFocus({
     title: "Aucun signalement à traiter",
     description: "Vos réservations restent accessibles si vous devez contacter le service client.",
   };
+}
+
+function getDisputeStatusKind(status: string): ClientSupportDisputeItem["statusKind"] {
+  if (status === "REFUNDED") return "refunded";
+  if (status === "REJECTED") return "rejected";
+  if (["RESOLVED", "REFUNDED", "REJECTED"].includes(status)) return "closed";
+  return "open";
+}
+
+function normalizeSupportSearch(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
