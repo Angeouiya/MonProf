@@ -158,7 +158,7 @@ export default async function TeachersPage({
     <PublicLayout>
       {/* HEADER */}
       <section className="relative overflow-hidden border-b border-[#E6EAF3] bg-white">
-        <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-10">
+        <div className="relative mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
           <nav className="mb-4 hidden min-h-9 flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B] sm:flex">
             <Link href="/" className="inline-flex min-h-10 items-center px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
@@ -168,13 +168,13 @@ export default async function TeachersPage({
             <div className="min-w-0">
               <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Recherche guidée · profils vérifiés
+                Profils vérifiés
               </div>
-              <h1 className="max-w-3xl text-[2rem] font-semibold leading-[1.08] text-[#111827] text-balance sm:text-4xl lg:text-4xl">
-                Trouvez le professeur idéal, au bon niveau et au bon moment.
+              <h1 className="max-w-2xl text-[1.85rem] font-semibold leading-[1.06] text-[#111827] text-balance sm:text-4xl lg:text-[2.65rem]">
+                Choisissez le bon professeur.
               </h1>
-              <p className="mt-3 max-w-2xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:text-base sm:leading-7">
-                Matières scolaires, université, adultes, concours, métiers techniques et art.
+              <p className="mt-2 max-w-xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:text-base">
+                Scolaire, université, concours, métiers et formations adultes.
               </p>
             </div>
             <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">

@@ -46,15 +46,15 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-8 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-5 text-center sm:p-6", className)}>
       {Icon && (
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] ring-1 ring-[#111B4D]">
-          <Icon className="h-6 w-6 text-white" />
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] ring-1 ring-[#111B4D] sm:h-11 sm:w-11">
+          <Icon className="h-5 w-5 text-white" />
         </div>
       )}
       <p className="text-sm font-semibold text-[#111827]">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm leading-6 text-[#64748B]">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-4 grid w-full justify-items-center gap-2 sm:flex sm:w-auto sm:justify-center">{action}</div>}
     </div>
   );
 }

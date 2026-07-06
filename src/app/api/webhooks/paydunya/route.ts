@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payload PayDunya invalide." }, { status: 400 });
   }
 
-  const data = asRecord(payload.data) ?? payload;
+  const data = normalizePayDunyaData(payload);
   const hash = firstString(data.hash);
 
   if (!(await verifyPayDunyaHash(hash))) {
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     source: "webhook",
     incomingStatus: status,
     incomingPayload: data,
+    incomingHashVerified: true,
   });
 
   const httpStatus = result.action === "not_found"
@@ -77,11 +78,7 @@ async function readPayDunyaPayload(req: NextRequest): Promise<PayDunyaPayload> {
   const params = new URLSearchParams(text);
   const rawData = params.get("data");
   if (rawData) {
-    try {
-      return { data: JSON.parse(rawData) };
-    } catch {
-      return { data: rawData };
-    }
+    return { data: parsePayDunyaDataValue(rawData) };
   }
 
   const payload: PayDunyaPayload = {};
@@ -89,6 +86,35 @@ async function readPayDunyaPayload(req: NextRequest): Promise<PayDunyaPayload> {
     setBracketPath(payload, key, value);
   }
   return payload;
+}
+
+function normalizePayDunyaData(payload: PayDunyaPayload): PayDunyaPayload {
+  const data = parsePayDunyaDataValue(payload.data);
+  return asRecord(data) ?? payload;
+}
+
+function parsePayDunyaDataValue(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // PayDunya posts callbacks as x-www-form-urlencoded. Some gateways wrap
+    // the "data" node as a query-string-like string, so keep supporting it.
+  }
+
+  if (trimmed.includes("=")) {
+    const nested: PayDunyaPayload = {};
+    const nestedParams = new URLSearchParams(trimmed);
+    for (const [key, nestedValue] of nestedParams.entries()) {
+      setBracketPath(nested, key, nestedValue);
+    }
+    return Object.keys(nested).length > 0 ? nested : value;
+  }
+
+  return value;
 }
 
 function setBracketPath(target: PayDunyaPayload, key: string, value: string) {

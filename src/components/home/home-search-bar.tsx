@@ -33,8 +33,8 @@ export function HomeSearchBar({
       action="/professeurs"
       className="mx-auto w-full max-w-5xl rounded-lg border border-[#DDE6F7] bg-white p-2.5 sm:p-4"
     >
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
-        <label className="col-span-2 min-w-0 lg:col-auto">
+      <div className="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 sm:gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
+        <label className="min-w-0 min-[360px]:col-span-2 lg:col-auto">
           <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
             Recherche
           </span>
@@ -48,10 +48,10 @@ export function HomeSearchBar({
         <SearchFieldLabel label="Matière">
           <SearchableCatalogSelect
             name="subject"
-            placeholder="Toutes les matières"
+            placeholder="Matières"
             searchPlaceholder="Saisir une matière, concours, métier..."
             emptyLabel="Aucune matière trouvée"
-            allLabel="Toutes les matières"
+            allLabel="Toutes"
             groups={subjectGroups.map((group) => ({
               label: group.category.label,
               options: group.items.map((item) => ({
@@ -66,10 +66,10 @@ export function HomeSearchBar({
         <SearchFieldLabel label="Niveau">
           <SearchableCatalogSelect
             name="level"
-            placeholder="Tous les niveaux"
+            placeholder="Niveaux"
             searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
             emptyLabel="Aucun niveau trouvé"
-            allLabel="Tous les niveaux"
+            allLabel="Tous"
             groups={levelGroups.map((group) => ({
               label: group.category.label,
               options: group.items.map((item) => ({
@@ -89,7 +89,7 @@ export function HomeSearchBar({
             name="commune"
             className="min-h-12 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           >
-            <option value="">Toutes les communes</option>
+            <option value="">Toutes</option>
             {communes.map((commune) => (
               <option key={commune.slug} value={commune.name}>{commune.name}</option>
             ))}

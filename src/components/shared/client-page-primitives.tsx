@@ -35,11 +35,11 @@ export function ClientPageHeader({
     <section
       data-app-page-header
       data-client-page-header
-      className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-3 pt-0 sm:pb-4", className)}
+      className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-2.5 pt-0 sm:pb-3", className)}
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex min-h-8 flex-wrap items-center gap-2">
+          <div className="mb-1.5 flex min-h-8 flex-wrap items-center gap-2">
             {showBack && <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg border-[#DDE6F7] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white" />}
             {eyebrow && (
               <span className="inline-flex min-h-8 items-center text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">
@@ -47,11 +47,11 @@ export function ClientPageHeader({
               </span>
             )}
           </div>
-          <h1 className="max-w-4xl text-[1.32rem] font-semibold leading-[1.08] tracking-normal text-[#0F172A] min-[420px]:text-[1.55rem] lg:text-[1.88rem]">
+          <h1 className="max-w-4xl text-[1.26rem] font-semibold leading-[1.08] tracking-normal text-[#0F172A] min-[420px]:text-[1.48rem] lg:text-[1.72rem]">
             {title}
           </h1>
           {description && (
-            <div className="mt-1.5 line-clamp-2 max-w-3xl text-sm font-medium leading-6 text-[#52627A] sm:line-clamp-none">
+            <div className="mt-1 line-clamp-1 max-w-3xl text-sm font-medium leading-6 text-[#52627A] min-[560px]:line-clamp-2 xl:line-clamp-none">
               {description}
             </div>
           )}
@@ -135,8 +135,8 @@ export function ClientSurface({
       {...props}
       data-client-surface
       className={cn(
-        "client-app-surface border-t border-[#E6EAF3] bg-white",
-        compact ? "py-3 min-[640px]:py-4" : "py-4 min-[640px]:py-5",
+        "client-app-surface bg-white",
+        compact ? "py-2.5 min-[640px]:py-3.5" : "py-3 min-[640px]:py-4",
         className,
       )}
     >
@@ -523,7 +523,7 @@ export function ClientAppRail({
     <div
       data-client-app-rail
       className={cn(
-        "client-app-rail hidden gap-1 rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid min-[720px]:grid-flow-row",
+        "client-app-rail flex snap-x snap-mandatory gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[720px]:grid min-[720px]:snap-none min-[720px]:grid-flow-row min-[720px]:overflow-visible",
         railGridClassName,
         className,
       )}
@@ -551,7 +551,7 @@ export function ClientAppRail({
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 hidden text-[0.72rem] font-semibold leading-4 min-[430px]:line-clamp-1 min-[720px]:text-sm min-[720px]:leading-5",
+                "mt-0.5 block truncate text-[0.72rem] font-semibold leading-4 min-[720px]:text-sm min-[720px]:leading-5",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -569,8 +569,8 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-14 min-w-0 items-center justify-between rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
-          items.length % 2 === 1 && index === items.length - 1 && "col-span-2 min-[720px]:col-span-1",
+          "client-shortcut-card group flex min-h-14 min-w-[8.75rem] snap-start items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[380px]:px-3 min-[720px]:min-w-0 min-[720px]:snap-none",
+          items.length % 2 === 1 && index === items.length - 1 && "min-[720px]:col-span-1",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",

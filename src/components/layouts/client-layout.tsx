@@ -316,7 +316,7 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav data-client-sidebar-nav className="client-sidebar-main-nav min-h-0 flex-1 space-y-1 overflow-hidden p-3" aria-label="Navigation principale client">
+      <nav data-client-sidebar-nav className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation principale client">
         <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>

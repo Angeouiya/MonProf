@@ -242,19 +242,19 @@ export default async function HomePage() {
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           <SectionHeader title="Un catalogue ouvert" text="Scolaire, université, concours, adultes, métiers, technique et arts." />
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {POPULAR_SUBJECTS.slice(0, 12).map((s) => (
               <Link
                 key={s.slug}
                 href={`/professeurs?subject=${s.slug}`}
-                className="group flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition hover:border-[#111B4D]"
+                className="group flex min-h-16 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition hover:border-[#111B4D]"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-[#111B4D]">
                   <s.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#111827]">{s.name}</p>
-                  <p className="text-xs text-[#64748B]">{s.desc}</p>
+                  <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{s.name}</p>
+                  <p className="line-clamp-1 text-xs text-[#64748B]">{s.desc}</p>
                 </div>
                 <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
               </Link>

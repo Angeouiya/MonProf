@@ -2033,11 +2033,18 @@ b {
 }
 
 .client-booking-progress-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.client-booking-progress-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .client-booking-progress-grid > button {
   overflow: hidden;
+  scroll-snap-align: start;
 }
 
 .client-booking-workspace {
@@ -2099,13 +2106,13 @@ b {
   }
 
   .client-booking-progress-grid {
-    gap: 0.35rem !important;
+    gap: 0.5rem !important;
   }
 
   .client-booking-progress-grid > button {
-    min-height: 3rem !important;
-    padding-left: 0.35rem !important;
-    padding-right: 0.35rem !important;
+    min-height: 2.75rem !important;
+    min-width: 6.35rem !important;
+    padding-inline: 0.55rem !important;
   }
 
   .client-shell [data-client-pricing-breakdown] {
@@ -3923,16 +3930,18 @@ b {
   }
 
   .client-shell :where(.client-booking-progress-grid) {
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 0.35rem !important;
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 0.5rem !important;
+    overflow-x: auto !important;
   }
 
   .client-shell :where(.client-booking-progress-grid button) {
-    min-height: 2.35rem !important;
-    padding-inline: 0.25rem !important;
-    font-size: 0.58rem !important;
-    line-height: 1.05 !important;
+    min-height: 2.75rem !important;
+    min-width: 6.35rem !important;
+    padding-inline: 0.55rem !important;
+    font-size: 0.68rem !important;
+    line-height: 1.08 !important;
   }
 
   .client-shell :where(.client-booking-workspace) {
@@ -3998,8 +4007,9 @@ b {
   }
 
   .client-shell :where(.client-booking-progress-grid button) {
-    min-height: 2.2rem !important;
-    font-size: 0.54rem !important;
+    min-height: 2.65rem !important;
+    min-width: 6.1rem !important;
+    font-size: 0.66rem !important;
   }
 
   .client-shell :where([data-client-payment-method-rail]) {
@@ -4253,5 +4263,232 @@ b {
 @media (max-width: 420px) {
   .client-shell [data-client-empty-state] {
     min-height: auto;
+  }
+}
+
+/* Client app final polish: compact headers and always-available mobile action rails. */
+.client-shell [data-client-page-header] {
+  padding-top: 0 !important;
+}
+
+.client-shell [data-client-app-rail] {
+  display: flex !important;
+  overflow-x: auto !important;
+  scrollbar-width: none;
+}
+
+.client-shell [data-client-app-rail]::-webkit-scrollbar {
+  display: none;
+}
+
+.client-shell [data-client-shortcut-card] {
+  flex: 0 0 auto;
+}
+
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-notification-filter-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-support-filter-rail],
+  [data-client-quick-search-rail]
+) {
+  display: flex !important;
+  gap: 0.4rem !important;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-notification-filter-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-support-filter-rail],
+  [data-client-quick-search-rail]
+)::-webkit-scrollbar {
+  display: none;
+}
+
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-notification-filter-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-support-filter-rail],
+  [data-client-quick-search-rail]
+) > * {
+  flex: 0 0 auto;
+  min-inline-size: min(9rem, calc(100vw - 2rem));
+  scroll-snap-align: start;
+}
+
+@media (min-width: 720px) {
+  .client-shell [data-client-app-rail] {
+    display: grid !important;
+    overflow: visible !important;
+  }
+
+  .client-shell [data-client-shortcut-card] {
+    flex: initial;
+  }
+
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    overflow: visible !important;
+    scroll-snap-type: none;
+  }
+
+  .client-shell :where(
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) > * {
+    flex: initial;
+  }
+}
+
+@media (max-width: 720px) {
+  .client-shell :where([data-client-page-header] h1) {
+    max-width: 100% !important;
+    font-size: clamp(1.36rem, 5.8vw, 1.82rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .client-shell :where([data-client-page-header] [class*="line-clamp"]) {
+    -webkit-line-clamp: 1 !important;
+  }
+
+  .client-shell :where(
+    [data-client-surface],
+    [data-client-record-card],
+    [data-client-metric-card],
+    [data-client-focus-panel],
+    [data-client-empty-state]
+  ) {
+    border-radius: 0.5rem !important;
+  }
+
+  .client-shell :where(
+    [data-client-record-card],
+    [data-client-payment-card],
+    [data-client-reservation-card],
+    [data-client-course-card],
+    [data-client-notification-card],
+    [data-client-review-card],
+    [data-client-support-dispute-card]
+  ) :where(a, button, [data-slot="button"]) {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .client-shell [data-client-shortcut-card] {
+    min-width: 8.4rem !important;
+  }
+
+  .client-shell :where([data-client-page-header] h1) {
+    font-size: 1.34rem !important;
+  }
+}
+
+/* Critical mobile fix: client rails must read like app controls, not squeezed web tabs. */
+@media (max-width: 719px) {
+  .client-shell [data-client-app-rail] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+    overflow: visible !important;
+    padding: 0.35rem !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell [data-client-app-rail] > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .client-shell [data-client-shortcut-card] {
+    min-width: 0 !important;
+    min-inline-size: 0 !important;
+    max-width: none !important;
+    flex: initial !important;
+  }
+
+  .client-shell [data-client-shortcut-card] > span {
+    align-items: center !important;
+    min-width: 0 !important;
+  }
+
+  .client-shell [data-client-shortcut-card] :where(span) {
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+
+  .client-shell [data-client-tab-bar] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.4rem !important;
+    overflow: visible !important;
+    padding: 0.35rem !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell [data-client-tab-item] {
+    min-width: 0 !important;
+    min-inline-size: 0 !important;
+    width: 100% !important;
+    flex: initial !important;
+    white-space: normal !important;
+  }
+
+  .client-shell [data-client-tab-item] > span:first-child {
+    min-width: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .client-shell :where([data-client-app-rail], [data-client-tab-bar], [data-client-shortcut-card], [data-client-tab-item]) {
+    transition-duration: 80ms !important;
+  }
+}
+
+@media (min-width: 520px) and (max-width: 719px) {
+  .client-shell [data-client-app-rail],
+  .client-shell [data-client-tab-bar] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .client-shell [data-client-app-rail] > :last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }

@@ -109,7 +109,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 min-[430px]:grid-cols-2 min-[760px]:grid-cols-3" data-client-pricing-facts>
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[560px]:grid-cols-3" data-client-pricing-facts>
         <PricingFact
           icon={<Clock className="h-4 w-4" />}
           label="Formule"
@@ -130,7 +130,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       </div>
 
       <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3" data-client-pricing-detail>
-        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[520px]:flex-row min-[520px]:items-end min-[520px]:justify-between">
+        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[620px]:flex-row min-[620px]:items-end min-[620px]:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
             <p className="mt-0.5 hidden text-xs font-medium leading-5 text-[#64748B] min-[430px]:block">
@@ -140,7 +140,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             </p>
           </div>
           {!isQuoteOnly && (
-            <p className="text-sm font-semibold text-[#111B4D] min-[520px]:text-right">
+            <p className="text-sm font-semibold text-[#111B4D] min-[620px]:text-right">
               Moyenne <Money amount={averageSessionPrice} /> / séance
             </p>
           )}
@@ -246,14 +246,14 @@ function PricingLine({
   strong?: boolean;
 }) {
   return (
-    <div className="grid items-start gap-1.5 min-[500px]:grid-cols-[minmax(0,1fr)_auto] min-[500px]:gap-3">
+    <div className="grid items-start gap-1.5 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:gap-3">
       <span className="min-w-0">
         <span className={strong ? "block font-semibold leading-snug text-[#111827]" : "block font-medium leading-snug text-[#64748B]"}>
           {label}
         </span>
         {detail && <span className="mt-0.5 block text-xs font-medium leading-snug text-[#64748B]">{detail}</span>}
       </span>
-      <span className={strong ? "font-semibold tabular-nums leading-snug text-[#111B4D] min-[500px]:whitespace-nowrap min-[500px]:text-right" : "font-semibold tabular-nums leading-snug text-[#111827] min-[500px]:whitespace-nowrap min-[500px]:text-right"}>
+      <span className={strong ? "font-semibold tabular-nums leading-snug text-[#111B4D] min-[560px]:whitespace-nowrap min-[560px]:text-right" : "font-semibold tabular-nums leading-snug text-[#111827] min-[560px]:whitespace-nowrap min-[560px]:text-right"}>
         {value}
       </span>
     </div>

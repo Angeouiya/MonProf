@@ -82,11 +82,20 @@ const PAYDUNYA_SETTING_KEYS = {
 let payDunyaConfigCache: { expiresAt: number; value: PayDunyaConfig | null } | null = null;
 
 export function getPayDunyaPublicBaseUrl(req: NextRequest) {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL
-    || process.env.APP_URL
-    || `${req.nextUrl.protocol}//${req.nextUrl.host}`
-  ).replace(/\/$/, "");
+  const vercelUrl = process.env.VERCEL_URL?.trim()
+    ? `https://${process.env.VERCEL_URL.trim().replace(/^https?:\/\//i, "")}`
+    : "";
+  const fallbackRequestUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+
+  return firstPublicBaseUrl(
+    process.env.PAYDUNYA_CALLBACK_BASE_URL,
+    process.env.PAYDUNYA_PUBLIC_BASE_URL,
+    process.env.APP_URL,
+    process.env.NEXTAUTH_URL,
+    vercelUrl,
+    process.env.NEXT_PUBLIC_APP_URL,
+    fallbackRequestUrl,
+  );
 }
 
 export async function getPayDunyaConfig(): Promise<PayDunyaConfig | null> {
@@ -357,4 +366,25 @@ function firstNonEmptyString(...values: unknown[]) {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
+}
+
+function firstPublicBaseUrl(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const normalized = normalizeBaseUrl(value);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+function normalizeBaseUrl(value: string) {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
 }
