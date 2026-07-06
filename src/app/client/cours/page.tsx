@@ -4,10 +4,10 @@ import { getSessionUser } from "@/lib/session";
 import {
   ClientCompactFacts,
   ClientAppRail,
-  ClientFocusPanel,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
+  ClientProcessTracker,
   ClientRecordStatusLine,
   ClientSurface,
   ClientTabBar,
@@ -17,7 +17,7 @@ import { Money } from "@/components/shared/money";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
-import { BookOpen, ArrowRight, Clock, Calendar, CheckCircle2, MessageSquare, WalletCards, Search, LockKeyhole, ExternalLink } from "lucide-react";
+import { BookOpen, ArrowRight, Clock, Calendar, CheckCircle2, MessageSquare, WalletCards, Search, ExternalLink } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { CourseListClient, type ClientCourseListItem } from "./course-list-client";
 
@@ -76,8 +76,12 @@ export default async function CoursPage({
       paydunyaStatus: true,
       paydunyaVerifiedAt: true,
       isQuoteOnly: true,
+      reference: true,
       subjectName: true,
       levelName: true,
+      courseFormat: true,
+      preferredTime: true,
+      scheduledTime: true,
       scheduledDate: true,
       startDate: true,
       teacher: {
@@ -128,6 +132,27 @@ export default async function CoursPage({
   const protectedAmount = overviewBookings
     .reduce((sum, booking) => sum + (booking.totalClientPays || booking.totalPrice), 0);
   const activeCourseCount = overviewBookings.length;
+  const nextCourseStep = nextCourse ? getCourseStep(nextCourse.status, nextCourse.paymentStatus) : null;
+  const nextCourseAction = nextCourse
+    ? {
+        id: nextCourse.id,
+        reference: nextCourse.reference,
+        subjectName: nextCourse.subjectName,
+        levelName: nextCourse.levelName,
+        teacherName: nextCourse.teacher.professionalName || nextCourse.teacher.fullName,
+        dateLabel: nextCourse.scheduledDate
+          ? formatDate(nextCourse.scheduledDate)
+          : nextCourse.startDate
+            ? `${formatDate(nextCourse.startDate)} demandée`
+            : "Date à confirmer",
+        timeLabel: nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer",
+        formatLabel: nextCourse.courseFormat === "HOME" ? "À domicile" : "En ligne",
+        stepLabel: nextCourseStep?.label ?? "Cours suivi",
+        stepHint: nextCourseStep?.hint ?? "Le cours est suivi par Compétence.",
+        needsConfirmation: nextCourse.status === "PENDING_CLIENT_VALIDATION",
+        isCurrent: nextCourse.status === "IN_PROGRESS",
+      }
+    : null;
   const fallbackCourseHref = pendingCourseBookings[0]
     ? `/client/reservations/${pendingCourseBookings[0].id}?payment=pending`
     : "/client/rechercher";
@@ -201,32 +226,19 @@ export default async function CoursPage({
         ]}
       />
 
-      <CourseTrustPanel protectedAmount={protectedAmount} activeCourseCount={activeCourseCount} />
+      <CourseCommandCenter
+        nextCourse={nextCourseAction}
+        activeCourseCount={activeCourseCount}
+        upcomingCount={tabCounts.avenir ?? 0}
+        currentCount={tabCounts.encours ?? 0}
+        confirmationCount={confirmationCount}
+        pendingCount={pendingCourseBookings.length}
+        protectedAmount={protectedAmount}
+      />
 
       {pendingCourseBookings.length > 0 && (
         <PendingCoursesPanel bookings={pendingCourseBookings} />
       )}
-
-      <ClientFocusPanel
-        eyebrow="Prochaine séance vérifiée"
-        icon={BookOpen}
-        title={nextCourse ? nextCourse.subjectName : "Aucun cours actif"}
-        description={
-          nextCourse
-            ? `${nextCourse.teacher.professionalName || nextCourse.teacher.fullName} · ${nextCourse.scheduledDate ? formatDate(nextCourse.scheduledDate) : nextCourse.startDate ? `${formatDate(nextCourse.startDate)} demandée` : "date à confirmer"}`
-            : pendingCourseBookings.length > 0
-              ? "Finalisez le paiement PayDunya d'une demande pour l'activer dans vos cours."
-              : "Réservez un cours pour afficher ici la prochaine séance à suivre."
-        }
-        action={
-          <Button asChild className="min-h-11 rounded-lg sm:min-w-52">
-            <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : pendingCourseBookings[0] ? `/client/reservations/${pendingCourseBookings[0].id}?payment=pending` : "/client/rechercher"}>
-              {nextCourse ? "Voir le dossier" : pendingCourseBookings[0] ? "Finaliser le paiement" : "Trouver un professeur"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        }
-      />
 
       <ClientTabBar
         activeId={tabId}
@@ -240,6 +252,158 @@ export default async function CoursPage({
 
       <CourseListClient courses={courseItems} fallbackHref={fallbackCourseHref} />
     </div>
+  );
+}
+
+type CourseCommandCenterProps = {
+  nextCourse: {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+    teacherName: string;
+    dateLabel: string;
+    timeLabel: string;
+    formatLabel: string;
+    stepLabel: string;
+    stepHint: string;
+    needsConfirmation: boolean;
+    isCurrent: boolean;
+  } | null;
+  activeCourseCount: number;
+  upcomingCount: number;
+  currentCount: number;
+  confirmationCount: number;
+  pendingCount: number;
+  protectedAmount: number;
+};
+
+function CourseCommandCenter({
+  nextCourse,
+  activeCourseCount,
+  upcomingCount,
+  currentCount,
+  confirmationCount,
+  pendingCount,
+  protectedAmount,
+}: CourseCommandCenterProps) {
+  const hasAction = confirmationCount > 0 || pendingCount > 0;
+  const actionHref = nextCourse
+    ? `/client/reservations/${nextCourse.id}${nextCourse.needsConfirmation ? "?action=confirm" : ""}`
+    : pendingCount > 0
+      ? "/client/cours?tab=avenir"
+      : "/client/rechercher";
+  const actionLabel = nextCourse
+    ? nextCourse.needsConfirmation ? "Confirmer le cours" : "Ouvrir le dossier"
+    : pendingCount > 0 ? "Finaliser une demande" : "Trouver un professeur";
+
+  return (
+    <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-course-command-center>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="min-w-0 space-y-4 p-4 min-[640px]:p-5">
+          <div className="flex min-w-0 gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+              {confirmationCount > 0 ? <MessageSquare className="h-5 w-5" /> : currentCount > 0 ? <Clock className="h-5 w-5" /> : <BookOpen className="h-5 w-5" />}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Pilotage des cours</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">
+                {confirmationCount > 0
+                  ? "Un cours terminé attend votre confirmation."
+                  : currentCount > 0
+                    ? "Un cours est en suivi actif."
+                    : activeCourseCount > 0
+                      ? "Vos cours vérifiés sont organisés."
+                      : pendingCount > 0
+                        ? "Des demandes attendent encore l'activation."
+                        : "Réservez un cours pour démarrer."}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
+                Les cours listés ici existent uniquement après paiement PayDunya vérifié côté serveur. Les demandes non payées ne préviennent ni le professeur ni le service client.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-2 min-[520px]:grid-cols-2 xl:grid-cols-4">
+            <ClientInfoPill label="Cours actifs" value={activeCourseCount} strong={activeCourseCount > 0} />
+            <ClientInfoPill label="À venir" value={upcomingCount} strong={upcomingCount > 0} />
+            <ClientInfoPill label="À confirmer" value={confirmationCount} strong={confirmationCount > 0} />
+            <ClientInfoPill label="Protégé" value={<Money amount={protectedAmount} />} strong={protectedAmount > 0} />
+          </div>
+
+          <ClientProcessTracker
+            steps={[
+              {
+                label: "Paiement serveur",
+                hint: pendingCount > 0 ? `${pendingCount} demande(s) restent hors cours actif.` : "Tous les cours visibles sont vérifiés.",
+                state: pendingCount > 0 ? "current" : activeCourseCount > 0 ? "done" : "pending",
+              },
+              {
+                label: "Cours avec professeur",
+                hint: nextCourse ? `${nextCourse.teacherName} · ${nextCourse.dateLabel}` : "Aucun cours actif à afficher.",
+                state: nextCourse ? nextCourse.isCurrent ? "current" : "done" : "pending",
+              },
+              {
+                label: "Validation client",
+                hint: confirmationCount > 0 ? `${confirmationCount} cours à valider.` : "La validation apparaîtra après le cours.",
+                state: confirmationCount > 0 ? "current" : activeCourseCount > 0 ? "done" : "pending",
+              },
+            ]}
+          />
+        </div>
+
+        <aside className="border-t border-[#DDE3EE] bg-white p-4 min-[640px]:p-5 lg:border-l lg:border-t-0">
+          <div className="flex h-full flex-col justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+                  {hasAction ? <MessageSquare className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827]">Action prioritaire</p>
+                  <p className="text-xs font-medium leading-5 text-[#64748B]">
+                    {nextCourse ? nextCourse.stepLabel : pendingCount > 0 ? "Paiement ou devis à finaliser" : "Choisir un professeur"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#D8DEE9] bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                  {nextCourse ? "Prochaine séance" : pendingCount > 0 ? "Demande non active" : "Nouveau cours"}
+                </p>
+                <p className="mt-1 text-base font-semibold leading-6 text-[#111827]">
+                  {nextCourse?.subjectName || (pendingCount > 0 ? `${pendingCount} demande(s) à finaliser` : "Aucun cours actif")}
+                </p>
+                <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                  {nextCourse
+                    ? `${nextCourse.reference} · ${nextCourse.teacherName} · ${nextCourse.levelName} · ${nextCourse.dateLabel} · ${nextCourse.timeLabel} · ${nextCourse.formatLabel}`
+                    : pendingCount > 0
+                      ? "Finalisez le paiement PayDunya ou le devis pour créer un vrai cours."
+                      : "Choisissez un professeur, une date et une séance de 2h."}
+                </p>
+              </div>
+
+              {nextCourse && (
+                <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Suivi</p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-[#111827]">{nextCourse.stepHint}</p>
+                  <p className="mt-2 inline-flex min-h-7 items-center rounded-lg border border-[#D8DEE9] bg-white px-2 text-xs font-semibold text-[#111B4D]">
+                    PayDunya confirmé
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+              <Link href={actionHref}>
+                {actionLabel}
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </aside>
+      </div>
+    </ClientSurface>
   );
 }
 
@@ -280,38 +444,6 @@ type PendingCourseBooking = {
     badgeVerified: boolean;
   };
 };
-
-function CourseTrustPanel({
-  protectedAmount,
-  activeCourseCount,
-}: {
-  protectedAmount: number;
-  activeCourseCount: number;
-}) {
-  return (
-    <ClientSurface compact className="p-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
-        <div className="flex min-w-0 gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-            <LockKeyhole className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Cours activés</p>
-            <h2 className="mt-1 text-lg font-semibold leading-6 text-[#111827]">PayDunya doit confirmer le paiement côté serveur.</h2>
-            <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-              Un dossier non payé reste une demande. Dès que la confirmation serveur est reçue, le cours apparaît ici avec le professeur choisi.
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-2 min-[420px]:grid-cols-3 lg:grid-cols-1">
-          <ClientInfoPill label="Cours actifs" value={formatCount(activeCourseCount, "cours")} strong />
-          <ClientInfoPill label="Montant protégé" value={<Money amount={protectedAmount} />} strong />
-          <ClientInfoPill label="Contrôle" value="Serveur PayDunya" />
-        </div>
-      </div>
-    </ClientSurface>
-  );
-}
 
 function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] }) {
   return (
