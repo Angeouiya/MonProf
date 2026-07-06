@@ -6,7 +6,8 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, GraduationCap, CalendarRange, Wallet,
   ShieldAlert, Tag, Bell, Settings, LogOut, Menu, X, BookOpen,
-  Banknote, Lock, MessageSquare, MapPin, ChevronRight, Home, Activity, ClipboardList, AlertTriangle
+  Banknote, Lock, MessageSquare, MapPin, ChevronRight, Home, Activity,
+  ClipboardList, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -52,6 +53,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/paiements", label: "Paiements reçus", icon: Wallet },
       { href: "/admin/fonds-bloques", label: "Fonds bloqués", icon: Lock },
+      { href: "/admin/remboursements", label: "Remboursements", icon: RefreshCw },
       { href: "/admin/paiements-a-liberer", label: "Paiements à libérer", icon: Banknote },
       { href: "/admin/professeurs-a-payer", label: "Professeurs à payer", icon: Banknote },
     ],
