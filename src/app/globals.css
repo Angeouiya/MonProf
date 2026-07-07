@@ -4642,7 +4642,7 @@ b {
   .client-shell [data-client-tab-bar],
   .client-shell :where([data-client-reservation-filter-rail]) {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: 1fr !important;
     grid-auto-flow: row !important;
     gap: 0.5rem !important;
     overflow: visible !important;
@@ -4664,7 +4664,7 @@ b {
     white-space: normal !important;
     overflow-wrap: normal !important;
     word-break: normal !important;
-    transition-duration: 70ms !important;
+    transition-duration: 45ms !important;
   }
 
   .client-shell [data-client-tab-item] > span:first-child {
@@ -4685,7 +4685,14 @@ b {
   }
 }
 
-@media (min-width: 520px) and (max-width: 719px) {
+@media (min-width: 360px) and (max-width: 719px) {
+  .client-shell [data-client-tab-bar],
+  .client-shell :where([data-client-reservation-filter-rail]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 719px) {
   .client-shell [data-client-tab-bar],
   .client-shell :where([data-client-reservation-filter-rail]) {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -4693,5 +4700,5 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation-duration: 620ms !important;
+  animation-duration: 260ms !important;
 }
