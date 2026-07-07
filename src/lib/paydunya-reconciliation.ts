@@ -27,10 +27,13 @@ export type ReconcilePayDunyaResult = {
 };
 
 export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaInput): Promise<ReconcilePayDunyaResult> {
+  const inputToken = firstString(input.token);
   const bookingWhere: Prisma.BookingWhereInput | null = input.bookingId
     ? { id: input.bookingId }
     : input.bookingReference
       ? { reference: input.bookingReference }
+      : inputToken
+        ? { paydunyaToken: inputToken }
       : null;
 
   if (!bookingWhere) {
@@ -78,7 +81,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
   }
 
   const alreadyPaid = hasVerifiedPayDunyaClientPayment(booking);
-  const token = firstString(input.token, booking.paydunyaToken);
+  const token = firstString(inputToken, booking.paydunyaToken);
   if (!token) {
     await db.booking.update({
       where: { id: booking.id },
@@ -129,7 +132,8 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
   );
   const confirmedToken = firstString(confirmation.token, token);
   const tokenMatches = confirmedToken === token;
-  const customMatches = (
+  const foundByStoredToken = !input.bookingId && !input.bookingReference && Boolean(inputToken && booking.paydunyaToken === inputToken);
+  const customMatches = foundByStoredToken || (
     (confirmedBookingId && confirmedBookingId === booking.id)
     || (confirmedBookingReference && confirmedBookingReference === booking.reference)
   );

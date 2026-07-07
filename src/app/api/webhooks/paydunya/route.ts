@@ -13,15 +13,11 @@ export async function POST(req: NextRequest) {
   }
 
   const data = normalizePayDunyaData(payload);
-  const hash = firstString(data.hash);
-
-  if (!(await verifyPayDunyaHash(hash))) {
-    return NextResponse.json({ error: "Signature PayDunya invalide." }, { status: 401 });
-  }
-
   const invoice = asRecord(data.invoice) ?? {};
   const customData = asRecord(data.custom_data) ?? {};
   const status = firstString(data.status)?.toLowerCase() ?? null;
+  const hash = firstString(data.hash);
+  const hashVerified = await verifyPayDunyaHash(hash);
   const invoiceToken = firstString(invoice.token, data.token);
   const bookingId = firstString(
     customData.booking_id,
@@ -35,8 +31,8 @@ export async function POST(req: NextRequest) {
     data.booking_reference,
   );
 
-  if (!bookingId && !bookingReference) {
-    return NextResponse.json({ error: "Réservation PayDunya introuvable dans custom_data." }, { status: 400 });
+  if (!bookingId && !bookingReference && !invoiceToken) {
+    return NextResponse.json({ error: "Réservation PayDunya introuvable dans custom_data ou token." }, { status: 400 });
   }
 
   const result = await reconcilePayDunyaBookingPayment({
@@ -46,7 +42,7 @@ export async function POST(req: NextRequest) {
     source: "webhook",
     incomingStatus: status,
     incomingPayload: data,
-    incomingHashVerified: true,
+    incomingHashVerified: hashVerified,
   });
 
   const httpStatus = result.action === "not_found"

@@ -268,7 +268,7 @@ export function ClientTabBar({
     <div
       data-client-tab-bar
       className={cn(
-        "client-tab-bar flex snap-x snap-mandatory gap-1.5 overflow-x-auto rounded-lg border border-[#DDE3EE] bg-white p-1.5 lg:snap-none lg:flex-nowrap lg:overflow-visible",
+        "client-tab-bar grid grid-flow-row grid-cols-2 auto-cols-auto gap-1.5 overflow-visible rounded-lg border border-[#DDE3EE] bg-white p-1.5 min-[520px]:grid-cols-3 lg:flex lg:snap-none lg:flex-nowrap lg:overflow-visible",
         className,
       )}
     >
@@ -280,11 +280,11 @@ export function ClientTabBar({
             href={item.href}
             data-client-tab-item
             className={cn(
-              "flex min-h-11 min-w-[8.25rem] snap-start items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:min-w-0 lg:flex-1 lg:snap-none lg:px-3",
+              "flex min-h-11 min-w-0 snap-start items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:flex-1 lg:snap-none lg:px-3",
               active ? "bg-[#111B4D] text-white" : "border border-[#E3E8F2] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]",
             )}
           >
-            <span className="min-w-0 truncate">{item.label}</span>
+            <span className="min-w-0 truncate [overflow-wrap:normal] [word-break:normal]">{item.label}</span>
             {typeof item.count === "number" && (
               <span
                 className={cn(
