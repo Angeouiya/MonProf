@@ -60,7 +60,14 @@ export default async function TeachersPage({
   const page = Math.max(1, Number(sp.page) || 1);
 
   // Build where clause (same logic as /api/teachers)
-  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(q)] };
+  const visibleTeacherWhere: any = {
+    status: "ACTIVE",
+    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+  };
+  const where: any = {
+    ...visibleTeacherWhere,
+    AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
+  };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
   if (level) where.levels = { some: { level: { slug: level } } };
   if (commune) where.zones = { some: { commune: { name: commune } } };
@@ -81,8 +88,9 @@ export default async function TeachersPage({
       break;
   }
 
-  const [total, teachers, subjects, levels, communes] = await Promise.all([
+  const [total, totalVisibleTeachers, teachers, subjects, levels, communes] = await Promise.all([
     db.teacher.count({ where }),
+    db.teacher.count({ where: visibleTeacherWhere }),
     db.teacher.findMany({
       where,
       orderBy,
@@ -151,6 +159,7 @@ export default async function TeachersPage({
     format,
     q,
   ].filter(Boolean).length;
+  const hasPublishedTeachers = totalVisibleTeachers > 0;
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
 
@@ -342,14 +351,18 @@ export default async function TeachersPage({
               {items.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
-                  title="Aucun professeur ne correspond à vos critères"
-                  description="Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
+                  title={hasPublishedTeachers ? "Aucun professeur ne correspond à vos critères" : "Professeurs en cours de publication"}
+                  description={
+                    hasPublishedTeachers
+                      ? "Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
+                      : "Compétence publie uniquement des professeurs avec vraie photo, profil vérifié et disponibilités exploitables. Les premiers profils réels sont ajoutés depuis le service client."
+                  }
                   action={
                     <Link
-                      href="/professeurs"
+                      href={hasPublishedTeachers ? "/professeurs" : "/contact"}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
                     >
-                      Réinitialiser les filtres
+                      {hasPublishedTeachers ? "Réinitialiser les filtres" : "Contacter Compétence"}
                     </Link>
                   }
                 />
