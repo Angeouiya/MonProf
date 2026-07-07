@@ -136,14 +136,14 @@ function PasswordField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
-          className="h-11 rounded-lg border-[#DDE6F7] bg-white pr-12 text-sm focus-visible:ring-[#9AAAD0]"
+          className="h-11 rounded-lg border-[#DDE6F7] bg-white pr-14 text-sm focus-visible:ring-[#9AAAD0]"
           data-client-password-input={id}
           required
         />
         <button
           type="button"
           onClick={onToggleVisible}
-          className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111B4D]"
+          className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111B4D]"
           aria-label={visible ? `Masquer ${label.toLowerCase()}` : `Afficher ${label.toLowerCase()}`}
           data-client-password-toggle={id}
         >
