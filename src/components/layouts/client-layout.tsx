@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type MouseEvent, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
@@ -58,6 +58,9 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+  const navigationResetRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const searchKey = searchParams.toString();
   const currentSection = getCurrentSection(pathname);
   const mobileSectionLabel = currentSection.mobileLabel ?? currentSection.label;
   const hideMobileBottomNav = Boolean(
@@ -68,16 +71,78 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const isActive = (item: ClientNavItem) =>
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
 
+  useEffect(() => {
+    if (navigationResetRef.current) {
+      window.clearTimeout(navigationResetRef.current);
+      navigationResetRef.current = null;
+    }
+    const routeSettledTimer = window.setTimeout(() => setNavigating(false), 0);
+    return () => window.clearTimeout(routeSettledTimer);
+  }, [pathname, searchKey]);
+
+  useEffect(() => {
+    return () => {
+      if (navigationResetRef.current) {
+        window.clearTimeout(navigationResetRef.current);
+      }
+    };
+  }, []);
+
+  function startNavigationFeedback() {
+    setNavigating(true);
+    if (navigationResetRef.current) {
+      window.clearTimeout(navigationResetRef.current);
+    }
+    navigationResetRef.current = window.setTimeout(() => {
+      setNavigating(false);
+      navigationResetRef.current = null;
+    }, 1800);
+  }
+
+  function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+    if (!anchor || anchor.target || anchor.hasAttribute("download")) {
+      return;
+    }
+    const rawHref = anchor.getAttribute("href");
+    if (!rawHref || rawHref.startsWith("#")) {
+      return;
+    }
+    try {
+      const nextUrl = new URL(rawHref, window.location.origin);
+      if (nextUrl.origin !== window.location.origin || !nextUrl.pathname.startsWith("/client")) {
+        return;
+      }
+      const nextPath = `${nextUrl.pathname}${nextUrl.search}`;
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      if (nextPath !== currentPath) {
+        startNavigationFeedback();
+      }
+    } catch {
+      // Ignore malformed href values; navigation itself will handle them.
+    }
+  }
+
   function submitQuickSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const query = String(formData.get("q") ?? "").trim();
+    startNavigationFeedback();
     router.push(query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher");
     setMobileSearchOpen(false);
   }
 
   return (
-    <div data-client-layout className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div
+      data-client-layout
+      aria-busy={navigating}
+      onClickCapture={handleClientNavigationCapture}
+      className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased"
+    >
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       {/* Top bar (mobile + desktop) */}
       <header data-client-topbar className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
@@ -189,6 +254,16 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           />
         </div>
       </header>
+      {navigating && (
+        <div
+          data-client-route-progress
+          className="pointer-events-none fixed inset-x-0 z-[90] h-0.5 overflow-hidden bg-white"
+          style={{ top: "var(--app-topbar-height, 4rem)" }}
+          aria-hidden="true"
+        >
+          <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
+        </div>
+      )}
       {mobileSearchOpen && !open && (
         <div id="client-mobile-search-panel" data-client-mobile-search-panel className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
           <form

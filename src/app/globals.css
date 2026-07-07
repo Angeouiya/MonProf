@@ -4613,3 +4613,26 @@ b {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
+
+@keyframes client-route-progress-slide {
+  0% {
+    transform: translateX(-72%);
+  }
+  58% {
+    transform: translateX(-12%);
+  }
+  100% {
+    transform: translateX(38%);
+  }
+}
+
+.client-shell [data-client-route-progress-bar] {
+  animation: client-route-progress-slide 980ms cubic-bezier(0.2, 0, 0, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-shell [data-client-route-progress-bar] {
+    animation: none;
+    transform: none;
+  }
+}
