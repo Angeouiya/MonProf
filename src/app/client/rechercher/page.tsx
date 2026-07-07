@@ -55,7 +55,14 @@ export default async function RechercherPage({
   const q = sp.q?.trim();
   const sort = sp.sort ?? "recommended";
 
-  const where: any = { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(q)] };
+  const visibleTeacherWhere: any = {
+    status: "ACTIVE",
+    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+  };
+  const where: any = {
+    ...visibleTeacherWhere,
+    AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
+  };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
   if (level) where.levels = { some: { level: { slug: level } } };
   if (commune) where.zones = { some: { commune: { name: commune } } };
@@ -69,18 +76,21 @@ export default async function RechercherPage({
     default: orderBy = [{ featured: "desc" }, { rating: "desc" }, { ratingCount: "desc" }]; break;
   }
 
-  const teachers = await db.teacher.findMany({
-    where,
-    orderBy,
-    take: 24,
-    include: {
-      subjects: { include: { subject: true } },
-      _count: { select: { reviews: true } },
-    },
-  });
-  const subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
-  const levels = await db.level.findMany({ orderBy: { order: "asc" } });
-  const communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+  const [teachers, totalVisibleTeachers, subjects, levels, communes] = await Promise.all([
+    db.teacher.findMany({
+      where,
+      orderBy,
+      take: 24,
+      include: {
+        subjects: { include: { subject: true } },
+        _count: { select: { reviews: true } },
+      },
+    }),
+    db.teacher.count({ where: visibleTeacherWhere }),
+    db.subject.findMany({ orderBy: { name: "asc" } }),
+    db.level.findMany({ orderBy: { order: "asc" } }),
+    db.commune.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
   const items = teachers.map((t) => ({
     ...t,
@@ -109,6 +119,7 @@ export default async function RechercherPage({
   const onlineCount = items.filter((teacher) => teacher.offersOnline).length;
   const certifiedCount = items.filter((teacher) => teacher.badgeVerified).length;
   const primaryActionHref = items.length > 0 ? "#resultats-professeurs" : "#filtres-professeurs";
+  const hasPublishedTeachers = totalVisibleTeachers > 0;
 
   return (
     <div className="space-y-5">
@@ -369,8 +380,14 @@ export default async function RechercherPage({
 
       <ClientSurface id="resultats-professeurs" className="scroll-mt-24 space-y-4">
         <ClientSectionTitle
-          title={formatCount(items.length, "professeur trouvé", "professeurs trouvés")}
-          description={hasActiveFilters ? "Résultats adaptés à vos critères." : "Choisissez un professeur pour réserver directement."}
+          title={hasPublishedTeachers ? formatCount(items.length, "professeur trouvé", "professeurs trouvés") : "Professeurs en cours de publication"}
+          description={
+            hasPublishedTeachers
+              ? hasActiveFilters
+                ? "Résultats adaptés à vos critères."
+                : "Choisissez un professeur pour réserver directement."
+              : "Les premiers profils réels sont ajoutés par le service client après vérification."
+          }
           action={
             <span className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-[#111B4D]">
               <CalendarCheck className="h-3.5 w-3.5" />
@@ -382,20 +399,24 @@ export default async function RechercherPage({
           <div className="space-y-4">
             <ClientEmptyState
               icon={Search}
-              title="Aucun professeur ne correspond"
-              description="Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
+              title={hasPublishedTeachers ? "Aucun professeur ne correspond" : "Aucun professeur publié pour le moment"}
+              description={
+                hasPublishedTeachers
+                  ? "Essayez d'élargir vos critères de recherche ou retirez un filtre actif."
+                  : "Compétence publie uniquement des professeurs avec vraie photo, profil vérifié et disponibilité exploitable. Revenez bientôt ou contactez le service client pour un besoin précis."
+              }
             />
             <div
               className="grid gap-2 min-[520px]:grid-cols-2 min-[840px]:grid-cols-4"
               aria-label="Suggestions de recherche"
             >
               <Link
-                href="/client/rechercher"
+                href={hasPublishedTeachers ? "/client/rechercher" : "/client/service-client"}
                 className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-center text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
-                Voir tous les professeurs
+                {hasPublishedTeachers ? "Voir tous les professeurs" : "Contacter le service client"}
               </Link>
-              {quickSearches.slice(0, 3).map((item) => (
+              {(hasPublishedTeachers ? quickSearches.slice(0, 3) : quickSearches.slice(0, 2)).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
