@@ -152,8 +152,8 @@ export default async function HomePage() {
             </p>
             <div className="mx-auto mt-5 hidden max-w-2xl grid-cols-3 gap-2 text-center text-xs font-semibold text-[#111B4D] min-[430px]:grid">
               <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
-                <p className="text-lg text-[#111827]">{activeTeacherCount}+</p>
-                <p>profils actifs</p>
+                <p className="text-lg text-[#111827]">{activeTeacherCount > 0 ? `${activeTeacherCount}+` : "Bientôt"}</p>
+                <p>{activeTeacherCount > 0 ? "profils actifs" : "profils vérifiés"}</p>
               </div>
               <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
                 <p className="text-lg text-[#111827]">2h</p>
