@@ -872,7 +872,8 @@ export function ReserverForm({
             />
           </div>
           <div
-            className="client-booking-progress-grid mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden"
+            data-client-booking-mobile-progress
+            className="client-booking-progress-grid mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 lg:hidden"
             aria-label="Progression mobile"
           >
             {STEPS.map((stepLabel, index) => {
@@ -896,7 +897,7 @@ export function ReserverForm({
                   onClick={() => {
                     if (reachable) setStep(index);
                   }}
-                  className={`min-h-11 min-w-[6.65rem] rounded-lg border px-2 text-center text-[11px] font-semibold leading-3 transition-colors ${
+                  className={`min-h-11 min-w-0 rounded-lg border px-2 text-center text-[11px] font-semibold leading-3 transition-colors ${
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : complete

@@ -4707,6 +4707,7 @@ b {
 @media (max-width: 719px) {
   .client-shell :where(
     [data-client-app-rail],
+    [data-client-booking-mobile-progress],
     [data-client-dashboard-action-rail],
     [data-client-payment-method-rail],
     [data-client-support-action-rail],
@@ -4727,6 +4728,7 @@ b {
 
   .client-shell :where(
     [data-client-app-rail],
+    [data-client-booking-mobile-progress],
     [data-client-dashboard-action-rail],
     [data-client-payment-method-rail],
     [data-client-support-action-rail],
@@ -4749,6 +4751,7 @@ b {
 @media (min-width: 360px) and (max-width: 719px) {
   .client-shell :where(
     [data-client-app-rail],
+    [data-client-booking-mobile-progress],
     [data-client-dashboard-action-rail],
     [data-client-payment-method-rail],
     [data-client-support-action-rail],
@@ -4766,6 +4769,7 @@ b {
 @media (min-width: 560px) and (max-width: 719px) {
   .client-shell :where(
     [data-client-app-rail],
+    [data-client-booking-mobile-progress],
     [data-client-dashboard-action-rail],
     [data-client-payment-method-rail],
     [data-client-support-action-rail],
