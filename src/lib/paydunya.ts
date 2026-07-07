@@ -80,12 +80,14 @@ const PAYDUNYA_SETTING_KEYS = {
 } as const;
 
 let payDunyaConfigCache: { expiresAt: number; value: PayDunyaConfig | null } | null = null;
+const STABLE_VERCEL_PUBLIC_BASE_URL = "https://competence-diplomateimmobilier99-4808s-projects.vercel.app";
 
 export function getPayDunyaPublicBaseUrl(req: NextRequest) {
   const vercelUrl = process.env.VERCEL_URL?.trim()
     ? `https://${process.env.VERCEL_URL.trim().replace(/^https?:\/\//i, "")}`
     : "";
   const fallbackRequestUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+  const safeRequestUrl = isLocalBaseUrl(fallbackRequestUrl) ? "" : fallbackRequestUrl;
 
   return firstPublicBaseUrl(
     process.env.PAYDUNYA_CALLBACK_BASE_URL,
@@ -94,7 +96,8 @@ export function getPayDunyaPublicBaseUrl(req: NextRequest) {
     process.env.NEXTAUTH_URL,
     vercelUrl,
     process.env.NEXT_PUBLIC_APP_URL,
-    fallbackRequestUrl,
+    safeRequestUrl,
+    STABLE_VERCEL_PUBLIC_BASE_URL,
   );
 }
 
@@ -386,5 +389,14 @@ function normalizeBaseUrl(value: string) {
     return url.toString().replace(/\/+$/, "");
   } catch {
     return null;
+  }
+}
+
+function isLocalBaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  } catch {
+    return false;
   }
 }

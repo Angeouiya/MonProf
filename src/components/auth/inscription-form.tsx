@@ -372,19 +372,34 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     id="legalAccepted"
                     checked={legalAccepted}
                     onCheckedChange={(checked) => setLegalAccepted(checked === true)}
-                    className="mt-1 h-5 w-5"
+                    className="mt-0 !h-11 !w-11"
                   />
-                  <label htmlFor="legalAccepted" className="text-sm font-medium leading-6 text-[#475569]">
-                    J'ai lu et j'accepte les{" "}
-                    <Link href="/conditions-utilisation" target="_blank" className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
-                      conditions générales d'utilisation
-                    </Link>{" "}
-                    ainsi que la{" "}
-                    <Link href="/politique-confidentialite" target="_blank" className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
-                      politique de confidentialité
-                    </Link>
-                    . En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes au service client sont traités pour assurer le service Compétence.
-                  </label>
+                  <div className="min-w-0 flex-1">
+                    <label htmlFor="legalAccepted" className="block text-sm font-medium leading-6 text-[#475569]">
+                      J'ai lu et j'accepte le cadre légal de Compétence.
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Link
+                        href="/conditions-utilisation"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                      >
+                        Conditions d'utilisation
+                      </Link>
+                      <Link
+                        href="/politique-confidentialite"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                      >
+                        Confidentialité
+                      </Link>
+                    </div>
+                    <p className="mt-2 text-sm font-medium leading-6 text-[#475569]">
+                      En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes au service client sont traités pour assurer le service Compétence.
+                    </p>
+                  </div>
                 </div>
               </div>
 

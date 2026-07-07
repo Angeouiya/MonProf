@@ -278,6 +278,7 @@ export function ClientTabBar({
           <Link
             key={item.id}
             href={item.href}
+            prefetch
             data-client-tab-item
             className={cn(
               "flex min-h-11 min-w-0 snap-start items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 min-[380px]:text-sm lg:flex-1 lg:snap-none lg:px-3",

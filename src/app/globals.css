@@ -4636,3 +4636,62 @@ b {
     transform: none;
   }
 }
+
+/* Final mobile guard: reservation tabs and filters must never collapse into vertical text. */
+@media (max-width: 719px) {
+  .client-shell [data-client-tab-bar],
+  .client-shell :where([data-client-reservation-filter-rail]) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    margin-inline: 0 !important;
+    padding: 0.35rem !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell [data-client-tab-item],
+  .client-shell :where([data-client-reservation-filter-rail]) > * {
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: none !important;
+    min-height: 2.75rem !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    padding-inline: 0.55rem !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    transition-duration: 70ms !important;
+  }
+
+  .client-shell [data-client-tab-item] > span:first-child {
+    display: -webkit-box !important;
+    min-inline-size: 0 !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .client-shell [data-client-tab-item] > span:last-child {
+    margin-left: 0.2rem !important;
+    min-inline-size: 1.45rem !important;
+    text-align: center !important;
+  }
+}
+
+@media (min-width: 520px) and (max-width: 719px) {
+  .client-shell [data-client-tab-bar],
+  .client-shell :where([data-client-reservation-filter-rail]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+.client-shell [data-client-route-progress-bar] {
+  animation-duration: 620ms !important;
+}
