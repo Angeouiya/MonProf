@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BadgePercent, BellRing, CheckCircle2, Headphones, Loader2, Mail, Save, Settings, Smartphone, XCircle } from "lucide-react";
+import { BadgePercent, BellRing, CheckCircle2, Database, Headphones, Loader2, Mail, Save, Settings, Smartphone, XCircle } from "lucide-react";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 
 type ProviderStatus = {
@@ -18,12 +18,26 @@ type ProviderStatus = {
   cron: boolean;
 };
 
+type DatabaseStatus = {
+  projectLabel: string;
+  schema: string;
+  tableCount: number;
+  publicTableCount: number;
+  teacherCount: number;
+  subjectCount: number;
+  levelCount: number;
+  communeCount: number;
+  userCount: number;
+};
+
 export function ParametresClient({
   initial,
   providerStatus,
+  databaseStatus,
 }: {
   initial: Record<string, string>;
   providerStatus: ProviderStatus;
+  databaseStatus: DatabaseStatus;
 }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>(initial);
@@ -122,6 +136,31 @@ export function ParametresClient({
           </div>
         </div>
 
+        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                <Database className="h-4 w-4 text-[#111B4D]" />
+                Base de données production
+              </p>
+              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                Les tables applicatives sont dans le schéma privé <span className="font-semibold text-[#111827]">{databaseStatus.schema}</span>, pas dans <span className="font-semibold text-[#111827]">public</span>. C'est normal pour éviter d'exposer les données au navigateur.
+              </p>
+            </div>
+            <ProviderPill label={databaseStatus.tableCount > 0 ? "Connectée" : "À vérifier"} ok={databaseStatus.tableCount > 0} />
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <StatusMetric label="Projet" value={databaseStatus.projectLabel} />
+            <StatusMetric label="Schéma actif" value={databaseStatus.schema} />
+            <StatusMetric label="Tables app" value={String(databaseStatus.tableCount)} />
+            <StatusMetric label="Tables public" value={String(databaseStatus.publicTableCount)} />
+            <StatusMetric label="Professeurs" value={String(databaseStatus.teacherCount)} />
+            <StatusMetric label="Matières" value={String(databaseStatus.subjectCount)} />
+            <StatusMetric label="Niveaux" value={String(databaseStatus.levelCount)} />
+            <StatusMetric label="Communes" value={String(databaseStatus.communeCount)} />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -141,6 +180,15 @@ export function ParametresClient({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function StatusMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5">
+      <p className="truncate text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-[#111827]">{value}</p>
+    </div>
   );
 }
 

@@ -13,6 +13,21 @@ export const dynamic = "force-dynamic";
 export default async function AdminParametresPage() {
   await requireAdmin();
   const rows = await db.setting.findMany();
+  const [schemaStats, teacherCount, subjectCount, levelCount, communeCount, userCount] = await Promise.all([
+    db.$queryRaw<Array<{ table_schema: string; tables: bigint | number }>>`
+      SELECT table_schema, COUNT(*)::int AS tables
+      FROM information_schema.tables
+      WHERE table_type = 'BASE TABLE'
+        AND table_schema IN ('public', 'competence')
+      GROUP BY table_schema
+      ORDER BY table_schema
+    `,
+    db.teacher.count(),
+    db.subject.count(),
+    db.level.count(),
+    db.commune.count(),
+    db.user.count(),
+  ]);
   const defaults: Record<string, string> = {
     platform_name: "Compétence",
     default_commission: String(PLATFORM_COMMISSION_PERCENT),
@@ -24,6 +39,17 @@ export default async function AdminParametresPage() {
   };
   const settings = settingsForClient(rows, defaults);
   const providerStatus = getNotificationProviderStatus();
+  const databaseStatus = {
+    projectLabel: "Supabase Production",
+    schema: "competence",
+    tableCount: Number(schemaStats.find((item) => item.table_schema === "competence")?.tables ?? 0),
+    publicTableCount: Number(schemaStats.find((item) => item.table_schema === "public")?.tables ?? 0),
+    teacherCount,
+    subjectCount,
+    levelCount,
+    communeCount,
+    userCount,
+  };
 
   return (
     <div className="space-y-5">
@@ -33,7 +59,7 @@ export default async function AdminParametresPage() {
           Configuration sensible
         </Badge>
       </PageHeader>
-      <ParametresClient initial={settings} providerStatus={providerStatus} />
+      <ParametresClient initial={settings} providerStatus={providerStatus} databaseStatus={databaseStatus} />
     </div>
   );
 }
