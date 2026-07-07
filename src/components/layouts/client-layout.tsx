@@ -493,11 +493,19 @@ function SidebarContent({
             <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
             Paiement protégé jusqu'à validation.
           </p>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
-            <Link href="/conditions-utilisation" className="text-[#111B4D] hover:underline" onClick={onNavigate}>
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
+            <Link
+              href="/conditions-utilisation"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
+              onClick={onNavigate}
+            >
               CGU
             </Link>
-            <Link href="/politique-confidentialite" className="text-[#111B4D] hover:underline" onClick={onNavigate}>
+            <Link
+              href="/politique-confidentialite"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
+              onClick={onNavigate}
+            >
               Confidentialité
             </Link>
           </div>
