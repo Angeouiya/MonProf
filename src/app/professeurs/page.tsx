@@ -244,8 +244,14 @@ export default async function TeachersPage({
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
             <p className="min-w-0 text-sm font-medium text-[#64748B]">
-              <span className="font-semibold text-[#111827]">{total}</span>{" "}
-              professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+              {hasPublishedTeachers ? (
+                <>
+                  <span className="font-semibold text-[#111827]">{total}</span>{" "}
+                  professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+                </>
+              ) : (
+                <span className="font-semibold text-[#111827]">Profils en préparation</span>
+              )}
             </p>
             {activeFiltersCount > 0 && (
               <Link href="/professeurs" className="shrink-0 text-xs font-semibold text-[#111B4D]">
@@ -330,13 +336,19 @@ export default async function TeachersPage({
             <div>
               <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
                 <p className="text-sm font-medium text-[#64748B]">
-                  <span className="font-semibold text-[#111827]">{total}</span>{" "}
-                  professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
-                  {subject || level || commune || format ? (
-                    <span className="ml-1 text-[#64748B]">
-                      · filtres actifs
-                    </span>
-                  ) : null}
+                  {hasPublishedTeachers ? (
+                    <>
+                      <span className="font-semibold text-[#111827]">{total}</span>{" "}
+                      professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+                      {subject || level || commune || format ? (
+                        <span className="ml-1 text-[#64748B]">
+                          · filtres actifs
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="font-semibold text-[#111827]">Profils en préparation par le service client</span>
+                  )}
                 </p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
                   {format === "HOME" && (
