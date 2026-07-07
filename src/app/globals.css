@@ -4702,3 +4702,80 @@ b {
 .client-shell [data-client-route-progress-bar] {
   animation-duration: 260ms !important;
 }
+
+/* Final mobile guard: app rails stay readable and never become cramped horizontal strips. */
+@media (max-width: 719px) {
+  .client-shell :where(
+    [data-client-app-rail],
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+    padding-inline: 0 !important;
+  }
+
+  .client-shell :where(
+    [data-client-app-rail],
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) > * {
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    max-inline-size: none !important;
+    white-space: normal !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 719px) {
+  .client-shell :where(
+    [data-client-app-rail],
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 719px) {
+  .client-shell :where(
+    [data-client-app-rail],
+    [data-client-dashboard-action-rail],
+    [data-client-payment-method-rail],
+    [data-client-support-action-rail],
+    [data-client-notification-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
