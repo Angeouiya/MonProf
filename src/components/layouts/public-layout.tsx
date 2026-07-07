@@ -320,10 +320,20 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-[#E3E8F2] pt-6 text-xs font-semibold text-[#64748B] sm:flex-row sm:items-center">
             <p>© {new Date().getFullYear()} Compétence - Tous droits réservés.</p>
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-[#111B4D]" /> Professeurs vérifiés · Paiement sécurisé</span>
-              <Link href="/conditions-utilisation" className="text-[#111B4D] hover:underline">CGU</Link>
-              <Link href="/politique-confidentialite" className="text-[#111B4D] hover:underline">Confidentialité</Link>
+              <Link
+                href="/conditions-utilisation"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
+              >
+                CGU
+              </Link>
+              <Link
+                href="/politique-confidentialite"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
+              >
+                Confidentialité
+              </Link>
             </p>
           </div>
         </div>
