@@ -53,6 +53,20 @@ record(
 );
 
 record(
+  "Client topbar stays fixed and every panel is offset below it",
+  /data-client-topbar[\s\S]*?className="[^"]*fixed inset-x-0 top-0/.test(layout)
+    && /app-topbar-spacer/.test(layout)
+    && /id="client-main-content"/.test(layout)
+    && /data-client-main/.test(layout)
+    && /app-sidebar-below-topbar fixed left-0/.test(layout)
+    && /app-topbar-offset fixed inset-x-0/.test(layout)
+    && /style=\{\{\s*top:\s*"var\(--app-topbar-height,\s*4rem\)"\s*\}\}/.test(layout)
+    && /\.app-topbar\s*\{[\s\S]*?position:\s*fixed\s*!important;[\s\S]*?top:\s*0\s*!important;[\s\S]*?\}/.test(css)
+    && /\.app-topbar-spacer\s*\{[\s\S]*?height:\s*var\(--app-topbar-height\);[\s\S]*?\}/.test(css)
+    && /\.app-sidebar-below-topbar\s*\{[\s\S]*?top:\s*var\(--app-topbar-height\)\s*!important;[\s\S]*?height:\s*calc\(100dvh - var\(--app-topbar-height\)\)\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
   "CSS also disables bottom nav when the mobile menu is open",
   /\.client-shell\[data-mobile-menu-open="true"\]\s*\[data-client-mobile-nav\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?pointer-events:\s*none\s*!important;[\s\S]*?\}/.test(css),
 );
