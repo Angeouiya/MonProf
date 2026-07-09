@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Le message ne doit pas dépasser 4000 caractères." }, { status: 400 });
   }
 
-  const [client, booking] = await Promise.all([
-    db.user.findUnique({ where: { id: clientId }, select: { id: true, name: true, role: true } }),
-    bookingId
-      ? db.booking.findUnique({
+  const [client, booking] = await db.$transaction(async (tx) => {
+    const client = await tx.user.findUnique({ where: { id: clientId }, select: { id: true, name: true, role: true } });
+    const booking = bookingId
+      ? await tx.booking.findUnique({
           where: { id: bookingId },
           select: {
             id: true,
@@ -59,8 +59,9 @@ export async function POST(req: NextRequest) {
             teacher: { select: { fullName: true, professionalName: true } },
           },
         })
-      : null,
-  ]);
+      : null;
+    return [client, booking] as const;
+  });
 
   if (!client || client.role !== "CLIENT") {
     return NextResponse.json({ error: "Client introuvable." }, { status: 404 });

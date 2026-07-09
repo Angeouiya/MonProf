@@ -112,7 +112,7 @@ export default async function ProfesseurDetailPage({
   const { id } = await params;
   const sp = await searchParams;
 
-  const [teacher, actionLogs] = await Promise.all([
+  const [teacher, actionLogs] = await db.$transaction([
     db.teacher.findUnique({
       where: { id },
       include: {

@@ -33,21 +33,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Le message ne doit pas dépasser ${MAX_MESSAGE_LENGTH} caractères.` }, { status: 400 });
   }
 
-  const [teacher, booking, replyTo] = await Promise.all([
-    db.teacher.findUnique({ where: { id: teacherId }, select: { id: true, fullName: true, professionalName: true } }),
-    bookingId
-      ? db.booking.findUnique({
+  const [teacher, booking, replyTo] = await db.$transaction(async (tx) => {
+    const teacher = await tx.teacher.findUnique({ where: { id: teacherId }, select: { id: true, fullName: true, professionalName: true } });
+    const booking = bookingId
+      ? await tx.booking.findUnique({
           where: { id: bookingId },
           select: { id: true, teacherId: true, reference: true, subjectName: true, levelName: true },
         })
-      : null,
-    replyToId
-      ? db.teacherAdminMessage.findUnique({
+      : null;
+    const replyTo = replyToId
+      ? await tx.teacherAdminMessage.findUnique({
           where: { id: replyToId },
           select: { id: true, teacherId: true, bookingId: true, subject: true, status: true },
         })
-      : null,
-  ]);
+      : null;
+    return [teacher, booking, replyTo] as const;
+  });
 
   if (!teacher) return NextResponse.json({ error: "Professeur introuvable." }, { status: 404 });
   if (bookingId && !booking) return NextResponse.json({ error: "Réservation introuvable." }, { status: 404 });

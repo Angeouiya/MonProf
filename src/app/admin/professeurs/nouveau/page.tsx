@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NouveauProfesseurPage() {
   await requireAdmin();
-  const [subjects, levels, communes] = await Promise.all([
+  const [subjects, levels, communes] = await db.$transaction([
     db.subject.findMany({ orderBy: { name: "asc" } }),
     db.level.findMany({ orderBy: { order: "asc" } }),
     db.commune.findMany({ orderBy: { name: "asc" } }),

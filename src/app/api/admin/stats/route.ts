@@ -54,7 +54,7 @@ export async function GET() {
     rawPendingReleaseBookings,
     openDisputeList,
     adminNotifications,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.user.count({ where: { role: "CLIENT" } }),
     db.teacher.count(),
     db.teacher.count({ where: { status: "ACTIVE" } }),

@@ -20,7 +20,7 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
     },
   });
   if (!teacher) notFound();
-  const [subjects, levels, communes] = await Promise.all([
+  const [subjects, levels, communes] = await db.$transaction([
     db.subject.findMany({ orderBy: { name: "asc" } }),
     db.level.findMany({ orderBy: { order: "asc" } }),
     db.commune.findMany({ orderBy: { name: "asc" } }),

@@ -57,10 +57,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Délai de réponse invalide." }, { status: 400 });
   }
 
-  const [teacher, booking] = await Promise.all([
-    db.teacher.findUnique({ where: { id: teacherId } }),
-    bookingId ? db.booking.findUnique({ where: { id: bookingId }, select: { id: true, teacherId: true, reference: true, subjectName: true, levelName: true } }) : null,
-  ]);
+  const [teacher, booking] = await db.$transaction(async (tx) => {
+    const teacher = await tx.teacher.findUnique({ where: { id: teacherId } });
+    const booking = bookingId
+      ? await tx.booking.findUnique({ where: { id: bookingId }, select: { id: true, teacherId: true, reference: true, subjectName: true, levelName: true } })
+      : null;
+    return [teacher, booking] as const;
+  });
   if (!teacher) return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
   if (bookingId && !booking) return NextResponse.json({ error: "Réservation introuvable." }, { status: 404 });
   if (booking && booking.teacherId !== teacherId) {

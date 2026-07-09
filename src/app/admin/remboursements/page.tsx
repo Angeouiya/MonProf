@@ -67,7 +67,7 @@ export default async function AdminRefundsPage({
   const sp = await searchParams;
   const selectedStatus = sp.status && REFUND_STATUSES.includes(sp.status as any) ? sp.status : "";
 
-  const [refundRequests, cancellationBookings] = await Promise.all([
+  const [refundRequests, cancellationBookings] = await db.$transaction([
     db.clientRefundRequest.findMany({
       where: selectedStatus ? { status: selectedStatus as any } : undefined,
       orderBy: { createdAt: "desc" },

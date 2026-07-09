@@ -46,7 +46,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const actionRequired = valid.filter((b) => ["PENDING_CLIENT_VALIDATION", "DISPUTED"].includes(b.status) || ["BLOCKED", "TO_PAY_TEACHER", "DISPUTED"].includes(b.paymentStatus));
 
   // Transactions
-  const [txs, communications, disputes, refundRequests, reviews] = await Promise.all([
+  const [txs, communications, disputes, refundRequests, reviews] = await db.$transaction([
     db.transaction.findMany({
       where: { booking: { is: verifiedPayDunyaBookingWhere({ clientId: client.id }) } },
       orderBy: { createdAt: "desc" },

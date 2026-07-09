@@ -36,7 +36,7 @@ export default async function AdminMessagesPage({
   const where: any = {};
   if (filter === "unhandled") where.handled = false;
 
-  const [messages, clientCommunications, teacherAdminMessages] = await Promise.all([
+  const [messages, clientCommunications, teacherAdminMessages] = await db.$transaction([
     db.contactMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
