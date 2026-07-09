@@ -259,7 +259,7 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
 
         <dl
           data-client-reservation-card-facts
-          className="mt-3 grid grid-cols-3 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white"
+          className="mt-3 grid grid-cols-1 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white min-[520px]:grid-cols-3"
         >
           <ReservationFact label="Date" value={reservation.dateLabel} />
           <ReservationFact label="Créneau" value={reservation.timeLabel} />
@@ -286,9 +286,9 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
 
 function ReservationFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 border-r border-[#E6EAF3] bg-white px-2.5 py-2 last:border-r-0 min-[420px]:px-3">
+    <div className="min-w-0 border-b border-[#E6EAF3] bg-white px-3 py-2.5 last:border-b-0 min-[520px]:border-b-0 min-[520px]:border-r min-[520px]:px-3 min-[520px]:py-2 min-[520px]:last:border-r-0">
       <dt className="truncate text-[9.5px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] min-[420px]:text-[10px]">{label}</dt>
-      <dd className="mt-1 line-clamp-2 min-h-8 break-words text-[11.5px] font-semibold leading-4 text-[#111827] min-[420px]:text-xs">{value}</dd>
+      <dd className="mt-1 line-clamp-2 min-h-0 break-words text-[12px] font-semibold leading-4 text-[#111827] min-[520px]:min-h-8">{value}</dd>
     </div>
   );
 }

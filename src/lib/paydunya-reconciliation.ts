@@ -5,6 +5,7 @@ import { confirmPayDunyaInvoice, type PayDunyaInvoiceStatus } from "@/lib/paydun
 import { hasVerifiedPayDunyaClientPayment, VERIFIED_CLIENT_FUND_STATUS_VALUES } from "@/lib/payment-security";
 
 const SECURED_PAYMENT_STATUSES = new Set<string>(VERIFIED_CLIENT_FUND_STATUS_VALUES);
+type PayDunyaConfirmedInvoice = Awaited<ReturnType<typeof confirmPayDunyaInvoice>>;
 
 type ReconcilePayDunyaInput = {
   bookingId?: string | null;
@@ -118,7 +119,14 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     };
   }
 
-  const confirmation = await confirmPayDunyaInvoice(token);
+  const trustedWebhookHash = input.source === "webhook" && input.incomingHashVerified === true;
+  let confirmation = await confirmPayDunyaInvoice(token);
+  if (trustedWebhookHash && !confirmation.ok) {
+    const webhookConfirmation = buildTrustedWebhookConfirmation(input.incomingPayload, token);
+    if (webhookConfirmation) {
+      confirmation = webhookConfirmation;
+    }
+  }
   const now = new Date();
   const expectedAmount = booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice;
   const confirmedBookingId = firstString(
@@ -138,7 +146,6 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     || (confirmedBookingReference && confirmedBookingReference === booking.reference)
   );
   const amountMatches = expectedAmount > 0 && confirmation.totalAmount === expectedAmount;
-  const trustedWebhookHash = input.source === "webhook" && input.incomingHashVerified === true;
   const serverConfirmationTrusted = input.source !== "webhook" && confirmation.ok && !confirmation.hashProvided;
   const hasTrustedPayDunyaProof = confirmation.hashValid || trustedWebhookHash || serverConfirmationTrusted;
   const missingConfirmationHash = !confirmation.hashProvided && !trustedWebhookHash && !serverConfirmationTrusted;
@@ -548,6 +555,58 @@ function compactPayload(value: unknown) {
   } catch {
     return String(value).slice(0, 8000);
   }
+}
+
+function buildTrustedWebhookConfirmation(payload: unknown, fallbackToken: string): PayDunyaConfirmedInvoice | null {
+  const root = asRecord(payload);
+  if (!root) return null;
+  const invoice = asRecord(root.invoice) ?? {};
+  const customer = asRecord(root.customer) ?? {};
+  const customData = asRecord(root.custom_data) ?? {};
+  const status = normalizeInvoiceStatus(root.status);
+  const token = firstString(invoice.token, root.token, fallbackToken);
+  if (!token) return null;
+  const responseCode = firstString(root.response_code);
+
+  return {
+    configured: true,
+    ok: responseCode === "00" || status !== "unknown",
+    status,
+    token,
+    totalAmount: parsePayDunyaAmount(invoice.total_amount ?? root.total_amount),
+    receiptUrl: firstString(root.receipt_url, root.receiptURL, root.receiptUrl),
+    customerName: firstString(customer.name),
+    customerEmail: firstString(customer.email),
+    customerPhone: firstString(customer.phone),
+    customData,
+    responseText: firstString(root.response_text, root.description) ?? undefined,
+    failReason: firstString(root.fail_reason) ?? undefined,
+    hashValid: true,
+    hashProvided: true,
+    raw: root,
+  };
+}
+
+function asRecord(value: unknown): Record<string, any> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, any>
+    : null;
+}
+
+function normalizeInvoiceStatus(value: unknown): PayDunyaInvoiceStatus {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (["completed", "complete", "success", "paid"].includes(normalized)) return "completed";
+  if (["cancelled", "canceled", "cancel"].includes(normalized)) return "cancelled";
+  if (["failed", "fail", "error"].includes(normalized)) return "failed";
+  if (["pending", "processing"].includes(normalized)) return "pending";
+  return "unknown";
+}
+
+function parsePayDunyaAmount(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  if (typeof value !== "string") return 0;
+  const parsed = Number(value.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
 }
 
 function formatDateFr(date?: Date | string | null) {

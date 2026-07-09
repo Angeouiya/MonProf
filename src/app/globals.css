@@ -2508,11 +2508,17 @@ b {
 .client-shell [data-client-reservation-mobile-priority] [data-client-info-pill] p {
   font-size: 0.56rem !important;
   line-height: 0.72rem !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
 }
 
 .client-shell [data-client-reservation-mobile-priority] [data-client-info-pill] div {
   font-size: 0.72rem !important;
   line-height: 0.95rem !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
 }
 
 .client-shell [data-client-payment-mobile-priority] [data-client-info-pill] {

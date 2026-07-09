@@ -277,7 +277,7 @@ function ReservationMobilePriorityCard({
           <Link href={actionHref}>{actionLabel}</Link>
         </Button>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
         <ClientInfoPill label="Brouillons" value={draftCount} strong={draftCount > 0} />
         <ClientInfoPill label="À confirmer" value={toConfirmCount} strong={toConfirmCount > 0} />
         <ClientInfoPill label="Fonds" value={formatFCFA(securedAmount)} strong={securedAmount > 0} />
