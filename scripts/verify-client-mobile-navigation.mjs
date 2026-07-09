@@ -163,6 +163,16 @@ record(
 );
 
 record(
+  "Client navigation exposes a stable active state on sidebar and bottom tabs",
+  /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/.test(layout)
+    && countMatches(layout, /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/g) >= 2
+    && /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/.test(layout)
+    && countMatches(layout, /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/g) >= 2
+    && /data-client-sidebar-link/.test(layout)
+    && /data-client-mobile-nav/.test(layout),
+);
+
+record(
   "Client shell warns cleanly when the mobile network drops",
   /const\s+\[isOffline,\s*setIsOffline\]\s*=\s*useState\(false\)/.test(layout)
     && /window\.addEventListener\("online",\s*syncNetworkState\)/.test(layout)

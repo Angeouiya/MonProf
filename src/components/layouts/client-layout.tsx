@@ -646,6 +646,7 @@ function SidebarContent({
               prefetch={CLIENT_NAV_PREFETCH}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
+              data-active={active ? "true" : "false"}
               data-client-sidebar-link
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
@@ -737,6 +738,7 @@ function MobileBottomNav({
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
               )}
               aria-current={active ? "page" : undefined}
+              data-active={active ? "true" : "false"}
             >
               <item.icon className="h-4 w-4" />
               <span className="max-w-full truncate text-[0.66rem] leading-none min-[380px]:text-[0.72rem]">
