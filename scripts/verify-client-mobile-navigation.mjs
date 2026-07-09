@@ -15,6 +15,7 @@ const clientLoadingPath = "src/app/client/loading.tsx";
 const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
+const teacherCardPath = "src/components/shared/teacher-card.tsx";
 const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
@@ -43,6 +44,7 @@ const clientLoading = read(clientLoadingPath);
 const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
+const teacherCard = read(teacherCardPath);
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
@@ -355,6 +357,16 @@ record(
   /Professeurs en cours de publication/.test(publicTeachersPage)
     && /Transmettre mon besoin/.test(publicTeachersPage)
     && !/Retour accueil/.test(publicTeachersPage),
+);
+
+record(
+  "Client teacher cards avoid fake zero-rating trust signals",
+  /const publicRating\s*=\s*teacher\.ratingCount\s*>\s*0\s*&&\s*teacher\.rating\s*>\s*0/.test(teacherCard)
+    && /const trustLabel\s*=\s*publicRating/.test(teacherCard)
+    && /Certifié/.test(teacherCard)
+    && /Profil suivi/.test(teacherCard)
+    && /trustLabel/.test(teacherCard)
+    && !/displayRating\.toFixed\(1\)\/5/.test(teacherCard),
 );
 
 record(

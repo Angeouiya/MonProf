@@ -23,11 +23,16 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
   const displayName = teacher.professionalName || teacher.fullName;
   const hasValidIndicativePrice = teacher.pricePerSession > 0;
   const priceLabel = hasValidIndicativePrice ? formatFCFA(teacher.pricePerSession) : "Prix à confirmer";
-  const displayRating = teacher.ratingCount > 0
+  const publicRating = teacher.ratingCount > 0 && teacher.rating > 0
     ? teacher.rating
     : teacher.adminRatingPublic && teacher.adminRating > 0
       ? teacher.adminRating
-      : teacher.rating;
+      : null;
+  const trustLabel = publicRating
+    ? `Note ${publicRating.toFixed(1)}/5`
+    : teacher.badgeVerified
+      ? "Certifié"
+      : "Profil suivi";
   const primarySubject = teacher.primarySubject ?? "Matière à confirmer";
   const commune = teacher.commune ?? "Abidjan";
 
@@ -64,7 +69,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
                 <span className="truncate">{commune}</span>
               </span>
-              <span className="font-semibold text-[#111827]">{displayRating.toFixed(1)}/5</span>
+              <span className="font-semibold text-[#111827]">{trustLabel}</span>
               <span>{teacher.experienceYears} ans exp.</span>
             </p>
           </div>
