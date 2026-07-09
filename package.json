@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
-    "build:production": "npm run production:check && npm run build",
+    "build:production": "npm run production:check && npm run db:verify && npm run build",
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "db:push": "prisma db push",
+    "db:verify": "node scripts/check-database-readiness.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
