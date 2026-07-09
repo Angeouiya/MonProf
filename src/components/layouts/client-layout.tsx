@@ -52,11 +52,6 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const primaryClientPrefetchRoutes = Array.from(new Set([
-  ...navItems.map((item) => item.href),
-  ...accountNavItems.map((item) => item.href),
-]));
-
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -76,12 +71,6 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
   const isActive = (item: ClientNavItem) =>
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
-
-  useEffect(() => {
-    for (const href of primaryClientPrefetchRoutes) {
-      router.prefetch(href);
-    }
-  }, [router]);
 
   useEffect(() => {
     if (navigationDelayRef.current) {
@@ -117,7 +106,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 160);
+    }, 80);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -125,7 +114,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 700);
+    }, 480);
   }
 
   function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
