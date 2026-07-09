@@ -22,6 +22,8 @@ export default function AdminConnexionPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    router.prefetch("/admin");
+
     fetch("/api/auth/me", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
@@ -67,7 +69,7 @@ export default function AdminConnexionPage() {
 
       toast.success("Connexion administrateur réussie.");
       router.replace("/admin");
-      window.location.assign("/admin");
+      router.refresh();
     } catch (err: any) {
       setError(err?.message || "Connexion impossible. Réessayez.");
       setLoading(false);

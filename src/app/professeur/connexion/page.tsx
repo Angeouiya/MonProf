@@ -26,6 +26,8 @@ function ProfesseurConnexionContent() {
   );
 
   useEffect(() => {
+    router.prefetch("/professeur");
+
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -72,7 +74,7 @@ function ProfesseurConnexionContent() {
       toast.success("Connexion professeur réussie.");
       const target = from.startsWith("/professeur") ? from : "/professeur";
       router.replace(target);
-      window.location.assign(target);
+      router.refresh();
     } catch {
       setError("Connexion impossible. Vérifiez votre accès ou contactez le service client.");
       setLoading(false);

@@ -41,6 +41,10 @@ function ConnexionContent() {
 
   // Si déjà connecté, rediriger selon le rôle
   useEffect(() => {
+    router.prefetch("/client");
+    router.prefetch("/admin");
+    router.prefetch("/professeur");
+
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -111,7 +115,7 @@ function ConnexionContent() {
               ? "/professeur"
               : "/";
       router.replace(target);
-      window.location.assign(target);
+      router.refresh();
     } catch (err: any) {
       setError(err.message || "Une erreur est survenue. Réessayez.");
       setLoading(false);
