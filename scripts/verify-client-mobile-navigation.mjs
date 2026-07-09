@@ -164,6 +164,14 @@ record(
 );
 
 record(
+  "Client long lists use browser rendering containment for faster mobile scrolling",
+  /@supports\s*\(content-visibility:\s*auto\)/.test(css)
+    && /\[data-client-record-card\][\s\S]*?\[data-client-empty-state\][\s\S]*?content-visibility:\s*auto;[\s\S]*?contain-intrinsic-size:\s*auto\s+12rem;/.test(css)
+    && /\[data-client-payment-history\]\s+article/.test(css)
+    && /\[data-client-review-history\]\s+article/.test(css),
+);
+
+record(
   "Client action buttons stay solid navy, never gradient-led",
   !/bg-gradient|from-|to-|via-/.test(layout)
     && /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(css),

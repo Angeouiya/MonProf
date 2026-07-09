@@ -5137,6 +5137,18 @@ b {
   color: #111827;
 }
 
+@supports (content-visibility: auto) {
+  .client-shell :where(
+    [data-client-record-card],
+    [data-client-empty-state],
+    [data-client-payment-history] article,
+    [data-client-review-history] article
+  ) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 12rem;
+  }
+}
+
 .client-shell :where(button, a)[class*="bg-[#111B4D]"] {
   background-color: #111B4D !important;
   color: #FFFFFF !important;
