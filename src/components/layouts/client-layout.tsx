@@ -137,7 +137,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 90);
+    }, 180);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -145,7 +145,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 1800);
+    }, 950);
   }
 
   function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
@@ -315,25 +315,14 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         </div>
       </header>
       {navigating && (
-        <>
-          <div
-            data-client-route-progress
-            className="pointer-events-none fixed inset-x-0 z-[90] h-1 overflow-hidden border-y border-[#E3E8F2] bg-white"
-            style={{ top: "var(--app-topbar-height, 4rem)" }}
-            aria-hidden="true"
-          >
-            <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
-          </div>
-          <div
-            data-client-route-status
-            className="pointer-events-none fixed left-1/2 z-[95] -translate-x-1/2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]"
-            style={{ top: "calc(var(--app-topbar-height, 4rem) + 0.75rem)" }}
-            role="status"
-            aria-live="polite"
-          >
-            Chargement de l'espace...
-          </div>
-        </>
+        <div
+          data-client-route-progress
+          className="pointer-events-none fixed inset-x-0 z-[90] h-1 overflow-hidden border-y border-[#E3E8F2] bg-white"
+          style={{ top: "var(--app-topbar-height, 4rem)" }}
+          aria-hidden="true"
+        >
+          <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
+        </div>
       )}
       {mobileSearchOpen && !open && (
         <div id="client-mobile-search-panel" data-client-mobile-search-panel className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">

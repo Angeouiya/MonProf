@@ -1437,10 +1437,6 @@ b {
   transform-origin: left center;
 }
 
-.client-shell [data-client-route-status] {
-  box-shadow: none;
-}
-
 @keyframes client-route-progress {
   0% {
     transform: translateX(-72%) scaleX(0.42);
