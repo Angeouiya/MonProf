@@ -276,6 +276,7 @@ export default async function ReservationDetailPage({
     paymentServiceFeeLabel: request.paymentServiceFeeLabel,
     totalToPay: request.totalToPay,
     paydunyaStatus: request.paydunyaStatus,
+    paydunyaCheckoutUrl: request.paydunyaCheckoutUrl,
     paidAt: request.paidAt?.toISOString() ?? null,
     teacherResponse: request.teacherResponse,
     teacherRespondedAt: request.teacherRespondedAt?.toISOString() ?? null,
@@ -618,7 +619,7 @@ export default async function ReservationDetailPage({
 
           <ReplacementProposalActions bookingId={booking.id} proposals={replacementProposals} />
 
-          <ClientRescheduleRequestPanel requests={rescheduleRequests} />
+          <ClientRescheduleRequestPanel bookingId={booking.id} requests={rescheduleRequests} />
 
           <BookingActions booking={bookingActionsPayload as any} />
         </div>

@@ -5,12 +5,18 @@ const checks = [];
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
+const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
+const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
+const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
 
 const layout = read(layoutPath);
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
+const clientReservationDetail = read(clientReservationDetailPath);
+const clientReschedulePanel = read(clientReschedulePanelPath);
+const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
 
@@ -125,6 +131,16 @@ record(
   /Professeurs en cours de publication/.test(publicTeachersPage)
     && /Transmettre mon besoin/.test(publicTeachersPage)
     && !/Retour accueil/.test(publicTeachersPage),
+);
+
+record(
+  "Client can resume and verify paid reschedule supplements from the booking detail",
+  /paydunyaCheckoutUrl:\s*request\.paydunyaCheckoutUrl/.test(clientReservationDetail)
+    && /<ClientRescheduleRequestPanel\s+bookingId=\{booking\.id\}\s+requests=\{rescheduleRequests\}\s*\/>/.test(clientReservationDetail)
+    && /action:\s*"reschedule_fee_checkout"/.test(clientReschedulePanel)
+    && /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel)
+    && /case\s+"reschedule_fee_checkout"/.test(bookingApi)
+    && /createPayDunyaRescheduleFeeInvoice/.test(bookingApi),
 );
 
 for (const check of checks) {

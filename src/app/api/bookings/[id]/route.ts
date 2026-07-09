@@ -1318,6 +1318,149 @@ export async function PATCH(
       }, { status: result.action === "rejected" ? 409 : 200 });
     }
 
+    case "reschedule_fee_checkout": {
+      if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+      }
+      const requestId = typeof rescheduleRequestId === "string" ? rescheduleRequestId : null;
+      if (!requestId) {
+        return NextResponse.json({ error: "Demande de modification introuvable." }, { status: 400 });
+      }
+      const request = await db.bookingRescheduleRequest.findFirst({
+        where: {
+          id: requestId,
+          bookingId: booking.id,
+          clientId: booking.clientId,
+          status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED"] },
+        },
+      });
+      if (!request) {
+        return NextResponse.json({ error: "Aucun supplément PayDunya à payer pour cette demande." }, { status: 404 });
+      }
+      if (request.feeAmount <= 0 || request.totalToPay <= 0) {
+        return NextResponse.json({ error: "Cette modification ne nécessite pas de supplément." }, { status: 400 });
+      }
+
+      const reusableStatus = (request.paydunyaStatus ?? "").toUpperCase();
+      const canReusePayDunyaCheckout = Boolean(
+        request.paydunyaCheckoutUrl
+        && !["COMPLETED", "FAILED", "CANCELLED", "CANCELED", "REJECTED", "CREATE_FAILED", "NOT_CONFIGURED"].includes(reusableStatus),
+      );
+      if (canReusePayDunyaCheckout) {
+        return NextResponse.json({
+          ok: true,
+          payment: {
+            provider: "PAYDUNYA",
+            configured: true,
+            checkoutUrl: request.paydunyaCheckoutUrl,
+            status: request.paydunyaStatus ?? "PENDING",
+            message: "Lien PayDunya du supplément réutilisé.",
+          },
+        });
+      }
+
+      let payment: Awaited<ReturnType<typeof createPayDunyaRescheduleFeeInvoice>>;
+      try {
+        payment = await createPayDunyaRescheduleFeeInvoice({
+          origin: getPayDunyaPublicBaseUrl(req),
+          booking: {
+            id: booking.id,
+            reference: booking.reference,
+            subjectName: booking.subjectName,
+            levelName: booking.levelName,
+          },
+          rescheduleRequest: {
+            id: request.id,
+            oldScheduledTime: request.oldScheduledTime,
+            proposedTime: request.proposedTime,
+            feeAmount: request.feeAmount,
+            paymentServiceFeeAmount: request.paymentServiceFeeAmount,
+            paymentServiceFeeLabel: request.paymentServiceFeeLabel,
+            totalToPay: request.totalToPay,
+          },
+          client: {
+            id: booking.client.id,
+            name: booking.client.name,
+            email: booking.client.email,
+            phone: booking.client.phone,
+          },
+          teacher: {
+            id: booking.teacher.id,
+            name: booking.teacher.professionalName || booking.teacher.fullName,
+          },
+        });
+      } catch (error: any) {
+        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement du supplément.";
+        await db.bookingRescheduleRequest.update({
+          where: { id: request.id },
+          data: {
+            status: "PAYMENT_FAILED",
+            paydunyaStatus: "CREATE_FAILED",
+            paydunyaFailureReason: errorMessage,
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: errorMessage,
+          },
+        });
+        return NextResponse.json({ error: errorMessage }, { status: 503 });
+      }
+
+      if (!payment.configured || !payment.checkoutUrl) {
+        await db.bookingRescheduleRequest.update({
+          where: { id: request.id },
+          data: {
+            status: "PAYMENT_FAILED",
+            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
+            paydunyaFailureReason: payment.configured
+              ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
+              : "PayDunya n'est pas encore configuré sur cette installation.",
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
+          },
+        });
+        return NextResponse.json({
+          error: payment.configured
+            ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
+            : "PayDunya n'est pas encore configuré sur cette installation.",
+        }, { status: 503 });
+      }
+
+      await db.bookingRescheduleRequest.update({
+        where: { id: request.id },
+        data: {
+          status: "PAYMENT_PENDING",
+          paydunyaToken: payment.token,
+          paydunyaCheckoutUrl: payment.checkoutUrl,
+          paydunyaStatus: "PENDING",
+          paydunyaFailureReason: null,
+          paydunyaLastCheckedAt: new Date(),
+          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
+        },
+      });
+
+      await db.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Supplément modification PayDunya relancé",
+          entityType: "BookingRescheduleRequest",
+          entityId: request.id,
+          detail: `${booking.client.name} a relancé le paiement du supplément ${request.totalToPay.toLocaleString("fr-FR")} FCFA pour ${booking.reference}.`,
+          oldStatus: request.status,
+          newStatus: "PAYMENT_PENDING",
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        payment: {
+          provider: "PAYDUNYA",
+          configured: payment.configured,
+          checkoutUrl: payment.checkoutUrl,
+          status: "PENDING",
+          message: "Lien PayDunya du supplément créé.",
+        },
+      });
+    }
+
     case "reschedule": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
         return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
