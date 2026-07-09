@@ -4877,3 +4877,70 @@ b {
     display: block !important;
   }
 }
+
+/* Mobile app safe area: bottom navigation never covers page content. */
+@media (max-width: 1023px) {
+  .public-shell.public-shell--mobile-nav-visible main.public-main-with-mobile-nav {
+    padding-bottom: calc(7.25rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .public-shell.public-shell--mobile-nav-visible footer {
+    padding-bottom: calc(7.75rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .client-shell main.client-main-with-mobile-nav {
+    padding-bottom: calc(8.25rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .client-shell main.client-main-with-mobile-nav .client-content {
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  .public-mobile-nav,
+  .client-shell [data-client-mobile-nav] {
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: calc(100dvh - var(--app-topbar-height) - 1.5rem) !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .public-mobile-nav > div,
+  .client-shell [data-client-mobile-nav] > div {
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+
+  .client-shell [data-client-tab-bar] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    padding: 0.35rem !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell [data-client-tab-item] {
+    min-inline-size: 0 !important;
+    inline-size: 100% !important;
+    flex: initial !important;
+  }
+
+  .client-shell [data-client-tab-item] > span:first-child {
+    overflow: hidden !important;
+    overflow-wrap: normal !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 1023px) {
+  .client-shell [data-client-tab-bar] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

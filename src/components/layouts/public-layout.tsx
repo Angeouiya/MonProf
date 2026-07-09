@@ -235,7 +235,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className="flex-1">{children}</main>
+      <main className={cn("flex-1", !hideMobileNav && "public-main-with-mobile-nav")}>{children}</main>
 
       <footer className={cn("mt-auto border-t border-[#E3E8F2] bg-white lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
