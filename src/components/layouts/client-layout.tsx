@@ -50,19 +50,21 @@ const quickSearchItems = [
 ];
 
 const CLIENT_NAV_PREFETCH = true;
-const CLIENT_PRIORITY_PREFETCH_ROUTES = [
+const CLIENT_PRIMARY_PREFETCH_ROUTES = [
   "/client",
   "/client/rechercher",
   "/client/reservations",
-  "/client/cours",
   "/client/paiements",
   "/client/notifications",
+];
+const CLIENT_SECONDARY_PREFETCH_ROUTES = [
+  "/client/cours",
   "/client/avis",
   "/client/service-client",
   "/client/profil",
   "/client/parametres",
 ];
-const CLIENT_IDLE_PREFETCH_ROUTES = CLIENT_PRIORITY_PREFETCH_ROUTES;
+const CLIENT_PRIORITY_PREFETCH_ROUTES = [...CLIENT_PRIMARY_PREFETCH_ROUTES, ...CLIENT_SECONDARY_PREFETCH_ROUTES];
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 70;
 const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 900;
 
@@ -172,10 +174,11 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (slowConnection) return;
 
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
-    const routes = CLIENT_IDLE_PREFETCH_ROUTES;
+    const routes = desktop ? CLIENT_PRIORITY_PREFETCH_ROUTES : CLIENT_PRIMARY_PREFETCH_ROUTES;
+    const staggerMs = desktop ? 70 : 120;
     const prefetchClientRoutes = () => {
       const timers = routes.map((route, index) => (
-        window.setTimeout(() => prefetchClientRoute(route), index * 70)
+        window.setTimeout(() => prefetchClientRoute(route), index * staggerMs)
       ));
       return () => timers.forEach((timer) => window.clearTimeout(timer));
     };
@@ -188,7 +191,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (browserWindow.requestIdleCallback) {
       const idleId = browserWindow.requestIdleCallback(() => {
         cancelStaggeredPrefetch = prefetchClientRoutes();
-      }, { timeout: desktop ? 350 : 650 });
+      }, { timeout: desktop ? 350 : 850 });
       return () => {
         browserWindow.cancelIdleCallback?.(idleId);
         cancelStaggeredPrefetch?.();
@@ -197,12 +200,20 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
     const timer = window.setTimeout(() => {
       cancelStaggeredPrefetch = prefetchClientRoutes();
-    }, desktop ? 90 : 260);
+    }, desktop ? 90 : 420);
     return () => {
       window.clearTimeout(timer);
       cancelStaggeredPrefetch?.();
     };
   }, [prefetchClientRoute]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timers = CLIENT_SECONDARY_PREFETCH_ROUTES.map((route, index) => (
+      window.setTimeout(() => prefetchClientRoute(route), 120 + index * 80)
+    ));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [open, prefetchClientRoute]);
 
   useEffect(() => {
     if (!open && !mobileSearchOpen) return;

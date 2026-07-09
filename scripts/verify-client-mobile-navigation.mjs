@@ -67,20 +67,52 @@ record(
 );
 
 record(
-  "Client navigation prefetch is prioritized and feedback avoids instant-load flashes",
+  "Client navigation prefetch is prioritized without overloading mobile startup",
   /const CLIENT_NAV_PREFETCH\s*=\s*true\s*;/.test(layout)
-    && /const CLIENT_IDLE_PREFETCH_ROUTES\s*=\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*;/.test(layout)
+    && /const CLIENT_PRIMARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
+    && /const CLIENT_SECONDARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
+    && /const CLIENT_PRIORITY_PREFETCH_ROUTES\s*=\s*\[\.\.\.CLIENT_PRIMARY_PREFETCH_ROUTES,\s*\.\.\.CLIENT_SECONDARY_PREFETCH_ROUTES\]\s*;/.test(layout)
     && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*70\s*;/.test(layout)
     && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*900\s*;/.test(layout)
-    && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*70/.test(layout)
-    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*350\s*:\s*650\s*\}/.test(layout)
-    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*90\s*:\s*260\s*\)/.test(layout)
+    && /const routes\s*=\s*desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES\s*;/.test(layout)
+    && /const staggerMs\s*=\s*desktop\s*\?\s*70\s*:\s*120\s*;/.test(layout)
+    && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*staggerMs/.test(layout)
+    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*350\s*:\s*850\s*\}/.test(layout)
+    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*90\s*:\s*420\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
 );
 
 record(
-  "Client idle prefetch covers every main client tab",
+  "Client idle prefetch covers core mobile tabs and every desktop client tab",
+  [
+    "/client",
+    "/client/rechercher",
+    "/client/reservations",
+    "/client/paiements",
+    "/client/notifications",
+  ].every((route) => layout.includes(`"${route}"`))
+    && [
+      "/client/cours",
+      "/client/avis",
+      "/client/service-client",
+      "/client/profil",
+      "/client/parametres",
+    ].every((route) => layout.includes(`"${route}"`))
+    && /desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES/.test(layout)
+    && /slowConnection\)\s*return/.test(layout)
+    && /connection\?\.saveData/.test(layout),
+);
+
+record(
+  "Client secondary routes prefetch only when the drawer is intentionally opened",
+  /if\s*\(!open\)\s*return\s*;/.test(layout)
+    && /CLIENT_SECONDARY_PREFETCH_ROUTES\.map\(\(route,\s*index\)\s*=>\s*\(/.test(layout)
+    && /120\s*\+\s*index\s*\*\s*80/.test(layout),
+);
+
+record(
+  "Client route constants still include every main client tab",
   [
     "/client",
     "/client/rechercher",
@@ -92,9 +124,7 @@ record(
     "/client/service-client",
     "/client/profil",
     "/client/parametres",
-  ].every((route) => layout.includes(`"${route}"`))
-    && /slowConnection\)\s*return/.test(layout)
-    && /connection\?\.saveData/.test(layout),
+  ].every((route) => layout.includes(`"${route}"`)),
 );
 
 record(
