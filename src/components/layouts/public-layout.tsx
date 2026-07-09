@@ -79,7 +79,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
-            prefetch={false}
+            prefetch={true}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white"
             onClick={() => setMobileOpen(false)}
           >
@@ -91,7 +91,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                prefetch={false}
+                prefetch={true}
                 className={cn(
                   "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.href)
@@ -107,24 +107,24 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           <div className="hidden items-center gap-2 lg:flex">
             {isClient && (
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/client" prefetch={false}>
+                <Link href="/client" prefetch={true}>
                   <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
                 </Link>
               </Button>
             )}
             {isAdmin && (
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/admin" prefetch={false}>Service client</Link>
+                <Link href="/admin" prefetch={true}>Service client</Link>
               </Button>
             )}
             {!session && (
               <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
-                <Link href="/connexion" prefetch={false}>Connexion</Link>
+                <Link href="/connexion" prefetch={true}>Connexion</Link>
               </Button>
             )}
             {!session && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/inscription" prefetch={false}>
+                <Link href="/inscription" prefetch={true}>
                   Créer un compte
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -132,7 +132,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
             {session && !isAdmin && !isClient && (
               <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
-                <Link href="/connexion" prefetch={false}>Connexion</Link>
+                <Link href="/connexion" prefetch={true}>Connexion</Link>
               </Button>
             )}
           </div>
@@ -158,7 +158,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             <Link
               href="/professeurs"
-              prefetch={false}
+              prefetch={true}
               onClick={() => setMobileOpen(false)}
               className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
             >
@@ -172,7 +172,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={link.href}
                 href={link.href}
-                prefetch={false}
+                prefetch={true}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
@@ -198,23 +198,23 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
               {isClient && (
                 <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href="/client" prefetch={false} onClick={() => setMobileOpen(false)}>
+                  <Link href="/client" prefetch={true} onClick={() => setMobileOpen(false)}>
                     <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
                   </Link>
                 </Button>
               )}
               {isAdmin && (
                 <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href="/admin" prefetch={false} onClick={() => setMobileOpen(false)}>Service client</Link>
+                  <Link href="/admin" prefetch={true} onClick={() => setMobileOpen(false)}>Service client</Link>
                 </Button>
               )}
               {!session && (
                 <>
                   <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                    <Link href="/connexion" prefetch={false} onClick={() => setMobileOpen(false)}>Connexion</Link>
+                    <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
                   </Button>
                   <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href="/inscription" prefetch={false} onClick={() => setMobileOpen(false)}>
+                    <Link href="/inscription" prefetch={true} onClick={() => setMobileOpen(false)}>
                       Créer un compte
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
@@ -251,7 +251,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </p>
               </div>
               <Button asChild className="min-h-12 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/professeurs" prefetch={false}>
+                <Link href="/professeurs" prefetch={true}>
                   Trouver un professeur
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -282,7 +282,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <ul className="mt-3 space-y-1 text-sm">
                 {footerPlatformLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} prefetch={false} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
+                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
                       {link.label}
                     </Link>
                   </li>
@@ -294,7 +294,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <ul className="mt-3 space-y-1 text-sm">
                 {footerAccountLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} prefetch={false} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
+                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
                       {link.label}
                     </Link>
                   </li>
@@ -306,7 +306,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <ul className="mt-3 space-y-1 text-sm">
                 {footerLegalLinks.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} prefetch={false} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
+                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
                       {link.label}
                     </Link>
                   </li>
@@ -328,14 +328,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-[#111B4D]" /> Professeurs vérifiés · Paiement sécurisé</span>
               <Link
                 href="/conditions-utilisation"
-                prefetch={false}
+                prefetch={true}
                 className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
               >
                 CGU
               </Link>
               <Link
                 href="/politique-confidentialite"
-                prefetch={false}
+                prefetch={true}
                 className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
               >
                 Confidentialité
@@ -392,7 +392,7 @@ function PublicMobileNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
+              prefetch={true}
               className={cn(
                 "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[0.7rem] font-semibold transition-colors",
                 active

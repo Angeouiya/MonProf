@@ -4957,3 +4957,74 @@ b {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
+
+/* Client production guard: navigation must stay readable on short desktop and small phones. */
+.client-shell [data-client-sidebar] {
+  overflow: hidden !important;
+}
+
+.client-shell [data-client-sidebar-nav],
+.client-shell .client-mobile-drawer [data-client-sidebar-nav] {
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.client-shell [data-client-sidebar-account] {
+  max-height: 8rem;
+}
+
+@media (max-height: 760px) and (min-width: 1024px) {
+  .client-shell [data-client-sidebar-account] {
+    max-height: 6.5rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .client-shell [data-client-tab-bar] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    padding: 0.35rem !important;
+    scroll-snap-type: none !important;
+  }
+
+  .client-shell [data-client-tab-item] {
+    inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    min-width: 0 !important;
+    max-inline-size: none !important;
+    flex: initial !important;
+    white-space: normal !important;
+  }
+
+  .client-shell [data-client-tab-item] > span:first-child {
+    display: block !important;
+    min-inline-size: 0 !important;
+    max-inline-size: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: keep-all !important;
+  }
+
+  .client-shell [data-client-tab-item] > span:last-child {
+    flex-shrink: 0 !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .client-shell [data-client-tab-bar] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 560px) and (max-width: 1023px) {
+  .client-shell [data-client-tab-bar] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

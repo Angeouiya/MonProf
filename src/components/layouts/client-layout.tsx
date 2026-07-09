@@ -30,9 +30,6 @@ const navItems: ClientNavItem[] = [
   { href: "/client/notifications", label: "Notifications", icon: Bell },
   { href: "/client/avis", label: "Avis", icon: MessageSquare },
   { href: "/client/service-client", label: "Service client", icon: LifeBuoy },
-];
-
-const accountNavItems: ClientNavItem[] = [
   { href: "/client/profil", label: "Profil", icon: User },
   { href: "/client/parametres", label: "Paramètres", icon: Settings },
 ];
@@ -458,40 +455,16 @@ function SidebarContent({
           );
         })}
       </nav>
-      <div data-client-sidebar-account className={cn("client-sidebar-account shrink-0 border-t border-[#E6EAF3]", compactAccount ? "p-2.5" : "p-3")}>
-        <div className="bg-white p-1">
+      <div data-client-sidebar-account className={cn("client-sidebar-account shrink-0 border-t border-[#E6EAF3]", compactAccount ? "p-2" : "p-2.5")}>
+        <div className="bg-white">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
               {getInitials(userName ?? "Client")}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
-              <p className="truncate text-xs font-medium text-[#64748B]">{compactAccount ? "Compte client" : "Espace personnel"}</p>
+              <p className="truncate text-xs font-medium text-[#64748B]">Compte client</p>
             </div>
-          </div>
-          <div className={cn("mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2", compactAccount && "gap-1.5")} aria-label="Compte client">
-            {accountNavItems.map((item) => {
-              const active = isActive(item);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch={CLIENT_NAV_PREFETCH}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "inline-flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors",
-                    compactAccount && "min-h-10",
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : "border-[#E3E8F2] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]",
-                  )}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
           </div>
           <ImportantActionConfirm
             title="Quitter l'espace client ?"
@@ -509,7 +482,7 @@ function SidebarContent({
               <button
                 type="button"
                 className={cn(
-                  "mt-2 flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]",
+                  "mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]",
                   compactAccount && "min-h-10",
                 )}
               >
