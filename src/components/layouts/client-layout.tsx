@@ -483,7 +483,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             />
             <aside
               data-client-mobile-drawer
-              className="client-mobile-menu-panel absolute inset-x-2 top-2 mx-auto flex max-h-[calc(100%-1rem)] w-[min(28rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-lg border border-[#E6EAF3] bg-white"
+              className="client-mobile-menu-panel absolute bottom-2 left-2 top-2 flex w-[min(22.5rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-lg border border-[#E6EAF3] bg-white"
               role="dialog"
               aria-modal="true"
               aria-label="Menu client"

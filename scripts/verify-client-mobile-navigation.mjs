@@ -24,8 +24,19 @@ record(
 );
 
 record(
+  "Client mobile drawer is an app-like side sheet, not a centered blocking card",
+  /data-client-mobile-drawer[\s\S]*?className="[^"]*absolute bottom-2 left-2 top-2[\s\S]*?w-\[min\(22\.5rem,calc\(100vw-1rem\)\)\]/.test(layout)
+    && /\.client-shell\s*\[data-client-mobile-drawer\]\.client-mobile-menu-panel\s*\{[\s\S]*?right:\s*auto\s*!important;[\s\S]*?width:\s*min\(22\.5rem,\s*calc\(100vw - 1rem\)\)\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
   "CSS also disables bottom nav when the mobile menu is open",
   /\.client-shell\[data-mobile-menu-open="true"\]\s*\[data-client-mobile-nav\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?pointer-events:\s*none\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Client mobile overlay is dimmed without turning the app into a black screen",
+  /\.client-shell\s*\[data-client-mobile-layer\]\s*>\s*button\s*\{[\s\S]*?opacity:\s*0\.46\s*!important;[\s\S]*?\}/.test(css),
 );
 
 record(
@@ -48,6 +59,12 @@ record(
   /const showPrimaryAction\s*=\s*!compactAccount\s*;/.test(layout)
     && /\{showPrimaryAction\s*&&\s*\(/.test(layout)
     && /compactAccount\s*\/>/.test(layout),
+);
+
+record(
+  "Client sidebar keeps one clear profile/settings pair",
+  countOccurrences(layout, 'href: "/client/profil"') === 1
+    && countOccurrences(layout, 'href: "/client/parametres"') === 1,
 );
 
 record(
@@ -81,4 +98,8 @@ function read(filePath) {
 
 function record(label, ok) {
   checks.push({ label, ok });
+}
+
+function countOccurrences(source, needle) {
+  return source.split(needle).length - 1;
 }

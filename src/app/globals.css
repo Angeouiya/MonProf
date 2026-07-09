@@ -5061,11 +5061,17 @@ b {
 }
 
 .client-shell [data-client-mobile-layer] > button {
-  opacity: 1 !important;
+  opacity: 0.46 !important;
 }
 
 .client-shell [data-client-mobile-drawer].client-mobile-menu-panel {
-  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.24) !important;
+  bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+  left: max(0.5rem, env(safe-area-inset-left)) !important;
+  right: auto !important;
+  top: 0.5rem !important;
+  width: min(22.5rem, calc(100vw - 1rem)) !important;
+  max-height: calc(100dvh - var(--app-topbar-height) - 1rem) !important;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.18) !important;
 }
 
 @media (max-height: 760px) and (min-width: 1024px) {
