@@ -47,13 +47,16 @@ record(
 );
 
 record(
-  "Client navigation prefetch is prioritized and staggered for app-like transitions",
+  "Client navigation prefetch is prioritized and feedback avoids instant-load flashes",
   /const CLIENT_NAV_PREFETCH\s*=\s*true\s*;/.test(layout)
     && /const CLIENT_IDLE_PREFETCH_ROUTES\s*=\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*;/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*120\s*;/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*1400\s*;/.test(layout)
     && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*120/.test(layout)
     && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*600\s*:\s*1000\s*\}/.test(layout)
     && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*180\s*:\s*520\s*\)/.test(layout)
-    && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*16\s*\)/.test(layout),
+    && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
+    && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
 );
 
 record(

@@ -57,6 +57,8 @@ const CLIENT_PRIORITY_PREFETCH_ROUTES = [
   "/client/notifications",
 ];
 const CLIENT_IDLE_PREFETCH_ROUTES = CLIENT_PRIORITY_PREFETCH_ROUTES;
+const CLIENT_NAV_FEEDBACK_DELAY_MS = 120;
+const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 1400;
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -215,7 +217,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 16);
+    }, CLIENT_NAV_FEEDBACK_DELAY_MS);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -223,7 +225,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 1800);
+    }, CLIENT_NAV_FEEDBACK_TIMEOUT_MS);
   }
 
   function getClientNavigationTarget(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement> | FocusEvent<HTMLElement>) {
