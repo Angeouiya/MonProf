@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,6 +27,7 @@ function resolveMetadataBase() {
 
 export const metadata: Metadata = {
   metadataBase: resolveMetadataBase(),
+  applicationName: "Compétence",
   title: "Compétence — Professeurs vérifiés pour cours à domicile et en ligne",
   description:
     "Plateforme ivoirienne de réservation de cours à domicile et en ligne avec des professeurs vérifiés, un paiement sécurisé et un suivi service client complet.",
@@ -43,10 +44,26 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/images/brand/competence-icon.png",
+    icon: [
+      { url: "/images/brand/competence-icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/images/brand/competence-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     shortcut: "/images/brand/competence-icon.png",
+    apple: "/images/brand/competence-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    title: "Compétence",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+  category: "education",
   openGraph: {
     title: "Compétence — Professeurs vérifiés en Côte d'Ivoire",
     description:
@@ -55,6 +72,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_CI",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#111B4D",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
