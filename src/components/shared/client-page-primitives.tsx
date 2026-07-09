@@ -45,7 +45,7 @@ export function ClientPageHeader({
             {title}
           </h1>
           {description && (
-            <div className="mt-1 line-clamp-1 max-w-3xl text-sm font-medium leading-6 text-[#52627A] min-[560px]:line-clamp-2 xl:line-clamp-none">
+            <div data-client-page-header-description className="mt-1 line-clamp-1 max-w-3xl text-sm font-medium leading-6 text-[#52627A] min-[560px]:line-clamp-2 xl:line-clamp-none">
               {description}
             </div>
           )}
@@ -199,7 +199,7 @@ export function ClientSectionTitle({
       <div className="min-w-0">
         {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{eyebrow}</p>}
         <h2 className="text-[0.98rem] font-semibold leading-tight tracking-normal text-[#111827] sm:text-[1.08rem]">{title}</h2>
-        {description && <div className="mt-1 line-clamp-2 max-w-2xl text-sm font-medium leading-6 text-[#64748B] sm:line-clamp-none">{description}</div>}
+        {description && <div data-client-section-description className="mt-1 line-clamp-2 max-w-2xl text-sm font-medium leading-6 text-[#64748B] sm:line-clamp-none">{description}</div>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -233,7 +233,7 @@ export function ClientFocusPanel({
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{eyebrow}</p>
             <div className="mt-1 text-base font-semibold leading-tight text-[#111827] sm:text-lg">{title}</div>
-            {description && <div className="mt-1 break-words text-sm font-medium leading-5 text-[#52627A]">{description}</div>}
+            {description && <div data-client-focus-description className="mt-1 break-words text-sm font-medium leading-5 text-[#52627A]">{description}</div>}
           </div>
         </div>
         {action && <div className="shrink-0 min-[640px]:min-w-48">{action}</div>}

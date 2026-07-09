@@ -118,6 +118,15 @@ record(
 );
 
 record(
+  "Client mobile pages keep app-like compact copy",
+  /data-client-page-header-description/.test(clientPrimitives)
+    && /data-client-section-description/.test(clientPrimitives)
+    && /data-client-focus-description/.test(clientPrimitives)
+    && /\[data-client-page-header-description\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
+    && /\[data-client-section-description\],[\s\S]*?\[data-client-focus-description\]\s*\{[\s\S]*?-webkit-line-clamp:\s*1;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)

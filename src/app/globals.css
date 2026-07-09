@@ -5148,6 +5148,18 @@ b {
     line-height: 1.08 !important;
   }
 
+  .client-shell [data-client-page-header-description] {
+    display: none !important;
+  }
+
+  .client-shell [data-client-section-description],
+  .client-shell [data-client-focus-description] {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
   .client-shell :where([data-client-page-header], [data-client-section-title]) :where(p, div) {
     max-width: 100%;
   }
