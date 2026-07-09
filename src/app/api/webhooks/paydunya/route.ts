@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
   const data = normalizePayDunyaData(payload);
   const invoice = asRecord(data.invoice) ?? {};
   const customData = asRecord(data.custom_data) ?? asRecord(invoice.custom_data) ?? {};
-  const status = firstString(data.status)?.toLowerCase() ?? null;
-  const hash = firstString(data.hash);
+  const status = firstString(data.status, payload.status)?.toLowerCase() ?? null;
+  const hash = firstString(data.hash, payload.hash);
   const hashVerified = await verifyPayDunyaHash(hash);
   const invoiceToken = firstString(
     invoice.token,
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
     data.invoiceToken,
     data.paydunya_token,
     data.paydunyaToken,
+    payload.token,
+    payload.invoice_token,
+    payload.invoiceToken,
+    payload.paydunya_token,
+    payload.paydunyaToken,
   );
   const bookingId = firstString(
     customData.booking_id,
@@ -41,12 +46,14 @@ export async function POST(req: NextRequest) {
     customData.booking,
     data.booking_id,
     invoice.booking_id,
+    payload.booking_id,
   );
   const bookingReference = firstString(
     customData.booking_reference,
     customData.bookingReference,
     data.booking_reference,
     invoice.booking_reference,
+    payload.booking_reference,
   );
 
   if (!bookingId && !bookingReference && !invoiceToken) {
