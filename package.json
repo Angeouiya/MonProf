@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
-    "build:production": "npm run production:check && npm run verify:client-mobile && npm run verify:operational-flows && npm run db:verify && npm run payment:audit && npm run build",
+    "build:production": "npm run production:check && npm run typecheck && npm run lint && npm run verify:client-mobile && npm run verify:operational-flows && npm run db:verify && npm run payment:audit && npm run build",
     "start": "node .next/standalone/server.js",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:verify": "node scripts/check-database-readiness.mjs",
