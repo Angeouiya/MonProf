@@ -274,30 +274,52 @@ export async function PATCH(
       }
 
       const pricingSnapshot = parsePricingSnapshot(detailedBooking.pricingSnapshot);
-      const payment = await createPayDunyaCheckoutInvoice({
-        origin: getPayDunyaPublicBaseUrl(req),
-        booking: {
-          id: detailedBooking.id,
-          reference: detailedBooking.reference,
-          subjectName: detailedBooking.subjectName,
-          levelName: detailedBooking.levelName,
-          sessionsCount: pricingSnapshot?.numberOfSessions ?? detailedBooking.sessionsCount,
-          totalClientPays: pricingSnapshot?.totalClientPays ?? detailedBooking.totalClientPays ?? detailedBooking.totalPrice,
-          courseAmount: pricingSnapshot?.courseAmount ?? detailedBooking.courseAmount,
-          transportFee: pricingSnapshot?.transportFee ?? detailedBooking.transportFee,
-          paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? detailedBooking.paymentServiceFeeAmount,
-          paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? detailedBooking.paymentServiceFeeLabel,
-        },
-        client: {
-          id: detailedBooking.client.id,
-          name: detailedBooking.client.name,
-          email: detailedBooking.client.email,
-        },
-        teacher: {
-          id: detailedBooking.teacher.id,
-          name: detailedBooking.teacher.professionalName || detailedBooking.teacher.fullName,
-        },
-      });
+      let payment: Awaited<ReturnType<typeof createPayDunyaCheckoutInvoice>>;
+      try {
+        payment = await createPayDunyaCheckoutInvoice({
+          origin: getPayDunyaPublicBaseUrl(req),
+          booking: {
+            id: detailedBooking.id,
+            reference: detailedBooking.reference,
+            subjectName: detailedBooking.subjectName,
+            levelName: detailedBooking.levelName,
+            sessionsCount: pricingSnapshot?.numberOfSessions ?? detailedBooking.sessionsCount,
+            totalClientPays: pricingSnapshot?.totalClientPays ?? detailedBooking.totalClientPays ?? detailedBooking.totalPrice,
+            courseAmount: pricingSnapshot?.courseAmount ?? detailedBooking.courseAmount,
+            transportFee: pricingSnapshot?.transportFee ?? detailedBooking.transportFee,
+            paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? detailedBooking.paymentServiceFeeAmount,
+            paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? detailedBooking.paymentServiceFeeLabel,
+          },
+          client: {
+            id: detailedBooking.client.id,
+            name: detailedBooking.client.name,
+            email: detailedBooking.client.email,
+          },
+          teacher: {
+            id: detailedBooking.teacher.id,
+            name: detailedBooking.teacher.professionalName || detailedBooking.teacher.fullName,
+          },
+        });
+      } catch (error: any) {
+        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement.";
+        await db.booking.update({
+          where: { id: booking.id },
+          data: {
+            paydunyaStatus: "CREATE_FAILED",
+            paydunyaFailureReason: errorMessage,
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: errorMessage,
+          },
+        });
+        return NextResponse.json({
+          error: errorMessage,
+          payment: {
+            provider: "PAYDUNYA",
+            configured: true,
+            checkoutUrl: null,
+          },
+        }, { status: 503 });
+      }
 
       if (!payment.configured || !payment.checkoutUrl) {
         await db.booking.update({

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { ImageIcon, Search, X } from "lucide-react";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 
 export function ProfesseursListClient({
   filters,
@@ -45,6 +46,14 @@ export function ProfesseursListClient({
     () => filters.q || filters.status || filters.subject || filters.commune || filters.badge || filters.photo,
     [filters],
   );
+  const communeGroups = useMemo(() => [{
+    label: "Villes et communes",
+    options: communes.map((commune) => ({
+      value: commune.name,
+      label: commune.name,
+      keywords: commune.name,
+    })),
+  }], [communes]);
 
   return (
     <Card className="overflow-hidden border-violet-100 bg-white">
@@ -91,15 +100,17 @@ export function ProfesseursListClient({
             </SelectContent>
           </Select>
 
-          <Select value={filters.commune || "all"} onValueChange={(v) => apply({ commune: v === "all" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder="Commune" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes communes</SelectItem>
-              {communes.map((c) => (
-                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SearchableCatalogSelect
+            name="commune"
+            value={filters.commune}
+            placeholder="Toutes communes"
+            searchPlaceholder="Tapez une ville ou commune..."
+            emptyLabel="Aucune commune trouvée"
+            allLabel="Toutes communes"
+            groups={communeGroups}
+            onValueChange={(value) => apply({ commune: value })}
+            triggerClassName="min-h-10"
+          />
 
           <Select value={filters.badge || "all"} onValueChange={(v) => apply({ badge: v === "all" ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Badge" /></SelectTrigger>

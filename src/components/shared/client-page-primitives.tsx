@@ -510,49 +510,39 @@ export function ClientAppRail({
   }>;
   className?: string;
 }) {
-  const railGridClassName = items.length === 1
-    ? "grid-cols-1"
-    : items.length === 2
-      ? "grid-cols-1 min-[360px]:grid-cols-2"
-      : items.length === 3
-        ? "grid-cols-2 min-[720px]:grid-cols-3"
-        : items.length >= 5
-          ? "grid-cols-2 min-[720px]:grid-cols-3 min-[1100px]:grid-cols-5"
-          : "grid-cols-2 min-[720px]:grid-cols-4";
-
   return (
     <div
       data-client-app-rail
+      data-client-app-rail-compact
       className={cn(
-        "client-app-rail grid grid-cols-1 gap-1 overflow-visible rounded-lg border border-[#D8DEE9] bg-white p-1 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 min-[720px]:grid-flow-row",
-        railGridClassName,
+        "client-app-rail hidden items-center gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[640px]:flex",
         className,
       )}
       aria-label="Raccourcis client"
       role="navigation"
     >
-      {items.map((item, index) => {
+      {items.map((item) => {
         const content = (
           <>
-            <span className="flex w-full items-center justify-center gap-2 min-[720px]:w-auto min-[720px]:justify-start">
+            <span className="flex items-center justify-center">
               <span
                 className={cn(
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors min-[720px]:h-9 min-[720px]:w-9",
-                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#111B4D] bg-[#111B4D] text-white",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors",
+                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#D8DEE9] bg-white text-[#111B4D]",
                 )}
               >
-                {item.icon && <item.icon className="h-3.5 w-3.5 min-[720px]:h-4 min-[720px]:w-4" />}
+                {item.icon && <item.icon className="h-3.5 w-3.5" />}
               </span>
             </span>
-            <span className="min-w-0 text-center min-[720px]:flex-1 min-[720px]:text-left">
+            <span className="min-w-0 text-left">
               <span className={cn(
-                "block truncate text-[10px] font-semibold uppercase leading-3 tracking-wide min-[380px]:text-[10.5px]",
+                "block truncate text-[10px] font-semibold uppercase leading-3 tracking-wide",
                 item.active ? "text-white" : "text-[#64748B]",
               )}>
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 block truncate text-[0.72rem] font-semibold leading-4 min-[720px]:text-sm min-[720px]:leading-5",
+                "mt-0.5 block max-w-[9rem] truncate text-xs font-semibold leading-4",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -570,13 +560,12 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group flex min-h-14 min-w-0 snap-start items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0] min-[380px]:px-3 min-[720px]:snap-none",
-          items.length % 2 === 1 && index === items.length - 1 && "min-[720px]:col-span-1",
+          "client-shortcut-card group inline-flex min-h-10 min-w-0 shrink-0 snap-start items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
         );
-        const inner = <span className="flex w-full min-w-0 flex-col items-center gap-1.5 min-[720px]:flex-row min-[720px]:gap-3">{content}</span>;
+        const inner = <span className="flex w-full min-w-0 items-center gap-2">{content}</span>;
 
         if (isInternalHref(item.href)) {
           return (

@@ -15,11 +15,14 @@ export default function ClientLoading() {
         <Skeleton className="mt-2 h-4 w-full max-w-2xl bg-[#E6EAF3]" />
       </section>
 
-      <section data-client-loading-rail className="grid grid-cols-2 gap-2 min-[720px]:grid-cols-4">
+      <section data-client-loading-rail className="hidden items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white p-1 min-[640px]:flex">
         {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="min-h-20 rounded-lg border border-[#E3E8F2] bg-white p-3">
-            <Skeleton className="h-3 w-20 bg-[#E6EAF3]" />
-            <Skeleton className="mt-3 h-5 w-24 bg-[#E6EAF3]" />
+          <div key={item} className="flex min-h-10 items-center gap-2 rounded-md px-2.5 py-1.5">
+            <Skeleton className="h-7 w-7 rounded-md bg-white ring-1 ring-[#DDE6F7]" />
+            <div className="min-w-0">
+              <Skeleton className="h-2.5 w-14 bg-[#E6EAF3]" />
+              <Skeleton className="mt-1.5 h-3.5 w-20 bg-[#E6EAF3]" />
+            </div>
           </div>
         ))}
       </section>

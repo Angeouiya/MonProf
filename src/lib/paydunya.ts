@@ -81,6 +81,7 @@ const PAYDUNYA_SETTING_KEYS = {
 
 let payDunyaConfigCache: { expiresAt: number; value: PayDunyaConfig | null } | null = null;
 const PRODUCTION_PUBLIC_BASE_URL = "https://competence.ci";
+const PAYDUNYA_MIN_CHECKOUT_AMOUNT = 200;
 
 export function getPayDunyaPublicBaseUrl(req: NextRequest) {
   const fallbackRequestUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
@@ -137,6 +138,10 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const config = await getPayDunyaConfig();
   if (!config) {
     return { configured: false, checkoutUrl: null, token: null };
+  }
+
+  if (!Number.isFinite(input.booking.totalClientPays) || input.booking.totalClientPays < PAYDUNYA_MIN_CHECKOUT_AMOUNT) {
+    throw new Error(`Montant PayDunya invalide: le total à payer doit être d'au moins ${PAYDUNYA_MIN_CHECKOUT_AMOUNT} FCFA.`);
   }
 
   const endpoint = config.mode === "live"

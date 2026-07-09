@@ -605,7 +605,7 @@ export async function POST(req: NextRequest) {
           paydunyaStatus: "CREATE_FAILED",
           paydunyaFailureReason: errorMessage,
           paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: null,
+          paydunyaLastPayload: errorMessage,
         },
       });
     }
