@@ -392,14 +392,6 @@ export default async function TeachersPage({
                       >
                         {hasPublishedTeachers ? "Réinitialiser les filtres" : "Transmettre mon besoin"}
                       </Link>
-                      {!hasPublishedTeachers && (
-                        <Link
-                          href="/"
-                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#D6DEED] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:w-auto"
-                        >
-                          Retour accueil
-                        </Link>
-                      )}
                     </>
                   }
                 />

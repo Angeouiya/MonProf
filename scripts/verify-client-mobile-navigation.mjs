@@ -4,11 +4,13 @@ const checks = [];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
+const publicTeachersPath = "src/app/professeurs/page.tsx";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
 
 const layout = read(layoutPath);
 const publicLayout = read(publicLayoutPath);
+const publicTeachersPage = read(publicTeachersPath);
 const providers = read(providersPath);
 const css = read(cssPath);
 
@@ -116,6 +118,13 @@ record(
     && !/SessionProvider/.test(providers)
     && /navLinks\.filter\(\(link\)\s*=>\s*link\.href\s*!==\s*"\/professeurs"\)\.map/.test(publicLayout)
     && /!\s*hideMobileNav\s*&&\s*!\s*mobileOpen\s*&&\s*<PublicMobileNav/.test(publicLayout),
+);
+
+record(
+  "Public teacher empty state keeps one primary action",
+  /Professeurs en cours de publication/.test(publicTeachersPage)
+    && /Transmettre mon besoin/.test(publicTeachersPage)
+    && !/Retour accueil/.test(publicTeachersPage),
 );
 
 for (const check of checks) {
