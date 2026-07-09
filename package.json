@@ -18,6 +18,7 @@
     "payment:quarantine": "node scripts/quarantine-unverified-payments.mjs --apply",
     "payment:quarantine:dry": "node scripts/quarantine-unverified-payments.mjs --dry-run",
     "production:check": "node scripts/check-production-config.mjs",
+    "verify:operational-flows": "node scripts/verify-operational-booking-flows.mjs",
     "verify:client-mobile": "node scripts/verify-client-mobile-navigation.mjs",
     "verify:client-app-shell": "node scripts/verify-client-app-shell.mjs"
   },
