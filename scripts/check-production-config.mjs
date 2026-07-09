@@ -31,6 +31,7 @@ checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
 checkBuildDoesNotIgnoreCodeQualityErrors();
+checkVercelDeploymentConfig();
 checkNoPublicPayDunyaSecrets();
 await checkPayDunyaConfiguration();
 
@@ -141,6 +142,55 @@ function checkBuildDoesNotIgnoreCodeQualityErrors() {
   const config = fs.readFileSync(configPath, "utf8");
   record("Production build validates TypeScript errors", !/ignoreBuildErrors\s*:\s*true/.test(config));
   record("Production build keeps ESLint checks enabled", !/ignoreDuringBuilds\s*:\s*true/.test(config));
+}
+
+function checkVercelDeploymentConfig() {
+  const vercelPath = "vercel.json";
+  if (!fs.existsSync(vercelPath)) {
+    record("Vercel deployment config exists", false);
+    return;
+  }
+
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(vercelPath, "utf8"));
+  } catch {
+    record("Vercel deployment config is valid JSON", false);
+    return;
+  }
+
+  record("Vercel uses the full production build pipeline", config.buildCommand === "npm run build:production");
+
+  const cron = Array.isArray(config.crons)
+    ? config.crons.find((item) => item?.path === "/api/cron/notification-reminders")
+    : null;
+  record("Vercel notification reminder cron is configured", Boolean(cron));
+  if (cron) {
+    record("Vercel notification reminder cron runs daily", cron.schedule === "0 8 * * *");
+  }
+
+  const cronRoutePath = "src/app/api/cron/notification-reminders/route.ts";
+  if (!fs.existsSync(cronRoutePath)) {
+    record("Notification reminder cron route exists", false);
+    return;
+  }
+
+  const cronRoute = fs.readFileSync(cronRoutePath, "utf8");
+  record(
+    "Notification reminder cron requires CRON_SECRET authorization",
+    /process\.env\.CRON_SECRET/.test(cronRoute)
+      && /authorization/.test(cronRoute)
+      && /Bearer\s/.test(cronRoute)
+      && /status:\s*401/.test(cronRoute),
+  );
+
+  const ignorePath = ".vercelignore";
+  if (!fs.existsSync(ignorePath)) {
+    record("Vercel ignore file protects local env files", false);
+    return;
+  }
+  const ignore = fs.readFileSync(ignorePath, "utf8");
+  record("Vercel ignore file excludes local env files", /^\.env$/m.test(ignore) && /^\.env\.\*$/m.test(ignore));
 }
 
 async function checkPayDunyaConfiguration() {
