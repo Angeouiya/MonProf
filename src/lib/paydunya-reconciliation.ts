@@ -398,7 +398,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
           action: "Paiement PayDunya vérifié serveur",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Token: ${token}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.`,
+          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Référence PayDunya: ${maskPayDunyaReference(token)}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.`,
           oldStatus: booking.paymentStatus,
           newStatus: nextPaymentStatus,
         },
@@ -454,7 +454,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
         action: failed ? "Paiement PayDunya non finalisé" : "Paiement PayDunya en attente",
         entityType: "Booking",
         entityId: booking.id,
-        detail: `Source: ${input.source}. Statut PayDunya confirmé: ${confirmation.status}. Token: ${token}. ${confirmation.failReason ? `Motif: ${confirmation.failReason}.` : ""}`,
+        detail: `Source: ${input.source}. Statut PayDunya confirmé: ${confirmation.status}. Référence PayDunya: ${maskPayDunyaReference(token)}. ${confirmation.failReason ? `Motif: ${confirmation.failReason}.` : ""}`,
         oldStatus: booking.paymentStatus,
         newStatus: failed ? "FAILED" : booking.paymentStatus,
       },
@@ -551,10 +551,38 @@ function firstString(...values: unknown[]) {
 function compactPayload(value: unknown) {
   if (value === undefined) return null;
   try {
-    return JSON.stringify(value).slice(0, 8000);
+    return JSON.stringify(redactPayDunyaPayload(value)).slice(0, 8000);
   } catch {
     return String(value).slice(0, 8000);
   }
+}
+
+function redactPayDunyaPayload(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactPayDunyaPayload);
+  if (!value || typeof value !== "object") return value;
+
+  const redacted: Record<string, unknown> = {};
+  for (const [key, nestedValue] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+    if (
+      normalizedKey === "token"
+      || normalizedKey.endsWith("_token")
+      || normalizedKey.includes("paydunya_token")
+      || normalizedKey === "hash"
+    ) {
+      redacted[key] = maskPayDunyaReference(typeof nestedValue === "string" ? nestedValue : null);
+    } else {
+      redacted[key] = redactPayDunyaPayload(nestedValue);
+    }
+  }
+  return redacted;
+}
+
+function maskPayDunyaReference(value?: string | null) {
+  if (!value) return "non fournie";
+  const compact = value.trim();
+  if (compact.length <= 8) return "masquee";
+  return `${compact.slice(0, 4)}...${compact.slice(-4)}`;
 }
 
 function buildTrustedWebhookConfirmation(payload: unknown, fallbackToken: string): PayDunyaConfirmedInvoice | null {

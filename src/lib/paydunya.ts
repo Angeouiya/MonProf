@@ -443,7 +443,7 @@ function sanitizePayDunyaApiResponse(data: Record<string, any>) {
     response_code: data.response_code ?? data.data?.response_code ?? null,
     description: data.description ?? data.data?.description ?? null,
     response_text: typeof data.response_text === "string" ? data.response_text.slice(0, 240) : null,
-    token: typeof data.token === "string" ? data.token : typeof data.data?.token === "string" ? data.data.token : null,
+    has_token: typeof data.token === "string" || typeof data.data?.token === "string",
   };
 }
 

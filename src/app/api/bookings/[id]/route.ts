@@ -364,7 +364,7 @@ export async function PATCH(
           action: "Relance paiement PayDunya",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Le client a demandé un nouveau lien PayDunya pour ${booking.reference}. Token: ${payment.token || "non fourni"}.`,
+          detail: `Le client a demandé un nouveau lien PayDunya pour ${booking.reference}. Référence PayDunya créée côté serveur.`,
           oldStatus: booking.paymentStatus,
           newStatus: "PAYDUNYA_CHECKOUT_CREATED",
         },
