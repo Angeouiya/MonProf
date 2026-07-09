@@ -7,6 +7,7 @@ const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
+const clientLoadingPath = "src/app/client/loading.tsx";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
@@ -16,6 +17,7 @@ const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
+const clientLoading = read(clientLoadingPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
@@ -142,6 +144,18 @@ record(
     && /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel)
     && /case\s+"reschedule_fee_checkout"/.test(bookingApi)
     && /createPayDunyaRescheduleFeeInvoice/.test(bookingApi),
+);
+
+record(
+  "Client route loading is an app-like responsive skeleton",
+  /data-client-loading/.test(clientLoading)
+    && /role="status"/.test(clientLoading)
+    && /aria-live="polite"/.test(clientLoading)
+    && /lg:grid-cols-\[1\.2fr_0\.8fr\]/.test(clientLoading)
+    && /lg:grid-cols-\[0\.9fr_1\.1fr\]/.test(clientLoading)
+    && /bg-gradient|from-|to-|via-/.test(clientLoading) === false
+    && /rounded-lg border border-\[#E3E8F2\] bg-white/.test(clientLoading)
+    && /bg-\[#111B4D\]/.test(clientLoading),
 );
 
 for (const check of checks) {
