@@ -15,7 +15,7 @@ import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shar
 import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink } from "lucide-react";
 import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
-import { getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
+import { RESCHEDULE_POLICY_WINDOWS, getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
 import { formatFCFA } from "@/lib/format";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
@@ -848,6 +848,42 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   )}
                   <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">
                     La règle est calculée sur le créneau initial. Le nouveau créneau peut être demandé dès aujourd'hui s'il commence au moins 2h après votre demande.
+                  </p>
+                </div>
+
+                <div data-client-reschedule-fee-grid className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                  <div className="flex flex-col gap-1 min-[560px]:flex-row min-[560px]:items-end min-[560px]:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#111827]">Grille des frais éventuels</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                        Calcul automatique sur une séance de 2h : {formatFCFA(reschedulePolicy.baseAmount)}.
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-[#111B4D]">
+                      Total actuel : {formatFCFA(reschedulePolicy.totalToPay)}
+                    </p>
+                  </div>
+                  <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
+                    {RESCHEDULE_POLICY_WINDOWS.map((item) => {
+                      const active = item.code === reschedulePolicy.code;
+                      return (
+                        <div
+                          key={item.code}
+                          className={`rounded-lg border bg-white p-3 text-xs ${active ? "border-[#111B4D]" : "border-[#E3E8F2]"}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-[#111827]">{item.title}</p>
+                            <span className="shrink-0 rounded-full border border-[#E3E8F2] bg-white px-2 py-0.5 font-semibold text-[#111B4D]">
+                              {item.clientLabel}
+                            </span>
+                          </div>
+                          <p className="mt-2 font-medium leading-5 text-[#64748B]">{item.description}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
+                    Le moyen et le numéro de paiement restent saisis uniquement sur PayDunya. Le professeur n'est notifié qu'après confirmation serveur si un supplément est dû.
                   </p>
                 </div>
 

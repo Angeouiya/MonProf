@@ -8,6 +8,48 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export type ReschedulePolicyCode = "FREE" | "MODERATE" | "LATE" | "NO_SHOW" | "UNSCHEDULED";
 
+export const RESCHEDULE_POLICY_WINDOWS = [
+  {
+    code: "FREE",
+    title: "Plus de 24h",
+    feeRate: 0,
+    teacherRate: 0,
+    clientLabel: "Modification gratuite",
+    description: "Aucun supplément n'est demandé. Le nouveau créneau part au professeur pour confirmation.",
+  },
+  {
+    code: "MODERATE",
+    title: "Entre 24h et 6h",
+    feeRate: 25,
+    teacherRate: 60,
+    clientLabel: "25% d'une séance",
+    description: "Supplément modéré, car le créneau initial mobilisait déjà le professeur.",
+  },
+  {
+    code: "LATE",
+    title: "Moins de 6h",
+    feeRate: 50,
+    teacherRate: 70,
+    clientLabel: "50% d'une séance",
+    description: "Supplément tardif, car la disponibilité du professeur est fortement bloquée.",
+  },
+  {
+    code: "NO_SHOW",
+    title: "Cours commencé",
+    feeRate: 100,
+    teacherRate: 70,
+    clientLabel: "Arbitrage service client",
+    description: "Le service client examine le dossier avant toute modification.",
+  },
+] as const satisfies ReadonlyArray<{
+  code: Exclude<ReschedulePolicyCode, "UNSCHEDULED">;
+  title: string;
+  feeRate: number;
+  teacherRate: number;
+  clientLabel: string;
+  description: string;
+}>;
+
 export type ReschedulePolicyBooking = {
   unitPrice?: number | null;
   courseAmount?: number | null;

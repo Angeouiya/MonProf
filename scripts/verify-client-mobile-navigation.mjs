@@ -9,8 +9,10 @@ const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
+const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
 const clientLoadingPath = "src/app/client/loading.tsx";
+const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
@@ -20,8 +22,10 @@ const layout = read(layoutPath);
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
 const clientReservationDetail = read(clientReservationDetailPath);
+const clientBookingActions = read(clientBookingActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
 const clientLoading = read(clientLoadingPath);
+const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
@@ -177,6 +181,19 @@ record(
     && /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel)
     && /case\s+"reschedule_fee_checkout"/.test(bookingApi)
     && /createPayDunyaRescheduleFeeInvoice/.test(bookingApi),
+);
+
+record(
+  "Client reschedule fees use the approved visible policy grid",
+  /RESCHEDULE_POLICY_WINDOWS/.test(reschedulePolicy)
+    && /title:\s*"Plus de 24h"[\s\S]*?feeRate:\s*0/.test(reschedulePolicy)
+    && /title:\s*"Entre 24h et 6h"[\s\S]*?feeRate:\s*25[\s\S]*?teacherRate:\s*60/.test(reschedulePolicy)
+    && /title:\s*"Moins de 6h"[\s\S]*?feeRate:\s*50[\s\S]*?teacherRate:\s*70/.test(reschedulePolicy)
+    && /title:\s*"Cours commencé"[\s\S]*?feeRate:\s*100[\s\S]*?teacherRate:\s*70/.test(reschedulePolicy)
+    && /data-client-reschedule-fee-grid/.test(clientBookingActions)
+    && /Calcul automatique sur une séance de 2h/.test(clientBookingActions)
+    && /Le professeur n'est notifié qu'après confirmation serveur/.test(clientBookingActions)
+    && !/Part plateforme/.test(clientBookingActions),
 );
 
 record(
