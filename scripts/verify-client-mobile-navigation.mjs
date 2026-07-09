@@ -14,6 +14,7 @@ const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-r
 const clientLoadingPath = "src/app/client/loading.tsx";
 const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
+const backButtonPath = "src/components/shared/back-button.tsx";
 const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
@@ -29,6 +30,7 @@ const clientReschedulePanel = read(clientReschedulePanelPath);
 const clientLoading = read(clientLoadingPath);
 const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
+const backButton = read(backButtonPath);
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
@@ -168,6 +170,17 @@ record(
     && /tabIndex=\{-1\}/.test(layout)
     && /focus:translate-y-0/.test(layout)
     && /bg-\[#111B4D\]/.test(layout),
+);
+
+record(
+  "Client back affordance never sends users back to PayDunya or another platform space",
+  /canSafelyGoBack\(pathname\)/.test(backButton)
+    && /document\.referrer/.test(backButton)
+    && /referrerUrl\.origin\s*!==\s*window\.location\.origin/.test(backButton)
+    && /getNavigationSpace\(pathname\)/.test(backButton)
+    && /currentSpace\s*===\s*referrerSpace/.test(backButton)
+    && /pathname\s*===\s*"\/client"\s*\|\|\s*pathname\.startsWith\("\/client\/"\)/.test(backButton)
+    && /router\.push\(fallback\)/.test(backButton),
 );
 
 record(
