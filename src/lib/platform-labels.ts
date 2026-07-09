@@ -93,7 +93,7 @@ export const notificationChannelLabels: Record<string, string> = {
 
 export const notificationTypeLabels: Record<string, string> = {
   NEW_BOOKING: "Nouvelle réservation",
-  QUOTE_REQUESTED: "Prix à finaliser",
+  QUOTE_REQUESTED: "Calcul à reprendre",
   PAYMENT_PENDING: "Paiement à finaliser",
   PAYMENT_RECEIVED: "Paiement reçu",
   BLOCKED_FUNDS: "Fonds bloqués",

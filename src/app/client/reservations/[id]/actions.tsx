@@ -1294,8 +1294,8 @@ function getActionSummary({
   }
   if (isQuoteOnly) {
     return {
-      title: "Prix en préparation",
-      description: "Aucun paiement n'est encaissé avant le montant final validé par le service client.",
+      title: "Calcul à reprendre",
+      description: "Aucun paiement n'est encaissé tant que le calcul automatique n'est pas prêt pour PayDunya.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

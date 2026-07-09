@@ -569,7 +569,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 items={[
                   { label: "Date", value: requestedDate },
                   { label: "Créneau", value: courseTime },
-                  { label: "Montant", value: amount > 0 ? <Money amount={amount} /> : "Prix à finaliser", strong: amount > 0 },
+                  { label: "Montant", value: amount > 0 ? <Money amount={amount} /> : "Montant à recalculer", strong: amount > 0 },
                   { label: "État", value: state.label, strong: true },
                 ]}
               />
@@ -609,8 +609,8 @@ function getPendingCourseAmount(booking: Pick<PendingCourseBooking, "totalClient
 function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly">) {
   if (booking.isQuoteOnly) {
     return {
-      label: "Prix en préparation",
-      hint: "Le service client doit finaliser le tarif avant paiement. Le cours n'est pas encore réservé.",
+      label: "Calcul à reprendre",
+      hint: "Le service client reprend le calcul automatique avant PayDunya. Le cours n'est pas encore réservé.",
     };
   }
 
@@ -623,8 +623,8 @@ function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly"
 function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
-      label: "Prix en préparation",
-      hint: "Le service client prépare le montant final avant paiement.",
+      label: "Calcul à reprendre",
+      hint: "Le service client reprend le calcul automatique avant PayDunya.",
       icon: Clock,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };

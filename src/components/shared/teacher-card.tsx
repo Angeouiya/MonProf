@@ -22,7 +22,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
   const bookingHref = href ?? `/client/reserver?teacherId=${teacher.id}`;
   const displayName = teacher.professionalName || teacher.fullName;
   const hasValidIndicativePrice = teacher.pricePerSession > 0;
-  const priceLabel = hasValidIndicativePrice ? formatFCFA(teacher.pricePerSession) : "Prix à confirmer";
+  const priceLabel = hasValidIndicativePrice ? formatFCFA(teacher.pricePerSession) : "Calculé à la réservation";
   const publicRating = teacher.ratingCount > 0 && teacher.rating > 0
     ? teacher.rating
     : teacher.adminRatingPublic && teacher.adminRating > 0

@@ -86,7 +86,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <p className="text-sm font-semibold text-[#111827]">Coût de la réservation</p>
             <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block" data-client-pricing-helper>
               {isQuoteOnly
-                ? "Prix à finaliser avant paiement."
+                ? "Calcul automatique à reprendre avant PayDunya."
                 : audience === "client"
                   ? "Séances de 2h, participants, déplacement et frais PayDunya."
                   : "Vue interne avec éléments comptables réservés au service client."}
@@ -99,7 +99,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             {isQuoteOnly ? "Montant" : "Total client"}
           </p>
           <p className="mt-1 text-2xl font-semibold leading-tight">
-            {isQuoteOnly ? "Prix à finaliser" : <Money amount={totalPrice} />}
+            {isQuoteOnly ? "Montant à recalculer" : <Money amount={totalPrice} />}
           </p>
           {!isQuoteOnly && (
             <p className="mt-1 text-xs font-semibold leading-5 text-white">
@@ -124,7 +124,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         />
         <PricingFact
           label="Prix / séance"
-          value={isQuoteOnly ? "Prix à finaliser" : <Money amount={indicativeSessionAmount} />}
+          value={isQuoteOnly ? "À recalculer" : <Money amount={indicativeSessionAmount} />}
           detail={`${totalHours}h au total`}
         />
       </div>
@@ -148,7 +148,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
 
         <div className="mt-3 space-y-2 text-sm">
           {isQuoteOnly ? (
-            <PricingLine label="Montant" value="Prix à finaliser" strong />
+            <PricingLine label="Montant" value="À recalculer avant PayDunya" strong />
           ) : (
             <>
               {isGroup ? (

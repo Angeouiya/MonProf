@@ -438,7 +438,7 @@ export default async function ReservationDetailPage({
             <ReservationHeroMetric
               icon={<WalletCards className="h-4 w-4" />}
               label={booking.isQuoteOnly ? "Montant" : paymentConfirmed ? "Payé" : "À payer"}
-              value={booking.isQuoteOnly ? "Prix à finaliser" : <Money amount={displayTotalPrice} />}
+              value={booking.isQuoteOnly ? "Montant à recalculer" : <Money amount={displayTotalPrice} />}
             />
           </div>
         </div>
@@ -676,8 +676,8 @@ function getClientSituation({
   }
   if (isQuoteOnly) {
     return {
-      title: "Prix en validation",
-      description: "Le service client valide le montant avant paiement.",
+      title: "Calcul à reprendre",
+      description: "Le service client reprend le calcul automatique avant PayDunya.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -802,7 +802,7 @@ function formatClientBookingStatus(status: string) {
 }
 
 function formatClientPaymentStatus(status: string, quoteOnly = false) {
-  if (quoteOnly) return "Prix à finaliser";
+  if (quoteOnly) return "Calcul à reprendre";
   return CLIENT_PAYMENT_STATUS_LABELS[status] ?? "Suivi paiement";
 }
 

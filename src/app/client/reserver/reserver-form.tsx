@@ -402,9 +402,9 @@ function getReservationFormNotice({
   }
 
   return {
-    title: isQuoteOnly ? "Action finale : envoyer le dossier" : "Action finale : paiement PayDunya",
+    title: isQuoteOnly ? "Action finale : reprendre le calcul" : "Action finale : paiement PayDunya",
     description: isQuoteOnly
-      ? "Aucun paiement n'est demandé maintenant. Le service client reçoit le dossier, vérifie le montant, puis vous confirme la suite."
+      ? "Le service client reçoit le dossier, reprend le calcul automatique, puis vous renvoie vers PayDunya dès que le montant est prêt."
       : `Le client paie uniquement le montant total affiché : ${formatFCFA(totalPrice)}. Le moyen de paiement et le numéro sont saisis sur PayDunya, puis la confirmation serveur PayDunya active la réservation.`,
   };
 }
@@ -831,7 +831,7 @@ export function ReserverForm({
   const isFinalStep = step === STEPS.length - 1;
   const primaryActionLabel = isFinalStep
     ? pricing.isQuoteOnly
-      ? "Envoyer la demande"
+      ? "Envoyer au service client"
       : "Payer via PayDunya"
     : "Continuer";
   const primaryActionDisabled = submitting || (isFinalStep && !isScheduleReadyForPayment);
@@ -878,13 +878,13 @@ export function ReserverForm({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
-                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}</p>
+                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Montant à recalculer" : formatFCFA(totalPrice)}</p>
               </div>
               <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
             <p className="mt-2 text-xs font-medium leading-5 text-white">
               {pricing.isQuoteOnly
-                ? "Le montant final sera validé par le service client avant paiement."
+                ? "Le calcul sera repris avant tout paiement PayDunya."
                 : pricing.transportFee > 0
                   ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
                   : "Aucun frais de déplacement ajouté pour le moment."}
@@ -1134,10 +1134,10 @@ export function ReserverForm({
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        {pricing.isQuoteOnly ? "Tarif à finaliser par le service client" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
+                        {pricing.isQuoteOnly ? "Calcul à reprendre avant PayDunya" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        {pricing.isQuoteOnly ? "Montant final validé par le service client" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
+                        {pricing.isQuoteOnly ? "Paiement après recalcul automatique" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
                     </div>
@@ -1417,7 +1417,7 @@ export function ReserverForm({
                       <InfoMini label="Lieu client" value={formatLocationSummary(form.city, form.commune, form.quartier) || "À sélectionner"} />
                       <InfoMini
                         label="Frais estimés"
-                        value={!form.commune ? "En attente" : pricing.isQuoteOnly ? "Forfait à finaliser" : formatFCFA(pricing.transportFee)}
+                        value={!form.commune ? "En attente" : pricing.isQuoteOnly ? "À recalculer" : formatFCFA(pricing.transportFee)}
                       />
                     </div>
                     <p className="mt-2 text-xs font-medium text-[#6B7280]">
@@ -1802,14 +1802,14 @@ export function ReserverForm({
                   <Row label="Format" value={form.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
                   <Row label="Type" value={form.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"} />
                   <Row label="Participants" value={`${participantsCount} ${participantsCount > 1 ? "participants" : "participant"}`} />
-                  <Row label="Tarif appliqué" value={pricing.isQuoteOnly ? "Prix à finaliser" : pricing.priceTierLabel} />
+                  <Row label="Tarif appliqué" value={pricing.isQuoteOnly ? "Calcul à reprendre" : pricing.priceTierLabel} />
                   {form.courseFormat === "HOME" ? (
                     <>
                       <Row label="Commune" value={form.commune || "—"} />
                       <Row label="Quartier" value={form.quartier || "—"} />
                       {form.addressHint && <Row label="Adresse" value={form.addressHint} />}
                       <Row label="Trajet" value={pricing.transportRouteLabel ?? "À confirmer"} />
-                      <Row label="Déplacement" value={pricing.isQuoteOnly ? "À confirmer par le service client" : formatFCFA(pricing.transportFee)} />
+                      <Row label="Déplacement" value={pricing.isQuoteOnly ? "À recalculer" : formatFCFA(pricing.transportFee)} />
                     </>
                   ) : (
                     form.onlineLink && <Row label="Lien" value={form.onlineLink} />
@@ -1874,7 +1874,7 @@ export function ReserverForm({
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
                     {pricing.isQuoteOnly
-                      ? "Aucun paiement n'est demandé maintenant. Le service client vous proposera un montant final clair."
+                      ? "Le calcul sera repris avant PayDunya. Aucun professeur n'est activé tant qu'un paiement PayDunya n'est pas confirmé côté serveur."
                       : "Le paiement sera finalisé sur PayDunya, confirmé côté serveur, puis gardé sécurisé jusqu'à votre confirmation après le cours."}
                   </span>
                 </div>
@@ -1887,9 +1887,9 @@ export function ReserverForm({
             <div className="space-y-5">
               <StepIntro
                 step="Étape 5"
-                title={pricing.isQuoteOnly ? "Prix à finaliser" : "Paiement sécurisé"}
+                title={pricing.isQuoteOnly ? "Calcul à reprendre" : "Paiement sécurisé"}
                 description={pricing.isQuoteOnly
-                  ? "Contrôlez le dossier. Le service client finalisera le prix avant paiement."
+                  ? "Contrôlez le dossier. Le service client reprendra le calcul avant de vous renvoyer vers PayDunya."
                   : "Contrôlez le dossier. Le moyen de paiement et les informations de paiement seront gérés uniquement sur PayDunya."}
               />
 
@@ -1949,7 +1949,7 @@ export function ReserverForm({
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                   <p className="text-sm font-semibold text-[#111827]">Validation service client requise</p>
                   <p className="mt-1 text-sm leading-6 text-[#6B7280]">
-                    {pricing.quoteReason ?? "Ce dossier nécessite une estimation manuelle."} Aucun paiement ne sera encaissé à cette étape.
+                    {pricing.quoteReason ?? "Ce dossier nécessite une reprise du calcul automatique."} Aucun paiement ne sera encaissé à cette étape.
                   </p>
                   <div className="mt-3 grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
                     <InfoMini label="Palier" value={pricing.priceTierLabel} />
@@ -2020,7 +2020,7 @@ export function ReserverForm({
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
                   pricing.isQuoteOnly ? (
-                    <>Envoyer la demande</>
+                    <>Envoyer au service client</>
                   ) : (
                     <><ExternalLink className="mr-2 h-4 w-4" /> Payer via PayDunya</>
                   )
@@ -2055,7 +2055,7 @@ export function ReserverForm({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Montant client</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Montant à recalculer" : formatFCFA(totalPrice)}</p>
                 </div>
                 <Lock className="mt-1 h-5 w-5 text-white" />
               </div>
@@ -2082,7 +2082,7 @@ export function ReserverForm({
               Étape {step + 1}/{STEPS.length} · {currentStepDetail.title}
             </span>
             <span className="shrink-0 text-xs font-semibold text-[#111B4D]">
-              {pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}
+              {pricing.isQuoteOnly ? "Montant à recalculer" : formatFCFA(totalPrice)}
             </span>
           </div>
           <div className="h-1 overflow-hidden rounded-full bg-[#E5E7EB]" aria-hidden="true">

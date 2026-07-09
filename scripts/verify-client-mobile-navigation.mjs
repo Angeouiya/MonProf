@@ -16,6 +16,17 @@ const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
+const clientPricingCopyPaths = [
+  "src/app/client/page.tsx",
+  "src/app/client/reserver/reserver-form.tsx",
+  "src/app/client/reservations/page.tsx",
+  "src/app/client/reservations/[id]/page.tsx",
+  "src/app/client/reservations/[id]/actions.tsx",
+  "src/app/client/cours/page.tsx",
+  "src/components/shared/booking-pricing-breakdown.tsx",
+  "src/components/shared/status-badge.tsx",
+  teacherCardPath,
+];
 const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
@@ -45,6 +56,7 @@ const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
 const teacherCard = read(teacherCardPath);
+const clientPricingCopySources = clientPricingCopyPaths.map(read).join("\n");
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
@@ -367,6 +379,14 @@ record(
     && /Profil suivi/.test(teacherCard)
     && /trustLabel/.test(teacherCard)
     && !/displayRating\.toFixed\(1\)\/5/.test(teacherCard),
+);
+
+record(
+  "Client pricing copy avoids manual quote language",
+  !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(clientPricingCopySources)
+    && /Montant à recalculer/.test(clientPricingCopySources)
+    && /Calcul à reprendre/.test(clientPricingCopySources)
+    && /Calculé à la réservation/.test(clientPricingCopySources),
 );
 
 record(

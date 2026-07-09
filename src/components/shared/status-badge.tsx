@@ -119,7 +119,7 @@ export function PaymentStatusBadge({
     return (
       <span className={cn("inline-flex items-center gap-1.5 rounded-full border border-[#E3E8F2] bg-white px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-[#111B4D]", className)}>
         <Clock className="h-3 w-3" />
-        Prix à finaliser
+        Calcul à reprendre
       </span>
     );
   }
