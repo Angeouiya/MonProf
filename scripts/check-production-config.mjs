@@ -33,6 +33,7 @@ checkStrongSecret("CRON_SECRET", { minLength: 24 });
 checkBuildDoesNotIgnoreCodeQualityErrors();
 checkProductionScripts();
 checkVercelDeploymentConfig();
+checkSupabaseDeploymentConfig();
 checkHealthEndpoint();
 checkNoPublicPayDunyaSecrets();
 await checkPayDunyaConfiguration();
@@ -213,6 +214,24 @@ function checkVercelDeploymentConfig() {
   }
   const ignore = fs.readFileSync(ignorePath, "utf8");
   record("Vercel ignore file excludes local env files", /^\.env$/m.test(ignore) && /^\.env\.\*$/m.test(ignore));
+}
+
+function checkSupabaseDeploymentConfig() {
+  const configPath = "supabase/config.toml";
+  if (!fs.existsSync(configPath)) {
+    record("Supabase project config exists", false);
+    return;
+  }
+
+  const config = fs.readFileSync(configPath, "utf8");
+  record("Supabase auth site URL uses competence.ci", /site_url\s*=\s*"https:\/\/competence\.ci"/.test(config));
+  record("Supabase redirects allow competence.ci", /additional_redirect_urls\s*=\s*\[[^\]]*"https:\/\/competence\.ci"[^\]]*"https:\/\/www\.competence\.ci"/s.test(config));
+  record("Supabase public auth signup is disabled", /\[auth\][\s\S]*?enable_signup\s*=\s*false/.test(config));
+  record("Supabase email auth signup is disabled", /\[auth\.email\][\s\S]*?enable_signup\s*=\s*false/.test(config));
+
+  const passwordLength = Number(config.match(/minimum_password_length\s*=\s*(\d+)/)?.[1] ?? 0);
+  record("Supabase password minimum is production-grade", passwordLength >= 12);
+  record("Supabase password policy requires mixed characters", /password_requirements\s*=\s*"lower_upper_letters_digits_symbols"/.test(config));
 }
 
 function checkHealthEndpoint() {
