@@ -186,19 +186,19 @@ export default async function TeachersPage({
                 Scolaire, université, concours, métiers et formations adultes.
               </p>
             </div>
-            <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 min-[420px]:grid-cols-2 lg:grid-cols-1 lg:p-4">
-              <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+            <div className="flex flex-wrap gap-2 lg:grid lg:grid-cols-1 lg:rounded-lg lg:border lg:border-[#E3E8F2] lg:bg-white lg:p-4">
+              <div className="inline-flex min-h-10 flex-1 basis-[10.5rem] items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-2 lg:flex lg:border-0 lg:px-0 lg:py-0">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#111827]">Professeurs contrôlés</p>
-                  <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Identité, diplôme et expérience vérifiés.</p>
+                  <p className="truncate text-xs font-semibold text-[#111827] lg:text-sm">Professeurs contrôlés</p>
+                  <p className="hidden text-xs font-medium text-[#64748B] lg:block">Identité, diplôme et expérience vérifiés.</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-2 lg:border-0 lg:px-0 lg:py-0">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#D6DEED] bg-white text-[#111B4D] lg:h-10 lg:w-10"><ShieldCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
+              <div className="inline-flex min-h-10 flex-1 basis-[10.5rem] items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-2 lg:flex lg:border-0 lg:px-0 lg:py-0">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D6DEED] bg-white text-[#111B4D] lg:h-10 lg:w-10"><ShieldCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[#111827]">Paiement rassurant</p>
-                  <p className="line-clamp-1 text-xs font-medium text-[#64748B] lg:line-clamp-none">Fonds bloqués jusqu'à confirmation du cours.</p>
+                  <p className="truncate text-xs font-semibold text-[#111827] lg:text-sm">Paiement rassurant</p>
+                  <p className="hidden text-xs font-medium text-[#64748B] lg:block">Fonds bloqués jusqu'à confirmation du cours.</p>
                 </div>
               </div>
             </div>
