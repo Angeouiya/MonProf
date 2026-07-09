@@ -50,19 +50,13 @@ const quickSearchItems = [
 ];
 
 const CLIENT_NAV_PREFETCH = true;
-const CLIENT_DESKTOP_PREFETCH_ROUTES = Array.from(
-  new Set([
-    ...navItems.map((item) => item.href),
-    ...mobileNavItems.map((item) => item.href),
-    "/client/support",
-  ]),
-);
 const CLIENT_PRIORITY_PREFETCH_ROUTES = [
   "/client/rechercher",
   "/client/reservations",
   "/client/paiements",
   "/client/notifications",
 ];
+const CLIENT_IDLE_PREFETCH_ROUTES = CLIENT_PRIORITY_PREFETCH_ROUTES;
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -170,22 +164,36 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (slowConnection) return;
 
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
-    const routes = desktop ? CLIENT_DESKTOP_PREFETCH_ROUTES : CLIENT_PRIORITY_PREFETCH_ROUTES;
+    const routes = CLIENT_IDLE_PREFETCH_ROUTES;
     const prefetchClientRoutes = () => {
-      routes.forEach(prefetchClientRoute);
+      const timers = routes.map((route, index) => (
+        window.setTimeout(() => prefetchClientRoute(route), index * 120)
+      ));
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
     };
     const browserWindow = window as Window & {
       requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
       cancelIdleCallback?: (handle: number) => void;
     };
+    let cancelStaggeredPrefetch: (() => void) | undefined;
 
     if (browserWindow.requestIdleCallback) {
-      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: desktop ? 900 : 1400 });
-      return () => browserWindow.cancelIdleCallback?.(idleId);
+      const idleId = browserWindow.requestIdleCallback(() => {
+        cancelStaggeredPrefetch = prefetchClientRoutes();
+      }, { timeout: desktop ? 600 : 1000 });
+      return () => {
+        browserWindow.cancelIdleCallback?.(idleId);
+        cancelStaggeredPrefetch?.();
+      };
     }
 
-    const timer = globalThis.setTimeout(prefetchClientRoutes, desktop ? 220 : 720);
-    return () => globalThis.clearTimeout(timer);
+    const timer = window.setTimeout(() => {
+      cancelStaggeredPrefetch = prefetchClientRoutes();
+    }, desktop ? 180 : 520);
+    return () => {
+      window.clearTimeout(timer);
+      cancelStaggeredPrefetch?.();
+    };
   }, [prefetchClientRoute]);
 
   useEffect(() => {

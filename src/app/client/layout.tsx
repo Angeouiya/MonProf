@@ -17,7 +17,7 @@ export default async function ClientRootLayout({ children }: { children: React.R
 
   const user = await db.user.findUnique({
     where: { id: (session.user as any).id },
-    select: { name: true, email: true, phone: true, commune: true, quartier: true, avatarUrl: true },
+    select: { name: true },
   });
   const notificationCount = ownerAdmin
     ? await db.notification.count({
