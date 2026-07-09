@@ -1715,12 +1715,15 @@ export function ReserverForm({
                       courseCatalogName: selectedCatalogCourse?.nom,
                       objective: form.objective,
                       deliveryMode,
-          requiresMaterial: false,
+                      requiresMaterial: false,
                       packType: p.value,
                       participantsCount,
+                      teacherPricePerSession: teacher.pricePerSession,
                       teacherCommune: canResolveTransport ? teacher.commune : undefined,
+                      teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
                       teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
                       clientCommune: canResolveTransport ? form.commune : undefined,
+                      clientQuartier: canResolveTransport ? form.quartier : undefined,
                     });
                     const count = optionPricing.numberOfSessions ?? 0;
                     const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;

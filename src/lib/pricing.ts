@@ -415,7 +415,7 @@ export function calculateGrandAbidjanTransportFee({
 
   if (sameArea(fallbackOrigin, destination)) {
     const sameKnownQuartier = Boolean(originQuartier && destinationQuartier && normalize(originQuartier) === normalize(destinationQuartier));
-    const amount = sameKnownQuartier ? 750 : 1500;
+    const amount = sameKnownQuartier ? 1000 : 1500;
     return {
       key: TRANSPORT_FEES.SAME_AREA.key,
       label: TRANSPORT_FEES.SAME_AREA.label,
