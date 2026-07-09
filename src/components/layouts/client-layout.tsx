@@ -374,7 +374,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" prefetch={CLIENT_NAV_PREFETCH} className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
+          <Link href="/client" prefetch={CLIENT_NAV_PREFETCH} onClick={closeMobileSurfaces} className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
             <BrandLogo size="sm" compact priority className="lg:hidden" />
             <BrandLogo size="sm" priority className="hidden lg:inline-flex" />
           </Link>
@@ -427,7 +427,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </Button>
           <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
-            <Link href="/client/notifications" prefetch={CLIENT_NAV_PREFETCH}>
+            <Link href="/client/notifications" prefetch={CLIENT_NAV_PREFETCH} onClick={closeMobileSurfaces}>
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
@@ -518,7 +518,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                 key={item.href}
                 href={item.href}
                 prefetch={CLIENT_NAV_PREFETCH}
-                onClick={() => setMobileSearchOpen(false)}
+                onClick={closeMobileSurfaces}
                 className="inline-flex min-h-9 min-w-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-center text-xs font-semibold text-[#111B4D]"
               >
                 {item.label}
@@ -602,7 +602,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         </main>
       </div>
       {shouldRenderMobileBottomNav && (
-        <MobileBottomNav pathname={pathname} isActive={isActive} notificationCount={notificationCount} />
+        <MobileBottomNav pathname={pathname} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} />
       )}
     </div>
   );
@@ -719,10 +719,12 @@ function MobileBottomNav({
   pathname,
   isActive,
   notificationCount,
+  onNavigate,
 }: {
   pathname: string | null;
   isActive: (item: ClientNavItem) => boolean;
   notificationCount: number;
+  onNavigate: () => void;
 }) {
   return (
     <nav
@@ -739,6 +741,7 @@ function MobileBottomNav({
               key={item.href}
               href={item.href}
               prefetch={CLIENT_NAV_PREFETCH}
+              onClick={onNavigate}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-semibold transition-colors min-[390px]:px-1",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"

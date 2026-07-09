@@ -183,6 +183,15 @@ record(
 );
 
 record(
+  "Client mobile navigation dismisses transient panels before route changes",
+  /<Link href="\/client"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(layout)
+    && /href="\/client\/notifications"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(layout)
+    && /onClick=\{closeMobileSurfaces\}[\s\S]*?className="inline-flex min-h-9/.test(layout)
+    && /<MobileBottomNav[\s\S]*?onNavigate=\{closeMobileSurfaces\}/.test(layout)
+    && /function MobileBottomNav\([\s\S]*?onNavigate,[\s\S]*?onClick=\{onNavigate\}/.test(layout),
+);
+
+record(
   "Client shell warns cleanly when the mobile network drops",
   /const\s+\[isOffline,\s*setIsOffline\]\s*=\s*useState\(false\)/.test(layout)
     && /window\.addEventListener\("online",\s*syncNetworkState\)/.test(layout)
