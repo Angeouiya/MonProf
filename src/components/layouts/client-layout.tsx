@@ -51,10 +51,16 @@ const quickSearchItems = [
 
 const CLIENT_NAV_PREFETCH = true;
 const CLIENT_PRIORITY_PREFETCH_ROUTES = [
+  "/client",
   "/client/rechercher",
   "/client/reservations",
+  "/client/cours",
   "/client/paiements",
   "/client/notifications",
+  "/client/avis",
+  "/client/service-client",
+  "/client/profil",
+  "/client/parametres",
 ];
 const CLIENT_IDLE_PREFETCH_ROUTES = CLIENT_PRIORITY_PREFETCH_ROUTES;
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 120;

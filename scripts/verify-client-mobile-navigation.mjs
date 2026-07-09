@@ -60,6 +60,24 @@ record(
 );
 
 record(
+  "Client idle prefetch covers every main client tab",
+  [
+    "/client",
+    "/client/rechercher",
+    "/client/reservations",
+    "/client/cours",
+    "/client/paiements",
+    "/client/notifications",
+    "/client/avis",
+    "/client/service-client",
+    "/client/profil",
+    "/client/parametres",
+  ].every((route) => layout.includes(`"${route}"`))
+    && /slowConnection\)\s*return/.test(layout)
+    && /connection\?\.saveData/.test(layout),
+);
+
+record(
   "Client mobile drawer does not repeat the primary search action",
   /const showPrimaryAction\s*=\s*!compactAccount\s*;/.test(layout)
     && /\{showPrimaryAction\s*&&\s*\(/.test(layout)
