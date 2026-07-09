@@ -12,6 +12,7 @@ const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
 const clientLoadingPath = "src/app/client/loading.tsx";
+const clientErrorPath = "src/app/client/error.tsx";
 const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
@@ -25,6 +26,7 @@ const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
 const clientLoading = read(clientLoadingPath);
+const clientError = read(clientErrorPath);
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
@@ -279,6 +281,18 @@ record(
   "Client route loading stays compact on very small phones",
   /\[data-client-loading\]\s*\{[\s\S]*?min-height:\s*calc\(100dvh - var\(--app-topbar-height\) - 2rem\);[\s\S]*?\}/.test(css)
     && /\[data-client-loading-secondary-panel\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Client route errors render a professional recoverable app screen",
+  /"use client";/.test(clientError)
+    && /data-client-error/.test(clientError)
+    && /aria-live="polite"/.test(clientError)
+    && /onClick=\{reset\}/.test(clientError)
+    && /href="\/client"/.test(clientError)
+    && /Référence incident/.test(clientError)
+    && /bg-\[#111B4D\]/.test(clientError)
+    && !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(clientError),
 );
 
 for (const check of checks) {
