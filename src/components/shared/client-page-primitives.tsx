@@ -515,10 +515,10 @@ export function ClientAppRail({
       data-client-app-rail
       data-client-app-rail-compact
       className={cn(
-        "client-app-rail hidden items-center gap-1 overflow-x-auto rounded-lg border border-[#D8DEE9] bg-white p-1 min-[640px]:flex",
+        "client-app-rail hidden items-center gap-1 overflow-x-auto rounded-lg border border-[#E6EAF3] bg-white p-1 2xl:flex",
         className,
       )}
-      aria-label="Raccourcis client"
+      aria-label="Navigation contextuelle client"
       role="navigation"
     >
       {items.map((item) => {
@@ -527,22 +527,22 @@ export function ClientAppRail({
             <span className="flex items-center justify-center">
               <span
                 className={cn(
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors",
                   item.active ? "border-white bg-white text-[#111B4D]" : "border-[#D8DEE9] bg-white text-[#111B4D]",
                 )}
               >
-                {item.icon && <item.icon className="h-3.5 w-3.5" />}
+                {item.icon && <item.icon className="h-3 w-3" />}
               </span>
             </span>
             <span className="min-w-0 text-left">
               <span className={cn(
-                "block truncate text-[10px] font-semibold uppercase leading-3 tracking-wide",
+                "block truncate text-[9px] font-semibold uppercase leading-3 tracking-wide",
                 item.active ? "text-white" : "text-[#64748B]",
               )}>
                 {item.label}
               </span>
               <span className={cn(
-                "mt-0.5 block max-w-[9rem] truncate text-xs font-semibold leading-4",
+                "mt-0.5 block max-w-[8rem] truncate text-[11px] font-semibold leading-4",
                 item.active ? "text-white" : "text-[#111827]",
               )}>
                 {item.value}
@@ -560,7 +560,7 @@ export function ClientAppRail({
         );
 
         const itemClassName = cn(
-          "client-shortcut-card group inline-flex min-h-10 min-w-0 shrink-0 snap-start items-center justify-between rounded-md px-2.5 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
+          "client-shortcut-card group inline-flex min-h-9 min-w-0 shrink-0 snap-start items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
           item.active
             ? "bg-[#111B4D] text-white"
             : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",

@@ -291,27 +291,30 @@ export async function confirmPayDunyaInvoice(invoiceToken: string): Promise<PayD
     cache: "no-store",
   });
   const raw = await response.json().catch(() => ({}));
-  const invoice = raw.invoice && typeof raw.invoice === "object" ? raw.invoice : {};
-  const customer = raw.customer && typeof raw.customer === "object" ? raw.customer : {};
-  const customData = raw.custom_data && typeof raw.custom_data === "object" ? raw.custom_data : {};
-  const status = normalizePayDunyaStatus(raw.status);
-  const confirmedToken = firstNonEmptyString(invoice.token, raw.token, safeToken);
+  const root = raw.data && typeof raw.data === "object" && !Array.isArray(raw.data)
+    ? raw.data
+    : raw;
+  const invoice = root.invoice && typeof root.invoice === "object" ? root.invoice : {};
+  const customer = root.customer && typeof root.customer === "object" ? root.customer : {};
+  const customData = root.custom_data && typeof root.custom_data === "object" ? root.custom_data : {};
+  const status = normalizePayDunyaStatus(root.status);
+  const confirmedToken = firstNonEmptyString(invoice.token, root.token, raw.token, safeToken);
   const totalAmount = parsePayDunyaAmount(invoice.total_amount);
-  const responseHash = firstNonEmptyString(raw.hash);
+  const responseHash = firstNonEmptyString(root.hash, raw.hash);
 
   return {
     configured: true,
-    ok: response.ok && raw.response_code === "00",
+    ok: response.ok && firstNonEmptyString(root.response_code, raw.response_code) === "00",
     status,
     token: confirmedToken,
     totalAmount,
-    receiptUrl: firstNonEmptyString(raw.receipt_url, raw.receiptURL, raw.receiptUrl),
+    receiptUrl: firstNonEmptyString(root.receipt_url, root.receiptURL, root.receiptUrl, raw.receipt_url, raw.receiptURL, raw.receiptUrl),
     customerName: firstNonEmptyString(customer.name),
     customerEmail: firstNonEmptyString(customer.email),
     customerPhone: firstNonEmptyString(customer.phone),
     customData,
-    responseText: firstNonEmptyString(raw.response_text, raw.description) ?? undefined,
-    failReason: firstNonEmptyString(raw.fail_reason, raw.errors?.message, raw.errors?.description) ?? undefined,
+    responseText: firstNonEmptyString(root.response_text, root.description, raw.response_text, raw.description) ?? undefined,
+    failReason: firstNonEmptyString(root.fail_reason, root.errors?.message, root.errors?.description, raw.fail_reason, raw.errors?.message, raw.errors?.description) ?? undefined,
     hashValid: responseHash ? verifyPayDunyaHashWithMasterKey(config.masterKey, responseHash) : false,
     hashProvided: Boolean(responseHash),
     raw,

@@ -32,6 +32,8 @@ import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
 import { getLevelCategory, getSubjectCategory } from "@/lib/catalog-taxonomy";
 
+export const dynamic = "force-dynamic";
+
 const PRICING = [
   { level: "Primaire", price: 7500 },
   { level: "Collège", price: 10000 },

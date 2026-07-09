@@ -4826,7 +4826,7 @@ b {
   display: none !important;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1536px) {
   .client-shell [data-client-app-rail][data-client-app-rail-compact] {
     display: flex !important;
     grid-template-columns: none !important;
@@ -4834,10 +4834,13 @@ b {
     overflow-x: auto !important;
     padding: 0.25rem !important;
     scroll-snap-type: x proximity;
+    border-color: #EEF2F7 !important;
+    box-shadow: none !important;
   }
 
   .client-shell [data-client-app-rail][data-client-app-rail-compact] > * {
     flex: 0 0 auto !important;
+    max-inline-size: 13rem !important;
     min-inline-size: 0 !important;
     scroll-snap-align: start;
   }

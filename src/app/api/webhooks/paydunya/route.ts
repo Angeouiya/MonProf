@@ -27,7 +27,14 @@ export async function POST(req: NextRequest) {
   const status = firstString(data.status)?.toLowerCase() ?? null;
   const hash = firstString(data.hash);
   const hashVerified = await verifyPayDunyaHash(hash);
-  const invoiceToken = firstString(invoice.token, data.token);
+  const invoiceToken = firstString(
+    invoice.token,
+    data.token,
+    data.invoice_token,
+    data.invoiceToken,
+    data.paydunya_token,
+    data.paydunyaToken,
+  );
   const bookingId = firstString(
     customData.booking_id,
     customData.bookingId,

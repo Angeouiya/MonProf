@@ -68,7 +68,7 @@ export default async function ReservationDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ action?: string; paydunya?: string; token?: string; proposalId?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const user = await getSessionUser();
   if (!user) return null;
@@ -729,14 +729,46 @@ function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; val
   );
 }
 
-function extractPayDunyaReturnToken(searchParams: { paydunya?: string; token?: string }) {
-  if (searchParams.token?.trim()) return searchParams.token.trim();
-  const paydunyaValue = searchParams.paydunya?.trim();
-  if (!paydunyaValue?.includes("token=")) return undefined;
+function extractPayDunyaReturnToken(searchParams: Record<string, string | undefined>) {
+  const directToken = firstQueryValue(
+    searchParams.token,
+    searchParams.invoice_token,
+    searchParams.invoiceToken,
+    searchParams.paydunya_token,
+    searchParams.paydunyaToken,
+  );
+  if (directToken) return directToken;
 
-  const queryPart = paydunyaValue.slice(paydunyaValue.indexOf("?") + 1);
+  for (const value of Object.values(searchParams)) {
+    const token = extractTokenFromQueryLikeValue(value);
+    if (token) return token;
+  }
+
+  return undefined;
+}
+
+function firstQueryValue(...values: Array<string | undefined>) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function extractTokenFromQueryLikeValue(value?: string) {
+  const trimmed = value?.trim();
+  if (!trimmed || !trimmed.includes("=")) return undefined;
+
+  const queryPart = trimmed.includes("?")
+    ? trimmed.slice(trimmed.indexOf("?") + 1)
+    : trimmed;
   const parsed = new URLSearchParams(queryPart);
-  return parsed.get("token")?.trim() || undefined;
+  return firstQueryValue(
+    parsed.get("token") ?? undefined,
+    parsed.get("invoice_token") ?? undefined,
+    parsed.get("invoiceToken") ?? undefined,
+    parsed.get("paydunya_token") ?? undefined,
+    parsed.get("paydunyaToken") ?? undefined,
+  );
 }
 
 function formatClientBookingStatus(status: string) {

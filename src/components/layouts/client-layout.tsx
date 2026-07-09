@@ -134,11 +134,18 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (navigationResetRef.current) {
       window.clearTimeout(navigationResetRef.current);
     }
-    setNavigating(true);
+    navigationDelayRef.current = window.setTimeout(() => {
+      setNavigating(true);
+      navigationDelayRef.current = null;
+    }, 90);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
-    }, 4200);
+      if (navigationDelayRef.current) {
+        window.clearTimeout(navigationDelayRef.current);
+        navigationDelayRef.current = null;
+      }
+    }, 1800);
   }
 
   function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
