@@ -63,8 +63,8 @@ const CLIENT_PRIORITY_PREFETCH_ROUTES = [
   "/client/parametres",
 ];
 const CLIENT_IDLE_PREFETCH_ROUTES = CLIENT_PRIORITY_PREFETCH_ROUTES;
-const CLIENT_NAV_FEEDBACK_DELAY_MS = 120;
-const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 1400;
+const CLIENT_NAV_FEEDBACK_DELAY_MS = 70;
+const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 900;
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -175,7 +175,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     const routes = CLIENT_IDLE_PREFETCH_ROUTES;
     const prefetchClientRoutes = () => {
       const timers = routes.map((route, index) => (
-        window.setTimeout(() => prefetchClientRoute(route), index * 120)
+        window.setTimeout(() => prefetchClientRoute(route), index * 70)
       ));
       return () => timers.forEach((timer) => window.clearTimeout(timer));
     };
@@ -188,7 +188,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (browserWindow.requestIdleCallback) {
       const idleId = browserWindow.requestIdleCallback(() => {
         cancelStaggeredPrefetch = prefetchClientRoutes();
-      }, { timeout: desktop ? 600 : 1000 });
+      }, { timeout: desktop ? 350 : 650 });
       return () => {
         browserWindow.cancelIdleCallback?.(idleId);
         cancelStaggeredPrefetch?.();
@@ -197,7 +197,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
     const timer = window.setTimeout(() => {
       cancelStaggeredPrefetch = prefetchClientRoutes();
-    }, desktop ? 180 : 520);
+    }, desktop ? 90 : 260);
     return () => {
       window.clearTimeout(timer);
       cancelStaggeredPrefetch?.();

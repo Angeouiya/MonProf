@@ -50,19 +50,20 @@ record(
 record(
   "Route progress indicator is a short settled animation, not an infinite spinner",
   /@keyframes client-route-progress-settle/.test(css)
-    && /animation:\s*client-route-progress-settle\s+320ms[\s\S]*?both\s*!important;/.test(css)
-    && css.lastIndexOf("client-route-progress-settle 320ms") > css.lastIndexOf("client-route-progress-slide"),
+    && /animation:\s*client-route-progress-slide\s+180ms/.test(css)
+    && /animation:\s*client-route-progress-settle\s+220ms[\s\S]*?both\s*!important;/.test(css)
+    && css.lastIndexOf("client-route-progress-settle 220ms") > css.lastIndexOf("client-route-progress-slide"),
 );
 
 record(
   "Client navigation prefetch is prioritized and feedback avoids instant-load flashes",
   /const CLIENT_NAV_PREFETCH\s*=\s*true\s*;/.test(layout)
     && /const CLIENT_IDLE_PREFETCH_ROUTES\s*=\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*;/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*120\s*;/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*1400\s*;/.test(layout)
-    && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*120/.test(layout)
-    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*600\s*:\s*1000\s*\}/.test(layout)
-    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*180\s*:\s*520\s*\)/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*70\s*;/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*900\s*;/.test(layout)
+    && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*70/.test(layout)
+    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*350\s*:\s*650\s*\}/.test(layout)
+    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*90\s*:\s*260\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
 );
