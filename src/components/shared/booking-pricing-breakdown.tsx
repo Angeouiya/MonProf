@@ -109,7 +109,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 min-[560px]:grid-cols-3" data-client-pricing-facts>
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[520px]:grid-cols-3" data-client-pricing-facts>
         <PricingFact
           icon={<Clock className="h-4 w-4" />}
           label="Formule"
@@ -129,7 +129,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         />
       </div>
 
-      <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3" data-client-pricing-detail>
+      <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5" data-client-pricing-detail>
         <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[620px]:flex-row min-[620px]:items-end min-[620px]:justify-between">
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
@@ -219,16 +219,16 @@ function PricingFact({
   icon?: ReactNode;
 }) {
   return (
-    <div data-client-pricing-fact className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
+    <div data-client-pricing-fact className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 min-[520px]:flex-col min-[760px]:flex-row">
       {icon && (
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8DEE9] text-[#111B4D]">
           {icon}
         </span>
       )}
       <div className="min-w-0">
-        <p className="break-words text-[10.5px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+        <p className="break-words text-[10px] font-semibold uppercase leading-3 tracking-wide text-[#64748B] min-[380px]:text-[10.5px]">{label}</p>
         <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-[#111827]">{value}</p>
-        <p className="mt-0.5 break-words text-[11px] font-medium leading-tight text-[#64748B]">{detail}</p>
+        <p className="mt-0.5 break-words text-[11px] font-medium leading-4 text-[#64748B]">{detail}</p>
       </div>
     </div>
   );
@@ -246,14 +246,14 @@ function PricingLine({
   strong?: boolean;
 }) {
   return (
-    <div className="grid items-start gap-1.5 min-[560px]:grid-cols-[minmax(0,1fr)_auto] min-[560px]:gap-3">
-      <span className="min-w-0">
+    <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-[#EEF2F7] bg-white px-3 py-2.5 min-[520px]:grid min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start min-[520px]:gap-3 min-[520px]:border-0 min-[520px]:px-0 min-[520px]:py-0">
+      <span className="min-w-0 [overflow-wrap:anywhere]">
         <span className={strong ? "block font-semibold leading-snug text-[#111827]" : "block font-medium leading-snug text-[#64748B]"}>
           {label}
         </span>
         {detail && <span className="mt-0.5 block text-xs font-medium leading-snug text-[#64748B]">{detail}</span>}
       </span>
-      <span className={strong ? "font-semibold tabular-nums leading-snug text-[#111B4D] min-[560px]:whitespace-nowrap min-[560px]:text-right" : "font-semibold tabular-nums leading-snug text-[#111827] min-[560px]:whitespace-nowrap min-[560px]:text-right"}>
+      <span className={strong ? "break-words font-semibold tabular-nums leading-snug text-[#111B4D] min-[520px]:whitespace-nowrap min-[520px]:text-right" : "break-words font-semibold tabular-nums leading-snug text-[#111827] min-[520px]:whitespace-nowrap min-[520px]:text-right"}>
         {value}
       </span>
     </div>
