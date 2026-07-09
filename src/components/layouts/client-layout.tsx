@@ -100,6 +100,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     closeMobileSurfaces();
 
     const closeOnPageShow = () => closeMobileSurfaces();
+    const closeOnFocus = () => closeMobileSurfaces();
     const closeOnVisible = () => {
       if (document.visibilityState === "visible") closeMobileSurfaces();
     };
@@ -111,12 +112,14 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     };
 
     window.addEventListener("pageshow", closeOnPageShow);
+    window.addEventListener("focus", closeOnFocus);
     window.addEventListener("resize", closeOnDesktop);
     document.addEventListener("visibilitychange", closeOnVisible);
     document.addEventListener("keydown", closeOnEscape);
 
     return () => {
       window.removeEventListener("pageshow", closeOnPageShow);
+      window.removeEventListener("focus", closeOnFocus);
       window.removeEventListener("resize", closeOnDesktop);
       document.removeEventListener("visibilitychange", closeOnVisible);
       document.removeEventListener("keydown", closeOnEscape);
@@ -397,22 +400,30 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div data-client-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-[80] overflow-hidden lg:hidden">
+          <div
+            data-client-mobile-layer
+            className="app-topbar-offset fixed inset-x-0 z-[60] overflow-hidden lg:hidden"
+            style={{
+              bottom: hideMobileBottomNav
+                ? "0px"
+                : "calc(5.6rem + env(safe-area-inset-bottom))",
+            }}
+          >
             <button
               type="button"
-              className="absolute inset-0 cursor-default bg-[#050B24]"
+              className="absolute inset-0 cursor-default bg-[#111827]"
               onPointerDown={closeMobileSurfaces}
               onClick={closeMobileSurfaces}
               aria-label="Fermer le menu client"
             />
             <aside
               data-client-mobile-drawer
-              className="client-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white"
+              className="client-mobile-menu-panel absolute inset-x-2 top-2 mx-auto flex max-h-[calc(100%-1rem)] w-[min(28rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-lg border border-[#E6EAF3] bg-white"
               role="dialog"
               aria-modal="true"
               aria-label="Menu client"
             >
-              <div className="flex min-h-16 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
+              <div className="flex min-h-14 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
                 <button onClick={closeMobileSurfaces} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
                   <X className="h-5 w-5" />
@@ -457,7 +468,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           </div>
         </main>
       </div>
-      {!hideMobileBottomNav && !open && (
+      {!hideMobileBottomNav && (
         <MobileBottomNav pathname={pathname} isActive={isActive} notificationCount={notificationCount} />
       )}
     </div>

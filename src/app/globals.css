@@ -1625,7 +1625,13 @@ b {
   overscroll-behavior: contain;
 }
 
+.client-mobile-menu-panel {
+  min-height: 0 !important;
+  overscroll-behavior: contain;
+}
+
 .client-mobile-drawer [data-client-sidebar-nav],
+.client-mobile-menu-panel [data-client-sidebar-nav],
 .professor-mobile-drawer [data-professor-sidebar-nav],
 .admin-mobile-drawer [data-admin-sidebar-nav] {
   min-height: 0 !important;
@@ -4988,8 +4994,9 @@ b {
 }
 
 .client-shell[data-mobile-menu-open="true"] [data-client-mobile-nav] {
-  display: none !important;
-  pointer-events: none !important;
+  display: block !important;
+  pointer-events: auto !important;
+  z-index: 95 !important;
 }
 
 .professor-shell[data-mobile-menu-open="true"] [data-professor-mobile-nav] {
@@ -5001,6 +5008,18 @@ b {
 .professor-shell [data-professor-mobile-layer],
 .admin-shell [data-admin-mobile-layer] {
   z-index: 80 !important;
+}
+
+.client-shell [data-client-mobile-layer] {
+  z-index: 60 !important;
+}
+
+.client-shell [data-client-mobile-layer] > button {
+  opacity: 1 !important;
+}
+
+.client-shell [data-client-mobile-drawer].client-mobile-menu-panel {
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.24) !important;
 }
 
 @media (max-height: 760px) and (min-width: 1024px) {
