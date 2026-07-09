@@ -13,6 +13,7 @@ const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
 const clientLoadingPath = "src/app/client/loading.tsx";
 const clientErrorPath = "src/app/client/error.tsx";
+const clientNotFoundPath = "src/app/client/not-found.tsx";
 const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
@@ -27,6 +28,7 @@ const clientBookingActions = read(clientBookingActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
 const clientLoading = read(clientLoadingPath);
 const clientError = read(clientErrorPath);
+const clientNotFound = read(clientNotFoundPath);
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
@@ -293,6 +295,16 @@ record(
     && /Référence incident/.test(clientError)
     && /bg-\[#111B4D\]/.test(clientError)
     && !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(clientError),
+);
+
+record(
+  "Client missing routes render a professional recoverable app screen",
+  /data-client-not-found/.test(clientNotFound)
+    && /href="\/client"/.test(clientNotFound)
+    && /href="\/client\/rechercher"/.test(clientNotFound)
+    && /Cette page client est introuvable/.test(clientNotFound)
+    && /bg-\[#111B4D\]/.test(clientNotFound)
+    && !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(clientNotFound),
 );
 
 for (const check of checks) {
