@@ -1,6 +1,8 @@
 import fs from "node:fs";
+import path from "node:path";
 
 const checks = [];
+const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", "src/components/shared/client-page-primitives.tsx"];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
@@ -21,6 +23,7 @@ const clientLoading = read(clientLoadingPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
+const clientUiSources = readClientUiSources(clientSourceRoots);
 
 record(
   "Client bottom nav is guarded while mobile drawer is open",
@@ -122,6 +125,21 @@ record(
 );
 
 record(
+  "Client platform source avoids gradient-led UI",
+  !/\b(?:bg-gradient(?:-[a-z]+)?|from-(?:\[[^\]]+\]|[a-z]+-\d+)|via-(?:\[[^\]]+\]|[a-z]+-\d+)|to-(?:\[[^\]]+\]|[a-z]+-\d+))\b/.test(clientUiSources),
+);
+
+record(
+  "Client platform avoids oversized rounded marketing cards",
+  !/rounded-(?:2xl|3xl|\[2rem\]|\[2\.5rem\])/.test(clientUiSources),
+);
+
+record(
+  "Client command centers are suppressed to avoid repeated UI blocks",
+  /\[data-client-course-command-center\][\s\S]*?\[data-client-support-command-center\][\s\S]*?\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Public mobile menu avoids duplicated professor search entries",
   !/useSession/.test(publicLayout)
     && !/SessionProvider/.test(providers)
@@ -178,4 +196,23 @@ function record(label, ok) {
 
 function countOccurrences(source, needle) {
   return source.split(needle).length - 1;
+}
+
+function readClientUiSources(entries) {
+  return entries.flatMap((entry) => {
+    if (!fs.existsSync(entry)) return [];
+    const stat = fs.statSync(entry);
+    if (stat.isFile()) return [read(entry)];
+    return walk(entry)
+      .filter((filePath) => /\.(tsx|ts|css)$/.test(filePath))
+      .map(read);
+  }).join("\n");
+}
+
+function walk(dirPath) {
+  return fs.readdirSync(dirPath, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) return walk(fullPath);
+    return [fullPath];
+  });
 }
