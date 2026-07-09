@@ -3,11 +3,14 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  if ((session.user as any).role !== "CLIENT") {
+  const role = (session.user as any).role;
+  const ownerAdmin = isOwnerAdminAccount({ role, email: session.user.email });
+  if (role !== "CLIENT" && !ownerAdmin) {
     return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
   }
   const userId = (session.user as any).id;
@@ -26,7 +29,9 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  if ((session.user as any).role !== "CLIENT") {
+  const role = (session.user as any).role;
+  const ownerAdmin = isOwnerAdminAccount({ role, email: session.user.email });
+  if (role !== "CLIENT" && !ownerAdmin) {
     return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
   }
   const userId = (session.user as any).id;
@@ -35,6 +40,9 @@ export async function PATCH(req: NextRequest) {
   const { action, name, phone, commune, quartier, avatarUrl, oldPassword, newPassword } = body;
 
   if (action === "changePassword") {
+    if (!canUseAccountPasswordFlow({ role, email: session.user.email })) {
+      return NextResponse.json({ error: "Compte non autorisé pour cette opération." }, { status: 403 });
+    }
     if (!oldPassword || !newPassword) {
       return NextResponse.json({ error: "Ancien et nouveau mot de passe requis" }, { status: 400 });
     }
@@ -48,8 +56,49 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 400 });
     }
     const newHash = await bcrypt.hash(newPassword, 10);
-    await db.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+    await db.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+      await tx.passwordResetToken.updateMany({
+        where: { userId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.notification.create({
+        data: {
+          userId: ownerAdmin ? null : userId,
+          title: "Mot de passe modifié",
+          message: ownerAdmin
+            ? "Le mot de passe du compte administrateur propriétaire a été modifié depuis l'espace compte."
+            : "Votre mot de passe Compétence a été modifié depuis vos paramètres.",
+          type: "PASSWORD_CHANGED",
+          recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          clientId: ownerAdmin ? null : userId,
+          sentAt: new Date(),
+          link: ownerAdmin ? "/admin/parametres" : "/client/parametres",
+          actionLabel: "Voir paramètres",
+        },
+      });
+      if (ownerAdmin) {
+        await tx.adminActionLog.create({
+          data: {
+            adminId: userId,
+            action: "OWNER_ADMIN_PASSWORD_CHANGED",
+            entityType: "User",
+            entityId: userId,
+            detail: "Modification du mot de passe du compte administrateur propriétaire depuis l'espace compte.",
+            oldStatus: "PASSWORD_ACTIVE",
+            newStatus: "PASSWORD_CHANGED",
+          },
+        });
+      }
+    });
     return NextResponse.json({ ok: true });
+  }
+
+  if (ownerAdmin) {
+    return NextResponse.json({ error: "Le compte propriétaire ne peut modifier ici que son mot de passe." }, { status: 403 });
   }
 
   const data: any = {};

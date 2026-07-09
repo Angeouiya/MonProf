@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/notification-delivery";
 import { z } from "zod";
 
 const schema = z.object({
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   const { name, email, phone, subject, message } = parsed.data;
 
   try {
-    await db.contactMessage.create({
+    const contactMessage = await db.contactMessage.create({
       data: {
         name,
         email: email.toLowerCase().trim(),
@@ -36,6 +37,48 @@ export async function POST(req: NextRequest) {
         message,
       },
     });
+
+    const supportEmail = await getSupportEmail();
+    const delivery = supportEmail
+      ? await sendEmail({
+          to: supportEmail,
+          subject: `Nouveau message contact - ${subject}`,
+          text: [
+            "Nouveau message reçu depuis la page contact Compétence.",
+            "",
+            `Nom : ${name}`,
+            `Email : ${email.toLowerCase().trim()}`,
+            phone?.trim() ? `Téléphone : ${phone.trim()}` : "Téléphone : non renseigné",
+            `Sujet : ${subject}`,
+            "",
+            "Message :",
+            message,
+            "",
+            "Ce message est également enregistré dans Admin > Messages.",
+          ].join("\n"),
+        })
+      : {
+          ok: false,
+          configured: false,
+          message: "Email service client non configuré.",
+        };
+
+    await db.notification.create({
+      data: {
+        title: "Nouveau message contact",
+        message: `${name} a envoyé un message: ${subject}. ${delivery.ok ? "Email service client envoyé." : delivery.message}`,
+        type: "CONTACT_MESSAGE",
+        recipientType: "ADMIN",
+        channel: "INTERNAL",
+        status: "CREATED",
+        priority: "IMPORTANT",
+        sentAt: new Date(),
+        link: "/admin/messages",
+        actionLabel: "Voir messages",
+        response: `contactMessageId=${contactMessage.id}`,
+      },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[api/contact] error:", e);
@@ -44,4 +87,9 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+async function getSupportEmail() {
+  const setting = await db.setting.findUnique({ where: { key: "support_email" } });
+  return setting?.value?.trim() || process.env.SUPPORT_EMAIL || "contact@competence.ci";
 }

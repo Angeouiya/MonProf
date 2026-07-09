@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Bell, CheckCircle2, Lock, Mail, ShieldCheck, UserCog } from "lucide-react";
 import { db } from "@/lib/db";
-import { requireClient } from "@/lib/session";
+import { getSessionUser } from "@/lib/session";
+import { isOwnerAdminAccount } from "@/lib/owner-account";
 import {
   ClientInfoPill,
   ClientMetricStrip,
@@ -16,7 +18,11 @@ import { ClientPasswordSettingsForm } from "./settings-client";
 export const dynamic = "force-dynamic";
 
 export default async function ClientParametresPage() {
-  const sessionUser = await requireClient();
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) redirect("/connexion?from=/client/parametres");
+  const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, email: sessionUser.email });
+  if (sessionUser.role !== "CLIENT" && !ownerAdmin) redirect(sessionUser.role === "ADMIN" ? "/admin" : "/professeur");
+
   const [profile, unreadNotifications, activeBookings] = await db.$transaction([
     db.user.findUnique({
       where: { id: sessionUser.id },
@@ -30,39 +36,49 @@ export default async function ClientParametresPage() {
       },
     }),
     db.notification.count({
-      where: {
-        recipientType: "CLIENT",
-        read: false,
-        OR: [{ userId: sessionUser.id }, { clientId: sessionUser.id }],
-      },
+      where: ownerAdmin
+        ? {
+            recipientType: "ADMIN",
+            read: false,
+          }
+        : {
+            recipientType: "CLIENT",
+            read: false,
+            OR: [{ userId: sessionUser.id }, { clientId: sessionUser.id }],
+          },
     }),
     db.booking.count({
-      where: {
-        clientId: sessionUser.id,
-        status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_CLIENT_VALIDATION"] },
-      },
+      where: ownerAdmin
+        ? { id: "__owner_admin_no_client_booking__" }
+        : {
+            clientId: sessionUser.id,
+            status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_CLIENT_VALIDATION"] },
+          },
     }),
   ]);
-  const accountName = profile?.name ?? sessionUser.name ?? "Client";
+  const accountName = profile?.name ?? sessionUser.name ?? (ownerAdmin ? "Propriétaire" : "Client");
   const hasEmail = Boolean(profile?.email ?? sessionUser.email);
   const hasPhone = Boolean(profile?.phone);
   const hasArea = Boolean(profile?.commune && profile?.quartier);
   const completedFields = [accountName, profile?.email ?? sessionUser.email, profile?.phone, profile?.commune, profile?.quartier].filter(Boolean).length;
   const profileCompletion = Math.round((completedFields / 5) * 100);
   const recoveryReady = hasEmail;
-  const accountReady = recoveryReady && hasPhone && hasArea;
+  const accountReady = ownerAdmin ? recoveryReady : recoveryReady && hasPhone && hasArea;
 
   return (
     <div className="space-y-5">
       <ClientPageHeader
-        eyebrow="Compte"
+        eyebrow={ownerAdmin ? "Compte propriétaire" : "Compte"}
         title="Paramètres"
-        description="Pilotez la sécurité de votre compte client, votre accès email et vos actions sensibles sans code OTP."
+        description={ownerAdmin
+          ? "Modifiez le mot de passe du compte administrateur propriétaire depuis l'espace compte rattaché, sans OTP."
+          : "Pilotez la sécurité de votre compte client, votre accès email et vos actions sensibles sans code OTP."
+        }
       />
 
       <ClientMetricStrip
         metrics={[
-          { icon: ShieldCheck, label: "Compte", value: accountReady ? "Prêt" : "À compléter", attention: !accountReady },
+          { icon: ShieldCheck, label: "Compte", value: ownerAdmin ? "Admin propriétaire" : accountReady ? "Prêt" : "À compléter", attention: !accountReady },
           { icon: Mail, label: "Récupération", value: recoveryReady ? "Email sécurisé" : "Email requis", attention: !recoveryReady },
           { icon: Bell, label: "Alertes", value: unreadNotifications, attention: unreadNotifications > 0 },
           { icon: Lock, label: "OTP", value: "Non utilisé" },
@@ -79,6 +95,7 @@ export default async function ClientParametresPage() {
         accountReady={accountReady}
         unreadNotifications={unreadNotifications}
         activeBookings={activeBookings}
+        ownerAdmin={ownerAdmin}
       />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -88,7 +105,7 @@ export default async function ClientParametresPage() {
             title="Modifier mon mot de passe"
             description="Saisissez votre mot de passe actuel, puis choisissez un nouveau mot de passe."
           />
-          <ClientPasswordSettingsForm />
+          <ClientPasswordSettingsForm ownerAdmin={ownerAdmin} />
         </ClientSurface>
 
         <ClientSurface compact>
@@ -97,9 +114,12 @@ export default async function ClientParametresPage() {
               <UserCog className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-base font-semibold text-[#111827]">Accès client</h2>
+              <h2 className="text-base font-semibold text-[#111827]">{ownerAdmin ? "Accès propriétaire" : "Accès client"}</h2>
               <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
-                Le client peut changer son mot de passe ici. En cas d'oubli, il reçoit un lien sécurisé par email, sans code OTP.
+                {ownerAdmin
+                  ? "Seul le compte propriétaire autorisé peut changer ici le mot de passe administrateur. En cas d'oubli, le lien sécurisé arrive par email, sans OTP."
+                  : "Le client peut changer son mot de passe ici. En cas d'oubli, il reçoit un lien sécurisé par email, sans code OTP."
+                }
               </p>
             </div>
           </div>
@@ -127,6 +147,7 @@ function SettingsCommandCenter({
   accountReady,
   unreadNotifications,
   activeBookings,
+  ownerAdmin,
 }: {
   name: string;
   email: string;
@@ -137,6 +158,7 @@ function SettingsCommandCenter({
   accountReady: boolean;
   unreadNotifications: number;
   activeBookings: number;
+  ownerAdmin: boolean;
 }) {
   return (
     <ClientSurface compact className="overflow-hidden rounded-lg border border-[#DDE3EE] p-0" data-client-settings-command-center>
@@ -149,7 +171,10 @@ function SettingsCommandCenter({
                 {accountReady ? "Votre compte est prêt pour les réservations" : "Quelques informations renforcent votre compte"}
               </h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
-                Le service client utilise ces informations pour confirmer vos cours, suivre vos paiements et vous aider en cas de récupération du compte.
+                {ownerAdmin
+                  ? "Ce compte est le point de contrôle sensible pour la sécurité administrateur. Le changement de mot de passe exige toujours l'ancien mot de passe."
+                  : "Le service client utilise ces informations pour confirmer vos cours, suivre vos paiements et vous aider en cas de récupération du compte."
+                }
               </p>
             </div>
             <span className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg border border-[#111B4D] bg-white px-3 text-sm font-semibold text-[#111B4D]">
@@ -196,7 +221,9 @@ function SettingsCommandCenter({
               <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
                 {activeBookings > 0
                   ? `${activeBookings} dossier(s) actif(s) dépendent d'informations de contact fiables.`
-                  : "Votre compte reste prêt pour une prochaine réservation."}
+                  : ownerAdmin
+                    ? "Votre accès propriétaire reste séparé des comptes clients ordinaires."
+                    : "Votre compte reste prêt pour une prochaine réservation."}
               </p>
             </div>
             <div className="grid gap-2">

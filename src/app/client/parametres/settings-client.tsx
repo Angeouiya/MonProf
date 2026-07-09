@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function ClientPasswordSettingsForm() {
+export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?: boolean }) {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -48,7 +48,7 @@ export function ClientPasswordSettingsForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
-      toast.success("Mot de passe client modifié.");
+      toast.success(ownerAdmin ? "Mot de passe administrateur modifié." : "Mot de passe client modifié.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -101,7 +101,7 @@ export function ClientPasswordSettingsForm() {
 
       <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-        Modifier le mot de passe
+        {ownerAdmin ? "Modifier le mot de passe administrateur" : "Modifier le mot de passe"}
       </Button>
     </form>
   );

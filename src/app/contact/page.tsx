@@ -50,7 +50,7 @@ const CONTACT_PATHS = [
     icon: Phone,
     title: "Besoin urgent",
     text: "Appelez le service client si une réservation du jour, une adresse ou un paiement bloque.",
-    href: "tel:+2252722000000",
+    href: "tel:+2250161393939",
     action: "Appeler le service client",
   },
   {
@@ -317,7 +317,7 @@ export default function ContactPage() {
                     <div>
                       <p className="text-xs text-[#64748B]">Téléphone</p>
                       <p className="font-medium text-[#111827]">
-                        +225 27 22 00 00 00
+                        +225 01 61 39 39 39
                       </p>
                       <p className="text-xs text-[#64748B]">
                         Lun. – Sam. · 8h – 18h

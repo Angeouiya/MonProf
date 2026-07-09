@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -17,10 +18,16 @@ export async function POST(req: NextRequest) {
     include: { user: true },
   });
 
-  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date() || resetToken.user.role !== "CLIENT") {
+  if (
+    !resetToken ||
+    resetToken.usedAt ||
+    resetToken.expiresAt < new Date() ||
+    !canUseAccountPasswordFlow({ role: resetToken.user.role, email: resetToken.user.email })
+  ) {
     return NextResponse.json({ error: "Ce lien est invalide ou expiré." }, { status: 400 });
   }
 
+  const ownerAdmin = isOwnerAdminAccount({ role: resetToken.user.role, email: resetToken.user.email });
   const passwordHash = await bcrypt.hash(password, 10);
   await db.$transaction(async (tx) => {
     await tx.user.update({
@@ -41,20 +48,35 @@ export async function POST(req: NextRequest) {
     });
     await tx.notification.create({
       data: {
-        userId: resetToken.userId,
+        userId: ownerAdmin ? null : resetToken.userId,
         title: "Mot de passe modifié",
-        message: "Votre mot de passe client Compétence a été réinitialisé avec succès.",
+        message: ownerAdmin
+          ? "Le mot de passe du compte administrateur propriétaire a été réinitialisé avec succès."
+          : "Votre mot de passe Compétence a été réinitialisé avec succès.",
         type: "PASSWORD_RESET_DONE",
-        recipientType: "CLIENT",
+        recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
         channel: "INTERNAL",
         status: "SENT",
         priority: "IMPORTANT",
-        clientId: resetToken.userId,
+        clientId: ownerAdmin ? null : resetToken.userId,
         sentAt: new Date(),
-        link: "/client/parametres",
+        link: ownerAdmin ? "/admin/parametres" : "/client/parametres",
         actionLabel: "Voir paramètres",
       },
     });
+    if (ownerAdmin) {
+      await tx.adminActionLog.create({
+        data: {
+          adminId: resetToken.userId,
+          action: "OWNER_ADMIN_PASSWORD_RESET",
+          entityType: "User",
+          entityId: resetToken.userId,
+          detail: "Réinitialisation du mot de passe du compte administrateur propriétaire via lien email sécurisé.",
+          oldStatus: "PASSWORD_ACTIVE",
+          newStatus: "PASSWORD_RESET",
+        },
+      });
+    }
   });
 
   return NextResponse.json({ ok: true });

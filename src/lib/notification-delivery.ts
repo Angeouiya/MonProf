@@ -203,7 +203,7 @@ export async function sendClientResetPasswordEmail(input: { to: string; name: st
     text: [
       `Bonjour ${input.name},`,
       "",
-      "Vous avez demandé la réinitialisation de votre mot de passe client Compétence.",
+      "Vous avez demandé la réinitialisation de votre mot de passe Compétence.",
       "Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :",
       input.resetUrl,
       "",

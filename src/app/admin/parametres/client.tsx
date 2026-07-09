@@ -81,7 +81,7 @@ export function ParametresClient({
             <Input type="number" min={0} max={100} value={values.default_commission ?? String(PLATFORM_COMMISSION_PERCENT)} onChange={(e) => set("default_commission", e.target.value)} />
           </SettingField>
           <SettingField icon={Smartphone} label="Téléphone service client">
-            <Input value={values.support_phone ?? ""} onChange={(e) => set("support_phone", e.target.value)} placeholder="+225 27 22 00 00 00" />
+            <Input value={values.support_phone ?? ""} onChange={(e) => set("support_phone", e.target.value)} placeholder="+225 01 61 39 39 39" />
           </SettingField>
           <SettingField icon={Mail} label="Email service client">
             <Input type="email" value={values.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="contact@competence.ci" />

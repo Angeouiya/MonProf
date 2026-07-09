@@ -31,8 +31,8 @@ export default async function AdminParametresPage() {
   const defaults: Record<string, string> = {
     platform_name: "Compétence",
     default_commission: String(PLATFORM_COMMISSION_PERCENT),
-    support_phone: "",
-    support_email: "",
+    support_phone: "+225 01 61 39 39 39",
+    support_email: "contact@competence.ci",
     notification_cron_enabled: "true",
     notification_delivery_enabled: "true",
     notification_from_name: "Compétence",

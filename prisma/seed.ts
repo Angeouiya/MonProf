@@ -1012,7 +1012,7 @@ async function main() {
   console.log("⚙️ Paramètres plateforme...");
   await prisma.setting.create({ data: { key: "platform_name", value: "Compétence" } });
   await prisma.setting.create({ data: { key: "default_commission", value: "20" } });
-  await prisma.setting.create({ data: { key: "support_phone", value: "+225 27 22 00 00 00" } });
+  await prisma.setting.create({ data: { key: "support_phone", value: "+225 01 61 39 39 39" } });
   await prisma.setting.create({ data: { key: "support_email", value: "support@competence.ci" } });
 
   console.log("\n✅ Seed terminé!");
