@@ -32,6 +32,7 @@ checkOptionalPublicUrl("NEXTAUTH_URL");
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
 checkBuildDoesNotIgnoreCodeQualityErrors();
 checkVercelDeploymentConfig();
+checkHealthEndpoint();
 checkNoPublicPayDunyaSecrets();
 await checkPayDunyaConfiguration();
 
@@ -191,6 +192,29 @@ function checkVercelDeploymentConfig() {
   }
   const ignore = fs.readFileSync(ignorePath, "utf8");
   record("Vercel ignore file excludes local env files", /^\.env$/m.test(ignore) && /^\.env\.\*$/m.test(ignore));
+}
+
+function checkHealthEndpoint() {
+  const healthRoutePath = "src/app/api/health/route.ts";
+  if (!fs.existsSync(healthRoutePath)) {
+    record("Production health endpoint exists", false);
+    return;
+  }
+
+  const healthRoute = fs.readFileSync(healthRoutePath, "utf8");
+  record(
+    "Production health endpoint checks database readiness",
+    /db\.\$queryRaw/.test(healthRoute)
+      && /db\.subject\.count/.test(healthRoute)
+      && /db\.level\.count/.test(healthRoute)
+      && /db\.commune\.count/.test(healthRoute)
+      && /db\.user\.count/.test(healthRoute),
+  );
+  record(
+    "Production health endpoint checks PayDunya without exposing secrets",
+    /getPayDunyaConfig/.test(healthRoute)
+      && !/masterKey|privateKey|publicKey|token/.test(healthRoute.replace(/getPayDunyaConfig/g, "")),
+  );
 }
 
 async function checkPayDunyaConfiguration() {
