@@ -529,6 +529,11 @@ function buildTeacherProfileExtras(t: (typeof TEACHERS)[number]) {
 }
 
 async function main() {
+  if (process.env.ALLOW_DEMO_SEED !== "true") {
+    console.log("Seed de démonstration désactivé. Définissez ALLOW_DEMO_SEED=true uniquement en développement local.");
+    return;
+  }
+
   console.log("🧹 Nettoyage...");
   await prisma.teacherPayoutAllocation.deleteMany();
   await prisma.teacherPayoutRecord.deleteMany();

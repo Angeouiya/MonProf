@@ -543,6 +543,8 @@ function FiltersForm({
             allLabel="Toutes les communes"
             groups={communeGroups}
             triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+            allowCustomValue
+            customValueLabel="Rechercher dans cette ville"
           />
         </Field>
 

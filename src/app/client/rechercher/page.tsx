@@ -346,6 +346,8 @@ export default async function RechercherPage({
                   allLabel="Toutes les communes"
                   groups={communeGroups}
                   triggerClassName="mt-1.5 h-11 rounded-lg border-[#E3E8F2] py-2.5 focus:border-[#111B4D] focus:ring-2 focus:ring-[#111B4D]"
+                  allowCustomValue
+                  customValueLabel="Rechercher dans cette ville"
                 />
               </div>
               <div>

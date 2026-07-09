@@ -98,6 +98,8 @@ export function HomeSearchBar({
             allLabel="Toutes"
             groups={communeGroups}
             triggerClassName="min-h-12 rounded-lg border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+            allowCustomValue
+            customValueLabel="Rechercher dans cette ville"
           />
         </SearchFieldLabel>
         <Button

@@ -153,47 +153,51 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const returnUrl = `${input.origin}/client/reservations/${input.booking.id}`;
   const callbackUrl = `${input.origin}/api/webhooks/paydunya`;
 
+  const invoicePayload = {
+    items: {
+      item_0: {
+        name: `Cours ${input.booking.subjectName}`,
+        quantity: input.booking.sessionsCount,
+        unit_price: Math.max(0, Math.round(input.booking.courseAmount / Math.max(1, input.booking.sessionsCount))),
+        total_price: input.booking.courseAmount,
+        description: `${input.booking.levelName} avec ${input.teacher.name}`,
+      },
+      ...(input.booking.transportFee > 0
+        ? {
+            item_1: {
+              name: "Frais de déplacement",
+              quantity: 1,
+              unit_price: input.booking.transportFee,
+              total_price: input.booking.transportFee,
+              description: "Déplacement professeur en Côte d'Ivoire",
+            },
+          }
+        : {}),
+      ...((input.booking.paymentServiceFeeAmount ?? 0) > 0
+        ? {
+            item_2: {
+              name: input.booking.paymentServiceFeeLabel || "Frais de service paiement",
+              quantity: 1,
+              unit_price: input.booking.paymentServiceFeeAmount,
+              total_price: input.booking.paymentServiceFeeAmount,
+              description: "Frais lies au paiement mobile money / PayDunya",
+            },
+          }
+        : {}),
+    },
+    customer: {
+      name: input.client.name,
+      email: input.client.email || "",
+      phone: input.client.phone || "",
+    },
+    channels: [...PAYDUNYA_CI_CHANNELS],
+    total_amount: input.booking.totalClientPays,
+    description: `Réservation ${input.booking.reference} - Compétence`,
+  };
+
   const payload = {
     invoice: {
-      items: {
-        item_0: {
-          name: `Cours ${input.booking.subjectName}`,
-          quantity: input.booking.sessionsCount,
-          unit_price: Math.max(0, Math.round(input.booking.courseAmount / Math.max(1, input.booking.sessionsCount))),
-          total_price: input.booking.courseAmount,
-          description: `${input.booking.levelName} avec ${input.teacher.name}`,
-        },
-        ...(input.booking.transportFee > 0
-          ? {
-              item_1: {
-                name: "Frais de déplacement",
-                quantity: 1,
-                unit_price: input.booking.transportFee,
-                total_price: input.booking.transportFee,
-                description: "Déplacement professeur en Côte d'Ivoire",
-              },
-            }
-          : {}),
-        ...((input.booking.paymentServiceFeeAmount ?? 0) > 0
-          ? {
-              item_2: {
-                name: input.booking.paymentServiceFeeLabel || "Frais de service paiement",
-                quantity: 1,
-                unit_price: input.booking.paymentServiceFeeAmount,
-                total_price: input.booking.paymentServiceFeeAmount,
-                description: "Frais lies au paiement mobile money / PayDunya",
-              },
-            }
-          : {}),
-      },
-      customer: {
-        name: input.client.name,
-        email: input.client.email || "",
-        phone: input.client.phone || "",
-      },
-      channels: PAYDUNYA_CI_CHANNELS,
-      total_amount: input.booking.totalClientPays,
-      description: `Réservation ${input.booking.reference} - Compétence`,
+      ...invoicePayload,
     },
     store: {
       name: config.storeName,
@@ -218,18 +222,20 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     },
   };
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "PAYDUNYA-MASTER-KEY": config.masterKey,
-      "PAYDUNYA-PRIVATE-KEY": config.privateKey,
-      "PAYDUNYA-TOKEN": config.token,
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-  const responseCode = normalizePayDunyaResponseCode(data.response_code, data.data?.response_code);
+  let createAttempt = await postPayDunyaCheckoutInvoice(endpoint, config, payload);
+
+  if (shouldRetryPayDunyaCheckoutWithoutChannels(createAttempt)) {
+    const fallbackPayload = {
+      ...payload,
+      invoice: {
+        ...invoicePayload,
+      },
+    };
+    delete (fallbackPayload.invoice as { channels?: unknown }).channels;
+    createAttempt = await postPayDunyaCheckoutInvoice(endpoint, config, fallbackPayload);
+  }
+
+  const { response, data, responseCode } = createAttempt;
   const checkoutUrl = extractPayDunyaCheckoutUrl(data);
   const token = extractPayDunyaCheckoutToken(data);
 
@@ -262,6 +268,41 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     responseText: data.description,
     raw: sanitizePayDunyaApiResponse(data),
   };
+}
+
+async function postPayDunyaCheckoutInvoice(endpoint: string, config: PayDunyaConfig, payload: Record<string, unknown>) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "PAYDUNYA-MASTER-KEY": config.masterKey,
+      "PAYDUNYA-PRIVATE-KEY": config.privateKey,
+      "PAYDUNYA-TOKEN": config.token,
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  return {
+    response,
+    data,
+    responseCode: normalizePayDunyaResponseCode(data.response_code, data.data?.response_code),
+  };
+}
+
+function shouldRetryPayDunyaCheckoutWithoutChannels(attempt: Awaited<ReturnType<typeof postPayDunyaCheckoutInvoice>>) {
+  if (attempt.response.ok && attempt.responseCode === "00") return false;
+  const message = [
+    attempt.data?.response_text,
+    attempt.data?.description,
+    attempt.data?.message,
+    attempt.data?.errors?.message,
+    attempt.data?.errors?.description,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return attempt.response.status === 400
+    || message.includes("channel")
+    || message.includes("operator")
+    || message.includes("moyen")
+    || message.includes("paiement");
 }
 
 export async function verifyPayDunyaHash(hash?: string | null) {
