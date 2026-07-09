@@ -242,7 +242,7 @@ export default async function TeachersPage({
 
       {/* CONTENU */}
       <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
           {showTeacherFilters && (
             <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
               <p className="min-w-0 text-sm font-medium text-[#64748B]">
@@ -365,7 +365,7 @@ export default async function TeachersPage({
                   description={
                     hasPublishedTeachers
                       ? "Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
-                      : "Les profils réels seront affichés ici après vérification par le service client : vraie photo, identité contrôlée, matières et disponibilités exploitables."
+                      : "Les profils avec vraie photo et disponibilités seront publiés après vérification par le service client."
                   }
                   action={
                     <>
