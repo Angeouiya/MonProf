@@ -52,13 +52,15 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const prefetchRoutes = [
-  "/client",
+const essentialPrefetchRoutes = [
   "/client/rechercher",
   "/client/reservations",
-  "/client/cours",
   "/client/paiements",
   "/client/notifications",
+];
+
+const desktopPrefetchRoutes = [
+  "/client/cours",
   "/client/service-client",
   "/client/profil",
   "/client/parametres",
@@ -98,14 +100,28 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, [pathname, searchKey]);
 
   useEffect(() => {
+    const connection = (navigator as Navigator & {
+      connection?: { effectiveType?: string; saveData?: boolean };
+    }).connection;
+    const constrainedNetwork = Boolean(
+      connection?.saveData
+      || ["slow-2g", "2g"].includes(connection?.effectiveType ?? "")
+    );
+    if (constrainedNetwork) return;
+
     const prefetch = () => {
-      for (const route of prefetchRoutes) {
+      const routes = window.matchMedia("(min-width: 1024px)").matches
+        ? [...essentialPrefetchRoutes, ...desktopPrefetchRoutes]
+        : essentialPrefetchRoutes;
+
+      for (const route of routes) {
+        if (pathname === route) continue;
         router.prefetch(route);
       }
     };
     const idleId = "requestIdleCallback" in window
-      ? window.requestIdleCallback(prefetch, { timeout: 1600 })
-      : window.setTimeout(prefetch, 450);
+      ? window.requestIdleCallback(prefetch, { timeout: 2400 })
+      : window.setTimeout(prefetch, 1200);
 
     return () => {
       if ("cancelIdleCallback" in window && typeof idleId === "number") {
@@ -114,7 +130,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(idleId);
       }
     };
-  }, [router]);
+  }, [pathname, router]);
 
   useEffect(() => {
     return () => {
