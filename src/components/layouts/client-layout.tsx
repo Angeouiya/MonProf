@@ -382,7 +382,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                   )}
                 </div>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={() => setOpen(false)} />
+              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={() => setOpen(false)} compactAccount />
             </aside>
           </div>
         )}
@@ -414,11 +414,13 @@ function SidebarContent({
   isActive,
   onNavigate,
   notificationCount = 0,
+  compactAccount = false,
 }: {
   userName?: string | null;
   isActive: (item: ClientNavItem) => boolean;
   onNavigate?: () => void;
   notificationCount?: number;
+  compactAccount?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -467,7 +469,7 @@ function SidebarContent({
           );
         })}
       </nav>
-      <div data-client-sidebar-account className="client-sidebar-account shrink-0 border-t border-[#E6EAF3] p-3">
+      <div data-client-sidebar-account className={cn("client-sidebar-account shrink-0 border-t border-[#E6EAF3]", compactAccount ? "p-2.5" : "p-3")}>
         <div className="bg-white p-1">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
@@ -475,10 +477,10 @@ function SidebarContent({
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
-              <p className="truncate text-xs font-medium text-[#64748B]">Espace personnel</p>
+              <p className="truncate text-xs font-medium text-[#64748B]">{compactAccount ? "Compte client" : "Espace personnel"}</p>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2" aria-label="Compte client">
+          <div className={cn("mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2", compactAccount && "gap-1.5")} aria-label="Compte client">
             {accountNavItems.map((item) => {
               const active = isActive(item);
               return (
@@ -490,6 +492,7 @@ function SidebarContent({
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "inline-flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors",
+                    compactAccount && "min-h-10",
                     active
                       ? "border-[#111B4D] bg-[#111B4D] text-white"
                       : "border-[#E3E8F2] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]",
@@ -516,35 +519,42 @@ function SidebarContent({
             trigger={
               <button
                 type="button"
-                className="mt-2 flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+                className={cn(
+                  "mt-2 flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]",
+                  compactAccount && "min-h-10",
+                )}
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Déconnexion
               </button>
             }
           />
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium leading-4 text-[#64748B]">
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-            Paiement protégé jusqu'à validation.
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
-            <Link
-              href="/conditions-utilisation"
-              prefetch={false}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
-              onClick={onNavigate}
-            >
-              CGU
-            </Link>
-            <Link
-              href="/politique-confidentialite"
-              prefetch={false}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
-              onClick={onNavigate}
-            >
-              Confidentialité
-            </Link>
-          </div>
+          {!compactAccount && (
+            <>
+              <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium leading-4 text-[#64748B]">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
+                Paiement protégé jusqu'à validation.
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
+                <Link
+                  href="/conditions-utilisation"
+                  prefetch={false}
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
+                  onClick={onNavigate}
+                >
+                  CGU
+                </Link>
+                <Link
+                  href="/politique-confidentialite"
+                  prefetch={false}
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
+                  onClick={onNavigate}
+                >
+                  Confidentialité
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
