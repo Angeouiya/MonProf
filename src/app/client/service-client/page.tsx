@@ -33,7 +33,7 @@ export default async function ServiceClientPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const [eligibleBookings, myDisputes] = await Promise.all([
+  const [eligibleBookings, myDisputes] = await db.$transaction([
     db.booking.findMany({
       where: {
         clientId: user.id,

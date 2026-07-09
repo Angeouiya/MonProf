@@ -28,7 +28,7 @@ export default async function PaiementsPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const [rawTransactions, pendingPaymentBookings] = await Promise.all([
+  const [rawTransactions, pendingPaymentBookings] = await db.$transaction([
     db.transaction.findMany({
       where: {
         booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },

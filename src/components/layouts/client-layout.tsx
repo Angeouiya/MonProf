@@ -50,6 +50,13 @@ const quickSearchItems = [
 ];
 
 const CLIENT_NAV_PREFETCH = true;
+const CLIENT_PREFETCH_ROUTES = Array.from(
+  new Set([
+    ...navItems.map((item) => item.href),
+    ...mobileNavItems.map((item) => item.href),
+    "/client/support",
+  ]),
+);
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -96,6 +103,33 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       }
     };
   }, []);
+
+  useEffect(() => {
+    const prefetchClientRoutes = () => {
+      CLIENT_PREFETCH_ROUTES.forEach((href) => router.prefetch(href));
+    };
+    const browserWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    if (browserWindow.requestIdleCallback) {
+      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: 1600 });
+      return () => browserWindow.cancelIdleCallback?.(idleId);
+    }
+
+    const timer = globalThis.setTimeout(prefetchClientRoutes, 300);
+    return () => globalThis.clearTimeout(timer);
+  }, [router]);
+
+  useEffect(() => {
+    if (!open && !mobileSearchOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, mobileSearchOpen]);
 
   function startNavigationFeedback() {
     if (navigationDelayRef.current) {

@@ -40,7 +40,7 @@ export default async function CoursPage({
   const tabId = sp.tab ?? "avenir";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const [rawBookings, rawOverviewBookings, pendingCourseBookings] = await Promise.all([
+  const [rawBookings, rawOverviewBookings, pendingCourseBookings] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         clientId: user.id,

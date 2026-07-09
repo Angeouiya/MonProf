@@ -27,7 +27,7 @@ export default async function AvisPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const [bookingsToReview, myReviews] = await Promise.all([
+  const [bookingsToReview, myReviews] = await db.$transaction([
     db.booking.findMany({
       where: {
         clientId: user.id,
