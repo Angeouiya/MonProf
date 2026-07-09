@@ -75,6 +75,19 @@ record(
 );
 
 record(
+  "Client app rails are swipeable on mobile without visible scrollbar noise",
+  /Client app polish guard/.test(css)
+    && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
+    && /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(css),
+);
+
+record(
+  "Client action buttons stay solid navy, never gradient-led",
+  !/bg-gradient|from-|to-|via-/.test(layout)
+    && /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(css),
+);
+
+record(
   "Public mobile menu avoids duplicated professor search entries",
   !/useSession/.test(publicLayout)
     && !/SessionProvider/.test(providers)

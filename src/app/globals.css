@@ -5074,6 +5074,100 @@ b {
   box-shadow: 0 24px 70px rgba(17, 24, 39, 0.18) !important;
 }
 
+/* Client app polish guard: controls must feel native, compact, and readable. */
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-quick-search-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-notification-filter-rail],
+  [data-client-support-filter-rail]
+) {
+  -webkit-overflow-scrolling: touch !important;
+  scroll-padding-inline: 0.5rem !important;
+  scroll-snap-type: x mandatory !important;
+  scrollbar-width: none !important;
+}
+
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-quick-search-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-notification-filter-rail],
+  [data-client-support-filter-rail]
+)::-webkit-scrollbar {
+  display: none !important;
+}
+
+.client-shell :where(
+  [data-client-dashboard-action-rail],
+  [data-client-payment-method-rail],
+  [data-client-support-action-rail],
+  [data-client-quick-search-rail],
+  [data-client-reservation-filter-rail],
+  [data-client-course-filter-rail],
+  [data-client-payment-filter-rail],
+  [data-client-review-filter-rail],
+  [data-client-notification-filter-rail],
+  [data-client-support-filter-rail]
+) > * {
+  scroll-snap-align: start !important;
+}
+
+.client-shell :where(
+  [data-client-page-header],
+  [data-client-section-title],
+  [data-client-focus-panel],
+  [data-client-empty-state]
+) :where(p, div) {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.client-shell :where(.client-app-surface, [data-client-surface]) {
+  color: #111827;
+}
+
+.client-shell :where(button, a)[class*="bg-[#111B4D]"] {
+  background-color: #111B4D !important;
+  color: #FFFFFF !important;
+}
+
+@media (max-width: 559px) {
+  .client-shell :where([data-client-page-header]) h1 {
+    font-size: clamp(1.18rem, 6.2vw, 1.48rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .client-shell :where([data-client-page-header], [data-client-section-title]) :where(p, div) {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 720px) {
+  .client-shell :where(
+    [data-client-reservation-filter-rail],
+    [data-client-course-filter-rail],
+    [data-client-payment-filter-rail],
+    [data-client-review-filter-rail],
+    [data-client-notification-filter-rail],
+    [data-client-support-filter-rail],
+    [data-client-quick-search-rail]
+  ) {
+    scroll-snap-type: none !important;
+    scrollbar-width: auto !important;
+  }
+}
+
 @media (max-height: 760px) and (min-width: 1024px) {
   .client-shell [data-client-sidebar-account] {
     max-height: 6.5rem;
