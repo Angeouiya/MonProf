@@ -165,6 +165,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   return (
     <div
       data-client-layout
+      data-mobile-menu-open={open ? "true" : "false"}
       aria-busy={navigating}
       data-route-pending={navigating ? "true" : "false"}
       onPointerDownCapture={handleClientNavigationIntent}
@@ -329,7 +330,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
         {/* Sidebar mobile (drawer) */}
         {open && (
-          <div data-client-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-client-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-[80] overflow-hidden lg:hidden">
             <button
               type="button"
               className="absolute inset-0 cursor-default bg-[#050B24]"

@@ -4976,6 +4976,15 @@ b {
   max-height: 8rem;
 }
 
+.client-shell[data-mobile-menu-open="true"] [data-client-mobile-nav] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.client-shell [data-client-mobile-layer] {
+  z-index: 80 !important;
+}
+
 @media (max-height: 760px) and (min-width: 1024px) {
   .client-shell [data-client-sidebar-account] {
     max-height: 6.5rem;
