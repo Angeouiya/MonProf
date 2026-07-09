@@ -25,6 +25,14 @@ export function HomeSearchBar({
     levels.filter((option) => option.category),
     (option) => option.category as CatalogCategory,
   ), [levels]);
+  const communeGroups = useMemo(() => [{
+    label: "Villes et communes",
+    options: communes.map((commune) => ({
+      value: commune.name,
+      label: commune.name,
+      keywords: commune.name,
+    })),
+  }], [communes]);
 
   return (
     <form
@@ -81,20 +89,17 @@ export function HomeSearchBar({
             triggerClassName="min-h-12 rounded-lg border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
           />
         </SearchFieldLabel>
-        <label className="min-w-0">
-          <span className="mb-1.5 block px-1 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
-            Commune
-          </span>
-          <select
+        <SearchFieldLabel label="Commune">
+          <SearchableCatalogSelect
             name="commune"
-            className="min-h-12 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
-          >
-            <option value="">Toutes</option>
-            {communes.map((commune) => (
-              <option key={commune.slug} value={commune.name}>{commune.name}</option>
-            ))}
-          </select>
-        </label>
+            placeholder="Toutes"
+            searchPlaceholder="Tapez Cocody, Bouaké, Korhogo..."
+            emptyLabel="Aucune commune trouvée"
+            allLabel="Toutes"
+            groups={communeGroups}
+            triggerClassName="min-h-12 rounded-lg border-[#DDE6F7] text-sm font-semibold focus:border-[#111B4D] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
+        </SearchFieldLabel>
         <Button
           type="submit"
           size="lg"

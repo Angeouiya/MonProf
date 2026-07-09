@@ -109,10 +109,12 @@ export default async function ReservationDetailPage({
   });
   if (!booking || booking.clientId !== user.id) notFound();
 
-  const paydunyaReturnCheck = sp.paydunya === "return"
+  const paydunyaReturnToken = extractPayDunyaReturnToken(sp);
+  const isPayDunyaReturn = sp.paydunya === "return" || Boolean(paydunyaReturnToken);
+  const paydunyaReturnCheck = isPayDunyaReturn
     ? await reconcilePayDunyaBookingPayment({
         bookingId: id,
-        token: sp.token,
+        token: paydunyaReturnToken,
         expectedClientId: user.id,
         source: "client_return",
         incomingPayload: sp,
@@ -191,7 +193,7 @@ export default async function ReservationDetailPage({
   const paymentAwaitingProof = !booking.isQuoteOnly
     && !paymentConfirmed
     && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(booking.paymentStatus);
-  const returnedFromPayDunya = sp.paydunya === "return";
+  const returnedFromPayDunya = isPayDunyaReturn;
   const cancelledOnPayDunya = sp.paydunya === "cancelled";
   const scheduleProposals = booking.scheduleProposals.map((proposal) => ({
     id: proposal.id,
@@ -725,6 +727,16 @@ function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; val
       </div>
     </div>
   );
+}
+
+function extractPayDunyaReturnToken(searchParams: { paydunya?: string; token?: string }) {
+  if (searchParams.token?.trim()) return searchParams.token.trim();
+  const paydunyaValue = searchParams.paydunya?.trim();
+  if (!paydunyaValue?.includes("token=")) return undefined;
+
+  const queryPart = paydunyaValue.slice(paydunyaValue.indexOf("?") + 1);
+  const parsed = new URLSearchParams(queryPart);
+  return parsed.get("token")?.trim() || undefined;
 }
 
 function formatClientBookingStatus(status: string) {

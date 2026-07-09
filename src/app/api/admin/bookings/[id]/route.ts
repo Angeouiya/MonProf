@@ -22,6 +22,7 @@ import {
   PAYDUNYA_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -377,7 +378,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ].join("\n");
         const missionToken = randomBytes(32).toString("hex");
         const missionUrl = `/mission/${missionToken}`;
-        const absoluteMissionUrl = new URL(missionUrl, req.nextUrl.origin).toString();
+        const absoluteMissionUrl = absoluteAppUrl(missionUrl, req);
         const missionExpiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
         const newTeacherMessage = body.newTeacherMessage || [
           `Bonjour ${newTeacherName},`,

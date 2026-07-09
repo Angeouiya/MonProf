@@ -111,6 +111,14 @@ export default async function RechercherPage({
     format ? { key: "format", label: `Format : ${formatLabel}`, href: buildSearchHref(sp, { format: null }) } : null,
     sort !== "recommended" ? { key: "sort", label: `Tri : ${sortLabel}`, href: buildSearchHref(sp, { sort: null }) } : null,
   ].filter((filter): filter is { key: string; label: string; href: string } => Boolean(filter));
+  const communeGroups = [{
+    label: "Villes et communes",
+    options: communes.map((c) => ({
+      value: c.name,
+      label: c.name,
+      keywords: c.name,
+    })),
+  }];
   const hasActiveFilters = activeFilters.length > 0;
   const resultIntro = hasActiveFilters
     ? `Résultats pour ${activeFilters.map((filter) => filter.label.replace(" : ", " ")).join(", ")}.`
@@ -329,16 +337,16 @@ export default async function RechercherPage({
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Commune</label>
-                <select
+                <SearchableCatalogSelect
                   name="commune"
-                  defaultValue={commune ?? ""}
-                  className={fieldClassName}
-                >
-                  <option value="">Toutes</option>
-                  {communes.map((c) => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
+                  value={commune ?? ""}
+                  placeholder="Toutes"
+                  searchPlaceholder="Tapez une ville ou commune..."
+                  emptyLabel="Aucune commune trouvée"
+                  allLabel="Toutes les communes"
+                  groups={communeGroups}
+                  triggerClassName="mt-1.5 h-11 rounded-lg border-[#E3E8F2] py-2.5 focus:border-[#111B4D] focus:ring-2 focus:ring-[#111B4D]"
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Format</label>

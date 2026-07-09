@@ -474,6 +474,15 @@ function FiltersForm({
   communes: CommuneFilterOption[];
   compact?: boolean;
 }) {
+  const communeGroups = [{
+    label: "Villes et communes",
+    options: communes.map((item) => ({
+      value: item.name,
+      label: item.name,
+      keywords: item.name,
+    })),
+  }];
+
   return (
     <form
       method="GET"
@@ -525,18 +534,16 @@ function FiltersForm({
         </Field>
 
         <Field label="Commune">
-          <select
+          <SearchableCatalogSelect
             name="commune"
-            defaultValue={commune}
-            className="min-h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-          >
-            <option value="">Toutes les communes</option>
-            {communes.map((item) => (
-              <option key={item.id} value={item.name}>
-                {item.name}
-              </option>
-            ))}
-          </select>
+            value={commune}
+            placeholder="Toutes les communes"
+            searchPlaceholder="Tapez une ville ou commune..."
+            emptyLabel="Aucune commune trouvée"
+            allLabel="Toutes les communes"
+            groups={communeGroups}
+            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+          />
         </Field>
 
         <Field label="Format">

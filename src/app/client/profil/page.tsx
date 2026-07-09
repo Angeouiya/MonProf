@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import {
   User,
   Save,
@@ -63,6 +64,14 @@ export default function ProfilPage() {
   const [commune, setCommune] = useState("");
   const [quartier, setQuartier] = useState("");
   const [savingInfo, setSavingInfo] = useState(false);
+  const communeGroups = useMemo(() => [{
+    label: "Villes et communes",
+    options: COMMUNES.map((item) => ({
+      value: item,
+      label: item,
+      keywords: item,
+    })),
+  }], []);
 
   useEffect(() => {
     fetch("/api/client/profile")
@@ -325,18 +334,18 @@ export default function ProfilPage() {
               </div>
               <div>
                 <Label htmlFor="commune">Commune</Label>
-                <select
+                <SearchableCatalogSelect
                   id="commune"
+                  name="commune"
                   value={commune}
-                  onChange={(e) => setCommune(e.target.value)}
-                  className="mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
-                  data-client-profile-commune
-                >
-                  <option value="">— Aucune —</option>
-                  {COMMUNES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onValueChange={setCommune}
+                  placeholder="Sélectionner une commune"
+                  searchPlaceholder="Tapez une ville ou commune..."
+                  emptyLabel="Aucune commune trouvée"
+                  allLabel="Aucune commune"
+                  groups={communeGroups}
+                  triggerClassName="mt-1.5 h-11 rounded-lg border-[#DDE6F7] focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
+                />
               </div>
               <div>
                 <Label htmlFor="quartier">Quartier</Label>

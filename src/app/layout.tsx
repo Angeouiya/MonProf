@@ -18,9 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 function resolveMetadataBase() {
-  const rawUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://competence.ci";
   try {
-    return new URL(rawUrl);
+    return new URL("https://competence.ci");
   } catch {
     return new URL("https://competence.ci");
   }

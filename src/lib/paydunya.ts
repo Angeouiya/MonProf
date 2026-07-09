@@ -80,21 +80,16 @@ const PAYDUNYA_SETTING_KEYS = {
 } as const;
 
 let payDunyaConfigCache: { expiresAt: number; value: PayDunyaConfig | null } | null = null;
-const STABLE_VERCEL_PUBLIC_BASE_URL = "https://competence-diplomateimmobilier99-4808s-projects.vercel.app";
-const TEMPORARILY_UNRELIABLE_CALLBACK_HOSTS = new Set(["competence.ci", "www.competence.ci"]);
+const PRODUCTION_PUBLIC_BASE_URL = "https://competence.ci";
 
 export function getPayDunyaPublicBaseUrl(req: NextRequest) {
-  const vercelUrl = process.env.VERCEL_URL?.trim()
-    ? `https://${process.env.VERCEL_URL.trim().replace(/^https?:\/\//i, "")}`
-    : "";
   const fallbackRequestUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
   const safeRequestUrl = isLocalBaseUrl(fallbackRequestUrl) ? "" : fallbackRequestUrl;
 
   return firstPayDunyaCallbackBaseUrl(
+    PRODUCTION_PUBLIC_BASE_URL,
     process.env.PAYDUNYA_CALLBACK_BASE_URL,
     process.env.PAYDUNYA_PUBLIC_BASE_URL,
-    STABLE_VERCEL_PUBLIC_BASE_URL,
-    vercelUrl,
     process.env.APP_URL,
     process.env.NEXTAUTH_URL,
     process.env.NEXT_PUBLIC_APP_URL,
@@ -147,7 +142,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const endpoint = config.mode === "live"
     ? "https://app.paydunya.com/api/v1/checkout-invoice/create"
     : "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create";
-  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}?paydunya=return`;
+  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}`;
   const callbackUrl = `${input.origin}/api/webhooks/paydunya`;
 
   const payload = {
@@ -385,26 +380,14 @@ function normalizeBaseUrl(value: string) {
 }
 
 function firstPayDunyaCallbackBaseUrl(...values: unknown[]) {
-  const allowCustomCallbackDomain = process.env.PAYDUNYA_ALLOW_CUSTOM_CALLBACK_DOMAIN === "true";
-
   for (const value of values) {
     if (typeof value !== "string") continue;
     const normalized = normalizeBaseUrl(value);
     if (!normalized || isLocalBaseUrl(normalized)) continue;
-
-    try {
-      const host = new URL(normalized).hostname.toLowerCase();
-      if (!allowCustomCallbackDomain && TEMPORARILY_UNRELIABLE_CALLBACK_HOSTS.has(host)) {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-
     return normalized;
   }
 
-  return STABLE_VERCEL_PUBLIC_BASE_URL;
+  return PRODUCTION_PUBLIC_BASE_URL;
 }
 
 function isLocalBaseUrl(value: string) {

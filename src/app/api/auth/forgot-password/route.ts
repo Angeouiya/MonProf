@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendClientResetPasswordEmail } from "@/lib/notification-delivery";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
@@ -25,8 +26,7 @@ export async function POST(req: NextRequest) {
   const token = randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-  const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-  const resetUrl = new URL(`/reinitialiser-mot-de-passe?token=${token}`, origin).toString();
+  const resetUrl = absoluteAppUrl(`/reinitialiser-mot-de-passe?token=${token}`, req);
 
   await db.passwordResetToken.create({
     data: {

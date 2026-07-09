@@ -27,13 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 
 type Commune = { id: string; name: string };
 
@@ -63,8 +57,6 @@ const TRUST_POINTS = [
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const SELECT_CLASS = "!h-12 min-h-12 w-full rounded-lg border-[#E3E8F2] bg-white focus:border-[#111B4D] focus:ring-[#111B4D]";
-
 export function InscriptionForm({ communes }: { communes: Commune[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -81,6 +73,14 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
     password: "",
     confirmPassword: "",
   });
+  const communeGroups = [{
+    label: "Villes et communes",
+    options: communes.map((c) => ({
+      value: c.name,
+      label: c.name,
+      keywords: c.name,
+    })),
+  }];
 
   function update(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -284,18 +284,18 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="commune" className="font-semibold text-[#111827]">Commune</Label>
-                  <Select value={commune} onValueChange={setCommune}>
-                    <SelectTrigger id="commune" className={SELECT_CLASS}>
-                      <SelectValue placeholder="Choisir une commune" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {communes.map((c) => (
-                        <SelectItem key={c.id} value={c.name}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableCatalogSelect
+                    id="commune"
+                    name="commune"
+                    value={commune}
+                    onValueChange={setCommune}
+                    placeholder="Choisir une commune"
+                    searchPlaceholder="Tapez votre commune..."
+                    emptyLabel="Aucune commune trouvée"
+                    allLabel="Aucune commune"
+                    groups={communeGroups}
+                    triggerClassName="min-h-12 rounded-lg border-[#E3E8F2] focus:border-[#111B4D] focus:ring-[#111B4D]"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="quartier" className="font-semibold text-[#111827]">Quartier</Label>

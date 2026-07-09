@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +25,14 @@ import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT } from "@/lib/pricing";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 function isPublicVisibleTeacherStatus(status?: string) {
   return PUBLIC_VISIBLE_TEACHER_STATUSES.includes(status as (typeof PUBLIC_VISIBLE_TEACHER_STATUSES)[number]);
@@ -148,6 +156,7 @@ export function TeacherForm({
   const [primarySubject, setPrimarySubject] = useState<string | null>(null);
   const [selectedLevels, setSelectedLevels] = useState<Record<string, boolean>>({});
   const [selectedZones, setSelectedZones] = useState<Record<string, boolean>>({});
+  const [zoneQuery, setZoneQuery] = useState("");
   const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>(() => createEmptyAvailability());
 
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormValues>({
@@ -239,6 +248,11 @@ export function TeacherForm({
   });
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
   const activeWithoutPhoto = isPublicVisibleTeacherStatus(status) && !photoUrl;
+  const visibleCommunes = useMemo(() => {
+    const normalizedQuery = normalizeSearch(zoneQuery);
+    if (!normalizedQuery) return communes;
+    return communes.filter((commune) => normalizeSearch(commune.name).includes(normalizedQuery));
+  }, [communes, zoneQuery]);
 
   const uploadPhoto = async (file?: File) => {
     setPhotoError(null);
@@ -859,8 +873,20 @@ export function TeacherForm({
           <Card>
             <CardHeader><CardTitle className="text-base">Zones d'intervention</CardTitle></CardHeader>
             <CardContent>
+              <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <Input
+                  type="search"
+                  value={zoneQuery}
+                  onChange={(event) => setZoneQuery(event.target.value)}
+                  placeholder="Rechercher une ville ou commune..."
+                  className="h-11 rounded-lg border-violet-100 bg-white"
+                />
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {visibleCommunes.length} / {communes.length} commune{communes.length > 1 ? "s" : ""}
+                </p>
+              </div>
               <div className="grid gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                {communes.map((c) => {
+                {visibleCommunes.map((c) => {
                   const checked = !!selectedZones[c.id];
                   return (
                     <label key={c.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
@@ -872,6 +898,11 @@ export function TeacherForm({
                     </label>
                   );
                 })}
+                {visibleCommunes.length === 0 && (
+                  <div className="rounded-lg border border-violet-100 bg-white p-4 text-sm font-medium text-muted-foreground sm:col-span-3 lg:col-span-4">
+                    Aucune commune ne correspond à cette recherche.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

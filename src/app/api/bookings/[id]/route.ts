@@ -11,6 +11,7 @@ import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/p
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
 import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
+import { absoluteAppUrl } from "@/lib/public-url";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
@@ -773,7 +774,7 @@ export async function PATCH(
         : booking.pricingSnapshot;
       const missionToken = randomBytes(32).toString("hex");
       const missionUrl = `/mission/${missionToken}`;
-      const absoluteMissionUrl = new URL(missionUrl, req.nextUrl.origin).toString();
+      const absoluteMissionUrl = absoluteAppUrl(missionUrl, req);
       const missionExpiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
       const clientMessage = [
         `Bonjour ${booking.client.name},`,

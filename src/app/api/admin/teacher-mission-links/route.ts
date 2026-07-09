@@ -6,6 +6,7 @@ import {
   PAYDUNYA_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 function makeToken() {
   return randomBytes(32).toString("hex");
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
   });
 
   const missionUrl = `/mission/${token}`;
-  const absoluteMissionUrl = new URL(missionUrl, req.nextUrl.origin).toString();
+  const absoluteMissionUrl = absoluteAppUrl(missionUrl, req);
   const dateLabel = booking.scheduledDate?.toLocaleDateString("fr-FR") ?? "À confirmer";
   const timeLabel = booking.scheduledTime || booking.preferredTime || "À confirmer";
   const formatLabel = booking.courseFormat === "ONLINE" ? "En ligne" : "À domicile";

@@ -79,12 +79,6 @@ function ProfesseurConnexionContent() {
     }
   }
 
-  function fillDemo() {
-    setPhone("+225 07 01 02 03 04");
-    setPassword("prof123");
-    setError(null);
-  }
-
   return (
     <PublicLayout>
       <section className="bg-white">
@@ -206,23 +200,6 @@ function ProfesseurConnexionContent() {
                   .
                 </p>
               </div>
-            </div>
-
-            <div className="mt-5 rounded-lg border border-dashed border-[#DDE6F7] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Démonstration professeur</p>
-              <button
-                type="button"
-                onClick={fillDemo}
-                className="mt-3 flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2.5 text-left text-xs transition hover:border-[#111B4D] hover:bg-white"
-              >
-                <div>
-                  <p className="font-semibold text-[#111827]">M. Kouamé</p>
-                  <p className="text-[#64748B]">+225 07 01 02 03 04 · prof123</p>
-                </div>
-                <span className="inline-flex items-center gap-1 font-semibold text-[#111B4D]">
-                  Utiliser <ArrowRight className="h-3.5 w-3.5" />
-                </span>
-              </button>
             </div>
           </div>
         </div>
