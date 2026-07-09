@@ -278,7 +278,7 @@ export function ClientTabBar({
           <Link
             key={item.id}
             href={item.href}
-            prefetch
+            prefetch={false}
             data-client-tab-item
             className={cn(
               "flex min-h-11 min-w-0 snap-start items-center justify-center rounded-lg px-2 py-2 text-center text-xs font-semibold transition-colors min-[380px]:px-2.5 lg:flex-1 lg:snap-none lg:px-3",
@@ -572,6 +572,7 @@ export function ClientAppRail({
             <Link
               key={`${item.label}-${item.href}`}
               href={item.href}
+              prefetch={false}
               data-client-shortcut-card
               className={itemClassName}
               aria-current={item.active ? "page" : undefined}

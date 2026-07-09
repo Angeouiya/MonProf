@@ -52,20 +52,6 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const essentialPrefetchRoutes = [
-  "/client/rechercher",
-  "/client/reservations",
-  "/client/paiements",
-  "/client/notifications",
-];
-
-const desktopPrefetchRoutes = [
-  "/client/cours",
-  "/client/service-client",
-  "/client/profil",
-  "/client/parametres",
-];
-
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -100,43 +86,6 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, [pathname, searchKey]);
 
   useEffect(() => {
-    const connection = (navigator as Navigator & {
-      connection?: { effectiveType?: string; saveData?: boolean };
-    }).connection;
-    const constrainedNetwork = Boolean(
-      connection?.saveData
-      || ["slow-2g", "2g"].includes(connection?.effectiveType ?? "")
-    );
-    if (constrainedNetwork) return;
-
-    const prefetch = () => {
-      const routes = window.matchMedia("(min-width: 1024px)").matches
-        ? [...essentialPrefetchRoutes, ...desktopPrefetchRoutes]
-        : essentialPrefetchRoutes;
-
-      for (const route of routes) {
-        if (pathname === route) continue;
-        router.prefetch(route);
-      }
-    };
-    const browserWindow = window as Window & typeof globalThis & {
-      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    const idleId = typeof browserWindow.requestIdleCallback === "function"
-      ? browserWindow.requestIdleCallback(prefetch, { timeout: 2400 })
-      : browserWindow.setTimeout(prefetch, 1200);
-
-    return () => {
-      if (typeof browserWindow.cancelIdleCallback === "function") {
-        browserWindow.cancelIdleCallback(idleId);
-      } else if (typeof idleId === "number") {
-        browserWindow.clearTimeout(idleId);
-      }
-    };
-  }, [pathname, router]);
-
-  useEffect(() => {
     return () => {
       if (navigationDelayRef.current) {
         window.clearTimeout(navigationDelayRef.current);
@@ -157,7 +106,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 180);
+    }, 80);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -165,7 +114,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 950);
+    }, 700);
   }
 
   function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
@@ -238,7 +187,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
+          <Link href="/client" prefetch={false} className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
             <BrandLogo size="sm" compact priority className="lg:hidden" />
             <BrandLogo size="sm" priority className="hidden lg:inline-flex" />
           </Link>
@@ -278,7 +227,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             PayDunya vérifié
           </div>
           <Button asChild className="hidden min-h-11 rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] lg:inline-flex">
-            <Link href="/client/rechercher">
+            <Link href="/client/rechercher" prefetch={false}>
               Trouver un professeur
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -298,7 +247,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </Button>
           <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
-            <Link href="/client/notifications">
+            <Link href="/client/notifications" prefetch={false}>
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
@@ -308,7 +257,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             </Link>
           </Button>
           <Button asChild variant="outline" className="hidden min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white xl:inline-flex">
-            <Link href="/">Retour au site</Link>
+            <Link href="/" prefetch={false}>Retour au site</Link>
           </Button>
           <ImportantActionConfirm
             title="Quitter l'espace client ?"
@@ -374,6 +323,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setMobileSearchOpen(false)}
                 className="inline-flex min-h-9 min-w-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-center text-xs font-semibold text-[#111B4D]"
               >
@@ -423,6 +373,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                   {!!notificationCount && (
                     <Link
                       href="/client/notifications"
+                      prefetch={false}
                       onClick={() => setOpen(false)}
                       className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D]"
                     >
@@ -477,6 +428,7 @@ function SidebarContent({
         </p>
         <Link
           href="/client/rechercher"
+          prefetch={false}
           onClick={onNavigate}
           className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
         >
@@ -492,6 +444,7 @@ function SidebarContent({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               data-client-sidebar-link
@@ -532,6 +485,7 @@ function SidebarContent({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
@@ -576,6 +530,7 @@ function SidebarContent({
           <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
             <Link
               href="/conditions-utilisation"
+              prefetch={false}
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
               onClick={onNavigate}
             >
@@ -583,6 +538,7 @@ function SidebarContent({
             </Link>
             <Link
               href="/politique-confidentialite"
+              prefetch={false}
               className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
               onClick={onNavigate}
             >
@@ -618,6 +574,7 @@ function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-semibold transition-colors min-[390px]:px-1",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
