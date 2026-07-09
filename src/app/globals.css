@@ -4867,20 +4867,6 @@ b {
 }
 
 @media (min-width: 1536px) {
-  .client-shell :where(
-    [data-client-course-command-center],
-    [data-client-notification-command-center],
-    [data-client-payment-command-center],
-    [data-client-profile-command-center],
-    [data-client-reservation-command-center],
-    [data-client-review-command-center],
-    [data-client-search-command-center],
-    [data-client-settings-command-center],
-    [data-client-support-command-center]
-  ) {
-    display: block !important;
-  }
-
   .client-shell [data-client-app-rail][data-client-app-rail-compact] > * {
     max-inline-size: 13rem !important;
   }
