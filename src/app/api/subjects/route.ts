@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getCachedSubjectsWithTeacherCounts } from "@/lib/catalog-cache";
 import { getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 
 export async function GET() {
-  const subjects = await db.subject.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { teachers: true } } },
-  });
+  const subjects = await getCachedSubjectsWithTeacherCounts();
   const items = subjects.map((s) => ({
     id: s.id,
     name: s.name,

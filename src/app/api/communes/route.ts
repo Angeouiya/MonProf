@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getCachedCommunesWithTeacherCounts } from "@/lib/catalog-cache";
 
 export async function GET() {
-  const communes = await db.commune.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { teachers: true } } },
-  });
+  const communes = await getCachedCommunesWithTeacherCounts();
   return NextResponse.json({
     items: communes.map((c) => ({ id: c.id, name: c.name, zone: c.zone, teachersCount: c._count.teachers })),
   });

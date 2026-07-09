@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { getCachedCommunesWithTeacherCounts } from "@/lib/catalog-cache";
 import { getSessionUser } from "@/lib/session";
 import { isOwnerAdminAccount } from "@/lib/owner-account";
 import { ProfileClient, type ClientCommuneOption, type ClientProfile } from "./profile-client";
@@ -28,10 +29,7 @@ export default async function ProfilPage() {
 
   if (!profile) redirect("/connexion?from=/client/profil");
 
-  const communes = await db.commune.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { teachers: true } } },
-  });
+  const communes = await getCachedCommunesWithTeacherCounts();
 
   const initialProfile: ClientProfile = {
     id: profile.id,

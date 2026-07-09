@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
+import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
@@ -93,9 +94,11 @@ export default async function RechercherPage({
           _count: { select: { reviews: true } },
         },
       });
-      subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
-      levels = await db.level.findMany({ orderBy: { order: "asc" } });
-      communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+      [subjects, levels, communes] = await Promise.all([
+        getCachedSubjects(),
+        getCachedLevels(),
+        getCachedCommunes(),
+      ]);
     }
   } catch (error) {
     console.error("[client-search:query_failed]", error);

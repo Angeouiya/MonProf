@@ -1,13 +1,10 @@
-import { db } from "@/lib/db";
 import { InscriptionForm } from "@/components/auth/inscription-form";
+import { getCachedCommunes } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 
 export default async function InscriptionPage() {
-  const communes = await db.commune.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const communes = await getCachedCommunes();
 
   return <InscriptionForm communes={communes} />;
 }

@@ -31,6 +31,7 @@ import { TeacherCard } from "@/components/shared/teacher-card";
 import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
 import { getLevelCategory, getSubjectCategory } from "@/lib/catalog-taxonomy";
+import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +102,9 @@ export default async function HomePage() {
     db.teacher.count({
       where: { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     }),
-    db.subject.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true, icon: true } }),
-    db.level.findMany({ orderBy: { order: "asc" }, select: { slug: true, name: true, order: true } }),
-    db.commune.findMany({ orderBy: { name: "asc" }, select: { name: true } }),
+    getCachedSubjects(),
+    getCachedLevels(),
+    getCachedCommunes(),
   ]);
 
   const featuredCards = featured.map((t) => ({

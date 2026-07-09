@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getCachedLevelsWithTeacherCounts } from "@/lib/catalog-cache";
 import { getLevelCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 
 export async function GET() {
-  const levels = await db.level.findMany({
-    orderBy: { order: "asc" },
-    include: { _count: { select: { teachers: true } } },
-  });
+  const levels = await getCachedLevelsWithTeacherCounts();
   const items = levels.map((l) => ({
     id: l.id,
     name: l.name,

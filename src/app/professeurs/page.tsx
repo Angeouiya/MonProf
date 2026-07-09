@@ -16,6 +16,7 @@ import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-
 import { EmptyState } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
+import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
@@ -112,9 +113,11 @@ export default async function TeachersPage({
             },
           })
         : [];
-      subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
-      levels = await db.level.findMany({ orderBy: { order: "asc" } });
-      communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+      [subjects, levels, communes] = await Promise.all([
+        getCachedSubjects(),
+        getCachedLevels(),
+        getCachedCommunes(),
+      ]);
     }
   } catch (error) {
     console.error("[teachers:public_query_failed]", error);
