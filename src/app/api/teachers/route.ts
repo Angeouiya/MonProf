@@ -44,21 +44,28 @@ export async function GET(req: NextRequest) {
       break;
   }
 
-  const [total, teachers] = await db.$transaction([
-    db.teacher.count({ where }),
-    db.teacher.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        subjects: { include: { subject: true } },
-        levels: { include: { level: true } },
-        zones: { include: { commune: true } },
-        _count: { select: { reviews: true, bookings: true } },
-      },
-    }),
-  ]);
+  let total = 0;
+  let teachers: any[] = [];
+
+  try {
+    total = await db.teacher.count({ where });
+    teachers = total > 0
+      ? await db.teacher.findMany({
+          where,
+          orderBy,
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          include: {
+            subjects: { include: { subject: true } },
+            levels: { include: { level: true } },
+            zones: { include: { commune: true } },
+            _count: { select: { reviews: true, bookings: true } },
+          },
+        })
+      : [];
+  } catch (error) {
+    console.error("[api:teachers_query_failed]", error);
+  }
 
   const items = teachers.map((t) => ({
     displayRating: t.ratingCount > 0

@@ -24,8 +24,9 @@ import { ClientCommunicationClient } from "./client-communication-client";
 import { ReplacementHistoryTable } from "@/components/admin/teacher-operational-components";
 import { formatFCFA, formatDateTime, formatDate, initials } from "@/lib/format";
 import { getTeacherFinancialSettlement } from "@/lib/teacher-payments";
-import { disputeStatusLabel, packTypeLabel, paymentMethodLabel, transactionTypeLabel } from "@/lib/platform-labels";
+import { disputeStatusLabel, packTypeLabel, paymentMethodLabel, rescheduleRequestStatusLabel, transactionTypeLabel } from "@/lib/platform-labels";
 import { cancellationActorLabel, cancellationWindowLabel } from "@/lib/cancellation-policy";
+import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 import { parsePricingSnapshot } from "@/lib/pricing";
 
@@ -58,6 +59,14 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       disputes: { include: { openedBy: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
       scheduleProposals: {
         include: {
+          teacher: { select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      rescheduleRequests: {
+        include: {
+          transaction: true,
+          client: { select: { name: true, phone: true, email: true } },
           teacher: { select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -448,6 +457,74 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                     {proposal.status === "REJECTED" && (
                       <Button asChild size="sm" className="mt-3 rounded-lg">
                         <Link href={`/admin/reservations/${booking.id}?action=replace`}>Remplacer ou annuler</Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {booking.rescheduleRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Modifications de créneau demandées par le client</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 lg:grid-cols-2">
+            {booking.rescheduleRequests.map((request) => (
+              <div key={request.id} className="rounded-lg border border-border bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <ProfessorImage
+                    photoUrl={request.teacher.photoUrl}
+                    name={request.teacher.professionalName || request.teacher.fullName}
+                    size="sm"
+                    shape="circle"
+                    verified={request.teacher.badgeVerified}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{rescheduleRequestStatusLabel(request.status)}</Badge>
+                      <Badge variant="outline">{rescheduleWindowLabel(request.feeWindow)}</Badge>
+                      <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        {formatDate(request.createdAt)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <Detail icon={Calendar} label="Ancien créneau" value={`${formatDate(request.oldScheduledDate)} · ${request.oldScheduledTime ?? "—"}`} />
+                      <Detail icon={CalendarClock} label="Nouveau créneau" value={`${formatDate(request.proposedDate)} · ${request.proposedTime}`} />
+                      <Detail icon={User} label="Client" value={request.client.name} />
+                      <Detail icon={User} label="Professeur" value={request.teacher.professionalName || request.teacher.fullName} />
+                    </div>
+
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <AmountBox label="Supplément cours" value={request.feeAmount} tone={request.feeAmount > 0 ? "warning" : "success"} sub={`${request.feeRate}% séance`} />
+                      <AmountBox label="Frais service" value={request.paymentServiceFeeAmount} tone={request.paymentServiceFeeAmount > 0 ? "warning" : "success"} />
+                      <AmountBox label="Part professeur" value={request.feeTeacherAmount} tone={request.feeTeacherAmount > 0 ? "primary" : "success"} sub={`${request.feeTeacherRate}%`} />
+                      <AmountBox label="Part plateforme" value={request.feePlatformAmount} tone={request.feePlatformAmount > 0 ? "warning" : "success"} sub={`${request.feePlatformRate}%`} />
+                    </div>
+
+                    {request.reason && (
+                      <p className="mt-3 rounded-lg border border-border bg-white px-3 py-2 text-sm text-muted-foreground">
+                        Motif client : {request.reason}
+                      </p>
+                    )}
+                    {request.teacherResponse && (
+                      <p className="mt-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground">
+                        Réponse professeur : {request.teacherResponse}
+                      </p>
+                    )}
+                    {request.transaction && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Transaction : {request.transaction.reference} · {transactionTypeLabel(request.transaction.type)} · {formatFCFA(request.transaction.amount)}
+                      </p>
+                    )}
+                    {request.status === "REFUND_REQUIRED" && (
+                      <Button asChild size="sm" className="mt-3 rounded-lg">
+                        <Link href={`/admin/remboursements?bookingId=${booking.id}`}>Traiter le remboursement</Link>
                       </Button>
                     )}
                   </div>

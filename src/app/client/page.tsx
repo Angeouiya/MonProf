@@ -14,7 +14,7 @@ import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
-import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
   ShieldCheck, BookOpen, Bell, WalletCards, LifeBuoy, LayoutDashboard,
@@ -44,89 +44,51 @@ export default async function ClientDashboardPage() {
 
   const now = new Date();
 
-  const [
-    totalBookings,
-    upcomingBookings,
-    blockedFundTransactions,
-    completedBookings,
-    pendingValidation,
-    nextCourse,
-    recentBookings,
-    recommended,
-  ] = await db.$transaction([
-    db.booking.count({ where: { clientId: user.id } }),
-    db.booking.count({
-      where: {
-        clientId: user.id,
-        status: { in: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"] },
-      },
-    }),
-    db.transaction.findMany({
-      where: {
-        booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
-        status: "BLOCKED",
-        type: "CLIENT_PAYMENT",
-      },
-      select: {
-        amount: true,
-        booking: {
-          select: {
-            paymentStatus: true,
-            totalClientPays: true,
-            totalPrice: true,
-            paydunyaStatus: true,
-            paydunyaVerifiedAt: true,
-            transactions: {
-              where: { type: "CLIENT_PAYMENT" },
-              select: { type: true, status: true, amount: true },
-            },
-          },
+  const allClientBookings = await db.booking.findMany({
+    where: { clientId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      teacher: {
+        select: {
+          id: true,
+          fullName: true,
+          professionalName: true,
+          photoUrl: true,
+          jobTitle: true,
+          commune: true,
+          badgeVerified: true,
         },
       },
-    }),
-    db.booking.count({
-      where: { clientId: user.id, status: { in: ["TEACHER_PAID", "VALIDATED_BY_CLIENT"] } },
-    }),
-    db.booking.findMany({
-      where: { clientId: user.id, status: "PENDING_CLIENT_VALIDATION" },
-      orderBy: { courseDoneAt: "desc" },
-      take: 5,
-      include: {
-        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, badgeVerified: true } },
+      transactions: {
+        where: { type: "CLIENT_PAYMENT" },
+        select: { type: true, status: true, amount: true },
       },
-    }),
-    db.booking.findFirst({
-      where: {
-        clientId: user.id,
-        status: { in: ["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] },
-        OR: [
-          { scheduledDate: { gte: now } },
-          { scheduledDate: null, startDate: { gte: now } },
-        ],
-      },
-      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }],
-      include: {
-        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true } },
-      },
-    }),
-    db.booking.findMany({
-      where: { clientId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: {
-        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-      },
-    }),
-    db.teacher.findMany({
-      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-      take: 3,
-      orderBy: { rating: "desc" },
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true } },
-      },
-    }),
-  ]);
+    },
+  });
+  const recommended = await db.teacher.findMany({
+    where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+    take: 3,
+    orderBy: { rating: "desc" },
+    include: {
+      subjects: { include: { subject: true } },
+      _count: { select: { reviews: true } },
+    },
+  });
+  const totalBookings = allClientBookings.length;
+  const upcomingBookings = allClientBookings.filter((booking) => ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
+  const completedBookings = allClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;
+  const pendingValidation = allClientBookings
+    .filter((booking) => booking.status === "PENDING_CLIENT_VALIDATION")
+    .sort((a, b) => compareDateDesc(a.courseDoneAt ?? a.updatedAt ?? a.createdAt, b.courseDoneAt ?? b.updatedAt ?? b.createdAt))
+    .slice(0, 5);
+  const nextCourse = allClientBookings
+    .filter((booking) => {
+      if (!["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"].includes(booking.status)) return false;
+      const nextDate = booking.scheduledDate ?? booking.startDate;
+      return Boolean(nextDate && nextDate >= now);
+    })
+    .sort((a, b) => compareDateAsc(a.scheduledDate ?? a.startDate, b.scheduledDate ?? b.startDate))[0] ?? null;
+  const recentBookings = allClientBookings.slice(0, 3);
   const nextCourseDate = nextCourse
     ? nextCourse.scheduledDate
       ? formatDate(nextCourse.scheduledDate)
@@ -134,8 +96,10 @@ export default async function ClientDashboardPage() {
         ? formatDate(nextCourse.startDate)
         : "Date à confirmer"
     : null;
-  const blockedFundsAmount = blockedFundTransactions
-    .filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking))
+  const blockedFundsAmount = allClientBookings
+    .filter(hasVerifiedPayDunyaClientPayment)
+    .flatMap((booking) => booking.transactions)
+    .filter((transaction) => transaction.status === "BLOCKED")
     .reduce((sum, transaction) => sum + transaction.amount, 0);
   const clientFirstName = getFirstName(user.name ?? "Client");
   const nextCourseTeacherName = nextCourse ? nextCourse.teacher.professionalName || nextCourse.teacher.fullName : "";
@@ -523,6 +487,18 @@ function RecentBookingLine({ booking }: { booking: DashboardBookingLine }) {
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function compareDateAsc(a: Date | null | undefined, b: Date | null | undefined) {
+  const left = a?.getTime() ?? Number.POSITIVE_INFINITY;
+  const right = b?.getTime() ?? Number.POSITIVE_INFINITY;
+  return left - right;
+}
+
+function compareDateDesc(a: Date | null | undefined, b: Date | null | undefined) {
+  const left = a?.getTime() ?? 0;
+  const right = b?.getTime() ?? 0;
+  return right - left;
 }
 
 function formatClientBookingStatus(status: string) {

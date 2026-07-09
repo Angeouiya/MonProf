@@ -5,9 +5,11 @@ import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { courseFormatLabel } from "@/lib/platform-labels";
+import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { Button } from "@/components/ui/button";
 import { MissionResponseActions } from "@/components/professor/mission-response-actions";
+import { ProfessorRescheduleRequestActions } from "@/components/professor/reschedule-request-actions";
 import {
   EmptyProfessorState,
   InfoLine,
@@ -29,6 +31,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
       transactions: { where: { type: "CLIENT_PAYMENT" } },
       missionLinks: { orderBy: { createdAt: "desc" }, take: 5 },
       scheduleProposals: { orderBy: { createdAt: "desc" }, take: 5 },
+      rescheduleRequests: { orderBy: { createdAt: "desc" }, take: 5, include: { transaction: true } },
       teacherTasks: { orderBy: [{ priority: "desc" }, { createdAt: "desc" }] },
       teacherPaymentAdjustments: { orderBy: { createdAt: "desc" } },
     },
@@ -40,6 +43,10 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
   const activeMission = booking.missionLinks.find((mission) => (
     ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status) && mission.expiresAt >= new Date()
   ));
+  const pendingReschedule = booking.rescheduleRequests.find((request) => request.status === "AWAITING_TEACHER");
+  const rescheduleTeacherSupplement = booking.rescheduleRequests
+    .filter((request) => ["AWAITING_TEACHER", "APPLIED"].includes(request.status))
+    .reduce((sum, request) => sum + request.feeTeacherAmount, 0);
 
   return (
     <div className="space-y-6">
@@ -131,7 +138,33 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
           <PortalCard>
             <h3 className="text-base font-semibold text-[#111827]">Réponse professeur</h3>
             <div className="mt-4">
-              {activeMission ? (
+              {pendingReschedule ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-[#D7DEE9] bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill status={pendingReschedule.status} />
+                      <span className="rounded-full border border-[#D7DEE9] bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+                        {rescheduleWindowLabel(pendingReschedule.feeWindow)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-[#111827]">
+                      Nouveau créneau : {formatDate(pendingReschedule.proposedDate)} · {pendingReschedule.proposedTime}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                      Ancien créneau : {formatDate(pendingReschedule.oldScheduledDate)} · {pendingReschedule.oldScheduledTime || "horaire non renseigné"}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                      Part professeur prévue : {formatFCFA(pendingReschedule.feeTeacherAmount)}
+                    </p>
+                    {pendingReschedule.reason && (
+                      <p className="mt-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
+                        Motif client : {pendingReschedule.reason}
+                      </p>
+                    )}
+                  </div>
+                  <ProfessorRescheduleRequestActions requestId={pendingReschedule.id} />
+                </div>
+              ) : activeMission ? (
                 <MissionResponseActions token={activeMission.token} />
               ) : (
                 <EmptyProfessorState
@@ -140,6 +173,37 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
                 />
               )}
             </div>
+          </PortalCard>
+
+          <PortalCard>
+            <h3 className="text-base font-semibold text-[#111827]">Demandes client de modification</h3>
+            {booking.rescheduleRequests.length === 0 ? (
+              <p className="mt-3 text-sm font-semibold text-[#64748B]">Aucune modification de créneau demandée par le client.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {booking.rescheduleRequests.map((request) => (
+                  <div key={request.id} className="rounded-lg border border-[#E6EAF3] bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill status={request.status} />
+                      <span className="rounded-full border border-[#D7DEE9] bg-white px-2.5 py-1 text-xs font-bold text-[#111B4D]">
+                        {rescheduleWindowLabel(request.feeWindow)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-[#111827]">
+                      {formatDate(request.proposedDate)} · {request.proposedTime}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                      Supplément client : {formatFCFA(request.totalToPay)} · part professeur : {formatFCFA(request.feeTeacherAmount)}
+                    </p>
+                    {request.teacherResponse && (
+                      <p className="mt-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
+                        Votre réponse : {request.teacherResponse}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </PortalCard>
 
           <PortalCard>
@@ -175,6 +239,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             <h3 className="text-base font-semibold text-[#111827]">Montants professeur</h3>
             <div className="mt-4">
               <InfoLine label="Net prévu" value={formatFCFA(booking.teacherNetAmount || booking.totalTeacherReceives)} />
+              <InfoLine label="Supplément créneau" value={formatFCFA(rescheduleTeacherSupplement)} />
               <InfoLine label="Déjà payé" value={formatFCFA(booking.teacherPaidAmount)} />
               <InfoLine label="Déplacement" value={formatFCFA(booking.transportFee)} />
               <InfoLine label="Statut paiement" value={<StatusPill status={booking.paymentStatus} />} />

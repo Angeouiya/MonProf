@@ -4,9 +4,11 @@ import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { courseFormatLabel } from "@/lib/platform-labels";
+import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { Button } from "@/components/ui/button";
 import { MissionResponseActions } from "@/components/professor/mission-response-actions";
+import { ProfessorRescheduleRequestActions } from "@/components/professor/reschedule-request-actions";
 import {
   EmptyProfessorState,
   PortalCard,
@@ -27,6 +29,7 @@ export default async function ProfesseurMissionsPage() {
       client: { select: { name: true, phone: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" } },
       missionLinks: { orderBy: { createdAt: "desc" }, take: 1 },
+      rescheduleRequests: { orderBy: { createdAt: "desc" }, take: 3 },
       teacherTasks: {
         where: { status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] } },
         take: 3,
@@ -53,6 +56,7 @@ export default async function ProfesseurMissionsPage() {
         <div className="grid gap-4">
           {verifiedBookings.map((booking) => {
             const mission = booking.missionLinks[0];
+            const pendingReschedule = booking.rescheduleRequests.find((request) => request.status === "AWAITING_TEACHER");
             const canRespond = Boolean(
               mission
               && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
@@ -67,6 +71,7 @@ export default async function ProfesseurMissionsPage() {
                       <p className="text-lg font-semibold text-[#111827]">{booking.reference}</p>
                       <StatusPill status={booking.status} />
                       {mission && <StatusPill status={mission.status} type="mission" />}
+                      {pendingReschedule && <StatusPill status={pendingReschedule.status} />}
                     </div>
                     <p className="mt-2 text-base font-semibold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
                     <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">{booking.objective || booking.needDescription || "Besoin client transmis par le service client."}</p>
@@ -93,7 +98,20 @@ export default async function ProfesseurMissionsPage() {
                   </div>
 
                   <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
-                    {canRespond && mission ? (
+                    {pendingReschedule ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg border border-[#D7DEE9] bg-white p-3">
+                          <p className="text-[11px] font-bold uppercase tracking-wide text-[#64748B]">Nouveau créneau demandé</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {formatDate(pendingReschedule.proposedDate)} · {pendingReschedule.proposedTime}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                            {rescheduleWindowLabel(pendingReschedule.feeWindow)} · part professeur {formatFCFA(pendingReschedule.feeTeacherAmount)}
+                          </p>
+                        </div>
+                        <ProfessorRescheduleRequestActions requestId={pendingReschedule.id} />
+                      </div>
+                    ) : canRespond && mission ? (
                       <MissionResponseActions token={mission.token} compact />
                     ) : (
                       <div className="space-y-3">

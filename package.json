@@ -16,7 +16,8 @@
     "payment:audit": "node scripts/audit-payment-integrity.mjs",
     "payment:quarantine": "node scripts/quarantine-unverified-payments.mjs --apply",
     "payment:quarantine:dry": "node scripts/quarantine-unverified-payments.mjs --dry-run",
-    "production:check": "node scripts/check-production-config.mjs"
+    "production:check": "node scripts/check-production-config.mjs",
+    "verify:client-mobile": "node scripts/verify-client-mobile-navigation.mjs"
   },
   "prisma": {
     "seed": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts"

@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Camera, Clock, KeyRound, Loader2, Save, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { CalendarClock, Camera, Clock, FileText, KeyRound, Loader2, Save, Search, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -33,6 +33,13 @@ function normalizeSearch(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function matchesSearch(label: string, query: string) {
+  const normalizedLabel = normalizeSearch(label);
+  const normalizedQuery = normalizeSearch(query);
+  if (!normalizedQuery) return true;
+  return normalizedQuery.split(/\s+/).every((part) => normalizedLabel.includes(part));
 }
 
 function isPublicVisibleTeacherStatus(status?: string) {
@@ -121,9 +128,37 @@ type FormValues = z.infer<typeof schema>;
 type Subject = { id: string; name: string };
 type Level = { id: string; name: string };
 type Commune = { id: string; name: string };
+type CvAnalysisFields = Partial<Pick<
+  FormValues,
+  "jobTitle" | "bio" | "experienceYears" | "diploma" | "cvUrl" | "careerSummary" | "skills" | "workHistory" | "certifications" | "teachingAchievements" | "learnersCoached" | "profileType"
+>>;
+type CvAnalysisResult = {
+  fields: CvAnalysisFields;
+  detectedSections?: Array<{ label: string; items: string[] }>;
+  previewText?: string;
+  extractedCharacters?: number;
+  confidence?: number;
+  warnings?: string[];
+  filename?: string;
+};
 
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_CV_SIZE = 6 * 1024 * 1024;
+const CV_ACCEPT = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
+const CV_FIELD_LABELS: Partial<Record<keyof CvAnalysisFields, string>> = {
+  jobTitle: "Titre professionnel",
+  bio: "Bio",
+  experienceYears: "Années d'expérience",
+  diploma: "Diplôme principal",
+  careerSummary: "Mini CV",
+  skills: "Compétences clés",
+  workHistory: "Parcours",
+  certifications: "Certifications / preuves",
+  teachingAchievements: "Résultats",
+  learnersCoached: "Apprenants encadrés",
+  profileType: "Type de profil",
+};
 
 function countAvailabilitySlots(availability: Record<string, Record<string, boolean>>) {
   return WEEK_DAYS.reduce(
@@ -151,6 +186,9 @@ export function TeacherForm({
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [analyzingCv, setAnalyzingCv] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+  const [cvAnalysis, setCvAnalysis] = useState<CvAnalysisResult | null>(null);
 
   // Selections
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, boolean>>({});
@@ -265,14 +303,10 @@ export function TeacherForm({
     return communes.filter((commune) => normalizeSearch(commune.name).includes(normalizedQuery));
   }, [communes, zoneQuery]);
   const visibleSubjects = useMemo(() => {
-    const normalizedQuery = normalizeSearch(subjectQuery);
-    if (!normalizedQuery) return subjects;
-    return subjects.filter((subject) => normalizeSearch(subject.name).includes(normalizedQuery));
+    return subjects.filter((subject) => matchesSearch(subject.name, subjectQuery));
   }, [subjects, subjectQuery]);
   const visibleLevels = useMemo(() => {
-    const normalizedQuery = normalizeSearch(levelQuery);
-    if (!normalizedQuery) return levels;
-    return levels.filter((level) => normalizeSearch(level.name).includes(normalizedQuery));
+    return levels.filter((level) => matchesSearch(level.name, levelQuery));
   }, [levels, levelQuery]);
   const selectedSubjectCount = useMemo(
     () => Object.values(selectedSubjects).filter(Boolean).length,
@@ -281,6 +315,14 @@ export function TeacherForm({
   const selectedLevelCount = useMemo(
     () => Object.values(selectedLevels).filter(Boolean).length,
     [selectedLevels],
+  );
+  const selectedSubjectItems = useMemo(
+    () => subjects.filter((subject) => selectedSubjects[subject.id]),
+    [subjects, selectedSubjects],
+  );
+  const selectedLevelItems = useMemo(
+    () => levels.filter((level) => selectedLevels[level.id]),
+    [levels, selectedLevels],
   );
 
   const uploadPhoto = async (file?: File) => {
@@ -311,6 +353,74 @@ export function TeacherForm({
       setPhotoError(e.message || "Erreur pendant l'upload de la photo.");
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const applyCvAnalysis = (fields: CvAnalysisFields, showToast = false) => {
+    let applied = 0;
+    const applyString = (name: keyof CvAnalysisFields) => {
+      const value = fields[name];
+      if (typeof value !== "string" || !value.trim()) return;
+      setValue(name as any, value.trim(), { shouldDirty: true, shouldValidate: true });
+      applied += 1;
+    };
+    applyString("jobTitle");
+    applyString("bio");
+    applyString("diploma");
+    applyString("careerSummary");
+    applyString("skills");
+    applyString("workHistory");
+    applyString("certifications");
+    applyString("teachingAchievements");
+    applyString("profileType");
+    if (typeof fields.experienceYears === "number" && Number.isFinite(fields.experienceYears)) {
+      setValue("experienceYears", fields.experienceYears, { shouldDirty: true, shouldValidate: true });
+      applied += 1;
+    }
+    if (typeof fields.learnersCoached === "number" && Number.isFinite(fields.learnersCoached)) {
+      setValue("learnersCoached", fields.learnersCoached, { shouldDirty: true, shouldValidate: true });
+      applied += 1;
+    }
+    if (showToast) {
+      toast.success(applied ? `${applied} champ(s) professionnel(s) appliqué(s)` : "Aucun champ exploitable à appliquer");
+    }
+  };
+
+  const analyzeCv = async (file?: File) => {
+    setCvError(null);
+    if (!file) return;
+    const lowerName = file.name.toLowerCase();
+    const allowed = [".pdf", ".docx", ".txt", ".md"].some((extension) => lowerName.endsWith(extension));
+    if (!allowed) {
+      setCvError("Format non autorisé. Utilisez PDF texte, DOCX, TXT ou MD.");
+      return;
+    }
+    if (file.size > MAX_CV_SIZE) {
+      setCvError("CV trop lourd. Taille maximale autorisée : 6 Mo.");
+      return;
+    }
+    if (file.size <= 0) {
+      setCvError("CV vide ou invalide.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    setAnalyzingCv(true);
+    try {
+      const res = await fetch("/api/admin/teachers/analyze-cv", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Analyse impossible");
+      setCvAnalysis(data);
+      applyCvAnalysis(data.fields ?? {});
+      toast.success("CV analysé et mini CV prérempli");
+    } catch (e: any) {
+      setCvError(e.message || "Erreur pendant l'analyse du CV.");
+    } finally {
+      setAnalyzingCv(false);
     }
   };
 
@@ -666,6 +776,111 @@ export function TeacherForm({
                   </Select>
                 )} />
               </Field>
+              <div className="sm:col-span-2 rounded-lg border border-[#D8DEE9] bg-white p-4">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+                        <Sparkles className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-[#111827]">Analyse automatique du CV</h3>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                          Chargez un CV PDF texte, DOCX, TXT ou MD. Le système extrait le mini CV, les compétences, expériences, diplômes et résultats, puis préremplit les champs modifiables.
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      id="teacher-cv-analysis"
+                      type="file"
+                      accept={CV_ACCEPT}
+                      className="hidden"
+                      onChange={(event) => {
+                        analyzeCv(event.target.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <Button type="button" variant="outline" asChild disabled={analyzingCv}>
+                      <label htmlFor="teacher-cv-analysis" className="cursor-pointer">
+                        {analyzingCv ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <UploadCloud className="mr-2 h-4 w-4" />
+                        )}
+                        {analyzingCv ? "Analyse en cours" : "Charger un CV"}
+                      </label>
+                    </Button>
+                    {cvAnalysis?.fields && (
+                      <Button type="button" variant="ghost" onClick={() => applyCvAnalysis(cvAnalysis.fields, true)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Réappliquer
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {cvError && (
+                  <p className="mt-3 rounded-lg border border-red-100 bg-white px-3 py-2 text-sm font-semibold text-red-700">
+                    {cvError}
+                  </p>
+                )}
+                {cvAnalysis && (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="bg-white text-[#111B4D] ring-1 ring-[#D8DEE9]">
+                          {cvAnalysis.filename || "CV analysé"}
+                        </Badge>
+                        <Badge variant="secondary" className="bg-white text-[#111B4D] ring-1 ring-[#D8DEE9]">
+                          Confiance {cvAnalysis.confidence ?? 0}%
+                        </Badge>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {cvAnalysis.extractedCharacters ?? 0} caractères extraits
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {Object.entries(cvAnalysis.fields ?? {}).map(([key, value]) => {
+                          if (value === undefined || value === null || value === "") return null;
+                          const label = CV_FIELD_LABELS[key as keyof CvAnalysisFields] ?? key;
+                          const text = typeof value === "number" ? String(value) : String(value).split("\n").slice(0, 2).join(" · ");
+                          return (
+                            <div key={key} className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+                              <p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-[#111827]">{text}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {!!cvAnalysis.warnings?.length && (
+                        <div className="mt-3 space-y-1 text-xs font-semibold text-amber-700">
+                          {cvAnalysis.warnings.map((warning) => (
+                            <p key={warning}>{warning}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Sections détectées</p>
+                      <div className="mt-2 space-y-2">
+                        {(cvAnalysis.detectedSections ?? []).slice(0, 5).map((section) => (
+                          <div key={section.label}>
+                            <p className="text-xs font-bold text-[#111B4D]">{section.label}</p>
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                              {section.items.slice(0, 3).join(" · ")}
+                            </p>
+                          </div>
+                        ))}
+                        {!cvAnalysis.detectedSections?.length && (
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Aucune section structurée détectée. Les champs restent modifiables manuellement.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="sm:col-span-2">
                 <Field label="Bio" error={errors.bio?.message} required>
                   <Textarea rows={5} {...register("bio")} placeholder="Présentation pédagogique..." />
@@ -719,7 +934,9 @@ export function TeacherForm({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Matières enseignées</CardTitle>
-              <p className="text-sm text-muted-foreground">Cochez les matières, puis choisissez la matière principale.</p>
+              <p className="text-sm text-muted-foreground">
+                Recherchez rapidement une matière ou un niveau, cochez les choix du professeur, puis définissez la matière principale.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -729,7 +946,8 @@ export function TeacherForm({
                     type="search"
                     value={subjectQuery}
                     onChange={(event) => setSubjectQuery(event.target.value)}
-                    placeholder="Rechercher une matière enseignée..."
+                    placeholder="Tapez une matière : mathématiques, couture, génie civil..."
+                    aria-label="Rechercher une matière enseignée"
                     className="h-11 rounded-lg border-violet-100 bg-white pl-9"
                   />
                 </div>
@@ -749,6 +967,30 @@ export function TeacherForm({
                   )}
                 </div>
               </div>
+              {selectedSubjectItems.length > 0 && (
+                <div className="rounded-lg border border-violet-100 bg-white p-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Matières sélectionnées
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedSubjectItems.map((subject) => (
+                      <button
+                        key={subject.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSubjects((prev) => ({ ...prev, [subject.id]: false }));
+                          if (primarySubject === subject.id) setPrimarySubject(null);
+                        }}
+                        className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#CAD7F2] bg-white px-3 text-xs font-bold text-[#111B4D] transition hover:border-[#111B4D]"
+                      >
+                        <span>{subject.name}</span>
+                        {primarySubject === subject.id && <span className="text-[10px] text-violet-700">Principale</span>}
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                 {visibleSubjects.map((s) => {
                   const checked = !!selectedSubjects[s.id];
@@ -789,7 +1031,8 @@ export function TeacherForm({
                       type="search"
                       value={levelQuery}
                       onChange={(event) => setLevelQuery(event.target.value)}
-                      placeholder="Rechercher un niveau, concours, adulte, université..."
+                      placeholder="Tapez un niveau : BAC, BTS, adulte, concours..."
+                      aria-label="Rechercher un niveau enseigné"
                       className="h-11 rounded-lg border-violet-100 bg-white pl-9"
                     />
                   </div>
@@ -809,6 +1052,26 @@ export function TeacherForm({
                     )}
                   </div>
                 </div>
+                {selectedLevelItems.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-violet-100 bg-white p-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      Niveaux sélectionnés
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedLevelItems.map((level) => (
+                        <button
+                          key={level.id}
+                          type="button"
+                          onClick={() => setSelectedLevels((prev) => ({ ...prev, [level.id]: false }))}
+                          className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-[#CAD7F2] bg-white px-3 text-xs font-bold text-[#111B4D] transition hover:border-[#111B4D]"
+                        >
+                          <span>{level.name}</span>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="grid gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                   {visibleLevels.map((l) => {
                     const checked = !!selectedLevels[l.id];

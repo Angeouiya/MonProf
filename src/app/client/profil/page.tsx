@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ClientInfoPill,
@@ -62,7 +61,6 @@ type CommuneOption = {
 };
 
 export default function ProfilPage() {
-  const { update: updateSession } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [communeOptions, setCommuneOptions] = useState<CommuneOption[]>(() => COMMUNES.map((name) => ({ name })));
@@ -139,9 +137,6 @@ export default function ProfilPage() {
         setPhone(data.user.phone ?? "");
         setCommune(data.user.commune ?? "");
         setQuartier(data.user.quartier ?? "");
-      }
-      if (updateSession) {
-        await updateSession({ name: name.trim() });
       }
       return true;
     } catch {

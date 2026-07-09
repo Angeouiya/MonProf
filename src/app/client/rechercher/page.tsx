@@ -75,21 +75,31 @@ export default async function RechercherPage({
     default: orderBy = [{ featured: "desc" }, { rating: "desc" }, { ratingCount: "desc" }]; break;
   }
 
-  const [teachers, totalVisibleTeachers, subjects, levels, communes] = await db.$transaction([
-    db.teacher.findMany({
-      where,
-      orderBy,
-      take: 24,
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true } },
-      },
-    }),
-    db.teacher.count({ where: visibleTeacherWhere }),
-    db.subject.findMany({ orderBy: { name: "asc" } }),
-    db.level.findMany({ orderBy: { order: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  let teachers: any[] = [];
+  let totalVisibleTeachers = 0;
+  let subjects: any[] = [];
+  let levels: any[] = [];
+  let communes: any[] = [];
+
+  try {
+    totalVisibleTeachers = await db.teacher.count({ where: visibleTeacherWhere });
+    if (totalVisibleTeachers > 0) {
+      teachers = await db.teacher.findMany({
+        where,
+        orderBy,
+        take: 24,
+        include: {
+          subjects: { include: { subject: true } },
+          _count: { select: { reviews: true } },
+        },
+      });
+      subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
+      levels = await db.level.findMany({ orderBy: { order: "asc" } });
+      communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+    }
+  } catch (error) {
+    console.error("[client-search:query_failed]", error);
+  }
 
   const items = teachers.map((t) => ({
     ...t,

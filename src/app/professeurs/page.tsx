@@ -88,23 +88,37 @@ export default async function TeachersPage({
       break;
   }
 
-  const [total, totalVisibleTeachers, teachers, subjects, levels, communes] = await Promise.all([
-    db.teacher.count({ where }),
-    db.teacher.count({ where: visibleTeacherWhere }),
-    db.teacher.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true, bookings: true } },
-      },
-    }),
-    db.subject.findMany({ orderBy: { name: "asc" } }),
-    db.level.findMany({ orderBy: { order: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  let total = 0;
+  let totalVisibleTeachers = 0;
+  let teachers: any[] = [];
+  let subjects: any[] = [];
+  let levels: any[] = [];
+  let communes: any[] = [];
+
+  try {
+    totalVisibleTeachers = await db.teacher.count({ where: visibleTeacherWhere });
+
+    if (totalVisibleTeachers > 0) {
+      total = await db.teacher.count({ where });
+      teachers = total > 0
+        ? await db.teacher.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * PAGE_SIZE,
+            take: PAGE_SIZE,
+            include: {
+              subjects: { include: { subject: true } },
+              _count: { select: { reviews: true, bookings: true } },
+            },
+          })
+        : [];
+      subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
+      levels = await db.level.findMany({ orderBy: { order: "asc" } });
+      communes = await db.commune.findMany({ orderBy: { name: "asc" } });
+    }
+  } catch (error) {
+    console.error("[teachers:public_query_failed]", error);
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

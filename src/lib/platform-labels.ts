@@ -2,9 +2,20 @@ export { paymentMethodLabel, paymentMethodLabels } from "@/lib/payment-methods";
 
 export const transactionTypeLabels: Record<string, string> = {
   CLIENT_PAYMENT: "Paiement client sécurisé",
+  RESCHEDULE_FEE: "Supplément modification créneau",
   TEACHER_PAYOUT: "Versement professeur",
   REFUND: "Remboursement client",
   COMMISSION: "Commission interne",
+};
+
+export const rescheduleRequestStatusLabels: Record<string, string> = {
+  PAYMENT_PENDING: "Supplément à payer",
+  PAYMENT_FAILED: "Paiement échoué",
+  AWAITING_TEACHER: "Réponse professeur attendue",
+  APPLIED: "Créneau modifié",
+  TEACHER_REJECTED: "Refusé par le professeur",
+  CANCELLED: "Annulé",
+  REFUND_REQUIRED: "Remboursement à traiter",
 };
 
 export const packTypeLabels: Record<string, string> = {
@@ -125,6 +136,10 @@ export const courseFormatLabels: Record<string, string> = {
 
 export function transactionTypeLabel(type: string) {
   return transactionTypeLabels[type] ?? type;
+}
+
+export function rescheduleRequestStatusLabel(status: string) {
+  return rescheduleRequestStatusLabels[status] ?? status;
 }
 
 export function packTypeLabel(type: string) {

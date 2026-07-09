@@ -102,7 +102,8 @@ export function AdminLayout({
     exact ? pathname === href : pathname?.startsWith(href);
 
   useEffect(() => {
-    setOpen(false);
+    const timer = window.setTimeout(() => setOpen(false), 0);
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   return (

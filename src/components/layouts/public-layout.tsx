@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/shared/back-button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { cn } from "@/lib/utils";
-import { useSession } from "next-auth/react";
 
 const navLinks = [
   { href: "/professeurs", label: "Trouver un professeur" },
@@ -65,9 +64,9 @@ const mobileNavBase = [
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "ADMIN";
-  const isClient = (session?.user as any)?.role === "CLIENT";
+  const isAdmin = false;
+  const isClient = false;
+  const isAuthenticated = false;
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
   const hideFooter = shouldHidePublicFooter(pathname);
 
@@ -75,7 +74,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
     <div className={cn(
       "public-shell flex min-h-screen flex-col bg-white",
       hideMobileNav ? "public-shell--mobile-nav-hidden" : "public-shell--mobile-nav-visible",
-    )}>
+    )}
+      data-public-mobile-menu-open={mobileOpen ? "true" : "false"}
+    >
       <header className="app-topbar fixed inset-x-0 top-0 z-[70] w-full border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
@@ -118,22 +119,17 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/admin" prefetch={true}>Service client</Link>
               </Button>
             )}
-            {!session && (
+            {!isAuthenticated && (
               <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
                 <Link href="/connexion" prefetch={true}>Connexion</Link>
               </Button>
             )}
-            {!session && (
+            {!isAuthenticated && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
                 <Link href="/inscription" prefetch={true}>
                   Créer un compte
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
-              </Button>
-            )}
-            {session && !isAdmin && !isClient && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
-                <Link href="/connexion" prefetch={true}>Connexion</Link>
               </Button>
             )}
           </div>
@@ -169,7 +165,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </span>
               <ArrowRight className="h-4 w-4" />
             </Link>
-            {navLinks.map((link) => (
+            {navLinks.filter((link) => link.href !== "/professeurs").map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -209,7 +205,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   <Link href="/admin" prefetch={true} onClick={() => setMobileOpen(false)}>Service client</Link>
                 </Button>
               )}
-              {!session && (
+              {!isAuthenticated && (
                 <>
                   <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
                     <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
@@ -347,7 +343,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
       )}
-      {!hideMobileNav && <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />}
+      {!hideMobileNav && !mobileOpen && <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />}
     </div>
   );
 }

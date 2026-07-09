@@ -49,7 +49,7 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const CLIENT_NAV_PREFETCH = false;
+const CLIENT_NAV_PREFETCH = true;
 const CLIENT_DESKTOP_PREFETCH_ROUTES = Array.from(
   new Set([
     ...navItems.map((item) => item.href),
@@ -73,6 +73,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const [navigating, setNavigating] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
+  const navigationIntentRef = useRef<{ target: string; timestamp: number } | null>(null);
   const prefetchedRoutesRef = useRef<Set<string>>(new Set());
   const searchKey = searchParams.toString();
   const currentSection = getCurrentSection(pathname);
@@ -81,6 +82,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     pathname?.startsWith("/client/reserver")
     || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
   );
+  const shouldRenderMobileBottomNav = !hideMobileBottomNav && !open;
   const closeMobileSurfaces = useCallback(() => {
     setOpen(false);
     setMobileSearchOpen(false);
@@ -97,7 +99,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, [router]);
 
   useEffect(() => {
-    closeMobileSurfaces();
+    const closeTimer = window.setTimeout(closeMobileSurfaces, 0);
     if (navigationDelayRef.current) {
       window.clearTimeout(navigationDelayRef.current);
       navigationDelayRef.current = null;
@@ -106,12 +108,16 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       window.clearTimeout(navigationResetRef.current);
       navigationResetRef.current = null;
     }
+    navigationIntentRef.current = null;
     const routeSettledTimer = window.setTimeout(() => setNavigating(false), 0);
-    return () => window.clearTimeout(routeSettledTimer);
+    return () => {
+      window.clearTimeout(closeTimer);
+      window.clearTimeout(routeSettledTimer);
+    };
   }, [pathname, searchKey, closeMobileSurfaces]);
 
   useEffect(() => {
-    closeMobileSurfaces();
+    const initialCloseTimer = window.setTimeout(closeMobileSurfaces, 0);
 
     const closeOnPageShow = () => closeMobileSurfaces();
     const closeOnFocus = () => closeMobileSurfaces();
@@ -132,6 +138,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     document.addEventListener("keydown", closeOnEscape);
 
     return () => {
+      window.clearTimeout(initialCloseTimer);
       window.removeEventListener("pageshow", closeOnPageShow);
       window.removeEventListener("focus", closeOnFocus);
       window.removeEventListener("resize", closeOnDesktop);
@@ -149,6 +156,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       if (navigationResetRef.current) {
         window.clearTimeout(navigationResetRef.current);
       }
+      navigationIntentRef.current = null;
     };
   }, []);
 
@@ -172,11 +180,11 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     };
 
     if (browserWindow.requestIdleCallback) {
-      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: desktop ? 1800 : 2800 });
+      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: desktop ? 900 : 1400 });
       return () => browserWindow.cancelIdleCallback?.(idleId);
     }
 
-    const timer = globalThis.setTimeout(prefetchClientRoutes, desktop ? 500 : 1400);
+    const timer = globalThis.setTimeout(prefetchClientRoutes, desktop ? 220 : 720);
     return () => globalThis.clearTimeout(timer);
   }, [prefetchClientRoute]);
 
@@ -199,7 +207,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 45);
+    }, 16);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -236,12 +244,21 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     }
   }
 
-  function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
+  function maybeStartClientNavigationFeedback(
+    event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>,
+    source: "pointer" | "click",
+  ) {
     const nextPath = getClientNavigationTarget(event);
     if (!nextPath) return;
     prefetchClientRoute(nextPath);
     const currentPath = `${window.location.pathname}${window.location.search}`;
     if (nextPath !== currentPath) {
+      const now = window.performance.now();
+      const previousIntent = navigationIntentRef.current;
+      if (source === "click" && previousIntent?.target === nextPath && now - previousIntent.timestamp < 700) {
+        return;
+      }
+      navigationIntentRef.current = { target: nextPath, timestamp: now };
       startNavigationFeedback();
     }
   }
@@ -253,11 +270,11 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
   function handleClientNavigationIntent(event: PointerEvent<HTMLElement>) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    maybeStartClientNavigationFeedback(event);
+    maybeStartClientNavigationFeedback(event, "pointer");
   }
 
   function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {
-    maybeStartClientNavigationFeedback(event);
+    maybeStartClientNavigationFeedback(event, "click");
   }
 
   function handleClientPrefetchCapture(event: MouseEvent<HTMLElement>) {
@@ -272,8 +289,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const query = String(formData.get("q") ?? "").trim();
-    startNavigationFeedback();
-    router.push(query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher");
+    const nextPath = query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher";
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (nextPath !== currentPath) {
+      navigationIntentRef.current = { target: nextPath, timestamp: window.performance.now() };
+      startNavigationFeedback();
+    }
+    router.push(nextPath);
     setMobileSearchOpen(false);
   }
 
@@ -450,11 +472,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           <div
             data-client-mobile-layer
             className="app-topbar-offset fixed inset-x-0 z-[60] overflow-hidden lg:hidden"
-            style={{
-              bottom: hideMobileBottomNav
-                ? "0px"
-                : "calc(5.6rem + env(safe-area-inset-bottom))",
-            }}
+            style={{ bottom: "0px" }}
           >
             <button
               type="button"
@@ -515,7 +533,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           </div>
         </main>
       </div>
-      {!hideMobileBottomNav && (
+      {shouldRenderMobileBottomNav && (
         <MobileBottomNav pathname={pathname} isActive={isActive} notificationCount={notificationCount} />
       )}
     </div>
@@ -535,24 +553,28 @@ function SidebarContent({
   notificationCount?: number;
   compactAccount?: boolean;
 }) {
+  const showPrimaryAction = !compactAccount;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav data-client-sidebar-nav className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation principale client">
         <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
-        <Link
-          href="/client/rechercher"
-          prefetch={CLIENT_NAV_PREFETCH}
-          onClick={onNavigate}
-          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
-        >
-          <span className="inline-flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Trouver un professeur
-          </span>
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+        {showPrimaryAction && (
+          <Link
+            href="/client/rechercher"
+            prefetch={CLIENT_NAV_PREFETCH}
+            onClick={onNavigate}
+            className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Trouver un professeur
+            </span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
         {navItems.map((item) => {
           const active = isActive(item);
           return (

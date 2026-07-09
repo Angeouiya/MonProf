@@ -29,22 +29,23 @@ model User {
 
   bookings                      Booking[]
   reviews                       Review[]
-  disputes                      Dispute[]              @relation("DisputeOpener")
+  disputes                      Dispute[]                  @relation("DisputeOpener")
   notifications                 Notification[]
-  adminNotificationsSent        Notification[]         @relation("NotificationAdminSender")
-  handledMessages               ContactMessage[]       @relation("HandledBy")
-  teacherTasksCreated           TeacherTask[]          @relation("TeacherTaskCreator")
-  teacherWarningsCreated        TeacherWarning[]       @relation("TeacherWarningCreator")
-  teacherSanctionsCreated       TeacherSanction[]      @relation("TeacherSanctionCreator")
-  teacherReplacementsCreated    TeacherReplacement[]   @relation("TeacherReplacementCreator")
-  reviewsHandled                Review[]               @relation("ReviewAdminReviewer")
-  actionLogs                    AdminActionLog[]       @relation("AdminActionActor")
-  clientCommunications          ClientCommunication[]  @relation("ClientCommunicationClient")
-  clientCommunicationsSent      ClientCommunication[]  @relation("ClientCommunicationSender")
-  clientRefundRequests          ClientRefundRequest[]  @relation("ClientRefundRequestClient")
-  teacherPayoutsCreated         TeacherPayoutRecord[]  @relation("TeacherPayoutCreator")
-  teacherPayoutRequestsReviewed TeacherPayoutRequest[] @relation("TeacherPayoutRequestReviewer")
-  teacherAdminMessagesSent      TeacherAdminMessage[]  @relation("TeacherAdminMessageAdminSender")
+  adminNotificationsSent        Notification[]             @relation("NotificationAdminSender")
+  handledMessages               ContactMessage[]           @relation("HandledBy")
+  teacherTasksCreated           TeacherTask[]              @relation("TeacherTaskCreator")
+  teacherWarningsCreated        TeacherWarning[]           @relation("TeacherWarningCreator")
+  teacherSanctionsCreated       TeacherSanction[]          @relation("TeacherSanctionCreator")
+  teacherReplacementsCreated    TeacherReplacement[]       @relation("TeacherReplacementCreator")
+  reviewsHandled                Review[]                   @relation("ReviewAdminReviewer")
+  actionLogs                    AdminActionLog[]           @relation("AdminActionActor")
+  clientCommunications          ClientCommunication[]      @relation("ClientCommunicationClient")
+  clientCommunicationsSent      ClientCommunication[]      @relation("ClientCommunicationSender")
+  clientRefundRequests          ClientRefundRequest[]      @relation("ClientRefundRequestClient")
+  clientRescheduleRequests      BookingRescheduleRequest[] @relation("ClientRescheduleRequestClient")
+  teacherPayoutsCreated         TeacherPayoutRecord[]      @relation("TeacherPayoutCreator")
+  teacherPayoutRequestsReviewed TeacherPayoutRequest[]     @relation("TeacherPayoutRequestReviewer")
+  teacherAdminMessagesSent      TeacherAdminMessage[]      @relation("TeacherAdminMessageAdminSender")
   passwordResetTokens           PasswordResetToken[]
 
   @@index([role])
@@ -169,6 +170,7 @@ model Teacher {
   notifications      TeacherNotification[]
   missionLinks       TeacherMissionLink[]
   scheduleProposals  BookingScheduleProposal[]
+  rescheduleRequests BookingRescheduleRequest[]
   tasks              TeacherTask[]
   warnings           TeacherWarning[]
   sanctions          TeacherSanction[]
@@ -347,6 +349,7 @@ model Booking {
   teacherPayoutAllocations  TeacherPayoutAllocation[]
   missionLinks              TeacherMissionLink[]
   scheduleProposals         BookingScheduleProposal[]
+  rescheduleRequests        BookingRescheduleRequest[]
   teacherAdminMessages      TeacherAdminMessage[]
 
   @@index([clientId])
@@ -417,25 +420,28 @@ enum PaymentMethod {
 // TRANSACTION (historique financier)
 // ============================================================
 model Transaction {
-  id         String          @id @default(cuid())
-  reference  String          @unique // TX-XXXX
-  bookingId  String
-  teacherId  String
-  amount     Int // montant total concerné
-  commission Int
-  teacherNet Int
-  type       TransactionType
-  status     PaymentStatus   @default(BLOCKED)
-  method     PaymentMethod?
-  paidAt     DateTime?
-  createdAt  DateTime        @default(now())
+  id                  String          @id @default(cuid())
+  reference           String          @unique // TX-XXXX
+  bookingId           String
+  teacherId           String
+  rescheduleRequestId String?         @unique
+  amount              Int // montant total concerné
+  commission          Int
+  teacherNet          Int
+  type                TransactionType
+  status              PaymentStatus   @default(BLOCKED)
+  method              PaymentMethod?
+  paidAt              DateTime?
+  createdAt           DateTime        @default(now())
 
-  booking Booking @relation(fields: [bookingId], references: [id])
-  teacher Teacher @relation(fields: [teacherId], references: [id])
+  booking           Booking                   @relation(fields: [bookingId], references: [id])
+  teacher           Teacher                   @relation(fields: [teacherId], references: [id])
+  rescheduleRequest BookingRescheduleRequest? @relation(fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
 }
 
 enum TransactionType {
   CLIENT_PAYMENT
+  RESCHEDULE_FEE
   TEACHER_PAYOUT
   REFUND
   COMMISSION
@@ -661,6 +667,73 @@ enum ScheduleProposalStatus {
   ACCEPTED
   REJECTED
   CANCELLED
+}
+
+model BookingRescheduleRequest {
+  id                      String                  @id @default(cuid())
+  bookingId               String
+  teacherId               String
+  clientId                String
+  requestedBy             RescheduleRequestActor  @default(CLIENT)
+  oldScheduledDate        DateTime?
+  oldScheduledTime        String?
+  proposedDate            DateTime
+  proposedTime            String
+  reason                  String?
+  status                  RescheduleRequestStatus @default(PAYMENT_PENDING)
+  feeWindow               String
+  feeBaseAmount           Int                     @default(0)
+  feeRate                 Int                     @default(0)
+  feeAmount               Int                     @default(0)
+  feeTeacherRate          Int                     @default(0)
+  feeTeacherAmount        Int                     @default(0)
+  feePlatformRate         Int                     @default(0)
+  feePlatformAmount       Int                     @default(0)
+  paymentServiceFeeRate   Int                     @default(0)
+  paymentServiceFeeAmount Int                     @default(0)
+  paymentServiceFeeLabel  String?
+  totalToPay              Int                     @default(0)
+  paydunyaToken           String?                 @unique
+  paydunyaCheckoutUrl     String?
+  paydunyaStatus          String?
+  paydunyaReceiptUrl      String?
+  paydunyaVerifiedAt      DateTime?
+  paydunyaLastCheckedAt   DateTime?
+  paydunyaFailureReason   String?
+  paydunyaLastPayload     String?
+  clientResponse          String?
+  teacherResponse         String?
+  paidAt                  DateTime?
+  teacherRespondedAt      DateTime?
+  appliedAt               DateTime?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  client      User         @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
+  transaction Transaction?
+
+  @@index([bookingId, status])
+  @@index([teacherId, status])
+  @@index([clientId, createdAt])
+  @@index([paydunyaToken])
+}
+
+enum RescheduleRequestActor {
+  CLIENT
+  TEACHER
+  ADMIN
+}
+
+enum RescheduleRequestStatus {
+  PAYMENT_PENDING
+  PAYMENT_FAILED
+  AWAITING_TEACHER
+  APPLIED
+  TEACHER_REJECTED
+  CANCELLED
+  REFUND_REQUIRED
 }
 
 // ============================================================

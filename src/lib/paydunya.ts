@@ -29,6 +29,35 @@ type PayDunyaCheckoutInput = {
   };
 };
 
+type PayDunyaRescheduleFeeInput = {
+  origin: string;
+  booking: {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+  };
+  rescheduleRequest: {
+    id: string;
+    oldScheduledTime?: string | null;
+    proposedTime: string;
+    feeAmount: number;
+    paymentServiceFeeAmount?: number | null;
+    paymentServiceFeeLabel?: string | null;
+    totalToPay: number;
+  };
+  client: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+  };
+  teacher: {
+    id: string;
+    name: string;
+  };
+};
+
 type PayDunyaCheckoutResult = {
   configured: boolean;
   checkoutUrl: string | null;
@@ -266,6 +295,141 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     mode: config.mode,
     amount: input.booking.totalClientPays,
     bookingReference: input.booking.reference,
+    callbackUrl,
+    returnUrl,
+    hasToken: Boolean(token),
+  });
+
+  return {
+    configured: true,
+    checkoutUrl,
+    token,
+    responseText: data.description,
+    raw: sanitizePayDunyaApiResponse(data),
+  };
+}
+
+export async function createPayDunyaRescheduleFeeInvoice(input: PayDunyaRescheduleFeeInput): Promise<PayDunyaCheckoutResult> {
+  const config = await getPayDunyaConfig();
+  if (!config) {
+    return { configured: false, checkoutUrl: null, token: null };
+  }
+
+  if (!Number.isFinite(input.rescheduleRequest.totalToPay) || input.rescheduleRequest.totalToPay < PAYDUNYA_MIN_CHECKOUT_AMOUNT) {
+    throw new Error(`Montant PayDunya invalide: le supplément doit être d'au moins ${PAYDUNYA_MIN_CHECKOUT_AMOUNT} FCFA.`);
+  }
+
+  const endpoint = config.mode === "live"
+    ? "https://app.paydunya.com/api/v1/checkout-invoice/create"
+    : "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create";
+  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}`;
+  const callbackUrl = `${input.origin}/api/webhooks/paydunya`;
+
+  const invoicePayload = {
+    items: {
+      item_0: {
+        name: "Frais de modification de créneau",
+        quantity: 1,
+        unit_price: input.rescheduleRequest.feeAmount,
+        total_price: input.rescheduleRequest.feeAmount,
+        description: `Réservation ${input.booking.reference} - ${input.rescheduleRequest.oldScheduledTime || "ancien créneau"} vers ${input.rescheduleRequest.proposedTime}`,
+      },
+      ...((input.rescheduleRequest.paymentServiceFeeAmount ?? 0) > 0
+        ? {
+            item_1: {
+              name: input.rescheduleRequest.paymentServiceFeeLabel || "Frais de service paiement",
+              quantity: 1,
+              unit_price: input.rescheduleRequest.paymentServiceFeeAmount,
+              total_price: input.rescheduleRequest.paymentServiceFeeAmount,
+              description: "Frais liés au paiement mobile money / PayDunya",
+            },
+          }
+        : {}),
+    },
+    customer: {
+      name: input.client.name,
+      email: input.client.email || "",
+      phone: input.client.phone || "",
+    },
+    channels: [...PAYDUNYA_CI_CHANNELS],
+    total_amount: input.rescheduleRequest.totalToPay,
+    description: `Modification créneau ${input.booking.reference} - Compétence`,
+  };
+
+  const payload = {
+    invoice: {
+      ...invoicePayload,
+    },
+    store: {
+      name: config.storeName,
+      tagline: config.storeTagline,
+      phone: config.storePhone,
+      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon.png`,
+      website_url: input.origin,
+    },
+    custom_data: {
+      booking_id: input.booking.id,
+      booking_reference: input.booking.reference,
+      reschedule_request_id: input.rescheduleRequest.id,
+      payment_purpose: "RESCHEDULE_FEE",
+      client_id: input.client.id,
+      teacher_id: input.teacher.id,
+      provider: "PAYDUNYA",
+      mode: config.mode,
+      app_url: input.origin,
+    },
+    actions: {
+      cancel_url: `${input.origin}/client/reservations/${input.booking.id}?reschedulePaydunya=cancelled`,
+      return_url: returnUrl,
+      callback_url: callbackUrl,
+    },
+  };
+
+  let createAttempt = await postPayDunyaCheckoutInvoice(endpoint, config, payload);
+
+  if (shouldRetryPayDunyaCheckoutWithoutChannels(createAttempt)) {
+    const fallbackPayload = {
+      ...payload,
+      invoice: {
+        ...invoicePayload,
+      },
+    };
+    delete (fallbackPayload.invoice as { channels?: unknown }).channels;
+    createAttempt = await postPayDunyaCheckoutInvoice(endpoint, config, fallbackPayload);
+  }
+
+  const { response, data, responseCode } = createAttempt;
+  const checkoutUrl = extractPayDunyaCheckoutUrl(data);
+  const token = extractPayDunyaCheckoutToken(data);
+
+  if (!response.ok || responseCode !== "00") {
+    console.error("[paydunya:reschedule_create_failed]", {
+      httpStatus: response.status,
+      responseCode,
+      description: data.description ?? null,
+      responseText: typeof data.response_text === "string" ? data.response_text.slice(0, 180) : null,
+      mode: config.mode,
+    });
+    throw new Error(data.response_text || data.description || "Impossible de créer la facture PayDunya du supplément.");
+  }
+
+  if (!checkoutUrl || !token) {
+    console.error("[paydunya:reschedule_create_incomplete]", {
+      httpStatus: response.status,
+      responseCode,
+      hasCheckoutUrl: Boolean(checkoutUrl),
+      hasToken: Boolean(token),
+      mode: config.mode,
+    });
+    throw new Error("PayDunya a renvoyé une facture de supplément incomplète.");
+  }
+
+  console.info("[paydunya:reschedule_create_success]", {
+    responseCode,
+    mode: config.mode,
+    amount: input.rescheduleRequest.totalToPay,
+    bookingReference: input.booking.reference,
+    rescheduleRequestId: input.rescheduleRequest.id,
     callbackUrl,
     returnUrl,
     hasToken: Boolean(token),

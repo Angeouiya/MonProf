@@ -4770,8 +4770,17 @@ b {
   }
 }
 
+@keyframes client-route-progress-settle {
+  from {
+    transform: translateX(-32%) scaleX(0.52);
+  }
+  to {
+    transform: translateX(8%) scaleX(0.86);
+  }
+}
+
 .client-shell [data-client-route-progress-bar] {
-  animation-duration: 120ms !important;
+  animation: client-route-progress-settle 320ms cubic-bezier(0.2, 0, 0, 1) both !important;
 }
 
 /* Final mobile guard: app rails stay readable and never become cramped horizontal strips. */
@@ -4975,6 +4984,44 @@ b {
   }
 }
 
+/* Final client readability guard: tabs and filter rails must never collapse into vertical letters. */
+.client-shell :where(
+  [data-client-tab-item],
+  [data-client-reservation-filter-rail] button,
+  [data-client-course-filter-rail] button,
+  [data-client-payment-filter-rail] button,
+  [data-client-review-filter-rail] button,
+  [data-client-notification-filter-rail] button,
+  [data-client-support-filter-rail] button
+) {
+  overflow-wrap: normal !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+
+.client-shell :where(
+  [data-client-tab-item] *,
+  [data-client-reservation-filter-rail] button *,
+  [data-client-course-filter-rail] button *,
+  [data-client-payment-filter-rail] button *,
+  [data-client-review-filter-rail] button *,
+  [data-client-notification-filter-rail] button *,
+  [data-client-support-filter-rail] button *
+) {
+  min-inline-size: 0 !important;
+  overflow-wrap: normal !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  word-break: normal !important;
+}
+
+.client-shell [data-client-mobile-drawer] [data-client-sidebar-nav] {
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
 /* Client production guard: navigation must stay readable on short desktop and small phones. */
 .client-shell [data-client-sidebar] {
   overflow: hidden !important;
@@ -4994,9 +5041,8 @@ b {
 }
 
 .client-shell[data-mobile-menu-open="true"] [data-client-mobile-nav] {
-  display: block !important;
-  pointer-events: auto !important;
-  z-index: 95 !important;
+  display: none !important;
+  pointer-events: none !important;
 }
 
 .professor-shell[data-mobile-menu-open="true"] [data-professor-mobile-nav] {
@@ -5011,7 +5057,7 @@ b {
 }
 
 .client-shell [data-client-mobile-layer] {
-  z-index: 60 !important;
+  z-index: 90 !important;
 }
 
 .client-shell [data-client-mobile-layer] > button {

@@ -40,27 +40,20 @@ export default async function ReservationsPage({
   const tabId = sp.tab ?? "toutes";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const where: any = { clientId: user.id };
-  if (tab.statuses) where.status = { in: tab.statuses };
-
   const bookingInclude = {
     teacher: {
       select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true },
     },
     transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
   };
-  const [bookings, allBookings] = await db.$transaction([
-    db.booking.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: bookingInclude,
-    }),
-    db.booking.findMany({
-      where: { clientId: user.id },
-      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-      include: bookingInclude,
-    }),
-  ]);
+  const allBookings = await db.booking.findMany({
+    where: { clientId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: bookingInclude,
+  });
+  const bookings = tab.statuses
+    ? allBookings.filter((booking) => tab.statuses?.includes(booking.status))
+    : allBookings;
   const securedBookings = allBookings.filter(hasVerifiedPayDunyaClientPayment);
   const draftBookings = allBookings.filter((booking) => booking.status === "PENDING_PAYMENT" && !hasVerifiedPayDunyaClientPayment(booking));
   const blockedBookings = allBookings.filter((booking) => booking.paymentStatus === "BLOCKED" && hasVerifiedPayDunyaClientPayment(booking));
@@ -88,7 +81,9 @@ export default async function ReservationsPage({
     ]),
   ) as Record<string, number>;
   const priorityBooking = toConfirmBookings[0]
-    ?? allBookings.find((booking) => ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"].includes(booking.status))
+    ?? allBookings
+      .filter((booking) => ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"].includes(booking.status))
+      .sort((a, b) => compareDateAsc(a.scheduledDate ?? a.startDate ?? a.createdAt, b.scheduledDate ?? b.startDate ?? b.createdAt))[0]
     ?? allBookings[0]
     ?? null;
   const priorityStep = priorityBooking ? getClientReservationStep(priorityBooking.status, priorityBooking.paymentStatus, hasVerifiedPayDunyaClientPayment(priorityBooking)) : null;
@@ -446,6 +441,12 @@ function normalizeReservationSearch(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function compareDateAsc(a: Date | null | undefined, b: Date | null | undefined) {
+  const left = a?.getTime() ?? Number.POSITIVE_INFINITY;
+  const right = b?.getTime() ?? Number.POSITIVE_INFINITY;
+  return left - right;
 }
 
 function getClientPaymentLabel(status: PaymentStatus, quoteOnly: boolean) {

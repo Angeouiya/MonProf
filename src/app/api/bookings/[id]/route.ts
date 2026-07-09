@@ -7,11 +7,13 @@ import { DisputeStatus } from "@prisma/client";
 import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
-import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
+import { createPayDunyaCheckoutInvoice, createPayDunyaRescheduleFeeInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import { createRescheduleAwaitingTeacherNotifications, reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
 import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { absoluteAppUrl } from "@/lib/public-url";
+import { getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
@@ -223,7 +225,7 @@ export async function PATCH(
     include: {
       transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
       teacher: { select: { id: true, fullName: true, professionalName: true } },
-      client: { select: { id: true, name: true, phone: true } },
+      client: { select: { id: true, name: true, email: true, phone: true } },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -232,7 +234,18 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { action, reason, description, rescheduleMessage, proposalId, replacementId, clientResponse } = body;
+  const {
+    action,
+    reason,
+    description,
+    rescheduleMessage,
+    rescheduleDate,
+    rescheduleTime,
+    rescheduleRequestId,
+    proposalId,
+    replacementId,
+    clientResponse,
+  } = body;
 
   const now = new Date();
 
@@ -1067,6 +1080,244 @@ export async function PATCH(
       return NextResponse.json({ booking: publicBookingDetailPayload(updated), dispute });
     }
 
+    case "request_reschedule": {
+      if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+      }
+      if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status)) {
+        return NextResponse.json({ error: "Cette réservation ne peut pas être déplacée à ce stade." }, { status: 400 });
+      }
+      if (!booking.scheduledDate && !booking.startDate) {
+        return NextResponse.json({ error: "Aucun créneau initial n'est fixé. Contactez le service client pour planifier cette réservation." }, { status: 400 });
+      }
+      const parsedReschedule = parseClientRescheduleInput(rescheduleDate, rescheduleTime);
+      if (!parsedReschedule) {
+        return NextResponse.json({ error: "Nouvelle date ou heure invalide." }, { status: 400 });
+      }
+      if (parsedReschedule.startsAt.getTime() < now.getTime() + 24 * 60 * 60 * 1000) {
+        return NextResponse.json({ error: "Le nouveau créneau doit être choisi au moins 24h à l'avance." }, { status: 400 });
+      }
+      const currentDate = booking.scheduledDate ?? booking.startDate;
+      const currentTime = booking.scheduledTime || booking.preferredTime;
+      if (currentDate && isSameDate(currentDate, parsedReschedule.date) && currentTime === parsedReschedule.slotLabel) {
+        return NextResponse.json({ error: "Le nouveau créneau est identique au créneau actuel." }, { status: 400 });
+      }
+      const existingAwaiting = await db.bookingRescheduleRequest.findFirst({
+        where: {
+          bookingId: booking.id,
+          status: { in: ["PAYMENT_PENDING", "AWAITING_TEACHER"] },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existingAwaiting) {
+        return NextResponse.json({
+          error: existingAwaiting.status === "PAYMENT_PENDING"
+            ? "Une modification est déjà en attente de paiement."
+            : "Une modification est déjà en attente de réponse du professeur.",
+        }, { status: 409 });
+      }
+
+      const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
+      const policy = getReschedulePolicy({
+        unitPrice: pricingSnapshot?.unitSessionAmount ?? booking.unitPrice,
+        courseAmount: pricingSnapshot?.courseAmount ?? booking.courseAmount,
+        totalClientPays: pricingSnapshot?.totalClientPays ?? booking.totalClientPays,
+        totalPrice: booking.totalPrice,
+        sessionsCount: pricingSnapshot?.numberOfSessions ?? booking.sessionsCount,
+        paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount,
+        scheduledDate: currentDate,
+        scheduledTime: currentTime,
+      }, now);
+      if (policy.code === "NO_SHOW") {
+        return NextResponse.json({
+          error: "Le cours est déjà commencé ou dépassé. Le service client doit traiter cette modification manuellement.",
+        }, { status: 409 });
+      }
+
+      const cleanReason = typeof rescheduleMessage === "string" ? rescheduleMessage.trim().slice(0, 700) : "";
+      if (cleanReason.length < 5) {
+        return NextResponse.json({ error: "Expliquez brièvement pourquoi vous souhaitez déplacer le créneau." }, { status: 400 });
+      }
+
+      const createdRequest = await db.bookingRescheduleRequest.create({
+        data: {
+          bookingId: booking.id,
+          teacherId: booking.teacherId,
+          clientId: booking.clientId,
+          requestedBy: "CLIENT",
+          oldScheduledDate: currentDate,
+          oldScheduledTime: currentTime,
+          proposedDate: parsedReschedule.date,
+          proposedTime: parsedReschedule.slotLabel,
+          reason: cleanReason,
+          status: policy.feeAmount > 0 ? "PAYMENT_PENDING" : "AWAITING_TEACHER",
+          feeWindow: policy.code,
+          feeBaseAmount: policy.baseAmount,
+          feeRate: policy.feeRate,
+          feeAmount: policy.feeAmount,
+          feeTeacherRate: policy.teacherRate,
+          feeTeacherAmount: policy.teacherAmount,
+          feePlatformRate: policy.platformRate,
+          feePlatformAmount: policy.platformAmount,
+          paymentServiceFeeRate: policy.paymentServiceFeeRate,
+          paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
+          paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
+          totalToPay: policy.totalToPay,
+        },
+        include: {
+          booking: {
+            include: {
+              client: { select: { name: true } },
+              teacher: { select: { fullName: true, professionalName: true } },
+            },
+          },
+          teacher: { select: { fullName: true, professionalName: true } },
+          client: { select: { name: true } },
+        },
+      });
+
+      if (policy.feeAmount <= 0) {
+        await db.$transaction(async (tx) => {
+          await createRescheduleAwaitingTeacherNotifications(tx, { request: createdRequest, now });
+          await tx.adminActionLog.create({
+            data: {
+              adminId: null,
+              action: "Modification créneau client gratuite",
+              entityType: "BookingRescheduleRequest",
+              entityId: createdRequest.id,
+              detail: `${booking.client.name} demande ${parsedReschedule.slotLabel} le ${parsedReschedule.date.toLocaleDateString("fr-FR")} pour ${booking.reference}. ${reschedulePolicySummary(policy)}.`,
+              oldStatus: "NONE",
+              newStatus: "AWAITING_TEACHER",
+            },
+          });
+        });
+        return NextResponse.json({
+          ok: true,
+          rescheduleRequest: serializeRescheduleRequest(createdRequest),
+          policy,
+          message: "Demande de modification transmise au professeur.",
+        });
+      }
+
+      let payment: Awaited<ReturnType<typeof createPayDunyaRescheduleFeeInvoice>>;
+      try {
+        payment = await createPayDunyaRescheduleFeeInvoice({
+          origin: getPayDunyaPublicBaseUrl(req),
+          booking: {
+            id: booking.id,
+            reference: booking.reference,
+            subjectName: booking.subjectName,
+            levelName: booking.levelName,
+          },
+          rescheduleRequest: {
+            id: createdRequest.id,
+            oldScheduledTime: currentTime,
+            proposedTime: parsedReschedule.slotLabel,
+            feeAmount: policy.feeAmount,
+            paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
+            paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
+            totalToPay: policy.totalToPay,
+          },
+          client: {
+            id: booking.client.id,
+            name: booking.client.name,
+            email: booking.client.email,
+            phone: booking.client.phone,
+          },
+          teacher: {
+            id: booking.teacher.id,
+            name: booking.teacher.professionalName || booking.teacher.fullName,
+          },
+        });
+      } catch (error: any) {
+        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement du supplément.";
+        await db.bookingRescheduleRequest.update({
+          where: { id: createdRequest.id },
+          data: {
+            status: "PAYMENT_FAILED",
+            paydunyaStatus: "CREATE_FAILED",
+            paydunyaFailureReason: errorMessage,
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: errorMessage,
+          },
+        });
+        return NextResponse.json({ error: errorMessage }, { status: 503 });
+      }
+
+      if (!payment.configured || !payment.checkoutUrl) {
+        await db.bookingRescheduleRequest.update({
+          where: { id: createdRequest.id },
+          data: {
+            status: "PAYMENT_FAILED",
+            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
+            paydunyaFailureReason: payment.configured
+              ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
+              : "PayDunya n'est pas encore configuré sur cette installation.",
+            paydunyaLastCheckedAt: new Date(),
+            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
+          },
+        });
+        return NextResponse.json({
+          error: payment.configured
+            ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
+            : "PayDunya n'est pas encore configuré sur cette installation.",
+        }, { status: 503 });
+      }
+
+      const updatedRequest = await db.bookingRescheduleRequest.update({
+        where: { id: createdRequest.id },
+        data: {
+          paydunyaToken: payment.token,
+          paydunyaCheckoutUrl: payment.checkoutUrl,
+          paydunyaStatus: "PENDING",
+          paydunyaFailureReason: null,
+          paydunyaLastCheckedAt: new Date(),
+          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
+        },
+      });
+
+      await db.adminActionLog.create({
+        data: {
+          adminId: null,
+          action: "Supplément modification PayDunya créé",
+          entityType: "BookingRescheduleRequest",
+          entityId: createdRequest.id,
+          detail: `${booking.client.name} doit payer ${policy.totalToPay.toLocaleString("fr-FR")} FCFA pour déplacer ${booking.reference}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, service: ${policy.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA.`,
+          oldStatus: "NONE",
+          newStatus: "PAYMENT_PENDING",
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        rescheduleRequest: serializeRescheduleRequest(updatedRequest),
+        policy,
+        payment: {
+          provider: "PAYDUNYA",
+          configured: payment.configured,
+          checkoutUrl: payment.checkoutUrl,
+        },
+        message: "Supplément requis avant transmission au professeur.",
+      });
+    }
+
+    case "reschedule_fee_verify": {
+      const requestId = typeof rescheduleRequestId === "string" ? rescheduleRequestId : null;
+      const token = typeof body.token === "string" ? body.token : null;
+      const result = await reconcilePayDunyaReschedulePayment({
+        bookingId: booking.id,
+        rescheduleRequestId: requestId,
+        token,
+        expectedClientId: booking.clientId,
+        source: "client_manual",
+        incomingPayload: body,
+      });
+      return NextResponse.json({
+        ok: result.verified,
+        payment: result,
+      }, { status: result.action === "rejected" ? 409 : 200 });
+    }
+
     case "reschedule": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
         return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
@@ -1366,4 +1617,67 @@ function compactPayDunyaCreatePayload(value: unknown) {
   } catch {
     return String(value).slice(0, 2000);
   }
+}
+
+function parseClientRescheduleInput(dateValue: unknown, timeValue: unknown) {
+  if (typeof dateValue !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return null;
+  const date = new Date(`${dateValue}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const time = typeof timeValue === "string" ? timeValue.trim() : "";
+  const match = time.match(/^(\d{1,2})(?::?(\d{2}))?$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
+  if (!Number.isFinite(hour) || hour < 6 || hour > 20) return null;
+  if (!Number.isFinite(minute) || minute < 0 || minute > 59) return null;
+  const startsAt = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0, 0);
+  const endHour = hour + 2;
+  if (endHour > 22) return null;
+  const startLabel = minute > 0 ? `${hour}h${String(minute).padStart(2, "0")}` : `${hour}h`;
+  const endLabel = minute > 0 ? `${endHour}h${String(minute).padStart(2, "0")}` : `${endHour}h`;
+  return {
+    date,
+    startsAt,
+    slotLabel: `${startLabel}-${endLabel}`,
+  };
+}
+
+function isSameDate(left: Date | string, right: Date) {
+  const parsed = left instanceof Date ? left : new Date(left);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.getFullYear() === right.getFullYear()
+    && parsed.getMonth() === right.getMonth()
+    && parsed.getDate() === right.getDate();
+}
+
+function serializeRescheduleRequest(request: any) {
+  return {
+    id: request.id,
+    bookingId: request.bookingId,
+    status: request.status,
+    oldScheduledDate: request.oldScheduledDate,
+    oldScheduledTime: request.oldScheduledTime,
+    proposedDate: request.proposedDate,
+    proposedTime: request.proposedTime,
+    reason: request.reason,
+    feeWindow: request.feeWindow,
+    feeBaseAmount: request.feeBaseAmount,
+    feeRate: request.feeRate,
+    feeAmount: request.feeAmount,
+    feeTeacherRate: request.feeTeacherRate,
+    feeTeacherAmount: request.feeTeacherAmount,
+    feePlatformRate: request.feePlatformRate,
+    feePlatformAmount: request.feePlatformAmount,
+    paymentServiceFeeAmount: request.paymentServiceFeeAmount,
+    paymentServiceFeeLabel: request.paymentServiceFeeLabel,
+    totalToPay: request.totalToPay,
+    paydunyaStatus: request.paydunyaStatus,
+    paydunyaVerifiedAt: request.paydunyaVerifiedAt,
+    paidAt: request.paidAt,
+    teacherResponse: request.teacherResponse,
+    teacherRespondedAt: request.teacherRespondedAt,
+    appliedAt: request.appliedAt,
+    createdAt: request.createdAt,
+  };
 }

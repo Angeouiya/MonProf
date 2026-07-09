@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shar
 import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink } from "lucide-react";
 import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
+import { getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
 import { formatFCFA } from "@/lib/format";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
@@ -34,6 +35,13 @@ type BookingActionsProps = {
       paymentPhone: string;
       accountName?: string | null;
       status: string;
+      createdAt: Date;
+    }[];
+    rescheduleRequests?: {
+      id: string;
+      status: string;
+      paydunyaCheckoutUrl?: string | null;
+      totalToPay: number;
       createdAt: Date;
     }[];
   };
@@ -215,6 +223,9 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
   // Reschedule form
   const [rescheduleMsg, setRescheduleMsg] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleAcknowledged, setRescheduleAcknowledged] = useState(false);
   const [cancelReason, setCancelReason] = useState<(typeof CANCELLATION_REASONS)[number]>(CANCELLATION_REASONS[0]);
   const [cancelDesc, setCancelDesc] = useState("");
   const [cancelAcknowledged, setCancelAcknowledged] = useState(false);
@@ -244,7 +255,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
         toast.error(data.error || "Erreur");
         return false;
       }
-      return true;
+      return data || true;
     } catch {
       toast.error("Erreur réseau");
       return false;
@@ -276,15 +287,35 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   async function onSubmitReschedule() {
-    if (!rescheduleMsg.trim()) {
-      toast.error("Veuillez indiquer le motif du report");
+    if (!rescheduleDate || !rescheduleTime) {
+      toast.error("Choisissez une nouvelle date et une heure de début.");
       return;
     }
-    const ok = await callAction("reschedule", { rescheduleMessage: rescheduleMsg });
-    if (ok) {
-      toast.success("Demande de report envoyée au service client.");
+    if (!rescheduleMsg.trim() || rescheduleMsg.trim().length < 5) {
+      toast.error("Veuillez indiquer le motif du changement.");
+      return;
+    }
+    if (!rescheduleAcknowledged) {
+      toast.error("Veuillez confirmer que vous avez compris les frais éventuels.");
+      return;
+    }
+    const data = await callAction("request_reschedule", {
+      rescheduleDate,
+      rescheduleTime,
+      rescheduleMessage: rescheduleMsg,
+    });
+    if (data) {
+      if (typeof data === "object" && data.payment?.checkoutUrl) {
+        toast.success("Ouverture de PayDunya pour le supplément...");
+        window.location.assign(data.payment.checkoutUrl);
+        return;
+      }
+      toast.success("Demande de modification envoyée au professeur.");
       setRescheduleOpen(false);
       setRescheduleMsg("");
+      setRescheduleDate("");
+      setRescheduleTime("");
+      setRescheduleAcknowledged(false);
       router.refresh();
     }
   }
@@ -377,8 +408,13 @@ export function BookingActions({ booking }: BookingActionsProps) {
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0) : 0;
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount });
+  const reschedulePolicy = useMemo(() => getReschedulePolicy(booking), [booking]);
+  const pendingRescheduleRequest = booking.rescheduleRequests?.find((request) => (
+    request.status === "PAYMENT_PENDING" || request.status === "AWAITING_TEACHER"
+  ));
   const canReview = isReviewableBookingStatus(status);
   const canCancel = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(status);
+  const canRequestReschedule = canCancel && paymentVerified && !pendingRescheduleRequest;
   const canResumePayDunya = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
   const foregroundNotice = getForegroundNotice({
     status,
@@ -588,40 +624,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <AlertTriangle className="mr-2 h-4 w-4" />
               Signaler un problème
             </Button>
-            <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="min-h-11 w-full rounded-lg" disabled={!!loading}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Demander un report
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Demande de report</DialogTitle>
-                  <DialogDescription>
-                    Expliquez pourquoi vous souhaitez reporter ce cours. Le service client reprogrammera avec le professeur.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="reschedule">Motif du report</Label>
-                    <Textarea
-                      id="reschedule"
-                      value={rescheduleMsg}
-                      onChange={(e) => setRescheduleMsg(e.target.value)}
-                      rows={3}
-                      placeholder="Ex: Empêchement, maladie, conflit d'agenda..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setRescheduleOpen(false)} className="rounded-lg">Annuler</Button>
-                  <Button onClick={onSubmitReschedule} disabled={loading === "reschedule"} className="rounded-lg">
-                    Envoyer la demande
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </>
         )}
 
@@ -761,6 +763,139 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 <Button variant="outline" onClick={() => setRefundOpen(false)} className="rounded-lg">Retour</Button>
                 <Button onClick={onSubmitRefundDetails} disabled={loading === "submit_refund_details"} className="rounded-lg">
                   Envoyer au service client
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {pendingRescheduleRequest && (
+          <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
+            <div className="flex items-center gap-2 font-semibold">
+              <RefreshCw className="h-4 w-4" />
+              Modification de créneau en cours
+            </div>
+            <p className="mt-1 text-xs leading-5 text-[#64748B]">
+              {pendingRescheduleRequest.status === "PAYMENT_PENDING"
+                ? `Un supplément de ${formatFCFA(pendingRescheduleRequest.totalToPay)} est en attente de paiement PayDunya.`
+                : "Votre demande est transmise au professeur. Vous serez notifié dès sa réponse."}
+            </p>
+            {pendingRescheduleRequest.status === "PAYMENT_PENDING" && pendingRescheduleRequest.paydunyaCheckoutUrl && (
+              <Button asChild className="mt-3 min-h-11 w-full rounded-lg">
+                <a href={pendingRescheduleRequest.paydunyaCheckoutUrl}>
+                  Payer via PayDunya
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
+
+        {canRequestReschedule && (
+          <Dialog
+            open={rescheduleOpen}
+            onOpenChange={(nextOpen) => {
+              setRescheduleOpen(nextOpen);
+              if (!nextOpen) setRescheduleAcknowledged(false);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="min-h-11 w-full rounded-lg border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white hover:text-[#111B4D]" disabled={!!loading}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Modifier le créneau
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Modifier le créneau du cours</DialogTitle>
+                <DialogDescription>
+                  Choisissez une nouvelle date et une heure de début. Une séance reste toujours fixée sur 2h.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
+                  <div className="flex flex-col gap-2 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
+                    <div>
+                      <p className="font-semibold text-[#111B4D]">{reschedulePolicy.label}</p>
+                      <p className="mt-1 text-xs font-semibold text-[#64748B]">{reschedulePolicySummary(reschedulePolicy)}</p>
+                    </div>
+                    <span className="inline-flex w-fit rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
+                      Avant validation
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-[#64748B]">{reschedulePolicy.description}</p>
+                  <div className="mt-3 grid gap-2 text-xs min-[520px]:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Base séance</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.baseAmount)}</p>
+                    </div>
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Frais</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.feeAmount)}</p>
+                    </div>
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Frais service</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.paymentServiceFeeAmount)}</p>
+                    </div>
+                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
+                      <p className="text-[#64748B]">Total à payer</p>
+                      <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.totalToPay)}</p>
+                    </div>
+                  </div>
+                  {reschedulePolicy.feeAmount > 0 && (
+                    <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">
+                      Après paiement PayDunya vérifié, la demande part au professeur. Le créneau change seulement quand le professeur confirme.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-3 min-[560px]:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rescheduleDate">Nouvelle date</Label>
+                    <Input
+                      id="rescheduleDate"
+                      type="date"
+                      value={rescheduleDate}
+                      min={minimumRescheduleDateInput()}
+                      onChange={(event) => setRescheduleDate(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rescheduleTime">Heure de début</Label>
+                    <Input
+                      id="rescheduleTime"
+                      type="time"
+                      value={rescheduleTime}
+                      onChange={(event) => setRescheduleTime(event.target.value)}
+                    />
+                    <p className="text-xs font-medium text-[#64748B]">La fin est automatiquement 2h après.</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="reschedule">Motif du changement</Label>
+                  <Textarea
+                    id="reschedule"
+                    value={rescheduleMsg}
+                    onChange={(e) => setRescheduleMsg(e.target.value)}
+                    rows={3}
+                    placeholder="Ex: empêchement professionnel, conflit d'agenda, urgence familiale..."
+                  />
+                </div>
+                <label htmlFor="rescheduleAcknowledged" className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
+                  <Checkbox
+                    id="rescheduleAcknowledged"
+                    checked={rescheduleAcknowledged}
+                    onCheckedChange={(checked) => setRescheduleAcknowledged(checked === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="leading-5 text-[#475569]">
+                    Je comprends que le supplément éventuel est calculé selon le délai avant le cours, que PayDunya peut ajouter des frais de service, et que le nouveau créneau doit être confirmé par le professeur.
+                  </span>
+                </label>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRescheduleOpen(false)} className="rounded-lg">Retour</Button>
+                <Button onClick={onSubmitReschedule} disabled={loading === "request_reschedule" || !rescheduleAcknowledged} className="rounded-lg">
+                  {reschedulePolicy.totalToPay > 0 ? "Payer le supplément" : "Envoyer au professeur"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1005,6 +1140,12 @@ function refundStatusLabel(status: string) {
     CANCELLED: "Annulé",
   };
   return labels[status] ?? status;
+}
+
+function minimumRescheduleDateInput() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function getForegroundNotice({

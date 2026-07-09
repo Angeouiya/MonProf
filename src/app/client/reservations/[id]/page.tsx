@@ -18,6 +18,7 @@ import { cancellationWindowLabel } from "@/lib/cancellation-policy";
 import { parsePricingSnapshot } from "@/lib/pricing";
 import { dayLabel } from "@/lib/scheduling";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import { reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
   Home, Video, User, Users, Calendar, Clock, MapPin, MessageSquare,
@@ -27,6 +28,7 @@ import {
 import { BookingActions, BookingPrimaryAction } from "./actions";
 import { ScheduleProposalActions } from "./schedule-proposal-actions";
 import { ReplacementProposalActions } from "./replacement-proposal-actions";
+import { ClientRescheduleRequestPanel } from "./reschedule-request-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -80,10 +82,15 @@ export default async function ReservationDetailPage({
       teacher: {
         select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, phone: true, badgeVerified: true },
       },
-      transactions: { where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } }, orderBy: { createdAt: "asc" } },
+      transactions: { where: { type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] } }, orderBy: { createdAt: "asc" } },
       reviews: { where: { clientId: user.id } },
       disputes: { orderBy: { createdAt: "desc" } },
       clientRefundRequests: { orderBy: { createdAt: "desc" } },
+      rescheduleRequests: {
+        orderBy: { createdAt: "desc" },
+        include: { transaction: true },
+        take: 5,
+      },
       scheduleProposals: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -110,14 +117,23 @@ export default async function ReservationDetailPage({
 
   const paydunyaReturnToken = extractPayDunyaReturnToken(sp);
   const isPayDunyaReturn = sp.paydunya === "return" || Boolean(paydunyaReturnToken);
+  const isReschedulePayDunyaReturn = Boolean(paydunyaReturnToken && paydunyaReturnToken !== booking.paydunyaToken) || sp.reschedulePaydunya === "return";
   const paydunyaReturnCheck = isPayDunyaReturn
-    ? await reconcilePayDunyaBookingPayment({
-        bookingId: id,
-        token: paydunyaReturnToken,
-        expectedClientId: user.id,
-        source: "client_return",
-        incomingPayload: sp,
-      })
+    ? isReschedulePayDunyaReturn
+      ? await reconcilePayDunyaReschedulePayment({
+          bookingId: id,
+          token: paydunyaReturnToken,
+          expectedClientId: user.id,
+          source: "client_return",
+          incomingPayload: sp,
+        })
+      : await reconcilePayDunyaBookingPayment({
+          bookingId: id,
+          token: paydunyaReturnToken,
+          expectedClientId: user.id,
+          source: "client_return",
+          incomingPayload: sp,
+        })
     : null;
 
   if (paydunyaReturnCheck) {
@@ -127,10 +143,15 @@ export default async function ReservationDetailPage({
         teacher: {
           select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, phone: true, badgeVerified: true },
         },
-        transactions: { where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } }, orderBy: { createdAt: "asc" } },
+        transactions: { where: { type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] } }, orderBy: { createdAt: "asc" } },
         reviews: { where: { clientId: user.id } },
         disputes: { orderBy: { createdAt: "desc" } },
         clientRefundRequests: { orderBy: { createdAt: "desc" } },
+        rescheduleRequests: {
+          orderBy: { createdAt: "desc" },
+          include: { transaction: true },
+          take: 5,
+        },
         scheduleProposals: {
           orderBy: { createdAt: "desc" },
           include: {
@@ -237,6 +258,31 @@ export default async function ReservationDetailPage({
       badgeVerified: replacement.newTeacher.badgeVerified,
     },
   }));
+  const rescheduleRequests = booking.rescheduleRequests.map((request) => ({
+    id: request.id,
+    status: request.status,
+    oldScheduledDate: request.oldScheduledDate?.toISOString() ?? null,
+    oldScheduledTime: request.oldScheduledTime,
+    proposedDate: request.proposedDate.toISOString(),
+    proposedTime: request.proposedTime,
+    reason: request.reason,
+    feeWindow: request.feeWindow,
+    feeBaseAmount: request.feeBaseAmount,
+    feeRate: request.feeRate,
+    feeAmount: request.feeAmount,
+    feeTeacherAmount: request.feeTeacherAmount,
+    feePlatformAmount: request.feePlatformAmount,
+    paymentServiceFeeAmount: request.paymentServiceFeeAmount,
+    paymentServiceFeeLabel: request.paymentServiceFeeLabel,
+    totalToPay: request.totalToPay,
+    paydunyaStatus: request.paydunyaStatus,
+    paidAt: request.paidAt?.toISOString() ?? null,
+    teacherResponse: request.teacherResponse,
+    teacherRespondedAt: request.teacherRespondedAt?.toISOString() ?? null,
+    appliedAt: request.appliedAt?.toISOString() ?? null,
+    createdAt: request.createdAt.toISOString(),
+    transactionStatus: request.transaction?.status ?? null,
+  }));
 
   // Timeline
   const timeline = [
@@ -320,9 +366,15 @@ export default async function ReservationDetailPage({
           <div className="text-sm">
             <p className="font-semibold text-[#111B4D]">Paiement PayDunya confirmé</p>
             <p className="mt-1 leading-6 text-[#64748B]">
-              Votre paiement de <strong className="text-[#111827]"><Money amount={displayTotalPrice} /></strong> a été reçu
-              et est gardé bloqué jusqu'à la confirmation du cours. Date demandée : <strong className="text-[#111827]">{dateShownToClient ? formatDate(dateShownToClient) : "à confirmer"}</strong>.
-              Le service client valide votre réservation prochainement.
+              {isReschedulePayDunyaReturn
+                ? "Votre supplément de modification a été reçu. Le professeur doit maintenant confirmer le nouveau créneau."
+                : (
+                    <>
+                      Votre paiement de <strong className="text-[#111827]"><Money amount={displayTotalPrice} /></strong> a été reçu
+                      et est gardé bloqué jusqu'à la confirmation du cours. Date demandée : <strong className="text-[#111827]">{dateShownToClient ? formatDate(dateShownToClient) : "à confirmer"}</strong>.
+                      Le service client valide votre réservation prochainement.
+                    </>
+                  )}
             </p>
           </div>
         </div>
@@ -523,7 +575,8 @@ export default async function ReservationDetailPage({
                       <p className="break-all font-mono text-xs font-semibold leading-5 text-[#111827]">{tx.reference}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
                         {tx.type === "CLIENT_PAYMENT" ? "Paiement sécurisé" :
-                          tx.type === "REFUND" ? "Remboursement" : "Transaction"}
+                          tx.type === "RESCHEDULE_FEE" ? "Supplément modification créneau" :
+                            tx.type === "REFUND" ? "Remboursement" : "Transaction"}
                         {" • "}{formatDate(tx.createdAt)}
                       </p>
                     </div>
@@ -564,6 +617,8 @@ export default async function ReservationDetailPage({
           <ScheduleProposalActions bookingId={booking.id} proposals={scheduleProposals} />
 
           <ReplacementProposalActions bookingId={booking.id} proposals={replacementProposals} />
+
+          <ClientRescheduleRequestPanel requests={rescheduleRequests} />
 
           <BookingActions booking={bookingActionsPayload as any} />
         </div>

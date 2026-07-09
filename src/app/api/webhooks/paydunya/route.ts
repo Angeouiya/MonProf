@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPayDunyaHash } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import { reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
 
 type PayDunyaPayload = Record<string, any>;
 
@@ -55,6 +56,18 @@ export async function POST(req: NextRequest) {
     invoice.booking_reference,
     payload.booking_reference,
   );
+  const paymentPurpose = firstString(
+    customData.payment_purpose,
+    customData.paymentPurpose,
+    data.payment_purpose,
+    payload.payment_purpose,
+  );
+  const rescheduleRequestId = firstString(
+    customData.reschedule_request_id,
+    customData.rescheduleRequestId,
+    data.reschedule_request_id,
+    payload.reschedule_request_id,
+  );
 
   if (!bookingId && !bookingReference && !invoiceToken) {
     console.warn("[paydunya:webhook_missing_reference]", {
@@ -74,15 +87,25 @@ export async function POST(req: NextRequest) {
     hashVerified,
   });
 
-  const result = await reconcilePayDunyaBookingPayment({
-    bookingId,
-    bookingReference,
-    token: invoiceToken,
-    source: "webhook",
-    incomingStatus: status,
-    incomingPayload: data,
-    incomingHashVerified: hashVerified,
-  });
+  const result = paymentPurpose === "RESCHEDULE_FEE" || Boolean(rescheduleRequestId)
+    ? await reconcilePayDunyaReschedulePayment({
+        bookingId,
+        rescheduleRequestId,
+        token: invoiceToken,
+        source: "webhook",
+        incomingStatus: status,
+        incomingPayload: data,
+        incomingHashVerified: hashVerified,
+      })
+    : await reconcilePayDunyaBookingPayment({
+        bookingId,
+        bookingReference,
+        token: invoiceToken,
+        source: "webhook",
+        incomingStatus: status,
+        incomingPayload: data,
+        incomingHashVerified: hashVerified,
+      });
 
   const httpStatus = result.action === "not_found"
     ? 404
@@ -98,6 +121,7 @@ export async function POST(req: NextRequest) {
     action: result.action,
     status: result.status,
     bookingId: result.bookingId,
+    rescheduleRequestId: "rescheduleRequestId" in result ? result.rescheduleRequestId : undefined,
     message: result.message,
   }, { status: httpStatus });
 }

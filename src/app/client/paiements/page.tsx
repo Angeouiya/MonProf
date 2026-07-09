@@ -28,69 +28,67 @@ export default async function PaiementsPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const [rawTransactions, pendingPaymentBookings] = await db.$transaction([
-    db.transaction.findMany({
-      where: {
-        booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
-        type: { in: ["CLIENT_PAYMENT", "REFUND"] },
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        booking: {
-          select: {
-            id: true, reference: true, subjectName: true, levelName: true, schoolProgram: true,
-            startDate: true, scheduledDate: true, paymentStatus: true, totalClientPays: true, totalPrice: true,
-            paydunyaStatus: true, paydunyaVerifiedAt: true,
-            transactions: {
-              where: { type: "CLIENT_PAYMENT" },
-              select: { type: true, status: true, amount: true },
-            },
-            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+  const rawTransactions = await db.transaction.findMany({
+    where: {
+      booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
+      type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      booking: {
+        select: {
+          id: true, reference: true, subjectName: true, levelName: true, schoolProgram: true,
+          startDate: true, scheduledDate: true, paymentStatus: true, totalClientPays: true, totalPrice: true,
+          paydunyaStatus: true, paydunyaVerifiedAt: true,
+          transactions: {
+            where: { type: "CLIENT_PAYMENT" },
+            select: { type: true, status: true, amount: true },
           },
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
         },
       },
-    }),
-    db.booking.findMany({
-      where: {
-        clientId: user.id,
-        status: "PENDING_PAYMENT",
-        paymentStatus: "FAILED",
-        isQuoteOnly: false,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      select: {
-        id: true,
-        reference: true,
-        subjectName: true,
-        levelName: true,
-        startDate: true,
-        scheduledDate: true,
-        totalClientPays: true,
-        totalPrice: true,
-        teacher: {
-          select: {
-            fullName: true,
-            professionalName: true,
-            photoUrl: true,
-            badgeVerified: true,
-          },
+    },
+  });
+  const pendingPaymentBookings = await db.booking.findMany({
+    where: {
+      clientId: user.id,
+      status: "PENDING_PAYMENT",
+      paymentStatus: "FAILED",
+      isQuoteOnly: false,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    select: {
+      id: true,
+      reference: true,
+      subjectName: true,
+      levelName: true,
+      startDate: true,
+      scheduledDate: true,
+      totalClientPays: true,
+      totalPrice: true,
+      teacher: {
+        select: {
+          fullName: true,
+          professionalName: true,
+          photoUrl: true,
+          badgeVerified: true,
         },
       },
-    }),
-  ]);
+    },
+  });
   const transactions = rawTransactions.filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking));
 
   const totalDepense = transactions
-    .filter((t) => t.type === "CLIENT_PAYMENT")
+    .filter((t) => t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE")
     .reduce((sum, t) => sum + t.amount, 0);
   const fondsBloques = transactions
-    .filter((t) => t.type === "CLIENT_PAYMENT" && t.status === "BLOCKED")
+    .filter((t) => (t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE") && t.status === "BLOCKED")
     .reduce((sum, t) => sum + t.amount, 0);
   const totalRembourse = transactions
     .filter((t) => t.type === "REFUND")
     .reduce((sum, t) => sum + t.amount, 0);
-  const secureTransactions = transactions.filter((t) => t.type === "CLIENT_PAYMENT" && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(t.status));
+  const secureTransactions = transactions.filter((t) => (t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE") && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(t.status));
   const lastSecureTransaction = secureTransactions[0] ?? transactions[0] ?? null;
   const priorityPendingBooking = pendingPaymentBookings[0] ?? null;
   const paymentHistory: ClientPaymentHistoryItem[] = transactions.map((transaction) => ({
