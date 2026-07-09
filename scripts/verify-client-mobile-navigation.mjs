@@ -163,6 +163,16 @@ record(
 );
 
 record(
+  "Client quick search uses precise filter-aware shortcuts",
+  /Maths Cocody[\s\S]*?\/client\/rechercher\?q=math&commune=Cocody/.test(layout)
+    && /Anglais ligne[\s\S]*?\/client\/rechercher\?q=anglais&format=ONLINE/.test(layout)
+    && countMatches(layout, /enterKeyHint="search"/g) >= 2
+    && countMatches(layout, /autoComplete="off"/g) >= 2
+    && countMatches(layout, /spellCheck=\{false\}/g) >= 2
+    && /data-client-mobile-search-panel/.test(layout),
+);
+
+record(
   "Client navigation exposes a stable active state on sidebar and bottom tabs",
   /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/.test(layout)
     && countMatches(layout, /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/g) >= 2

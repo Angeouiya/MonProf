@@ -43,8 +43,8 @@ const mobileNavItems: ClientNavItem[] = [
 ];
 
 const quickSearchItems = [
-  { label: "Maths", href: "/client/rechercher?q=math" },
-  { label: "Cocody", href: "/client/rechercher?q=Cocody" },
+  { label: "Maths Cocody", href: "/client/rechercher?q=math&commune=Cocody" },
+  { label: "Anglais ligne", href: "/client/rechercher?q=anglais&format=ONLINE" },
   { label: "Concours", href: "/client/rechercher?q=concours" },
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
@@ -400,6 +400,9 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             placeholder="Matière, niveau, commune, concours..."
             className="min-h-9 min-w-0 flex-1 border-0 bg-white px-1 text-sm font-medium text-[#111827] outline-none placeholder:text-[#64748B]"
             aria-label="Rechercher une matière, un niveau ou une commune"
+            enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
           />
           <button
             type="submit"
@@ -497,6 +500,9 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               placeholder="Matière, niveau, commune..."
               className="min-h-10 min-w-0 flex-1 border-0 bg-white text-base font-medium text-[#111827] outline-none placeholder:text-[#64748B]"
               aria-label="Rechercher un professeur depuis le mobile"
+              enterKeyHint="search"
+              autoComplete="off"
+              spellCheck={false}
               autoFocus
             />
             <button
