@@ -4828,11 +4828,25 @@ b {
   display: none !important;
 }
 
-@media (min-width: 1536px) {
+.client-shell :where(
+  [data-client-course-command-center],
+  [data-client-notification-command-center],
+  [data-client-payment-command-center],
+  [data-client-profile-command-center],
+  [data-client-reservation-command-center],
+  [data-client-review-command-center],
+  [data-client-search-command-center],
+  [data-client-settings-command-center],
+  [data-client-support-command-center]
+) {
+  display: none !important;
+}
+
+@media (min-width: 1280px) {
   .client-shell [data-client-app-rail][data-client-app-rail-compact] {
     display: flex !important;
     grid-template-columns: none !important;
-    gap: 0.25rem !important;
+    gap: 0.28rem !important;
     overflow-x: auto !important;
     padding: 0.25rem !important;
     scroll-snap-type: x proximity;
@@ -4842,8 +4856,36 @@ b {
 
   .client-shell [data-client-app-rail][data-client-app-rail-compact] > * {
     flex: 0 0 auto !important;
-    max-inline-size: 13rem !important;
+    max-inline-size: 10.5rem !important;
     min-inline-size: 0 !important;
     scroll-snap-align: start;
+  }
+
+  .client-shell [data-client-app-rail][data-client-app-rail-compact] [data-client-shortcut-value] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1536px) {
+  .client-shell :where(
+    [data-client-course-command-center],
+    [data-client-notification-command-center],
+    [data-client-payment-command-center],
+    [data-client-profile-command-center],
+    [data-client-reservation-command-center],
+    [data-client-review-command-center],
+    [data-client-search-command-center],
+    [data-client-settings-command-center],
+    [data-client-support-command-center]
+  ) {
+    display: block !important;
+  }
+
+  .client-shell [data-client-app-rail][data-client-app-rail-compact] > * {
+    max-inline-size: 13rem !important;
+  }
+
+  .client-shell [data-client-app-rail][data-client-app-rail-compact] [data-client-shortcut-value] {
+    display: block !important;
   }
 }

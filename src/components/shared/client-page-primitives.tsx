@@ -526,6 +526,7 @@ export function ClientAppRail({
           <>
             <span className="flex items-center justify-center">
               <span
+                data-client-shortcut-icon
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors",
                   item.active ? "border-white bg-white text-[#111B4D]" : "border-[#D8DEE9] bg-white text-[#111B4D]",
@@ -534,17 +535,17 @@ export function ClientAppRail({
                 {item.icon && <item.icon className="h-3 w-3" />}
               </span>
             </span>
-            <span className="min-w-0 text-left">
+            <span data-client-shortcut-text className="min-w-0 text-left">
               <span className={cn(
                 "block truncate text-[9px] font-semibold uppercase leading-3 tracking-wide",
                 item.active ? "text-white" : "text-[#64748B]",
-              )}>
+              )} data-client-shortcut-label>
                 {item.label}
               </span>
               <span className={cn(
                 "mt-0.5 block max-w-[8rem] truncate text-[11px] font-semibold leading-4",
                 item.active ? "text-white" : "text-[#111827]",
-              )}>
+              )} data-client-shortcut-value>
                 {item.value}
               </span>
             </span>
