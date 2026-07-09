@@ -777,7 +777,7 @@ export function ReserverForm({
         return;
       }
       if (data.booking?.isQuoteOnly) {
-        toast.success("Demande transmise. Le service client vous proposera un devis.");
+        toast.success("Demande transmise. Le service client finalise le contrôle avant paiement.");
         router.push(`/client/reservations/${data.booking.id}`);
       } else if (data.payment?.checkoutUrl) {
         toast.success("Redirection vers PayDunya...");
@@ -843,7 +843,7 @@ export function ReserverForm({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">{pricing.isQuoteOnly ? "Estimation" : "Total actuel"}</p>
-                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
+                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}</p>
               </div>
               <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
@@ -1099,7 +1099,7 @@ export function ReserverForm({
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        {pricing.isQuoteOnly ? "Tarif : sur devis du service client" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
+                        {pricing.isQuoteOnly ? "Tarif à finaliser par le service client" : `Palier calculé ${formatFCFA(pricing.unitSessionAmount)} / séance`}
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
                         {pricing.isQuoteOnly ? "Montant final validé par le service client" : `Total actuel ${formatFCFA(pricing.totalClientPays)}`}
@@ -1338,7 +1338,7 @@ export function ReserverForm({
                       <InfoMini label="Commune client" value={form.commune || "À sélectionner"} />
                       <InfoMini
                         label="Frais estimés"
-                        value={!form.commune ? "En attente" : pricing.isQuoteOnly ? "Sur devis" : formatFCFA(pricing.transportFee)}
+                        value={!form.commune ? "En attente" : pricing.isQuoteOnly ? "Forfait à finaliser" : formatFCFA(pricing.transportFee)}
                       />
                     </div>
                     <p className="mt-2 text-xs font-medium text-[#6B7280]">
@@ -1658,7 +1658,7 @@ export function ReserverForm({
                             <span className="block font-medium text-[#111827]">{p.label}</span>
                             <span className="block text-xs text-[#64748B]">
                               {optionPricing.isQuoteOnly
-                                ? "Sur devis par le service client"
+                                ? "Prix finalisé par le service client"
                                 : `${formatFCFA(optionPricing.totalClientPays)} · ${formatCount(count, "séance")} de 2h · env. ${formatFCFA(average)}/séance`}
                             </span>
                             {optionPricing.discountAmount > 0 && (
@@ -1720,7 +1720,7 @@ export function ReserverForm({
                   <Row label="Format" value={form.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
                   <Row label="Type" value={form.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"} />
                   <Row label="Participants" value={`${participantsCount} ${participantsCount > 1 ? "participants" : "participant"}`} />
-                  <Row label="Tarif appliqué" value={pricing.isQuoteOnly ? "Sur devis" : pricing.priceTierLabel} />
+                  <Row label="Tarif appliqué" value={pricing.isQuoteOnly ? "Prix à finaliser" : pricing.priceTierLabel} />
                   {form.courseFormat === "HOME" ? (
                     <>
                       <Row label="Commune" value={form.commune || "—"} />
@@ -1805,9 +1805,9 @@ export function ReserverForm({
             <div className="space-y-5">
               <StepIntro
                 step="Étape 5"
-                title={pricing.isQuoteOnly ? "Demande de devis" : "Paiement sécurisé"}
+                title={pricing.isQuoteOnly ? "Prix à finaliser" : "Paiement sécurisé"}
                 description={pricing.isQuoteOnly
-                  ? "Contrôlez le dossier. Le service client vous confirmera un devis précis avant paiement."
+                  ? "Contrôlez le dossier. Le service client finalisera le prix avant paiement."
                   : "Contrôlez le dossier. Le moyen de paiement et les informations de paiement seront gérés uniquement sur PayDunya."}
               />
 
@@ -1938,7 +1938,7 @@ export function ReserverForm({
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
                   pricing.isQuoteOnly ? (
-                    <>Envoyer la demande de devis</>
+                    <>Envoyer la demande</>
                   ) : (
                     <><ExternalLink className="mr-2 h-4 w-4" /> Payer via PayDunya</>
                   )
@@ -1973,7 +1973,7 @@ export function ReserverForm({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Montant client</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}</p>
                 </div>
                 <Lock className="mt-1 h-5 w-5 text-white" />
               </div>
@@ -2000,7 +2000,7 @@ export function ReserverForm({
               Étape {step + 1}/{STEPS.length} · {currentStepDetail.title}
             </span>
             <span className="shrink-0 text-xs font-semibold text-[#111B4D]">
-              {pricing.isQuoteOnly ? "Sur devis" : formatFCFA(totalPrice)}
+              {pricing.isQuoteOnly ? "Prix à finaliser" : formatFCFA(totalPrice)}
             </span>
           </div>
           <div className="h-1 overflow-hidden rounded-full bg-[#E5E7EB]" aria-hidden="true">

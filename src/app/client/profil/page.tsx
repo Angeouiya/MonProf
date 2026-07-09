@@ -39,9 +39,18 @@ type Profile = {
 };
 
 const COMMUNES = [
-  "Cocody", "Angré", "Riviera", "Deux Plateaux", "Bingerville",
-  "Yopougon", "Abobo", "Marcory", "Koumassi", "Treichville",
-  "Plateau", "Port-Bouët", "Adjamé", "Attécoubé", "Songon",
+  "Abidjan", "Cocody", "Angré", "Riviera", "Deux Plateaux", "Bingerville",
+  "Yopougon", "Abobo", "Anyama", "Marcory", "Koumassi", "Treichville",
+  "Plateau", "Port-Bouët", "Adjamé", "Attécoubé", "Songon", "Grand-Bassam",
+  "Bonoua", "Aboisso", "Adiaké", "Dabou", "Jacqueville", "Grand-Lahou",
+  "Alépé", "Adzopé", "Akoupé", "Agboville", "Tiassalé", "Abengourou",
+  "Agnibilékrou", "Bondoukou", "Tanda", "Bouna", "Bouaké", "Béoumi",
+  "Katiola", "Dabakala", "Yamoussoukro", "Toumodi", "Dimbokro", "Daoukro",
+  "Daloa", "Vavoua", "Issia", "Gagnoa", "Oumé", "Sinfra", "Bouaflé",
+  "San-Pédro", "Sassandra", "Tabou", "Soubré", "Méagui", "Divo", "Lakota",
+  "Fresco", "Korhogo", "Ferkessédougou", "Boundiali", "Tengréla", "Odienné",
+  "Minignan", "Touba", "Mankono", "Séguéla", "Man", "Danané", "Biankouma",
+  "Guiglo", "Duékoué", "Bangolo", "Toulépleu", "Bloléquin",
 ];
 
 export default function ProfilPage() {

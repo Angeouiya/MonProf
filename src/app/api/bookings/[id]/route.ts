@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
@@ -5,10 +6,11 @@ import { authOptions } from "@/lib/auth";
 import { DisputeStatus } from "@prisma/client";
 import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
-import { parsePricingSnapshot } from "@/lib/pricing";
+import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
 import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
 import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
+import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
@@ -220,7 +222,7 @@ export async function PATCH(
     include: {
       transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
       teacher: { select: { id: true, fullName: true, professionalName: true } },
-      client: { select: { id: true, name: true } },
+      client: { select: { id: true, name: true, phone: true } },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -229,14 +231,14 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { action, reason, description, rescheduleMessage, proposalId, clientResponse } = body;
+  const { action, reason, description, rescheduleMessage, proposalId, replacementId, clientResponse } = body;
 
   const now = new Date();
 
   switch (action) {
     case "paydunya_checkout": {
       if (booking.isQuoteOnly) {
-        return NextResponse.json({ error: "Cette réservation est sur devis. Le paiement sera disponible après validation du service client." }, { status: 400 });
+        return NextResponse.json({ error: "Cette réservation nécessite un contrôle du prix. Le paiement sera disponible après validation du service client." }, { status: 400 });
       }
       if (booking.status !== "PENDING_PAYMENT" || booking.paymentStatus !== "FAILED") {
         return NextResponse.json({ error: "Cette réservation n'est pas en attente de paiement PayDunya." }, { status: 400 });
@@ -355,7 +357,7 @@ export async function PATCH(
 
     case "paydunya_verify": {
       if (booking.isQuoteOnly) {
-        return NextResponse.json({ error: "Cette réservation est sur devis et ne possède pas de paiement PayDunya à vérifier." }, { status: 400 });
+        return NextResponse.json({ error: "Cette réservation nécessite un contrôle du prix et ne possède pas de paiement PayDunya à vérifier." }, { status: 400 });
       }
       const result = await reconcilePayDunyaBookingPayment({
         bookingId: booking.id,
@@ -621,6 +623,377 @@ export async function PATCH(
             detail: `${booking.client.name} a refusé ${formattedDate} à ${proposal.proposedTime} pour ${booking.reference}. ${cleanClientResponse || ""}`.trim(),
             oldStatus: "PENDING",
             newStatus: "REJECTED",
+          },
+        });
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    case "accept_replacement_proposal":
+    case "reject_replacement_proposal": {
+      if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
+        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+      }
+      if (typeof replacementId !== "string" || !replacementId) {
+        return NextResponse.json({ error: "Proposition de professeur introuvable." }, { status: 400 });
+      }
+      const replacement = await db.teacherReplacement.findUnique({
+        where: { id: replacementId },
+        include: { oldTeacher: true, newTeacher: true },
+      });
+      if (!replacement || replacement.bookingId !== booking.id) {
+        return NextResponse.json({ error: "Cette proposition ne correspond pas à votre réservation." }, { status: 404 });
+      }
+      if (!["DRAFT", "CLIENT_NOTIFIED"].includes(replacement.status)) {
+        return NextResponse.json({ error: "Cette proposition a déjà été traitée." }, { status: 409 });
+      }
+      if (booking.teacherId !== replacement.oldTeacherId) {
+        return NextResponse.json({ error: "Le professeur de la réservation a déjà changé." }, { status: 409 });
+      }
+      const cleanClientResponse = typeof clientResponse === "string" ? clientResponse.trim().slice(0, 700) : "";
+      const oldTeacherName = replacement.oldTeacher.professionalName || replacement.oldTeacher.fullName;
+      const newTeacherName = replacement.newTeacher.professionalName || replacement.newTeacher.fullName;
+
+      if (action === "reject_replacement_proposal") {
+        await db.$transaction(async (tx) => {
+          await tx.teacherReplacement.update({
+            where: { id: replacement.id },
+            data: {
+              status: "CANCELLED",
+              details: `${replacement.details || ""}\nClient a refusé la proposition.${cleanClientResponse ? ` Motif: ${cleanClientResponse}` : ""}`.trim(),
+            },
+          });
+          await tx.notification.create({
+            data: {
+              userId: null,
+              title: "Remplaçant automatique refusé",
+              message: `${booking.client.name} a refusé ${newTeacherName} pour ${booking.reference}. Le service client doit proposer un autre professeur, un autre créneau ou confirmer l'annulation/remboursement.`,
+              type: "AUTO_REPLACEMENT_REJECTED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "CRITICAL",
+              bookingId: booking.id,
+              teacherId: replacement.newTeacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              response: cleanClientResponse || null,
+              link: `/admin/reservations/${booking.id}?action=replace`,
+              actionLabel: "Proposer une solution",
+              actionType: "REPLACE_TEACHER",
+            },
+          });
+          await tx.notification.create({
+            data: {
+              userId: booking.clientId,
+              title: "Proposition refusée",
+              message: "Votre refus est transmis au service client. Nous vous proposerons un autre professeur, un autre créneau ou une solution de remboursement selon votre dossier.",
+              type: "AUTO_REPLACEMENT_REJECTED",
+              recipientType: "CLIENT",
+              recipientName: booking.client.name,
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: replacement.newTeacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              link: `/client/reservations/${booking.id}`,
+              actionLabel: "Voir réservation",
+            },
+          });
+          await tx.clientCommunication.create({
+            data: {
+              clientId: booking.clientId,
+              bookingId: booking.id,
+              type: "TEACHER_CHANGE",
+              channel: "INTERNAL",
+              subject: `Proposition professeur refusée - ${booking.reference}`,
+              content: `Vous avez refusé ${newTeacherName}. Le service client reprend le dossier pour proposer une autre solution.`,
+              priority: "IMPORTANT",
+              status: "SENT",
+            },
+          });
+          await tx.teacherTask.create({
+            data: {
+              teacherId: booking.teacherId,
+              bookingId: booking.id,
+              type: "ADMIN_ACTION",
+              title: `Remplacement refusé par client ${booking.reference}`,
+              description: `Le client a refusé ${newTeacherName}. Action requise: proposer un autre professeur, proposer un autre créneau ou confirmer l'annulation/remboursement.`,
+              priority: "CRITICAL",
+              status: "TODO",
+              dueAt: now,
+            },
+          });
+          await tx.adminActionLog.create({
+            data: {
+              action: "Remplacement automatique refusé",
+              entityType: "TeacherReplacement",
+              entityId: replacement.id,
+              detail: `${booking.client.name} a refusé ${newTeacherName} pour ${booking.reference}. ${cleanClientResponse || ""}`.trim(),
+              oldStatus: "CLIENT_NOTIFIED",
+              newStatus: "CANCELLED",
+            },
+          });
+        });
+        return NextResponse.json({ ok: true });
+      }
+
+      const candidateResult = await findReplacementCandidatesForBooking(booking.id, 30);
+      const candidate = candidateResult.items.find((item) => item.teacher.id === replacement.newTeacherId);
+      if (!candidate) {
+        return NextResponse.json({
+          error: "Ce professeur n'est plus disponible ou ne répond plus aux critères. Le service client va proposer une autre solution.",
+        }, { status: 409 });
+      }
+
+      const dateLabel = booking.scheduledDate?.toLocaleDateString("fr-FR") ?? "À confirmer";
+      const timeLabel = booking.scheduledTime || booking.preferredTime || "À confirmer";
+      const formatLabel = booking.courseFormat === "ONLINE" ? "En ligne" : "À domicile";
+      const locationLabel = booking.courseFormat === "ONLINE"
+        ? (booking.onlineLink || "Lien en ligne à confirmer")
+        : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" / ") || "Adresse à confirmer";
+      const nextCommission = booking.commissionAmount || Math.round(((booking.courseAmount || 0) * PLATFORM_COMMISSION_PERCENT) / 100);
+      const nextTeacherCoursePayout = candidate.teacherCourseShare;
+      const nextTransportFee = candidate.transportFee;
+      const nextNet = candidate.netAmount;
+      const financialImpact = nextNet - booking.teacherNetAmount;
+      const existingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
+      const nextPricingSnapshot = existingSnapshot
+        ? pricingSnapshotToJson({
+            ...existingSnapshot,
+            transportFee: nextTransportFee,
+            transportFeeLabel: candidate.transportFee > 0 ? "Déplacement remplaçant" : existingSnapshot.transportFeeLabel,
+            transportRouteLabel: candidate.transportRouteLabel ?? existingSnapshot.transportRouteLabel,
+            transportRuleLabel: candidate.transportRuleLabel ?? existingSnapshot.transportRuleLabel,
+            totalTeacherReceives: nextNet,
+            isQuoteOnly: false,
+          })
+        : booking.pricingSnapshot;
+      const missionToken = randomBytes(32).toString("hex");
+      const missionUrl = `/mission/${missionToken}`;
+      const absoluteMissionUrl = new URL(missionUrl, req.nextUrl.origin).toString();
+      const missionExpiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+      const clientMessage = [
+        `Bonjour ${booking.client.name},`,
+        "",
+        `Vous avez accepté ${newTeacherName} pour remplacer ${oldTeacherName} sur votre cours de ${booking.subjectName}.`,
+        `Date : ${dateLabel}`,
+        `Heure : ${timeLabel}`,
+        `Format : ${formatLabel}`,
+        "",
+        "Votre réservation reste confirmée et votre paiement reste sécurisé.",
+      ].join("\n");
+      const oldTeacherMessage = [
+        `Bonjour ${oldTeacherName},`,
+        "",
+        "Vous avez été retiré de la réservation suivante :",
+        `Client : ${booking.client.name}`,
+        `Cours : ${booking.subjectName}`,
+        `Niveau : ${booking.levelName}`,
+        `Date : ${dateLabel}`,
+        `Heure : ${timeLabel}`,
+        "",
+        "Merci de contacter le service client si nécessaire.",
+      ].join("\n");
+      const newTeacherMessage = [
+        `Bonjour ${newTeacherName},`,
+        "",
+        "Un cours vous a été attribué en remplacement après acceptation du client.",
+        `Client : ${booking.client.name}`,
+        `Contact : ${booking.client.phone ?? "à confirmer par le service client"}`,
+        `Cours : ${booking.subjectName}`,
+        `Niveau : ${booking.levelName}`,
+        `Date : ${dateLabel}`,
+        `Heure : ${timeLabel}`,
+        `Lieu : ${locationLabel}`,
+        `Format : ${formatLabel}`,
+        candidate.transportRouteLabel ? `Trajet : ${candidate.transportRouteLabel}` : "",
+        nextTransportFee > 0 ? `Frais déplacement : ${nextTransportFee.toLocaleString("fr-FR")} FCFA` : "",
+        `Montant net à recevoir : ${nextNet.toLocaleString("fr-FR")} FCFA`,
+        "",
+        `Lien mission sécurisé : ${absoluteMissionUrl}`,
+        "",
+        "Merci de confirmer rapidement votre disponibilité.",
+      ].filter(Boolean).join("\n");
+
+      await db.$transaction(async (tx) => {
+        await tx.booking.update({
+          where: { id: booking.id },
+          data: {
+            teacherId: replacement.newTeacherId,
+            status: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status) ? "ASSIGNED" : booking.status,
+            assignedAt: booking.assignedAt ?? now,
+            commissionRate: PLATFORM_COMMISSION_PERCENT,
+            commissionAmount: nextCommission,
+            teacherRate: TEACHER_PERCENT,
+            teacherPayoutAmount: nextTeacherCoursePayout,
+            transportFee: nextTransportFee,
+            totalTeacherReceives: nextNet,
+            teacherNetAmount: nextNet,
+            pricingSnapshot: nextPricingSnapshot,
+          },
+        });
+        await tx.transaction.updateMany({
+          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
+          data: {
+            teacherId: replacement.newTeacherId,
+            commission: nextCommission,
+            teacherNet: nextNet,
+          },
+        });
+        await tx.teacherReplacement.update({
+          where: { id: replacement.id },
+          data: {
+            financialImpact,
+            clientMessage,
+            oldTeacherMessage,
+            newTeacherMessage,
+            status: "APPLIED",
+            appliedAt: now,
+          },
+        });
+        await tx.teacherTask.updateMany({
+          where: {
+            teacherId: replacement.oldTeacherId,
+            bookingId: booking.id,
+            status: { notIn: ["DONE", "CANCELLED"] },
+            type: { not: "ADMIN_ACTION" },
+          },
+          data: { status: "CANCELLED", completedAt: now },
+        });
+        await tx.teacherMissionLink.updateMany({
+          where: {
+            teacherId: replacement.oldTeacherId,
+            bookingId: booking.id,
+            status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+          },
+          data: { status: "EXPIRED" },
+        });
+        await tx.teacherNotification.createMany({
+          data: [
+            {
+              teacherId: replacement.oldTeacherId,
+              bookingId: booking.id,
+              title: `Retrait de réservation ${booking.reference}`,
+              message: oldTeacherMessage,
+              channel: "INTERNAL",
+              sent: true,
+              status: "SENT",
+            },
+            {
+              teacherId: replacement.newTeacherId,
+              bookingId: booking.id,
+              title: `Cours attribué en remplacement ${booking.reference}`,
+              message: newTeacherMessage,
+              channel: "PRIVATE_LINK",
+              sent: true,
+              status: "SENT",
+            },
+          ],
+        });
+        await tx.teacherTask.create({
+          data: {
+            teacherId: replacement.newTeacherId,
+            bookingId: booking.id,
+            type: "CONFIRM_AVAILABILITY",
+            title: "Confirmer le remplacement",
+            description: `Confirmer la disponibilité pour la réservation ${booking.reference}.`,
+            priority: "URGENT",
+            status: "SENT_TO_TEACHER",
+            dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+          },
+        });
+        await tx.teacherMissionLink.create({
+          data: {
+            token: missionToken,
+            teacherId: replacement.newTeacherId,
+            bookingId: booking.id,
+            title: `Mission remplacement ${booking.reference} - ${booking.subjectName}`,
+            instructions: "Vous recevez cette mission en remplacement. Merci de confirmer rapidement votre disponibilité ou de signaler un problème.",
+            expiresAt: missionExpiresAt,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: booking.clientId,
+            title: "Nouveau professeur accepté",
+            message: clientMessage,
+            type: "AUTO_REPLACEMENT_ACCEPTED",
+            recipientType: "CLIENT",
+            recipientName: booking.client.name,
+            channel: "INTERNAL",
+            status: "CONFIRMED",
+            priority: "IMPORTANT",
+            bookingId: booking.id,
+            teacherId: replacement.newTeacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            confirmedAt: now,
+            link: `/client/reservations/${booking.id}`,
+            actionLabel: "Voir réservation",
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: null,
+            title: "Remplacement accepté par le client",
+            message: `${booking.client.name} a accepté ${newTeacherName}. Le nouveau professeur doit maintenant confirmer la mission ${booking.reference}.`,
+            type: "AUTO_REPLACEMENT_ACCEPTED",
+            recipientType: "ADMIN",
+            channel: "INTERNAL",
+            status: "CONFIRMED",
+            priority: "URGENT",
+            bookingId: booking.id,
+            teacherId: replacement.newTeacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            confirmedAt: now,
+            link: `/admin/professeurs/${replacement.newTeacherId}?tab=cours&bookingId=${booking.id}`,
+            actionLabel: "Ouvrir l'espace professeur",
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: null,
+            title: "Lien mission remplacement envoyé",
+            message: `Lien privé généré pour ${newTeacherName} sur ${booking.reference}.`,
+            type: "TEACHER_MISSION_LINK",
+            recipientType: "TEACHER",
+            recipientName: newTeacherName,
+            channel: "PRIVATE_LINK",
+            status: "SENT",
+            priority: "URGENT",
+            bookingId: booking.id,
+            teacherId: replacement.newTeacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            expiresAt: missionExpiresAt,
+            link: `/admin/professeurs/${replacement.newTeacherId}?tab=cours&bookingId=${booking.id}`,
+            actionLabel: "Ouvrir l'espace professeur",
+          },
+        });
+        await tx.clientCommunication.create({
+          data: {
+            clientId: booking.clientId,
+            bookingId: booking.id,
+            type: "TEACHER_CHANGE",
+            channel: "INTERNAL",
+            subject: `Professeur remplacé - ${booking.reference}`,
+            content: clientMessage,
+            priority: "IMPORTANT",
+            status: "SENT",
+          },
+        });
+        await tx.adminActionLog.create({
+          data: {
+            action: "Remplacement automatique accepté",
+            entityType: "TeacherReplacement",
+            entityId: replacement.id,
+            detail: `${oldTeacherName} remplacé par ${newTeacherName} après acceptation client. Impact financier net: ${financialImpact} FCFA.`,
+            oldStatus: replacement.oldTeacherId,
+            newStatus: replacement.newTeacherId,
           },
         });
       });

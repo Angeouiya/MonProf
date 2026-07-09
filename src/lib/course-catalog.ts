@@ -603,7 +603,7 @@ export const COURSE_CATALOG: CourseCatalogItem[] = [
     matiere,
     prix: [20000, 50000],
     publicCible: "PME, équipes et organisations",
-    objectif: "Montée en compétence d'équipe avec devis adapté",
+    objectif: "Montée en compétence d'équipe avec tarif adapté",
   })),
 ];
 

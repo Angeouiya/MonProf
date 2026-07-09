@@ -442,7 +442,7 @@ function CourseCommandCenter({
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111827]">Action prioritaire</p>
                   <p className="text-xs font-medium leading-5 text-[#64748B]">
-                    {nextCourse ? nextCourse.stepLabel : pendingCount > 0 ? "Paiement ou devis à finaliser" : "Choisir un professeur"}
+                    {nextCourse ? nextCourse.stepLabel : pendingCount > 0 ? "Paiement à finaliser" : "Choisir un professeur"}
                   </p>
                 </div>
               </div>
@@ -458,7 +458,7 @@ function CourseCommandCenter({
                   {nextCourse
                     ? `${nextCourse.reference} · ${nextCourse.teacherName} · ${nextCourse.levelName} · ${nextCourse.dateLabel} · ${nextCourse.timeLabel} · ${nextCourse.formatLabel}`
                     : pendingCount > 0
-                      ? "Finalisez le paiement PayDunya ou le devis pour créer un vrai cours."
+                      ? "Finalisez le paiement PayDunya pour créer un vrai cours."
                       : "Choisissez un professeur, une date et une séance de 2h."}
                 </p>
               </div>
@@ -533,7 +533,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Demandes non actives</p>
           <h2 className="text-lg font-semibold leading-6 text-[#111827]">À finaliser avant réservation</h2>
           <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-            Ces demandes ne bloquent aucun créneau professeur tant que le paiement ou le devis final n'est pas confirmé.
+            Ces demandes ne bloquent aucun créneau professeur tant que le paiement PayDunya n'est pas confirmé.
           </p>
         </div>
         <span className="inline-flex min-h-9 items-center rounded-lg border border-[#D8DEE9] bg-white px-3 text-xs font-semibold text-[#111B4D]">
@@ -577,7 +577,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 items={[
                   { label: "Date", value: requestedDate },
                   { label: "Créneau", value: courseTime },
-                  { label: "Montant", value: amount > 0 ? <Money amount={amount} /> : "Sur devis", strong: amount > 0 },
+                  { label: "Montant", value: amount > 0 ? <Money amount={amount} /> : "Prix à finaliser", strong: amount > 0 },
                   { label: "État", value: state.label, strong: true },
                 ]}
               />
@@ -586,7 +586,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 className="mt-3"
                 label={state.label}
                 hint={state.hint}
-                aside={booking.isQuoteOnly ? "Devis" : "PayDunya"}
+                aside={booking.isQuoteOnly ? "Dossier" : "PayDunya"}
               />
 
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
@@ -598,7 +598,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 </Button>
                 <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                   <Link href={booking.isQuoteOnly ? `/client/reservations/${booking.id}` : `/client/reservations/${booking.id}?payment=pending`}>
-                    {booking.isQuoteOnly ? "Suivre le devis" : "Payer via PayDunya"}
+                    {booking.isQuoteOnly ? "Suivre le dossier" : "Payer via PayDunya"}
                   </Link>
                 </Button>
               </div>
@@ -617,7 +617,7 @@ function getPendingCourseAmount(booking: Pick<PendingCourseBooking, "totalClient
 function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly">) {
   if (booking.isQuoteOnly) {
     return {
-      label: "Devis en préparation",
+      label: "Prix en préparation",
       hint: "Le service client doit finaliser le tarif avant paiement. Le cours n'est pas encore réservé.",
     };
   }
@@ -631,7 +631,7 @@ function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly"
 function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
-      label: "Devis en préparation",
+      label: "Prix en préparation",
       hint: "Le service client prépare le montant final avant paiement.",
       icon: Clock,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",

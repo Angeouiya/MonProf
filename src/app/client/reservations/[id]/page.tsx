@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { BookingActions, BookingPrimaryAction } from "./actions";
 import { ScheduleProposalActions } from "./schedule-proposal-actions";
+import { ReplacementProposalActions } from "./replacement-proposal-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,20 @@ export default async function ReservationDetailPage({
           teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
         },
       },
+      replacements: {
+        where: { status: { in: ["DRAFT", "CLIENT_NOTIFIED", "APPLIED", "CANCELLED"] } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          oldTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          newTeacher: {
+            select: {
+              id: true, fullName: true, professionalName: true, photoUrl: true,
+              jobTitle: true, commune: true, rating: true, qualityScore: true, badgeVerified: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!booking || booking.clientId !== user.id) notFound();
@@ -119,6 +134,20 @@ export default async function ReservationDetailPage({
           orderBy: { createdAt: "desc" },
           include: {
             teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          },
+        },
+        replacements: {
+          where: { status: { in: ["DRAFT", "CLIENT_NOTIFIED", "APPLIED", "CANCELLED"] } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: {
+            oldTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+            newTeacher: {
+              select: {
+                id: true, fullName: true, professionalName: true, photoUrl: true,
+                jobTitle: true, commune: true, rating: true, qualityScore: true, badgeVerified: true,
+              },
+            },
           },
         },
       },
@@ -179,6 +208,33 @@ export default async function ReservationDetailPage({
           professionalName: proposal.teacher.professionalName,
         }
       : null,
+  }));
+  const replacementProposals = booking.replacements.map((replacement) => ({
+    id: replacement.id,
+    status: replacement.status,
+    reason: replacement.reason,
+    details: replacement.details,
+    financialImpact: replacement.financialImpact,
+    clientMessage: replacement.clientMessage,
+    createdAt: replacement.createdAt.toISOString(),
+    appliedAt: replacement.appliedAt?.toISOString() ?? null,
+    oldTeacher: {
+      id: replacement.oldTeacher.id,
+      fullName: replacement.oldTeacher.fullName,
+      professionalName: replacement.oldTeacher.professionalName,
+      photoUrl: replacement.oldTeacher.photoUrl,
+    },
+    newTeacher: {
+      id: replacement.newTeacher.id,
+      fullName: replacement.newTeacher.fullName,
+      professionalName: replacement.newTeacher.professionalName,
+      photoUrl: replacement.newTeacher.photoUrl,
+      jobTitle: replacement.newTeacher.jobTitle,
+      commune: replacement.newTeacher.commune,
+      rating: replacement.newTeacher.rating,
+      qualityScore: replacement.newTeacher.qualityScore,
+      badgeVerified: replacement.newTeacher.badgeVerified,
+    },
   }));
 
   // Timeline
@@ -273,7 +329,7 @@ export default async function ReservationDetailPage({
           },
           {
             label: "Paiement",
-            value: booking.isQuoteOnly ? "Sur devis" : paymentConfirmed ? "Sécurisé" : "À finaliser",
+            value: booking.isQuoteOnly ? "Prix à finaliser" : paymentConfirmed ? "Sécurisé" : "À finaliser",
             icon: WalletCards,
             href: "/client/paiements",
           },
@@ -357,7 +413,7 @@ export default async function ReservationDetailPage({
             <ReservationHeroMetric
               icon={<WalletCards className="h-4 w-4" />}
               label={booking.isQuoteOnly ? "Montant" : paymentConfirmed ? "Payé" : "À payer"}
-              value={booking.isQuoteOnly ? "Sur devis" : <Money amount={displayTotalPrice} />}
+              value={booking.isQuoteOnly ? "Prix à finaliser" : <Money amount={displayTotalPrice} />}
             />
           </div>
         </div>
@@ -535,6 +591,8 @@ export default async function ReservationDetailPage({
 
           <ScheduleProposalActions bookingId={booking.id} proposals={scheduleProposals} />
 
+          <ReplacementProposalActions bookingId={booking.id} proposals={replacementProposals} />
+
           <BookingActions booking={bookingActionsPayload as any} />
         </div>
       </div>
@@ -590,7 +648,7 @@ function getClientSituation({
   }
   if (isQuoteOnly) {
     return {
-      title: "Devis en validation",
+      title: "Prix en validation",
       description: "Le service client valide le montant avant paiement.",
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
@@ -674,7 +732,7 @@ function formatClientBookingStatus(status: string) {
 }
 
 function formatClientPaymentStatus(status: string, quoteOnly = false) {
-  if (quoteOnly) return "Sur devis";
+  if (quoteOnly) return "Prix à finaliser";
   return CLIENT_PAYMENT_STATUS_LABELS[status] ?? "Suivi paiement";
 }
 

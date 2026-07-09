@@ -390,7 +390,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           />
           {booking.isQuoteOnly && (
             <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">
-              <p className="font-black">Dossier sur devis</p>
+              <p className="font-black">Prix à finaliser</p>
               <p className="mt-1 text-amber-950/75">
                 Aucun paiement client n'est encore encaissé. L'administration doit valider le prix du cours, le déplacement et les frais éventuels avant paiement.
               </p>

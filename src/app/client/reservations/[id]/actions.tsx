@@ -1108,7 +1108,7 @@ function getActionSummary({
   }
   if (isQuoteOnly) {
     return {
-      title: "Devis en préparation",
+      title: "Prix en préparation",
       description: "Aucun paiement n'est encaissé avant le montant final validé par le service client.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",

@@ -127,7 +127,7 @@ export default async function ReservationsPage({
         : "Date à confirmer";
     const bookingTime = b.scheduledTime || b.preferredTime || "Créneau à confirmer";
     const formatLabel = b.courseFormat === "HOME" ? "À domicile" : "En ligne";
-    const amountLabel = b.isQuoteOnly ? "Sur devis" : formatFCFA(b.totalClientPays || b.totalPrice);
+    const amountLabel = b.isQuoteOnly ? "Prix à finaliser" : formatFCFA(b.totalClientPays || b.totalPrice);
     const actionKind = getReservationActionKind(b.status, b.paymentStatus, paymentVerified);
     const searchText = normalizeReservationSearch([
       b.reference,
@@ -458,7 +458,7 @@ function normalizeReservationSearch(value: string) {
 }
 
 function getClientPaymentLabel(status: PaymentStatus, quoteOnly: boolean) {
-  if (quoteOnly) return "Devis en cours";
+  if (quoteOnly) return "Prix à finaliser";
   const labels: Record<PaymentStatus, string> = {
     FAILED: "Paiement à finaliser",
     RECEIVED: "Paiement reçu",
@@ -493,7 +493,7 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   }
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
-      label: "Devis en préparation",
+      label: "Prix en préparation",
       hint: "Le service client prépare le montant final avant paiement.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };

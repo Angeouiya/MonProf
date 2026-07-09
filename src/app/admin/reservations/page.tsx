@@ -163,7 +163,7 @@ export default async function AdminReservationsPage({
                         </div>
                         <p className="text-xs text-muted-foreground">{b.scheduledDate ? "Planifiée" : "Souhaitée"} : {formatDate(displayDate)}</p>
                       </div>
-                      <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalClientPays || b.totalPrice} />}</p>
+                      <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Prix à finaliser" : <Money amount={b.totalClientPays || b.totalPrice} />}</p>
                     </div>
 
                     <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
@@ -278,7 +278,7 @@ export default async function AdminReservationsPage({
                         <p>{formatDate(displayDate)}</p>
                         {!b.scheduledDate && b.startDate && <p className="text-[11px]">Date souhaitée</p>}
                       </TableCell>
-                      <TableCell className="text-right text-sm font-medium">{b.isQuoteOnly ? "Sur devis" : <Money amount={b.totalClientPays || b.totalPrice} />}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{b.isQuoteOnly ? "Prix à finaliser" : <Money amount={b.totalClientPays || b.totalPrice} />}</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <BookingStatusBadge status={b.status} />

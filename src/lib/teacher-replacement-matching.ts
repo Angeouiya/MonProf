@@ -1,16 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdminApi } from "@/lib/admin-api";
-import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { calculateGrandAbidjanTransportFee } from "@/lib/pricing";
+import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
 
+function normalize(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("fr-FR");
+}
+
 function includesNormalized(values: string[], target?: string | null) {
-  if (!target) return false;
-  const normalizedTarget = target.trim().toLocaleLowerCase("fr-FR");
-  return values.some((value) => typeof value === "string" && value.trim().toLocaleLowerCase("fr-FR") === normalizedTarget);
+  const normalizedTarget = normalize(target);
+  if (!normalizedTarget) return false;
+  return values.some((value) => normalize(value) === normalizedTarget);
 }
 
 function parsePreferredDays(value?: string | null) {
@@ -24,8 +32,8 @@ function parsePreferredDays(value?: string | null) {
 }
 
 function dayKeyFromLabel(value: string) {
-  const normalized = value.trim().toLocaleLowerCase("fr-FR");
-  const day = WEEK_DAYS.find((item) => item.key === normalized || item.label.toLocaleLowerCase("fr-FR") === normalized);
+  const normalized = normalize(value);
+  const day = WEEK_DAYS.find((item) => item.key === normalized || normalize(item.label) === normalized);
   return day?.key ?? "";
 }
 
@@ -33,8 +41,7 @@ function dayKeyFromDate(date: Date | string | null | undefined) {
   if (!date) return "";
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return "";
-  const indexToKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-  return indexToKey[parsed.getDay()] ?? "";
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][parsed.getDay()] ?? "";
 }
 
 function slotKeyFromTime(value?: string | null) {
@@ -56,15 +63,18 @@ function dateKey(value?: Date | string | null) {
   return parsed.toISOString().slice(0, 10);
 }
 
-function hasActiveConflict(teacherBookings: { status: string; scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string | null }[], booking: { scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string }) {
+function hasActiveConflict(
+  teacherBookings: { status: string; scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string | null }[],
+  booking: { scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string },
+) {
   const bookingDate = dateKey(booking.scheduledDate);
   const bookingTime = booking.scheduledTime || booking.preferredTime;
   if (!bookingDate || !bookingTime) return false;
   return teacherBookings.some((item) => (
-    ACTIVE_BOOKING_STATUSES.includes(item.status as (typeof ACTIVE_BOOKING_STATUSES)[number]) &&
-    dateKey(item.scheduledDate) === bookingDate &&
-    Boolean((item.scheduledTime || item.preferredTime || "").trim()) &&
-    (item.scheduledTime || item.preferredTime) === bookingTime
+    ACTIVE_BOOKING_STATUSES.includes(item.status as (typeof ACTIVE_BOOKING_STATUSES)[number])
+    && dateKey(item.scheduledDate) === bookingDate
+    && Boolean((item.scheduledTime || item.preferredTime || "").trim())
+    && (item.scheduledTime || item.preferredTime) === bookingTime
   ));
 }
 
@@ -84,22 +94,15 @@ function isAvailabilityCompatible(rawAvailability: string | null, booking: { pre
   return requestedDays.some((day) => TWO_HOUR_SLOTS.some((slot) => Boolean(availability[day]?.[slot.key])));
 }
 
-export async function GET(req: NextRequest) {
-  const admin = await requireAdminApi();
-  if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const { searchParams } = new URL(req.url);
-  const bookingId = searchParams.get("bookingId");
-  if (!bookingId) return NextResponse.json({ error: "bookingId requis" }, { status: 400 });
-
+export async function findReplacementCandidatesForBooking(bookingId: string, limit = 12) {
   const booking = await db.booking.findUnique({
     where: { id: bookingId },
     include: {
       teacher: true,
-      client: { select: { name: true } },
+      client: { select: { id: true, name: true, phone: true } },
     },
   });
-  if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+  if (!booking) return { booking: null, items: [] };
 
   const teachers = await db.teacher.findMany({
     where: {
@@ -114,7 +117,6 @@ export async function GET(req: NextRequest) {
       zones: { include: { commune: true } },
       warnings: { orderBy: { createdAt: "desc" }, take: 5 },
       sanctions: { orderBy: { createdAt: "desc" }, take: 5 },
-      oldReplacements: { orderBy: { createdAt: "desc" }, take: 5 },
       bookings: {
         where: {
           OR: [
@@ -136,10 +138,11 @@ export async function GET(req: NextRequest) {
       },
       _count: { select: { bookings: true, reviews: true } },
     },
-    take: 80,
+    take: 100,
   });
 
-  const suggestions = teachers
+  const currentTeacherCourseShare = booking.teacherPayoutAmount || Math.max(0, booking.teacherNetAmount - booking.transportFee);
+  const items = teachers
     .map((teacher) => {
       const subjectNames = teacher.subjects.map((item) => item.subject.name);
       const levelNames = teacher.levels.map((item) => item.level.name);
@@ -148,7 +151,7 @@ export async function GET(req: NextRequest) {
         .filter((value): value is string => typeof value === "string" && value.length > 0);
       const sameSubject = includesNormalized(subjectNames, booking.subjectName);
       const sameLevel = includesNormalized(levelNames, booking.levelName);
-      const sameCommune = includesNormalized(zoneNames, booking.commune) || teacher.commune === booking.commune;
+      const sameCommune = includesNormalized(zoneNames, booking.commune) || normalize(teacher.commune) === normalize(booking.commune);
       const transport = booking.courseFormat === "HOME"
         ? calculateGrandAbidjanTransportFee({
             teacherCommune: teacher.commune,
@@ -163,28 +166,8 @@ export async function GET(req: NextRequest) {
       const priceDiff = teacher.pricePerSession - booking.unitPrice;
       const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
-      const matchReasons = [
-        sameSubject ? "Même matière" : "",
-        sameLevel ? "Même niveau" : "",
-        sameCommune ? "Même commune/zone" : "",
-        formatCompatible ? "Format compatible" : "",
-        availabilityCompatible ? "Disponibilité compatible" : "",
-        priceCompatible ? "Tarif compatible" : "",
-        teacher.qualityScore >= 75 ? "Bon score qualité" : "",
-        noRecentIssue ? "Aucun incident récent" : "",
-        !activeConflict ? "Aucun conflit actif évident" : "",
-      ].filter(Boolean);
-      const riskFlags = [
-        !sameSubject ? "Matière différente" : "",
-        !sameLevel ? "Niveau différent" : "",
-        !sameCommune ? "Commune différente" : "",
-        !availabilityCompatible ? "Disponibilité à vérifier" : "",
-        activeConflict ? "Conflit de planning possible" : "",
-        !priceCompatible ? "Écart tarifaire à valider" : "",
-        recentDisputeCount > 0 ? "Litige récent" : "",
-        teacher.warnings.length > 0 || teacher.sanctions.length > 0 ? "Historique récent à vérifier" : "",
-        transport?.isQuoteOnly ? "Déplacement à contrôler" : "",
-      ].filter(Boolean);
+      const transportFee = transport?.amount ?? 0;
+      const netAmount = currentTeacherCourseShare + transportFee;
       const rawScore = [
         sameSubject ? 30 : 0,
         sameLevel ? 20 : 0,
@@ -198,42 +181,28 @@ export async function GET(req: NextRequest) {
         activeConflict ? -25 : 0,
         recentDisputeCount > 0 ? -20 : 0,
       ].reduce((sum, value) => sum + value, 0);
-      const score = Math.max(0, Math.min(100, rawScore));
 
-      const teacherCourseShare = booking.teacherPayoutAmount || Math.max(0, booking.teacherNetAmount - booking.transportFee);
-      const transportFee = transport?.amount ?? 0;
-      const netAmount = teacherCourseShare + transportFee;
       return {
-        id: teacher.id,
-        fullName: teacher.fullName,
-        professionalName: teacher.professionalName,
-        jobTitle: teacher.jobTitle,
-        photoUrl: teacher.photoUrl,
-        commune: teacher.commune,
-        quartier: teacher.quartier,
-        rating: teacher.rating,
-        ratingCount: teacher.ratingCount,
-        qualityScore: teacher.qualityScore,
-        pricePerSession: teacher.pricePerSession,
-        commissionRate: booking.commissionRate,
-        teacherCourseShare,
+        teacher,
+        subjectNames,
+        levelNames,
+        zoneNames,
+        teacherCourseShare: currentTeacherCourseShare,
         transportFee,
         transportRouteLabel: transport?.routeLabel ?? null,
         transportRuleLabel: transport?.ruleLabel ?? null,
         netAmount,
         financialImpact: netAmount - booking.teacherNetAmount,
-        subjects: subjectNames,
-        levels: levelNames,
-        zones: zoneNames,
-        badges: {
-          verified: teacher.badgeVerified,
-          recommended: teacher.badgeRecommended,
-          premium: teacher.badgePremium,
-        },
-        matchReasons,
-        riskFlags,
+        matchReasons: [
+          sameSubject ? "Même matière" : "",
+          sameLevel ? "Même niveau" : "",
+          sameCommune ? "Même commune/zone" : "",
+          availabilityCompatible ? "Disponibilité compatible" : "",
+          priceCompatible ? "Tarif compatible" : "",
+          (teacher.qualityScore || 0) >= 75 ? "Bon score qualité" : "",
+        ].filter(Boolean),
         compatibility: {
-          score,
+          score: Math.max(0, Math.min(100, rawScore)),
           sameSubject,
           sameLevel,
           sameCommune,
@@ -244,41 +213,31 @@ export async function GET(req: NextRequest) {
           activeConflict,
           recentDisputeCount,
           transportQuoteOnly: transport?.isQuoteOnly ?? false,
-          bookingsCount: teacher._count.bookings,
-          reviewsCount: teacher._count.reviews,
         },
       };
     })
-    .filter((teacher) => (
-      teacher.compatibility.sameSubject &&
-      teacher.compatibility.sameLevel &&
-      teacher.compatibility.formatCompatible &&
-      teacher.compatibility.availabilityCompatible &&
-      !teacher.compatibility.activeConflict &&
-      teacher.compatibility.recentDisputeCount === 0 &&
-      !teacher.compatibility.transportQuoteOnly &&
-      teacher.photoUrl
+    .filter((item) => (
+      item.compatibility.sameSubject
+      && item.compatibility.sameLevel
+      && item.compatibility.formatCompatible
+      && item.compatibility.availabilityCompatible
+      && !item.compatibility.activeConflict
+      && item.compatibility.recentDisputeCount === 0
+      && !item.compatibility.transportQuoteOnly
+      && item.teacher.photoUrl
     ))
-    .sort((a, b) => b.compatibility.score - a.compatibility.score || b.qualityScore - a.qualityScore || b.rating - a.rating)
-    .slice(0, 12);
+    .sort((a, b) => (
+      b.compatibility.score - a.compatibility.score
+      || b.teacher.qualityScore - a.teacher.qualityScore
+      || b.teacher.rating - a.teacher.rating
+    ))
+    .slice(0, limit);
 
-  return NextResponse.json({
-    booking: {
-      id: booking.id,
-      reference: booking.reference,
-      subjectName: booking.subjectName,
-      levelName: booking.levelName,
-      courseFormat: booking.courseFormat,
-      commune: booking.commune,
-      unitPrice: booking.unitPrice,
-      totalPrice: booking.totalPrice,
-      currentTeacherNetAmount: booking.teacherNetAmount,
-      currentTeacher: {
-        id: booking.teacher.id,
-        name: booking.teacher.professionalName || booking.teacher.fullName,
-        photoUrl: booking.teacher.photoUrl,
-      },
-    },
-    items: suggestions,
-  });
+  return { booking, items };
 }
+
+export async function findBestReplacementCandidate(bookingId: string) {
+  const result = await findReplacementCandidatesForBooking(bookingId, 1);
+  return { booking: result.booking, candidate: result.items[0] ?? null };
+}
+

@@ -91,7 +91,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
     `Nombre de séance(s) : ${booking.sessionsCount} séance(s) de 2h`,
     `Lieu : ${locationLabel || "À confirmer"}`,
     pricingSnapshot?.transportRouteLabel ? `Trajet : ${pricingSnapshot.transportRouteLabel}` : "",
-    booking.isQuoteOnly ? "Montant : devis du service client en préparation" : `Part cours : ${formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)}`,
+    booking.isQuoteOnly ? "Montant : prix finalisé par le service client" : `Part cours : ${formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)}`,
     !booking.isQuoteOnly && booking.transportFee > 0 ? `Frais déplacement : ${formatFCFA(booking.transportFee)}` : "",
     booking.isQuoteOnly ? "" : `Total à recevoir : ${formatFCFA(booking.teacherNetAmount)}`,
     mission.instructions ? `Consignes service client : ${mission.instructions}` : "Consignes service client : confirmer rapidement la disponibilité.",
@@ -169,9 +169,9 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
             <Info label="Format" value={booking.courseFormat === "HOME" ? "Cours à domicile" : "Cours en ligne"} />
             <Info label="Type" value={groupLabel} icon={<Users className="h-4 w-4" />} />
             <Info label="Séances" value={`${booking.sessionsCount} séance(s) de 2h`} />
-            <Info label="Part cours" value={booking.isQuoteOnly ? "Sur devis" : formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)} icon={<Wallet className="h-4 w-4" />} />
+            <Info label="Part cours" value={booking.isQuoteOnly ? "Prix à finaliser" : formatFCFA(booking.teacherPayoutAmount || booking.teacherNetAmount)} icon={<Wallet className="h-4 w-4" />} />
             <Info label="Déplacement" value={booking.isQuoteOnly ? "À confirmer" : formatFCFA(booking.transportFee)} icon={<Wallet className="h-4 w-4" />} />
-            <Info label="Total à recevoir" value={booking.isQuoteOnly ? "Sur devis" : formatFCFA(booking.teacherNetAmount)} icon={<Wallet className="h-4 w-4" />} />
+            <Info label="Total à recevoir" value={booking.isQuoteOnly ? "Prix à finaliser" : formatFCFA(booking.teacherNetAmount)} icon={<Wallet className="h-4 w-4" />} />
             {pricingSnapshot?.transportRouteLabel && (
               <Info label="Trajet déplacement" value={pricingSnapshot.transportRouteLabel} icon={<MapPin className="h-4 w-4" />} />
             )}

@@ -54,12 +54,12 @@ export const PRICE_TIERS = {
     description: "Experts, Terminale, lycée français, data, informatique, BTP.",
   },
   SUR_DEVIS: {
-    key: "sur_devis",
-    label: "Sur devis",
-    amount: null,
-    platformCommission: null,
-    teacherPayout: null,
-    description: "Entreprise, pack personnalisé, formation spéciale ou zone hors Grand Abidjan.",
+    key: "expert_personnalise",
+    label: "Expert personnalisé",
+    amount: 25000,
+    platformCommission: 7500,
+    teacherPayout: 17500,
+    description: "Entreprise, pack personnalisé, formation spéciale, mémoire, soutenance ou zone étendue.",
   },
 } as const;
 
@@ -84,8 +84,8 @@ export const TRANSPORT_FEES = {
   },
   OUTSIDE_GRAND_ABIDJAN: {
     key: "outside_grand_abidjan",
-    label: "Hors Grand Abidjan ou zone à arbitrer",
-    amount: null,
+    label: "Ville intérieure / zone étendue",
+    amount: 10000,
   },
 } as const;
 
@@ -109,6 +109,7 @@ export const GRAND_ABIDJAN_AREAS = [
   "Abobo",
   "Adjamé",
   "Angré",
+  "Anyama",
   "Attécoubé",
   "Bingerville",
   "Cocody",
@@ -154,6 +155,10 @@ export const GRAND_ABIDJAN_NEAR_ROUTES = [
   ["Abobo", "Adjamé"],
   ["Abobo", "Cocody"],
   ["Abobo", "Angré"],
+  ["Abobo", "Anyama"],
+  ["Anyama", "Adjamé"],
+  ["Anyama", "Cocody"],
+  ["Anyama", "Angré"],
   ["Abobo", "Plateau"],
   ["Adjamé", "Attécoubé"],
 ] as const;
@@ -185,9 +190,9 @@ export const COURSE_PACKS = {
   },
   CUSTOM: {
     key: "custom_pack",
-    label: "Pack personnalisé",
-    sessions: null,
-    discountRate: null,
+    label: "Pack personnalisé 12 séances",
+    sessions: 12,
+    discountRate: 0.08,
   },
   EXAM_PREP: {
     key: "legacy_exam_prep",
@@ -354,7 +359,7 @@ export function getTransportFeeResultByKey(key?: string | null): TransportFeeRes
     ruleLabel: fee.label,
     coveredByTeacherZone: false,
     isGrandAbidjanRoute: fee.key !== TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key,
-    isQuoteOnly: fee.amount === null,
+    isQuoteOnly: false,
   };
 }
 
@@ -378,14 +383,14 @@ export function calculateGrandAbidjanTransportFee({
     return {
       key: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key,
       label: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.label,
-      amount: null,
+      amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       routeLabel,
-      ruleLabel: "Commune professeur ou client manquante : validation service client requise.",
+      ruleLabel: "Commune professeur ou client manquante : forfait prudent applique automatiquement.",
       coveredByTeacherZone,
       isGrandAbidjanRoute: false,
-      isQuoteOnly: true,
+      isQuoteOnly: false,
     };
   }
 
@@ -393,14 +398,14 @@ export function calculateGrandAbidjanTransportFee({
     return {
       key: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key,
       label: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.label,
-      amount: null,
+      amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       routeLabel,
-      ruleLabel: "Zone hors matrice Grand Abidjan : devis manuel obligatoire.",
+      ruleLabel: "Zone hors matrice Grand Abidjan : forfait interurbain applique automatiquement.",
       coveredByTeacherZone,
       isGrandAbidjanRoute: false,
-      isQuoteOnly: true,
+      isQuoteOnly: false,
     };
   }
 
@@ -616,21 +621,19 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const groupMultiplier = 1 + Math.max(0, participantsCount - 1) * 0.5;
   const materialFee = 0;
 
-  if (pack.key === "custom_pack") tierCode = "SUR_DEVIS";
-  if (transport.amount === null || transport.isQuoteOnly) tierCode = "SUR_DEVIS";
+  if (pack.key === "custom_pack") tierCode = mostExpensiveTier(tierCode, "PREMIUM_20000");
+  if (transport.key === TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key) {
+    tierCode = mostExpensiveTier(tierCode, "PREMIUM_20000");
+  }
 
   const tier = PRICE_TIERS[tierCode];
-  const isQuoteOnly = tier.amount === null || pack.sessions === null;
+  const isQuoteOnly = false;
   const teacherPricePerSession = Math.max(0, Math.round(Number(input.teacherPricePerSession) || 0));
   const tierSessionAmount = tier.amount ?? 0;
   const unitSessionAmount = teacherPricePerSession > 0 && tier.amount !== null
     ? teacherPricePerSession
     : tierSessionAmount;
-  const quoteReason = tier.amount === null
-    ? tier.description
-    : pack.sessions === null
-      ? "Pack personnalisé à chiffrer par le service client."
-      : undefined;
+  const quoteReason = undefined;
 
   if (isQuoteOnly) {
     return {

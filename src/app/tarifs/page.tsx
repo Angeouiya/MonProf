@@ -53,9 +53,9 @@ const TIERS = [
   },
   {
     name: PRICE_TIERS.SUR_DEVIS.label,
-    price: null,
-    usage: "Cas spécial",
-    rule: "Entreprise, pack personnalisé, formation spéciale ou hors Grand Abidjan.",
+    price: PRICE_TIERS.SUR_DEVIS.amount,
+    usage: "Expert personnalisé",
+    rule: "Entreprise, pack personnalisé, mémoire, soutenance, formation spéciale ou zone étendue.",
   },
 ];
 
@@ -91,7 +91,7 @@ const PACKS = [
   {
     name: "Pack personnalisé",
     desc: "Pour groupe, entreprise ou planning particulier.",
-    priceNote: "Sur devis",
+    priceNote: "Calcul automatique",
     icon: Package,
     useCases: ["Entreprise", "Formation métier", "Planning complexe"],
   },
@@ -178,7 +178,7 @@ const CANCELLATION_EXAMPLE_AMOUNT = 20000;
 const FAQ = [
   {
     q: "Le prix affiché est-il le prix final ?",
-    a: "Oui pour les réservations à tarif fixe. Le prix est calculé automatiquement par la plateforme selon le besoin, le niveau, le système scolaire, le format, le pack et le déplacement. Pour les cas spéciaux, le service client envoie un devis avant paiement.",
+    a: "Oui. Le prix est calculé automatiquement par la plateforme selon le besoin, le niveau, le système scolaire, le format, le pack et le déplacement. Le client paie ensuite directement via PayDunya.",
   },
   {
     q: "Quand le paiement est-il finalisé ?",
@@ -270,7 +270,7 @@ export default function TarifsPage() {
                       <p className="mt-1 text-xs font-semibold text-[#64748B]">{t.usage}</p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold tabular-nums text-[#111B4D]">
-                      {t.price === null ? "Sur devis" : formatFCFA(t.price)}
+                      {t.price === null ? "Prix à finaliser" : formatFCFA(t.price)}
                     </p>
                   </div>
                   <p className="mt-3 text-sm font-medium leading-6 text-[#64748B]">{t.rule}</p>
@@ -295,7 +295,7 @@ export default function TarifsPage() {
                           {t.name}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#111827]">
-                          {t.price === null ? "Sur devis" : formatFCFA(t.price)}
+                          {t.price === null ? "Prix à finaliser" : formatFCFA(t.price)}
                         </td>
                         <td className="px-4 py-3 font-medium text-[#64748B]">
                           {t.usage}
@@ -319,7 +319,7 @@ export default function TarifsPage() {
               <div key={fee.key} className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                 <p className="text-sm font-semibold text-[#111827]">{fee.label}</p>
                 <p className="mt-2 text-lg font-semibold text-[#111B4D]">
-                  {fee.amount === null ? "Sur devis" : formatFCFA(fee.amount)}
+                  {fee.amount === null ? "Forfait appliqué" : formatFCFA(fee.amount)}
                 </p>
                 <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
                   Frais affichés avant paiement, sans frais cachés côté client.
@@ -332,7 +332,7 @@ export default function TarifsPage() {
               <div>
                 <p className="text-sm font-semibold text-[#111B4D]">Calcul Grand Abidjan automatique</p>
                 <p className="mt-2 text-sm leading-relaxed text-[#394568]">
-                  À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou devis service client.
+                  À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou forfait automatique pour les villes hors matrice.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-semibold text-[#111B4D]">
                   {GRAND_ABIDJAN_AREAS.slice(0, 10).map((area) => (

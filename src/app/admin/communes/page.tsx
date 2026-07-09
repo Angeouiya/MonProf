@@ -58,7 +58,7 @@ export default async function AdminCommunesPage() {
                 ))}
               </div>
               <p className="mt-3 text-xs font-medium text-blue-950/70">
-                Toute autre route connue du Grand Abidjan est considérée éloignée. Les communes hors matrice passent en devis admin.
+                Toute autre route connue du Grand Abidjan est considérée éloignée. Les communes hors matrice utilisent un forfait automatique de zone étendue.
               </p>
             </div>
           </div>

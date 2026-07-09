@@ -323,11 +323,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               clientCommune: booking.commune,
             })
           : null;
-        if (replacementTransport?.isQuoteOnly) {
-          return NextResponse.json({
-            error: `Le déplacement du professeur remplaçant nécessite un devis manuel (${replacementTransport.routeLabel}).`,
-          }, { status: 400 });
-        }
         const nextTransportFee = replacementTransport?.amount ?? 0;
         const nextNet = nextTeacherCoursePayout + nextTransportFee;
         const financialImpact = nextNet - oldNet;

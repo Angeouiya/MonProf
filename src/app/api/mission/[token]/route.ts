@@ -4,6 +4,7 @@ import {
   PAYDUNYA_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
+import { findBestReplacementCandidate } from "@/lib/teacher-replacement-matching";
 
 const MIN_RESPONSE_LENGTH_FOR_ISSUE = 10;
 const MAX_RESPONSE_LENGTH = 700;
@@ -335,6 +336,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
   }
 
   const status = action === "unavailable" ? "UNAVAILABLE" : "PROBLEM_REPORTED";
+  const autoReplacement = await findBestReplacementCandidate(mission.bookingId);
   await db.$transaction(async (tx) => {
     await tx.teacherMissionLink.update({
       where: { id: mission.id },
@@ -405,6 +407,148 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         actionType: action === "unavailable" ? "REPLACE_TEACHER" : "HANDLE_TEACHER_PROBLEM",
       },
     });
+    if (autoReplacement.candidate) {
+      const newTeacher = autoReplacement.candidate.teacher;
+      const newTeacherName = newTeacher.professionalName || newTeacher.fullName;
+      const dateLabel = mission.booking.scheduledDate?.toLocaleDateString("fr-FR") ?? "À confirmer";
+      const timeLabel = mission.booking.scheduledTime || mission.booking.preferredTime || "À confirmer";
+      const formatLabel = mission.booking.courseFormat === "ONLINE" ? "En ligne" : "À domicile";
+      const financialImpact = autoReplacement.candidate.financialImpact;
+      const clientMessage = [
+        `Bonjour ${mission.booking.client.name},`,
+        "",
+        `${teacherName} n'est pas disponible pour votre cours de ${mission.booking.subjectName}.`,
+        "Compétence vous propose automatiquement un professeur compatible.",
+        "",
+        `Nouveau professeur proposé : ${newTeacherName}`,
+        `Matière : ${mission.booking.subjectName}`,
+        `Niveau : ${mission.booking.levelName}`,
+        `Date : ${dateLabel}`,
+        `Heure : ${timeLabel}`,
+        `Format : ${formatLabel}`,
+        autoReplacement.candidate.transportRouteLabel ? `Trajet : ${autoReplacement.candidate.transportRouteLabel}` : "",
+        `Montant professeur ajusté : ${autoReplacement.candidate.netAmount.toLocaleString("fr-FR")} FCFA`,
+        "",
+        "Votre paiement reste sécurisé. Vous pouvez accepter ce professeur ou refuser la proposition depuis votre réservation.",
+      ].filter(Boolean).join("\n");
+      await tx.teacherReplacement.updateMany({
+        where: {
+          bookingId: mission.bookingId,
+          status: { in: ["DRAFT", "CLIENT_NOTIFIED"] },
+        },
+        data: {
+          status: "CANCELLED",
+          details: "Remplacée par une nouvelle proposition automatique.",
+        },
+      });
+      const replacement = await tx.teacherReplacement.create({
+        data: {
+          bookingId: mission.bookingId,
+          oldTeacherId: mission.teacherId,
+          newTeacherId: newTeacher.id,
+          reason: action === "unavailable" ? "UNAVAILABLE" : "QUALITY_ISSUE",
+          details: `Proposition automatique après réponse professeur: ${response || status}. Score compatibilité ${autoReplacement.candidate.compatibility.score}/100. Critères: ${autoReplacement.candidate.matchReasons.join(", ") || "compatibilité générale"}.`,
+          financialImpact,
+          clientMessage,
+          oldTeacherMessage: `${teacherName} a été retiré de la proposition opérationnelle ${mission.booking.reference}. Motif: ${response || status}.`,
+          newTeacherMessage: `${newTeacherName} est proposé automatiquement pour ${mission.booking.reference}. Le lien mission sera envoyé après acceptation du client.`,
+          status: "CLIENT_NOTIFIED",
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: mission.booking.clientId,
+          title: "Nouveau professeur proposé",
+          message: clientMessage,
+          type: "AUTO_REPLACEMENT_PROPOSED",
+          recipientType: "CLIENT",
+          recipientName: mission.booking.client.name,
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "URGENT",
+          bookingId: mission.bookingId,
+          teacherId: newTeacher.id,
+          clientId: mission.booking.clientId,
+          sentAt: now,
+          link: `/client/reservations/${mission.bookingId}?replacementId=${replacement.id}`,
+          actionLabel: "Répondre à la proposition",
+          actionType: "RESPOND_REPLACEMENT_PROPOSAL",
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: "Remplaçant proposé automatiquement",
+          message: `${newTeacherName} a été proposé automatiquement au client pour remplacer ${teacherName} sur ${mission.booking.reference}. Score compatibilité ${autoReplacement.candidate.compatibility.score}/100.`,
+          type: "AUTO_REPLACEMENT_PROPOSED",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "URGENT",
+          bookingId: mission.bookingId,
+          teacherId: newTeacher.id,
+          clientId: mission.booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${mission.bookingId}`,
+          actionLabel: "Suivre proposition",
+          actionType: "FOLLOW_REPLACEMENT_PROPOSAL",
+        },
+      });
+      await tx.clientCommunication.create({
+        data: {
+          clientId: mission.booking.clientId,
+          bookingId: mission.bookingId,
+          type: "TEACHER_CHANGE",
+          channel: "INTERNAL",
+          subject: `Nouveau professeur proposé - ${mission.booking.reference}`,
+          content: clientMessage,
+          priority: "URGENT",
+          status: "SENT",
+        },
+      });
+      await tx.teacherTask.create({
+        data: {
+          teacherId: mission.teacherId,
+          bookingId: mission.bookingId,
+          type: "ADMIN_ACTION",
+          title: `Suivre réponse client - remplaçant proposé ${mission.booking.reference}`,
+          description: `${newTeacherName} a été proposé automatiquement. Si le client refuse, choisir un autre profil ou confirmer l'annulation/remboursement.`,
+          priority: "URGENT",
+          status: "TODO",
+          dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        },
+      });
+      await tx.adminActionLog.create({
+        data: {
+          action: "Remplacement automatique proposé",
+          entityType: "TeacherReplacement",
+          entityId: replacement.id,
+          detail: `${newTeacherName} proposé automatiquement pour ${mission.booking.reference}. Ancien professeur: ${teacherName}. Score ${autoReplacement.candidate.compatibility.score}/100. Impact: ${financialImpact} FCFA.`,
+          oldStatus: mission.teacherId,
+          newStatus: newTeacher.id,
+        },
+      });
+    } else {
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: "Aucun remplaçant automatique trouvé",
+          message: `Aucun professeur compatible n'a été trouvé automatiquement pour ${mission.booking.reference}. Le service client doit proposer un nouveau professeur, un nouveau créneau ou annuler/rembourser.`,
+          type: "AUTO_REPLACEMENT_NOT_FOUND",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "CRITICAL",
+          bookingId: mission.bookingId,
+          teacherId: mission.teacherId,
+          clientId: mission.booking.clientId,
+          sentAt: now,
+          link: `/admin/reservations/${mission.bookingId}?action=replace`,
+          actionLabel: "Traiter manuellement",
+          actionType: "REPLACE_TEACHER",
+        },
+      });
+    }
     await tx.adminActionLog.create({
       data: {
         action: action === "unavailable" ? "Mission professeur refusée" : "Problème mission signalé",
