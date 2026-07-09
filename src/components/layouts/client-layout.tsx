@@ -6,7 +6,7 @@ import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, us
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, Settings
+  ArrowRight, Settings, WifiOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -75,6 +75,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
   const navigationIntentRef = useRef<{ target: string; timestamp: number } | null>(null);
@@ -206,6 +207,17 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       cancelStaggeredPrefetch?.();
     };
   }, [prefetchClientRoute]);
+
+  useEffect(() => {
+    const syncNetworkState = () => setIsOffline(!navigator.onLine);
+    syncNetworkState();
+    window.addEventListener("online", syncNetworkState);
+    window.addEventListener("offline", syncNetworkState);
+    return () => {
+      window.removeEventListener("online", syncNetworkState);
+      window.removeEventListener("offline", syncNetworkState);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -444,6 +456,20 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           aria-hidden="true"
         >
           <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
+        </div>
+      )}
+      {isOffline && (
+        <div
+          data-client-offline-banner
+          className="fixed inset-x-3 z-[85] mx-auto flex max-w-xl items-center gap-2 rounded-lg border border-[#111B4D] bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white"
+          style={{ top: "calc(var(--app-topbar-height, 4rem) + 0.5rem)" }}
+          role="status"
+          aria-live="polite"
+        >
+          <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="min-w-0">
+            Connexion interrompue. Les actions seront reprises au retour du réseau.
+          </span>
         </div>
       )}
       {mobileSearchOpen && !open && (

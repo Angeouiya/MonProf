@@ -132,6 +132,19 @@ record(
 );
 
 record(
+  "Client shell warns cleanly when the mobile network drops",
+  /const\s+\[isOffline,\s*setIsOffline\]\s*=\s*useState\(false\)/.test(layout)
+    && /window\.addEventListener\("online",\s*syncNetworkState\)/.test(layout)
+    && /window\.addEventListener\("offline",\s*syncNetworkState\)/.test(layout)
+    && /data-client-offline-banner/.test(layout)
+    && /role="status"/.test(layout)
+    && /aria-live="polite"/.test(layout)
+    && /Connexion interrompue/.test(layout)
+    && /bg-\[#111B4D\]/.test(layout)
+    && /WifiOff/.test(layout),
+);
+
+record(
   "Client mobile drawer does not repeat the primary search action",
   /const showPrimaryAction\s*=\s*!compactAccount\s*;/.test(layout)
     && /\{showPrimaryAction\s*&&\s*\(/.test(layout)
