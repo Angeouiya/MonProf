@@ -366,6 +366,8 @@ export default function ProfilPage() {
                   allLabel="Aucune commune"
                   groups={communeGroups}
                   triggerClassName="mt-1.5 h-11 rounded-lg border-[#DDE6F7] focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]"
+                  allowCustomValue
+                  customValueLabel="Utiliser cette ville"
                 />
               </div>
               <div>

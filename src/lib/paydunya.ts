@@ -121,7 +121,7 @@ export async function getPayDunyaConfig(): Promise<PayDunyaConfig | null> {
     publicKey,
     privateKey,
     token,
-    mode: configValue(settings, PAYDUNYA_SETTING_KEYS.mode, "PAYDUNYA_MODE") === "live" ? "live" : "sandbox",
+    mode: normalizePayDunyaMode(configValue(settings, PAYDUNYA_SETTING_KEYS.mode, "PAYDUNYA_MODE")),
     storeName: configValue(settings, PAYDUNYA_SETTING_KEYS.storeName, "PAYDUNYA_STORE_NAME") || "Compétence",
     storeTagline: configValue(settings, PAYDUNYA_SETTING_KEYS.storeTagline, "PAYDUNYA_STORE_TAGLINE") || "Cours à domicile et en ligne en Côte d'Ivoire",
     storePhone: configValue(settings, PAYDUNYA_SETTING_KEYS.storePhone, "PAYDUNYA_STORE_PHONE") || "",
@@ -149,7 +149,8 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const endpoint = config.mode === "live"
     ? "https://app.paydunya.com/api/v1/checkout-invoice/create"
     : "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create";
-  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}?paydunya=return`;
+  // PayDunya appends ?token=... to return_url; keep this URL query-free.
+  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}`;
   const callbackUrl = `${input.origin}/api/webhooks/paydunya`;
 
   const payload = {
@@ -228,7 +229,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));
-  const responseCode = firstNonEmptyString(data.response_code, data.data?.response_code);
+  const responseCode = normalizePayDunyaResponseCode(data.response_code, data.data?.response_code);
   const checkoutUrl = extractPayDunyaCheckoutUrl(data);
   const token = extractPayDunyaCheckoutToken(data);
 
@@ -322,7 +323,7 @@ export async function confirmPayDunyaInvoice(invoiceToken: string): Promise<PayD
 
   return {
     configured: true,
-    ok: response.ok && firstNonEmptyString(root.response_code, raw.response_code) === "00",
+    ok: response.ok && normalizePayDunyaResponseCode(root.response_code, raw.response_code) === "00",
     status,
     token: confirmedToken,
     totalAmount,
@@ -353,6 +354,12 @@ async function getPayDunyaSettings() {
 
 function configValue(settings: Map<string, string>, settingKey: string, envKey: string) {
   return settings.get(settingKey) || process.env[envKey]?.trim() || "";
+}
+
+function normalizePayDunyaMode(value: string): PayDunyaConfig["mode"] {
+  const normalized = value.trim().toLowerCase();
+  if (["live", "prod", "production", "real", "reel", "réel"].includes(normalized)) return "live";
+  return "sandbox";
 }
 
 function emptyPayDunyaConfirmation(input: {
@@ -398,6 +405,19 @@ function parsePayDunyaAmount(value: unknown) {
 function firstNonEmptyString(...values: unknown[]) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function normalizePayDunyaResponseCode(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value === 0 ? "00" : String(value);
+    }
+    if (typeof value === "string" && value.trim()) {
+      const trimmed = value.trim();
+      return trimmed === "0" ? "00" : trimmed;
+    }
   }
   return null;
 }

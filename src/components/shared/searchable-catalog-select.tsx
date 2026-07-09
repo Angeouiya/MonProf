@@ -49,6 +49,8 @@ type SearchableCatalogSelectProps = {
   onValueChange?: (value: string) => void;
   className?: string;
   triggerClassName?: string;
+  allowCustomValue?: boolean;
+  customValueLabel?: string;
 };
 
 export function SearchableCatalogSelect({
@@ -63,6 +65,8 @@ export function SearchableCatalogSelect({
   onValueChange,
   className,
   triggerClassName,
+  allowCustomValue = false,
+  customValueLabel = "Utiliser cette valeur",
 }: SearchableCatalogSelectProps) {
   const [open, setOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value ?? "");
@@ -79,8 +83,16 @@ export function SearchableCatalogSelect({
     return null;
   }, [currentValue, groups]);
 
-  const normalizedQuery = normalizeSearch(query);
+  const trimmedQuery = query.trim();
+  const normalizedQuery = normalizeSearch(trimmedQuery);
   const allOptionMatches = !normalizedQuery || normalizeSearch(`${allLabel} tous toutes aucun`).includes(normalizedQuery);
+  const hasExactOption = useMemo(() => {
+    if (!normalizedQuery) return false;
+    return groups.some((group) => group.options.some((option) => (
+      normalizeSearch(option.value) === normalizedQuery || normalizeSearch(option.label) === normalizedQuery
+    )));
+  }, [groups, normalizedQuery]);
+  const canUseCustomValue = allowCustomValue && trimmedQuery.length >= 2 && !hasExactOption;
   const visibleGroups = useMemo(() => {
     if (!normalizedQuery) return groups;
 
@@ -125,7 +137,7 @@ export function SearchableCatalogSelect({
             <span className="flex min-w-0 items-center gap-2">
               <Search className="h-4 w-4 shrink-0 text-[#64748B]" />
               <span className={cn("min-w-0 truncate", !selectedOption && !selectedValue && "text-[#6B7280]")}>
-                {selectedOption?.label ?? placeholder}
+                {selectedOption?.label ?? (currentValue ? currentValue : placeholder)}
               </span>
             </span>
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-[#6B7280]" />
@@ -166,7 +178,21 @@ export function SearchableCatalogSelect({
                   ))}
                 </CommandGroup>
               ))}
-              {!allOptionMatches && visibleGroups.length === 0 && (
+              {canUseCustomValue && (
+                <CommandGroup heading="Saisie libre">
+                  <CommandItem
+                    value={`custom ${trimmedQuery}`}
+                    onSelect={() => choose(trimmedQuery)}
+                    className="min-h-11"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {customValueLabel} : {trimmedQuery}
+                    </span>
+                    {currentValue === trimmedQuery && <Check className="h-4 w-4 text-[#111B4D]" />}
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {!allOptionMatches && visibleGroups.length === 0 && !canUseCustomValue && (
                 <div className="px-4 py-8 text-center text-sm font-medium text-[#64748B]">
                   {emptyLabel}
                 </div>

@@ -1307,9 +1307,11 @@ export function ReserverForm({
                       allLabel="Aucune commune choisie"
                       groups={communeSelectionGroups}
                       triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                      allowCustomValue
+                      customValueLabel="Utiliser cette ville"
                     />
                     <p className="mt-1 text-xs font-medium text-[#64748B]">
-                      Tapez les premières lettres pour filtrer rapidement la liste.
+                      Tapez les premières lettres pour filtrer la liste; si votre ville n'apparait pas, saisissez-la librement.
                     </p>
                   </div>
                   <div>

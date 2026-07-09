@@ -295,6 +295,8 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     allLabel="Aucune commune"
                     groups={communeGroups}
                     triggerClassName="min-h-12 rounded-lg border-[#E3E8F2] focus:border-[#111B4D] focus:ring-[#111B4D]"
+                    allowCustomValue
+                    customValueLabel="Utiliser cette ville"
                   />
                 </div>
                 <div className="space-y-1.5">
