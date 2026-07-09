@@ -1426,6 +1426,8 @@ b {
 
 .client-shell[data-route-pending="true"] [data-client-content] {
   cursor: progress;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .client-shell [data-client-route-progress] {
@@ -1433,8 +1435,8 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation: client-route-progress 520ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
   transform-origin: left center;
+  will-change: transform;
 }
 
 @keyframes client-route-progress {
@@ -4666,7 +4668,7 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation: client-route-progress-slide 620ms cubic-bezier(0.2, 0, 0, 1) infinite;
+  animation: client-route-progress-slide 240ms cubic-bezier(0.2, 0, 0, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4739,7 +4741,7 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation-duration: 260ms !important;
+  animation-duration: 180ms !important;
 }
 
 /* Final mobile guard: app rails stay readable and never become cramped horizontal strips. */
