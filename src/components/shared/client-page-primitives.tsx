@@ -1,16 +1,8 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Circle, type LucideIcon } from "lucide-react";
+import { CheckCircle2, Circle, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/shared/back-button";
-
-function isInternalHref(href?: string): href is string {
-  return typeof href === "string" && href.startsWith("/");
-}
-
-function isHttpHref(href?: string): href is string {
-  return typeof href === "string" && /^https?:\/\//i.test(href);
-}
 
 export function ClientPageHeader({
   eyebrow,
@@ -498,8 +490,8 @@ export function ClientProcessTracker({
 }
 
 export function ClientAppRail({
-  items,
-  className,
+  items: _items,
+  className: _className,
 }: {
   items: Array<{
     label: string;
@@ -510,100 +502,5 @@ export function ClientAppRail({
   }>;
   className?: string;
 }) {
-  return (
-    <div
-      data-client-app-rail
-      data-client-app-rail-compact
-      className={cn(
-        "client-app-rail hidden items-center gap-1 overflow-x-auto rounded-lg border border-[#E6EAF3] bg-white p-1 2xl:flex",
-        className,
-      )}
-      aria-label="Navigation contextuelle client"
-      role="navigation"
-    >
-      {items.map((item) => {
-        const content = (
-          <>
-            <span className="flex items-center justify-center">
-              <span
-                data-client-shortcut-icon
-                className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors",
-                  item.active ? "border-white bg-white text-[#111B4D]" : "border-[#D8DEE9] bg-white text-[#111B4D]",
-                )}
-              >
-                {item.icon && <item.icon className="h-3 w-3" />}
-              </span>
-            </span>
-            <span data-client-shortcut-text className="min-w-0 text-left">
-              <span className={cn(
-                "block truncate text-[9px] font-semibold uppercase leading-3 tracking-wide",
-                item.active ? "text-white" : "text-[#64748B]",
-              )} data-client-shortcut-label>
-                {item.label}
-              </span>
-              <span className={cn(
-                "mt-0.5 block max-w-[8rem] truncate text-[11px] font-semibold leading-4",
-                item.active ? "text-white" : "text-[#111827]",
-              )} data-client-shortcut-value>
-                {item.value}
-              </span>
-            </span>
-            {item.href && (
-              <ChevronRight
-                className={cn(
-                  "ml-auto hidden h-4 w-4 shrink-0 min-[1400px]:block",
-                  item.active ? "text-white" : "text-[#64748B]",
-                )}
-              />
-            )}
-          </>
-        );
-
-        const itemClassName = cn(
-          "client-shortcut-card group inline-flex min-h-9 min-w-0 shrink-0 snap-start items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]",
-          item.active
-            ? "bg-[#111B4D] text-white"
-            : "bg-white text-[#111827] hover:bg-white hover:text-[#111B4D]",
-        );
-        const inner = <span className="flex w-full min-w-0 items-center gap-2">{content}</span>;
-
-        if (isInternalHref(item.href)) {
-          return (
-            <Link
-              key={`${item.label}-${item.href}`}
-              href={item.href}
-              prefetch={false}
-              data-client-shortcut-card
-              className={itemClassName}
-              aria-current={item.active ? "page" : undefined}
-            >
-              {inner}
-            </Link>
-          );
-        }
-
-        if (item.href) {
-          return (
-            <a
-              key={`${item.label}-${item.href}`}
-              href={item.href}
-              data-client-shortcut-card
-              className={itemClassName}
-              target={isHttpHref(item.href) ? "_blank" : undefined}
-              rel={isHttpHref(item.href) ? "noopener noreferrer" : undefined}
-            >
-              {inner}
-            </a>
-          );
-        }
-
-        return (
-          <div key={item.label} data-client-shortcut-card className={itemClassName}>
-            {inner}
-          </div>
-        );
-      })}
-    </div>
-  );
+  return null;
 }
