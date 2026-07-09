@@ -361,7 +361,7 @@ export default async function TeachersPage({
                 <EmptyState
                   icon={SearchX}
                   title={hasPublishedTeachers ? "Aucun professeur ne correspond à vos critères" : "Professeurs en cours de publication"}
-                  className={hasPublishedTeachers ? undefined : "min-h-[18rem] px-5 py-8 sm:px-8 sm:py-10"}
+                  className={hasPublishedTeachers ? undefined : "px-5 py-6 sm:min-h-[18rem] sm:px-8 sm:py-10"}
                   description={
                     hasPublishedTeachers
                       ? "Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
