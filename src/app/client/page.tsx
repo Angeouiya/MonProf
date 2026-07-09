@@ -45,78 +45,89 @@ export default async function ClientDashboardPage() {
 
   const now = new Date();
 
-  const totalBookings = await db.booking.count({ where: { clientId: user.id } });
-  const upcomingBookings = await db.booking.count({
-    where: {
-      clientId: user.id,
-      status: { in: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"] },
-    },
-  });
-  const blockedFundTransactions = await db.transaction.findMany({
-    where: {
-      booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
-      status: "BLOCKED",
-      type: "CLIENT_PAYMENT",
-    },
-    select: {
-      amount: true,
-      booking: {
-        select: {
-          paymentStatus: true,
-          totalClientPays: true,
-          totalPrice: true,
-          paydunyaStatus: true,
-          paydunyaVerifiedAt: true,
-          transactions: {
-            where: { type: "CLIENT_PAYMENT" },
-            select: { type: true, status: true, amount: true },
+  const [
+    totalBookings,
+    upcomingBookings,
+    blockedFundTransactions,
+    completedBookings,
+    pendingValidation,
+    nextCourse,
+    recentBookings,
+    recommended,
+  ] = await Promise.all([
+    db.booking.count({ where: { clientId: user.id } }),
+    db.booking.count({
+      where: {
+        clientId: user.id,
+        status: { in: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"] },
+      },
+    }),
+    db.transaction.findMany({
+      where: {
+        booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
+        status: "BLOCKED",
+        type: "CLIENT_PAYMENT",
+      },
+      select: {
+        amount: true,
+        booking: {
+          select: {
+            paymentStatus: true,
+            totalClientPays: true,
+            totalPrice: true,
+            paydunyaStatus: true,
+            paydunyaVerifiedAt: true,
+            transactions: {
+              where: { type: "CLIENT_PAYMENT" },
+              select: { type: true, status: true, amount: true },
+            },
           },
         },
       },
-    },
-  });
-  const completedBookings = await db.booking.count({
-    where: { clientId: user.id, status: { in: ["TEACHER_PAID", "VALIDATED_BY_CLIENT"] } },
-  });
-  const pendingValidation = await db.booking.findMany({
-    where: { clientId: user.id, status: "PENDING_CLIENT_VALIDATION" },
-    orderBy: { courseDoneAt: "desc" },
-    take: 5,
-    include: {
-      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, badgeVerified: true } },
-    },
-  });
-  const nextCourse = await db.booking.findFirst({
-    where: {
-      clientId: user.id,
-      status: { in: ["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] },
-      OR: [
-        { scheduledDate: { gte: now } },
-        { scheduledDate: null, startDate: { gte: now } },
-      ],
-    },
-    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }],
-    include: {
-      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true } },
-    },
-  });
-  const recentBookings = await db.booking.findMany({
-    where: { clientId: user.id },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-    include: {
-      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-    },
-  });
-  const recommended = await db.teacher.findMany({
-    where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-    take: 3,
-    orderBy: { rating: "desc" },
-    include: {
-      subjects: { include: { subject: true } },
-      _count: { select: { reviews: true } },
-    },
-  });
+    }),
+    db.booking.count({
+      where: { clientId: user.id, status: { in: ["TEACHER_PAID", "VALIDATED_BY_CLIENT"] } },
+    }),
+    db.booking.findMany({
+      where: { clientId: user.id, status: "PENDING_CLIENT_VALIDATION" },
+      orderBy: { courseDoneAt: "desc" },
+      take: 5,
+      include: {
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, badgeVerified: true } },
+      },
+    }),
+    db.booking.findFirst({
+      where: {
+        clientId: user.id,
+        status: { in: ["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] },
+        OR: [
+          { scheduledDate: { gte: now } },
+          { scheduledDate: null, startDate: { gte: now } },
+        ],
+      },
+      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }],
+      include: {
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true } },
+      },
+    }),
+    db.booking.findMany({
+      where: { clientId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      include: {
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+      },
+    }),
+    db.teacher.findMany({
+      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+      take: 3,
+      orderBy: { rating: "desc" },
+      include: {
+        subjects: { include: { subject: true } },
+        _count: { select: { reviews: true } },
+      },
+    }),
+  ]);
   const nextCourseDate = nextCourse
     ? nextCourse.scheduledDate
       ? formatDate(nextCourse.scheduledDate)

@@ -28,46 +28,45 @@ export default async function AvisPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  // Réservations validées par le client, sans avis
-  const bookingsToReview = await db.booking.findMany({
-    where: {
-      clientId: user.id,
-      status: { in: [...REVIEWABLE_BOOKING_STATUSES] },
-      reviews: { none: { clientId: user.id } },
-    },
-    orderBy: [{ clientValidatedAt: "desc" }, { teacherPaidAt: "desc" }, { updatedAt: "desc" }],
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          jobTitle: true,
-          badgeVerified: true,
+  const [bookingsToReview, myReviews] = await Promise.all([
+    db.booking.findMany({
+      where: {
+        clientId: user.id,
+        status: { in: [...REVIEWABLE_BOOKING_STATUSES] },
+        reviews: { none: { clientId: user.id } },
+      },
+      orderBy: [{ clientValidatedAt: "desc" }, { teacherPaidAt: "desc" }, { updatedAt: "desc" }],
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            fullName: true,
+            professionalName: true,
+            photoUrl: true,
+            jobTitle: true,
+            badgeVerified: true,
+          },
         },
       },
-    },
-  });
-
-  // Avis déjà laissés
-  const myReviews = await db.review.findMany({
-    where: { clientId: user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          jobTitle: true,
-          badgeVerified: true,
+    }),
+    db.review.findMany({
+      where: { clientId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            fullName: true,
+            professionalName: true,
+            photoUrl: true,
+            jobTitle: true,
+            badgeVerified: true,
+          },
         },
+        booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
       },
-      booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
-    },
-  });
+    }),
+  ]);
   const primaryReviewBooking = bookingsToReview[0] ?? null;
   const secondaryReviewBookings = bookingsToReview.slice(1);
   const primaryReviewTeacherName = primaryReviewBooking

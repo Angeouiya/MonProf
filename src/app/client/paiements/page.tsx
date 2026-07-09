@@ -29,56 +29,58 @@ export default async function PaiementsPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const rawTransactions = await db.transaction.findMany({
-    where: {
-      booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
-      type: { in: ["CLIENT_PAYMENT", "REFUND"] },
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      booking: {
-        select: {
-          id: true, reference: true, subjectName: true, levelName: true, schoolProgram: true,
-          startDate: true, scheduledDate: true, paymentStatus: true, totalClientPays: true, totalPrice: true,
-          paydunyaStatus: true, paydunyaVerifiedAt: true,
-          transactions: {
-            where: { type: "CLIENT_PAYMENT" },
-            select: { type: true, status: true, amount: true },
+  const [rawTransactions, pendingPaymentBookings] = await Promise.all([
+    db.transaction.findMany({
+      where: {
+        booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
+        type: { in: ["CLIENT_PAYMENT", "REFUND"] },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        booking: {
+          select: {
+            id: true, reference: true, subjectName: true, levelName: true, schoolProgram: true,
+            startDate: true, scheduledDate: true, paymentStatus: true, totalClientPays: true, totalPrice: true,
+            paydunyaStatus: true, paydunyaVerifiedAt: true,
+            transactions: {
+              where: { type: "CLIENT_PAYMENT" },
+              select: { type: true, status: true, amount: true },
+            },
+            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
           },
-          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
         },
       },
-    },
-  });
+    }),
+    db.booking.findMany({
+      where: {
+        clientId: user.id,
+        status: "PENDING_PAYMENT",
+        paymentStatus: "FAILED",
+        isQuoteOnly: false,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        reference: true,
+        subjectName: true,
+        levelName: true,
+        startDate: true,
+        scheduledDate: true,
+        totalClientPays: true,
+        totalPrice: true,
+        teacher: {
+          select: {
+            fullName: true,
+            professionalName: true,
+            photoUrl: true,
+            badgeVerified: true,
+          },
+        },
+      },
+    }),
+  ]);
   const transactions = rawTransactions.filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking));
-  const pendingPaymentBookings = await db.booking.findMany({
-    where: {
-      clientId: user.id,
-      status: "PENDING_PAYMENT",
-      paymentStatus: "FAILED",
-      isQuoteOnly: false,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-    select: {
-      id: true,
-      reference: true,
-      subjectName: true,
-      levelName: true,
-      startDate: true,
-      scheduledDate: true,
-      totalClientPays: true,
-      totalPrice: true,
-      teacher: {
-        select: {
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          badgeVerified: true,
-        },
-      },
-    },
-  });
 
   const totalDepense = transactions
     .filter((t) => t.type === "CLIENT_PAYMENT")

@@ -50,16 +50,18 @@ export default async function ReservationsPage({
     },
     transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
   };
-  const bookings = await db.booking.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: bookingInclude,
-  });
-  const allBookings = await db.booking.findMany({
-    where: { clientId: user.id },
-    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-    include: bookingInclude,
-  });
+  const [bookings, allBookings] = await Promise.all([
+    db.booking.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: bookingInclude,
+    }),
+    db.booking.findMany({
+      where: { clientId: user.id },
+      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
+      include: bookingInclude,
+    }),
+  ]);
   const securedBookings = allBookings.filter(hasVerifiedPayDunyaClientPayment);
   const draftBookings = allBookings.filter((booking) => booking.status === "PENDING_PAYMENT" && !hasVerifiedPayDunyaClientPayment(booking));
   const blockedBookings = allBookings.filter((booking) => booking.paymentStatus === "BLOCKED" && hasVerifiedPayDunyaClientPayment(booking));

@@ -33,33 +33,32 @@ export default async function ServiceClientPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  // Réservations sur lesquelles le client peut ouvrir un litige.
-  const eligibleBookings = await db.booking.findMany({
-    where: {
-      clientId: user.id,
-      status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION"] },
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-      disputes: true,
-    },
-  });
-  const bookableForDispute = eligibleBookings.filter((b) => b.disputes.length === 0);
-
-  // Litiges du client.
-  const myDisputes = await db.dispute.findMany({
-    where: { openedById: user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      booking: {
-        select: {
-          id: true, reference: true, subjectName: true, levelName: true,
-          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+  const [eligibleBookings, myDisputes] = await Promise.all([
+    db.booking.findMany({
+      where: {
+        clientId: user.id,
+        status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION"] },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+        disputes: true,
+      },
+    }),
+    db.dispute.findMany({
+      where: { openedById: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        booking: {
+          select: {
+            id: true, reference: true, subjectName: true, levelName: true,
+            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+          },
         },
       },
-    },
-  });
+    }),
+  ]);
+  const bookableForDispute = eligibleBookings.filter((b) => b.disputes.length === 0);
   const openDisputes = myDisputes.filter((dispute) => ["OPEN", "INVESTIGATING"].includes(dispute.status));
   const resolvedDisputes = myDisputes.filter((dispute) => ["RESOLVED", "REFUNDED", "REJECTED"].includes(dispute.status));
   const focus = buildSupportFocus({

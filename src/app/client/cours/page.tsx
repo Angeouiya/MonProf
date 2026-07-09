@@ -41,88 +41,88 @@ export default async function CoursPage({
   const tabId = sp.tab ?? "avenir";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const rawBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      clientId: user.id,
-      status: { in: tab.statuses as any },
-      isQuoteOnly: false,
+  const [rawBookings, rawOverviewBookings, pendingCourseBookings] = await Promise.all([
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({
+        clientId: user.id,
+        status: { in: tab.statuses as any },
+        isQuoteOnly: false,
+      }),
+      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
+      include: {
+        teacher: {
+          select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true },
+        },
+        transactions: {
+          where: { type: "CLIENT_PAYMENT" },
+          select: { type: true, status: true, amount: true },
+        },
+      },
     }),
-    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-    include: {
-      teacher: {
-        select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, badgeVerified: true },
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({
+        clientId: user.id,
+        status: { in: COURSE_STATUSES as any },
+        isQuoteOnly: false,
+      }),
+      orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        totalPrice: true,
+        totalClientPays: true,
+        paydunyaStatus: true,
+        paydunyaVerifiedAt: true,
+        isQuoteOnly: true,
+        reference: true,
+        subjectName: true,
+        levelName: true,
+        courseFormat: true,
+        preferredTime: true,
+        scheduledTime: true,
+        scheduledDate: true,
+        startDate: true,
+        teacher: {
+          select: { fullName: true, professionalName: true },
+        },
+        transactions: {
+          where: { type: "CLIENT_PAYMENT" },
+          select: { type: true, status: true, amount: true },
+        },
       },
-      transactions: {
-        where: { type: "CLIENT_PAYMENT" },
-        select: { type: true, status: true, amount: true },
+    }),
+    db.booking.findMany({
+      where: {
+        clientId: user.id,
+        OR: [
+          { status: "PENDING_PAYMENT", paymentStatus: "FAILED", isQuoteOnly: false },
+          { status: { in: ["PENDING_PAYMENT", "PENDING_ADMIN_VALIDATION"] as any }, isQuoteOnly: true },
+        ],
       },
-    },
-  });
+      orderBy: [{ createdAt: "desc" }],
+      take: 6,
+      select: {
+        id: true,
+        reference: true,
+        subjectName: true,
+        levelName: true,
+        courseFormat: true,
+        preferredTime: true,
+        scheduledTime: true,
+        startDate: true,
+        scheduledDate: true,
+        totalClientPays: true,
+        totalPrice: true,
+        isQuoteOnly: true,
+        teacher: {
+          select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
+        },
+      },
+    }),
+  ]);
   const bookings = rawBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
-
-  const rawOverviewBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      clientId: user.id,
-      status: { in: COURSE_STATUSES as any },
-      isQuoteOnly: false,
-    }),
-    orderBy: [{ scheduledDate: "asc" }, { startDate: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      status: true,
-      paymentStatus: true,
-      totalPrice: true,
-      totalClientPays: true,
-      paydunyaStatus: true,
-      paydunyaVerifiedAt: true,
-      isQuoteOnly: true,
-      reference: true,
-      subjectName: true,
-      levelName: true,
-      courseFormat: true,
-      preferredTime: true,
-      scheduledTime: true,
-      scheduledDate: true,
-      startDate: true,
-      teacher: {
-        select: { fullName: true, professionalName: true },
-      },
-      transactions: {
-        where: { type: "CLIENT_PAYMENT" },
-        select: { type: true, status: true, amount: true },
-      },
-    },
-  });
   const overviewBookings = rawOverviewBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
-
-  const pendingCourseBookings = await db.booking.findMany({
-    where: {
-      clientId: user.id,
-      OR: [
-        { status: "PENDING_PAYMENT", paymentStatus: "FAILED", isQuoteOnly: false },
-        { status: { in: ["PENDING_PAYMENT", "PENDING_ADMIN_VALIDATION"] as any }, isQuoteOnly: true },
-      ],
-    },
-    orderBy: [{ createdAt: "desc" }],
-    take: 6,
-    select: {
-      id: true,
-      reference: true,
-      subjectName: true,
-      levelName: true,
-      courseFormat: true,
-      preferredTime: true,
-      scheduledTime: true,
-      startDate: true,
-      scheduledDate: true,
-      totalClientPays: true,
-      totalPrice: true,
-      isQuoteOnly: true,
-      teacher: {
-        select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
-      },
-    },
-  });
 
   const tabCounts = Object.fromEntries(
     TABS.map((item) => [item.id, overviewBookings.filter((booking) => item.statuses.includes(booking.status)).length]),

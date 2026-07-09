@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, type MouseEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type MouseEvent, type PointerEvent, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
@@ -134,17 +134,14 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (navigationResetRef.current) {
       window.clearTimeout(navigationResetRef.current);
     }
-    navigationDelayRef.current = window.setTimeout(() => {
-      setNavigating(true);
-      navigationDelayRef.current = null;
-    }, 140);
+    setNavigating(true);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
-    }, 900);
+    }, 4200);
   }
 
-  function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {
+  function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
     if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
     }
@@ -172,6 +169,15 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     }
   }
 
+  function handleClientNavigationIntent(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    maybeStartClientNavigationFeedback(event);
+  }
+
+  function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {
+    maybeStartClientNavigationFeedback(event);
+  }
+
   function submitQuickSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -185,6 +191,8 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     <div
       data-client-layout
       aria-busy={navigating}
+      data-route-pending={navigating ? "true" : "false"}
+      onPointerDownCapture={handleClientNavigationIntent}
       onClickCapture={handleClientNavigationCapture}
       className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased"
     >
@@ -300,14 +308,25 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         </div>
       </header>
       {navigating && (
-        <div
-          data-client-route-progress
-          className="pointer-events-none fixed inset-x-0 z-[90] h-0.5 overflow-hidden bg-white"
-          style={{ top: "var(--app-topbar-height, 4rem)" }}
-          aria-hidden="true"
-        >
-          <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
-        </div>
+        <>
+          <div
+            data-client-route-progress
+            className="pointer-events-none fixed inset-x-0 z-[90] h-1 overflow-hidden border-y border-[#E3E8F2] bg-white"
+            style={{ top: "var(--app-topbar-height, 4rem)" }}
+            aria-hidden="true"
+          >
+            <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
+          </div>
+          <div
+            data-client-route-status
+            className="pointer-events-none fixed left-1/2 z-[95] -translate-x-1/2 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]"
+            style={{ top: "calc(var(--app-topbar-height, 4rem) + 0.75rem)" }}
+            role="status"
+            aria-live="polite"
+          >
+            Chargement de l'espace...
+          </div>
+        </>
       )}
       {mobileSearchOpen && !open && (
         <div id="client-mobile-search-panel" data-client-mobile-search-panel className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
