@@ -149,7 +149,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const endpoint = config.mode === "live"
     ? "https://app.paydunya.com/api/v1/checkout-invoice/create"
     : "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create";
-  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}`;
+  const returnUrl = `${input.origin}/client/reservations/${input.booking.id}?paydunya=return`;
   const callbackUrl = `${input.origin}/api/webhooks/paydunya`;
 
   const payload = {
@@ -207,6 +207,8 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
       client_id: input.client.id,
       teacher_id: input.teacher.id,
       provider: "PAYDUNYA",
+      mode: config.mode,
+      app_url: input.origin,
     },
     actions: {
       cancel_url: `${input.origin}/client/reservations/${input.booking.id}?paydunya=cancelled`,

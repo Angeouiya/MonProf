@@ -104,7 +104,13 @@ export function SearchableCatalogSelect({
   return (
     <div className={cn("min-w-0", className)}>
       <input type="hidden" name={name} value={currentValue} />
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setQuery("");
+        }}
+      >
         <PopoverTrigger asChild>
           <Button
             id={id}
@@ -116,8 +122,11 @@ export function SearchableCatalogSelect({
               triggerClassName,
             )}
           >
-            <span className={cn("min-w-0 truncate", !selectedOption && !selectedValue && "text-[#6B7280]")}>
-              {selectedOption?.label ?? placeholder}
+            <span className="flex min-w-0 items-center gap-2">
+              <Search className="h-4 w-4 shrink-0 text-[#64748B]" />
+              <span className={cn("min-w-0 truncate", !selectedOption && !selectedValue && "text-[#6B7280]")}>
+                {selectedOption?.label ?? placeholder}
+              </span>
             </span>
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-[#6B7280]" />
           </Button>

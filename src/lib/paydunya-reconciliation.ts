@@ -324,7 +324,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
             {
               userId: null,
               title: "Paiement PayDunya vérifié",
-              message: `${booking.client.name} a payé ${booking.reference}. Vérification serveur PayDunya OK. Professeur : ${teacherName}. Token : ${token}. Reçu : ${confirmation.receiptUrl || "non fourni"}.`,
+              message: `${booking.client.name} a payé ${booking.reference}. Vérification serveur PayDunya OK. Professeur : ${teacherName}. Référence PayDunya : ${maskPayDunyaReference(token)}. Reçu : ${confirmation.receiptUrl || "non fourni"}.`,
               type: "PAYMENT_RECEIVED",
               recipientType: "ADMIN",
               channel: "INTERNAL",
