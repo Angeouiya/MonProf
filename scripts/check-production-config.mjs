@@ -24,8 +24,8 @@ loadEnvFile(".env.production.local");
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
-checkDatabaseUrl("DATABASE_URL", { requirePgbouncer: true });
-checkDatabaseUrl("DIRECT_URL", { requirePgbouncer: false });
+checkDatabaseUrl("DATABASE_URL", { requirePgbouncer: true, requireSupabaseHost: true });
+checkDatabaseUrl("DIRECT_URL", { requirePgbouncer: false, requireSupabaseHost: true });
 checkStrongSecret("NEXTAUTH_SECRET", { minLength: 32 });
 checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
@@ -91,10 +91,35 @@ function checkDatabaseUrl(key, options) {
   }
 
   record(`${key} uses PostgreSQL`, url.protocol === "postgresql:");
+  record(`${key} has no placeholder password`, isSafeDatabasePassword(url.password));
+  record(`${key} does not target a local database`, !isLocalDatabaseHost(url.hostname));
+  if (options.requireSupabaseHost) {
+    record(`${key} targets Supabase Postgres`, isSupabaseDatabaseHost(url.hostname));
+  }
   record(`${key} targets schema=competence`, url.searchParams.get("schema") === "competence");
   if (options.requirePgbouncer) {
     record(`${key} is serverless pooler friendly`, url.searchParams.get("pgbouncer") === "true" && url.searchParams.has("connection_limit"));
   }
+}
+
+function isSafeDatabasePassword(password) {
+  const decoded = decodeURIComponent(password ?? "").trim();
+  if (!decoded) return false;
+  const lowered = decoded.toLowerCase();
+  return !lowered.includes("your-password")
+    && !lowered.includes("password")
+    && !lowered.includes("change-me")
+    && !lowered.includes("placeholder");
+}
+
+function isLocalDatabaseHost(hostname) {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function isSupabaseDatabaseHost(hostname) {
+  const normalized = hostname.toLowerCase();
+  return normalized.endsWith(".supabase.co") || normalized.endsWith(".pooler.supabase.com");
 }
 
 function checkStrongSecret(key, { minLength }) {
