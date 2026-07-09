@@ -168,11 +168,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   useEffect(() => {
     const browserNavigator = navigator as Navigator & {
       connection?: { saveData?: boolean; effectiveType?: string };
+      deviceMemory?: number;
     };
     const connection = browserNavigator.connection;
     const effectiveType = connection?.effectiveType ?? "";
-    const slowConnection = connection?.saveData || /(^|-)2g$|slow-2g/i.test(effectiveType);
-    if (slowConnection) return;
+    const lowMemoryDevice = typeof browserNavigator.deviceMemory === "number" && browserNavigator.deviceMemory <= 2;
+    const constrainedConnection = connection?.saveData || /(^|-)2g$|slow-2g|3g/i.test(effectiveType);
+    if (constrainedConnection || lowMemoryDevice) return;
 
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
     const routes = desktop ? CLIENT_PRIORITY_PREFETCH_ROUTES : CLIENT_PRIMARY_PREFETCH_ROUTES;

@@ -118,7 +118,9 @@ record(
       "/client/parametres",
     ].every((route) => layout.includes(`"${route}"`))
     && /desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES/.test(layout)
-    && /slowConnection\)\s*return/.test(layout)
+    && /constrainedConnection\s*\|\|\s*lowMemoryDevice\)\s*return/.test(layout)
+    && /deviceMemory/.test(layout)
+    && /3g/i.test(layout)
     && /connection\?\.saveData/.test(layout),
 );
 
