@@ -204,6 +204,7 @@ export default async function CoursPage({
         eyebrow="Cours"
         title="Cours"
         description="Suivez uniquement les cours activés après validation serveur PayDunya. Les demandes non payées restent séparées."
+        showBack={false}
       />
 
       <CourseMobilePriorityCard

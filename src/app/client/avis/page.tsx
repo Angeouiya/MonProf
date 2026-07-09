@@ -105,6 +105,7 @@ export default async function AvisPage() {
         eyebrow="Qualité"
         title="Avis"
         description="Évaluez vos cours terminés et gardez un historique clair de vos retours qualité."
+        showBack={false}
       />
 
       <ClientMetricStrip

@@ -122,6 +122,7 @@ export default async function PaiementsPage() {
         eyebrow="Paiements"
         title="Paiements"
         description="Consultez vos paiements sécurisés, remboursements et dossiers liés aux professeurs choisis."
+        showBack={false}
       />
 
       <ClientMetricStrip

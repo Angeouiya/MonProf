@@ -19,6 +19,18 @@ const reschedulePolicyPath = "src/lib/reschedule-policy.ts";
 const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
+const clientRootTabPaths = [
+  "src/app/client/page.tsx",
+  "src/app/client/rechercher/page.tsx",
+  "src/app/client/reservations/page.tsx",
+  "src/app/client/cours/page.tsx",
+  "src/app/client/paiements/page.tsx",
+  "src/app/client/notifications/page.tsx",
+  "src/app/client/avis/page.tsx",
+  "src/app/client/service-client/page.tsx",
+  "src/app/client/profil/profile-client.tsx",
+  "src/app/client/parametres/page.tsx",
+];
 
 const clientPrimitives = read(clientPrimitivesPath);
 const layout = read(layoutPath);
@@ -36,6 +48,7 @@ const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
 const clientUiSources = readClientUiSources(clientSourceRoots);
+const clientRootTabSources = clientRootTabPaths.map(read).join("\n");
 
 record(
   "Client bottom nav is guarded while mobile drawer is open",
@@ -194,6 +207,15 @@ record(
   "Client sidebar keeps one clear profile/settings pair",
   countOccurrences(layout, 'href: "/client/profil"') === 1
     && countOccurrences(layout, 'href: "/client/parametres"') === 1,
+);
+
+record(
+  "Client root tabs avoid redundant back buttons while deep flows keep them",
+  clientRootTabPaths.every((filePath) => /showBack=\{false\}/.test(read(filePath)))
+    && /<ClientPageHeader[\s\S]*?title=\{`Réservation/.test(clientReservationDetail)
+    && !/<ClientPageHeader[\s\S]*?title=\{`Réservation[\s\S]*?showBack=\{false\}/.test(clientReservationDetail)
+    && /<BackButton\s+fallbackHref="\/client\/rechercher"/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && countMatches(clientRootTabSources, /showBack=\{false\}/g) >= clientRootTabPaths.length,
 );
 
 record(

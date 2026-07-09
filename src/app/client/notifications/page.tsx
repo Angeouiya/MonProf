@@ -93,6 +93,7 @@ export default async function ClientNotificationsPage() {
         eyebrow="Messages"
         title="Notifications"
         description={`${formatCount(notifications.length, "notification")}, ${formatCount(unreadCount, "non lue")}.`}
+        showBack={false}
       >
         <ClientNotificationActions mode="all" />
       </ClientPageHeader>

@@ -73,6 +73,7 @@ export default async function ClientParametresPage() {
           ? "Modifiez le mot de passe du compte administrateur propriétaire depuis l'espace compte rattaché, sans OTP."
           : "Pilotez la sécurité de votre compte client, votre accès email et vos actions sensibles sans code OTP."
         }
+        showBack={false}
       />
 
       <ClientMetricStrip

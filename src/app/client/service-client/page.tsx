@@ -109,6 +109,7 @@ export default async function ServiceClientPage() {
         eyebrow="Assistance"
         title="Service client et litiges"
         description="Une aide claire pour suivre vos cours, protéger votre paiement et garder une trace de chaque décision."
+        showBack={false}
       />
 
       <ClientMetricStrip

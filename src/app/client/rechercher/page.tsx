@@ -148,6 +148,7 @@ export default async function RechercherPage({
         eyebrow="Trouver un professeur"
         title="Rechercher un professeur"
         description="Tapez une matière, un concours, un métier ou une commune."
+        showBack={false}
       />
 
       <ClientMetricStrip

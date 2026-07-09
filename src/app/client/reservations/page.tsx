@@ -172,6 +172,7 @@ export default async function ReservationsPage({
         eyebrow="Réservations"
         title="Réservations"
         description="Dates, professeurs, paiements et confirmations dans un suivi clair."
+        showBack={false}
       />
 
       <ClientMetricStrip

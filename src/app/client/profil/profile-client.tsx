@@ -176,6 +176,7 @@ export function ProfileClient({
         eyebrow="Compte client"
         title={name || "Client Compétence"}
         description={profile?.email}
+        showBack={false}
       >
         <div className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111B4D]">
           <ShieldCheck className="h-4 w-4" />
