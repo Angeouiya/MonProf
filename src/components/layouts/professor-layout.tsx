@@ -104,7 +104,7 @@ export function ProfessorLayout({
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/professeur" className="flex min-h-11 items-center gap-2 rounded-lg px-1.5">
+          <Link href="/professeur" prefetch={false} className="flex min-h-11 items-center gap-2 rounded-lg px-1.5">
             <BrandLogo size="sm" priority />
           </Link>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] md:inline-flex">
@@ -114,7 +114,7 @@ export function ProfessorLayout({
 
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white sm:hidden" aria-label="Notifications professeur">
-            <Link href="/professeur/notifications">
+            <Link href="/professeur/notifications" prefetch={false}>
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
@@ -124,7 +124,7 @@ export function ProfessorLayout({
             </Link>
           </Button>
           <Button asChild variant="outline" className="relative hidden min-h-11 rounded-lg border-[#D7DEE9] bg-white px-4 text-[#111B4D] sm:inline-flex">
-            <Link href="/professeur/notifications">
+            <Link href="/professeur/notifications" prefetch={false}>
               <Bell className="h-4 w-4" />
               Notifications
               {!!notificationCount && (
@@ -135,7 +135,7 @@ export function ProfessorLayout({
             </Link>
           </Button>
           <Button asChild variant="ghost" className="hidden min-h-11 rounded-lg bg-white px-4 text-[#111B4D] sm:inline-flex">
-            <Link href="/">Site public</Link>
+            <Link href="/" prefetch={false}>Site public</Link>
           </Button>
           <ImportantActionConfirm
             title="Quitter l'espace professeur ?"
@@ -292,6 +292,7 @@ function SidebarContent({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={onNavigate}
                   className={cn(
                     "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
@@ -327,10 +328,10 @@ function SidebarContent({
           <p className="text-[#111827]">Cadre Compétence</p>
           <p className="mt-1">L'accès professeur suppose l'acceptation des règles présentées pendant l'enrôlement avec le service client.</p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-            <Link href="/conditions-utilisation" className="text-[#111B4D] hover:underline" onClick={onNavigate}>
+            <Link href="/conditions-utilisation" prefetch={false} className="text-[#111B4D] hover:underline" onClick={onNavigate}>
               CGU
             </Link>
-            <Link href="/politique-confidentialite" className="text-[#111B4D] hover:underline" onClick={onNavigate}>
+            <Link href="/politique-confidentialite" prefetch={false} className="text-[#111B4D] hover:underline" onClick={onNavigate}>
               Confidentialité
             </Link>
           </div>
@@ -386,6 +387,7 @@ function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-semibold transition-colors",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:bg-white hover:text-[#111B4D]",
@@ -438,6 +440,7 @@ function SidebarSignal({
     <Link
       data-professor-sidebar-signal
       href={href}
+      prefetch={false}
       onClick={onNavigate}
       className={cn(
         "flex min-h-10 items-center justify-between rounded-lg border px-2.5 text-xs font-semibold transition-colors",

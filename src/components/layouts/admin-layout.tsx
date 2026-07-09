@@ -114,7 +114,7 @@ export function AdminLayout({
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/admin" className="flex min-w-0 items-center gap-2">
+          <Link href="/admin" prefetch={false} className="flex min-w-0 items-center gap-2">
             <BrandLogo size="sm" priority />
             <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] sm:inline-flex">
               Admin
@@ -124,7 +124,7 @@ export function AdminLayout({
         <div className="flex shrink-0 items-center gap-2">
           <NotificationHeaderRadar summary={summary} />
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-            <Link href="/"><Home className="mr-1.5 h-4 w-4" /> Voir le site</Link>
+            <Link href="/" prefetch={false}><Home className="mr-1.5 h-4 w-4" /> Voir le site</Link>
           </Button>
           <ImportantActionConfirm
             title="Déconnecter l'administration ?"
@@ -226,6 +226,7 @@ function SidebarContent({
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={false}
                       onClick={onNavigate}
                       className={cn(
                         "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
@@ -266,7 +267,7 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
   if (summary.total === 0 && summary.urgent === 0 && summary.teacher === 0 && summary.payment === 0) {
     return (
       <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-        <Link href="/admin/notifications">
+        <Link href="/admin/notifications" prefetch={false}>
           <Bell className="mr-1.5 h-4 w-4" />
           Notifications
         </Link>
@@ -284,7 +285,7 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
         summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-white" : "border-[#CAD7F2] text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
       )}
     >
-      <Link href={summary.urgent > 0 ? "/admin/notifications?filter=urgent" : "/admin/notifications"}>
+      <Link href={summary.urgent > 0 ? "/admin/notifications?filter=urgent" : "/admin/notifications"} prefetch={false}>
         {summary.urgent > 0 ? <AlertTriangle className="mr-1.5 h-4 w-4" /> : <Bell className="mr-1.5 h-4 w-4" />}
         {summary.urgent > 0 ? `${summary.urgent} urgente(s)` : `${summary.total} notification(s)`}
       </Link>
@@ -308,6 +309,7 @@ function RadarPill({
   return (
     <Link
       href={href}
+      prefetch={false}
       onClick={onNavigate}
       className={cn(
         "rounded-lg border px-2 py-2 transition hover:border-[#111B4D]",
