@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Camera, Clock, KeyRound, Loader2, Save, ShieldCheck, Trash2, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT } from "@/lib/pricing";
@@ -248,6 +249,14 @@ export function TeacherForm({
   });
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
   const activeWithoutPhoto = isPublicVisibleTeacherStatus(status) && !photoUrl;
+  const communeSelectionGroups = useMemo(() => [{
+    label: "Villes et communes de Côte d'Ivoire",
+    options: communes.map((commune) => ({
+      value: commune.name,
+      label: commune.name,
+      keywords: commune.name,
+    })),
+  }], [communes]);
   const visibleCommunes = useMemo(() => {
     const normalizedQuery = normalizeSearch(zoneQuery);
     if (!normalizedQuery) return communes;
@@ -490,7 +499,19 @@ export function TeacherForm({
                 <Input type="email" {...register("email")} placeholder="prof@competence.ci" />
               </Field>
               <Field label="Commune">
-                <Input {...register("commune")} placeholder="Cocody" />
+                <Controller control={control} name="commune" render={({ field }) => (
+                  <SearchableCatalogSelect
+                    name="commune"
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder="Rechercher ou choisir une commune"
+                    searchPlaceholder="Tapez une ville ou commune..."
+                    emptyLabel="Aucune commune trouvée"
+                    allLabel="Aucune commune principale"
+                    groups={communeSelectionGroups}
+                    triggerClassName="min-h-10"
+                  />
+                )} />
               </Field>
               <Field label="Quartier">
                 <Input {...register("quartier")} placeholder="Riviera Palmeraie" />

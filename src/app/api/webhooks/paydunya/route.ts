@@ -4,6 +4,15 @@ import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
 
 type PayDunyaPayload = Record<string, any>;
 
+export function GET() {
+  return NextResponse.json({
+    ok: true,
+    provider: "PAYDUNYA",
+    endpoint: "ipn",
+    message: "Webhook PayDunya Compétence disponible. Les paiements sont validés uniquement par POST PayDunya.",
+  });
+}
+
 export async function POST(req: NextRequest) {
   let payload: PayDunyaPayload;
   try {

@@ -139,9 +139,10 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
   );
   const amountMatches = expectedAmount > 0 && confirmation.totalAmount === expectedAmount;
   const trustedWebhookHash = input.source === "webhook" && input.incomingHashVerified === true;
-  const hasTrustedPayDunyaHash = confirmation.hashValid || trustedWebhookHash;
-  const missingConfirmationHash = !confirmation.hashProvided && !trustedWebhookHash;
-  const invalidConfirmationHash = confirmation.hashProvided && !confirmation.hashValid;
+  const serverConfirmationTrusted = input.source !== "webhook" && confirmation.ok && !confirmation.hashProvided;
+  const hasTrustedPayDunyaProof = confirmation.hashValid || trustedWebhookHash || serverConfirmationTrusted;
+  const missingConfirmationHash = !confirmation.hashProvided && !trustedWebhookHash && !serverConfirmationTrusted;
+  const invalidConfirmationHash = confirmation.hashProvided && !confirmation.hashValid && !trustedWebhookHash;
   const lastPayload = compactPayload({
     source: input.source,
     incomingStatus: input.incomingStatus,
@@ -171,7 +172,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     };
   }
 
-  if (!confirmation.ok || !hasTrustedPayDunyaHash || missingConfirmationHash || invalidConfirmationHash || !tokenMatches) {
+  if (!confirmation.ok || !hasTrustedPayDunyaProof || missingConfirmationHash || invalidConfirmationHash || !tokenMatches) {
     await markSuspiciousPayment({
       booking,
       source: input.source,
@@ -179,7 +180,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
         !confirmation.ok ? `Confirmation PayDunya invalide: ${confirmation.responseText ?? "réponse non OK"}.` : "",
         missingConfirmationHash ? "Hash PayDunya absent sur la confirmation serveur." : "",
         invalidConfirmationHash ? "Hash PayDunya invalide sur la confirmation serveur." : "",
-        !hasTrustedPayDunyaHash ? "Aucun hash PayDunya vérifié disponible." : "",
+        !hasTrustedPayDunyaProof ? "Aucune preuve PayDunya vérifiée disponible." : "",
         !tokenMatches ? `Token confirmé différent. Reçu: ${token}. Confirmé: ${confirmedToken ?? "absent"}.` : "",
       ].filter(Boolean).join(" "),
       incomingPayload: { incoming: input.incomingPayload, confirmation: confirmation.raw },
@@ -390,7 +391,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
           action: "Paiement PayDunya vérifié serveur",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Token: ${token}. Hash PayDunya: ${confirmation.hashValid ? "confirmation OK" : "webhook OK"}.`,
+          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Token: ${token}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.`,
           oldStatus: booking.paymentStatus,
           newStatus: nextPaymentStatus,
         },
