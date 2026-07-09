@@ -320,8 +320,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const replacementTransport = booking.courseFormat === "HOME"
           ? calculateGrandAbidjanTransportFee({
               teacherCommune: newTeacher.commune,
+              teacherQuartier: newTeacher.quartier,
               teacherZoneNames: newTeacher.zones.map((zone) => zone.commune.name),
               clientCommune: booking.commune,
+              clientQuartier: booking.quartier,
             })
           : null;
         const nextTransportFee = replacementTransport?.amount ?? 0;

@@ -46,6 +46,13 @@ import {
   packSessionCount,
 } from "@/lib/pricing";
 import {
+  buildAbidjanCommuneOptions,
+  buildCityOptions,
+  buildQuartierOptions,
+  formatLocationSummary,
+  isAbidjanCity,
+} from "@/lib/ivory-coast-locations";
+import {
   ArrowLeft, ArrowRight, Lock, Home, Video, User, Users,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink,
 } from "lucide-react";
@@ -57,6 +64,7 @@ type Teacher = {
   photoUrl: string | null;
   jobTitle: string;
   commune: string | null;
+  quartier?: string | null;
   rating: number;
   ratingCount: number;
   pricePerSession: number;
@@ -432,6 +440,7 @@ export function ReserverForm({
     courseFormat: teacher.offersHome ? "HOME" : (teacher.offersOnline ? "ONLINE" : "HOME"),
     groupType: "INDIVIDUAL",
     participantsCount: 1,
+    city: "",
     commune: "",
     quartier: "",
     addressHint: "",
@@ -457,6 +466,24 @@ export function ReserverForm({
         : current.selectedTimeSlots,
       customDay: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customDay,
       customStartTime: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customStartTime,
+    }));
+  }
+
+  function handleCityChange(value: string) {
+    setForm((current) => ({
+      ...current,
+      city: value,
+      commune: isAbidjanCity(value) ? "" : value,
+      quartier: "",
+      addressHint: current.addressHint,
+    }));
+  }
+
+  function handleCommuneChange(value: string) {
+    setForm((current) => ({
+      ...current,
+      commune: value,
+      quartier: "",
     }));
   }
 
@@ -514,13 +541,17 @@ export function ReserverForm({
     })),
   }], [displayName, hasTeacherSubjects, subjects]);
   const communeSelectionGroups = useMemo(() => [{
-    label: "Villes et communes de Côte d'Ivoire",
-    options: communes.map((commune) => ({
-      value: commune.name,
-      label: commune.name,
-      keywords: commune.name,
-    })),
+    label: "Villes de Côte d'Ivoire",
+    options: buildCityOptions(communes.map((commune) => commune.name)),
   }], [communes]);
+  const abidjanCommuneGroups = useMemo(() => [{
+    label: "Communes du Grand Abidjan",
+    options: buildAbidjanCommuneOptions(),
+  }], []);
+  const quartierSelectionGroups = useMemo(() => [{
+    label: form.commune ? `Quartiers - ${form.commune}` : form.city ? `Quartiers - ${form.city}` : "Quartiers connus",
+    options: buildQuartierOptions(form.commune || form.city),
+  }], [form.city, form.commune]);
   const safeCourseCatalogId = selectedCategoryCourseIds.has(form.courseCatalogId) ? form.courseCatalogId : "";
   const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === safeCourseCatalogId);
   const schoolProgramPayload = buildSchoolProgramSummary({
@@ -548,8 +579,10 @@ export function ReserverForm({
     participantsCount,
     teacherPricePerSession: teacher.pricePerSession,
     teacherCommune: canResolveTransport ? teacher.commune : undefined,
+    teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
     teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
     clientCommune: canResolveTransport ? form.commune : undefined,
+    clientQuartier: canResolveTransport ? form.quartier : undefined,
   });
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
@@ -679,7 +712,9 @@ export function ReserverForm({
     }
     if (s === 2) {
       if (form.courseFormat === "HOME") {
-        if (!form.commune) return "Veuillez sélectionner votre commune.";
+        if (!form.city) return "Veuillez sélectionner votre ville.";
+        if (isAbidjanCity(form.city) && !form.commune) return "Veuillez sélectionner la commune d'Abidjan concernée.";
+        if (!form.commune) return "Veuillez sélectionner votre commune ou ville.";
         if (!form.quartier.trim()) return "Veuillez indiquer votre quartier.";
         if (!form.addressHint.trim()) return "Veuillez indiquer un repère ou une adresse approximative pour le cours à domicile.";
       }
@@ -1295,35 +1330,74 @@ export function ReserverForm({
               {form.courseFormat === "HOME" ? (
                 <div className="grid gap-4 min-[720px]:grid-cols-2">
                   <div>
-                    <Label htmlFor="commune">Recherche rapide ville ou commune *</Label>
+                    <Label htmlFor="city">Ville *</Label>
                     <SearchableCatalogSelect
-                      id="commune"
-                      name="commune"
-                      value={form.commune}
-                      onValueChange={(value) => update("commune", value)}
+                      id="city"
+                      name="city"
+                      value={form.city}
+                      onValueChange={handleCityChange}
                       placeholder="Saisir ou rechercher la ville"
-                      searchPlaceholder="Tapez Cocody, Yopougon, Bouaké, Korhogo..."
-                      emptyLabel="Aucune commune disponible."
-                      allLabel="Aucune commune choisie"
+                      searchPlaceholder="Tapez Abidjan, Bouaké, Yamoussoukro..."
+                      emptyLabel="Aucune ville disponible."
+                      allLabel="Aucune ville choisie"
                       groups={communeSelectionGroups}
                       triggerClassName="mt-1.5 min-h-12 rounded-lg"
                       allowCustomValue
                       customValueLabel="Utiliser cette ville"
                     />
                     <p className="mt-1 text-xs font-medium text-[#64748B]">
-                      Tapez les premières lettres pour filtrer la liste; si votre ville n'apparait pas, saisissez-la librement.
+                      Tapez les premières lettres pour filtrer. Pour Abidjan, choisissez ensuite la commune exacte.
+                    </p>
+                  </div>
+                  {isAbidjanCity(form.city) ? (
+                    <div>
+                      <Label htmlFor="commune">Commune d'Abidjan *</Label>
+                      <SearchableCatalogSelect
+                        id="commune"
+                        name="commune"
+                        value={form.commune}
+                        onValueChange={handleCommuneChange}
+                        placeholder="Choisir Cocody, Yopougon, Marcory..."
+                        searchPlaceholder="Tapez Cocody, Angré, Riviera, Yopougon..."
+                        emptyLabel="Aucune commune d'Abidjan trouvée."
+                        allLabel="Aucune commune choisie"
+                        groups={abidjanCommuneGroups}
+                        triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                      />
+                      <p className="mt-1 text-xs font-medium text-[#64748B]">
+                        Cette commune sert directement au calcul du forfait de déplacement.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Zone de calcul</p>
+                      <p className="mt-1 text-sm font-semibold text-[#111827]">{form.commune || "Ville à sélectionner"}</p>
+                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                        Hors Abidjan, la ville sélectionnée devient la commune de référence. Le quartier reste libre et recherché quand connu.
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <Label htmlFor="quartier">Quartier *</Label>
+                    <SearchableCatalogSelect
+                      id="quartier"
+                      name="quartier"
+                      value={form.quartier}
+                      onValueChange={(value) => update("quartier", value)}
+                      placeholder="Sélectionner ou saisir le quartier"
+                      searchPlaceholder="Tapez le quartier, ex : Riviera, Zone 4..."
+                      emptyLabel="Aucun quartier trouvé."
+                      allLabel="Aucun quartier choisi"
+                      groups={quartierSelectionGroups}
+                      triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                      allowCustomValue
+                      customValueLabel="Utiliser ce quartier"
+                    />
+                    <p className="mt-1 text-xs font-medium text-[#64748B]">
+                      Si le quartier n'est pas dans la liste, saisissez-le librement.
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="quartier">Quartier *</Label>
-                    <Input
-                      id="quartier"
-                      value={form.quartier}
-                      onChange={(e) => update("quartier", e.target.value)}
-                      placeholder="Ex: Riviera Palmeraie"
-                    />
-                  </div>
-                  <div className="min-[720px]:col-span-2">
                     <Label htmlFor="addressHint">Repère / adresse approximative *</Label>
                     <Textarea
                       id="addressHint"
@@ -1339,8 +1413,8 @@ export function ReserverForm({
                   <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
                     <div className="mt-3 grid gap-2 min-[760px]:grid-cols-3">
-                      <InfoMini label="Base professeur" value={teacher.commune ?? "À confirmer"} />
-                      <InfoMini label="Commune client" value={form.commune || "À sélectionner"} />
+                      <InfoMini label="Base professeur" value={[teacher.commune, teacher.quartier].filter(Boolean).join(" · ") || "À confirmer"} />
+                      <InfoMini label="Lieu client" value={formatLocationSummary(form.city, form.commune, form.quartier) || "À sélectionner"} />
                       <InfoMini
                         label="Frais estimés"
                         value={!form.commune ? "En attente" : pricing.isQuoteOnly ? "Forfait à finaliser" : formatFCFA(pricing.transportFee)}

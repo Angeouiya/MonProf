@@ -155,8 +155,10 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
       const transport = booking.courseFormat === "HOME"
         ? calculateGrandAbidjanTransportFee({
             teacherCommune: teacher.commune,
+            teacherQuartier: teacher.quartier,
             teacherZoneNames: zoneNames,
             clientCommune: booking.commune,
+            clientQuartier: booking.quartier,
           })
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;
@@ -240,4 +242,3 @@ export async function findBestReplacementCandidate(bookingId: string) {
   const result = await findReplacementCandidatesForBooking(bookingId, 1);
   return { booking: result.booking, candidate: result.items[0] ?? null };
 }
-

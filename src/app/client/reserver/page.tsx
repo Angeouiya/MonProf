@@ -43,6 +43,7 @@ export default async function ReserverPage({
           photoUrl: teacher.photoUrl,
           jobTitle: teacher.jobTitle,
           commune: teacher.commune,
+          quartier: teacher.quartier,
           rating: teacher.rating,
           ratingCount: teacher.ratingCount,
           pricePerSession: teacher.pricePerSession,

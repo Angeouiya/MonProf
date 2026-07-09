@@ -296,6 +296,10 @@ b {
   top: var(--app-topbar-height) !important;
   height: calc(100vh - var(--app-topbar-height)) !important;
   height: calc(100dvh - var(--app-topbar-height)) !important;
+  max-height: calc(100dvh - var(--app-topbar-height)) !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .public-shell > header:first-of-type,
@@ -1601,13 +1605,22 @@ b {
   display: none;
 }
 
-.client-mobile-drawer {
-  min-height: 100dvh;
-}
-
+.client-mobile-drawer,
 .professor-mobile-drawer,
 .admin-mobile-drawer {
-  min-height: 100dvh;
+  height: calc(100dvh - var(--app-topbar-height)) !important;
+  max-height: calc(100dvh - var(--app-topbar-height)) !important;
+  min-height: 0 !important;
+  overscroll-behavior: contain;
+}
+
+.client-mobile-drawer [data-client-sidebar-nav],
+.professor-mobile-drawer [data-professor-sidebar-nav],
+.admin-mobile-drawer [data-admin-sidebar-nav] {
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
 }
 
 .professor-shell,

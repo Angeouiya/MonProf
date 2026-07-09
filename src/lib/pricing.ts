@@ -4,6 +4,7 @@ import {
   PAYMENT_SERVICE_FEE_RATE_BPS,
   paymentServiceFeeDescription,
 } from "@/lib/payment-service-fees";
+import { ABIDJAN_COMMUNES } from "@/lib/ivory-coast-locations";
 
 export const CURRENCY = "XOF";
 
@@ -69,23 +70,23 @@ export type PriceTierKey = (typeof PRICE_TIERS)[PriceTierCode]["key"];
 export const TRANSPORT_FEES = {
   SAME_AREA: {
     key: "same_area",
-    label: "Même zone / quartier proche",
-    amount: 0,
+    label: "Même quartier / même commune proche",
+    amount: 1000,
   },
   NEAR_COMMUNE: {
     key: "near_commune",
     label: "Commune proche",
-    amount: 2000,
+    amount: 2500,
   },
   FAR_COMMUNE: {
     key: "far_commune",
     label: "Commune éloignée",
-    amount: 5000,
+    amount: 4500,
   },
   OUTSIDE_GRAND_ABIDJAN: {
     key: "outside_grand_abidjan",
     label: "Ville intérieure / zone étendue",
-    amount: 10000,
+    amount: 8000,
   },
 } as const;
 
@@ -98,6 +99,8 @@ export type TransportFeeResult = {
   amount: number | null;
   originCommune: string | null;
   destinationCommune: string | null;
+  originQuartier?: string | null;
+  destinationQuartier?: string | null;
   routeLabel: string;
   ruleLabel: string;
   coveredByTeacherZone: boolean;
@@ -106,22 +109,7 @@ export type TransportFeeResult = {
 };
 
 export const GRAND_ABIDJAN_AREAS = [
-  "Abobo",
-  "Adjamé",
-  "Angré",
-  "Anyama",
-  "Attécoubé",
-  "Bingerville",
-  "Cocody",
-  "Deux Plateaux",
-  "Koumassi",
-  "Marcory",
-  "Plateau",
-  "Port-Bouët",
-  "Riviera",
-  "Songon",
-  "Treichville",
-  "Yopougon",
+  ...ABIDJAN_COMMUNES,
 ] as const;
 
 export const GRAND_ABIDJAN_NEAR_ROUTES = [
@@ -234,8 +222,10 @@ export type BookingPricingInput = PricingDerivationInput & {
   teacherPricePerSession?: number | null;
   transportFeeKey?: string | null;
   teacherCommune?: string | null;
+  teacherQuartier?: string | null;
   teacherZoneNames?: string[];
   clientCommune?: string | null;
+  clientQuartier?: string | null;
   materialFee?: number;
 };
 
@@ -355,6 +345,8 @@ export function getTransportFeeResultByKey(key?: string | null): TransportFeeRes
     amount: fee.amount,
     originCommune: null,
     destinationCommune: null,
+    originQuartier: null,
+    destinationQuartier: null,
     routeLabel: fee.label,
     ruleLabel: fee.label,
     coveredByTeacherZone: false,
@@ -365,19 +357,27 @@ export function getTransportFeeResultByKey(key?: string | null): TransportFeeRes
 
 export function calculateGrandAbidjanTransportFee({
   teacherCommune,
+  teacherQuartier,
   teacherZoneNames = [],
   clientCommune,
+  clientQuartier,
 }: {
   teacherCommune?: string | null;
+  teacherQuartier?: string | null;
   teacherZoneNames?: string[];
   clientCommune?: string | null;
+  clientQuartier?: string | null;
 }): TransportFeeResult {
   const origin = displayAreaName(teacherCommune);
   const destination = displayAreaName(clientCommune);
+  const originQuartier = teacherQuartier?.trim() || null;
+  const destinationQuartier = clientQuartier?.trim() || null;
   const normalizedDestination = normalize(destination);
   const coveredByTeacherZone = teacherZoneNames.some((zone) => normalize(zone) === normalizedDestination);
   const fallbackOrigin = origin || teacherZoneNames.map(displayAreaName).find(Boolean) || null;
-  const routeLabel = fallbackOrigin && destination ? `${fallbackOrigin} -> ${destination}` : "Trajet a confirmer";
+  const routeLabel = fallbackOrigin && destination
+    ? `${fallbackOrigin}${originQuartier ? ` (${originQuartier})` : ""} -> ${destination}${destinationQuartier ? ` (${destinationQuartier})` : ""}`
+    : "Trajet a confirmer";
 
   if (!destination || !fallbackOrigin) {
     return {
@@ -386,6 +386,8 @@ export function calculateGrandAbidjanTransportFee({
       amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
+      originQuartier,
+      destinationQuartier,
       routeLabel,
       ruleLabel: "Commune professeur ou client manquante : forfait prudent applique automatiquement.",
       coveredByTeacherZone,
@@ -401,6 +403,8 @@ export function calculateGrandAbidjanTransportFee({
       amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
+      originQuartier,
+      destinationQuartier,
       routeLabel,
       ruleLabel: "Ville hors zone de proximité : forfait interurbain applique automatiquement.",
       coveredByTeacherZone,
@@ -410,14 +414,20 @@ export function calculateGrandAbidjanTransportFee({
   }
 
   if (sameArea(fallbackOrigin, destination)) {
+    const sameKnownQuartier = Boolean(originQuartier && destinationQuartier && normalize(originQuartier) === normalize(destinationQuartier));
+    const amount = sameKnownQuartier ? 750 : 1500;
     return {
       key: TRANSPORT_FEES.SAME_AREA.key,
       label: TRANSPORT_FEES.SAME_AREA.label,
-      amount: TRANSPORT_FEES.SAME_AREA.amount,
+      amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
+      originQuartier,
+      destinationQuartier,
       routeLabel,
-      ruleLabel: "Même commune ou même bassin de proximité.",
+      ruleLabel: sameKnownQuartier
+        ? "Même quartier : forfait léger appliqué."
+        : "Même commune ou même bassin proche : forfait local appliqué.",
       coveredByTeacherZone,
       isGrandAbidjanRoute: true,
       isQuoteOnly: false,
@@ -431,6 +441,8 @@ export function calculateGrandAbidjanTransportFee({
       amount: TRANSPORT_FEES.NEAR_COMMUNE.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
+      originQuartier,
+      destinationQuartier,
       routeLabel,
       ruleLabel: "Route proche dans la zone de déplacement.",
       coveredByTeacherZone,
@@ -445,6 +457,8 @@ export function calculateGrandAbidjanTransportFee({
     amount: TRANSPORT_FEES.FAR_COMMUNE.amount,
     originCommune: fallbackOrigin,
     destinationCommune: destination,
+    originQuartier,
+    destinationQuartier,
     routeLabel,
     ruleLabel: "Route éloignée mais calculée automatiquement.",
     coveredByTeacherZone,
@@ -461,8 +475,10 @@ function resolveTransportFee(input: BookingPricingInput): TransportFeeResult {
   if (input.teacherCommune || input.clientCommune || input.teacherZoneNames?.length) {
     return calculateGrandAbidjanTransportFee({
       teacherCommune: input.teacherCommune,
+      teacherQuartier: input.teacherQuartier,
       teacherZoneNames: input.teacherZoneNames,
       clientCommune: input.clientCommune,
+      clientQuartier: input.clientQuartier,
     });
   }
 

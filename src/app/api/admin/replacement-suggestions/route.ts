@@ -152,8 +152,10 @@ export async function GET(req: NextRequest) {
       const transport = booking.courseFormat === "HOME"
         ? calculateGrandAbidjanTransportFee({
             teacherCommune: teacher.commune,
+            teacherQuartier: teacher.quartier,
             teacherZoneNames: zoneNames,
             clientCommune: booking.commune,
+            clientQuartier: booking.quartier,
           })
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;

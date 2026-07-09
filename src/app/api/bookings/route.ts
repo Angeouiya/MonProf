@@ -384,8 +384,10 @@ export async function POST(req: NextRequest) {
     participantsCount: normalizedParticipants,
     teacherPricePerSession: teacher.pricePerSession,
     teacherCommune: courseFormat === "HOME" ? teacher.commune : undefined,
+    teacherQuartier: courseFormat === "HOME" ? teacher.quartier : undefined,
     teacherZoneNames: courseFormat === "HOME" ? teacher.zones.map((zone) => zone.commune.name) : undefined,
     clientCommune: courseFormat === "HOME" ? commune : undefined,
+    clientQuartier: courseFormat === "HOME" ? quartier : undefined,
   });
   const basePrice = pricing.numberOfSessions ? pricing.unitSessionAmount * pricing.numberOfSessions : 0;
   const unitPrice = pricing.unitSessionAmount;
