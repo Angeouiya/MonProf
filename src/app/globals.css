@@ -298,8 +298,19 @@ b {
   height: calc(100dvh - var(--app-topbar-height)) !important;
   max-height: calc(100dvh - var(--app-topbar-height)) !important;
   min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
+}
+
+@media (max-width: 1023px) {
+  .app-sidebar-below-topbar {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-sidebar-below-topbar {
+    display: flex !important;
+    flex-direction: column !important;
+  }
 }
 
 .public-shell > header:first-of-type,
@@ -4981,7 +4992,14 @@ b {
   pointer-events: none !important;
 }
 
-.client-shell [data-client-mobile-layer] {
+.professor-shell[data-mobile-menu-open="true"] [data-professor-mobile-nav] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.client-shell [data-client-mobile-layer],
+.professor-shell [data-professor-mobile-layer],
+.admin-shell [data-admin-mobile-layer] {
   z-index: 80 !important;
 }
 

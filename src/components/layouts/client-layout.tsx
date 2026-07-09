@@ -72,6 +72,8 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
 
   useEffect(() => {
+    setOpen(false);
+    setMobileSearchOpen(false);
     if (navigationDelayRef.current) {
       window.clearTimeout(navigationDelayRef.current);
       navigationDelayRef.current = null;

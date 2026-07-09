@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   Bell,
@@ -90,8 +90,12 @@ export function ProfessorLayout({
     item.exact ? pathname === item.href : pathname?.startsWith(item.href)
   );
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
-    <div data-professor-layout className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div data-professor-layout data-mobile-menu-open={open ? "true" : "false"} className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <header data-professor-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
         <div className="flex items-center gap-3">
@@ -178,7 +182,7 @@ export function ProfessorLayout({
         </aside>
 
         {open && (
-          <div data-professor-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-professor-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-[80] overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside data-professor-mobile-drawer className="professor-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex min-h-18 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">

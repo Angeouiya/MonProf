@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Users, GraduationCap, CalendarRange, Wallet,
   ShieldAlert, Tag, Bell, Settings, LogOut, Menu, X, BookOpen,
@@ -101,8 +101,12 @@ export function AdminLayout({
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname?.startsWith(href);
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
-    <div data-admin-layout className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+    <div data-admin-layout data-mobile-menu-open={open ? "true" : "false"} className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <header data-admin-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -155,7 +159,7 @@ export function AdminLayout({
         </aside>
 
         {open && (
-          <div data-admin-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-30 overflow-hidden lg:hidden">
+          <div data-admin-mobile-layer className="app-topbar-offset fixed inset-x-0 bottom-0 z-[80] overflow-hidden lg:hidden">
             <div className="absolute inset-0 bg-[#111827]" onClick={() => setOpen(false)} />
             <aside data-admin-mobile-drawer className="admin-mobile-drawer absolute left-0 top-0 flex h-full w-[19rem] max-w-[88%] flex-col overflow-hidden border-r border-[#E6EAF3] bg-white">
               <div className="flex h-14 items-center justify-between border-b border-[#E6EAF3] px-4">
