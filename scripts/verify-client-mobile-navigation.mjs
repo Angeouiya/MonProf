@@ -228,8 +228,12 @@ record(
 record(
   "Client mobile pages keep app-like compact copy",
   /data-client-page-header-description/.test(clientPrimitives)
+    && /data-client-root-tab-header/.test(clientPrimitives)
+    && /data-client-page-header-eyebrow/.test(clientPrimitives)
     && /data-client-section-description/.test(clientPrimitives)
     && /data-client-focus-description/.test(clientPrimitives)
+    && /\[data-client-root-tab-header="true"\]\)\s*\{[\s\S]*?padding-bottom:\s*0\.45rem\s*!important;[\s\S]*?\}/.test(css)
+    && /\[data-client-root-tab-header="true"\]\s+\[data-client-page-header-eyebrow\]\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
     && /\[data-client-page-header-description\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
     && /\[data-client-section-description\],[\s\S]*?\[data-client-focus-description\]\s*\{[\s\S]*?-webkit-line-clamp:\s*1;[\s\S]*?\}/.test(css),
 );

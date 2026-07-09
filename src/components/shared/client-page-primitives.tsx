@@ -29,6 +29,7 @@ export function ClientPageHeader({
     <section
       data-app-page-header
       data-client-page-header
+      data-client-root-tab-header={!showBack ? "true" : "false"}
       className={cn("client-page-header client-screen-header border-b border-[#E6EAF3] bg-white pb-2.5 pt-0 sm:pb-3", className)}
     >
       <div className="flex flex-col gap-2.5 lg:flex-row lg:items-end lg:justify-between">
@@ -36,7 +37,7 @@ export function ClientPageHeader({
           <div className="mb-1.5 flex min-h-8 flex-wrap items-center gap-2">
             {showBack && <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg border-[#DDE6F7] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white" />}
             {eyebrow && (
-              <span className="inline-flex min-h-8 items-center text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">
+              <span data-client-page-header-eyebrow className="inline-flex min-h-8 items-center text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">
                 {eyebrow}
               </span>
             )}

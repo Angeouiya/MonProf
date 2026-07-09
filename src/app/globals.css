@@ -5155,9 +5155,25 @@ b {
 }
 
 @media (max-width: 559px) {
+  .client-shell :where([data-client-root-tab-header="true"]) {
+    padding-bottom: 0.45rem !important;
+  }
+
+  .client-shell :where([data-client-root-tab-header="true"] [data-client-page-header-eyebrow]) {
+    display: none !important;
+  }
+
+  .client-shell :where([data-client-root-tab-header="true"] > div) {
+    gap: 0.35rem !important;
+  }
+
   .client-shell :where([data-client-page-header]) h1 {
     font-size: clamp(1.18rem, 6.2vw, 1.48rem) !important;
     line-height: 1.08 !important;
+  }
+
+  .client-shell :where([data-client-root-tab-header="true"] h1) {
+    font-size: clamp(1.08rem, 5.4vw, 1.32rem) !important;
   }
 
   .client-shell [data-client-page-header-description] {
