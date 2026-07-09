@@ -351,6 +351,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased"
     >
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
+      <a
+        href="#client-main-content"
+        data-client-skip-link
+        className="fixed left-3 top-3 z-[120] -translate-y-20 rounded-lg bg-[#111B4D] px-4 py-2 text-sm font-semibold text-white transition focus:translate-y-0"
+      >
+        Aller au contenu
+      </a>
       {/* Top bar (mobile + desktop) */}
       <header data-client-topbar className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
@@ -581,7 +588,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               : "client-main-with-mobile-nav pb-40"
           )}
         >
-          <div data-client-content className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">
+          <div id="client-main-content" tabIndex={-1} data-client-content className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">
             {children}
           </div>
         </main>

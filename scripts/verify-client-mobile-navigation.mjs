@@ -145,6 +145,16 @@ record(
 );
 
 record(
+  "Client shell exposes a keyboard skip link to the main content",
+  /data-client-skip-link/.test(layout)
+    && /href="#client-main-content"/.test(layout)
+    && /id="client-main-content"/.test(layout)
+    && /tabIndex=\{-1\}/.test(layout)
+    && /focus:translate-y-0/.test(layout)
+    && /bg-\[#111B4D\]/.test(layout),
+);
+
+record(
   "Client mobile drawer does not repeat the primary search action",
   /const showPrimaryAction\s*=\s*!compactAccount\s*;/.test(layout)
     && /\{showPrimaryAction\s*&&\s*\(/.test(layout)
