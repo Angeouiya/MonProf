@@ -106,7 +106,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 80);
+    }, 35);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -114,7 +114,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 480);
+    }, 220);
   }
 
   function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {

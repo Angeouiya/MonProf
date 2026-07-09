@@ -4741,7 +4741,7 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation-duration: 180ms !important;
+  animation-duration: 120ms !important;
 }
 
 /* Final mobile guard: app rails stay readable and never become cramped horizontal strips. */
