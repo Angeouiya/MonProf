@@ -187,7 +187,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" prefetch className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
+          <Link href="/client" prefetch={false} className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
             <BrandLogo size="sm" compact priority className="lg:hidden" />
             <BrandLogo size="sm" priority className="hidden lg:inline-flex" />
           </Link>
@@ -227,7 +227,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             PayDunya vérifié
           </div>
           <Button asChild className="hidden min-h-11 rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] lg:inline-flex">
-            <Link href="/client/rechercher" prefetch>
+            <Link href="/client/rechercher" prefetch={false}>
               Trouver un professeur
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -247,7 +247,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </Button>
           <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
-            <Link href="/client/notifications" prefetch>
+            <Link href="/client/notifications" prefetch={false}>
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
@@ -323,7 +323,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch
+                prefetch={false}
                 onClick={() => setMobileSearchOpen(false)}
                 className="inline-flex min-h-9 min-w-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-center text-xs font-semibold text-[#111B4D]"
               >
@@ -373,7 +373,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                   {!!notificationCount && (
                     <Link
                       href="/client/notifications"
-                      prefetch
+                      prefetch={false}
                       onClick={() => setOpen(false)}
                       className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D]"
                     >
@@ -430,7 +430,7 @@ function SidebarContent({
         </p>
         <Link
           href="/client/rechercher"
-          prefetch
+          prefetch={false}
           onClick={onNavigate}
           className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
         >
@@ -446,7 +446,7 @@ function SidebarContent({
             <Link
               key={item.href}
               href={item.href}
-              prefetch
+              prefetch={false}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               data-client-sidebar-link
@@ -487,7 +487,7 @@ function SidebarContent({
                 <Link
                   key={item.href}
                   href={item.href}
-                  prefetch
+                  prefetch={false}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
@@ -584,7 +584,7 @@ function MobileBottomNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch
+              prefetch={false}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-xs font-semibold transition-colors min-[390px]:px-1",
                 active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
