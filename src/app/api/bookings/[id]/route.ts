@@ -1094,8 +1094,8 @@ export async function PATCH(
       if (!parsedReschedule) {
         return NextResponse.json({ error: "Nouvelle date ou heure invalide." }, { status: 400 });
       }
-      if (parsedReschedule.startsAt.getTime() < now.getTime() + 24 * 60 * 60 * 1000) {
-        return NextResponse.json({ error: "Le nouveau créneau doit être choisi au moins 24h à l'avance." }, { status: 400 });
+      if (parsedReschedule.startsAt.getTime() < now.getTime() + 2 * 60 * 60 * 1000) {
+        return NextResponse.json({ error: "Le nouveau créneau doit commencer au moins 2h après la demande. Pour une urgence, contactez le service client." }, { status: 400 });
       }
       const currentDate = booking.scheduledDate ?? booking.startDate;
       const currentTime = booking.scheduledTime || booking.preferredTime;

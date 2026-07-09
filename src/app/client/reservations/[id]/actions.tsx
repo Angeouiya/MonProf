@@ -808,7 +808,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <DialogHeader>
                 <DialogTitle>Modifier le créneau du cours</DialogTitle>
                 <DialogDescription>
-                  Choisissez une nouvelle date et une heure de début. Une séance reste toujours fixée sur 2h.
+                  Choisissez une nouvelle date et une heure de début. Une séance reste fixée sur 2h, et le report peut être payant selon le délai avant le cours initial.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -819,7 +819,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                       <p className="mt-1 text-xs font-semibold text-[#64748B]">{reschedulePolicySummary(reschedulePolicy)}</p>
                     </div>
                     <span className="inline-flex w-fit rounded-full border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
-                      Avant validation
+                      Règle appliquée
                     </span>
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-[#64748B]">{reschedulePolicy.description}</p>
@@ -846,6 +846,9 @@ export function BookingActions({ booking }: BookingActionsProps) {
                       Après paiement PayDunya vérifié, la demande part au professeur. Le créneau change seulement quand le professeur confirme.
                     </p>
                   )}
+                  <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">
+                    La règle est calculée sur le créneau initial. Le nouveau créneau peut être demandé dès aujourd'hui s'il commence au moins 2h après votre demande.
+                  </p>
                 </div>
 
                 <div className="grid gap-3 min-[560px]:grid-cols-2">
@@ -1144,8 +1147,14 @@ function refundStatusLabel(status: string) {
 
 function minimumRescheduleDateInput() {
   const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
+  return formatDateInput(date);
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function getForegroundNotice({
