@@ -74,7 +74,7 @@ export default async function AdminReservationsPage({
   if (courseCategory) where.courseCategory = courseCategory;
   if (schoolSystem) where.schoolSystem = schoolSystem;
 
-  const [bookings, teachers] = await Promise.all([
+  const [bookings, teachers] = await db.$transaction([
     db.booking.findMany({
       where,
       orderBy: { createdAt: "desc" },

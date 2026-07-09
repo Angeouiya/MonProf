@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Note trop longue (${MAX_NOTE_LENGTH} caractères maximum).` }, { status: 400 });
   }
 
-  const [bookings, adjustments, pendingRequests] = await Promise.all([
+  const [bookings, adjustments, pendingRequests] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         teacherId: teacher.id,

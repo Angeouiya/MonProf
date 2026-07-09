@@ -70,7 +70,7 @@ export default async function CentreOperationnelPage() {
     suspendedTeachers,
     disputedBookings,
     missionAlerts,
-  ] = await Promise.all([
+  ] = await db.$transaction([
     db.teacherTask.findMany({
       where: { status: { in: ["TODO", "SENT_TO_TEACHER", "LATE"] }, priority: { in: ["URGENT", "CRITICAL"] } },
       include: { teacher: true, booking: true },

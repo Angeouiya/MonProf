@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, type MouseEvent, type PointerEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
@@ -74,13 +74,16 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     pathname?.startsWith("/client/reserver")
     || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
   );
+  const closeMobileSurfaces = useCallback(() => {
+    setOpen(false);
+    setMobileSearchOpen(false);
+  }, []);
 
   const isActive = (item: ClientNavItem) =>
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
 
   useEffect(() => {
-    setOpen(false);
-    setMobileSearchOpen(false);
+    closeMobileSurfaces();
     if (navigationDelayRef.current) {
       window.clearTimeout(navigationDelayRef.current);
       navigationDelayRef.current = null;
@@ -91,7 +94,35 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     }
     const routeSettledTimer = window.setTimeout(() => setNavigating(false), 0);
     return () => window.clearTimeout(routeSettledTimer);
-  }, [pathname, searchKey]);
+  }, [pathname, searchKey, closeMobileSurfaces]);
+
+  useEffect(() => {
+    closeMobileSurfaces();
+
+    const closeOnPageShow = () => closeMobileSurfaces();
+    const closeOnVisible = () => {
+      if (document.visibilityState === "visible") closeMobileSurfaces();
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileSurfaces();
+    };
+    const closeOnDesktop = () => {
+      if (window.innerWidth >= 1024) closeMobileSurfaces();
+    };
+
+    window.addEventListener("pageshow", closeOnPageShow);
+    window.addEventListener("resize", closeOnDesktop);
+    document.addEventListener("visibilitychange", closeOnVisible);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.removeEventListener("pageshow", closeOnPageShow);
+      window.removeEventListener("resize", closeOnDesktop);
+      document.removeEventListener("visibilitychange", closeOnVisible);
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = "";
+    };
+  }, [closeMobileSurfaces]);
 
   useEffect(() => {
     return () => {
@@ -216,7 +247,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
             onClick={() => {
               setMobileSearchOpen(false);
-              setOpen(!open);
+              setOpen((value) => !value);
             }}
             aria-label="Menu"
             aria-expanded={open}
@@ -370,7 +401,8 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             <button
               type="button"
               className="absolute inset-0 cursor-default bg-[#050B24]"
-              onClick={() => setOpen(false)}
+              onPointerDown={closeMobileSurfaces}
+              onClick={closeMobileSurfaces}
               aria-label="Fermer le menu client"
             />
             <aside
@@ -382,7 +414,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
             >
               <div className="flex min-h-16 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
-                <button onClick={() => setOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
+                <button onClick={closeMobileSurfaces} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -397,7 +429,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                     <Link
                       href="/client/notifications"
                       prefetch={CLIENT_NAV_PREFETCH}
-                      onClick={() => setOpen(false)}
+                      onClick={closeMobileSurfaces}
                       className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D]"
                     >
                       {notificationCount > 99 ? "99+" : notificationCount}
@@ -405,7 +437,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                   )}
                 </div>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={() => setOpen(false)} compactAccount />
+              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} compactAccount />
             </aside>
           </div>
         )}

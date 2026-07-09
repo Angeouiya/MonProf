@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminParametresPage() {
   await requireAdmin();
   const rows = await db.setting.findMany();
-  const [schemaStats, teacherCount, subjectCount, levelCount, communeCount, userCount] = await Promise.all([
+  const [schemaStats, teacherCount, subjectCount, levelCount, communeCount, userCount] = await db.$transaction([
     db.$queryRaw<Array<{ table_schema: string; tables: bigint | number }>>`
       SELECT table_schema, COUNT(*)::int AS tables
       FROM information_schema.tables

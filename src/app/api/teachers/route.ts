@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       break;
   }
 
-  const [total, teachers] = await Promise.all([
+  const [total, teachers] = await db.$transaction([
     db.teacher.count({ where }),
     db.teacher.findMany({
       where,

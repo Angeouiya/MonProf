@@ -46,7 +46,7 @@ export default async function AdminPaiementsPage({
     if (to) where.createdAt.lte = new Date(to.getTime() + 24*60*60*1000);
   }
 
-  const [rawTxs, teacherPayouts, teacherPayoutAgg] = await Promise.all([
+  const [rawTxs, teacherPayouts, teacherPayoutAgg] = await db.$transaction([
     db.transaction.findMany({
       where,
       orderBy: { createdAt: "desc" },
