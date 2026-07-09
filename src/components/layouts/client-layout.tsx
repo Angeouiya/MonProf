@@ -6,7 +6,7 @@ import { type FormEvent, type MouseEvent, type PointerEvent, useEffect, useRef, 
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
-  ShieldCheck, ArrowRight, Settings
+  ArrowRight, Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -222,16 +222,6 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
           </button>
         </form>
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-1.5 text-xs font-semibold text-[#111B4D] xl:flex">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            PayDunya vérifié
-          </div>
-          <Button asChild className="hidden min-h-11 rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] lg:inline-flex">
-            <Link href="/client/rechercher" prefetch={false}>
-              Trouver un professeur
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -255,9 +245,6 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
                 </span>
               )}
             </Link>
-          </Button>
-          <Button asChild variant="outline" className="hidden min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white xl:inline-flex">
-            <Link href="/" prefetch={false}>Retour au site</Link>
           </Button>
           <ImportantActionConfirm
             title="Quitter l'espace client ?"
@@ -529,32 +516,6 @@ function SidebarContent({
               </button>
             }
           />
-          {!compactAccount && (
-            <>
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium leading-4 text-[#64748B]">
-                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-                Paiement protégé jusqu'à validation.
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[#E6EAF3] pt-2 text-[11px] font-semibold text-[#64748B]">
-                <Link
-                  href="/conditions-utilisation"
-                  prefetch={false}
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
-                  onClick={onNavigate}
-                >
-                  CGU
-                </Link>
-                <Link
-                  href="/politique-confidentialite"
-                  prefetch={false}
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
-                  onClick={onNavigate}
-                >
-                  Confidentialité
-                </Link>
-              </div>
-            </>
-          )}
         </div>
       </div>
     </div>
