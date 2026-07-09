@@ -261,6 +261,16 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     throw new Error("PayDunya a renvoyé une facture incomplète: URL de paiement ou token manquant.");
   }
 
+  console.info("[paydunya:create_success]", {
+    responseCode,
+    mode: config.mode,
+    amount: input.booking.totalClientPays,
+    bookingReference: input.booking.reference,
+    callbackUrl,
+    returnUrl,
+    hasToken: Boolean(token),
+  });
+
   return {
     configured: true,
     checkoutUrl,
@@ -427,10 +437,10 @@ function emptyPayDunyaConfirmation(input: {
 
 export function normalizePayDunyaStatus(status: unknown): PayDunyaInvoiceStatus {
   const normalized = typeof status === "string" ? status.trim().toLowerCase() : "";
-  if (normalized === "completed") return "completed";
-  if (normalized === "pending") return "pending";
-  if (normalized === "cancelled" || normalized === "canceled") return "cancelled";
-  if (normalized === "failed") return "failed";
+  if (["completed", "complete", "success", "successful", "paid"].includes(normalized)) return "completed";
+  if (["pending", "processing", "created"].includes(normalized)) return "pending";
+  if (["cancelled", "canceled", "cancel"].includes(normalized)) return "cancelled";
+  if (["failed", "fail", "error", "declined"].includes(normalized)) return "failed";
   return "unknown";
 }
 

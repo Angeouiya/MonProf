@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientCompactFacts,
   ClientFocusPanel,
   ClientInfoPill,
@@ -133,15 +132,6 @@ export default async function PaiementsPage() {
           { icon: Wallet, label: "Bloqués", value: formatFCFA(fondsBloques), attention: fondsBloques > 0 },
           { icon: ArrowDownCircle, label: "Remboursé", value: formatFCFA(totalRembourse) },
           { icon: Clock3, label: "À finaliser", value: `${pendingPaymentBookings.length} dossier(s)`, attention: pendingPaymentBookings.length > 0 },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/paiements", icon: ReceiptText, label: "Historique", value: `${transactions.length} mouvement(s)`, active: true },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations liées" },
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau cours" },
-          { href: "/client/service-client", icon: ShieldCheck, label: "Sécurité", value: "Litige ou remboursement" },
         ]}
       />
 

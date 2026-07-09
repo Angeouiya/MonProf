@@ -601,6 +601,11 @@ export async function POST(req: NextRequest) {
       });
     } catch (error: any) {
       const errorMessage = error?.message || "PayDunya indisponible.";
+      console.error("[booking:paydunya_create_failed]", {
+        bookingId: booking.id,
+        bookingReference: booking.reference,
+        reason: errorMessage,
+      });
       paydunya = {
         configured: true,
         checkoutUrl: null,

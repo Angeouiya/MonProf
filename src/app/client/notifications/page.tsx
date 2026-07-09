@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -113,15 +112,6 @@ export default async function ClientNotificationsPage() {
           { icon: AlertTriangle, label: "Urgentes", value: urgentCount, attention: urgentCount > 0 },
           { icon: WalletCards, label: "Paiements", value: paymentCount },
           { icon: ShieldCheck, label: "Suivi", value: formatCount(bookingCount, "dossier") },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/notifications", icon: Bell, label: "Centre", value: "Tous les messages", active: true },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: formatCount(bookingCount, "suivi") },
-          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatCount(paymentCount, "alerte") },
-          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
         ]}
       />
 

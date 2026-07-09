@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
@@ -180,16 +179,6 @@ export default async function ClientDashboardPage() {
           { icon: BookOpen, label: "Cours", value: `${upcomingBookings} à venir` },
           { icon: Bell, label: "Action", value: pendingValidation.length ? formatCount(pendingValidation.length, "attente") : "À jour", attention: pendingValidation.length > 0 },
           { icon: CheckCircle2, label: "Terminés", value: completedBookings },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client", icon: LayoutDashboard, label: "Accueil", value: "Vue générale", active: true },
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Choisir un professeur" },
-          { href: "/client/cours", icon: BookOpen, label: "Cours", value: `${upcomingBookings} actif${upcomingBookings > 1 ? "s" : ""}` },
-          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatFCFACompact(blockedFundsAmount) },
-          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide et litige" },
         ]}
       />
 

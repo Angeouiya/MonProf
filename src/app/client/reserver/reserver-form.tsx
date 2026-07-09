@@ -783,7 +783,7 @@ export function ReserverForm({
         toast.success("Redirection vers PayDunya...");
         window.location.assign(data.payment.checkoutUrl);
       } else {
-        toast.warning(data.payment?.error || "Réservation créée. PayDunya doit être configuré pour encaisser le paiement.");
+        toast.error(data.payment?.error || "PayDunya n'a pas renvoyé de lien de paiement. Le dossier reste en brouillon et aucun professeur n'est notifié.");
         router.push(`/client/reservations/${data.booking.id}?payment=pending`);
       }
     } catch (e: any) {

@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
   ClientCompactFacts,
-  ClientAppRail,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -224,15 +223,6 @@ export default async function CoursPage({
           { icon: Calendar, label: "À venir", value: tabCounts.avenir ?? 0 },
           { icon: MessageSquare, label: "À confirmer", value: confirmationCount, attention: confirmationCount > 0 },
           { icon: WalletCards, label: "À finaliser", value: pendingCourseBookings.length, attention: pendingCourseBookings.length > 0 },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/cours", icon: BookOpen, label: "Cours", value: formatCount(activeCourseCount, "cours"), active: true },
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau cours" },
-          { href: "/client/reservations", icon: Calendar, label: "Dossiers", value: "Réservations" },
-          { href: "/client/notifications", icon: MessageSquare, label: "Alertes", value: formatCount(confirmationCount, "confirmation") },
         ]}
       />
 

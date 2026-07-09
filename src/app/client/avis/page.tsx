@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
@@ -115,15 +114,6 @@ export default async function AvisPage() {
           { icon: ClipboardCheck, label: "À donner", value: bookingsToReview.length, attention: bookingsToReview.length > 0 },
           { icon: MessageSquare, label: "Envoyés", value: myReviews.length },
           { icon: ShieldCheck, label: "Qualité", value: "Suivi service client" },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/avis", icon: MessageSquare, label: "Avis", value: `${myReviews.length} publié(s)`, active: true },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Cours terminés" },
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Nouveau professeur" },
-          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Qualité et litige" },
         ]}
       />
 

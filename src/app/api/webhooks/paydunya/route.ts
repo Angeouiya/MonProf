@@ -57,8 +57,22 @@ export async function POST(req: NextRequest) {
   );
 
   if (!bookingId && !bookingReference && !invoiceToken) {
+    console.warn("[paydunya:webhook_missing_reference]", {
+      hasInvoice: Object.keys(invoice).length > 0,
+      hasCustomData: Object.keys(customData).length > 0,
+      status,
+      hashVerified,
+    });
     return NextResponse.json({ error: "Réservation PayDunya introuvable dans custom_data ou token." }, { status: 400 });
   }
+
+  console.info("[paydunya:webhook_received]", {
+    hasBookingId: Boolean(bookingId),
+    hasBookingReference: Boolean(bookingReference),
+    hasToken: Boolean(invoiceToken),
+    status,
+    hashVerified,
+  });
 
   const result = await reconcilePayDunyaBookingPayment({
     bookingId,

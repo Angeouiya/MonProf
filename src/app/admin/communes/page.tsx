@@ -5,23 +5,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { MapPin } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import { CommunesClient } from "./client";
 import { GRAND_ABIDJAN_AREAS, GRAND_ABIDJAN_NEAR_ROUTES, TRANSPORT_FEES } from "@/lib/pricing";
 import { formatFCFA } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCommunesPage() {
+export default async function AdminCommunesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ q?: string }>;
+}) {
   await requireAdmin();
+  const sp = searchParams ? await searchParams : {};
+  const q = sp.q?.trim() ?? "";
   const communes = await db.commune.findMany({
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { zone: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
     orderBy: { name: "asc" },
     include: { _count: { select: { teachers: true } } },
   });
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Communes & quartiers" description={`${communes.length} commune(s)`} />
+      <PageHeader title="Communes & quartiers" description={`${communes.length} commune(s)${q ? ` pour "${q}"` : ""}`} />
       <Card className="border-violet-100 bg-white">
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
@@ -64,8 +78,45 @@ export default async function AdminCommunesPage() {
           </div>
         </CardContent>
       </Card>
+      <form
+        method="GET"
+        action="/admin/communes"
+        className="grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
+      >
+        <label className="relative block min-w-0">
+          <span className="sr-only">Rechercher une ville ou commune</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Saisir une ville, commune ou zone..."
+            className="min-h-11 w-full rounded-lg border border-violet-100 bg-white pl-10 pr-3 text-sm font-medium outline-none transition focus:border-[#111B4D] focus:ring-2 focus:ring-violet-100"
+          />
+        </label>
+        <button
+          type="submit"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
+        >
+          <Search className="h-4 w-4" />
+          Rechercher
+        </button>
+        {q && (
+          <a
+            href="/admin/communes"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-violet-100 bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+          >
+            <X className="h-4 w-4" />
+            Effacer
+          </a>
+        )}
+      </form>
       {communes.length === 0 ? (
-        <EmptyState icon={MapPin} title="Aucune commune" description="Ajoutez votre première commune." />
+        <EmptyState
+          icon={MapPin}
+          title={q ? "Aucune commune ne correspond à la recherche" : "Aucune commune"}
+          description={q ? "Essayez une autre ville, une autre orthographe ou effacez la recherche." : "Ajoutez votre première commune."}
+        />
       ) : (
         <>
           <div className="grid gap-3 md:hidden">

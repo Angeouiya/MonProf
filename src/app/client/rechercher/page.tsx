@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import {
-  ClientAppRail,
   ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
@@ -144,15 +143,6 @@ export default async function RechercherPage({
           { icon: ShieldCheck, label: "Certifiés", value: certifiedCount },
           { icon: MapPin, label: "Domicile", value: homeCount },
           { icon: BookOpenCheck, label: "En ligne", value: onlineCount },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/rechercher", icon: Search, label: "Recherche", value: "Professeurs", active: true },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: "Réservations" },
-          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: "PayDunya" },
-          { href: "/client/service-client", icon: LifeBuoy, label: "Service client", value: "Aide" },
         ]}
       />
 

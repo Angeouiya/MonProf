@@ -488,19 +488,3 @@ export function ClientProcessTracker({
     </ol>
   );
 }
-
-export function ClientAppRail({
-  items: _items,
-  className: _className,
-}: {
-  items: Array<{
-    label: string;
-    value: ReactNode;
-    icon?: LucideIcon;
-    href?: string;
-    active?: boolean;
-  }>;
-  className?: string;
-}) {
-  return null;
-}

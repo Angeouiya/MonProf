@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -186,16 +185,6 @@ export default async function ReservationsPage({
           { icon: WalletCards, label: "Non réservés", value: draftBookings.length, attention: draftBookings.length > 0 },
           { icon: Wallet, label: "Bloqués", value: blockedBookings.length, attention: blockedBookings.length > 0 },
           { icon: MessageSquare, label: "À confirmer", value: toConfirmBookings.length, attention: toConfirmBookings.length > 0 },
-        ]}
-      />
-
-      <ClientAppRail
-        items={[
-          { href: "/client/rechercher", icon: Search, label: "Réserver", value: "Choisir un professeur" },
-          { href: "/client/reservations", icon: CalendarCheck, label: "Dossiers", value: `${allBookings.length} réservation(s)`, active: true },
-          { href: "/client/reservations?tab=brouillons", icon: WalletCards, label: "Non réservés", value: `${draftBookings.length} paiement(s)` },
-          { href: "/client/reservations?tab=aconfirmer", icon: MessageSquare, label: "À confirmer", value: `${toConfirmBookings.length} action(s)` },
-          { href: "/client/paiements", icon: WalletCards, label: "Paiements", value: formatFCFA(securedAmount) },
         ]}
       />
 

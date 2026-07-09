@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientAppRail,
   ClientPageHeader,
   ClientProcessTracker,
   ClientSectionTitle,
@@ -314,35 +313,6 @@ export default async function ReservationDetailPage({
           <ReservationStatusChip label="Paiement" value={formatClientPaymentStatus(booking.paymentStatus, booking.isQuoteOnly)} />
         </div>
       </ClientPageHeader>
-
-      <ClientAppRail
-        items={[
-          {
-            label: "Dossier",
-            value: formatClientBookingStatus(booking.status),
-            icon: ClipboardCheck,
-            active: true,
-          },
-          {
-            label: "Professeur",
-            value: name,
-            icon: User,
-            href: `/professeurs/${booking.teacher.id}`,
-          },
-          {
-            label: "Paiement",
-            value: booking.isQuoteOnly ? "Prix à finaliser" : paymentConfirmed ? "Sécurisé" : "À finaliser",
-            icon: WalletCards,
-            href: "/client/paiements",
-          },
-          {
-            label: "Assistance",
-            value: hasBlockingClientState(booking.status, booking.paymentStatus, booking.disputes.length) ? "Suivi prioritaire" : "Service client",
-            icon: LifeBuoy,
-            href: "/client/service-client",
-          },
-        ]}
-      />
 
       {returnedFromPayDunya && paymentConfirmed && (
         <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
