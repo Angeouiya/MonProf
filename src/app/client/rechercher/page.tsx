@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
@@ -159,16 +160,18 @@ export default async function RechercherPage({
         ]}
       />
 
-      <SearchCommandCenter
-        resultCount={items.length}
-        activeFilterCount={activeFilters.length}
-        hasQuery={Boolean(q)}
-        subjectLabel={subjectLabel}
-        levelLabel={levelLabel}
-        commune={commune ?? ""}
-        formatLabel={formatLabel}
-        primaryActionHref={primaryActionHref}
-      />
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
+        <SearchCommandCenter
+          resultCount={items.length}
+          activeFilterCount={activeFilters.length}
+          hasQuery={Boolean(q)}
+          subjectLabel={subjectLabel}
+          levelLabel={levelLabel}
+          commune={commune ?? ""}
+          formatLabel={formatLabel}
+          primaryActionHref={primaryActionHref}
+        />
+      )}
 
       <form
         id="filtres-professeurs"

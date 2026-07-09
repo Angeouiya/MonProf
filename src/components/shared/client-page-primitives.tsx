@@ -4,6 +4,8 @@ import { CheckCircle2, Circle, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/shared/back-button";
 
+export const CLIENT_COMMAND_CENTERS_ENABLED = false;
+
 export function ClientPageHeader({
   eyebrow,
   title,

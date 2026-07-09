@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
@@ -136,6 +137,7 @@ export default async function ServiceClientPage() {
           : null}
       />
 
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
       <div className="max-md:hidden">
         <SupportCommandCenter
           focus={focus}
@@ -154,6 +156,7 @@ export default async function ServiceClientPage() {
             : null}
         />
       </div>
+      )}
 
       {/* Ouvrir un litige */}
       <ClientSurface id="signaler-cours" className="scroll-mt-24 space-y-4">

@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const checks = [];
-const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", "src/components/shared/client-page-primitives.tsx"];
+const clientPrimitivesPath = "src/components/shared/client-page-primitives.tsx";
+const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", clientPrimitivesPath];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
@@ -14,6 +15,7 @@ const bookingApiPath = "src/app/api/bookings/[id]/route.ts";
 const providersPath = "src/components/providers.tsx";
 const cssPath = "src/app/globals.css";
 
+const clientPrimitives = read(clientPrimitivesPath);
 const layout = read(layoutPath);
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
@@ -139,6 +141,19 @@ record(
   /\[data-client-course-command-center\][\s\S]*?\[data-client-support-command-center\][\s\S]*?\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
 );
 
+const commandCenterRenderCount = countMatches(clientUiSources, /<[A-Za-z]+CommandCenter\b/g);
+const gatedCommandCenterRenderCount = countMatches(
+  clientUiSources,
+  /CLIENT_COMMAND_CENTERS_ENABLED\s*&&\s*\([\s\S]{0,300}?<[A-Za-z]+CommandCenter\b/g,
+);
+
+record(
+  "Client command centers are disabled before render",
+  /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(clientPrimitives)
+    && commandCenterRenderCount === 9
+    && gatedCommandCenterRenderCount === commandCenterRenderCount,
+);
+
 record(
   "Public mobile menu avoids duplicated professor search entries",
   !/useSession/.test(publicLayout)
@@ -196,6 +211,10 @@ function record(label, ok) {
 
 function countOccurrences(source, needle) {
   return source.split(needle).length - 1;
+}
+
+function countMatches(source, pattern) {
+  return Array.from(source.matchAll(pattern)).length;
 }
 
 function readClientUiSources(entries) {

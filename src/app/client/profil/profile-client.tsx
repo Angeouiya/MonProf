@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -196,19 +197,21 @@ export function ProfileClient({
         ]}
       />
 
-      <ProfileCommandCenter
-        name={name}
-        email={profile?.email ?? ""}
-        phone={phone}
-        commune={commune}
-        quartier={quartier}
-        completion={profileCompletion}
-        missingItems={missingProfileItems}
-        dirty={profileDirty}
-        saving={savingInfo}
-        onSave={() => void persistInfo()}
-        onReset={resetInfo}
-      />
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
+        <ProfileCommandCenter
+          name={name}
+          email={profile?.email ?? ""}
+          phone={phone}
+          commune={commune}
+          quartier={quartier}
+          completion={profileCompletion}
+          missingItems={missingProfileItems}
+          dirty={profileDirty}
+          saving={savingInfo}
+          onSave={() => void persistInfo()}
+          onReset={resetInfo}
+        />
+      )}
 
       {profileDirty && (
         <div

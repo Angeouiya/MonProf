@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -115,6 +116,7 @@ export default async function ClientNotificationsPage() {
         ]}
       />
 
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
       <div className="max-md:hidden">
         <NotificationCommandCenter
           notification={priorityNotification}
@@ -125,6 +127,7 @@ export default async function ClientNotificationsPage() {
           paymentCount={paymentCount}
         />
       </div>
+      )}
 
       <ClientNotificationCenter notifications={serializedNotifications} bookings={serializedBookings} />
     </div>

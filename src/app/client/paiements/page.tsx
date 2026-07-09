@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientCompactFacts,
   ClientFocusPanel,
   ClientInfoPill,
@@ -142,6 +143,7 @@ export default async function PaiementsPage() {
         lastSecureTransaction={lastSecureTransaction}
       />
 
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
       <div className="max-md:hidden">
         <PaymentCommandCenter
           totalDepense={totalDepense}
@@ -152,6 +154,7 @@ export default async function PaiementsPage() {
           lastSecureTransaction={lastSecureTransaction}
         />
       </div>
+      )}
 
       <div className="max-md:hidden">
         <PaymentTrustPanel />

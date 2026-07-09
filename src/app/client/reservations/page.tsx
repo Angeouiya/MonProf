@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -183,16 +184,18 @@ export default async function ReservationsPage({
         ]}
       />
 
-      <ReservationCommandCenter
-        priority={priorityAction}
-        totalCount={allBookings.length}
-        draftCount={draftBookings.length}
-        securedCount={activeSecuredCount}
-        blockedCount={blockedBookings.length}
-        toConfirmCount={toConfirmBookings.length}
-        completedCount={completedCount}
-        securedAmount={securedAmount}
-      />
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
+        <ReservationCommandCenter
+          priority={priorityAction}
+          totalCount={allBookings.length}
+          draftCount={draftBookings.length}
+          securedCount={activeSecuredCount}
+          blockedCount={blockedBookings.length}
+          toConfirmCount={toConfirmBookings.length}
+          completedCount={completedCount}
+          securedAmount={securedAmount}
+        />
+      )}
 
       <ReservationMobilePriorityCard
         priority={priorityAction}

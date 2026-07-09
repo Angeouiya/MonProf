@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import { isOwnerAdminAccount } from "@/lib/owner-account";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -83,18 +84,20 @@ export default async function ClientParametresPage() {
         ]}
       />
 
-      <SettingsCommandCenter
-        name={accountName}
-        email={profile?.email ?? sessionUser.email ?? ""}
-        phone={profile?.phone ?? ""}
-        area={[profile?.commune, profile?.quartier].filter(Boolean).join(" · ")}
-        profileCompletion={profileCompletion}
-        recoveryReady={recoveryReady}
-        accountReady={accountReady}
-        unreadNotifications={unreadNotifications}
-        activeBookings={activeBookings}
-        ownerAdmin={ownerAdmin}
-      />
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
+        <SettingsCommandCenter
+          name={accountName}
+          email={profile?.email ?? sessionUser.email ?? ""}
+          phone={profile?.phone ?? ""}
+          area={[profile?.commune, profile?.quartier].filter(Boolean).join(" · ")}
+          profileCompletion={profileCompletion}
+          recoveryReady={recoveryReady}
+          accountReady={accountReady}
+          unreadNotifications={unreadNotifications}
+          activeBookings={activeBookings}
+          ownerAdmin={ownerAdmin}
+        />
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <ClientSurface id="mot-de-passe" className="scroll-mt-24">

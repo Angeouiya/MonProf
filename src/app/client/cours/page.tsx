@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
+  CLIENT_COMMAND_CENTERS_ENABLED,
   ClientCompactFacts,
   ClientInfoPill,
   ClientMetricStrip,
@@ -224,6 +225,7 @@ export default async function CoursPage({
         ]}
       />
 
+      {CLIENT_COMMAND_CENTERS_ENABLED && (
       <div className="max-md:hidden">
         <CourseCommandCenter
           nextCourse={nextCourseAction}
@@ -235,6 +237,7 @@ export default async function CoursPage({
           protectedAmount={protectedAmount}
         />
       </div>
+      )}
 
       {pendingCourseBookings.length > 0 && (
         <PendingCoursesPanel bookings={pendingCourseBookings} />
