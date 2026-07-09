@@ -5185,6 +5185,21 @@ b {
   }
 }
 
+@media (max-width: 719px) {
+  .client-shell :where(
+    button,
+    input,
+    select,
+    textarea,
+    [role="button"],
+    a[data-client-tab-item],
+    [data-client-mobile-nav] a,
+    a[class*="rounded"]
+  ) {
+    min-height: 44px;
+  }
+}
+
 @media (min-width: 720px) {
   .client-shell :where(
     [data-client-reservation-filter-rail],

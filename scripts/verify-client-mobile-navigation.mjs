@@ -172,6 +172,11 @@ record(
 );
 
 record(
+  "Client mobile controls keep comfortable app touch targets",
+  /@media\s*\(max-width:\s*719px\)\s*\{[\s\S]*?\.client-shell\s*:where\([\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?a\[data-client-tab-item\],[\s\S]*?\[data-client-mobile-nav\]\s+a,[\s\S]*?a\[class\*="rounded"\][\s\S]*?\)\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Client action buttons stay solid navy, never gradient-led",
   !/bg-gradient|from-|to-|via-/.test(layout)
     && /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(css),
