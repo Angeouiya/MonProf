@@ -177,6 +177,18 @@ record(
 );
 
 record(
+  "Client focus state is visible and consistent across app controls",
+  /\.client-shell\s*:where\([\s\S]*?a,[\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?\[data-slot="button"\],[\s\S]*?\[data-slot="select-trigger"\][\s\S]*?\):focus-visible\s*\{[\s\S]*?outline:\s*2px\s+solid\s+#111B4D\s*!important;[\s\S]*?outline-offset:\s*3px\s*!important;[\s\S]*?box-shadow:\s*none\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Client reduced-motion mode disables decorative transitions and route progress",
+  /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css)
+    && /\.client-shell,[\s\S]*?\.client-shell\s+\*\s*\{[\s\S]*?scroll-behavior:\s*auto\s*!important;[\s\S]*?transition-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-iteration-count:\s*1\s*!important;[\s\S]*?\}/.test(css)
+    && /\.client-shell\s+\[data-client-route-progress\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Client action buttons stay solid navy, never gradient-led",
   !/bg-gradient|from-|to-|via-/.test(layout)
     && /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(css),

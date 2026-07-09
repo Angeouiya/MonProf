@@ -5200,6 +5200,35 @@ b {
   }
 }
 
+.client-shell :where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [data-slot="button"],
+  [data-slot="select-trigger"]
+):focus-visible {
+  outline: 2px solid #111B4D !important;
+  outline-offset: 3px !important;
+  box-shadow: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-shell,
+  .client-shell * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .client-shell [data-client-route-progress] {
+    display: none !important;
+  }
+}
+
 @media (min-width: 720px) {
   .client-shell :where(
     [data-client-reservation-filter-rail],
