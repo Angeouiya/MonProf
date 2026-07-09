@@ -160,6 +160,7 @@ export default async function TeachersPage({
     q,
   ].filter(Boolean).length;
   const hasPublishedTeachers = totalVisibleTeachers > 0;
+  const showTeacherFilters = hasPublishedTeachers;
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
 
@@ -242,140 +243,147 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
-            <p className="min-w-0 text-sm font-medium text-[#64748B]">
-              {hasPublishedTeachers ? (
-                <>
-                  <span className="font-semibold text-[#111827]">{total}</span>{" "}
-                  professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
-                </>
-              ) : (
-                <span className="font-semibold text-[#111827]">Profils en préparation</span>
-              )}
-            </p>
-            {activeFiltersCount > 0 && (
-              <Link href="/professeurs" className="shrink-0 text-xs font-semibold text-[#111B4D]">
-                Effacer ({activeFiltersCount})
-              </Link>
-            )}
-          </div>
-          <details className="mb-4 rounded-lg border border-[#E3E8F2] bg-white p-3 lg:hidden">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-sm font-semibold text-[#111827]">
-              <span className="inline-flex items-center gap-2">
-                <Filter className="h-4 w-4 text-[#111B4D]" />
-                Filtres
-              </span>
+          {showTeacherFilters && (
+            <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
+              <p className="min-w-0 text-sm font-medium text-[#64748B]">
+                <span className="font-semibold text-[#111827]">{total}</span>{" "}
+                professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+              </p>
               {activeFiltersCount > 0 && (
-                <span className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs text-[#111B4D]">
-                  {activeFiltersCount}
-                </span>
+                <Link href="/professeurs" className="shrink-0 text-xs font-semibold text-[#111B4D]">
+                  Effacer ({activeFiltersCount})
+                </Link>
               )}
-            </summary>
-            <div className="pt-3">
-              <FiltersForm
-                activeFiltersCount={activeFiltersCount}
-                q={q}
-                subject={subject}
-                level={level}
-                commune={commune}
-                format={format}
-                sort={sort}
-                subjectGroups={subjectGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((s) => ({
-                    value: s.slug,
-                    label: s.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
-                levelGroups={levelGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((l) => ({
-                    value: l.slug,
-                    label: l.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
-                communes={communes}
-                compact
-              />
             </div>
-          </details>
-          <div className="grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+          )}
+          {showTeacherFilters && (
+            <details className="mb-4 rounded-lg border border-[#E3E8F2] bg-white p-3 lg:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-sm font-semibold text-[#111827]">
+                <span className="inline-flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-[#111B4D]" />
+                  Filtres
+                </span>
+                {activeFiltersCount > 0 && (
+                  <span className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs text-[#111B4D]">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </summary>
+              <div className="pt-3">
+                <FiltersForm
+                  activeFiltersCount={activeFiltersCount}
+                  q={q}
+                  subject={subject}
+                  level={level}
+                  commune={commune}
+                  format={format}
+                  sort={sort}
+                  subjectGroups={subjectGroups.map((group) => ({
+                    label: group.category.label,
+                    options: group.items.map((s) => ({
+                      value: s.slug,
+                      label: s.name,
+                      keywords: group.category.label,
+                    })),
+                  }))}
+                  levelGroups={levelGroups.map((group) => ({
+                    label: group.category.label,
+                    options: group.items.map((l) => ({
+                      value: l.slug,
+                      label: l.name,
+                      keywords: group.category.label,
+                    })),
+                  }))}
+                  communes={communes}
+                  compact
+                />
+              </div>
+            </details>
+          )}
+          <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
             {/* SIDEBAR FILTRES */}
-            <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
-              <FiltersForm
-                activeFiltersCount={activeFiltersCount}
-                q={q}
-                subject={subject}
-                level={level}
-                commune={commune}
-                format={format}
-                sort={sort}
-                subjectGroups={subjectGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((s) => ({
-                    value: s.slug,
-                    label: s.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
-                levelGroups={levelGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((l) => ({
-                    value: l.slug,
-                    label: l.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
-                communes={communes}
-              />
-            </aside>
+            {showTeacherFilters && (
+              <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
+                <FiltersForm
+                  activeFiltersCount={activeFiltersCount}
+                  q={q}
+                  subject={subject}
+                  level={level}
+                  commune={commune}
+                  format={format}
+                  sort={sort}
+                  subjectGroups={subjectGroups.map((group) => ({
+                    label: group.category.label,
+                    options: group.items.map((s) => ({
+                      value: s.slug,
+                      label: s.name,
+                      keywords: group.category.label,
+                    })),
+                  }))}
+                  levelGroups={levelGroups.map((group) => ({
+                    label: group.category.label,
+                    options: group.items.map((l) => ({
+                      value: l.slug,
+                      label: l.name,
+                      keywords: group.category.label,
+                    })),
+                  }))}
+                  communes={communes}
+                />
+              </aside>
+            )}
 
             {/* RÉSULTATS */}
             <div>
-              <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
-                <p className="text-sm font-medium text-[#64748B]">
-                  {hasPublishedTeachers ? (
-                    <>
-                      <span className="font-semibold text-[#111827]">{total}</span>{" "}
-                      professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
-                      {subject || level || commune || format ? (
-                        <span className="ml-1 text-[#64748B]">
-                          · filtres actifs
-                        </span>
-                      ) : null}
-                    </>
-                  ) : (
-                    <span className="font-semibold text-[#111827]">Profils en préparation par le service client</span>
-                  )}
-                </p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
-                  {format === "HOME" && (
-                    <InlineFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
-                  )}
-                  {format === "ONLINE" && (
-                    <InlineFilter icon={<Video className="h-3 w-3" />} label="En ligne" />
-                  )}
+              {showTeacherFilters && (
+                <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
+                  <p className="text-sm font-medium text-[#64748B]">
+                    <span className="font-semibold text-[#111827]">{total}</span>{" "}
+                    professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+                    {subject || level || commune || format ? (
+                      <span className="ml-1 text-[#64748B]">
+                        · filtres actifs
+                      </span>
+                    ) : null}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
+                    {format === "HOME" && (
+                      <InlineFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
+                    )}
+                    {format === "ONLINE" && (
+                      <InlineFilter icon={<Video className="h-3 w-3" />} label="En ligne" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {items.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
                   title={hasPublishedTeachers ? "Aucun professeur ne correspond à vos critères" : "Professeurs en cours de publication"}
+                  className={hasPublishedTeachers ? undefined : "min-h-[18rem] px-5 py-8 sm:px-8 sm:py-10"}
                   description={
                     hasPublishedTeachers
                       ? "Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
-                      : "Compétence publie uniquement des professeurs avec vraie photo, profil vérifié et disponibilités exploitables. Les premiers profils réels sont ajoutés depuis le service client."
+                      : "Les profils réels seront affichés ici après vérification par le service client : vraie photo, identité contrôlée, matières et disponibilités exploitables."
                   }
                   action={
-                    <Link
-                      href={hasPublishedTeachers ? "/professeurs" : "/contact"}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
-                    >
-                      {hasPublishedTeachers ? "Réinitialiser les filtres" : "Contacter Compétence"}
-                    </Link>
+                    <>
+                      <Link
+                        href={hasPublishedTeachers ? "/professeurs" : "/contact"}
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto"
+                      >
+                        {hasPublishedTeachers ? "Réinitialiser les filtres" : "Transmettre mon besoin"}
+                      </Link>
+                      {!hasPublishedTeachers && (
+                        <Link
+                          href="/"
+                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#D6DEED] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:w-auto"
+                        >
+                          Retour accueil
+                        </Link>
+                      )}
+                    </>
                   }
                 />
               ) : (
