@@ -52,6 +52,18 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
+const prefetchRoutes = [
+  "/client",
+  "/client/rechercher",
+  "/client/reservations",
+  "/client/cours",
+  "/client/paiements",
+  "/client/notifications",
+  "/client/service-client",
+  "/client/profil",
+  "/client/parametres",
+];
+
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -60,6 +72,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
+  const navigationDelayRef = useRef<number | null>(null);
   const searchKey = searchParams.toString();
   const currentSection = getCurrentSection(pathname);
   const mobileSectionLabel = currentSection.mobileLabel ?? currentSection.label;
@@ -72,6 +85,10 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
 
   useEffect(() => {
+    if (navigationDelayRef.current) {
+      window.clearTimeout(navigationDelayRef.current);
+      navigationDelayRef.current = null;
+    }
     if (navigationResetRef.current) {
       window.clearTimeout(navigationResetRef.current);
       navigationResetRef.current = null;
@@ -81,7 +98,29 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, [pathname, searchKey]);
 
   useEffect(() => {
+    const prefetch = () => {
+      for (const route of prefetchRoutes) {
+        router.prefetch(route);
+      }
+    };
+    const idleId = "requestIdleCallback" in window
+      ? window.requestIdleCallback(prefetch, { timeout: 1600 })
+      : window.setTimeout(prefetch, 450);
+
     return () => {
+      if ("cancelIdleCallback" in window && typeof idleId === "number") {
+        window.cancelIdleCallback(idleId);
+      } else if (typeof idleId === "number") {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (navigationDelayRef.current) {
+        window.clearTimeout(navigationDelayRef.current);
+      }
       if (navigationResetRef.current) {
         window.clearTimeout(navigationResetRef.current);
       }
@@ -89,14 +128,20 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, []);
 
   function startNavigationFeedback() {
-    setNavigating(true);
+    if (navigationDelayRef.current) {
+      window.clearTimeout(navigationDelayRef.current);
+    }
     if (navigationResetRef.current) {
       window.clearTimeout(navigationResetRef.current);
     }
+    navigationDelayRef.current = window.setTimeout(() => {
+      setNavigating(true);
+      navigationDelayRef.current = null;
+    }, 140);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
-    }, 1800);
+    }, 900);
   }
 
   function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {

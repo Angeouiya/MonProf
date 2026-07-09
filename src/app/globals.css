@@ -4627,7 +4627,7 @@ b {
 }
 
 .client-shell [data-client-route-progress-bar] {
-  animation: client-route-progress-slide 980ms cubic-bezier(0.2, 0, 0, 1) infinite;
+  animation: client-route-progress-slide 620ms cubic-bezier(0.2, 0, 0, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
