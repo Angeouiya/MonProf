@@ -501,7 +501,7 @@ function buildTeacherProfileExtras(t: (typeof TEACHERS)[number]) {
 
   return {
     learnersCoached: coached,
-    careerSummary: `${t.professionalName} accompagne des apprenants à ${t.commune} et dans le Grand Abidjan depuis ${t.experienceYears} ans. Son profil est orienté ${primarySubject}, avec une approche pratique, structurée et suivie par le service client Compétence.`,
+    careerSummary: `${t.professionalName} accompagne des apprenants à ${t.commune} et en Côte d'Ivoire depuis ${t.experienceYears} ans. Son profil est orienté ${primarySubject}, avec une approche pratique, structurée et suivie par le service client Compétence.`,
     skills: [
       `${primarySubject} - accompagnement ciblé`,
       ...secondarySubjects,

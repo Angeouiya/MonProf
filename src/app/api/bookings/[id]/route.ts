@@ -265,7 +265,7 @@ export async function PATCH(
       const detailedBooking = await db.booking.findUnique({
         where: { id },
         include: {
-          client: { select: { id: true, name: true, email: true } },
+          client: { select: { id: true, name: true, email: true, phone: true } },
           teacher: { select: { id: true, fullName: true, professionalName: true } },
         },
       });
@@ -294,6 +294,7 @@ export async function PATCH(
             id: detailedBooking.client.id,
             name: detailedBooking.client.name,
             email: detailedBooking.client.email,
+            phone: detailedBooking.client.phone,
           },
           teacher: {
             id: detailedBooking.teacher.id,

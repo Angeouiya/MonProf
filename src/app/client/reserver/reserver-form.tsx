@@ -514,7 +514,7 @@ export function ReserverForm({
     })),
   }], [displayName, hasTeacherSubjects, subjects]);
   const communeSelectionGroups = useMemo(() => [{
-    label: "Communes du Grand Abidjan",
+    label: "Villes et communes de Côte d'Ivoire",
     options: communes.map((commune) => ({
       value: commune.name,
       label: commune.name,
@@ -1295,19 +1295,22 @@ export function ReserverForm({
               {form.courseFormat === "HOME" ? (
                 <div className="grid gap-4 min-[720px]:grid-cols-2">
                   <div>
-                    <Label htmlFor="commune">Commune *</Label>
+                    <Label htmlFor="commune">Recherche rapide ville ou commune *</Label>
                     <SearchableCatalogSelect
                       id="commune"
                       name="commune"
                       value={form.commune}
                       onValueChange={(value) => update("commune", value)}
-                      placeholder="Rechercher la commune"
-                      searchPlaceholder="Tapez Cocody, Yopougon, Marcory..."
+                      placeholder="Saisir ou rechercher la ville"
+                      searchPlaceholder="Tapez Cocody, Yopougon, Bouaké, Korhogo..."
                       emptyLabel="Aucune commune disponible."
                       allLabel="Aucune commune choisie"
                       groups={communeSelectionGroups}
                       triggerClassName="mt-1.5 min-h-12 rounded-lg"
                     />
+                    <p className="mt-1 text-xs font-medium text-[#64748B]">
+                      Tapez les premières lettres pour filtrer rapidement la liste.
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="quartier">Quartier *</Label>
@@ -1343,8 +1346,8 @@ export function ReserverForm({
                     </div>
                     <p className="mt-2 text-xs font-medium text-[#6B7280]">
                       {form.commune
-                        ? `${pricing.transportRouteLabel ?? "Trajet"} - ${formatSentencePart(pricing.transportRuleLabel ?? "règle Grand Abidjan")}. Ces frais vont entièrement au professeur.`
-                        : "Choisissez la commune du client pour que la plateforme applique la matrice Grand Abidjan."}
+                        ? `${pricing.transportRouteLabel ?? "Trajet"} - ${formatSentencePart(pricing.transportRuleLabel ?? "règle de déplacement")}. Ces frais vont entièrement au professeur.`
+                        : "Choisissez la ville ou commune du client pour que la plateforme applique automatiquement les frais de déplacement."}
                     </p>
                   </div>
                 </div>

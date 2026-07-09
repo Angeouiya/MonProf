@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ClipboardCopy, Link2, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { publicClientUrl } from "@/lib/client-public-url";
 
 type MissionCopyPanelProps = {
   token: string;
@@ -24,8 +25,7 @@ export function MissionCopyPanel({
   supportWhatsAppUrl,
 }: MissionCopyPanelProps) {
   const absoluteMissionUrl = useMemo(() => {
-    if (typeof window === "undefined") return `/mission/${token}`;
-    return `${window.location.origin}/mission/${token}`;
+    return publicClientUrl(`/mission/${token}`);
   }, [token]);
 
   async function copyText(text: string, successLabel: string) {

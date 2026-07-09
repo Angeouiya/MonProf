@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
+import { publicClientUrl } from "@/lib/client-public-url";
 
 type TeacherMissionLinkItem = {
   id: string;
@@ -82,13 +83,13 @@ function missionAction(mission: TeacherMissionLinkItem) {
 
 export function TeacherMissionLinksClient({ missions }: { missions: TeacherMissionLinkItem[] }) {
   const copyLink = async (token: string) => {
-    const url = `${window.location.origin}/mission/${token}`;
+    const url = publicClientUrl(`/mission/${token}`);
     await navigator.clipboard.writeText(url);
     toast.success("Lien mission copié.");
   };
 
   const copyMissionSummary = async (mission: TeacherMissionLinkItem) => {
-    const url = `${window.location.origin}/mission/${mission.token}`;
+    const url = publicClientUrl(`/mission/${mission.token}`);
     await navigator.clipboard.writeText([
       mission.title,
       `Réservation : ${mission.booking.reference}`,

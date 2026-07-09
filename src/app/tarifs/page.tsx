@@ -330,7 +330,7 @@ export default function TarifsPage() {
           <div className="mt-6 rounded-lg border border-[#E3E8F2] bg-white p-4">
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
-                <p className="text-sm font-semibold text-[#111B4D]">Calcul Grand Abidjan automatique</p>
+                <p className="text-sm font-semibold text-[#111B4D]">Calcul de déplacement automatique</p>
                 <p className="mt-2 text-sm leading-relaxed text-[#394568]">
                   À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou forfait automatique pour les villes hors matrice.
                 </p>

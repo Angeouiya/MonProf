@@ -26,7 +26,7 @@ export default async function AdminCommunesPage() {
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-black text-foreground">Matrice officielle de déplacement Grand Abidjan</p>
+              <p className="text-sm font-black text-foreground">Matrice officielle de déplacement</p>
               <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
                 La réservation calcule automatiquement le trajet professeur vers client. Le déplacement est séparé du cours, reversé au professeur et sans commission plateforme.
               </p>
@@ -58,7 +58,7 @@ export default async function AdminCommunesPage() {
                 ))}
               </div>
               <p className="mt-3 text-xs font-medium text-blue-950/70">
-                Toute autre route connue du Grand Abidjan est considérée éloignée. Les communes hors matrice utilisent un forfait automatique de zone étendue.
+                Les routes proches sont calculées automatiquement. Les villes hors zone de proximité utilisent un forfait interurbain automatique.
               </p>
             </div>
           </div>

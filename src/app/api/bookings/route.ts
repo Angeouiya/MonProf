@@ -402,7 +402,7 @@ export async function POST(req: NextRequest) {
   const transportLine = courseFormat === "HOME"
     ? pricing.isQuoteOnly
       ? `Déplacement: ${pricing.transportRouteLabel ?? "trajet à confirmer"} - contrôle service client requis.`
-      : `Déplacement: ${pricing.transportRouteLabel ?? "Grand Abidjan"} - ${pricing.transportFee.toLocaleString("fr-FR")} FCFA (${pricing.transportRuleLabel ?? "matrice Grand Abidjan"}).`
+      : `Déplacement: ${pricing.transportRouteLabel ?? "Côte d'Ivoire"} - ${pricing.transportFee.toLocaleString("fr-FR")} FCFA (${pricing.transportRuleLabel ?? "règle de déplacement"}).`
     : "Déplacement: aucun frais pour le cours en ligne.";
   const paymentServiceLine = pricing.isQuoteOnly
     ? "Frais de service paiement: calculés après validation du devis."
@@ -422,7 +422,7 @@ export async function POST(req: NextRequest) {
 
   const client = await db.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true },
+    select: { name: true, email: true, phone: true },
   });
 
   const clientName = client?.name ?? "Un client";
@@ -574,6 +574,7 @@ export async function POST(req: NextRequest) {
           id: userId,
           name: clientName,
           email: client?.email,
+          phone: client?.phone,
         },
         teacher: {
           id: teacher.id,

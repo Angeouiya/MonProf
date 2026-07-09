@@ -21,6 +21,7 @@ type PayDunyaCheckoutInput = {
     id: string;
     name: string;
     email?: string | null;
+    phone?: string | null;
   };
   teacher: {
     id: string;
@@ -167,7 +168,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
                 quantity: 1,
                 unit_price: input.booking.transportFee,
                 total_price: input.booking.transportFee,
-                description: "Déplacement professeur Grand Abidjan",
+                description: "Déplacement professeur en Côte d'Ivoire",
               },
             }
           : {}),
@@ -186,6 +187,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
       customer: {
         name: input.client.name,
         email: input.client.email || "",
+        phone: input.client.phone || "",
       },
       channels: PAYDUNYA_CI_CHANNELS,
       total_amount: input.booking.totalClientPays,
@@ -225,6 +227,13 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || data.response_code !== "00") {
+    console.error("[paydunya:create_failed]", {
+      httpStatus: response.status,
+      responseCode: data.response_code ?? null,
+      description: data.description ?? null,
+      responseText: typeof data.response_text === "string" ? data.response_text.slice(0, 180) : null,
+      mode: config.mode,
+    });
     throw new Error(data.response_text || data.description || "Impossible de créer la facture PayDunya.");
   }
 
