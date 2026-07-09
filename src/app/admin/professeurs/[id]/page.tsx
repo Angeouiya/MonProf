@@ -124,6 +124,15 @@ export default async function ProfesseurDetailPage({
           include: {
             client: { select: { name: true, phone: true } },
             transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+            rescheduleRequests: {
+              where: { status: "APPLIED" },
+              select: {
+                feeTeacherAmount: true,
+                feePlatformAmount: true,
+                feeAmount: true,
+                totalToPay: true,
+              },
+            },
           },
           take: 100,
         },
@@ -235,6 +244,9 @@ export default async function ProfesseurDetailPage({
     const courseShare = b.teacherPayoutAmount || Math.max(0, b.teacherNetAmount - b.transportFee);
     return s + courseShare;
   }, 0);
+  const totalRescheduleTeacherSupplements = validBookings.reduce((sum, booking) => (
+    sum + booking.rescheduleRequests.reduce((requestSum, request) => requestSum + Math.max(0, request.feeTeacherAmount), 0)
+  ), 0);
   const blockedFunds = validBookings.filter((b) => b.paymentStatus === "BLOCKED").reduce((s, b) => s + b.teacherNetAmount, 0);
   const validatedFunds = validBookings.filter((b) => b.paymentStatus === "VALIDATED").reduce((s, b) => s + b.teacherNetAmount, 0);
   const paidForBooking = (b: (typeof teacher.bookings)[number]) => hasVerifiedPayDunyaClientPayment(b)
@@ -313,6 +325,7 @@ export default async function ProfesseurDetailPage({
       teacherCourseShare: booking.teacherPayoutAmount || Math.max(0, booking.teacherNetAmount - booking.transportFee),
       transportFee: booking.transportFee,
       transportRouteLabel: pricingSnapshot?.transportRouteLabel ?? null,
+      rescheduleSupplementTeacherAmount: booking.rescheduleRequests.reduce((sum, request) => sum + Math.max(0, request.feeTeacherAmount), 0),
       teacherNetAmount: booking.teacherNetAmount,
       payableAmount: settlement.remaining + settlement.paid + settlement.retained,
       cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
@@ -346,6 +359,7 @@ export default async function ProfesseurDetailPage({
       participantsCount: booking.participantsCount,
       sessionsCount: booking.sessionsCount,
       teacherNetAmount: booking.teacherNetAmount,
+      rescheduleSupplementTeacherAmount: booking.rescheduleRequests.reduce((sum, request) => sum + Math.max(0, request.feeTeacherAmount), 0),
       payableAmount: settlement.remaining + settlement.paid + settlement.retained,
       cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
       cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
@@ -390,6 +404,12 @@ export default async function ProfesseurDetailPage({
       ? getTeacherFinancialSettlement(booking, teacher.paymentAdjustments)
       : { payableAmount: 0, paid: 0, retained: 0, remaining: 0, settled: true };
     const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
+    const rescheduleSupplementTeacherAmount = booking.rescheduleRequests.reduce((sum, request) => (
+      sum + Math.max(0, request.feeTeacherAmount)
+    ), 0);
+    const rescheduleSupplementPlatformAmount = booking.rescheduleRequests.reduce((sum, request) => (
+      sum + Math.max(0, request.feePlatformAmount)
+    ), 0);
     return {
       id: booking.id,
       reference: booking.reference,
@@ -404,6 +424,8 @@ export default async function ProfesseurDetailPage({
       transportFee: booking.transportFee,
       transportRouteLabel: pricingSnapshot?.transportRouteLabel ?? null,
       teacherNetAmount: booking.teacherNetAmount,
+      rescheduleSupplementTeacherAmount,
+      rescheduleSupplementPlatformAmount,
       payableAmount: settlement.payableAmount,
       cancellationPenaltyTeacherAmount: booking.cancellationPenaltyTeacherAmount,
       cancellationPenaltyPlatformAmount: booking.cancellationPenaltyPlatformAmount,
@@ -1252,6 +1274,7 @@ export default async function ProfesseurDetailPage({
                   </div>
                   <AmountTile label="Part cours" amount={targetLedgerRow.teacherCourseShare} />
                   <AmountTile label="Déplacement" amount={targetLedgerRow.transportFee} muted={targetLedgerRow.transportFee === 0} />
+                  <AmountTile label="Suppl. créneau" amount={targetLedgerRow.rescheduleSupplementTeacherAmount} muted={targetLedgerRow.rescheduleSupplementTeacherAmount === 0} />
                   <AmountTile
                     label={targetLedgerRow.isCancellationPenalty ? "Indemnité annulation" : "Montant payable"}
                     amount={targetLedgerRow.payableAmount}
@@ -1303,6 +1326,7 @@ export default async function ProfesseurDetailPage({
                       <div className="grid grid-cols-2 gap-2">
                         <AmountMini label="Part cours" amount={row.teacherCourseShare} />
                         <AmountMini label="Déplacement" amount={row.transportFee} />
+                        {row.rescheduleSupplementTeacherAmount > 0 && <AmountMini label="Suppl. créneau" amount={row.rescheduleSupplementTeacherAmount} />}
                         <AmountMini label={row.isCancellationPenalty ? "Indemnité" : "Payable"} amount={row.payableAmount} />
                         {row.isCancellationPenalty && <AmountMini label="Net initial" amount={row.teacherNetAmount} />}
                         <AmountMini label="Déjà payé" amount={row.paid} />
@@ -1357,6 +1381,11 @@ export default async function ProfesseurDetailPage({
                         <TableCell className="text-right hidden xl:table-cell"><Money amount={row.transportFee} className="text-sm" muted={row.transportFee === 0} /></TableCell>
                         <TableCell className="text-right">
                           <Money amount={row.payableAmount} className="text-sm font-medium" />
+                          {row.rescheduleSupplementTeacherAmount > 0 && (
+                            <p className="mt-0.5 text-[11px] font-semibold text-violet-700">
+                              +{formatFCFA(row.rescheduleSupplementTeacherAmount)} report
+                            </p>
+                          )}
                           {row.isCancellationPenalty && (
                             <p className="mt-0.5 text-[11px] font-semibold text-blue-800">Indemnité annulation</p>
                           )}
@@ -1467,6 +1496,7 @@ export default async function ProfesseurDetailPage({
             <StatCard label="Commission plateforme" value={formatFCFA(totalCommission)} icon={Award} tone="warning" />
             <StatCard label="Part cours professeur" value={formatFCFA(totalTeacherCourseShare)} icon={Wallet} tone="success" />
             <StatCard label="Déplacements reversés" value={formatFCFA(totalTransportFees)} icon={MapPin} tone="primary" />
+            <StatCard label="Suppléments reports" value={formatFCFA(totalRescheduleTeacherSupplements)} icon={Clock} tone="primary" />
             <StatCard label="Net prof total" value={formatFCFA(totalNet)} icon={Wallet} tone="success" />
             <StatCard label="Déjà payé au prof" value={formatFCFA(alreadyPaid)} icon={CheckCircle2} tone="success" />
           </div>

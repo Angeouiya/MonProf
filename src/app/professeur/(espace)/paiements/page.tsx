@@ -53,6 +53,10 @@ export default async function ProfesseurPaiementsPage() {
         cancellationPenaltyTeacherRate: true,
         cancellationPenaltyPlatformAmount: true,
         cancellationPenaltyPlatformRate: true,
+        rescheduleRequests: {
+          where: { status: "APPLIED" },
+          select: { feeTeacherAmount: true },
+        },
         totalClientPays: true,
         totalPrice: true,
         paydunyaStatus: true,
@@ -127,7 +131,7 @@ export default async function ProfesseurPaiementsPage() {
       />
 
       <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-6">
-        <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Cours validés et indemnités d'annulation dues" icon="wallet" />
+        <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Cours validés, reports confirmés et indemnités dues" icon="wallet" />
         <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
         <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
         <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par le service client" icon="wallet" />
@@ -140,7 +144,7 @@ export default async function ProfesseurPaiementsPage() {
           <div>
             <p className="text-base font-semibold text-[#111827]">Décompte comptable</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Calcul appliqué : montant payable professeur - versements enregistrés - retenues validées = reste dû. Les indemnités d'annulation apparaissent séparément lorsque le client a été remboursé ou que les fonds sont retenus.
+              Calcul appliqué : montant payable professeur - versements enregistrés - retenues validées = reste dû. Les suppléments de report confirmés sont inclus dans le net, et les indemnités d'annulation apparaissent séparément lorsque le client a été remboursé ou que les fonds sont retenus.
             </p>
           </div>
           <div className="grid gap-2 text-sm min-[520px]:grid-cols-3 lg:min-w-[36rem]">
@@ -242,6 +246,7 @@ export default async function ProfesseurPaiementsPage() {
             <div className="mt-4 grid gap-3">
               {settlementRows.map(({ booking, settlement }) => {
                 const cancellationPenalty = isCancellationPenaltyPayout(booking);
+                const rescheduleSupplement = booking.rescheduleRequests.reduce((sum, request) => sum + Math.max(0, request.feeTeacherAmount), 0);
                 return (
                 <Link
                   key={booking.id}
@@ -259,6 +264,7 @@ export default async function ProfesseurPaiementsPage() {
                   </div>
                   <div className="grid min-w-[220px] gap-1 text-sm">
                     <InfoLine label={cancellationPenalty ? "Indemnité" : "Net"} value={formatFCFA(settlement.payableAmount)} />
+                    {rescheduleSupplement > 0 && <InfoLine label="Supplément report" value={formatFCFA(rescheduleSupplement)} />}
                     {cancellationPenalty && <InfoLine label="Net cours initial" value={formatFCFA(booking.teacherNetAmount)} />}
                     <InfoLine label="Payé" value={formatFCFA(settlement.paid)} />
                     <InfoLine label="Retenu" value={formatFCFA(settlement.retained)} />

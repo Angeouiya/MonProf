@@ -8,6 +8,10 @@ const reschedulePolicy = read("src/lib/reschedule-policy.ts");
 const rescheduleReconciliation = read("src/lib/paydunya-reschedule-reconciliation.ts");
 const replacementActions = read("src/app/client/reservations/[id]/replacement-proposal-actions.tsx");
 const bookingActions = read("src/app/client/reservations/[id]/actions.tsx");
+const professorRescheduleRoute = read("src/app/api/professor/reschedule-requests/[id]/route.ts");
+const adminTeacherPage = read("src/app/admin/professeurs/[id]/page.tsx");
+const adminTeacherPayoutClient = read("src/app/admin/professeurs/[id]/teacher-payout-client.tsx");
+const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.tsx");
 
 record(
   "Teacher unavailable response proposes an automatic replacement to the client",
@@ -64,6 +68,22 @@ record(
     && /status:\s*"BLOCKED"/.test(rescheduleReconciliation)
     && /teacherNet:\s*request\.feeTeacherAmount/.test(rescheduleReconciliation)
     && /commission:\s*request\.feePlatformAmount/.test(rescheduleReconciliation),
+);
+
+record(
+  "Accepted reschedules increase the professor accounting base",
+  /teacherPayoutAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
+    && /teacherNetAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
+    && /commissionAmount:\s*\{\s*increment:\s*request\.feePlatformAmount\s*\}/.test(professorRescheduleRoute),
+);
+
+record(
+  "Admin and professor ledgers expose confirmed reschedule supplements",
+  /rescheduleRequests:\s*\{[\s\S]*?where:\s*\{\s*status:\s*"APPLIED"\s*\}/.test(adminTeacherPage)
+    && /rescheduleSupplementTeacherAmount/.test(adminTeacherPage)
+    && /Suppléments reports/.test(adminTeacherPage)
+    && /supplement_report_professeur/.test(adminTeacherPayoutClient)
+    && /Supplément report/.test(professorPaymentsPage),
 );
 
 record(

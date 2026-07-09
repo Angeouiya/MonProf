@@ -61,6 +61,7 @@ type AccountingLedgerRow = {
   paymentStatus: string;
   status: string;
   teacherNetAmount: number;
+  rescheduleSupplementTeacherAmount?: number;
   payableAmount: number;
   cancellationPenaltyTeacherAmount?: number;
   cancellationPenaltyPlatformAmount?: number;
@@ -246,8 +247,8 @@ export function TeacherPayoutClient({
       status: ACCOUNTING_STATUS_LABELS[row.paymentStatus] ?? row.paymentStatus,
       amount: row.remaining > 0 ? row.remaining : row.paid,
       detail: row.retained > 0
-        ? `Payé ${formatFCFA(row.paid)} · retenu ${formatFCFA(row.retained)} · reste ${formatFCFA(row.remaining)}`
-        : `Payé ${formatFCFA(row.paid)} · reste ${formatFCFA(row.remaining)}`,
+        ? `Payé ${formatFCFA(row.paid)} · retenu ${formatFCFA(row.retained)} · reste ${formatFCFA(row.remaining)}${(row.rescheduleSupplementTeacherAmount ?? 0) > 0 ? ` · suppl. report ${formatFCFA(row.rescheduleSupplementTeacherAmount ?? 0)}` : ""}`
+        : `Payé ${formatFCFA(row.paid)} · reste ${formatFCFA(row.remaining)}${(row.rescheduleSupplementTeacherAmount ?? 0) > 0 ? ` · suppl. report ${formatFCFA(row.rescheduleSupplementTeacherAmount ?? 0)}` : ""}`,
       tone: row.remaining > 0 ? "amber" : "blue",
     }));
     const payoutRows = records.map((record) => ({
@@ -400,7 +401,7 @@ export function TeacherPayoutClient({
 
   const copyDetailedAccountingReport = async () => {
     const line = (row: AccountingLedgerRow) => (
-      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${row.isCancellationPenalty ? "indemnité annulation" : "payable"} ${formatFCFA(row.payableAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)} | ${row.paymentStatus}`
+      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${row.isCancellationPenalty ? "indemnité annulation" : "payable"} ${formatFCFA(row.payableAmount)}${(row.rescheduleSupplementTeacherAmount ?? 0) > 0 ? ` dont suppl. report ${formatFCFA(row.rescheduleSupplementTeacherAmount ?? 0)}` : ""} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)} | ${row.paymentStatus}`
     );
     const report = [
       `Grand livre professeur - ${teacherName}`,
@@ -427,7 +428,7 @@ export function TeacherPayoutClient({
 
   const copyFilteredLedgerReport = async () => {
     const line = (row: AccountingLedgerRow) => (
-      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${formatDateTime(row.scheduledDate)} | ${ACCOUNTING_STATUS_LABELS[row.paymentStatus] ?? row.paymentStatus} | payable ${formatFCFA(row.payableAmount)} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)}`
+      `- ${row.reference} | ${row.clientName} | ${row.subjectName} (${row.levelName}) | ${formatDateTime(row.scheduledDate)} | ${ACCOUNTING_STATUS_LABELS[row.paymentStatus] ?? row.paymentStatus} | payable ${formatFCFA(row.payableAmount)}${(row.rescheduleSupplementTeacherAmount ?? 0) > 0 ? ` dont suppl. report ${formatFCFA(row.rescheduleSupplementTeacherAmount ?? 0)}` : ""} | payé ${formatFCFA(row.paid)} | retenu ${formatFCFA(row.retained)} | reste ${formatFCFA(row.remaining)}`
     );
     const report = [
       `Relevé filtré professeur - ${teacherName}`,
@@ -479,6 +480,7 @@ export function TeacherPayoutClient({
       "statut_fonds",
       "montant_payable",
       "net_cours_initial",
+      "supplement_report_professeur",
       "deja_paye",
       "retenu",
       "reste_du",
@@ -493,6 +495,7 @@ export function TeacherPayoutClient({
       row.paymentStatus,
       row.payableAmount,
       row.teacherNetAmount,
+      row.rescheduleSupplementTeacherAmount ?? 0,
       row.paid,
       row.retained,
       row.remaining,
@@ -928,6 +931,11 @@ export function TeacherPayoutClient({
                   {row.isCancellationPenalty && (
                     <p className="mt-1 text-xs font-semibold text-blue-800">
                       Indemnité annulation : {formatFCFA(row.payableAmount)}
+                    </p>
+                  )}
+                  {(row.rescheduleSupplementTeacherAmount ?? 0) > 0 && (
+                    <p className="mt-1 text-xs font-semibold text-violet-700">
+                      Supplément report professeur : {formatFCFA(row.rescheduleSupplementTeacherAmount ?? 0)}
                     </p>
                   )}
                 </div>
