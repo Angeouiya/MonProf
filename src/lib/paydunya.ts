@@ -34,6 +34,7 @@ type PayDunyaCheckoutResult = {
   checkoutUrl: string | null;
   token: string | null;
   responseText?: string;
+  raw?: Record<string, unknown>;
 };
 
 export type PayDunyaInvoiceStatus = "completed" | "pending" | "cancelled" | "failed" | "unknown";
@@ -225,11 +226,14 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));
+  const responseCode = firstNonEmptyString(data.response_code, data.data?.response_code);
+  const checkoutUrl = extractPayDunyaCheckoutUrl(data);
+  const token = extractPayDunyaCheckoutToken(data);
 
-  if (!response.ok || data.response_code !== "00") {
+  if (!response.ok || responseCode !== "00") {
     console.error("[paydunya:create_failed]", {
       httpStatus: response.status,
-      responseCode: data.response_code ?? null,
+      responseCode,
       description: data.description ?? null,
       responseText: typeof data.response_text === "string" ? data.response_text.slice(0, 180) : null,
       mode: config.mode,
@@ -237,11 +241,23 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
     throw new Error(data.response_text || data.description || "Impossible de créer la facture PayDunya.");
   }
 
+  if (!checkoutUrl || !token) {
+    console.error("[paydunya:create_incomplete]", {
+      httpStatus: response.status,
+      responseCode,
+      hasCheckoutUrl: Boolean(checkoutUrl),
+      hasToken: Boolean(token),
+      mode: config.mode,
+    });
+    throw new Error("PayDunya a renvoyé une facture incomplète: URL de paiement ou token manquant.");
+  }
+
   return {
     configured: true,
-    checkoutUrl: typeof data.response_text === "string" ? data.response_text : null,
-    token: typeof data.token === "string" ? data.token : null,
+    checkoutUrl,
+    token,
     responseText: data.description,
+    raw: sanitizePayDunyaApiResponse(data),
   };
 }
 
@@ -382,6 +398,53 @@ function firstNonEmptyString(...values: unknown[]) {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
+}
+
+function extractPayDunyaCheckoutUrl(data: Record<string, any>) {
+  const candidate = firstNonEmptyString(
+    data.response_text,
+    data.checkout_url,
+    data.checkoutUrl,
+    data.invoice_url,
+    data.invoiceUrl,
+    data.url,
+    data.data?.response_text,
+    data.data?.checkout_url,
+    data.data?.checkoutUrl,
+    data.data?.invoice_url,
+    data.data?.invoiceUrl,
+    data.data?.url,
+  );
+  if (!candidate) return null;
+
+  const match = candidate.match(/https?:\/\/[^\s"']+/);
+  const rawUrl = match?.[0] ?? candidate;
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractPayDunyaCheckoutToken(data: Record<string, any>) {
+  return firstNonEmptyString(
+    data.token,
+    data.invoice_token,
+    data.invoiceToken,
+    data.data?.token,
+    data.data?.invoice_token,
+    data.data?.invoiceToken,
+  );
+}
+
+function sanitizePayDunyaApiResponse(data: Record<string, any>) {
+  return {
+    response_code: data.response_code ?? data.data?.response_code ?? null,
+    description: data.description ?? data.data?.description ?? null,
+    response_text: typeof data.response_text === "string" ? data.response_text.slice(0, 240) : null,
+    token: typeof data.token === "string" ? data.token : typeof data.data?.token === "string" ? data.data.token : null,
+  };
 }
 
 function normalizeBaseUrl(value: string) {

@@ -119,15 +119,19 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         router.prefetch(route);
       }
     };
-    const idleId = "requestIdleCallback" in window
-      ? window.requestIdleCallback(prefetch, { timeout: 2400 })
-      : window.setTimeout(prefetch, 1200);
+    const browserWindow = window as Window & typeof globalThis & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleId = typeof browserWindow.requestIdleCallback === "function"
+      ? browserWindow.requestIdleCallback(prefetch, { timeout: 2400 })
+      : browserWindow.setTimeout(prefetch, 1200);
 
     return () => {
-      if ("cancelIdleCallback" in window && typeof idleId === "number") {
-        window.cancelIdleCallback(idleId);
+      if (typeof browserWindow.cancelIdleCallback === "function") {
+        browserWindow.cancelIdleCallback(idleId);
       } else if (typeof idleId === "number") {
-        window.clearTimeout(idleId);
+        browserWindow.clearTimeout(idleId);
       }
     };
   }, [pathname, router]);

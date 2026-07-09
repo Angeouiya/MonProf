@@ -331,7 +331,7 @@ export async function PATCH(
               ? "PayDunya n'a pas retourné de lien de paiement."
               : "PayDunya n'est pas encore configuré sur cette installation.",
             paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: payment.responseText ?? null,
+            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
           },
         });
         return NextResponse.json({
@@ -354,7 +354,7 @@ export async function PATCH(
           paydunyaStatus: "PENDING",
           paydunyaFailureReason: null,
           paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: payment.responseText ?? null,
+          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
         },
       });
 
@@ -1356,5 +1356,14 @@ export async function PATCH(
 
     default:
       return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+  }
+}
+
+function compactPayDunyaCreatePayload(value: unknown) {
+  if (value == null) return null;
+  try {
+    return JSON.stringify(value).slice(0, 2000);
+  } catch {
+    return String(value).slice(0, 2000);
   }
 }

@@ -553,7 +553,14 @@ export async function POST(req: NextRequest) {
     return createdBooking;
   });
 
-  let paydunya: { configured: boolean; checkoutUrl: string | null; token: string | null; responseText?: string; error?: string } | null = null;
+  let paydunya: {
+    configured: boolean;
+    checkoutUrl: string | null;
+    token: string | null;
+    responseText?: string;
+    raw?: Record<string, unknown>;
+    error?: string;
+  } | null = null;
   if (!booking.isQuoteOnly) {
     try {
       paydunya = await createPayDunyaCheckoutInvoice({
@@ -589,7 +596,7 @@ export async function POST(req: NextRequest) {
           paydunyaStatus: paydunya.configured ? "PENDING" : "NOT_CONFIGURED",
           paydunyaFailureReason: paydunya.configured ? null : "PayDunya n'est pas configuré.",
           paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: paydunya.responseText ?? null,
+          paydunyaLastPayload: compactPayDunyaCreatePayload(paydunya.raw ?? paydunya.responseText),
         },
       });
     } catch (error: any) {
@@ -635,4 +642,13 @@ export async function POST(req: NextRequest) {
         }
       : null,
   }, { status: 201 });
+}
+
+function compactPayDunyaCreatePayload(value: unknown) {
+  if (value == null) return null;
+  try {
+    return JSON.stringify(value).slice(0, 2000);
+  } catch {
+    return String(value).slice(0, 2000);
+  }
 }

@@ -54,10 +54,18 @@ const COMMUNES = [
   "Guiglo", "Duékoué", "Bangolo", "Toulépleu", "Bloléquin",
 ];
 
+type CommuneOption = {
+  id?: string;
+  name: string;
+  zone?: string | null;
+  teachersCount?: number;
+};
+
 export default function ProfilPage() {
   const { update: updateSession } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [communeOptions, setCommuneOptions] = useState<CommuneOption[]>(() => COMMUNES.map((name) => ({ name })));
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -66,12 +74,12 @@ export default function ProfilPage() {
   const [savingInfo, setSavingInfo] = useState(false);
   const communeGroups = useMemo(() => [{
     label: "Villes et communes",
-    options: COMMUNES.map((item) => ({
-      value: item,
-      label: item,
-      keywords: item,
+    options: communeOptions.map((item) => ({
+      value: item.name,
+      label: item.zone ? `${item.name} · ${item.zone}` : item.name,
+      keywords: `${item.name} ${item.zone ?? ""} ${item.teachersCount ? `${item.teachersCount} professeurs` : ""}`,
     })),
-  }], []);
+  }], [communeOptions]);
 
   useEffect(() => {
     fetch("/api/client/profile")
@@ -87,6 +95,19 @@ export default function ProfilPage() {
       })
       .catch(() => toast.error("Erreur de chargement du profil"))
       .finally(() => setLoadingProfile(false));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/communes", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("communes")))
+      .then((data) => {
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setCommuneOptions(data.items);
+        }
+      })
+      .catch(() => {
+        setCommuneOptions(COMMUNES.map((name) => ({ name })));
+      });
   }, []);
 
   async function persistInfo() {
