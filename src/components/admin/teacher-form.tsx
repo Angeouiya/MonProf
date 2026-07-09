@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Camera, Clock, KeyRound, Loader2, Save, ShieldCheck, Trash2, X } from "lucide-react";
+import { CalendarClock, Camera, Clock, KeyRound, Loader2, Save, Search, ShieldCheck, Trash2, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -157,6 +157,8 @@ export function TeacherForm({
   const [primarySubject, setPrimarySubject] = useState<string | null>(null);
   const [selectedLevels, setSelectedLevels] = useState<Record<string, boolean>>({});
   const [selectedZones, setSelectedZones] = useState<Record<string, boolean>>({});
+  const [subjectQuery, setSubjectQuery] = useState("");
+  const [levelQuery, setLevelQuery] = useState("");
   const [zoneQuery, setZoneQuery] = useState("");
   const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>(() => createEmptyAvailability());
 
@@ -262,6 +264,24 @@ export function TeacherForm({
     if (!normalizedQuery) return communes;
     return communes.filter((commune) => normalizeSearch(commune.name).includes(normalizedQuery));
   }, [communes, zoneQuery]);
+  const visibleSubjects = useMemo(() => {
+    const normalizedQuery = normalizeSearch(subjectQuery);
+    if (!normalizedQuery) return subjects;
+    return subjects.filter((subject) => normalizeSearch(subject.name).includes(normalizedQuery));
+  }, [subjects, subjectQuery]);
+  const visibleLevels = useMemo(() => {
+    const normalizedQuery = normalizeSearch(levelQuery);
+    if (!normalizedQuery) return levels;
+    return levels.filter((level) => normalizeSearch(level.name).includes(normalizedQuery));
+  }, [levels, levelQuery]);
+  const selectedSubjectCount = useMemo(
+    () => Object.values(selectedSubjects).filter(Boolean).length,
+    [selectedSubjects],
+  );
+  const selectedLevelCount = useMemo(
+    () => Object.values(selectedLevels).filter(Boolean).length,
+    [selectedLevels],
+  );
 
   const uploadPhoto = async (file?: File) => {
     setPhotoError(null);
@@ -702,8 +722,35 @@ export function TeacherForm({
               <p className="text-sm text-muted-foreground">Cochez les matières, puis choisissez la matière principale.</p>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    value={subjectQuery}
+                    onChange={(event) => setSubjectQuery(event.target.value)}
+                    placeholder="Rechercher une matière enseignée..."
+                    className="h-11 rounded-lg border-violet-100 bg-white pl-9"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <span>{visibleSubjects.length} / {subjects.length}</span>
+                  <span className="rounded-full border border-violet-100 bg-white px-2 py-1 text-[#111B4D]">
+                    {selectedSubjectCount} sélectionnée{selectedSubjectCount > 1 ? "s" : ""}
+                  </span>
+                  {subjectQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSubjectQuery("")}
+                      className="inline-flex min-h-8 items-center rounded-lg border border-violet-100 bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+              </div>
               <div className="grid gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                {subjects.map((s) => {
+                {visibleSubjects.map((s) => {
                   const checked = !!selectedSubjects[s.id];
                   return (
                     <label key={s.id} className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
@@ -727,11 +774,43 @@ export function TeacherForm({
                     </label>
                   );
                 })}
+                {visibleSubjects.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-violet-100 bg-white p-4 text-sm font-medium text-muted-foreground min-[420px]:col-span-2 sm:col-span-3 lg:col-span-4">
+                    Aucune matière ne correspond à cette recherche.
+                  </div>
+                )}
               </div>
               <div className="border-t border-border pt-4">
                 <p className="mb-2 text-sm font-medium text-foreground">Niveaux enseignés</p>
+                <div className="mb-3 grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      value={levelQuery}
+                      onChange={(event) => setLevelQuery(event.target.value)}
+                      placeholder="Rechercher un niveau, concours, adulte, université..."
+                      className="h-11 rounded-lg border-violet-100 bg-white pl-9"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
+                    <span>{visibleLevels.length} / {levels.length}</span>
+                    <span className="rounded-full border border-violet-100 bg-white px-2 py-1 text-[#111B4D]">
+                      {selectedLevelCount} sélectionné{selectedLevelCount > 1 ? "s" : ""}
+                    </span>
+                    {levelQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setLevelQuery("")}
+                        className="inline-flex min-h-8 items-center rounded-lg border border-violet-100 bg-white px-2 text-[#111B4D] transition hover:border-[#111B4D]"
+                      >
+                        Effacer
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="grid gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-                  {levels.map((l) => {
+                  {visibleLevels.map((l) => {
                     const checked = !!selectedLevels[l.id];
                     return (
                       <label key={l.id} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-200 bg-violet-50 text-violet-900" : "border-violet-100 bg-white hover:border-violet-200 hover:bg-violet-50/60"}`}>
@@ -743,6 +822,11 @@ export function TeacherForm({
                       </label>
                     );
                   })}
+                  {visibleLevels.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-violet-100 bg-white p-4 text-sm font-medium text-muted-foreground min-[420px]:col-span-2 sm:col-span-3 lg:col-span-5">
+                      Aucun niveau ne correspond à cette recherche.
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
