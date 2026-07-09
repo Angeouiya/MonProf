@@ -65,8 +65,8 @@ const CLIENT_SECONDARY_PREFETCH_ROUTES = [
   "/client/parametres",
 ];
 const CLIENT_PRIORITY_PREFETCH_ROUTES = [...CLIENT_PRIMARY_PREFETCH_ROUTES, ...CLIENT_SECONDARY_PREFETCH_ROUTES];
-const CLIENT_NAV_FEEDBACK_DELAY_MS = 70;
-const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 900;
+const CLIENT_NAV_FEEDBACK_DELAY_MS = 35;
+const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 520;
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -178,7 +178,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
     const desktop = window.matchMedia("(min-width: 1024px)").matches;
     const routes = desktop ? CLIENT_PRIORITY_PREFETCH_ROUTES : CLIENT_PRIMARY_PREFETCH_ROUTES;
-    const staggerMs = desktop ? 70 : 120;
+    const staggerMs = desktop ? 50 : 90;
     const prefetchClientRoutes = () => {
       const timers = routes.map((route, index) => (
         window.setTimeout(() => prefetchClientRoute(route), index * staggerMs)
@@ -194,7 +194,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     if (browserWindow.requestIdleCallback) {
       const idleId = browserWindow.requestIdleCallback(() => {
         cancelStaggeredPrefetch = prefetchClientRoutes();
-      }, { timeout: desktop ? 350 : 850 });
+      }, { timeout: desktop ? 250 : 650 });
       return () => {
         browserWindow.cancelIdleCallback?.(idleId);
         cancelStaggeredPrefetch?.();
@@ -203,7 +203,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
     const timer = window.setTimeout(() => {
       cancelStaggeredPrefetch = prefetchClientRoutes();
-    }, desktop ? 90 : 420);
+    }, desktop ? 60 : 260);
     return () => {
       window.clearTimeout(timer);
       cancelStaggeredPrefetch?.();
@@ -224,7 +224,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   useEffect(() => {
     if (!open) return;
     const timers = CLIENT_SECONDARY_PREFETCH_ROUTES.map((route, index) => (
-      window.setTimeout(() => prefetchClientRoute(route), 120 + index * 80)
+      window.setTimeout(() => prefetchClientRoute(route), 90 + index * 55)
     ));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [open, prefetchClientRoute]);

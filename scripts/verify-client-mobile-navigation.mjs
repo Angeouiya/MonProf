@@ -94,9 +94,9 @@ record(
 record(
   "Route progress indicator is a short settled animation, not an infinite spinner",
   /@keyframes client-route-progress-settle/.test(css)
-    && /animation:\s*client-route-progress-slide\s+180ms/.test(css)
-    && /animation:\s*client-route-progress-settle\s+220ms[\s\S]*?both\s*!important;/.test(css)
-    && css.lastIndexOf("client-route-progress-settle 220ms") > css.lastIndexOf("client-route-progress-slide"),
+    && /animation:\s*client-route-progress-slide\s+140ms/.test(css)
+    && /animation:\s*client-route-progress-settle\s+150ms[\s\S]*?both\s*!important;/.test(css)
+    && css.lastIndexOf("client-route-progress-settle 150ms") > css.lastIndexOf("client-route-progress-slide"),
 );
 
 record(
@@ -105,13 +105,13 @@ record(
     && /const CLIENT_PRIMARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
     && /const CLIENT_SECONDARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
     && /const CLIENT_PRIORITY_PREFETCH_ROUTES\s*=\s*\[\.\.\.CLIENT_PRIMARY_PREFETCH_ROUTES,\s*\.\.\.CLIENT_SECONDARY_PREFETCH_ROUTES\]\s*;/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*70\s*;/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*900\s*;/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*35\s*;/.test(layout)
+    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*520\s*;/.test(layout)
     && /const routes\s*=\s*desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES\s*;/.test(layout)
-    && /const staggerMs\s*=\s*desktop\s*\?\s*70\s*:\s*120\s*;/.test(layout)
+    && /const staggerMs\s*=\s*desktop\s*\?\s*50\s*:\s*90\s*;/.test(layout)
     && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*staggerMs/.test(layout)
-    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*350\s*:\s*850\s*\}/.test(layout)
-    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*90\s*:\s*420\s*\)/.test(layout)
+    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*250\s*:\s*650\s*\}/.test(layout)
+    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*60\s*:\s*260\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
 );
@@ -143,7 +143,7 @@ record(
   "Client secondary routes prefetch only when the drawer is intentionally opened",
   /if\s*\(!open\)\s*return\s*;/.test(layout)
     && /CLIENT_SECONDARY_PREFETCH_ROUTES\.map\(\(route,\s*index\)\s*=>\s*\(/.test(layout)
-    && /120\s*\+\s*index\s*\*\s*80/.test(layout),
+    && /90\s*\+\s*index\s*\*\s*55/.test(layout),
 );
 
 record(
@@ -266,6 +266,15 @@ record(
 record(
   "Client mobile controls keep comfortable app touch targets",
   /@media\s*\(max-width:\s*719px\)\s*\{[\s\S]*?\.client-shell\s*:where\([\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?a\[data-client-tab-item\],[\s\S]*?\[data-client-mobile-nav\]\s+a,[\s\S]*?a\[class\*="rounded"\][\s\S]*?\)\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Client motion budget stays fast and app-like",
+  /CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*520/.test(layout)
+    && /transition-duration:\s*95ms\s*!important/.test(css)
+    && /\[data-client-loading\]\s+\.animate-pulse\s*\{[\s\S]*?animation-duration:\s*850ms\s*!important;[\s\S]*?\}/.test(css)
+    && !/CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*(?:9\d\d|[1-9]\d{3,})/.test(layout)
+    && !/transition-duration:\s*(?:2\d\d|[3-9]\d\d|\d{4,})ms\s*!important/.test(css),
 );
 
 record(
