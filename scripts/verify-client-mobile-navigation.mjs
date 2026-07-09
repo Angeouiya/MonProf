@@ -240,11 +240,20 @@ record(
   /data-client-loading/.test(clientLoading)
     && /role="status"/.test(clientLoading)
     && /aria-live="polite"/.test(clientLoading)
+    && /motion-safe:animate-pulse/.test(clientLoading)
+    && /data-client-loading-primary-panel/.test(clientLoading)
+    && /data-client-loading-secondary-panel/.test(clientLoading)
     && /lg:grid-cols-\[1\.2fr_0\.8fr\]/.test(clientLoading)
     && /lg:grid-cols-\[0\.9fr_1\.1fr\]/.test(clientLoading)
     && /bg-gradient|from-|to-|via-/.test(clientLoading) === false
     && /rounded-lg border border-\[#E3E8F2\] bg-white/.test(clientLoading)
     && /bg-\[#111B4D\]/.test(clientLoading),
+);
+
+record(
+  "Client route loading stays compact on very small phones",
+  /\[data-client-loading\]\s*\{[\s\S]*?min-height:\s*calc\(100dvh - var\(--app-topbar-height\) - 2rem\);[\s\S]*?\}/.test(css)
+    && /\[data-client-loading-secondary-panel\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
 );
 
 for (const check of checks) {

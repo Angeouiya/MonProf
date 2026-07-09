@@ -5160,6 +5160,14 @@ b {
     -webkit-line-clamp: 1;
   }
 
+  .client-shell [data-client-loading] {
+    min-height: calc(100dvh - var(--app-topbar-height) - 2rem);
+  }
+
+  .client-shell [data-client-loading-secondary-panel] {
+    display: none !important;
+  }
+
   .client-shell :where([data-client-page-header], [data-client-section-title]) :where(p, div) {
     max-width: 100%;
   }

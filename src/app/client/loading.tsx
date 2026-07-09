@@ -38,8 +38,8 @@ export default function ClientLoading() {
         </div>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+      <section data-client-loading-workspace className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
+        <div data-client-loading-primary-panel className="rounded-lg border border-[#E3E8F2] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <LoadingBlock className="h-4 w-36 rounded-full bg-[#111B4D]" />
             <LoadingBlock className="h-9 w-24 rounded-lg bg-[#111B4D]" />
@@ -57,7 +57,7 @@ export default function ClientLoading() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+        <div data-client-loading-secondary-panel className="rounded-lg border border-[#E3E8F2] bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <LoadingBlock className="h-4 w-32 rounded-full bg-[#111B4D]" />
             <LoadingBlock className="h-8 w-8 rounded-lg bg-[#D7DEE9]" />
@@ -78,5 +78,5 @@ export default function ClientLoading() {
 }
 
 function LoadingBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse ${className}`} aria-hidden="true" />;
+  return <div className={`motion-safe:animate-pulse ${className}`} aria-hidden="true" />;
 }
