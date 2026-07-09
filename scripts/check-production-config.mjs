@@ -30,6 +30,7 @@ checkStrongSecret("NEXTAUTH_SECRET", { minLength: 32 });
 checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
+checkBuildDoesNotIgnoreCodeQualityErrors();
 checkNoPublicPayDunyaSecrets();
 await checkPayDunyaConfiguration();
 
@@ -128,6 +129,18 @@ function parseHttpsUrl(value) {
 function checkNoPublicPayDunyaSecrets() {
   const leakedPublicKeys = Object.keys(process.env).filter((key) => key.startsWith("NEXT_PUBLIC_PAYDUNYA"));
   record("No PayDunya secret is exposed through NEXT_PUBLIC_*", leakedPublicKeys.length === 0);
+}
+
+function checkBuildDoesNotIgnoreCodeQualityErrors() {
+  const configPath = "next.config.ts";
+  if (!fs.existsSync(configPath)) {
+    record("Next.js production config exists", false);
+    return;
+  }
+
+  const config = fs.readFileSync(configPath, "utf8");
+  record("Production build validates TypeScript errors", !/ignoreBuildErrors\s*:\s*true/.test(config));
+  record("Production build keeps ESLint checks enabled", !/ignoreDuringBuilds\s*:\s*true/.test(config));
 }
 
 async function checkPayDunyaConfiguration() {

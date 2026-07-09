@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
     NEXTAUTH_URL: "https://competence.ci",
     NEXT_PUBLIC_APP_URL: "https://competence.ci",
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   devIndicators: false,
   reactStrictMode: false,
