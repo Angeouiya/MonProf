@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
   MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
@@ -49,14 +49,20 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const CLIENT_NAV_PREFETCH = true;
-const CLIENT_PREFETCH_ROUTES = Array.from(
+const CLIENT_NAV_PREFETCH = false;
+const CLIENT_DESKTOP_PREFETCH_ROUTES = Array.from(
   new Set([
     ...navItems.map((item) => item.href),
     ...mobileNavItems.map((item) => item.href),
     "/client/support",
   ]),
 );
+const CLIENT_PRIORITY_PREFETCH_ROUTES = [
+  "/client/rechercher",
+  "/client/reservations",
+  "/client/paiements",
+  "/client/notifications",
+];
 
 export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
@@ -67,6 +73,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   const [navigating, setNavigating] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
+  const prefetchedRoutesRef = useRef<Set<string>>(new Set());
   const searchKey = searchParams.toString();
   const currentSection = getCurrentSection(pathname);
   const mobileSectionLabel = currentSection.mobileLabel ?? currentSection.label;
@@ -81,6 +88,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
   const isActive = (item: ClientNavItem) =>
     item.exact ? pathname === item.href : pathname?.startsWith(item.href);
+
+  const prefetchClientRoute = useCallback((href: string) => {
+    if (!href.startsWith("/client")) return;
+    if (prefetchedRoutesRef.current.has(href)) return;
+    prefetchedRoutesRef.current.add(href);
+    router.prefetch(href);
+  }, [router]);
 
   useEffect(() => {
     closeMobileSurfaces();
@@ -139,8 +153,18 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
   }, []);
 
   useEffect(() => {
+    const browserNavigator = navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    };
+    const connection = browserNavigator.connection;
+    const effectiveType = connection?.effectiveType ?? "";
+    const slowConnection = connection?.saveData || /(^|-)2g$|slow-2g/i.test(effectiveType);
+    if (slowConnection) return;
+
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    const routes = desktop ? CLIENT_DESKTOP_PREFETCH_ROUTES : CLIENT_PRIORITY_PREFETCH_ROUTES;
     const prefetchClientRoutes = () => {
-      CLIENT_PREFETCH_ROUTES.forEach((href) => router.prefetch(href));
+      routes.forEach(prefetchClientRoute);
     };
     const browserWindow = window as Window & {
       requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
@@ -148,13 +172,13 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     };
 
     if (browserWindow.requestIdleCallback) {
-      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: 1600 });
+      const idleId = browserWindow.requestIdleCallback(prefetchClientRoutes, { timeout: desktop ? 1800 : 2800 });
       return () => browserWindow.cancelIdleCallback?.(idleId);
     }
 
-    const timer = globalThis.setTimeout(prefetchClientRoutes, 300);
+    const timer = globalThis.setTimeout(prefetchClientRoutes, desktop ? 500 : 1400);
     return () => globalThis.clearTimeout(timer);
-  }, [router]);
+  }, [prefetchClientRoute]);
 
   useEffect(() => {
     if (!open && !mobileSearchOpen) return;
@@ -175,7 +199,7 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     navigationDelayRef.current = window.setTimeout(() => {
       setNavigating(true);
       navigationDelayRef.current = null;
-    }, 35);
+    }, 45);
     navigationResetRef.current = window.setTimeout(() => {
       setNavigating(false);
       navigationResetRef.current = null;
@@ -183,35 +207,48 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
         window.clearTimeout(navigationDelayRef.current);
         navigationDelayRef.current = null;
       }
-    }, 220);
+    }, 1800);
   }
 
-  function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return;
+  function getClientNavigationTarget(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement> | FocusEvent<HTMLElement>) {
+    const hasModifier = "metaKey" in event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
+    if (event.defaultPrevented || hasModifier) {
+      return null;
     }
     const target = event.target as HTMLElement | null;
     const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
     if (!anchor || anchor.target || anchor.hasAttribute("download")) {
-      return;
+      return null;
     }
     const rawHref = anchor.getAttribute("href");
     if (!rawHref || rawHref.startsWith("#")) {
-      return;
+      return null;
     }
     try {
       const nextUrl = new URL(rawHref, window.location.origin);
       if (nextUrl.origin !== window.location.origin || !nextUrl.pathname.startsWith("/client")) {
-        return;
+        return null;
       }
-      const nextPath = `${nextUrl.pathname}${nextUrl.search}`;
-      const currentPath = `${window.location.pathname}${window.location.search}`;
-      if (nextPath !== currentPath) {
-        startNavigationFeedback();
-      }
+      return `${nextUrl.pathname}${nextUrl.search}`;
     } catch {
       // Ignore malformed href values; navigation itself will handle them.
+      return null;
     }
+  }
+
+  function maybeStartClientNavigationFeedback(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement>) {
+    const nextPath = getClientNavigationTarget(event);
+    if (!nextPath) return;
+    prefetchClientRoute(nextPath);
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    if (nextPath !== currentPath) {
+      startNavigationFeedback();
+    }
+  }
+
+  function maybePrefetchClientNavigation(event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) {
+    const nextPath = getClientNavigationTarget(event);
+    if (nextPath) prefetchClientRoute(nextPath);
   }
 
   function handleClientNavigationIntent(event: PointerEvent<HTMLElement>) {
@@ -221,6 +258,14 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
 
   function handleClientNavigationCapture(event: MouseEvent<HTMLElement>) {
     maybeStartClientNavigationFeedback(event);
+  }
+
+  function handleClientPrefetchCapture(event: MouseEvent<HTMLElement>) {
+    maybePrefetchClientNavigation(event);
+  }
+
+  function handleClientFocusPrefetch(event: FocusEvent<HTMLElement>) {
+    maybePrefetchClientNavigation(event);
   }
 
   function submitQuickSearch(event: FormEvent<HTMLFormElement>) {
@@ -240,6 +285,8 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
       data-route-pending={navigating ? "true" : "false"}
       onPointerDownCapture={handleClientNavigationIntent}
       onClickCapture={handleClientNavigationCapture}
+      onMouseOverCapture={handleClientPrefetchCapture}
+      onFocusCapture={handleClientFocusPrefetch}
       className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased"
     >
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
