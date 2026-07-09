@@ -189,10 +189,12 @@ function checkProductionScripts() {
 
   const productionBuild = pkg.scripts?.["build:production"] ?? "";
   const typecheck = pkg.scripts?.["typecheck"] ?? "";
+  const clientAppShellVerify = pkg.scripts?.["verify:client-app-shell"] ?? "";
   const operationalFlowVerify = pkg.scripts?.["verify:operational-flows"] ?? "";
   const clientMobileVerify = pkg.scripts?.["verify:client-mobile"] ?? "";
   record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production build runs explicit ESLint gate", productionBuild.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
+  record("Production build verifies installable client app shell", productionBuild.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
   record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
   record("Production build audits payment integrity", productionBuild.includes("npm run payment:audit"));
   record("Production build verifies client mobile UX gates", productionBuild.includes("npm run verify:client-mobile") && clientMobileVerify.includes("verify-client-mobile-navigation.mjs"));
