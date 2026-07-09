@@ -63,10 +63,33 @@ async function checkDatabaseUrl() {
   try {
     const url = new URL(rawUrl);
     record("DATABASE_URL uses PostgreSQL for database readiness", url.protocol === "postgresql:");
+    record("DATABASE_URL targets Supabase for database readiness", isSupabaseDatabaseHost(url.hostname));
+    record("DATABASE_URL does not target a local database for database readiness", !isLocalDatabaseHost(url.hostname));
+    record("DATABASE_URL has no placeholder password for database readiness", isSafeDatabasePassword(url.password));
     record("DATABASE_URL targets schema=competence for database readiness", url.searchParams.get("schema") === "competence");
   } catch {
     record("DATABASE_URL is valid for database readiness", false);
   }
+}
+
+function isSupabaseDatabaseHost(hostname) {
+  const normalized = hostname.toLowerCase();
+  return normalized.endsWith(".supabase.co") || normalized.endsWith(".pooler.supabase.com");
+}
+
+function isLocalDatabaseHost(hostname) {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function isSafeDatabasePassword(password) {
+  const decoded = decodeURIComponent(password ?? "").trim();
+  if (!decoded) return false;
+  const lowered = decoded.toLowerCase();
+  return !lowered.includes("your-password")
+    && !lowered.includes("password")
+    && !lowered.includes("change-me")
+    && !lowered.includes("placeholder");
 }
 
 async function checkTable(label, getCount) {
