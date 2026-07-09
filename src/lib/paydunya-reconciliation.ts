@@ -129,22 +129,40 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
   }
   const now = new Date();
   const expectedAmount = booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice;
+  const incomingPayloadRoot = asRecord(input.incomingPayload);
+  const incomingInvoice = asRecord(incomingPayloadRoot?.invoice) ?? {};
+  const incomingCustomData = asRecord(incomingPayloadRoot?.custom_data) ?? asRecord(incomingInvoice.custom_data) ?? {};
   const confirmedBookingId = firstString(
     confirmation.customData.booking_id,
     confirmation.customData.bookingId,
     confirmation.customData.booking,
+    incomingCustomData.booking_id,
+    incomingCustomData.bookingId,
+    incomingCustomData.booking,
+    incomingPayloadRoot?.booking_id,
   );
   const confirmedBookingReference = firstString(
     confirmation.customData.booking_reference,
     confirmation.customData.bookingReference,
+    incomingCustomData.booking_reference,
+    incomingCustomData.bookingReference,
+    incomingPayloadRoot?.booking_reference,
   );
   const confirmedToken = firstString(confirmation.token, token);
   const tokenMatches = confirmedToken === token;
   const foundByStoredToken = !input.bookingId && !input.bookingReference && Boolean(inputToken && booking.paydunyaToken === inputToken);
-  const customMatches = foundByStoredToken || (
-    (confirmedBookingId && confirmedBookingId === booking.id)
-    || (confirmedBookingReference && confirmedBookingReference === booking.reference)
+  const foundByTrustedBookingAndStoredToken = Boolean(
+    input.bookingId === booking.id
+    && booking.paydunyaToken
+    && token === booking.paydunyaToken
+    && (input.source === "client_return" || input.source === "client_manual" || trustedWebhookHash)
   );
+  const customMatches = foundByStoredToken
+    || foundByTrustedBookingAndStoredToken
+    || (
+      (confirmedBookingId && confirmedBookingId === booking.id)
+      || (confirmedBookingReference && confirmedBookingReference === booking.reference)
+    );
   const amountMatches = expectedAmount > 0 && confirmation.totalAmount === expectedAmount;
   const serverConfirmationTrusted = input.source !== "webhook" && confirmation.ok && !confirmation.hashProvided;
   const hasTrustedPayDunyaProof = confirmation.hashValid || trustedWebhookHash || serverConfirmationTrusted;
@@ -590,7 +608,7 @@ function buildTrustedWebhookConfirmation(payload: unknown, fallbackToken: string
   if (!root) return null;
   const invoice = asRecord(root.invoice) ?? {};
   const customer = asRecord(root.customer) ?? {};
-  const customData = asRecord(root.custom_data) ?? {};
+  const customData = asRecord(root.custom_data) ?? asRecord(invoice.custom_data) ?? {};
   const status = normalizeInvoiceStatus(root.status);
   const token = firstString(invoice.token, root.token, fallbackToken);
   if (!token) return null;
