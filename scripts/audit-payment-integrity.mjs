@@ -1,5 +1,16 @@
 import fs from "node:fs";
+import { createJiti } from "jiti";
 import { PrismaClient } from "@prisma/client";
+
+const jiti = createJiti(import.meta.url);
+const {
+  getExpectedClientPaymentAmount,
+  getVerifiedPayDunyaClientPaymentTransaction,
+  hasCompletedPayDunyaProof,
+  hasVerifiedClientFunds,
+  hasVerifiedPayDunyaClientPayment,
+  isOperationalBookingStatus,
+} = jiti("../src/lib/payment-security.ts");
 
 function loadDatabaseUrl() {
   if (process.env.DATABASE_URL) return;
@@ -17,48 +28,6 @@ function loadDatabaseUrl() {
 loadDatabaseUrl();
 
 const prisma = new PrismaClient();
-const verifiedStatuses = new Set([
-  "RECEIVED",
-  "BLOCKED",
-  "VALIDATED",
-  "TO_PAY_TEACHER",
-  "TEACHER_PAID",
-  "DISPUTED",
-  "PARTIALLY_REFUNDED",
-  "REFUNDED",
-  "RETAINED",
-]);
-const operationalPaidStatuses = new Set([
-  "PAID",
-  "PENDING_ADMIN_VALIDATION",
-  "CONFIRMED",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "COURSE_DONE",
-  "PENDING_CLIENT_VALIDATION",
-  "VALIDATED_BY_CLIENT",
-  "PAYMENT_TO_RELEASE",
-  "TEACHER_PAID",
-]);
-
-function hasPayDunyaProof(booking) {
-  return booking.paydunyaVerifiedAt && String(booking.paydunyaStatus || "").toUpperCase() === "COMPLETED";
-}
-
-function expectedAmount(booking) {
-  return booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice || 0;
-}
-
-function verifiedClientPayment(booking) {
-  const expected = expectedAmount(booking);
-  if (expected <= 0) return null;
-  return booking.transactions.find((transaction) => (
-    transaction.type === "CLIENT_PAYMENT"
-    && verifiedStatuses.has(transaction.status)
-    && transaction.amount === expected
-  ));
-}
-
 const bookings = await prisma.booking.findMany({
   include: {
     transactions: { where: { type: "CLIENT_PAYMENT" } },
@@ -76,10 +45,10 @@ const report = {
 };
 
 for (const booking of bookings) {
-  const expected = expectedAmount(booking);
-  const verifiedTx = verifiedClientPayment(booking);
+  const expected = getExpectedClientPaymentAmount(booking);
+  const verifiedTx = getVerifiedPayDunyaClientPaymentTransaction(booking);
 
-  if (verifiedStatuses.has(booking.paymentStatus) && !verifiedTx) {
+  if (hasVerifiedClientFunds(booking.paymentStatus) && !verifiedTx) {
     report.paidWithoutVerifiedTransaction.push({
       reference: booking.reference,
       id: booking.id,
@@ -90,7 +59,7 @@ for (const booking of bookings) {
 
   const anyVerifiedTx = booking.transactions.find((transaction) => (
     transaction.type === "CLIENT_PAYMENT"
-    && verifiedStatuses.has(transaction.status)
+    && hasVerifiedClientFunds(transaction.status)
     && transaction.amount > 0
   ));
   if (anyVerifiedTx && expected > 0 && anyVerifiedTx.amount !== expected) {
@@ -110,7 +79,7 @@ for (const booking of bookings) {
     });
   }
 
-  if (verifiedStatuses.has(booking.paymentStatus) && !hasPayDunyaProof(booking)) {
+  if (hasVerifiedClientFunds(booking.paymentStatus) && !hasCompletedPayDunyaProof(booking)) {
     report.verifiedStatusWithoutPayDunyaProof.push({
       reference: booking.reference,
       id: booking.id,
@@ -120,7 +89,7 @@ for (const booking of bookings) {
     });
   }
 
-  if (operationalPaidStatuses.has(booking.status) && !booking.isQuoteOnly && (!verifiedTx || !hasPayDunyaProof(booking))) {
+  if (isOperationalBookingStatus(booking.status) && !booking.isQuoteOnly && !hasVerifiedPayDunyaClientPayment(booking)) {
     report.operationalStatusWithoutVerifiedFunds.push({
       reference: booking.reference,
       id: booking.id,

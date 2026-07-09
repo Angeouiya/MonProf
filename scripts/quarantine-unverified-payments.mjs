@@ -1,5 +1,15 @@
 import fs from "node:fs";
+import { createJiti } from "jiti";
 import { PrismaClient } from "@prisma/client";
+
+const jiti = createJiti(import.meta.url);
+const {
+  getExpectedClientPaymentAmount,
+  getVerifiedPayDunyaClientPaymentTransaction,
+  hasCompletedPayDunyaProof,
+  hasVerifiedClientFunds,
+  isOperationalBookingStatus,
+} = jiti("../src/lib/payment-security.ts");
 
 function loadDatabaseUrl() {
   if (process.env.DATABASE_URL) return;
@@ -19,56 +29,12 @@ loadDatabaseUrl();
 const prisma = new PrismaClient();
 const apply = process.argv.includes("--apply");
 
-const verifiedStatuses = new Set([
-  "RECEIVED",
-  "BLOCKED",
-  "VALIDATED",
-  "TO_PAY_TEACHER",
-  "TEACHER_PAID",
-  "DISPUTED",
-  "PARTIALLY_REFUNDED",
-  "REFUNDED",
-  "RETAINED",
-]);
-
-const operationalPaidStatuses = new Set([
-  "PAID",
-  "PENDING_ADMIN_VALIDATION",
-  "CONFIRMED",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "COURSE_DONE",
-  "PENDING_CLIENT_VALIDATION",
-  "VALIDATED_BY_CLIENT",
-  "PAYMENT_TO_RELEASE",
-  "TEACHER_PAID",
-  "DISPUTED",
-]);
-
-function expectedAmount(booking) {
-  return booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice || 0;
-}
-
-function hasCompletedPayDunyaProof(booking) {
-  return Boolean(booking.paydunyaVerifiedAt) && String(booking.paydunyaStatus || "").toUpperCase() === "COMPLETED";
-}
-
-function verifiedClientPayment(booking) {
-  const expected = expectedAmount(booking);
-  if (expected <= 0) return null;
-  return booking.transactions.find((transaction) => (
-    transaction.type === "CLIENT_PAYMENT"
-    && verifiedStatuses.has(transaction.status)
-    && transaction.amount === expected
-  ));
-}
-
 function quarantineReason(booking) {
-  const expected = expectedAmount(booking);
-  const tx = verifiedClientPayment(booking);
+  const expected = getExpectedClientPaymentAmount(booking);
+  const tx = getVerifiedPayDunyaClientPaymentTransaction(booking);
   const anyClientPayment = booking.transactions.find((transaction) => (
     transaction.type === "CLIENT_PAYMENT"
-    && verifiedStatuses.has(transaction.status)
+    && hasVerifiedClientFunds(transaction.status)
     && transaction.amount > 0
   ));
   const reasons = [];
@@ -97,7 +63,7 @@ const bookings = await prisma.booking.findMany({
 
 const suspects = bookings
   .map((booking) => ({ booking, reason: quarantineReason(booking) }))
-  .filter(({ booking, reason }) => verifiedStatuses.has(booking.paymentStatus) && reason);
+  .filter(({ booking, reason }) => hasVerifiedClientFunds(booking.paymentStatus) && reason);
 const operationalArtifactsWithoutProof = bookings
   .map((booking) => ({ booking, reason: quarantineReason(booking) }))
   .filter(({ booking, reason }) => reason && (booking.teacherTasks.length > 0 || booking.missionLinks.length > 0));
@@ -124,7 +90,7 @@ const report = {
 if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0)) {
   const now = new Date();
   for (const { booking, reason } of suspects) {
-    const nextStatus = operationalPaidStatuses.has(booking.status) ? "PENDING_PAYMENT" : booking.status;
+    const nextStatus = isOperationalBookingStatus(booking.status) ? "PENDING_PAYMENT" : booking.status;
     const detail = `Quarantaine anti-faux paiement sur ${booking.reference}: ${reason}. Aucun flux financier ne doit être déclenché sans confirmation PayDunya serveur.`;
 
     await prisma.$transaction(async (tx) => {

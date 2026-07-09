@@ -31,6 +31,7 @@ checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
 checkBuildDoesNotIgnoreCodeQualityErrors();
+checkProductionScripts();
 checkVercelDeploymentConfig();
 checkHealthEndpoint();
 checkNoPublicPayDunyaSecrets();
@@ -143,6 +144,26 @@ function checkBuildDoesNotIgnoreCodeQualityErrors() {
   const config = fs.readFileSync(configPath, "utf8");
   record("Production build validates TypeScript errors", !/ignoreBuildErrors\s*:\s*true/.test(config));
   record("Production build keeps ESLint checks enabled", !/ignoreDuringBuilds\s*:\s*true/.test(config));
+}
+
+function checkProductionScripts() {
+  const packagePath = "package.json";
+  if (!fs.existsSync(packagePath)) {
+    record("Package scripts exist for production checks", false);
+    return;
+  }
+
+  let pkg;
+  try {
+    pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  } catch {
+    record("Package scripts are valid JSON", false);
+    return;
+  }
+
+  const productionBuild = pkg.scripts?.["build:production"] ?? "";
+  record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
+  record("Production build audits payment integrity", productionBuild.includes("npm run payment:audit"));
 }
 
 function checkVercelDeploymentConfig() {
