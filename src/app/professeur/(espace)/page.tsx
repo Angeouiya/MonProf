@@ -3,7 +3,7 @@ import { ArrowRight, Bell, BookOpenCheck, CalendarClock, ClipboardList, CreditCa
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
+import { getTeacherBlockedAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
@@ -113,10 +113,12 @@ export default async function ProfesseurDashboardPage() {
     db.teacherNotification.findMany({ where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 4 }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
-        teacherId: teacher.id,
-        OR: [
-          { teacherNetAmount: { gt: 0 }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
-          { status: { in: ["CANCELLED", "REFUNDED"] }, paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] }, cancellationPenaltyTeacherAmount: { gt: 0 } },
+        AND: [
+          { OR: [{ teacherId: teacher.id }, { sessions: { some: { teacherId: teacher.id } } }] },
+          { OR: [
+            { teacherNetAmount: { gt: 0 }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+            { status: { in: ["CANCELLED", "REFUNDED"] }, paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] }, cancellationPenaltyTeacherAmount: { gt: 0 } },
+          ] },
         ],
       }),
       select: {
@@ -124,6 +126,10 @@ export default async function ProfesseurDashboardPage() {
         cancellationPenaltyTeacherAmount: true, paymentStatus: true, totalClientPays: true,
         totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
         transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+        sessions: {
+          where: { teacherId: teacher.id },
+          select: { status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true },
+        },
       },
     }),
     db.teacherPaymentAdjustment.findMany({ where: { teacherId: teacher.id }, select: { bookingId: true, amount: true, status: true } }),
@@ -146,8 +152,7 @@ export default async function ProfesseurDashboardPage() {
     .filter(isTeacherPayableStatus)
     .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, adjustments), 0);
   const blockedTeacherAmount = verifiedPaymentBookings
-    .filter((booking) => booking.paymentStatus === "BLOCKED")
-    .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, adjustments), 0);
+    .reduce((sum, booking) => sum + getTeacherBlockedAmount(booking), 0);
   const realizedCount = verifiedPaymentBookings.filter((booking) => booking.paymentStatus === "TEACHER_PAID").length;
   const primarySubject = fullTeacher?.subjects.find((item) => item.isPrimary)?.subject.name
     ?? fullTeacher?.subjects[0]?.subject.name

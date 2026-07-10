@@ -156,6 +156,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
       teacherPaymentAdjustments: { where: { status: "APPLIED" } },
       clientRefundRequests: { orderBy: { createdAt: "desc" } },
+      sessions: { orderBy: { sequence: "asc" } },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -620,6 +621,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ ok: true });
       }
       case "mark_done": {
+        if (booking.sessions.length > 0) {
+          return NextResponse.json({ error: "Marquez la séance précise comme effectuée dans le suivi du pack." }, { status: 409 });
+        }
         if (booking.status !== "ASSIGNED" && booking.status !== "IN_PROGRESS" && booking.status !== "CONFIRMED") {
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });
         }
@@ -645,6 +649,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ ok: true });
       }
       case "pay_teacher": {
+        if (booking.sessions.length > 0) {
+          return NextResponse.json({ error: "Utilisez la comptabilité professeur : seuls les montants libérés séance par séance sont payables." }, { status: 409 });
+        }
         if (booking.paymentStatus !== "TO_PAY_TEACHER") {
           return NextResponse.json({ error: "Le paiement n'est pas à libérer" }, { status: 400 });
         }

@@ -101,6 +101,9 @@ export default async function AdminDashboard() {
         cancellationPenaltyTeacherAmount: true,
         paymentStatus: true,
         teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+        sessions: {
+          select: { teacherId: true, status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true },
+        },
       },
     }),
     db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
@@ -226,7 +229,13 @@ export default async function AdminDashboard() {
   const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
   const toRelease = toReleaseAgg.reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments), 0);
   const teachersToPay = new Set(
-    toReleaseAgg.filter((booking) => isTeacherPayableStatus(booking) && getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0).map((booking) => booking.teacherId)
+    toReleaseAgg
+      .filter((booking) => isTeacherPayableStatus(booking) && getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0)
+      .flatMap((booking) => booking.sessions.length > 0
+        ? booking.sessions
+          .filter((session) => session.releasedAmount > session.paidAmount + session.retainedAmount)
+          .map((session) => session.teacherId)
+        : [booking.teacherId])
   ).size;
   const totalCommission = allTimeCommissionAgg._sum.commissionAmount ?? 0;
   const monthCommission = monthCommissionAgg._sum.commissionAmount ?? 0;

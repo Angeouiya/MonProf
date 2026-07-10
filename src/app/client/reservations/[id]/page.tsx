@@ -29,6 +29,7 @@ import { BookingActions, BookingPrimaryAction } from "./actions";
 import { ScheduleProposalActions } from "./schedule-proposal-actions";
 import { ReplacementProposalActions } from "./replacement-proposal-actions";
 import { ClientRescheduleRequestPanel } from "./reschedule-request-panel";
+import { BookingSessionLedger } from "@/components/shared/booking-session-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,13 @@ export default async function ReservationDetailPage({
           },
         },
       },
+      sessions: {
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          proposedTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
   });
   if (!booking || booking.clientId !== user.id) notFound();
@@ -171,6 +179,13 @@ export default async function ReservationDetailPage({
               },
             },
           },
+        },
+        sessions: {
+          include: {
+            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+            proposedTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          },
+          orderBy: { sequence: "asc" },
         },
       },
     });
@@ -505,6 +520,14 @@ export default async function ReservationDetailPage({
               )}
             </div>
           </ClientSurface>
+
+          {booking.sessions.length > 0 && (
+            <BookingSessionLedger
+              bookingId={booking.id}
+              sessions={JSON.parse(JSON.stringify(booking.sessions))}
+              audience="client"
+            />
+          )}
 
           {isCancelled && (
             <ClientSurface className="space-y-4">

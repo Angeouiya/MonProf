@@ -27,17 +27,19 @@ export default async function ProfesseurPaiementsPage() {
   const [bookings, adjustments, payouts, payoutRequests] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
-        teacherId: teacher.id,
-        OR: [
-          {
-            teacherNetAmount: { gt: 0 },
-            status: { notIn: ["CANCELLED", "REFUNDED"] },
-          },
-          {
-            status: { in: ["CANCELLED", "REFUNDED"] },
-            paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
-            cancellationPenaltyTeacherAmount: { gt: 0 },
-          },
+        AND: [
+          { OR: [{ teacherId: teacher.id }, { sessions: { some: { teacherId: teacher.id } } }] },
+          { OR: [
+            {
+              teacherNetAmount: { gt: 0 },
+              status: { notIn: ["CANCELLED", "REFUNDED"] },
+            },
+            {
+              status: { in: ["CANCELLED", "REFUNDED"] },
+              paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
+              cancellationPenaltyTeacherAmount: { gt: 0 },
+            },
+          ] },
         ],
       }),
       select: {
@@ -65,6 +67,11 @@ export default async function ProfesseurPaiementsPage() {
         paydunyaStatus: true,
         paydunyaVerifiedAt: true,
         transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+        sessions: {
+          where: { teacherId: teacher.id },
+          select: { status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true },
+          orderBy: { sequence: "asc" },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -80,6 +87,7 @@ export default async function ProfesseurPaiementsPage() {
         allocations: {
           include: {
             booking: { select: { reference: true, subjectName: true, levelName: true } },
+            bookingSession: { select: { sequence: true } },
           },
         },
       },
@@ -95,6 +103,7 @@ export default async function ProfesseurPaiementsPage() {
             allocations: {
               include: {
                 booking: { select: { reference: true, subjectName: true, levelName: true } },
+                bookingSession: { select: { sequence: true } },
               },
             },
           },
@@ -110,16 +119,15 @@ export default async function ProfesseurPaiementsPage() {
     booking,
     settlement: getTeacherFinancialSettlement(booking, adjustments),
   }));
-  const totalNet = settlementRows.reduce((sum, row) => sum + row.settlement.payableAmount, 0);
+  const totalNet = settlementRows.reduce((sum, row) => sum + row.settlement.expectedAmount, 0);
+  const totalReleased = settlementRows.reduce((sum, row) => sum + row.settlement.released, 0);
   const totalPaid = settlementRows.reduce((sum, row) => sum + row.settlement.paid, 0);
   const totalRetained = settlementRows.reduce((sum, row) => sum + row.settlement.retained, 0);
-  const remaining = settlementRows.reduce((sum, row) => sum + row.settlement.remaining, 0);
+  const remaining = settlementRows.reduce((sum, row) => sum + row.settlement.totalOutstanding, 0);
   const readyToReceive = settlementRows
     .filter((row) => isTeacherPayableStatus(row.booking))
     .reduce((sum, row) => sum + row.settlement.remaining, 0);
-  const blockedAmount = settlementRows
-    .filter((row) => row.booking.paymentStatus === "BLOCKED")
-    .reduce((sum, row) => sum + row.settlement.remaining, 0);
+  const blockedAmount = settlementRows.reduce((sum, row) => sum + row.settlement.blocked, 0);
   const underControlAmount = Math.max(0, remaining - readyToReceive - blockedAmount);
   const pendingRequested = payoutRequests
     .filter((request) => request.status === "PENDING")
@@ -135,7 +143,7 @@ export default async function ProfesseurPaiementsPage() {
       />
 
       <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-6" balanceOdd={false}>
-        <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Cours validés, reports confirmés et indemnités dues" icon="wallet" />
+        <ProfessorStatCard label="Net prévu" value={formatFCFA(totalNet)} detail="Toutes les séances attribuées, libérées ou encore bloquées" icon="wallet" />
         <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
         <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
         <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par le service client" icon="wallet" />
@@ -152,9 +160,10 @@ export default async function ProfesseurPaiementsPage() {
             </p>
           </div>
           <div className="grid gap-2 text-sm min-[520px]:grid-cols-3 lg:min-w-[36rem]">
-            <AccountingMini label="Net total" value={formatFCFA(totalNet)} />
+            <AccountingMini label="Net prévu" value={formatFCFA(totalNet)} />
             <AccountingMini label="Déjà payé" value={formatFCFA(totalPaid)} />
             <AccountingMini label="Reste dû" value={formatFCFA(remaining)} strong />
+            <AccountingMini label="Déjà libéré" value={formatFCFA(totalReleased)} />
             <AccountingMini label="Prêt à recevoir" value={formatFCFA(readyToReceive)} />
             <AccountingMini label="Encore bloqué" value={formatFCFA(blockedAmount)} />
             <AccountingMini label="En contrôle" value={formatFCFA(underControlAmount)} />
@@ -269,12 +278,14 @@ export default async function ProfesseurPaiementsPage() {
                     <p className="mt-1 text-xs font-semibold text-[#64748B]">{formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)}</p>
                   </div>
                   <div className="grid min-w-[220px] gap-1 text-sm">
-                    <InfoLine label={cancellationPenalty ? "Indemnité" : "Net"} value={formatFCFA(settlement.payableAmount)} />
+                    <InfoLine label={cancellationPenalty ? "Indemnité" : "Net prévu"} value={formatFCFA(settlement.expectedAmount)} />
+                    {!cancellationPenalty && <InfoLine label="Libéré" value={formatFCFA(settlement.released)} />}
+                    {!cancellationPenalty && <InfoLine label="Bloqué" value={formatFCFA(settlement.blocked)} />}
                     {rescheduleSupplement > 0 && <InfoLine label="Supplément report" value={formatFCFA(rescheduleSupplement)} />}
                     {cancellationPenalty && <InfoLine label="Net cours initial" value={formatFCFA(booking.teacherNetAmount)} />}
                     <InfoLine label="Payé" value={formatFCFA(settlement.paid)} />
                     <InfoLine label="Retenu" value={formatFCFA(settlement.retained)} />
-                    <InfoLine label="Reste" value={formatFCFA(settlement.remaining)} />
+                    <InfoLine label="Payable maintenant" value={formatFCFA(settlement.remaining)} />
                   </div>
                 </Link>
               );})}

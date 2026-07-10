@@ -22,6 +22,10 @@ const payoutPicker = read("src/components/professor/payout-method-picker.tsx");
 const payoutRequestRoute = read("src/app/api/professor/payout-requests/route.ts");
 const termsPage = read("src/app/conditions-utilisation/page.tsx");
 const privacyPage = read("src/app/politique-confidentialite/page.tsx");
+const bookingSessions = read("src/lib/booking-sessions.ts");
+const bookingSessionRoute = read("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts");
+const payoutRoute = read("src/app/api/admin/teacher-payouts/route.ts");
+const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -213,6 +217,39 @@ record(
     && /10 juillet 2026/.test(privacyPage)
     && /Données de brouillon/.test(privacyPage)
     && /moyen Mobile Money préféré/.test(privacyPage),
+);
+
+record(
+  "Every pack creates one exact financial ledger row per session",
+  /buildBookingSessionRows/.test(bookingCreateApi)
+    && /bookingSession\.createMany/.test(bookingCreateApi)
+    && /distributeAmount\(courseAmount, count\)/.test(bookingSessions)
+    && /distributeAmount\(commissionAmount, count\)/.test(bookingSessions)
+    && /distributeAmount\(transportFee, count\)/.test(bookingSessions),
+);
+
+record(
+  "Client confirmation releases only the completed session",
+  /action === "confirm"/.test(bookingSessionRoute)
+    && /status: "RELEASED"/.test(bookingSessionRoute)
+    && /releasedAmount: courseSession\.teacherNetAmount/.test(bookingSessionRoute)
+    && /Chaque séance possède son planning, son professeur et son propre décompte financier/.test(sessionLedger),
+);
+
+record(
+  "Partial teacher unavailability proposes and applies a session-only replacement",
+  /findReplacementCandidatesForBooking\(bookingId, 3/.test(bookingSessionRoute)
+    && /status: nextStatus, proposedTeacherId/.test(bookingSessionRoute)
+    && /teacherId: proposedTeacherId, proposedTeacherId: null/.test(bookingSessionRoute)
+    && /Les autres séances restent inchangées/.test(bookingSessionRoute),
+);
+
+record(
+  "Professor payouts are allocated and locked at session level",
+  /bookingSessionId: allocation\.item\.session\?\.id/.test(payoutRoute)
+    && /paidAmount: item\.session\.paidAmount/.test(payoutRoute)
+    && /releasedAmount: item\.session\.releasedAmount/.test(payoutRoute)
+    && /syncBookingSessionAggregates/.test(payoutRoute),
 );
 
 for (const check of checks) {

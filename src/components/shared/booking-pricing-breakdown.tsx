@@ -168,7 +168,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               {(transportFee > 0 || transportRouteLabel) && (
                 <PricingLine
                   label="Déplacement"
-                  detail={transportRouteLabel ?? "Frais selon zone"}
+                  detail={`${transportRouteLabel ?? "Frais selon zone"}${safeSessionsCount > 1 ? ` · ${Math.round(transportFee / safeSessionsCount).toLocaleString("fr-FR")} FCFA x ${safeSessionsCount} séances` : ""}`}
                   value={<Money amount={transportFee} />}
                 />
               )}

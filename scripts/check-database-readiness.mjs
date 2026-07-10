@@ -13,6 +13,7 @@ const criticalTables = [
   ["communes", () => db.commune.count()],
   ["communeQuarters", () => db.communeQuarter.count()],
   ["bookings", () => db.booking.count()],
+  ["bookingSessions", () => db.bookingSession.count()],
   ["transactions", () => db.transaction.count()],
   ["notifications", () => db.notification.count()],
   ["reviews", () => db.review.count()],

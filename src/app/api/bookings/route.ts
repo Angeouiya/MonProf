@@ -28,6 +28,7 @@ import {
   validateEducationSelection,
 } from "@/lib/course-catalog";
 import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
+import { buildBookingSessionRows } from "@/lib/booking-sessions";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
@@ -503,6 +504,20 @@ export async function POST(req: NextRequest) {
         paymentStatus: "FAILED",
         paymentMethod: null,
       },
+    });
+    await tx.bookingSession.createMany({
+      data: buildBookingSessionRows({
+        bookingId: createdBooking.id,
+        teacherId,
+        sessionsCount: normalizedSessionsCount,
+        startDate: parsedStartDate,
+        selectedTimeSlots: normalizedSelectedSlots,
+        fallbackTime: initialScheduledTime,
+        courseAmount: pricing.courseAmount,
+        commissionAmount,
+        teacherPayoutAmount: teacherCoursePayoutAmount,
+        transportFee: pricing.transportFee,
+      }),
     });
     await tx.notification.create({
       data: {

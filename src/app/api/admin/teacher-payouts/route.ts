@@ -6,6 +6,7 @@ import { requireAdminApi } from "@/lib/admin-api";
 import { ACTIVE_PAYMENT_METHODS, isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { getTeacherPayableAmount, isCancellationPenaltyPayout } from "@/lib/teacher-payments";
+import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
 const MAX_REFERENCE_LENGTH = 80;
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
         where: {
           OR: [
             { paymentStatus: "TO_PAY_TEACHER" },
+            { sessions: { some: { teacherId, status: { in: ["RELEASED", "PARTIALLY_PAID"] } } } },
             {
               status: { in: ["CANCELLED", "REFUNDED"] },
               paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
@@ -100,6 +102,21 @@ export async function POST(req: NextRequest) {
             where: { type: "CLIENT_PAYMENT" },
             select: { type: true, status: true, amount: true },
           },
+          sessions: {
+            where: { teacherId, status: { in: ["RELEASED", "PARTIALLY_PAID", "PAID"] } },
+            orderBy: [{ releasedAt: "asc" }, { sequence: "asc" }],
+            select: {
+              id: true,
+              sequence: true,
+              status: true,
+              teacherNetAmount: true,
+              releasedAmount: true,
+              paidAmount: true,
+              retainedAmount: true,
+              releasedAt: true,
+              paidAt: true,
+            },
+          },
         },
       },
       paymentAdjustments: {
@@ -112,6 +129,54 @@ export async function POST(req: NextRequest) {
   if (!teacher) {
     return NextResponse.json({ error: "Professeur introuvable." }, { status: 404 });
   }
+
+  // Une réservation conserve son professeur d'origine, mais chaque séance peut être
+  // réattribuée. Ces dossiers doivent donc entrer dans la comptabilité du remplaçant.
+  const replacementBookings = await db.booking.findMany({
+    where: {
+      teacherId: { not: teacher.id },
+      sessions: { some: { teacherId: teacher.id, status: { in: ["RELEASED", "PARTIALLY_PAID"] } } },
+    },
+    orderBy: [{ clientValidatedAt: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      reference: true,
+      teacherNetAmount: true,
+      teacherPaidAmount: true,
+      teacherPaidAt: true,
+      cancellationPenaltyTeacherAmount: true,
+      cancellationPenaltyTeacherRate: true,
+      cancellationPenaltyPlatformAmount: true,
+      cancellationPenaltyPlatformRate: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      totalClientPays: true,
+      totalPrice: true,
+      paydunyaStatus: true,
+      paydunyaVerifiedAt: true,
+      status: true,
+      transactions: {
+        where: { type: "CLIENT_PAYMENT" },
+        select: { type: true, status: true, amount: true },
+      },
+      sessions: {
+        where: { teacherId: teacher.id, status: { in: ["RELEASED", "PARTIALLY_PAID", "PAID"] } },
+        orderBy: [{ releasedAt: "asc" }, { sequence: "asc" }],
+        select: {
+          id: true,
+          sequence: true,
+          status: true,
+          teacherNetAmount: true,
+          releasedAmount: true,
+          paidAmount: true,
+          retainedAmount: true,
+          releasedAt: true,
+          paidAt: true,
+        },
+      },
+    },
+  });
+  const teacherBookings = [...teacher.bookings, ...replacementBookings];
 
   const payoutRequest = requestId
     ? await db.teacherPayoutRequest.findUnique({
@@ -159,34 +224,92 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let globalRetentionLeft = teacher.paymentAdjustments
+  const persistedGlobalRetentions = teacherBookings.reduce((sum, booking) => {
+    const persisted = booking.sessions.reduce(
+      (sessionSum, session) => sessionSum + Math.max(0, session.retainedAmount),
+      0,
+    );
+    const bookingAdjustments = teacher.paymentAdjustments
+      .filter((adjustment) => adjustment.bookingId === booking.id)
+      .reduce((adjustmentSum, adjustment) => adjustmentSum + Math.max(0, adjustment.amount), 0);
+    return sum + Math.max(0, persisted - bookingAdjustments);
+  }, 0);
+  let globalRetentionLeft = Math.max(0, teacher.paymentAdjustments
     .filter((adjustment) => !adjustment.bookingId)
-    .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
-  const dueBookings = teacher.bookings
-    .filter((booking) => hasVerifiedPayDunyaClientPayment(booking))
-    .map((booking) => {
-      const payableAmount = getTeacherPayableAmount(booking);
-      const paid = Math.min(payableAmount, Math.max(0, booking.teacherPaidAmount));
-      const grossRemaining = Math.max(0, payableAmount - paid);
-      const bookingRetention = teacher.paymentAdjustments
+    .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0) - persistedGlobalRetentions);
+  type PayoutBooking = (typeof teacherBookings)[number];
+  type PayoutSession = PayoutBooking["sessions"][number];
+  type DueItem = {
+    booking: PayoutBooking;
+    session: PayoutSession | null;
+    payableAmount: number;
+    paid: number;
+    retainedAmount: number;
+    remaining: number;
+  };
+  const dueItems: DueItem[] = [];
+
+  for (const booking of teacherBookings.filter((item) => hasVerifiedPayDunyaClientPayment(item))) {
+    const cancellationPenaltyPayout = isCancellationPenaltyPayout(booking);
+    if (booking.sessions.length > 0 && !cancellationPenaltyPayout) {
+      const persistedBookingRetention = booking.sessions.reduce(
+        (sum, session) => sum + Math.max(0, session.retainedAmount),
+        0,
+      );
+      let bookingRetentionLeft = Math.max(0, teacher.paymentAdjustments
         .filter((adjustment) => adjustment.bookingId === booking.id)
-        .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
-      const globalRetention = Math.min(Math.max(0, grossRemaining - bookingRetention), globalRetentionLeft);
-      globalRetentionLeft -= globalRetention;
-      const retainedAmount = Math.min(grossRemaining, bookingRetention + globalRetention);
-      return {
-        ...booking,
+        .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0) - persistedBookingRetention);
+
+      for (const session of booking.sessions) {
+        const payableAmount = Math.max(0, session.releasedAmount);
+        const paid = Math.min(payableAmount, Math.max(0, session.paidAmount));
+        const grossRemaining = Math.max(0, payableAmount - paid);
+        const bookingRetention = Math.min(grossRemaining, bookingRetentionLeft);
+        bookingRetentionLeft -= bookingRetention;
+        const globalRetention = Math.min(Math.max(0, grossRemaining - bookingRetention), globalRetentionLeft);
+        globalRetentionLeft -= globalRetention;
+        const retainedAmount = Math.min(
+          grossRemaining,
+          Math.max(0, session.retainedAmount) + bookingRetention + globalRetention,
+        );
+        if (grossRemaining > 0 || retainedAmount > 0) {
+          dueItems.push({
+            booking,
+            session,
+            payableAmount,
+            paid,
+            retainedAmount,
+            remaining: Math.max(0, grossRemaining - retainedAmount),
+          });
+        }
+      }
+      continue;
+    }
+
+    const payableAmount = getTeacherPayableAmount(booking);
+    const paid = Math.min(payableAmount, Math.max(0, booking.teacherPaidAmount));
+    const grossRemaining = Math.max(0, payableAmount - paid);
+    const bookingRetention = teacher.paymentAdjustments
+      .filter((adjustment) => adjustment.bookingId === booking.id)
+      .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
+    const globalRetention = Math.min(Math.max(0, grossRemaining - bookingRetention), globalRetentionLeft);
+    globalRetentionLeft -= globalRetention;
+    const retainedAmount = Math.min(grossRemaining, bookingRetention + globalRetention);
+    if (grossRemaining > 0 || retainedAmount > 0) {
+      dueItems.push({
+        booking,
+        session: null,
         payableAmount,
         paid,
         retainedAmount,
         remaining: Math.max(0, grossRemaining - retainedAmount),
-      };
-    })
-    .filter((booking) => booking.remaining > 0 || booking.retainedAmount > 0);
+      });
+    }
+  }
   const allocationCandidates = targetBookingId
-    ? dueBookings.filter((booking) => booking.id === targetBookingId)
-    : dueBookings;
-  const totalDue = allocationCandidates.reduce((sum, booking) => sum + booking.remaining, 0);
+    ? dueItems.filter((item) => item.booking.id === targetBookingId)
+    : dueItems;
+  const totalDue = allocationCandidates.reduce((sum, item) => sum + item.remaining, 0);
 
   if (targetBookingId && allocationCandidates.length === 0) {
     return NextResponse.json({ error: "Cette réservation n'est pas payable pour ce professeur ou n'a plus de reste dû." }, { status: 400 });
@@ -202,19 +325,19 @@ export async function POST(req: NextRequest) {
   }
 
   let remainingPayment = amount;
-  const allocations: { booking: (typeof dueBookings)[number]; amount: number }[] = [];
-  for (const booking of allocationCandidates) {
+  const allocations: { item: (typeof dueItems)[number]; amount: number }[] = [];
+  for (const item of allocationCandidates) {
     if (remainingPayment <= 0) break;
-    const allocated = Math.min(booking.remaining, remainingPayment);
+    const allocated = Math.min(item.remaining, remainingPayment);
     if (allocated <= 0) continue;
-    allocations.push({ booking, amount: allocated });
+    allocations.push({ item, amount: allocated });
     remainingPayment -= allocated;
   }
 
   const now = new Date();
   const teacherName = teacher.professionalName || teacher.fullName;
   const allocationSummary = allocations
-    .map((allocation) => `- ${allocation.booking.reference} : ${allocation.amount.toLocaleString("fr-FR")} FCFA`)
+    .map((allocation) => `- ${allocation.item.booking.reference}${allocation.item.session ? ` · séance ${allocation.item.session.sequence}/${allocation.item.booking.sessions.length}` : ""} : ${allocation.amount.toLocaleString("fr-FR")} FCFA`)
     .join("\n");
   let payout: any;
   try {
@@ -231,26 +354,86 @@ export async function POST(req: NextRequest) {
         createdById: admin.id,
         allocations: {
           create: allocations.map((allocation) => ({
-            bookingId: allocation.booking.id,
+            bookingId: allocation.item.booking.id,
+            bookingSessionId: allocation.item.session?.id ?? null,
             amount: allocation.amount,
           })),
         },
       },
       include: {
-        allocations: { include: { booking: { select: { reference: true } } } },
+        allocations: {
+          include: {
+            booking: { select: { reference: true } },
+            bookingSession: { select: { sequence: true } },
+          },
+        },
       },
     });
 
-    const allocatedByBooking = new Map(allocations.map((allocation) => [allocation.booking.id, allocation.amount]));
-    for (const booking of dueBookings) {
-      const allocated = allocatedByBooking.get(booking.id) ?? 0;
-      const newPaid = booking.teacherPaidAmount + allocated;
-      const fullyPaid = newPaid + booking.retainedAmount >= booking.payableAmount;
+    const allocatedByItem = new Map(allocations.map((allocation) => [
+      allocation.item.session?.id ?? `booking:${allocation.item.booking.id}`,
+      allocation.amount,
+    ]));
+    const sessionBookingIds = new Set<string>();
+    for (const item of dueItems) {
+      const booking = item.booking;
+      const allocated = allocatedByItem.get(item.session?.id ?? `booking:${booking.id}`) ?? 0;
+      const newPaid = item.paid + allocated;
+      const fullyPaid = newPaid + item.retainedAmount >= item.payableAmount;
+
+      if (item.session) {
+        if (allocated <= 0 && !fullyPaid && item.retainedAmount === item.session.retainedAmount) continue;
+        const sessionUpdate = await tx.bookingSession.updateMany({
+          where: {
+            id: item.session.id,
+            paidAmount: item.session.paidAmount,
+            releasedAmount: item.session.releasedAmount,
+          },
+          data: {
+            paidAmount: newPaid,
+            retainedAmount: item.retainedAmount,
+            status: fullyPaid ? "PAID" : "PARTIALLY_PAID",
+            paidAt: fullyPaid ? now : item.session.paidAt,
+          },
+        });
+        if (sessionUpdate.count !== 1) throw new Error("PAYOUT_BALANCE_CHANGED");
+        sessionBookingIds.add(booking.id);
+        if (allocated > 0) {
+          const payoutMethod = method ?? (isActivePaymentMethod(booking.paymentMethod) ? booking.paymentMethod : null);
+          await tx.transaction.create({
+            data: {
+              reference: generateReference("TX-PROF"),
+              bookingId: booking.id,
+              teacherId: teacher.id,
+              amount: allocated,
+              commission: 0,
+              teacherNet: allocated,
+              type: "TEACHER_PAYOUT",
+              status: fullyPaid ? "TEACHER_PAID" : "TO_PAY_TEACHER",
+              method: payoutMethod,
+              paidAt: now,
+            },
+          });
+          await tx.bookingSessionHistory.create({
+            data: {
+              bookingSessionId: item.session.id,
+              action: "PAYOUT_RECORDED",
+              detail: `${allocated} FCFA enregistrés sous la référence ${reference}.`,
+              actorType: "ADMIN",
+              actorId: admin.id,
+              fromStatus: item.session.status,
+              toStatus: fullyPaid ? "PAID" : "PARTIALLY_PAID",
+            },
+          });
+        }
+        continue;
+      }
+
       const cancellationPenaltyPayout = isCancellationPenaltyPayout(booking);
       if (allocated <= 0 && !fullyPaid) continue;
 
       const bookingUpdate = await tx.booking.updateMany({
-        where: { id: booking.id, teacherPaidAmount: booking.teacherPaidAmount },
+        where: { id: booking.id, teacherPaidAmount: item.paid },
         data: {
           teacherPaidAmount: newPaid,
           paymentStatus: cancellationPenaltyPayout
@@ -290,6 +473,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    for (const bookingId of sessionBookingIds) {
+      const aggregate = await syncBookingSessionAggregates(tx as any, bookingId);
+      if (aggregate?.paymentStatus === "TEACHER_PAID") {
+        await tx.transaction.updateMany({
+          where: { bookingId, type: "CLIENT_PAYMENT" },
+          data: { status: "TEACHER_PAID", paidAt: now },
+        });
+      }
+    }
+
     await tx.adminActionLog.create({
       data: {
         adminId: admin.id,
@@ -321,7 +514,7 @@ export async function POST(req: NextRequest) {
     await tx.teacherNotification.create({
       data: {
         teacherId: teacher.id,
-        bookingId: allocations[0]?.booking.id,
+        bookingId: allocations[0]?.item.booking.id,
         title: `Paiement enregistré - ${reference}`,
         message: [
           `Bonjour ${teacherName},`,
@@ -356,10 +549,10 @@ export async function POST(req: NextRequest) {
         status: "CREATED",
         priority: "NORMAL",
         teacherId: teacher.id,
-        bookingId: allocations[0]?.booking.id,
+        bookingId: allocations[0]?.item.booking.id,
         adminId: admin.id,
-        link: allocations[0]?.booking.id
-          ? `/admin/professeurs/${teacher.id}?tab=paiements&bookingId=${allocations[0].booking.id}`
+        link: allocations[0]?.item.booking.id
+          ? `/admin/professeurs/${teacher.id}?tab=paiements&bookingId=${allocations[0].item.booking.id}`
           : `/admin/professeurs/${teacher.id}?tab=paiements`,
         actionLabel: "Ouvrir comptabilité",
       },

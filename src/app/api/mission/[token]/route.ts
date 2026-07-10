@@ -232,6 +232,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
           },
         });
       }
+      await tx.bookingSession.updateMany({
+        where: {
+          bookingId: mission.bookingId,
+          teacherId: mission.teacherId,
+          status: "PLANNED",
+        },
+        data: { status: "TEACHER_CONFIRMED" },
+      });
       await tx.teacherNotification.create({
         data: {
           teacherId: mission.teacherId,

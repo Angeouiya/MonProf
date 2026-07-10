@@ -95,7 +95,11 @@ function isAvailabilityCompatible(rawAvailability: string | null, booking: { pre
   return requestedDays.some((day) => TWO_HOUR_SLOTS.some((slot) => Boolean(availability[day]?.[slot.key])));
 }
 
-export async function findReplacementCandidatesForBooking(bookingId: string, limit = 12) {
+export async function findReplacementCandidatesForBooking(
+  bookingId: string,
+  limit = 12,
+  options?: { excludedTeacherId?: string; excludedTeacherIds?: string[]; scheduledDate?: Date | null; scheduledTime?: string | null },
+) {
   const booking = await db.booking.findUnique({
     where: { id: bookingId },
     include: {
@@ -113,9 +117,20 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
       : null,
   ]);
 
+  const matchingBooking = {
+    ...booking,
+    scheduledDate: options?.scheduledDate ?? booking.scheduledDate,
+    scheduledTime: options?.scheduledTime ?? booking.scheduledTime,
+  };
   const teachers = await db.teacher.findMany({
     where: {
-      id: { not: booking.teacherId },
+      id: {
+        notIn: Array.from(new Set([
+          booking.teacherId,
+          options?.excludedTeacherId,
+          ...(options?.excludedTeacherIds ?? []),
+        ].filter((value): value is string => Boolean(value)))),
+      },
       status: "ACTIVE",
       AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
       ...(booking.courseFormat === "HOME" ? { offersHome: true } : { offersOnline: true }),
@@ -173,8 +188,8 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
           })
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;
-      const availabilityCompatible = isAvailabilityCompatible(teacher.availability, booking);
-      const activeConflict = hasActiveConflict(teacher.bookings, booking);
+      const availabilityCompatible = isAvailabilityCompatible(teacher.availability, matchingBooking);
+      const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking);
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
       const priceDiff = teacher.pricePerSession - booking.unitPrice;
       const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));

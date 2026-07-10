@@ -244,6 +244,8 @@ model Teacher {
   payoutRequests       TeacherPayoutRequest[]
   adminMessages        TeacherAdminMessage[]
   webPushSubscriptions WebPushSubscription[]
+  bookingSessions      BookingSession[]           @relation("BookingSessionTeacher")
+  proposedSessions     BookingSession[]           @relation("BookingSessionProposedTeacher")
 
   @@index([status])
   @@index([featured])
@@ -441,10 +443,90 @@ model Booking {
   scheduleProposals         BookingScheduleProposal[]
   rescheduleRequests        BookingRescheduleRequest[]
   teacherAdminMessages      TeacherAdminMessage[]
+  sessions                  BookingSession[]
 
   @@index([clientId])
   @@index([teacherId])
   @@index([status])
+}
+
+// Une réservation de pack est payée en une fois, mais exploitée et comptabilisée
+// séance par séance. Les champs financiers de Booking restent les agrégats.
+model BookingSession {
+  id                  String               @id @default(cuid())
+  bookingId           String
+  sequence            Int
+  teacherId           String
+  proposedTeacherId   String?
+  scheduledDate       DateTime?
+  scheduledTime       String?
+  durationMinutes     Int                  @default(120)
+  status              BookingSessionStatus @default(PLANNED)
+  courseAmount        Int                  @default(0)
+  commissionAmount    Int                  @default(0)
+  teacherCourseAmount Int                  @default(0)
+  transportFee        Int                  @default(0)
+  teacherNetAmount    Int                  @default(0)
+  releasedAmount      Int                  @default(0)
+  paidAmount          Int                  @default(0)
+  retainedAmount      Int                  @default(0)
+  proposedDate        DateTime?
+  proposedTime        String?
+  unavailableReason   String?
+  completedAt         DateTime?
+  clientValidatedAt   DateTime?
+  releasedAt          DateTime?
+  paidAt              DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  booking           Booking                   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  teacher           Teacher                   @relation("BookingSessionTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  proposedTeacher   Teacher?                  @relation("BookingSessionProposedTeacher", fields: [proposedTeacherId], references: [id], onDelete: SetNull)
+  payoutAllocations TeacherPayoutAllocation[]
+  history           BookingSessionHistory[]
+  disputes          Dispute[]
+
+  @@unique([bookingId, sequence])
+  @@index([bookingId, status])
+  @@index([teacherId, status, scheduledDate])
+  @@index([proposedTeacherId, status])
+}
+
+model BookingSessionHistory {
+  id               String   @id @default(cuid())
+  bookingSessionId String
+  actorType        String
+  actorId          String?
+  action           String
+  fromStatus       String?
+  toStatus         String?
+  oldTeacherId     String?
+  newTeacherId     String?
+  detail           String?
+  createdAt        DateTime @default(now())
+
+  bookingSession BookingSession @relation(fields: [bookingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([bookingSessionId, createdAt])
+  @@index([actorType, actorId])
+}
+
+enum BookingSessionStatus {
+  PLANNED
+  TEACHER_CONFIRMED
+  IN_PROGRESS
+  AWAITING_CLIENT_CONFIRMATION
+  RELEASED
+  PARTIALLY_PAID
+  PAID
+  RESCHEDULE_PROPOSED
+  REPLACEMENT_PROPOSED
+  NEEDS_REPLACEMENT
+  DISPUTED
+  CANCELLED
+  REFUNDED
 }
 
 enum CourseFormat {
@@ -575,18 +657,22 @@ enum ReviewAdminStatus {
 }
 
 model Dispute {
-  id          String        @id @default(cuid())
-  bookingId   String
-  openedById  String
-  reason      String
-  description String
-  status      DisputeStatus @default(OPEN)
-  resolution  String?
-  createdAt   DateTime      @default(now())
-  resolvedAt  DateTime?
+  id               String        @id @default(cuid())
+  bookingId        String
+  bookingSessionId String?
+  openedById       String
+  reason           String
+  description      String
+  status           DisputeStatus @default(OPEN)
+  resolution       String?
+  createdAt        DateTime      @default(now())
+  resolvedAt       DateTime?
 
-  booking  Booking @relation(fields: [bookingId], references: [id])
-  openedBy User    @relation("DisputeOpener", fields: [openedById], references: [id])
+  booking        Booking         @relation(fields: [bookingId], references: [id])
+  bookingSession BookingSession? @relation(fields: [bookingSessionId], references: [id], onDelete: SetNull)
+  openedBy       User            @relation("DisputeOpener", fields: [openedById], references: [id])
+
+  @@index([bookingSessionId])
 }
 
 enum DisputeStatus {
@@ -1310,17 +1396,20 @@ model TeacherPayoutRequest {
 }
 
 model TeacherPayoutAllocation {
-  id        String   @id @default(cuid())
-  payoutId  String
-  bookingId String
-  amount    Int
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  payoutId         String
+  bookingId        String
+  bookingSessionId String?
+  amount           Int
+  createdAt        DateTime @default(now())
 
-  payout  TeacherPayoutRecord @relation(fields: [payoutId], references: [id], onDelete: Cascade)
-  booking Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  payout         TeacherPayoutRecord @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  booking        Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingSession BookingSession?     @relation(fields: [bookingSessionId], references: [id], onDelete: SetNull)
 
   @@index([payoutId])
   @@index([bookingId])
+  @@index([bookingSessionId])
 }
 
 enum TeacherPayoutRecordStatus {

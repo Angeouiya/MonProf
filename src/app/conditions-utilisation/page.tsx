@@ -112,6 +112,8 @@ const sections: LegalSection[] = [
     title: "Paiement professeur",
     body: [
       "La comptabilité professeur est interne à Compétence. Le professeur ne dispose pas d'un wallet autonome. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables par le service client.",
+      "Pour une réservation comprenant plusieurs séances, chaque séance possède son propre planning, son professeur affecté et son décompte. Les fonds d'une séance deviennent libérables uniquement après sa réalisation puis sa confirmation par le client; les séances futures restent bloquées.",
+      "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
       "Le professeur choisit le moyen sur lequel il souhaite recevoir ses fonds parmi Wave, Orange Money, MTN Money et Moov Money. Il saisit puis confirme deux fois le numéro exact. Ce choix est enregistré comme préférence et peut être modifié dans Paramètres ou lors d'une nouvelle demande.",
       "Lorsqu'un professeur fait une demande de paiement, il doit saisir le montant demandé, le moyen de paiement et confirmer le numéro exact. Une demande de paiement validement envoyée est traitée entre 1 heure et 72 heures ouvrées après contrôle du service client.",
       "Ce délai peut être prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
@@ -132,6 +134,7 @@ const sections: LegalSection[] = [
       "Les frais de déplacement concernent uniquement les cours à domicile. Aucun frais de déplacement n'est appliqué aux cours en ligne.",
       "Même quartier exact : lorsque le quartier du professeur et celui du client correspondent dans la même commune, les frais de déplacement sont de 0 FCFA. Lorsque la commune est identique mais le quartier différent, le forfait local affiché avant paiement peut s'appliquer.",
       "Pour les communes proches, éloignées ou les villes hors Grand Abidjan, la plateforme applique automatiquement le palier publié selon les informations disponibles. Le client doit vérifier la commune, le quartier et le montant avant paiement.",
+      "Lorsque la réservation comporte plusieurs séances à domicile, le forfait de déplacement affiché est calculé pour chaque déplacement effectivement planifié puis multiplié par le nombre de séances. Le détail unitaire et le total sont présentés avant le paiement.",
     ],
   },
   {

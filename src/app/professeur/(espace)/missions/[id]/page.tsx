@@ -18,6 +18,7 @@ import {
   ProfessorPageHeader,
   StatusPill,
 } from "@/components/professor/professor-ui";
+import { BookingSessionLedger } from "@/components/shared/booking-session-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,13 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
   const { id } = await params;
 
   const booking = await db.booking.findFirst({
-    where: verifiedPayDunyaBookingWhere({ id, teacherId: teacher.id }),
+    where: verifiedPayDunyaBookingWhere({
+      id,
+      OR: [
+        { teacherId: teacher.id },
+        { sessions: { some: { teacherId: teacher.id } } },
+      ],
+    }),
     include: {
       client: { select: { name: true, phone: true, email: true, commune: true, quartier: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" } },
@@ -35,6 +42,14 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
       rescheduleRequests: { orderBy: { createdAt: "desc" }, take: 5, include: { transaction: true } },
       teacherTasks: { orderBy: [{ priority: "desc" }, { createdAt: "desc" }] },
       teacherPaymentAdjustments: { orderBy: { createdAt: "desc" } },
+      sessions: {
+        where: { teacherId: teacher.id },
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          proposedTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
   });
 
@@ -80,6 +95,14 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
               </p>
             )}
           </PortalCard>
+
+          {booking.sessions.length > 0 && (
+            <BookingSessionLedger
+              bookingId={booking.id}
+              sessions={JSON.parse(JSON.stringify(booking.sessions))}
+              audience="professor"
+            />
+          )}
 
           <PortalCard>
             <h3 className="text-base font-semibold text-[#111827]">Planning et lieu</h3>

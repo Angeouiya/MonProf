@@ -23,7 +23,10 @@ export default async function ProfesseurMissionsPage() {
   const { teacher } = await requireTeacher();
   const bookings = await db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({
-      teacherId: teacher.id,
+      OR: [
+        { teacherId: teacher.id },
+        { sessions: { some: { teacherId: teacher.id } } },
+      ],
       status: { notIn: ["CANCELLED", "REFUNDED"] },
     }),
     include: {

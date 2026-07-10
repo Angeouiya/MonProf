@@ -53,13 +53,44 @@ export default async function AdminProfesseursAPayerPage() {
       },
       client: { select: { name: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+      sessions: {
+        where: { status: { in: ["RELEASED", "PARTIALLY_PAID", "PAID"] } },
+        select: {
+          status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true,
+          teacher: {
+            select: {
+              id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true,
+              payoutRecords: {
+                orderBy: { paidAt: "desc" }, take: 1,
+                select: { reference: true, amount: true, method: true, paidAt: true },
+              },
+              paymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
+            },
+          },
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
     orderBy: { clientValidatedAt: "desc" },
     take: 200,
   });
   const bookings = rawBookings.filter(hasVerifiedPayDunyaClientPayment);
 
-  const rows = bookings
+  const accountingBookings = bookings.flatMap((booking) => {
+    if (booking.sessions.length === 0 || isCancellationPenaltyPayout(booking)) return [booking];
+    const groups = new Map<string, typeof booking.sessions>();
+    for (const session of booking.sessions) {
+      groups.set(session.teacher.id, [...(groups.get(session.teacher.id) ?? []), session]);
+    }
+    return Array.from(groups.values()).map((sessions) => ({
+      ...booking,
+      teacherId: sessions[0].teacher.id,
+      teacher: sessions[0].teacher,
+      sessions,
+    }));
+  });
+
+  const rows = accountingBookings
     .map((booking) => {
       const settlement = getTeacherFinancialSettlement(booking, booking.teacher.paymentAdjustments);
       return {
@@ -211,7 +242,7 @@ export default async function AdminProfesseursAPayerPage() {
               <CardContent className="p-4 md:hidden">
                 <div className="grid gap-3">
                   {g.rows.map(({ booking: b, payableAmount, paid, retained, remaining, partiallyPaid, cancellationPenalty }) => (
-                    <div key={b.id} className="rounded-lg border border-violet-100 bg-white p-3">
+                    <div key={`${b.id}-${b.teacher.id}`} className="rounded-lg border border-violet-100 bg-white p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link href={`/admin/reservations/${b.id}`} className="font-mono text-xs font-bold text-primary">
@@ -261,7 +292,7 @@ export default async function AdminProfesseursAPayerPage() {
                   </TableHeader>
                   <TableBody>
                     {g.rows.map(({ booking: b, payableAmount, paid, retained, remaining, partiallyPaid, cancellationPenalty }) => (
-                      <TableRow key={b.id}>
+                      <TableRow key={`${b.id}-${b.teacher.id}`}>
                         <TableCell className="font-mono text-xs">
                           <Link href={`/admin/reservations/${b.id}`} className="text-primary hover:underline">{b.reference}</Link>
                           {partiallyPaid && <p className="mt-1 text-[11px] font-semibold text-amber-700">Partiel</p>}

@@ -5,7 +5,18 @@ export type TeacherPaymentBooking = {
   cancellationPenaltyTeacherAmount?: number | null;
   teacherPaidAmount?: number | null;
   paymentStatus: string;
+  sessions?: Array<{
+    status: string;
+    teacherNetAmount?: number;
+    releasedAmount?: number;
+    paidAmount?: number;
+    retainedAmount?: number;
+  }>;
 };
+
+function usesSessionLedger(booking: TeacherPaymentBooking) {
+  return !isCancellationPenaltyPayout(booking) && Boolean(booking.sessions?.length);
+}
 
 export type TeacherPaymentAdjustment = {
   amount: number;
@@ -18,7 +29,28 @@ export function getTeacherPayableAmount(booking: TeacherPaymentBooking) {
   if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "") && cancellationPenalty > 0) {
     return cancellationPenalty;
   }
+  if (usesSessionLedger(booking)) {
+    return booking.sessions!.reduce((sum, session) => sum + Math.max(0, session.releasedAmount ?? 0), 0);
+  }
   return Math.max(0, booking.teacherNetAmount);
+}
+
+export function getTeacherExpectedAmount(booking: TeacherPaymentBooking) {
+  if (isCancellationPenaltyPayout(booking)) return getTeacherPayableAmount(booking);
+  if (booking.sessions?.length) {
+    return booking.sessions.reduce((sum, session) => sum + Math.max(0, session.teacherNetAmount ?? 0), 0);
+  }
+  return Math.max(0, booking.teacherNetAmount);
+}
+
+export function getTeacherBlockedAmount(booking: TeacherPaymentBooking) {
+  if (!usesSessionLedger(booking)) {
+    return booking.paymentStatus === "BLOCKED" ? getTeacherExpectedAmount(booking) : 0;
+  }
+  return booking.sessions!.reduce((sum, session) => {
+    if (["RELEASED", "PARTIALLY_PAID", "PAID", "CANCELLED", "REFUNDED"].includes(session.status)) return sum;
+    return sum + Math.max(0, (session.teacherNetAmount ?? 0) - (session.retainedAmount ?? 0));
+  }, 0);
 }
 
 export function isCancellationPenaltyPayout(booking: TeacherPaymentBooking) {
@@ -27,6 +59,12 @@ export function isCancellationPenaltyPayout(booking: TeacherPaymentBooking) {
 }
 
 export function isTeacherPayableStatus(booking: TeacherPaymentBooking) {
+  if (usesSessionLedger(booking)) {
+    return booking.sessions!.some((session) => (
+      ["RELEASED", "PARTIALLY_PAID"].includes(session.status)
+      && (session.releasedAmount ?? 0) > (session.paidAmount ?? 0) + (session.retainedAmount ?? 0)
+    ));
+  }
   if (booking.paymentStatus === "TO_PAY_TEACHER") return true;
   return isCancellationPenaltyPayout(booking)
     && ["PARTIALLY_REFUNDED", "RETAINED"].includes(booking.paymentStatus);
@@ -34,6 +72,12 @@ export function isTeacherPayableStatus(booking: TeacherPaymentBooking) {
 
 export function getTeacherPaidAmount(booking: TeacherPaymentBooking) {
   const payableAmount = getTeacherPayableAmount(booking);
+  if (usesSessionLedger(booking)) {
+    return Math.min(
+      payableAmount,
+      booking.sessions!.reduce((sum, session) => sum + Math.max(0, session.paidAmount ?? 0), 0),
+    );
+  }
   const explicitPaid = Math.max(0, booking.teacherPaidAmount ?? 0);
   if (explicitPaid > 0) return Math.min(explicitPaid, payableAmount);
   return booking.paymentStatus === "TEACHER_PAID" ? payableAmount : 0;
@@ -44,9 +88,14 @@ export function getTeacherRetainedAmount(
   adjustments: TeacherPaymentAdjustment[] = [],
 ) {
   if (!booking.id) return 0;
-  return adjustments
+  const adjustmentTotal = adjustments
     .filter((adjustment) => adjustment.status === "APPLIED" && adjustment.bookingId === booking.id)
     .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
+  if (usesSessionLedger(booking)) {
+    const sessionTotal = booking.sessions!.reduce((sum, session) => sum + Math.max(0, session.retainedAmount ?? 0), 0);
+    return Math.max(sessionTotal, adjustmentTotal);
+  }
+  return adjustmentTotal;
 }
 
 export function getTeacherRemainingAmount(
@@ -55,7 +104,9 @@ export function getTeacherRemainingAmount(
 ) {
   const payableAmount = getTeacherPayableAmount(booking);
   const retained = getTeacherRetainedAmount(booking, adjustments);
-  const paid = retained > 0 ? Math.max(0, booking.teacherPaidAmount ?? 0) : getTeacherPaidAmount(booking);
+  const paid = usesSessionLedger(booking)
+    ? getTeacherPaidAmount(booking)
+    : retained > 0 ? Math.max(0, booking.teacherPaidAmount ?? 0) : getTeacherPaidAmount(booking);
   return Math.max(0, payableAmount - paid - retained);
 }
 
@@ -88,13 +139,21 @@ export function getTeacherFinancialSettlement(
 ) {
   const payableAmount = getTeacherPayableAmount(booking);
   const retained = getTeacherRetainedAmount(booking, adjustments);
-  const paid = retained > 0 ? Math.max(0, booking.teacherPaidAmount ?? 0) : getTeacherPaidAmount(booking);
+  const paid = usesSessionLedger(booking)
+    ? getTeacherPaidAmount(booking)
+    : retained > 0 ? Math.max(0, booking.teacherPaidAmount ?? 0) : getTeacherPaidAmount(booking);
   const remaining = Math.max(0, payableAmount - paid - retained);
+  const expectedAmount = getTeacherExpectedAmount(booking);
+  const blocked = getTeacherBlockedAmount(booking);
   return {
+    expectedAmount,
     payableAmount,
+    released: payableAmount,
+    blocked,
     paid,
     retained,
     remaining,
+    totalOutstanding: Math.max(0, expectedAmount - paid - retained),
     settled: remaining <= 0,
   };
 }

@@ -39,7 +39,11 @@ if (!ADMIN_ROLE_PERMISSIONS.FINANCE.includes("FINANCE_MANAGE")) errors.push("Le 
 if (ADMIN_ROLE_PERMISSIONS.OBSERVER.includes("FINANCE_MANAGE")) errors.push("Le rôle Lecture seule peut modifier les paiements.");
 if (ADMIN_ROLE_PERMISSIONS.SUPPORT.includes("TEAM_MANAGE")) errors.push("Le Service client peut gérer l'équipe admin.");
 if (!payoutRouteSource.includes('isolationLevel: "Serializable"')) errors.push("Les paiements professeur ne sont pas isolés contre les validations simultanées.");
-if (!payoutRouteSource.includes("teacherPaidAmount: booking.teacherPaidAmount")) errors.push("Le débit professeur ne vérifie pas le solde précédent avant mise à jour.");
+const verifiesLegacyBalance = payoutRouteSource.includes("teacherPaidAmount: item.paid");
+const verifiesSessionBalance = payoutRouteSource.includes("paidAmount: item.session.paidAmount")
+  && payoutRouteSource.includes("releasedAmount: item.session.releasedAmount")
+  && payoutRouteSource.includes("PAYOUT_BALANCE_CHANGED");
+if (!verifiesLegacyBalance || !verifiesSessionBalance) errors.push("Le débit professeur ne vérifie pas le solde précédent de la réservation et de la séance avant mise à jour.");
 if (!payoutRouteSource.includes('status: "PENDING", payoutRecordId: null')) errors.push("Une demande de paiement peut être réutilisée après traitement.");
 
 const prisma = new PrismaClient();

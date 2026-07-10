@@ -16,6 +16,7 @@ type PayoutReceiptAllocation = {
     subjectName: string;
     levelName: string;
   };
+  bookingSession?: { sequence: number } | null;
 };
 
 type PayoutReceiptRecord = {
@@ -119,7 +120,7 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
   const issuer = issuerLabel ?? record.createdBy?.name ?? "Service client";
   const allocationLines = record.allocations.length
     ? record.allocations.map((allocation) => (
-        `- ${allocation.booking.reference} | ${allocation.booking.subjectName} (${allocation.booking.levelName}) : ${formatFCFA(allocation.amount)}`
+        `- ${allocation.booking.reference}${allocation.bookingSession ? ` · séance ${allocation.bookingSession.sequence}` : ""} | ${allocation.booking.subjectName} (${allocation.booking.levelName}) : ${formatFCFA(allocation.amount)}`
       ))
     : ["- Aucune allocation détaillée"];
 
@@ -147,7 +148,7 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
   const rows = record.allocations.length
     ? record.allocations.map((allocation) => `
       <tr>
-        <td>${escapeHtml(allocation.booking.reference)}</td>
+        <td>${escapeHtml(`${allocation.booking.reference}${allocation.bookingSession ? ` · séance ${allocation.bookingSession.sequence}` : ""}`)}</td>
         <td>${escapeHtml(allocation.booking.subjectName)}</td>
         <td>${escapeHtml(allocation.booking.levelName)}</td>
         <td class="amount">${escapeHtml(formatFCFA(allocation.amount))}</td>

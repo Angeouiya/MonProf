@@ -144,8 +144,30 @@ export default async function ProfesseurDetailPage({
                 totalToPay: true,
               },
             },
+            sessions: {
+              where: { teacherId: id },
+              orderBy: { sequence: "asc" },
+            },
           },
           take: 100,
+        },
+        bookingSessions: {
+          where: { teacherId: id },
+          include: {
+            booking: {
+              include: {
+                client: { select: { name: true, phone: true } },
+                transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+                rescheduleRequests: {
+                  where: { status: "APPLIED" },
+                  select: { feeTeacherAmount: true, feePlatformAmount: true, feeAmount: true, totalToPay: true },
+                },
+                sessions: { where: { teacherId: id }, orderBy: { sequence: "asc" } },
+              },
+            },
+          },
+          orderBy: { scheduledDate: "desc" },
+          take: 200,
         },
         transactions: { orderBy: { createdAt: "desc" }, take: 50 },
         reviews: { include: { client: { select: { name: true } }, booking: { select: { reference: true } } }, orderBy: { createdAt: "desc" } },
@@ -197,6 +219,7 @@ export default async function ProfesseurDetailPage({
             allocations: {
               include: {
                 booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
+                bookingSession: { select: { sequence: true } },
               },
             },
           },
@@ -230,23 +253,32 @@ export default async function ProfesseurDetailPage({
 
   if (!teacher) notFound();
 
+  const replacementBookings = Array.from(
+    new Map(
+      teacher.bookingSessions
+        .filter((session) => session.booking.teacherId !== teacher.id)
+        .map((session) => [session.bookingId, session.booking]),
+    ).values(),
+  );
+  const teacherBookings = [...teacher.bookings, ...replacementBookings];
+
   const targetBookingId = sp.bookingId ?? null;
-  const targetBooking = targetBookingId ? teacher.bookings.find((booking) => booking.id === targetBookingId) : null;
+  const targetBooking = targetBookingId ? teacherBookings.find((booking) => booking.id === targetBookingId) : null;
   const availability = parseAvailability(teacher.availability);
   const primarySubject = teacher.subjects.find((s) => s.isPrimary)?.subject ?? teacher.subjects[0]?.subject;
 
-  const realized = teacher.bookings.filter((b) => ["COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID"].includes(b.status)).length;
-  const cancelled = teacher.bookings.filter((b) => b.status === "CANCELLED").length;
-  const refunded = teacher.bookings.filter((b) => b.status === "REFUNDED").length;
-  const pending = teacher.bookings.filter((b) => ["PENDING_PAYMENT","PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS"].includes(b.status)).length;
-  const disputed = teacher.bookings.filter((b) => b.status === "DISPUTED").length;
-  const uniqueClients = new Set(teacher.bookings.map((b) => b.clientId)).size;
-  const activeOperationalBookings = teacher.bookings.filter((b) => ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS"].includes(b.status));
+  const realized = teacherBookings.filter((b) => ["COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID"].includes(b.status)).length;
+  const cancelled = teacherBookings.filter((b) => b.status === "CANCELLED").length;
+  const refunded = teacherBookings.filter((b) => b.status === "REFUNDED").length;
+  const pending = teacherBookings.filter((b) => ["PENDING_PAYMENT","PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS"].includes(b.status)).length;
+  const disputed = teacherBookings.filter((b) => b.status === "DISPUTED").length;
+  const uniqueClients = new Set(teacherBookings.map((b) => b.clientId)).size;
+  const activeOperationalBookings = teacherBookings.filter((b) => ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS"].includes(b.status));
   const nextBooking = activeOperationalBookings
     .filter((booking) => booking.scheduledDate)
     .sort((a, b) => (a.scheduledDate?.getTime() ?? 0) - (b.scheduledDate?.getTime() ?? 0))[0];
 
-  const validBookings = teacher.bookings.filter(hasVerifiedPayDunyaClientPayment);
+  const validBookings = teacherBookings.filter(hasVerifiedPayDunyaClientPayment);
   const totalGenerated = validBookings.reduce((s, b) => s + b.totalPrice, 0);
   const totalCommission = validBookings.reduce((s, b) => s + b.commissionAmount, 0);
   const totalNet = validBookings.reduce((s, b) => s + getTeacherFinancialSettlement(b, teacher.paymentAdjustments).payableAmount, 0);
@@ -260,7 +292,7 @@ export default async function ProfesseurDetailPage({
   ), 0);
   const blockedFunds = validBookings.filter((b) => b.paymentStatus === "BLOCKED").reduce((s, b) => s + b.teacherNetAmount, 0);
   const validatedFunds = validBookings.filter((b) => b.paymentStatus === "VALIDATED").reduce((s, b) => s + b.teacherNetAmount, 0);
-  const paidForBooking = (b: (typeof teacher.bookings)[number]) => hasVerifiedPayDunyaClientPayment(b)
+  const paidForBooking = (b: (typeof teacherBookings)[number]) => hasVerifiedPayDunyaClientPayment(b)
     ? getTeacherFinancialSettlement(b, teacher.paymentAdjustments).paid
     : 0;
   const toPay = validBookings
@@ -274,18 +306,18 @@ export default async function ProfesseurDetailPage({
   const lateTasks = teacher.tasks.filter((task) => task.status === "LATE").length;
   const criticalTasks = teacher.tasks.filter((task) => task.priority === "CRITICAL" && !["DONE", "CANCELLED"].includes(task.status)).length;
   const today = new Date();
-  const coursesToday = teacher.bookings.filter((booking) => {
+  const coursesToday = teacherBookings.filter((booking) => {
     if (!booking.scheduledDate) return false;
     return booking.scheduledDate.toDateString() === today.toDateString();
   }).length;
   const qualityScore = computeTeacherQualityScore({
     rating: teacher.rating,
-    bookings: teacher.bookings,
+    bookings: teacherBookings,
     warnings: teacher.warnings,
     sanctions: teacher.sanctions,
     replacements,
   });
-  const taskBookingOptions = teacher.bookings.map((booking) => ({
+  const taskBookingOptions = teacherBookings.map((booking) => ({
     id: booking.id,
     reference: booking.reference,
     subjectName: booking.subjectName,
@@ -307,7 +339,7 @@ export default async function ProfesseurDetailPage({
     booking: message.booking,
     admin: message.admin,
   }));
-  const missionMessageBookings = teacher.bookings.slice(0, 25).map((booking) => {
+  const missionMessageBookings = teacherBookings.slice(0, 25).map((booking) => {
     const settlement = hasVerifiedPayDunyaClientPayment(booking)
       ? getTeacherFinancialSettlement(booking, teacher.paymentAdjustments)
       : { paid: 0, retained: 0, remaining: 0, settled: true };
@@ -347,7 +379,7 @@ export default async function ProfesseurDetailPage({
       remainingAmount: settlement.remaining,
     };
   });
-  const courseActionBooking = (booking: (typeof teacher.bookings)[number]) => {
+  const courseActionBooking = (booking: (typeof teacherBookings)[number]) => {
     const settlement = hasVerifiedPayDunyaClientPayment(booking)
       ? getTeacherFinancialSettlement(booking, teacher.paymentAdjustments)
       : { paid: 0, retained: 0, remaining: 0, settled: true };
@@ -409,7 +441,7 @@ export default async function ProfesseurDetailPage({
     reviewedAt: request.reviewedAt?.toISOString() ?? null,
     payoutRecord: request.payoutRecord,
   }));
-  const ledgerRows = teacher.bookings.map((booking) => {
+  const ledgerRows = teacherBookings.map((booking) => {
     const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
     const settlement = paymentVerified
       ? getTeacherFinancialSettlement(booking, teacher.paymentAdjustments)
@@ -998,7 +1030,7 @@ export default async function ProfesseurDetailPage({
         {/* ACTIVITE */}
         <TabsContent value="activite">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard label="Cours attribués" value={teacher.bookings.length} icon={GraduationCap} />
+            <StatCard label="Cours attribués" value={teacherBookings.length} icon={GraduationCap} />
             <StatCard label="Cours réalisés" value={realized} icon={CheckCircle2} tone="success" />
             <StatCard label="En attente" value={pending} icon={Clock} tone="warning" />
             <StatCard label="Annulés" value={cancelled} icon={Clock} />
@@ -1101,12 +1133,12 @@ export default async function ProfesseurDetailPage({
             <CardHeader><CardTitle className="text-base">Cours du professeur</CardTitle></CardHeader>
             <CardContent className="p-0">
               <div className="grid gap-3 p-4 md:hidden">
-                {teacher.bookings.length === 0 ? (
+                {teacherBookings.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-violet-100 bg-violet-50/30 p-4 text-center text-sm text-muted-foreground">
                     Aucun cours.
                   </p>
                 ) : (
-                  teacher.bookings.map((b) => {
+                  teacherBookings.map((b) => {
                     const settlement = getTeacherFinancialSettlement(b, teacher.paymentAdjustments);
                     const paid = settlement.paid;
                     const remaining = settlement.remaining;
@@ -1178,10 +1210,10 @@ export default async function ProfesseurDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teacher.bookings.length === 0 && (
+                  {teacherBookings.length === 0 && (
                     <TableRow><TableCell colSpan={9} className="py-6 text-center text-sm text-muted-foreground">Aucun cours.</TableCell></TableRow>
                   )}
-                  {teacher.bookings.map((b) => {
+                  {teacherBookings.map((b) => {
                     const settlement = getTeacherFinancialSettlement(b, teacher.paymentAdjustments);
                     const paid = settlement.paid;
                     const remaining = settlement.remaining;

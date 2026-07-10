@@ -21,6 +21,7 @@ import {
   PAYDUNYA_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
+import { distributeAmount, syncBookingSessionAggregates } from "@/lib/booking-sessions";
 
 function parsePreferredDays(value?: string | null) {
   if (!value) return [];
@@ -136,6 +137,7 @@ function publicBookingDetailPayload(booking: any) {
           teacher: proposal.teacher,
         }))
       : [],
+    sessions: Array.isArray(booking.sessions) ? booking.sessions : [],
     transactions: Array.isArray(booking.transactions)
       ? booking.transactions
           .filter((transaction: any) => (
@@ -189,6 +191,13 @@ export async function GET(
           teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
         },
       },
+      sessions: {
+        orderBy: { sequence: "asc" },
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          proposedTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+      },
     },
   });
 
@@ -226,6 +235,7 @@ export async function PATCH(
       transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
       teacher: { select: { id: true, fullName: true, professionalName: true } },
       client: { select: { id: true, name: true, email: true, phone: true } },
+      sessions: { orderBy: { sequence: "asc" } },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -496,6 +506,55 @@ export async function PATCH(
     }
 
     case "confirm": {
+      const pendingSessions = booking.sessions.filter((session) => session.status === "AWAITING_CLIENT_CONFIRMATION");
+      if (booking.sessions.length > 0) {
+        if (pendingSessions.length !== 1) {
+          return NextResponse.json({ error: "Confirmez la séance concernée depuis le suivi du pack." }, { status: 409 });
+        }
+        const pendingSession = pendingSessions[0];
+        await db.$transaction(async (tx) => {
+          await tx.bookingSession.update({
+            where: { id: pendingSession.id },
+            data: {
+              status: "RELEASED",
+              clientValidatedAt: now,
+              releasedAt: now,
+              releasedAmount: pendingSession.teacherNetAmount,
+            },
+          });
+          await tx.bookingSessionHistory.create({
+            data: {
+              bookingSessionId: pendingSession.id,
+              actorType: "CLIENT",
+              actorId: userId,
+              action: "CLIENT_CONFIRMED",
+              fromStatus: pendingSession.status,
+              toStatus: "RELEASED",
+              detail: pendingSession.teacherNetAmount + " FCFA libérés.",
+            },
+          });
+          await syncBookingSessionAggregates(tx as any, booking.id);
+          await tx.notification.create({
+            data: {
+              userId: null,
+              title: "Paiement séance à libérer",
+              message: "Le client a confirmé la séance " + pendingSession.sequence + "/" + booking.sessionsCount + " de " + booking.reference + ".",
+              type: "SESSION_FUNDS_RELEASED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: pendingSession.teacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              link: "/admin/reservations/" + booking.id + "#seances",
+            },
+          });
+        });
+        const refreshed = await db.booking.findUniqueOrThrow({ where: { id: booking.id } });
+        return NextResponse.json({ booking: publicBookingDetailPayload(refreshed) });
+      }
       if (booking.status !== "PENDING_CLIENT_VALIDATION") {
         return NextResponse.json({ error: "Action non autorisée pour ce statut" }, { status: 400 });
       }
@@ -1083,6 +1142,35 @@ export async function PATCH(
             pricingSnapshot: nextPricingSnapshot,
           },
         });
+        const futureSessions = await tx.bookingSession.findMany({
+          where: {
+            bookingId: booking.id,
+            status: { in: ["PLANNED", "TEACHER_CONFIRMED", "IN_PROGRESS", "RESCHEDULE_PROPOSED", "REPLACEMENT_PROPOSED", "NEEDS_REPLACEMENT"] },
+          },
+          orderBy: { sequence: "asc" },
+        });
+        if (futureSessions.length > 0) {
+          const courseParts = distributeAmount(booking.courseAmount, booking.sessionsCount);
+          const commissionParts = distributeAmount(nextCommission, booking.sessionsCount);
+          const teacherParts = distributeAmount(nextTeacherCoursePayout, booking.sessionsCount);
+          const transportParts = distributeAmount(nextTransportFee, booking.sessionsCount);
+          for (const courseSession of futureSessions) {
+            const index = Math.max(0, courseSession.sequence - 1);
+            await tx.bookingSession.update({
+              where: { id: courseSession.id },
+              data: {
+                teacherId: replacement.newTeacherId,
+                proposedTeacherId: null,
+                status: "PLANNED",
+                courseAmount: courseParts[index] ?? courseSession.courseAmount,
+                commissionAmount: commissionParts[index] ?? courseSession.commissionAmount,
+                teacherCourseAmount: teacherParts[index] ?? courseSession.teacherCourseAmount,
+                transportFee: transportParts[index] ?? courseSession.transportFee,
+                teacherNetAmount: (teacherParts[index] ?? courseSession.teacherCourseAmount) + (transportParts[index] ?? courseSession.transportFee),
+              },
+            });
+          }
+        }
         await tx.transaction.updateMany({
           where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
           data: {

@@ -63,6 +63,7 @@ type Booking = {
   preferredTime: string;
   scheduledDate?: string | Date | null;
   scheduledTime?: string | null;
+  sessions?: { id: string; status: string }[];
 };
 
 type ReplacementSuggestion = {
@@ -146,6 +147,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const refundableAmount = booking.cancellationRefundAmount || Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
   const refundDetailsMissing = refundableAmount > 0 && !latestRefundRequest;
   const refundReferenceInvalid = refundExternalReference.trim().length < 3;
+  const hasSessionLedger = Boolean(booking.sessions?.length);
 
   const doAction = async (action: string, extra?: Record<string, any>) => {
     setLoading(action);
@@ -175,11 +177,11 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   useEffect(() => {
     if (didAutoPay.current) return;
     const action = sp.get("action");
-    if (action === "pay" && booking.paymentStatus === "TO_PAY_TEACHER") {
+    if (action === "pay" && booking.paymentStatus === "TO_PAY_TEACHER" && !hasSessionLedger) {
       didAutoPay.current = true;
       queueMicrotask(() => setPayTeacherOpen(true));
     }
-  }, [booking.paymentStatus, sp]);
+  }, [booking.paymentStatus, hasSessionLedger, sp]);
 
   const sendAssign = () => {
     if (!message.trim()) { toast.error("Message requis"); return; }
@@ -335,7 +337,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       </Button>
     );
   }
-  if (status === "ASSIGNED" || status === "IN_PROGRESS" || status === "CONFIRMED") {
+  if ((status === "ASSIGNED" || status === "IN_PROGRESS" || status === "CONFIRMED") && !hasSessionLedger) {
     actions.push(
       <Button key="done" variant="outline" onClick={() => doAction("mark_done")} disabled={!!loading}>
         {loading === "mark_done" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ClipboardCheck className="mr-1.5 h-4 w-4" />}
@@ -348,7 +350,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       </Button>
     );
   }
-  if (paymentStatus === "TO_PAY_TEACHER") {
+  if (paymentStatus === "TO_PAY_TEACHER" && !hasSessionLedger) {
     actions.push(
       <AlertDialog key="pay" open={payTeacherOpen} onOpenChange={setPayTeacherOpen}>
         <AlertDialogTrigger asChild>

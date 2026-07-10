@@ -269,6 +269,7 @@ export type BookingPricingSnapshot = {
   teacherRate: number;
   teacherPayoutAmount: number;
   transportFee: number;
+  transportFeePerSession: number;
   transportFeeKey: string | null;
   transportFeeLabel?: string;
   transportRouteLabel?: string;
@@ -783,7 +784,8 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     && transport.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
     && Number.isFinite(transportFeeOverride)
     && transportFeeOverride >= 0;
-  const transportFee = canOverrideTransport ? Math.round(transportFeeOverride) : (transport.amount ?? 0);
+  const transportFeePerSession = canOverrideTransport ? Math.round(transportFeeOverride) : (transport.amount ?? 0);
+  const transportFee = input.deliveryMode === "en_ligne" ? 0 : transportFeePerSession * sessions;
   const totalBeforePaymentServiceFee = courseAmount + transportFee + materialFee;
   const paymentServiceFeeAmount = calculatePaymentServiceFee(totalBeforePaymentServiceFee);
   const totalClientPays = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
@@ -801,6 +803,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     teacherRate,
     teacherPayoutAmount,
     transportFee,
+    transportFeePerSession,
     transportFeeKey: transport.key,
     transportFeeLabel: transport.label,
     transportRouteLabel: transport.routeLabel,

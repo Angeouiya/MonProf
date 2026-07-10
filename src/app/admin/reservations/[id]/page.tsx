@@ -29,6 +29,7 @@ import { cancellationActorLabel, cancellationWindowLabel } from "@/lib/cancellat
 import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 import { parsePricingSnapshot } from "@/lib/pricing";
+import { BookingSessionLedger } from "@/components/shared/booking-session-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,13 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       clientRefundRequests: {
         orderBy: { createdAt: "desc" },
       },
+      sessions: {
+        include: {
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+          proposedTeacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true } },
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
   });
 
@@ -146,6 +154,14 @@ export default async function ReservationDetailPage({ params }: { params: Promis
 
       {/* Actions contextuelles */}
       <BookingActionsClient booking={JSON.parse(JSON.stringify(booking))} />
+
+      {booking.sessions.length > 0 && (
+        <BookingSessionLedger
+          bookingId={booking.id}
+          sessions={JSON.parse(JSON.stringify(booking.sessions))}
+          audience="admin"
+        />
+      )}
 
       <ClientCommunicationClient
         booking={JSON.parse(JSON.stringify({

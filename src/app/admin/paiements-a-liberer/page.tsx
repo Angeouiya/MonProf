@@ -31,12 +31,35 @@ export default async function AdminPaiementsALibererPage() {
       teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
       teacherPaymentAdjustments: { orderBy: { createdAt: "desc" } },
+      sessions: {
+        where: { status: { in: ["RELEASED", "PARTIALLY_PAID", "PAID"] } },
+        select: {
+          status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true,
+          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true } },
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
     take: 200,
   });
   const bookings = rawBookings.filter(hasVerifiedPayDunyaClientPayment);
 
-  const paymentRows = bookings
+  const accountingBookings = bookings.flatMap((booking) => {
+    if (booking.sessions.length === 0) return [booking];
+    const groups = new Map<string, typeof booking.sessions>();
+    for (const session of booking.sessions) {
+      groups.set(session.teacher.id, [...(groups.get(session.teacher.id) ?? []), session]);
+    }
+    return Array.from(groups.values()).map((sessions) => ({
+      ...booking,
+      teacherId: sessions[0].teacher.id,
+      teacher: sessions[0].teacher,
+      sessions,
+      teacherPaymentAdjustments: booking.teacherPaymentAdjustments.filter((adjustment) => adjustment.teacherId === sessions[0].teacher.id),
+    }));
+  });
+
+  const paymentRows = accountingBookings
     .map((booking) => {
       const settlement = getTeacherFinancialSettlement(booking, booking.teacherPaymentAdjustments);
       return {
@@ -103,7 +126,7 @@ export default async function AdminPaiementsALibererPage() {
         <>
           <div className="grid gap-3 md:hidden">
             {paymentRows.map(({ booking: b, paid, retained, remaining, partiallyPaid }) => (
-              <Card key={b.id} className="border-violet-100 bg-white">
+              <Card key={`${b.id}-${b.teacher.id}`} className="border-violet-100 bg-white">
                 <CardContent className="space-y-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -190,7 +213,7 @@ export default async function AdminPaiementsALibererPage() {
               </TableHeader>
               <TableBody>
                 {paymentRows.map(({ booking: b, paid, retained, remaining, partiallyPaid }) => (
-                  <TableRow key={b.id}>
+                  <TableRow key={`${b.id}-${b.teacher.id}`}>
                     <TableCell>
                       <Link href={`/admin/reservations/${b.id}`} className="font-mono text-xs font-medium text-primary hover:underline">{b.reference}</Link>
                       {partiallyPaid && <p className="mt-1 text-[11px] font-semibold text-amber-700">Paiement partiel</p>}
