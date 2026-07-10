@@ -1440,7 +1440,6 @@ b {
 
 .client-content {
   animation: none;
-  contain: layout;
 }
 
 .client-shell[data-route-pending="true"] [data-client-content] {
@@ -3844,10 +3843,6 @@ b {
   letter-spacing: 0 !important;
 }
 
-.client-shell :where([data-client-content]) {
-  container-type: inline-size;
-}
-
 .client-shell :where([data-client-page-header]) {
   margin-bottom: 0.25rem;
 }
@@ -4985,6 +4980,13 @@ b {
 @media (min-width: 560px) and (max-width: 1023px) {
   .client-shell [data-client-tab-bar] {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Final booking viewport guard. Keep this after generic rail overrides. */
+@media (max-width: 1023px) {
+  .client-shell [data-client-booking-desktop-progress] {
+    display: none !important;
   }
 }
 

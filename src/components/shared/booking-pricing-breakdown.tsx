@@ -88,7 +88,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               {isQuoteOnly
                 ? "Calcul automatique à reprendre avant PayDunya."
                 : audience === "client"
-                  ? "Séances de 2h, participants, déplacement et frais PayDunya."
+                  ? `Séances de 2h, participants${transportFee > 0 ? ", déplacement" : ""} et frais PayDunya.`
                   : "Vue interne avec éléments comptables réservés au service client."}
             </p>
           </div>

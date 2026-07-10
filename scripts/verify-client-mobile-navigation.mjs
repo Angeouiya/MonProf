@@ -263,6 +263,16 @@ record(
 );
 
 record(
+  "Client booking keeps one progress control and a viewport-fixed mobile action",
+  !/data-client-booking-mobile-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /data-client-booking-desktop-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /\[data-client-booking-desktop-progress\][\s\S]*?display:\s*none\s*!important/.test(css)
+    && !/\.client-content\s*\{[^}]*contain\s*:/.test(css)
+    && !/\[data-client-content\][^}]*container-type/.test(css)
+    && /client-booking-mobile-action fixed/.test(read("src/app/client/reserver/reserver-form.tsx")),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)

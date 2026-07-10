@@ -14,7 +14,6 @@ import { BackButton } from "@/components/shared/back-button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-breakdown";
-import { ImportantActionNotice } from "@/components/shared/important-action-confirm";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { formatFCFA } from "@/lib/format";
@@ -53,7 +52,7 @@ import {
   isAbidjanCity,
 } from "@/lib/ivory-coast-locations";
 import {
-  ArrowLeft, ArrowRight, Lock, Home, Video, User, Users,
+  ArrowLeft, ArrowRight, Home, Video, User, Users,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink,
 } from "lucide-react";
 
@@ -344,67 +343,6 @@ function buildSessionPreview(timeLabels: string[], customTimeRequest: string, se
   }));
 }
 
-type ReservationFormNoticeInput = {
-  step: number;
-  displayName: string;
-  courseFormat: string;
-  groupType: string;
-  participantsCount: number;
-  selectedStartDateLabel: string;
-  preferredTimeSummary: string[];
-  isScheduleReadyForPayment: boolean;
-  paymentScheduleWarning: string;
-  totalPrice: number;
-};
-
-function getReservationFormNotice({
-  step,
-  displayName,
-  courseFormat,
-  groupType,
-  participantsCount,
-  selectedStartDateLabel,
-  preferredTimeSummary,
-  isScheduleReadyForPayment,
-  paymentScheduleWarning,
-  totalPrice,
-}: ReservationFormNoticeInput) {
-  if (step === 0) {
-    return {
-      title: "Choisissez votre besoin",
-      description: `La réservation sera rattachée à ${displayName}. Sélectionnez sa matière, le niveau et votre objectif.`,
-    };
-  }
-
-  if (step === 1) {
-    return {
-      title: "Format et participants",
-      description: `${courseFormat === "HOME" ? "Cours à domicile" : "Cours en ligne"}. Chaque participant supplémentaire ajoute 50% au prix de base; le matériel reste à la charge de l'apprenant.`,
-    };
-  }
-
-  if (step === 2) {
-    return {
-      title: "Date et créneau obligatoires",
-      description: isScheduleReadyForPayment
-        ? `${selectedStartDateLabel} · ${preferredTimeSummary.join(" ; ")} · séance de 2h.`
-        : paymentScheduleWarning || `Sélectionnez une date d'aujourd'hui ou ultérieure, puis un créneau de 2h. La réservation doit être faite au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le cours.`,
-    };
-  }
-
-  if (step === 3) {
-    return {
-      title: "Vérifiez votre réservation",
-      description: `${courseFormat === "HOME" ? "À domicile" : "En ligne"} · ${groupType === "SMALL_GROUP" ? `${participantsCount} participants` : "individuel"}. Contrôlez la date, le créneau et le montant.`,
-    };
-  }
-
-  return {
-    title: "Paiement PayDunya",
-    description: `${formatFCFA(totalPrice)} à payer sur PayDunya. La réservation devient active uniquement après confirmation serveur.`,
-  };
-}
-
 export function ReserverForm({
   teacher, subjects, levels, communes,
 }: {
@@ -645,19 +583,6 @@ export function ReserverForm({
           : !hasMinimumBookingNotice
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
-  const reservationFormNotice = getReservationFormNotice({
-    step,
-    displayName,
-    courseFormat: form.courseFormat,
-    groupType: form.groupType,
-    participantsCount,
-    selectedStartDateLabel,
-    preferredTimeSummary,
-    isScheduleReadyForPayment,
-    paymentScheduleWarning,
-    totalPrice,
-  });
-
   function handleClientTypeChange(clientType: string) {
     const nextCategory = CLIENT_TYPE_DEFAULT_CATEGORY[clientType] ?? form.courseCategory;
     setForm((current) => ({
@@ -861,7 +786,7 @@ export function ReserverForm({
             </div>
           </div>
 
-          <div className="client-booking-total-card rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
+          <div className="client-booking-total-card hidden rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white min-[720px]:block">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Total actuel</p>
@@ -891,50 +816,7 @@ export function ReserverForm({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div
-            data-client-booking-mobile-progress
-            className="client-booking-progress-grid mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[560px]:grid-cols-3 lg:hidden"
-            aria-label="Progression mobile"
-          >
-            {STEPS.map((stepLabel, index) => {
-              const complete = index < step;
-              const active = index === step;
-              const reachable = index <= step;
-              const compactStepLabel = stepLabel === "Disponibilité"
-                ? "Date"
-                : stepLabel === "Récapitulatif"
-                  ? "Récap."
-                  : stepLabel === "Paiement"
-                    ? "Payer"
-                  : stepLabel;
-              return (
-                <button
-                  key={stepLabel}
-                  type="button"
-                  disabled={!reachable}
-                  aria-current={active ? "step" : undefined}
-                  aria-label={`Étape ${index + 1}: ${stepLabel}`}
-                  onClick={() => {
-                    if (reachable) setStep(index);
-                  }}
-                  className={`min-h-11 min-w-0 rounded-lg border px-2 text-center text-[11px] font-semibold leading-3 transition-colors ${
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : complete
-                        ? "border-[#111B4D] bg-white text-[#111B4D]"
-                        : "cursor-default border-[#E3E8F2] bg-white text-[#64748B]"
-                  }`}
-                >
-                  <span className="block uppercase tracking-wide">
-                    {index + 1}
-                    {complete ? <CheckCircle2 className="ml-1 inline h-3 w-3" /> : null}
-                  </span>
-                  <span className="mt-0.5 block truncate">{compactStepLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="client-booking-progress-grid mt-3 hidden grid-cols-5 gap-2 lg:grid">
+          <div data-client-booking-desktop-progress className="client-booking-progress-grid mt-3 hidden grid-cols-5 gap-2 lg:grid">
             {STEPS.map((stepLabel, index) => {
               const complete = index < step;
               const active = index === step;
@@ -968,12 +850,6 @@ export function ReserverForm({
       <div className="client-booking-workspace grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <Card className="client-booking-step-card client-booking-step-panel min-w-0 overflow-hidden rounded-lg border-[#DDE6F7] bg-white">
           <CardContent className="p-4 sm:p-6">
-            <ImportantActionNotice
-              title={reservationFormNotice.title}
-              description={reservationFormNotice.description}
-              className="mb-4"
-            />
-
             {/* Step 1 — Besoin */}
             {step === 0 && (
             <div className="space-y-5">
@@ -1873,12 +1749,10 @@ export function ReserverForm({
 
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                  <div className="flex items-start gap-3">
-                    <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-[#111827]">{displayName}</p>
-                      <p className="mt-0.5 text-sm text-[#6B7280]">{form.subjectName} · {form.levelName}</p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Votre séance</p>
+                    <p className="mt-1 text-base font-semibold text-[#111827]">{form.subjectName} · {form.levelName}</p>
+                    <p className="mt-0.5 text-sm font-medium text-[#64748B]">Avec {displayName}</p>
                   </div>
 
                   <div className="mt-4 grid gap-2 min-[720px]:grid-cols-2">
@@ -1990,43 +1864,20 @@ export function ReserverForm({
         </CardContent>
         </Card>
 
-        <aside className="client-booking-side-summary hidden space-y-4 xl:block xl:self-start">
+        <aside className="client-booking-side-summary hidden xl:block xl:self-start">
           <div className="rounded-lg border border-[#DDE6F7] bg-white p-4">
-            <div className="flex items-center gap-3">
-              <ProfessorImage photoUrl={teacher.photoUrl} name={displayName} size="md" shape="circle" verified={teacher.badgeVerified} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
-                <p className="truncate text-xs font-medium text-[#64748B]">{primarySubjectLabel} · {teacher.commune ?? "Abidjan"}</p>
-              </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier en cours</p>
+            <h2 className="mt-1 text-base font-semibold text-[#111827]">Votre réservation</h2>
+            <div className="mt-3 divide-y divide-[#E6EAF3] border-y border-[#E6EAF3]">
+              <SummaryLine flat icon={<ClipboardList className="h-4 w-4" />} label="Besoin" value={primarySubjectLabel} />
+              <SummaryLine flat icon={<CalendarDays className="h-4 w-4" />} label="Date" value={selectedStartDateLabel || "À choisir"} />
+              <SummaryLine flat icon={<Clock3 className="h-4 w-4" />} label="Créneau" value={preferredTimeSummary.join(" ; ") || "À choisir"} />
+              <SummaryLine flat icon={<Users className="h-4 w-4" />} label="Participants" value={`${participantsCount}`} />
             </div>
-
-            <div className="mt-4 rounded-lg border border-[#DDE6F7] bg-white p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Résumé instantané</p>
-              <div className="mt-3 space-y-2">
-                <SummaryLine icon={<ClipboardList className="h-4 w-4" />} label="Besoin" value={primarySubjectLabel} />
-                <SummaryLine icon={<CalendarDays className="h-4 w-4" />} label="Date" value={selectedStartDateLabel || "À choisir"} />
-                <SummaryLine icon={<Clock3 className="h-4 w-4" />} label="Créneau" value={preferredTimeSummary.join(" ; ") || "À choisir"} />
-                <SummaryLine icon={<Users className="h-4 w-4" />} label="Participants" value={`${participantsCount}`} />
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-[#111B4D] bg-[#111B4D] p-3 text-white">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Montant client</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">{formatFCFA(totalPrice)}</p>
-                </div>
-                <Lock className="mt-1 h-5 w-5 text-white" />
-              </div>
-              <p className="mt-2 text-xs font-medium leading-5 text-white">
-                Le client ne voit que le montant à payer. Les répartitions internes restent côté service client.
-              </p>
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs font-medium leading-5 text-[#64748B]">
-              <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Réservation rattachée au professeur choisi.</p>
-              <p className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" /> Date et créneau transmis au suivi service client.</p>
-            </div>
+            <p className="mt-3 flex gap-2 text-xs font-medium leading-5 text-[#64748B]">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
+              Professeur, planning et montant restent liés au même dossier.
+            </p>
           </div>
         </aside>
       </div>
@@ -2035,28 +1886,13 @@ export function ReserverForm({
         className="client-booking-mobile-action fixed inset-x-2 z-40 rounded-lg border border-[#DDE6F7] bg-white p-2.5 min-[390px]:inset-x-3 min-[720px]:hidden"
         style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="mb-2 space-y-1.5 px-1">
+        <div className="mb-2 px-1">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs font-semibold text-[#111827]">
               Étape {step + 1}/{STEPS.length} · {currentStepDetail.title}
             </span>
             <span className="shrink-0 text-xs font-semibold text-[#111B4D]">
               {formatFCFA(totalPrice)}
-            </span>
-          </div>
-          <div className="h-1 overflow-hidden rounded-full bg-[#E5E7EB]" aria-hidden="true">
-            <div
-              className="h-full rounded-full bg-[#111B4D] transition-[width] duration-150"
-              style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-[11px] font-semibold leading-4 text-[#64748B]">
-            <span className="min-w-0 truncate">{displayName}</span>
-            <span className="max-w-[9.5rem] truncate text-right text-[#111827]">
-              {selectedStartDateLabel || "Date à choisir"}
-            </span>
-            <span className="col-span-2 min-w-0 truncate text-[#64748B]">
-              {preferredTimeSummary.join(" ; ") || "Créneau de 2h à choisir"}
             </span>
           </div>
         </div>
@@ -2110,9 +1946,12 @@ function InfoMini({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+function SummaryLine({ icon, label, value, flat = false }: { icon: ReactNode; label: string; value: ReactNode; flat?: boolean }) {
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
+    <div className={flat
+      ? "flex min-w-0 items-start gap-2 bg-white py-3"
+      : "flex min-w-0 items-start gap-2 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2"}
+    >
       <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>

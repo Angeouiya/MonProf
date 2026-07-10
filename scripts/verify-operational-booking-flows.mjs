@@ -25,6 +25,12 @@ record(
 );
 
 record(
+  "Online bookings never include a transport fee",
+  /ONLINE:\s*\{[\s\S]*?key:\s*"online"[\s\S]*?amount:\s*0/.test(pricingEngine)
+    && /input\.deliveryMode\s*!==\s*"domicile"[\s\S]*?key:\s*TRANSPORT_FEES\.ONLINE\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.ONLINE\.amount/.test(pricingEngine),
+);
+
+record(
   "New bookings always enter PayDunya payment before activation",
   /isQuoteOnly:\s*false/.test(bookingCreateApi)
     && /status:\s*"PENDING_PAYMENT"/.test(bookingCreateApi)

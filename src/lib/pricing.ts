@@ -68,6 +68,11 @@ export type PriceTierCode = keyof typeof PRICE_TIERS;
 export type PriceTierKey = (typeof PRICE_TIERS)[PriceTierCode]["key"];
 
 export const TRANSPORT_FEES = {
+  ONLINE: {
+    key: "online",
+    label: "Cours en ligne",
+    amount: 0,
+  },
   SAME_AREA: {
     key: "same_area",
     label: "Même quartier / même commune proche",
@@ -469,7 +474,20 @@ export function calculateGrandAbidjanTransportFee({
 
 function resolveTransportFee(input: BookingPricingInput): TransportFeeResult {
   if (input.deliveryMode !== "domicile") {
-    return getTransportFeeResultByKey(TRANSPORT_FEES.SAME_AREA.key);
+    return {
+      key: TRANSPORT_FEES.ONLINE.key,
+      label: TRANSPORT_FEES.ONLINE.label,
+      amount: TRANSPORT_FEES.ONLINE.amount,
+      originCommune: null,
+      destinationCommune: null,
+      originQuartier: null,
+      destinationQuartier: null,
+      routeLabel: "",
+      ruleLabel: "",
+      coveredByTeacherZone: false,
+      isGrandAbidjanRoute: false,
+      isQuoteOnly: false,
+    };
   }
 
   if (input.teacherCommune || input.clientCommune || input.teacherZoneNames?.length) {
