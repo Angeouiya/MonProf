@@ -94,6 +94,41 @@ record(
     && parsedCv.fields.teachingAchievements?.includes("120 apprenants"),
 );
 
+const sparseCv = await analyzeTeacherCv({
+  buffer: Buffer.from(`
+KOUAME JEAN
+Formateur en mathématiques
+Téléphone : 07 01 02 03 04
+Localisation : Abidjan, Cocody
+5 ans d'expérience en enseignement
+Mathématiques
+Préparation BAC
+Pédagogie active
+Licence de mathématiques
+`, "utf8"),
+  filename: "cv-court.txt",
+  mimeType: "text/plain",
+});
+
+record(
+  "Sparse CV receives an evidence-based biography without invented facts",
+  sparseCv.generatedFields.includes("careerSummary")
+    && sparseCv.generatedFields.includes("bio")
+    && sparseCv.fields.careerSummary?.includes("KOUAME JEAN")
+    && sparseCv.fields.careerSummary?.includes("5 années d'expérience")
+    && sparseCv.fields.diploma === "Licence de mathématiques"
+    && !/profil à vérifier|employeur non renseigné/i.test(sparseCv.fields.careerSummary ?? ""),
+);
+
+record(
+  "CV catalog suggestions stay precise and expose missing interview evidence",
+  sparseCv.suggestedSubjects.length === 1
+    && sparseCv.suggestedSubjects[0] === "Mathématiques"
+    && sparseCv.suggestedLevels.includes("BAC")
+    && sparseCv.suggestedLevels.includes("Licence")
+    && sparseCv.missingCriticalFields.includes("Expériences"),
+);
+
 for (const check of checks) {
   console.log(`${check.ok ? "OK" : "FAIL"} ${check.label}`);
 }

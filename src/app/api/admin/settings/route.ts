@@ -33,6 +33,9 @@ export async function PATCH(req: NextRequest) {
   const previousCommission = Number(previous.default_commission) || 30;
   const nextCommission = parsed.data.default_commission;
   const rows = platformSettingsInputToRows(parsed.data);
+  const changedKeys = rows
+    .filter((row) => previous[row.key] !== row.value)
+    .map((row) => row.key);
 
   const result = await db.$transaction(async (tx) => {
     for (const row of rows) {
@@ -61,9 +64,9 @@ export async function PATCH(req: NextRequest) {
           previousCommission,
           nextCommission,
           teacherProfilesSynchronized: syncedTeachers.count,
-          changedKeys: rows
-            .filter((row) => previous[row.key] !== row.value)
-            .map((row) => row.key),
+          changedKeys,
+          previousValues: Object.fromEntries(changedKeys.map((key) => [key, previous[key]])),
+          nextValues: Object.fromEntries(changedKeys.map((key) => [key, rows.find((row) => row.key === key)?.value])),
         }),
         oldStatus: `${previousCommission}%`,
         newStatus: `${nextCommission}%`,

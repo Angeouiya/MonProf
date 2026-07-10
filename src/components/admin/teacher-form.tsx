@@ -138,6 +138,10 @@ type CvAnalysisFields = Partial<Pick<
 type CvAnalysisResult = {
   fields: CvAnalysisFields;
   detectedSections?: Array<{ label: string; items: string[] }>;
+  generatedFields?: Array<keyof CvAnalysisFields>;
+  suggestedSubjects?: string[];
+  suggestedLevels?: string[];
+  missingCriticalFields?: string[];
   previewText?: string;
   extractedCharacters?: number;
   confidence?: number;
@@ -444,6 +448,36 @@ export function TeacherForm({
     }
   };
 
+  const applyCvCatalogSuggestions = (analysis: CvAnalysisResult) => {
+    const subjectMatches = subjects.filter((subject) => (
+      (analysis.suggestedSubjects ?? []).some((suggestion) => (
+        normalizeSearch(subject.name) === normalizeSearch(suggestion)
+      ))
+    ));
+    const levelMatches = levels.filter((level) => (
+      (analysis.suggestedLevels ?? []).some((suggestion) => {
+        const levelName = normalizeSearch(level.name);
+        const term = normalizeSearch(suggestion);
+        return levelName === term || levelName.includes(term) || term.includes(levelName);
+      })
+    ));
+
+    if (subjectMatches.length) {
+      setSelectedSubjects((current) => ({
+        ...current,
+        ...Object.fromEntries(subjectMatches.map((subject) => [subject.id, true])),
+      }));
+      setPrimarySubject((current) => current ?? subjectMatches[0]?.id ?? null);
+    }
+    if (levelMatches.length) {
+      setSelectedLevels((current) => ({
+        ...current,
+        ...Object.fromEntries(levelMatches.map((level) => [level.id, true])),
+      }));
+    }
+    return { subjects: subjectMatches.length, levels: levelMatches.length };
+  };
+
   const analyzeCv = async (file?: File) => {
     setCvError(null);
     if (!file) return;
@@ -490,7 +524,8 @@ export function TeacherForm({
       }
       setCvAnalysis(data);
       applyCvAnalysis({ ...data.fields, cvUrl: data.cvUrl });
-      toast.success("CV analysé et mini CV prérempli");
+      const catalogMatches = applyCvCatalogSuggestions(data);
+      toast.success(`CV analysé : profil prérempli${catalogMatches.subjects || catalogMatches.levels ? `, ${catalogMatches.subjects} matière(s) et ${catalogMatches.levels} niveau(x) suggérés` : ""}`);
     } catch (e: any) {
       setCvError(e.message || "Erreur pendant l'analyse du CV.");
     } finally {
@@ -905,7 +940,10 @@ export function TeacherForm({
                       </label>
                     </Button>
                     {cvAnalysis?.fields && (
-                      <Button type="button" variant="ghost" onClick={() => applyCvAnalysis({ ...cvAnalysis.fields, cvUrl: cvAnalysis.cvUrl }, true, true)}>
+                      <Button type="button" variant="ghost" onClick={() => {
+                        applyCvAnalysis({ ...cvAnalysis.fields, cvUrl: cvAnalysis.cvUrl }, true, true);
+                        applyCvCatalogSuggestions(cvAnalysis);
+                      }}>
                         <FileText className="mr-2 h-4 w-4" />
                         Remplacer par l'analyse
                       </Button>
@@ -923,7 +961,7 @@ export function TeacherForm({
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>
                         {Object.values(cvAnalysis.fields ?? {}).filter((value) => value !== undefined && value !== null && value !== "").length} champs professionnels ont été remplis automatiquement. Vous pouvez les contrôler puis enregistrer le professeur.
-                        Les matières et niveaux restent à confirmer dans l'onglet suivant afin d'éviter une attribution erronée.
+                        Les matières et niveaux détectés sont présélectionnés, mais restent à confirmer avant l'enregistrement.
                       </span>
                     </div>
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -949,7 +987,18 @@ export function TeacherForm({
                         <span className="text-xs font-semibold text-muted-foreground">
                           {cvAnalysis.extractedCharacters ?? 0} caractères extraits
                         </span>
+                        {!!cvAnalysis.generatedFields?.length && (
+                          <Badge variant="outline" className="border-[#CAD7F2] bg-white text-[#111B4D]">
+                            Biographie générée depuis les faits du CV
+                          </Badge>
+                        )}
                       </div>
+                      {((cvAnalysis.suggestedSubjects?.length ?? 0) > 0 || (cvAnalysis.suggestedLevels?.length ?? 0) > 0) && (
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <SuggestionSummary label="Matières suggérées" values={cvAnalysis.suggestedSubjects ?? []} />
+                          <SuggestionSummary label="Niveaux suggérés" values={cvAnalysis.suggestedLevels ?? []} />
+                        </div>
+                      )}
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         {Object.entries(cvAnalysis.fields ?? {}).map(([key, value]) => {
                           if (value === undefined || value === null || value === "") return null;
@@ -968,6 +1017,11 @@ export function TeacherForm({
                           {cvAnalysis.warnings.map((warning) => (
                             <p key={warning}>{warning}</p>
                           ))}
+                        </div>
+                      )}
+                      {!!cvAnalysis.missingCriticalFields?.length && (
+                        <div className="mt-3 rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold leading-5 text-amber-800">
+                          À compléter pendant l'entretien : {cvAnalysis.missingCriticalFields.join(" · ")}.
                         </div>
                       )}
                     </div>
@@ -1565,6 +1619,17 @@ export function TeacherForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function SuggestionSummary({ label, values }: { label: string; values: string[] }) {
+  return (
+    <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold leading-5 text-[#111827]">
+        {values.length ? values.join(" · ") : "Aucune suggestion fiable"}
+      </p>
+    </div>
   );
 }
 

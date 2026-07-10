@@ -23,6 +23,10 @@ export type TeacherCvAnalysisFields = {
 export type TeacherCvAnalysisResult = {
   fields: TeacherCvAnalysisFields;
   detectedSections: Array<{ label: string; items: string[] }>;
+  generatedFields: Array<keyof TeacherCvAnalysisFields>;
+  suggestedSubjects: string[];
+  suggestedLevels: string[];
+  missingCriticalFields: string[];
   previewText: string;
   extractedCharacters: number;
   confidence: number;
@@ -79,14 +83,21 @@ export async function analyzeTeacherCv(input: {
 
   const lines = toLogicalLines(text).slice(0, 260);
   const sections = collectSections(lines);
-  const fields = buildTeacherFields(lines, sections);
+  const { fields, generatedFields, subjectList } = buildTeacherFields(lines, sections);
   addCompletenessWarnings(fields, warnings, text);
   const detectedSections = buildDetectedSections(sections, fields);
   const confidence = computeConfidence(fields, text.length);
+  const suggestedSubjects = suggestSubjects(subjectList);
+  const suggestedLevels = suggestLevels(text, fields.profileType);
+  const missingCriticalFields = findMissingCriticalFields(fields);
 
   return {
     fields,
     detectedSections,
+    generatedFields,
+    suggestedSubjects,
+    suggestedLevels,
+    missingCriticalFields,
     previewText: text.slice(0, MAX_PREVIEW_CHARS),
     extractedCharacters: text.length,
     confidence,
@@ -243,7 +254,13 @@ function buildTeacherFields(lines: string[], sections: Record<keyof typeof SECTI
   const allText = lines.join("\n");
   const identity = detectIdentity(lines, allText);
   const profileType = detectProfileType(allText);
-  const subjectList = findKnownTerms(allText, SUBJECT_HINTS);
+  const subjectEvidence = [
+    ...lines.slice(0, 8),
+    ...sections.summary,
+    ...sections.skills,
+    ...sections.education,
+  ].join("\n");
+  const subjectList = findKnownTerms(subjectEvidence, SUBJECT_HINTS);
   const explicitSkillText = normalizeForSearch(sections.skills.join(" "));
   const hintedSkills = findKnownTerms(allText, SKILL_HINTS)
     .filter((term) => !explicitSkillText.includes(normalizeForSearch(term)));
@@ -256,22 +273,36 @@ function buildTeacherFields(lines: string[], sections: Record<keyof typeof SECTI
   const certificationLines = uniqueLines([
     ...sections.certification,
     ...sections.education.filter((line) => /\b(master|licence|doctorat|bts|bac(?:\+\d)?|certificat|certification|dipl[oô]me|attestation|universit|école|ecole|institut)\b/i.test(line)),
+    ...lines.filter((line) => /\b(master|licence|doctorat|bts|bac\s*\+\s*\d|certificat|certification|dipl[oô]me|attestation)\b/i.test(line)),
   ]).slice(0, 8);
   const achievementLines = uniqueLines([
     ...sections.achievement,
     ...lines.filter((line) => /\b(r[eé]ussite|progression|admis|admission|[0-9]+\s*(?:eleves|élèves|apprenants|etudiants|étudiants|personnes|logements|immeubles|localités)|programme résidentiel|cité résidentielle|immobilier (?:privé|résidentiel))\b/i.test(line)),
   ]).slice(0, 8);
-  const summaryLines = uniqueLines([
-    ...sections.summary,
-    ...lines.filter((line) => /\b(professeur|enseignant|formateur|p[eé]dagogie|exp[eé]rience|sp[eé]cialiste)\b/i.test(line)),
-  ]).slice(0, 4);
+  const summaryLines = uniqueLines(sections.summary).slice(0, 4);
   const experienceYears = detectExperienceYears(allText);
   const learnersCoached = detectLearnersCoached(allText);
   const jobTitle = detectJobTitle(lines, subjectList, identity.fullName);
   const diploma = detectPrimaryDiploma(certificationLines.length ? certificationLines : sections.education);
-  const careerSummary = toParagraph(summaryLines) || buildFallbackSummary(jobTitle, experienceYears, subjectList);
+  const extractedSummary = toParagraph(summaryLines);
+  const generatedBiography = buildEvidenceBasedBiography({
+    fullName: identity.fullName,
+    jobTitle,
+    profileType,
+    experienceYears,
+    subjects: subjectList,
+    skills: skillList,
+    workHistory: experienceLines,
+    diploma,
+    commune: identity.commune,
+  });
+  const careerSummary = buildCareerSummary(extractedSummary, generatedBiography);
+  const generatedFields: Array<keyof TeacherCvAnalysisFields> = [];
+  if (careerSummary && (!extractedSummary || extractedSummary.length < 110)) {
+    generatedFields.push("careerSummary", "bio");
+  }
 
-  return compactFields({
+  const fields = compactFields({
     ...identity,
     jobTitle,
     bio: careerSummary,
@@ -285,6 +316,7 @@ function buildTeacherFields(lines: string[], sections: Record<keyof typeof SECTI
     learnersCoached,
     profileType,
   });
+  return { fields, generatedFields, subjectList };
 }
 
 function detectExperienceYears(text: string) {
@@ -398,13 +430,115 @@ function detectProfileType(text: string): TeacherCvAnalysisFields["profileType"]
   return "ENSEIGNANT";
 }
 
-function buildFallbackSummary(jobTitle?: string, experienceYears?: number, subjects: string[] = []) {
-  const parts = [
-    jobTitle,
-    experienceYears ? `${experienceYears} ans d'expérience` : undefined,
-    subjects.length ? `spécialisé en ${subjects.slice(0, 3).join(", ")}` : undefined,
-  ].filter(Boolean);
-  return parts.length ? `${parts.join(", ")}. Profil à vérifier et enrichir par l'administration.` : undefined;
+function buildCareerSummary(extractedSummary?: string, generatedBiography?: string) {
+  if (extractedSummary && extractedSummary.length >= 110) return extractedSummary;
+  if (!generatedBiography) return extractedSummary;
+  if (!extractedSummary || normalizeForSearch(generatedBiography).includes(normalizeForSearch(extractedSummary))) {
+    return generatedBiography;
+  }
+  return `${extractedSummary.replace(/[.!?]+$/, "")}. ${generatedBiography}`.slice(0, MAX_FIELD_CHARS);
+}
+
+function buildEvidenceBasedBiography({
+  fullName,
+  jobTitle,
+  profileType,
+  experienceYears,
+  subjects,
+  skills,
+  workHistory,
+  diploma,
+  commune,
+}: {
+  fullName?: string;
+  jobTitle?: string;
+  profileType?: TeacherCvAnalysisFields["profileType"];
+  experienceYears?: number;
+  subjects: string[];
+  skills: string[];
+  workHistory: string[];
+  diploma?: string;
+  commune?: string;
+}) {
+  const sentences: string[] = [];
+  const identity = fullName || "Ce profil";
+  const role = jobTitle || profileTypeLabel(profileType);
+  if (role) {
+    sentences.push(`${identity} présente un parcours de ${lowercaseFirst(role)}${commune ? ` basé à ${commune}` : ""}.`);
+  } else if (commune) {
+    sentences.push(`${identity} présente un parcours professionnel basé à ${commune}.`);
+  }
+
+  const domains = uniqueLines([
+    ...subjects,
+    ...skills.filter((skill) => skill.length <= 90),
+  ]).slice(0, 4);
+  if (domains.length) {
+    sentences.push(`Ses compétences documentées couvrent ${joinFrench(domains)}.`);
+  }
+  if (experienceYears !== undefined && experienceYears > 0) {
+    sentences.push(`Le CV fait état de ${experienceYears} année${experienceYears > 1 ? "s" : ""} d'expérience.`);
+  } else if (workHistory.length) {
+    sentences.push(`Son expérience comprend notamment ${lowercaseFirst(trimExperienceForBiography(workHistory[0]))}.`);
+  }
+  if (diploma) {
+    sentences.push(`Formation principale mentionnée : ${diploma.replace(/[.!?]+$/, "")}.`);
+  }
+  return sentences.length ? sentences.join(" ").slice(0, MAX_FIELD_CHARS) : undefined;
+}
+
+function profileTypeLabel(value?: TeacherCvAnalysisFields["profileType"]) {
+  if (value === "FORMATEUR") return "formateur";
+  if (value === "PROFESSIONNEL") return "professionnel";
+  if (value === "REPETITEUR") return "répétiteur";
+  if (value === "ETUDIANT") return "étudiant";
+  if (value === "ENSEIGNANT") return "enseignant";
+  return undefined;
+}
+
+function trimExperienceForBiography(value: string) {
+  return value.split("|")[0]?.replace(/[—–-]\s*(depuis\s+)?(?:19|20)\d{2}.*$/i, "").trim() || value;
+}
+
+function lowercaseFirst(value: string) {
+  const cleaned = value.trim().replace(/[.!?]+$/, "");
+  return cleaned ? cleaned.charAt(0).toLocaleLowerCase("fr-FR") + cleaned.slice(1) : cleaned;
+}
+
+function joinFrench(values: string[]) {
+  if (values.length <= 1) return values[0] ?? "";
+  return `${values.slice(0, -1).join(", ")} et ${values.at(-1)}`;
+}
+
+function suggestSubjects(alreadyDetected: string[]) {
+  return uniqueLines(alreadyDetected).slice(0, 10);
+}
+
+function suggestLevels(text: string, profileType?: TeacherCvAnalysisFields["profileType"]) {
+  const normalized = normalizeForSearch(text);
+  const levels: string[] = [];
+  if (/\bcepe\b|\bprimaire\b|\bcp[12]?\b|\bce[12]\b|\bcm[12]\b/.test(normalized)) levels.push("Primaire");
+  if (/\bbepc\b|\bcollege\b|\b6e\b|\b5e\b|\b4e\b|\b3e\b/.test(normalized)) levels.push("Collège", "BEPC");
+  if (/\bbac\b(?!\s*\+)|\blycee\b|\bseconde\b|\bpremiere\b|\bterminale\b/.test(normalized)) levels.push("Lycée", "BAC");
+  if (/\bbts\b/.test(normalized)) levels.push("BTS");
+  if (/\blicence\b|\bbac\+?3\b/.test(normalized)) levels.push("Licence");
+  if (/\bmaster\b|\bbac\+?[45]\b|\bingenieur\b/.test(normalized)) levels.push("Master", "Université");
+  if (/\bconcours\b/.test(normalized)) levels.push("Concours");
+  if (/\badulte\b|\bprofessionnel\b|\bentreprise\b/.test(normalized) || profileType === "PROFESSIONNEL") {
+    levels.push("Adultes", "Professionnels");
+  }
+  return uniqueLines(levels).slice(0, 8);
+}
+
+function findMissingCriticalFields(fields: TeacherCvAnalysisFields) {
+  const required: Array<[keyof TeacherCvAnalysisFields, string]> = [
+    ["jobTitle", "Titre professionnel"],
+    ["careerSummary", "Biographie professionnelle"],
+    ["skills", "Compétences"],
+    ["workHistory", "Expériences"],
+    ["diploma", "Diplôme principal"],
+  ];
+  return required.filter(([key]) => !fields[key]).map(([, label]) => label);
 }
 
 function findKnownTerms(text: string, terms: string[]) {

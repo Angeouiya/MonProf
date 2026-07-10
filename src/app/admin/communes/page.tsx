@@ -26,28 +26,32 @@ export default async function AdminCommunesPage({ searchParams }: { searchParams
       { name: { contains: q, mode: "insensitive" as const } },
       { zone: { contains: q, mode: "insensitive" as const } },
       { quarters: { some: { name: { contains: q, mode: "insensitive" as const } } } },
+      { quarters: { some: { aliases: { contains: q, mode: "insensitive" as const } } } },
     ] } : {}),
     ...(status === "active" ? { isActive: true } : status === "inactive" ? { isActive: false } : {}),
     ...(transport !== "all" ? { transportClass: transport as "GRAND_ABIDJAN" | "PERI_URBAN" | "INTERIOR" } : {}),
   };
-  const [communes, filteredTotal, total, active, quarters, grandAbidjan, settings] = await Promise.all([
-    db.commune.findMany({
-      where,
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
-      skip: (currentPage - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true, name: true, slug: true, zone: true, transportClass: true,
-        transportFeeOverride: true, isActive: true,
-        quarters: { orderBy: { name: "asc" }, select: { id: true, name: true, aliases: true, isActive: true } },
-        _count: { select: { teachers: true, quarters: true } },
-      },
-    }),
-    db.commune.count({ where }),
-    db.commune.count(),
-    db.commune.count({ where: { isActive: true } }),
-    db.communeQuarter.count(),
-    db.commune.count({ where: { transportClass: "GRAND_ABIDJAN", isActive: true } }),
+  const [[communes, filteredTotal, total, active, quarters, activeQuarters, grandAbidjan], settings] = await Promise.all([
+    db.$transaction([
+      db.commune.findMany({
+        where,
+        orderBy: [{ isActive: "desc" }, { name: "asc" }],
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true, name: true, slug: true, zone: true, transportClass: true,
+          transportFeeOverride: true, isActive: true,
+          quarters: { orderBy: { name: "asc" }, select: { id: true, name: true, aliases: true, isActive: true } },
+          _count: { select: { teachers: true, quarters: true } },
+        },
+      }),
+      db.commune.count({ where }),
+      db.commune.count(),
+      db.commune.count({ where: { isActive: true } }),
+      db.communeQuarter.count(),
+      db.communeQuarter.count({ where: { isActive: true, commune: { isActive: true } } }),
+      db.commune.count({ where: { transportClass: "GRAND_ABIDJAN", isActive: true } }),
+    ]),
     getPlatformRuntimeSettings(),
   ]);
   const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
@@ -69,7 +73,7 @@ export default async function AdminCommunesPage({ searchParams }: { searchParams
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Communes actives" value={`${active}/${total}`} />
-        <Stat label="Quartiers référencés" value={String(quarters)} />
+        <Stat label="Quartiers actifs" value={`${activeQuarters}/${quarters}`} />
         <Stat label="Grand Abidjan" value={String(grandAbidjan)} />
         <Stat label="Ville intérieure" value={formatFCFA(settings.transportFees.interior)} />
       </div>

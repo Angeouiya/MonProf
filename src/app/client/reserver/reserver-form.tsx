@@ -88,7 +88,7 @@ type CommuneOption = {
   zone: string | null;
   transportClass: "GRAND_ABIDJAN" | "PERI_URBAN" | "INTERIOR";
   transportFeeOverride: number | null;
-  quarters: Array<{ id: string; name: string }>;
+  quarters: Array<{ id: string; name: string; aliases?: string | null }>;
 };
 
 type PricingConfig = {
@@ -516,7 +516,7 @@ export function ReserverForm({
   const quartierSelectionGroups = useMemo(() => [{
     label: form.commune ? `Quartiers - ${form.commune}` : form.city ? `Quartiers - ${form.city}` : "Quartiers connus",
     options: selectedCommune?.quarters.length
-      ? selectedCommune.quarters.map((quarter) => ({ value: quarter.name, label: quarter.name, keywords: `${quarter.name} ${form.commune}` }))
+      ? selectedCommune.quarters.map((quarter) => ({ value: quarter.name, label: quarter.name, keywords: `${quarter.name} ${quarter.aliases ?? ""} ${form.commune}` }))
       : buildQuartierOptions(form.commune || form.city),
   }], [form.city, form.commune, selectedCommune]);
   const safeCourseCatalogId = selectedCategoryCourseIds.has(form.courseCatalogId) ? form.courseCatalogId : "";

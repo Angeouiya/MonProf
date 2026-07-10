@@ -250,7 +250,7 @@ const TEACHERS = [
     pricePerSession: 15000,
     pricePack4: 57000,
     pricePack8: 108000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.9,
     ratingCount: 47,
     badgeRecommended: true,
@@ -285,7 +285,7 @@ const TEACHERS = [
     pricePerSession: 10000,
     pricePack4: 38000,
     pricePack8: 72000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.8,
     ratingCount: 32,
     badgeRecommended: true,
@@ -318,7 +318,7 @@ const TEACHERS = [
     pricePerSession: 15000,
     pricePack4: 57000,
     pricePack8: 108000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.7,
     ratingCount: 28,
     badgePopular: true,
@@ -349,7 +349,7 @@ const TEACHERS = [
     pricePerSession: 10000,
     pricePack4: 38000,
     pricePack8: 72000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 5.0,
     ratingCount: 19,
     badgeRecommended: true,
@@ -387,7 +387,7 @@ const TEACHERS = [
     pricePerSession: 20000,
     pricePack4: 76000,
     pricePack8: 144000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.8,
     ratingCount: 24,
     badgeRecommended: true,
@@ -420,7 +420,7 @@ const TEACHERS = [
     pricePerSession: 10000,
     pricePack4: 38000,
     pricePack8: 72000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.5,
     ratingCount: 11,
     pricingTier: "STANDARD",
@@ -452,7 +452,7 @@ const TEACHERS = [
     pricePerSession: 15000,
     pricePack4: 57000,
     pricePack8: 108000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.6,
     ratingCount: 18,
     badgePopular: true,
@@ -483,7 +483,7 @@ const TEACHERS = [
     pricePerSession: 7500,
     pricePack4: 28000,
     pricePack8: 54000,
-    commissionRate: 20,
+    commissionRate: 30,
     rating: 4.9,
     ratingCount: 35,
     badgeRecommended: true,
@@ -1011,7 +1011,7 @@ async function main() {
 
   console.log("⚙️ Paramètres plateforme...");
   await prisma.setting.create({ data: { key: "platform_name", value: "Compétence" } });
-  await prisma.setting.create({ data: { key: "default_commission", value: "20" } });
+  await prisma.setting.create({ data: { key: "default_commission", value: "30" } });
   await prisma.setting.create({ data: { key: "support_phone", value: "+225 01 61 39 39 39" } });
   await prisma.setting.create({ data: { key: "support_email", value: "support@competence.ci" } });
 

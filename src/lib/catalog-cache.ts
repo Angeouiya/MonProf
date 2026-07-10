@@ -13,7 +13,7 @@ type TeacherSearchCatalog = {
     zone: string | null;
     transportClass: "GRAND_ABIDJAN" | "PERI_URBAN" | "INTERIOR";
     transportFeeOverride: number | null;
-    quarters: Array<{ id: string; name: string }>;
+    quarters: Array<{ id: string; name: string; aliases: string | null }>;
   }>;
 };
 
@@ -59,7 +59,7 @@ export const getCachedTeacherSearchCatalog = unstable_cache(
                 'transportFeeOverride', c."transportFeeOverride",
                 'quarters', COALESCE(
                   (
-                    SELECT jsonb_agg(jsonb_build_object('id', q."id", 'name', q."name") ORDER BY q."name" ASC)
+                    SELECT jsonb_agg(jsonb_build_object('id', q."id", 'name', q."name", 'aliases', q."aliases") ORDER BY q."name" ASC)
                     FROM competence."CommuneQuarter" q
                     WHERE q."communeId" = c."id" AND q."isActive" = true
                   ),
@@ -76,7 +76,7 @@ export const getCachedTeacherSearchCatalog = unstable_cache(
     `;
     return catalog ?? { teacherCount: 0, subjects: [], levels: [], communes: [] };
   },
-  ["teacher-search-catalog-v1"],
+  ["teacher-search-catalog-v2"],
   {
     revalidate: CATALOG_REVALIDATE_SECONDS,
     tags: ["catalog-subjects", "catalog-levels", "catalog-communes", "teachers"],
@@ -149,11 +149,11 @@ export const getCachedCommunes = unstable_cache(
         quarters: {
           where: { isActive: true },
           orderBy: { name: "asc" },
-          select: { id: true, name: true },
+          select: { id: true, name: true, aliases: true },
         },
       },
     }),
-  ["catalog-communes-v1"],
+  ["catalog-communes-v2"],
   { revalidate: CATALOG_REVALIDATE_SECONDS, tags: ["catalog-communes"] },
 );
 
@@ -171,11 +171,11 @@ export const getCachedCommunesWithTeacherCounts = unstable_cache(
         quarters: {
           where: { isActive: true },
           orderBy: { name: "asc" },
-          select: { id: true, name: true },
+          select: { id: true, name: true, aliases: true },
         },
         _count: { select: { teachers: true } },
       },
     }),
-  ["catalog-communes-counts-v1"],
+  ["catalog-communes-counts-v2"],
   { revalidate: CATALOG_REVALIDATE_SECONDS, tags: ["catalog-communes"] },
 );

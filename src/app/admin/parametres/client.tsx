@@ -3,11 +3,12 @@
 import type { ComponentType, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
-  BadgePercent, BellRing, Building2, CheckCircle2, Clock3, Database,
-  Headphones, Loader2, Mail, MapPinned, Route, Save, Settings,
-  ShieldCheck, Smartphone, WalletCards, XCircle,
+  ArrowUpRight, BadgePercent, BellRing, Building2, CalendarClock, CheckCircle2, Clock3, Database,
+  Loader2, Mail, MapPinned, Route, Save, Settings, ShieldCheck, Smartphone,
+  UsersRound, WalletCards, XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,6 +109,18 @@ export function ParametresClient({
         </div>
       </SettingSection>
 
+      <SettingSection icon={CalendarClock} title="Règles de réservation" description="Règles métier obligatoires appliquées de la simulation client jusqu'à la validation serveur.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <RuleMetric icon={Clock3} label="Anticipation" value="24 heures" detail="Réservation impossible sous ce délai" />
+          <RuleMetric icon={CalendarClock} label="Durée séance" value="2 heures" detail="Créneaux détaillés de 08h à 22h" />
+          <RuleMetric icon={UsersRound} label="Groupe" value="+50 %" detail="Par participant supplémentaire" />
+          <RuleMetric icon={ShieldCheck} label="Paiement" value="PayDunya vérifié" detail="Aucune réservation avant confirmation serveur" />
+        </div>
+        <p className="mt-4 text-xs font-medium leading-5 text-[#64748B]">
+          Ces garanties structurantes sont verrouillées pour éviter qu'un changement de saisie rende les réservations ou la comptabilité incohérentes.
+        </p>
+      </SettingSection>
+
       <SettingSection icon={MapPinned} title="Déplacements" description="Forfaits automatiques pour les cours à domicile. Le même quartier exact reste à 0 FCFA.">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MoneyField label="Même commune" value={values.transport_same_commune_fee} onChange={(value) => set("transport_same_commune_fee", value)} />
@@ -115,9 +128,14 @@ export function ParametresClient({
           <MoneyField label="Commune éloignée" value={values.transport_far_commune_fee} onChange={(value) => set("transport_far_commune_fee", value)} />
           <MoneyField label="Ville intérieure" value={values.transport_interior_fee} onChange={(value) => set("transport_interior_fee", value)} />
         </div>
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#475569]">
-          <Route className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-          Les classifications, quartiers et éventuels forfaits particuliers se gèrent dans <strong className="text-[#111827]">Communes & quartiers</strong>.
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#475569] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Route className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
+            <span>Les classifications, quartiers et forfaits particuliers se gèrent dans le référentiel géographique.</span>
+          </div>
+          <Button asChild variant="outline" className="min-h-11 shrink-0 border-[#CAD7F2] text-[#111B4D]">
+            <Link href="/admin/communes">Communes & quartiers <ArrowUpRight className="ml-2 h-4 w-4" /></Link>
+          </Button>
         </div>
       </SettingSection>
 
@@ -159,7 +177,7 @@ export function ParametresClient({
         </div>
       </SettingSection>
 
-      <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-lg border border-[#C9D4EA] bg-white p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+      <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-lg border border-[#C9D4EA] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white"><ShieldCheck className="h-5 w-5" /></div>
           <div><p className="text-sm font-semibold text-[#111827]">Configuration sensible et journalisée</p><p className="text-xs leading-5 text-[#64748B]">Les changements affectent uniquement les nouveaux calculs et sont conservés dans le journal admin.</p></div>
@@ -191,6 +209,10 @@ function SelectField({ label, value, onChange }: { label: string; value: string;
 
 function ProviderPill({ label, ok }: { label: string; ok: boolean }) {
   return <div className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111827]">{ok ? <CheckCircle2 className="h-4 w-4 text-[#111B4D]" /> : <XCircle className="h-4 w-4 text-red-600" />}{label}</div>;
+}
+
+function RuleMetric({ icon: Icon, label, value, detail }: { icon: ComponentType<{ className?: string }>; label: string; value: string; detail: string }) {
+  return <div className="rounded-lg border border-[#DDE6F7] bg-white p-4"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white"><Icon className="h-4 w-4" /></div><p className="mt-3 text-[10px] font-semibold uppercase text-[#64748B]">{label}</p><p className="mt-1 text-sm font-semibold text-[#111827]">{value}</p><p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{detail}</p></div>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -12,6 +12,17 @@ function assert(condition: unknown, message: string) {
 }
 
 async function main() {
+  const seed = read("prisma/seed.ts");
+  const settingsUi = read("src/app/admin/parametres/client.tsx");
+  const settingsRoute = read("src/app/api/admin/settings/route.ts");
+  const locationsUi = read("src/app/admin/communes/client.tsx");
+  const catalogCache = read("src/lib/catalog-cache.ts");
+  assert(/default_commission", value: "30"/.test(seed), "Fresh installations start with the 30 percent commission");
+  assert(/Communes & quartiers/.test(settingsUi) && /href="\/admin\/communes"/.test(settingsUi), "Admin settings link directly to the location catalog");
+  assert(/previousValues/.test(settingsRoute) && /nextValues/.test(settingsRoute), "Settings changes retain before and after audit values");
+  assert(/Alias du quartier/.test(locationsUi) && /aliases: aliases \|\| null/.test(locationsUi), "Admin can create and edit neighborhood aliases");
+  assert(/'aliases', q\."aliases"/.test(catalogCache), "Neighborhood aliases are available to client search");
+
   const configured = calculateBookingPricing({
     category: "soutien_scolaire",
     levelName: "Collège",
@@ -65,6 +76,10 @@ async function main() {
   assert(commission?.value === "30", "Production default commission is 30 percent");
   assert(communes >= 100, "Production has a broad Ivorian commune catalog");
   assert(quarters >= 400, "Production has a searchable neighborhood catalog");
+}
+
+function read(filename: string) {
+  return fs.readFileSync(path.resolve(process.cwd(), filename), "utf8");
 }
 
 function loadLocalEnvironment() {
