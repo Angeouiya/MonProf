@@ -2,8 +2,7 @@ import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api";
 import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -31,14 +30,11 @@ const REPLACEABLE_PAYMENT_STATUSES = ["RECEIVED", "BLOCKED", "VALIDATED", "DISPU
 const ACTIVE_PAYOUT_METHODS = ["WAVE", "ORANGE_MONEY", "MTN_MONEY", "MOOV_MONEY"] as const;
 
 async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
+  return Boolean(await requireAdminApi("BOOKINGS_MANAGE"));
 }
 
 async function getAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== "ADMIN") return null;
-  return { id: (session.user as any).id as string, name: session.user.name || "Admin" };
+  return requireAdminApi("BOOKINGS_MANAGE");
 }
 
 function includesNormalized(values: string[], target?: string | null) {
@@ -126,7 +122,7 @@ function isAvailabilityCompatible(rawAvailability: string | null, booking: { pre
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("BOOKINGS_VIEW"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;

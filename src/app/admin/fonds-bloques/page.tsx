@@ -19,7 +19,7 @@ import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "
 export const dynamic = "force-dynamic";
 
 export default async function AdminFondsBloquesPage() {
-  await requireAdmin();
+  await requireAdmin("FINANCE_VIEW");
   const now = new Date();
   const rawBookings = await db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }),

@@ -1,16 +1,11 @@
-import { redirect } from "next/navigation";
 import { AdminLayout } from "@/components/layouts/admin-layout";
 import { db } from "@/lib/db";
-import { getSessionUser } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminRootLayout({ children }: { children: React.ReactNode }) {
-  const sessionUser = await getSessionUser();
-  if (!sessionUser) redirect("/admin/connexion");
-  if (sessionUser.role === "CLIENT") redirect("/client");
-  if (sessionUser.role === "TEACHER") redirect("/professeur");
-  if (sessionUser.role !== "ADMIN") redirect("/");
+  const sessionUser = await requireAdmin();
   const [summary] = await db.$queryRaw<Array<{
     notificationCount: number;
     urgentCount: number;
@@ -56,6 +51,8 @@ export default async function AdminRootLayout({ children }: { children: React.Re
         teacher: teacherCount,
         payment: paymentCount,
       }}
+      permissions={sessionUser.adminPermissions}
+      teamRole={sessionUser.adminTeamRole}
     >
       {children}
     </AdminLayout>

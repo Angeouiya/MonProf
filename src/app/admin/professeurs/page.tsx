@@ -28,7 +28,7 @@ export default async function AdminProfesseursPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; subject?: string; commune?: string; badge?: string; photo?: string }>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin("TEACHERS_VIEW");
   const sp = await searchParams;
   const q = sp.q?.trim();
   const status = sp.status && sp.status !== "all" ? sp.status : undefined;
@@ -155,6 +155,8 @@ export default async function AdminProfesseursPage({
       sanctions: t.sanctions,
       replacements: t.oldReplacements,
     });
+    const visibleRating = t.ratingCount > 0 && t.rating > 0 ? t.rating : t.adminRating;
+    const ratingSource = t.ratingCount > 0 ? `${t.ratingCount} avis client(s)` : t.adminRating > 0 ? "Service client" : "Non noté";
     return {
       teacher: t,
       primary,
@@ -170,17 +172,21 @@ export default async function AdminProfesseursPage({
       criticalTasks,
       incidents,
       score,
+      visibleRating,
+      ratingSource,
     };
   });
 
   return (
     <div className="space-y-5">
       <PageHeader title="Professeurs" description={`${teachers.length} professeur(s)`}>
-        <Button asChild>
-          <Link href="/admin/professeurs/nouveau">
-            <Plus className="mr-2 h-4 w-4" /> Ajouter
-          </Link>
-        </Button>
+        {admin.adminPermissions?.includes("TEACHERS_MANAGE") && (
+          <Button asChild>
+            <Link href="/admin/professeurs/nouveau">
+              <Plus className="mr-2 h-4 w-4" /> Ajouter
+            </Link>
+          </Button>
+        )}
       </PageHeader>
 
       <ProfesseursListClient
@@ -238,7 +244,7 @@ export default async function AdminProfesseursPage({
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, score }) => {
+            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, score, visibleRating, ratingSource }) => {
 
               return (
                 <Card key={t.id} className="border-violet-100 bg-white">
@@ -300,7 +306,7 @@ export default async function AdminProfesseursPage({
                     <div className="flex flex-wrap items-center gap-2">
                       <TeacherStatusBadge status={t.status} />
                       <Badge variant="outline" className="border-violet-100 bg-white text-violet-800">
-                        Note {t.rating.toFixed(1)}/5 · {t.ratingCount} avis
+                        {visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Non noté"} · {ratingSource}
                       </Badge>
                       <Badge variant="outline" className={score >= 75 ? "border-blue-100 bg-blue-50 text-blue-800" : score >= 60 ? "border-amber-100 bg-amber-50 text-amber-800" : "border-red-100 bg-red-50 text-red-800"}>
                         Score qualité {score}/100
@@ -388,7 +394,7 @@ export default async function AdminProfesseursPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, blocked, toPay, paid, totalGenerated, realized, criticalTasks, lateTasks, incidents, score }) => {
+                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, blocked, toPay, paid, totalGenerated, realized, criticalTasks, lateTasks, incidents, score, visibleRating, ratingSource }) => {
                   return (
                     <TableRow key={t.id}>
                       <TableCell>
@@ -425,8 +431,8 @@ export default async function AdminProfesseursPage({
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{communeName}</TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium">Note {t.rating.toFixed(1)}</span>
-                          <span className="text-xs text-muted-foreground">({t.ratingCount})</span>
+                          <span className="text-sm font-medium">{visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Non noté"}</span>
+                          <span className="text-xs text-muted-foreground">{ratingSource}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden xl:table-cell">

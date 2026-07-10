@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
-
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("FINANCE_MANAGE"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;

@@ -108,9 +108,20 @@ export default async function ProfesseurDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string; action?: string; bookingId?: string; status?: string; messageId?: string; payoutRequestId?: string }>;
 }) {
-  const user = await requireAdmin();
+  const user = await requireAdmin("TEACHERS_VIEW");
   const { id } = await params;
   const sp = await searchParams;
+  const canViewFinance = user.adminPermissions?.includes("FINANCE_VIEW") ?? false;
+  const canViewCommunications = user.adminPermissions?.includes("COMMUNICATIONS_VIEW") ?? false;
+  const canReview = user.adminPermissions?.includes("REVIEWS_MANAGE") ?? false;
+  const canViewAudit = user.adminPermissions?.includes("AUDIT_VIEW") ?? false;
+  const requestedTab = sp.tab || "infos";
+  const defaultTab = (
+    (requestedTab === "paiements" && !canViewFinance)
+    || (["messages", "historique"].includes(requestedTab) && !canViewCommunications)
+    || (requestedTab === "avis" && !canReview)
+    || (requestedTab === "journal" && !canViewAudit)
+  ) ? "infos" : requestedTab;
 
   const [teacher, actionLogs] = await db.$transaction([
     db.teacher.findUnique({
@@ -759,22 +770,22 @@ export default async function ProfesseurDetailPage({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue={sp.tab || "infos"}>
+      <Tabs defaultValue={defaultTab}>
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 border border-violet-100 bg-white p-1">
           <TabsTrigger value="infos">Informations</TabsTrigger>
           <TabsTrigger value="matieres">Matières & Niveaux</TabsTrigger>
           <TabsTrigger value="tarifs">Tarifs</TabsTrigger>
           <TabsTrigger value="activite">Activité</TabsTrigger>
           <TabsTrigger value="operationnel">Opérationnel</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
+          {canViewCommunications && <TabsTrigger value="messages">Messages</TabsTrigger>}
           <TabsTrigger value="taches">Tâches</TabsTrigger>
           <TabsTrigger value="cours">Cours</TabsTrigger>
-          <TabsTrigger value="paiements">Paiements</TabsTrigger>
+          {canViewFinance && <TabsTrigger value="paiements">Paiements</TabsTrigger>}
           <TabsTrigger value="discipline">Avertissements</TabsTrigger>
           <TabsTrigger value="remplacements">Remplacements</TabsTrigger>
-          <TabsTrigger value="avis">Avis</TabsTrigger>
-          <TabsTrigger value="historique">Historique notifs</TabsTrigger>
-          <TabsTrigger value="journal">Journal</TabsTrigger>
+          {canReview && <TabsTrigger value="avis">Avis</TabsTrigger>}
+          {canViewCommunications && <TabsTrigger value="historique">Historique notifs</TabsTrigger>}
+          {canViewAudit && <TabsTrigger value="journal">Journal</TabsTrigger>}
         </TabsList>
 
         {/* INFOS */}
@@ -1032,7 +1043,7 @@ export default async function ProfesseurDetailPage({
         </TabsContent>
 
         {/* MESSAGES */}
-        <TabsContent value="messages" className="space-y-4">
+        {canViewCommunications && <TabsContent value="messages" className="space-y-4">
           <TeacherAdminMessagesClient
             teacherId={teacher.id}
             teacherName={teacher.professionalName || teacher.fullName}
@@ -1040,7 +1051,7 @@ export default async function ProfesseurDetailPage({
             bookings={taskBookingOptions}
             focusMessageId={sp.messageId ?? null}
           />
-        </TabsContent>
+        </TabsContent>}
 
         {/* TACHES */}
         <TabsContent value="taches" className="space-y-4">
@@ -1210,7 +1221,7 @@ export default async function ProfesseurDetailPage({
         </TabsContent>
 
         {/* PAIEMENTS */}
-        <TabsContent value="paiements" className="space-y-4">
+        {canViewFinance && <TabsContent value="paiements" className="space-y-4">
           <TeacherPaymentSummary
             blocked={blockedFunds}
             toPay={toPay}
@@ -1581,7 +1592,7 @@ export default async function ProfesseurDetailPage({
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         {/* DISCIPLINE */}
         <TabsContent value="discipline" className="space-y-4">
@@ -1691,7 +1702,7 @@ export default async function ProfesseurDetailPage({
         </TabsContent>
 
         {/* AVIS */}
-        <TabsContent value="avis" className="space-y-4">
+        {canReview && <TabsContent value="avis" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
             <Card>
               <CardHeader><CardTitle className="text-base">Synthèse des avis clients</CardTitle></CardHeader>
@@ -1828,21 +1839,21 @@ export default async function ProfesseurDetailPage({
               })}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         {/* HISTORIQUE NOTIFS */}
-        <TabsContent value="historique">
+        {canViewCommunications && <TabsContent value="historique">
           <TeacherNotificationHistoryClient
             teacherName={teacher.professionalName || teacher.fullName}
             teacherPhone={teacher.phone}
             notifications={JSON.parse(JSON.stringify(teacher.notifications))}
           />
-        </TabsContent>
+        </TabsContent>}
 
         {/* JOURNAL */}
-        <TabsContent value="journal">
+        {canViewAudit && <TabsContent value="journal">
           <AdminActionLog logs={actionLogs} />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

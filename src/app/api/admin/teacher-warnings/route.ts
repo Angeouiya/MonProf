@@ -31,7 +31,7 @@ function oneOf<T extends readonly string[]>(value: unknown, allowed: T): T[numbe
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const body = await req.json();

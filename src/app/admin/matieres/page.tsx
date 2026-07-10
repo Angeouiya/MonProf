@@ -14,7 +14,7 @@ import { MatieresClient } from "./client";
 export const dynamic = "force-dynamic";
 
 export default async function AdminMatieresPage() {
-  await requireAdmin();
+  await requireAdmin("CATALOG_MANAGE");
   const subjects = await db.subject.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { teachers: true } } },

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import sharp from "sharp";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { requireAdminApi } from "@/lib/admin-api";
 
 export const runtime = "nodejs";
 
@@ -10,11 +9,6 @@ const MAX_SIZE = 4 * 1024 * 1024;
 const MIN_DIMENSION = 240;
 const OUTPUT_DIMENSION = 1200;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return Boolean(session?.user && (session.user as any).role === "ADMIN");
-}
 
 function hasValidImageSignature(buffer: Buffer, mimeType: string) {
   if (mimeType === "image/jpeg") {
@@ -41,7 +35,7 @@ function hasValidImageSignature(buffer: Buffer, mimeType: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await isAdmin())) {
+    if (!(await requireAdminApi("TEACHERS_MANAGE"))) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
     }
 

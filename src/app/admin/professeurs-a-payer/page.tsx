@@ -22,7 +22,7 @@ import { CopyTeacherPaymentSummaryButton } from "./copy-summary-button";
 export const dynamic = "force-dynamic";
 
 export default async function AdminProfesseursAPayerPage() {
-  await requireAdmin();
+  await requireAdmin("FINANCE_VIEW");
   const rawBookings = await db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({
       OR: [

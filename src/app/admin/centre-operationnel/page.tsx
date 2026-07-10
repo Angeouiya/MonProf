@@ -52,7 +52,7 @@ function hasTeacherConfirmation(booking: { assignedAt: Date | null; missionLinks
 }
 
 export default async function CentreOperationnelPage() {
-  await requireAdmin();
+  await requireAdmin("OPERATIONS_MANAGE");
   const now = new Date();
   const soon = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   const todayStart = new Date(now);

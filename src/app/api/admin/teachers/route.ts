@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { countAvailabilitySlots, normalizeAvailability } from "@/lib/scheduling";
-
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -34,7 +28,8 @@ function isPublicVisibleTeacherStatus(status: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   try {
@@ -45,7 +40,7 @@ export async function POST(req: NextRequest) {
       jobTitle, bio, experienceYears, diploma, cvUrl, careerSummary, skills, workHistory,
       certifications, teachingAchievements, learnersCoached, profileType, status, featured,
       badgeVerified, badgeRecommended, badgeNew, badgePopular, badgePremium,
-      internalNote,
+      internalNote, adminRating, adminRatingNote, adminRatingPublic,
       offersHome, offersOnline, offersGroup,
       pricePerHour, pricePerSession, pricePack4, pricePack8,
       commissionRate, pricingTier,
@@ -129,6 +124,13 @@ export async function POST(req: NextRequest) {
         featured: !!featured,
         rating: 0,
         ratingCount: 0,
+        adminRating: Math.max(0, Math.min(5, Number(adminRating) || 0)),
+        adminRatingNote: typeof adminRatingNote === "string" && adminRatingNote.trim()
+          ? adminRatingNote.trim().slice(0, 500)
+          : null,
+        adminRatingPublic: adminRatingPublic ?? true,
+        adminRatingUpdatedAt: Number(adminRating) > 0 || adminRatingNote ? new Date() : null,
+        adminRatingUpdatedById: Number(adminRating) > 0 || adminRatingNote ? admin.id : null,
         badgeVerified: badgeVerified ?? true,
         badgeRecommended: !!badgeRecommended,
         badgeNew: badgeNew ?? true,

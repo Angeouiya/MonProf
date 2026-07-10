@@ -24,7 +24,7 @@ export default async function AdminClientsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("CLIENTS_VIEW");
   const sp = await searchParams;
   const q = sp.q?.trim();
 

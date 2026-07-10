@@ -29,7 +29,7 @@ export default async function AdminPaiementsPage({
 }: {
   searchParams: Promise<{ method?: string; status?: string; from?: string; to?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("FINANCE_VIEW");
   const sp = await searchParams;
   const method = sp.method && VALID_METHODS.includes(sp.method) ? sp.method : undefined;
   const status = sp.status && VALID_STATUSES.includes(sp.status) ? sp.status : undefined;

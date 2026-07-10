@@ -20,7 +20,7 @@ import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "
 export const dynamic = "force-dynamic";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAdmin("CLIENTS_VIEW");
   const { id } = await params;
 
   const client = await db.user.findUnique({

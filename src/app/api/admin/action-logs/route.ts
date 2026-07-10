@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("AUDIT_VIEW");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const body = await req.json();

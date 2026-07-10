@@ -78,6 +78,9 @@ const schema = z.object({
   badgePopular: z.boolean().default(false),
   badgePremium: z.boolean().default(false),
   internalNote: z.string().optional(),
+  adminRating: z.coerce.number().min(0).max(5).default(0),
+  adminRatingNote: z.string().max(500, "Commentaire limité à 500 caractères").optional(),
+  adminRatingPublic: z.boolean().default(true),
   offersHome: z.boolean().default(true),
   offersOnline: z.boolean().default(true),
   offersGroup: z.boolean().default(false),
@@ -221,6 +224,9 @@ export function TeacherForm({
           portalAccessEnabled: initial.portalAccessEnabled ?? false,
           portalPhone: initial.portalPhone || initial.phone || "",
           portalPassword: "",
+          adminRating: initial.adminRating ?? 0,
+          adminRatingNote: initial.adminRatingNote ?? "",
+          adminRatingPublic: initial.adminRatingPublic ?? true,
         }
       : {
           profileType: "ENSEIGNANT",
@@ -240,6 +246,9 @@ export function TeacherForm({
           portalAccessEnabled: false,
           portalPhone: "",
           portalPassword: "",
+          adminRating: 0,
+          adminRatingNote: "",
+          adminRatingPublic: true,
         } as any,
   });
 
@@ -1424,7 +1433,7 @@ export function TeacherForm({
           <Card>
             <CardHeader><CardTitle className="text-base">Avis publics, notes admin & badges</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-3 rounded-lg border border-blue-100 bg-blue-50/70 p-4 sm:grid-cols-2">
+              <div className="grid gap-3 rounded-lg border border-blue-100 bg-white p-4 sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-900/70">Note publique client</p>
                   <p className="mt-1 text-2xl font-black text-blue-950">
@@ -1438,8 +1447,67 @@ export function TeacherForm({
                   <p className="text-xs font-bold uppercase tracking-wide text-blue-900/70">Avis publiés</p>
                   <p className="mt-1 text-2xl font-black text-blue-950">{Number(initial?.ratingCount ?? 0)}</p>
                   <p className="mt-1 text-xs text-blue-900/75">
-                    L'admin ne modifie pas cette note depuis le formulaire professeur.
+                    Les avis clients restent calculés automatiquement et ne sont jamais remplacés par une saisie admin.
                   </p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#CBD5E1] bg-white p-4">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,1.35fr)]">
+                  <div>
+                    <Label>Note du service client sur 5</Label>
+                    <Controller
+                      name="adminRating"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="mt-2 grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Note du service client">
+                          {[0, 1, 2, 3, 4, 5].map((value) => {
+                            const selected = Number(field.value) === value;
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                onClick={() => field.onChange(value)}
+                                className={selected
+                                  ? "flex h-11 items-center justify-center rounded-lg border border-[#111B4D] bg-[#111B4D] text-sm font-semibold text-white"
+                                  : "flex h-11 items-center justify-center rounded-lg border border-[#CBD5E1] bg-white text-sm font-semibold text-[#111827] hover:border-[#111B4D]"}
+                              >
+                                {value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    />
+                    <p className="mt-2 text-xs leading-5 text-[#64748B]">
+                      Cette évaluation interne peut servir de note publique tant qu'aucun avis client publié n'est disponible.
+                    </p>
+                    <Controller
+                      name="adminRatingPublic"
+                      control={control}
+                      render={({ field }) => (
+                        <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border border-[#E2E8F0] px-3">
+                          <span className="text-sm font-semibold text-[#111827]">Visible publiquement</span>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </label>
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="adminRatingNote">Appréciation du service client</Label>
+                    <Textarea
+                      id="adminRatingNote"
+                      rows={5}
+                      maxLength={500}
+                      placeholder="Ponctualité, qualité pédagogique, communication, suivi..."
+                      className="mt-2 resize-y"
+                      {...register("adminRatingNote")}
+                    />
+                    <p className="mt-2 text-xs leading-5 text-[#64748B]">
+                      Le commentaire reste visible dans les espaces administrateur et professeur. Seule la note chiffrée peut être affichée au public.
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

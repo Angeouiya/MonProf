@@ -30,7 +30,7 @@ export default async function AdminMessagesPage({
 }: {
   searchParams: Promise<{ filter?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("COMMUNICATIONS_VIEW");
   const sp = await searchParams;
   const filter = sp.filter;
   const where: any = {};

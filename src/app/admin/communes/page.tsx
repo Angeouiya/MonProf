@@ -17,7 +17,7 @@ export default async function AdminCommunesPage({
 }: {
   searchParams?: Promise<{ q?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("CATALOG_MANAGE");
   const sp = searchParams ? await searchParams : {};
   const q = sp.q?.trim() ?? "";
   const communes = await db.commune.findMany({

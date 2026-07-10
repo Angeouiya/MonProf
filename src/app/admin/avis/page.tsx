@@ -53,7 +53,7 @@ export default async function AdminAvisPage({
 }: {
   searchParams: Promise<{ rating?: string; q?: string; status?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("REVIEWS_MANAGE");
   const sp = await searchParams;
   const rating = sp.rating ? Number(sp.rating) : undefined;
   const q = sp.q?.trim();

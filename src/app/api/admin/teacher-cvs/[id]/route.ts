@@ -3,7 +3,7 @@ import { requireAdminApi } from "@/lib/admin-api";
 import { db } from "@/lib/db";
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const { id } = await context.params;

@@ -1,19 +1,12 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== "ADMIN") return false;
-  return true;
-}
-
 export async function GET() {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("DASHBOARD_VIEW"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 

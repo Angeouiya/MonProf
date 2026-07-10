@@ -10,6 +10,8 @@ import { NotificationsClient } from "./client";
 import { AdminUrgentAlertCard, NotificationHistoryTable, NotificationItem } from "@/components/admin/notification-components";
 import { NotificationQuickActionsClient } from "./quick-actions-client";
 import { RunNotificationRemindersClient } from "./run-reminders-client";
+import { CommunicationCampaignComposer } from "./campaign-composer";
+import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ export default async function AdminNotificationsPage({
 }: {
   searchParams: Promise<{ filter?: string }>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin("COMMUNICATIONS_VIEW");
   const sp = await searchParams;
   const filter = sp.filter;
   const where: any = { userId: null };
@@ -36,6 +38,31 @@ export default async function AdminNotificationsPage({
     orderBy: { createdAt: "desc" },
     take: 200,
   });
+  const [campaigns, clients, campaignTeachers] = await Promise.all([
+    db.communicationCampaign.findMany({
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
+    admin.adminPermissions?.includes("COMMUNICATIONS_SEND")
+      ? db.user.findMany({
+          where: { role: "CLIENT" },
+          select: { id: true, name: true, email: true, phone: true },
+          orderBy: { name: "asc" },
+          take: 1000,
+        })
+      : [],
+    admin.adminPermissions?.includes("COMMUNICATIONS_SEND")
+      ? db.teacher.findMany({
+          select: {
+            id: true, fullName: true, professionalName: true, phone: true,
+            subjects: { where: { isPrimary: true }, select: { subject: { select: { name: true } } }, take: 1 },
+          },
+          orderBy: { fullName: "asc" },
+          take: 1000,
+        })
+      : [],
+  ]);
   const teacherIds = Array.from(new Set(notifications.map((n) => n.teacherId).filter((id): id is string => Boolean(id))));
   const bookingIds = Array.from(new Set(notifications.map((n) => n.bookingId).filter((id): id is string => Boolean(id))));
   const bookings = bookingIds.length
@@ -98,6 +125,50 @@ export default async function AdminNotificationsPage({
           <NotificationsClient mode="markAll" />
         </div>
       </PageHeader>
+
+      {admin.adminPermissions?.includes("COMMUNICATIONS_SEND") && (
+        <CommunicationCampaignComposer
+          clients={clients.map((client) => ({
+            id: client.id,
+            name: client.name,
+            detail: client.email || client.phone || "Client",
+          }))}
+          teachers={campaignTeachers.map((teacher) => ({
+            id: teacher.id,
+            name: teacher.professionalName || teacher.fullName,
+            detail: [teacher.subjects[0]?.subject.name, teacher.phone].filter(Boolean).join(" · ") || "Professeur",
+          }))}
+        />
+      )}
+
+      {campaigns.length > 0 && (
+        <Card className="overflow-hidden border-[#E2E8F0] bg-white">
+          <CardHeader className="border-b border-[#E2E8F0] bg-white">
+            <CardTitle className="text-base text-[#111827]">Historique des diffusions</CardTitle>
+            <p className="text-sm text-[#64748B]">Campagnes ciblées et annonces globales, avec leur volume réel de destinataires.</p>
+          </CardHeader>
+          <CardContent className="divide-y divide-[#E2E8F0] p-0">
+            {campaigns.map((campaign) => (
+              <div key={campaign.id} className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-[#111827]">{campaign.title}</p>
+                    <Badge variant="outline" className="border-[#CBD5E1] bg-white text-[#111B4D]">{campaign.audience}</Badge>
+                    <Badge variant="outline" className="border-[#CBD5E1] bg-white text-[#111B4D]">{campaign.priority}</Badge>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#64748B]">{campaign.message}</p>
+                  <p className="mt-1 text-xs text-[#64748B]">{campaign.reference} · {campaign.createdBy?.name || "Compte retiré"} · {formatDateTime(campaign.createdAt)}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.recipientCount}</strong>Ciblés</div>
+                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.deliveredCount}</strong>Envoyés</div>
+                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.failedCount}</strong>Échecs</div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 md:grid-cols-3">
         <AdminUrgentAlertCard title="Alertes urgentes" description="Critiques ou urgentes non lues." count={urgentCount} />

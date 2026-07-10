@@ -6,7 +6,7 @@ import { TeacherForm } from "@/components/admin/teacher-form";
 export const dynamic = "force-dynamic";
 
 export default async function NouveauProfesseurPage() {
-  await requireAdmin();
+  await requireAdmin("TEACHERS_MANAGE");
   const [subjects, levels, communes] = await db.$transaction([
     db.subject.findMany({ orderBy: { name: "asc" } }),
     db.level.findMany({ orderBy: { order: "asc" } }),

@@ -22,7 +22,7 @@ function isSanctionType(value: unknown): value is (typeof SANCTION_TYPES)[number
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const body = await req.json();

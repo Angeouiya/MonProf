@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSessionUser } from "@/lib/session";
+import { requireAdminApi } from "@/lib/admin-api";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 
 const MAX_ADMIN_NOTE_LENGTH = 500;
@@ -9,8 +9,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const admin = await getSessionUser();
-  if (!admin || admin.role !== "ADMIN") {
+  const admin = await requireAdminApi("FINANCE_MANAGE");
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 

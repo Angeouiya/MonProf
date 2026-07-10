@@ -41,7 +41,7 @@ function schoolSystemLabel(value?: string | null) {
 }
 
 export default async function ReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAdmin("BOOKINGS_VIEW");
   const { id } = await params;
 
   const booking = await db.booking.findUnique({

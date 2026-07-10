@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export default async function ModifierProfesseurPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAdmin("TEACHERS_MANAGE");
   const { id } = await params;
   const teacher = await db.teacher.findUnique({
     where: { id },

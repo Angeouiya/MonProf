@@ -4,7 +4,7 @@ import { requireAdminApi } from "@/lib/admin-api";
 import { OPEN_SUBJECT_PRESETS } from "@/lib/open-subject-catalog";
 
 export async function POST() {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("CATALOG_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const existing = await db.subject.findMany({

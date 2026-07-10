@@ -7,7 +7,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const { id } = await params;

@@ -15,17 +15,27 @@ datasource db {
 // UTILISATEURS (Client + Admin seulement — pas de compte prof)
 // ============================================================
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  phone        String?
-  passwordHash String
-  role         UserRole @default(CLIENT)
-  commune      String?
-  quartier     String?
-  avatarUrl    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                     String              @id @default(cuid())
+  email                  String              @unique
+  name                   String
+  phone                  String?
+  passwordHash           String
+  role                   UserRole            @default(CLIENT)
+  commune                String?
+  quartier               String?
+  avatarUrl              String?
+  adminTeamRole          AdminTeamRole?
+  adminAccountStatus     AdminAccountStatus?
+  adminPermissions       Json?
+  adminAccessEnabled     Boolean             @default(true)
+  adminLastLoginAt       DateTime?
+  adminPasswordChangedAt DateTime?
+  adminCreatedById       String?
+  adminSuspendedAt       DateTime?
+  adminSuspensionReason  String?
+  adminDeletedAt         DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   bookings                      Booking[]
   reviews                       Review[]
@@ -47,13 +57,32 @@ model User {
   teacherPayoutRequestsReviewed TeacherPayoutRequest[]     @relation("TeacherPayoutRequestReviewer")
   teacherAdminMessagesSent      TeacherAdminMessage[]      @relation("TeacherAdminMessageAdminSender")
   passwordResetTokens           PasswordResetToken[]
+  communicationCampaigns        CommunicationCampaign[]    @relation("CommunicationCampaignCreator")
 
   @@index([role])
+  @@index([adminTeamRole, adminAccountStatus])
 }
 
 enum UserRole {
   CLIENT
   ADMIN
+}
+
+enum AdminTeamRole {
+  OWNER
+  SUPER_ADMIN
+  OPERATIONS
+  FINANCE
+  SUPPORT
+  QUALITY
+  CONTENT
+  OBSERVER
+}
+
+enum AdminAccountStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
 }
 
 // ============================================================
@@ -555,6 +584,7 @@ model Notification {
   teacherId     String?
   clientId      String?
   adminId       String?
+  campaignId    String?
   sentAt        DateTime?
   readAt        DateTime?
   confirmedAt   DateTime?
@@ -562,14 +592,66 @@ model Notification {
   response      String?
   createdAt     DateTime                  @default(now())
 
-  user  User? @relation(fields: [userId], references: [id])
-  admin User? @relation("NotificationAdminSender", fields: [adminId], references: [id], onDelete: SetNull)
+  user     User?                  @relation(fields: [userId], references: [id])
+  admin    User?                  @relation("NotificationAdminSender", fields: [adminId], references: [id], onDelete: SetNull)
+  campaign CommunicationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([userId, read])
   @@index([recipientType, status, priority])
   @@index([bookingId])
   @@index([teacherId])
   @@index([clientId])
+  @@index([campaignId])
+}
+
+model CommunicationCampaign {
+  id              String                      @id @default(cuid())
+  reference       String                      @unique
+  title           String
+  message         String
+  audience        CommunicationAudience
+  targetUserId    String?
+  targetTeacherId String?
+  channel         NotificationChannel         @default(INTERNAL)
+  priority        NotificationPriority        @default(NORMAL)
+  status          CommunicationCampaignStatus @default(DRAFT)
+  recipientCount  Int                         @default(0)
+  deliveredCount  Int                         @default(0)
+  failedCount     Int                         @default(0)
+  link            String?
+  actionLabel     String?
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  sentAt          DateTime?
+  createdById     String?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  createdBy            User?                 @relation("CommunicationCampaignCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  notifications        Notification[]
+  teacherNotifications TeacherNotification[]
+
+  @@index([status, createdAt])
+  @@index([audience, createdAt])
+  @@index([createdById])
+}
+
+enum CommunicationAudience {
+  ONE_CLIENT
+  ONE_TEACHER
+  ALL_CLIENTS
+  ALL_TEACHERS
+  ALL_USERS
+}
+
+enum CommunicationCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PARTIAL
+  FAILED
+  CANCELLED
 }
 
 enum NotificationRecipientType {
@@ -607,22 +689,25 @@ enum NotificationPriority {
 }
 
 model TeacherNotification {
-  id        String                     @id @default(cuid())
-  teacherId String
-  bookingId String?
-  title     String
-  message   String
-  channel   String // SMS, WHATSAPP, EMAIL
-  sent      Boolean                    @default(false)
-  status    NotificationDeliveryStatus @default(SENT)
-  sentById  String?
-  readAt    DateTime?
-  createdAt DateTime                   @default(now())
+  id         String                     @id @default(cuid())
+  teacherId  String
+  bookingId  String?
+  campaignId String?
+  title      String
+  message    String
+  channel    String // SMS, WHATSAPP, EMAIL
+  sent       Boolean                    @default(false)
+  status     NotificationDeliveryStatus @default(SENT)
+  sentById   String?
+  readAt     DateTime?
+  createdAt  DateTime                   @default(now())
 
-  teacher Teacher @relation(fields: [teacherId], references: [id])
+  teacher  Teacher                @relation(fields: [teacherId], references: [id])
+  campaign CommunicationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([teacherId, createdAt])
   @@index([bookingId])
+  @@index([campaignId])
 }
 
 enum NotificationDeliveryStatus {

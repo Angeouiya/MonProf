@@ -17,7 +17,7 @@ import { AlertTriangle, Bell, ClipboardList, Eye, RefreshCw, ShieldAlert, Siren,
 export const dynamic = "force-dynamic";
 
 export default async function SuiviProfesseursPage() {
-  await requireAdmin();
+  await requireAdmin("TEACHERS_VIEW");
 
   const teachers = await db.teacher.findMany({
     include: {

@@ -34,7 +34,7 @@ export default async function AdminLitigesPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("DISPUTES_MANAGE");
   const sp = await searchParams;
   const status = sp.status && STATUSES.includes(sp.status) ? sp.status : undefined;
   const where: any = {};

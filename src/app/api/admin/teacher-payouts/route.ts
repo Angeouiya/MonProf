@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
-import { getSessionUser } from "@/lib/session";
+import { requireAdminApi } from "@/lib/admin-api";
 import { ACTIVE_PAYMENT_METHODS, isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { getTeacherPayableAmount, isCancellationPenaltyPayout } from "@/lib/teacher-payments";
@@ -22,8 +22,8 @@ function normalizePhone(value: unknown) {
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await getSessionUser();
-  if (!admin || admin.role !== "ADMIN") {
+  const admin = await requireAdminApi("FINANCE_MANAGE");
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const body = await req.json();
@@ -216,7 +216,9 @@ export async function POST(req: NextRequest) {
   const allocationSummary = allocations
     .map((allocation) => `- ${allocation.booking.reference} : ${allocation.amount.toLocaleString("fr-FR")} FCFA`)
     .join("\n");
-  const payout = await db.$transaction(async (tx) => {
+  let payout: any;
+  try {
+    payout = await db.$transaction(async (tx) => {
     const record = await tx.teacherPayoutRecord.create({
       data: {
         reference,
@@ -247,8 +249,8 @@ export async function POST(req: NextRequest) {
       const cancellationPenaltyPayout = isCancellationPenaltyPayout(booking);
       if (allocated <= 0 && !fullyPaid) continue;
 
-      await tx.booking.update({
-        where: { id: booking.id },
+      const bookingUpdate = await tx.booking.updateMany({
+        where: { id: booking.id, teacherPaidAmount: booking.teacherPaidAmount },
         data: {
           teacherPaidAmount: newPaid,
           paymentStatus: cancellationPenaltyPayout
@@ -260,6 +262,9 @@ export async function POST(req: NextRequest) {
           teacherPaidAt: fullyPaid ? now : booking.teacherPaidAt,
         },
       });
+      if (bookingUpdate.count !== 1) {
+        throw new Error("PAYOUT_BALANCE_CHANGED");
+      }
       if (allocated > 0) {
         const payoutMethod = method ?? (isActivePaymentMethod(booking.paymentMethod) ? booking.paymentMethod : null);
         await tx.transaction.create({
@@ -298,8 +303,8 @@ export async function POST(req: NextRequest) {
     });
 
     if (payoutRequest) {
-      await tx.teacherPayoutRequest.update({
-        where: { id: payoutRequest.id },
+      const claimedRequest = await tx.teacherPayoutRequest.updateMany({
+        where: { id: payoutRequest.id, status: "PENDING", payoutRecordId: null },
         data: {
           status: "PAID",
           adminNote: `Versement enregistré par le service client Compétence. Reçu ${record.reference}. Numéro déclaré : ${paymentPhone}.`,
@@ -308,6 +313,9 @@ export async function POST(req: NextRequest) {
           payoutRecordId: record.id,
         },
       });
+      if (claimedRequest.count !== 1) {
+        throw new Error("PAYOUT_REQUEST_ALREADY_HANDLED");
+      }
     }
 
     await tx.teacherNotification.create({
@@ -357,8 +365,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return record;
-  });
+      return record;
+    }, { isolationLevel: "Serializable" });
+  } catch (error: any) {
+    if (["P2034", "PAYOUT_BALANCE_CHANGED", "PAYOUT_REQUEST_ALREADY_HANDLED"].includes(error?.code || error?.message)) {
+      return NextResponse.json({
+        error: "Le solde ou la demande vient d'être modifié par une autre action. Actualisez la comptabilité avant de valider à nouveau.",
+      }, { status: 409 });
+    }
+    if (error?.code === "P2002") {
+      return NextResponse.json({ error: "Cette référence ou cette demande de paiement a déjà été utilisée." }, { status: 409 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({ ok: true, payout });
 }

@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { requireAdminApi } from "@/lib/admin-api";
 
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
-
 export async function GET(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("COMMUNICATIONS_VIEW"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { searchParams } = new URL(req.url);
@@ -26,7 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("COMMUNICATIONS_VIEW");
   if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }

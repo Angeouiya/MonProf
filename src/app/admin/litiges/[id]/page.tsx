@@ -29,7 +29,7 @@ const LABELS: Record<string, string> = {
 };
 
 export default async function LitigeDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAdmin("DISPUTES_MANAGE");
   const { id } = await params;
 
   const dispute = await db.dispute.findUnique({

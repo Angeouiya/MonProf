@@ -14,7 +14,7 @@ import { NiveauxClient } from "./client";
 export const dynamic = "force-dynamic";
 
 export default async function AdminNiveauxPage() {
-  await requireAdmin();
+  await requireAdmin("CATALOG_MANAGE");
   const levels = await db.level.findMany({
     orderBy: { order: "asc" },
     include: { _count: { select: { teachers: true } } },

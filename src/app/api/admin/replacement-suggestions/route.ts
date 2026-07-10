@@ -85,7 +85,7 @@ function isAvailabilityCompatible(rawAvailability: string | null, booking: { pre
 }
 
 export async function GET(req: NextRequest) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("BOOKINGS_MANAGE");
   if (!admin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);

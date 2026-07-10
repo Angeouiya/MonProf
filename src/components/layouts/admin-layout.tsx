@@ -8,12 +8,15 @@ import {
   ShieldAlert, Tag, Bell, Settings, LogOut, Menu, X, BookOpen,
   Banknote, Lock, MessageSquare, MapPin, ChevronRight, Home, Activity,
   ClipboardList, AlertTriangle, RefreshCw,
+  UserRoundCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
+import type { AdminPermission } from "@/lib/admin-permissions";
+import { ADMIN_ROLE_LABELS, hasAdminPermission, normalizeAdminRole } from "@/lib/admin-permissions";
 
 type NavItem = {
   href: string;
@@ -21,6 +24,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   exact?: boolean;
   hideInList?: boolean;
+  permission: AdminPermission;
 };
 
 type AdminNotificationSummary = {
@@ -34,51 +38,53 @@ const navSections: { title: string; items: NavItem[] }[] = [
   {
     title: "Pilotage",
     items: [
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-      { href: "/admin/centre-operationnel", label: "Centre opérationnel", icon: Activity },
-      { href: "/admin/reservations", label: "Réservations", icon: CalendarRange },
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: "DASHBOARD_VIEW" },
+      { href: "/admin/centre-operationnel", label: "Centre opérationnel", icon: Activity, permission: "OPERATIONS_MANAGE" },
+      { href: "/admin/reservations", label: "Réservations", icon: CalendarRange, permission: "BOOKINGS_VIEW" },
     ],
   },
   {
     title: "Professeurs & Clients",
     items: [
-      { href: "/admin/professeurs", label: "Professeurs", icon: GraduationCap },
-      { href: "/admin/suivi-professeurs", label: "Suivi professeurs", icon: ClipboardList },
-      { href: "/admin/professeurs/nouveau", label: "Ajouter professeur", icon: BookOpen, hideInList: true },
-      { href: "/admin/clients", label: "Clients", icon: Users },
+      { href: "/admin/professeurs", label: "Professeurs", icon: GraduationCap, permission: "TEACHERS_VIEW" },
+      { href: "/admin/suivi-professeurs", label: "Suivi professeurs", icon: ClipboardList, permission: "TEACHERS_VIEW" },
+      { href: "/admin/professeurs/nouveau", label: "Ajouter professeur", icon: BookOpen, hideInList: true, permission: "TEACHERS_MANAGE" },
+      { href: "/admin/clients", label: "Clients", icon: Users, permission: "CLIENTS_VIEW" },
     ],
   },
   {
     title: "Finances",
     items: [
-      { href: "/admin/paiements", label: "Paiements reçus", icon: Wallet },
-      { href: "/admin/fonds-bloques", label: "Fonds bloqués", icon: Lock },
-      { href: "/admin/remboursements", label: "Remboursements", icon: RefreshCw },
-      { href: "/admin/paiements-a-liberer", label: "Paiements à libérer", icon: Banknote },
-      { href: "/admin/professeurs-a-payer", label: "Professeurs à payer", icon: Banknote },
+      { href: "/admin/paiements", label: "Paiements reçus", icon: Wallet, permission: "FINANCE_VIEW" },
+      { href: "/admin/fonds-bloques", label: "Fonds bloqués", icon: Lock, permission: "FINANCE_VIEW" },
+      { href: "/admin/remboursements", label: "Remboursements", icon: RefreshCw, permission: "FINANCE_VIEW" },
+      { href: "/admin/paiements-a-liberer", label: "Paiements à libérer", icon: Banknote, permission: "FINANCE_VIEW" },
+      { href: "/admin/professeurs-a-payer", label: "Professeurs à payer", icon: Banknote, permission: "FINANCE_VIEW" },
     ],
   },
   {
     title: "Litiges & Avis",
     items: [
-      { href: "/admin/litiges", label: "Litiges", icon: ShieldAlert },
-      { href: "/admin/avis", label: "Avis & notes", icon: MessageSquare },
+      { href: "/admin/litiges", label: "Litiges", icon: ShieldAlert, permission: "DISPUTES_MANAGE" },
+      { href: "/admin/avis", label: "Avis & notes", icon: MessageSquare, permission: "REVIEWS_MANAGE" },
     ],
   },
   {
     title: "Référentiels",
     items: [
-      { href: "/admin/matieres", label: "Matières", icon: Tag },
-      { href: "/admin/niveaux", label: "Niveaux", icon: BookOpen },
-      { href: "/admin/communes", label: "Communes & quartiers", icon: MapPin },
+      { href: "/admin/matieres", label: "Matières", icon: Tag, permission: "CATALOG_MANAGE" },
+      { href: "/admin/niveaux", label: "Niveaux", icon: BookOpen, permission: "CATALOG_MANAGE" },
+      { href: "/admin/communes", label: "Communes & quartiers", icon: MapPin, permission: "CATALOG_MANAGE" },
     ],
   },
   {
     title: "Communication",
     items: [
-      { href: "/admin/messages", label: "Messages", icon: MessageSquare },
-      { href: "/admin/notifications", label: "Notifications", icon: Bell },
-      { href: "/admin/parametres", label: "Paramètres", icon: Settings },
+      { href: "/admin/messages", label: "Messages", icon: MessageSquare, permission: "COMMUNICATIONS_VIEW" },
+      { href: "/admin/notifications", label: "Centre de communication", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
+      { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
+      { href: "/admin/parametres", label: "Paramètres", icon: Settings, permission: "SETTINGS_MANAGE" },
+      { href: "/admin/mon-compte", label: "Mon compte", icon: UserRoundCog, permission: "DASHBOARD_VIEW" },
     ],
   },
 ];
@@ -88,11 +94,15 @@ export function AdminLayout({
   userName,
   notificationCount = 0,
   notificationSummary,
+  permissions = [],
+  teamRole,
 }: {
   children: React.ReactNode;
   userName?: string | null;
   notificationCount?: number;
   notificationSummary?: AdminNotificationSummary;
+  permissions?: AdminPermission[];
+  teamRole?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -156,7 +166,7 @@ export function AdminLayout({
 
       <div className="flex flex-1">
         <aside data-admin-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
-          <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} />
+          <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} />
         </aside>
 
         {open && (
@@ -169,7 +179,7 @@ export function AdminLayout({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} onNavigate={() => setOpen(false)} />
+              <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} onNavigate={() => setOpen(false)} />
             </aside>
           </div>
         )}
@@ -188,12 +198,16 @@ function SidebarContent({
   notificationCount,
   notificationSummary,
   onNavigate,
+  permissions,
+  teamRole,
 }: {
   userName?: string | null;
   isActive: (href: string, exact?: boolean) => boolean;
   notificationCount?: number;
   notificationSummary?: AdminNotificationSummary;
   onNavigate?: () => void;
+  permissions: AdminPermission[];
+  teamRole?: string | null;
 }) {
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
   return (
@@ -224,7 +238,7 @@ function SidebarContent({
             </p>
             <div className="space-y-0.5">
               {section.items
-                .filter((i) => !i.hideInList)
+                .filter((i) => !i.hideInList && hasAdminPermission(permissions, i.permission))
                 .map((item) => {
                   const active = isActive(item.href, item.exact);
                   return (
@@ -260,7 +274,7 @@ function SidebarContent({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Admin"}</p>
-            <p className="truncate text-xs font-semibold text-[#64748B]">Administrateur</p>
+            <p className="truncate text-xs font-semibold text-[#64748B]">{ADMIN_ROLE_LABELS[normalizeAdminRole(teamRole)]}</p>
           </div>
         </div>
       </div>

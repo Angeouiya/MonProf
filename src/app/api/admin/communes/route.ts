@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
+import { requireAdminApi } from "@/lib/admin-api";
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("CATALOG_MANAGE"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const body = await req.json();

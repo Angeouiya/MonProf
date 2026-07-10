@@ -42,7 +42,7 @@ export default async function AdminReservationsPage({
     clientType?: string; courseCategory?: string; schoolSystem?: string;
   }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("BOOKINGS_VIEW");
   const sp = await searchParams;
   const q = sp.q?.trim();
   const status = sp.status && VALID_BOOKING_STATUSES.includes(sp.status) ? sp.status as any : undefined;

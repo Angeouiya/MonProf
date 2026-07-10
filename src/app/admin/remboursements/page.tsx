@@ -63,7 +63,7 @@ export default async function AdminRefundsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdmin("FINANCE_VIEW");
   const sp = await searchParams;
   const selectedStatus = sp.status && REFUND_STATUSES.includes(sp.status as any) ? sp.status : "";
 

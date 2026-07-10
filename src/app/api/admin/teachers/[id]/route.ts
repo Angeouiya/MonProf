@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { requireAdminApi } from "@/lib/admin-api";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
@@ -55,13 +53,8 @@ function validateTeacherRelationPatch(subjects: unknown, levels: unknown) {
   return null;
 }
 
-async function isAdmin() {
-  const session = await getServerSession(authOptions);
-  return !!session?.user && (session.user as any).role === "ADMIN";
-}
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  if (!(await requireAdminApi("TEACHERS_VIEW"))) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;
@@ -120,7 +113,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
@@ -442,7 +435,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApi("TEACHERS_MANAGE");
   if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
