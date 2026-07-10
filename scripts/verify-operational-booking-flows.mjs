@@ -41,6 +41,8 @@ record(
   "Exact same-neighborhood home lessons have no transport fee",
   /SAME_NEIGHBORHOOD:\s*\{[\s\S]*?key:\s*"same_neighborhood"[\s\S]*?amount:\s*0/.test(pricingEngine)
     && /sameKnownQuartier[\s\S]*?key:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.amount/.test(pricingEngine)
+    && /NEIGHBORHOOD_ALIASES[\s\S]*?mermoze:\s*"mermoz"/.test(pricingEngine)
+    && /normalizeNeighborhood\(originQuartier\)\s*===\s*normalizeNeighborhood\(destinationQuartier\)/.test(pricingEngine)
     && /SAME_AREA:\s*\{[\s\S]*?key:\s*"same_area"[\s\S]*?amount:\s*1000/.test(pricingEngine),
 );
 

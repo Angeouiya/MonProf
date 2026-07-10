@@ -4983,6 +4983,75 @@ b {
   }
 }
 
+/* Pricing responds to its own panel width, including narrow desktop sidebars. */
+@container (min-width: 520px) {
+  [data-client-pricing-breakdown] [data-client-pricing-facts],
+  [data-client-pricing-breakdown] [data-client-pricing-admin] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-line] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+    border: 0;
+    padding: 0;
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-line] > span:last-child {
+    white-space: nowrap;
+    text-align: right;
+  }
+}
+
+@container (min-width: 620px) {
+  [data-client-pricing-breakdown] [data-client-pricing-header] {
+    grid-template-columns: minmax(0, 1fr) minmax(13rem, auto);
+    align-items: start;
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-heading] {
+    order: 1;
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-total] {
+    order: 2;
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-detail-header] {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  [data-client-pricing-breakdown] [data-client-pricing-average] {
+    text-align: right;
+  }
+}
+
+/* Count-aware client tabs keep short rails balanced on phone screens. */
+@media (max-width: 719px) {
+  .client-shell [data-client-tab-bar] > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .client-shell [data-client-page-header] [data-client-back-button] {
+    width: fit-content !important;
+    justify-content: flex-start !important;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 719px) {
+  .client-shell [data-client-tab-bar][data-item-count="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .client-shell [data-client-tab-bar][data-item-count="3"] > :last-child {
+    grid-column: auto;
+  }
+}
+
 /* Final booking viewport guard. Keep this after generic rail overrides. */
 @media (max-width: 1023px) {
   .client-shell [data-client-booking-desktop-progress] {
@@ -5309,7 +5378,7 @@ b {
 
 @media (max-width: 359px) {
   .client-shell [data-client-tab-bar] {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 

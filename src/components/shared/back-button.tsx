@@ -27,6 +27,7 @@ export function BackButton({ fallbackHref, label = "Retour", className }: BackBu
 
   return (
     <Button
+      data-client-back-button
       type="button"
       variant="outline"
       size="sm"

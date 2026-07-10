@@ -19,6 +19,8 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts",
     "db:sync-catalog": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/sync-production-catalog.ts",
+    "db:reprice-drafts": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/repair-unpaid-draft-pricing.ts",
+    "db:reprice-drafts:apply": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/repair-unpaid-draft-pricing.ts --apply",
     "db:backfill-admin-team": "node scripts/backfill-admin-team.mjs",
     "payment:audit": "node scripts/audit-payment-integrity.mjs",
     "payment:quarantine": "node scripts/quarantine-unverified-payments.mjs --apply",

@@ -262,6 +262,7 @@ export function ClientTabBar({
   return (
     <div
       data-client-tab-bar
+      data-item-count={items.length}
       className={cn(
         "client-tab-bar flex snap-x gap-1.5 overflow-x-auto rounded-lg border border-[#DDE3EE] bg-white p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:snap-none lg:overflow-visible",
         className,

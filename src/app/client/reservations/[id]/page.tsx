@@ -355,7 +355,7 @@ export default async function ReservationDetailPage({
         title={`Réservation ${booking.reference}`}
         description={`Créée le ${formatDateTime(booking.createdAt)}`}
       >
-        <div className="grid w-full gap-2 min-[520px]:w-auto min-[520px]:grid-cols-2">
+        <div className="grid w-full grid-cols-2 gap-2 min-[520px]:w-auto">
           <ReservationStatusChip label="Statut" value={formatClientBookingStatus(booking.status)} />
           <ReservationStatusChip label="Paiement" value={formatClientPaymentStatus(booking.paymentStatus, booking.isQuoteOnly)} />
         </div>

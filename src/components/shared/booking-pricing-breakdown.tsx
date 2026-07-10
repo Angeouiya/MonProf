@@ -76,9 +76,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const adminProps = props as BookingPricingBreakdownAdminProps;
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white p-3 min-[640px]:p-4" data-client-pricing-breakdown>
-      <div className="grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_minmax(13rem,auto)] min-[620px]:items-start">
-        <div className="order-2 flex min-w-0 items-start gap-3 min-[620px]:order-1">
+    <section
+      className="min-w-0 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white p-3 min-[640px]:p-4"
+      data-client-pricing-breakdown
+      style={{ containerType: "inline-size" }}
+    >
+      <div className="grid gap-3" data-client-pricing-header>
+        <div className="order-2 flex min-w-0 items-start gap-3" data-client-pricing-heading>
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
             <Calculator className="h-4 w-4" />
           </span>
@@ -94,7 +98,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
           </div>
         </div>
 
-        <div className="order-1 rounded-lg border border-[#111B4D] bg-[#111B4D] px-4 py-3 text-white min-[620px]:order-2" data-client-pricing-total>
+        <div className="order-1 rounded-lg border border-[#111B4D] bg-[#111B4D] px-4 py-3 text-white" data-client-pricing-total>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-white">
             {isQuoteOnly ? "Montant" : "Total client"}
           </p>
@@ -109,7 +113,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 min-[520px]:grid-cols-3" data-client-pricing-facts>
+      <div className="mt-3 grid grid-cols-1 gap-2" data-client-pricing-facts>
         <PricingFact
           icon={<Clock className="h-4 w-4" />}
           label="Formule"
@@ -130,7 +134,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       </div>
 
       <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5" data-client-pricing-detail>
-        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3 min-[620px]:flex-row min-[620px]:items-end min-[620px]:justify-between">
+        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3" data-client-pricing-detail-header>
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
             <p className="mt-0.5 hidden text-xs font-medium leading-5 text-[#64748B] min-[430px]:block">
@@ -140,7 +144,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             </p>
           </div>
           {!isQuoteOnly && (
-            <p className="text-sm font-semibold text-[#111B4D] min-[620px]:text-right">
+            <p className="text-sm font-semibold text-[#111B4D]" data-client-pricing-average>
               Moyenne <Money amount={averageSessionPrice} /> / séance
             </p>
           )}
@@ -197,7 +201,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       )}
 
       {audience === "admin" && (
-        <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[#E3E8F2] pt-3 min-[480px]:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[#E3E8F2] pt-3" data-client-pricing-admin>
           <PricingMini label="Commission" value={<Money amount={adminProps.commissionAmount ?? 0} />} detail={adminProps.commissionRate !== undefined ? `${adminProps.commissionRate}%` : undefined} />
           <PricingMini label="Part prof cours" value={<Money amount={adminProps.teacherPayoutAmount ?? adminProps.teacherNetAmount ?? 0} />} detail="70% du cours" />
           <PricingMini label="Total prof" value={<Money amount={adminProps.totalTeacherReceives ?? adminProps.teacherNetAmount ?? 0} />} detail={transportFee > 0 ? "Part cours + déplacement" : "Part cours"} />
@@ -219,7 +223,7 @@ function PricingFact({
   icon?: ReactNode;
 }) {
   return (
-    <div data-client-pricing-fact className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5 min-[520px]:flex-col min-[760px]:flex-row">
+    <div data-client-pricing-fact className="flex min-w-0 items-start gap-3 rounded-lg border border-[#D8DEE9] bg-white px-3 py-2.5">
       {icon && (
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8DEE9] text-[#111B4D]">
           {icon}
@@ -246,14 +250,14 @@ function PricingLine({
   strong?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-[#EEF2F7] bg-white px-3 py-2.5 min-[520px]:grid min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-start min-[520px]:gap-3 min-[520px]:border-0 min-[520px]:px-0 min-[520px]:py-0">
+    <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-[#EEF2F7] bg-white px-3 py-2.5" data-client-pricing-line>
       <span className="min-w-0 [overflow-wrap:anywhere]">
         <span className={strong ? "block font-semibold leading-snug text-[#111827]" : "block font-medium leading-snug text-[#64748B]"}>
           {label}
         </span>
         {detail && <span className="mt-0.5 block text-xs font-medium leading-snug text-[#64748B]">{detail}</span>}
       </span>
-      <span className={strong ? "break-words font-semibold tabular-nums leading-snug text-[#111B4D] min-[520px]:whitespace-nowrap min-[520px]:text-right" : "break-words font-semibold tabular-nums leading-snug text-[#111827] min-[520px]:whitespace-nowrap min-[520px]:text-right"}>
+      <span className={strong ? "break-words font-semibold tabular-nums leading-snug text-[#111B4D]" : "break-words font-semibold tabular-nums leading-snug text-[#111827]"}>
         {value}
       </span>
     </div>

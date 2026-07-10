@@ -318,8 +318,30 @@ function normalize(value?: string | null) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[’']/g, "")
+    .replace(/[-_/.,]+/g, " ")
     .replace(/\s+/g, " ")
     .toLowerCase();
+}
+
+const NEIGHBORHOOD_ALIASES: Record<string, string> = {
+  mermoze: "mermoz",
+  "2 plateaux": "deux plateaux",
+  "ii plateaux": "deux plateaux",
+};
+
+const NEIGHBORHOOD_DISPLAY_NAMES: Record<string, string> = {
+  mermoz: "Mermoz",
+  "deux plateaux": "Deux Plateaux",
+};
+
+function normalizeNeighborhood(value?: string | null) {
+  const normalized = normalize(value);
+  return NEIGHBORHOOD_ALIASES[normalized] ?? normalized;
+}
+
+function displayNeighborhoodName(value?: string | null) {
+  const normalized = normalizeNeighborhood(value);
+  return NEIGHBORHOOD_DISPLAY_NAMES[normalized] ?? (value?.trim() || null);
 }
 
 function includesAny(value: string, needles: string[]) {
@@ -433,8 +455,8 @@ export function calculateGrandAbidjanTransportFee({
   const amounts = resolveTransportFeeAmounts(transportFeeAmounts);
   const origin = displayAreaName(teacherCommune);
   const destination = displayAreaName(clientCommune);
-  const originQuartier = teacherQuartier?.trim() || null;
-  const destinationQuartier = clientQuartier?.trim() || null;
+  const originQuartier = displayNeighborhoodName(teacherQuartier);
+  const destinationQuartier = displayNeighborhoodName(clientQuartier);
   const normalizedDestination = normalize(destination);
   const coveredByTeacherZone = teacherZoneNames.some((zone) => normalize(zone) === normalizedDestination);
   const fallbackOrigin = origin || teacherZoneNames.map(displayAreaName).find(Boolean) || null;
@@ -479,7 +501,11 @@ export function calculateGrandAbidjanTransportFee({
   }
 
   if (sameArea(fallbackOrigin, destination)) {
-    const sameKnownQuartier = Boolean(originQuartier && destinationQuartier && normalize(originQuartier) === normalize(destinationQuartier));
+    const sameKnownQuartier = Boolean(
+      originQuartier
+      && destinationQuartier
+      && normalizeNeighborhood(originQuartier) === normalizeNeighborhood(destinationQuartier)
+    );
     if (sameKnownQuartier) {
       return {
         key: TRANSPORT_FEES.SAME_NEIGHBORHOOD.key,

@@ -16,6 +16,7 @@ const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
+const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
 const clientPricingCopyPaths = [
   "src/app/client/page.tsx",
   "src/app/client/reserver/reserver-form.tsx",
@@ -56,6 +57,10 @@ const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
 const teacherCard = read(teacherCardPath);
+const pricingBreakdown = read(pricingBreakdownPath);
+const clientReservationsPage = read("src/app/client/reservations/page.tsx");
+const clientReviewsPage = read("src/app/client/avis/page.tsx");
+const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
 const clientPricingCopySources = clientPricingCopyPaths.map(read).join("\n");
 const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
@@ -243,6 +248,37 @@ record(
 );
 
 record(
+  "Client short tab rails stay balanced on small phones",
+  /data-item-count=\{items\.length\}/.test(clientPrimitives)
+    && /\[data-client-tab-bar\]\[data-item-count="3"\][\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(css)
+    && /\[data-client-tab-bar\]\s*>\s*:last-child:nth-child\(odd\)[\s\S]*?grid-column:\s*1\s*\/\s*-1/.test(css)
+    && /@media\s*\(max-width:\s*359px\)[\s\S]*?\[data-client-tab-bar\][\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(css),
+);
+
+record(
+  "Client deep-page back action remains compact on mobile",
+  /data-client-back-button/.test(backButton)
+    && /\[data-client-page-header\]\s*\[data-client-back-button\][\s\S]*?width:\s*fit-content\s*!important/.test(css),
+);
+
+record(
+  "Client reservation summary keeps its three financial facts readable",
+  /data-client-reservation-mobile-priority[\s\S]*?mt-3 grid grid-cols-3 gap-2/.test(clientReservationsPage),
+);
+
+record(
+  "Client reviews avoid repeating the same empty pending state",
+  /\{primaryReviewBooking\s*&&\s*\([\s\S]*?id="avis-a-evaluer"/.test(clientReviewsPage)
+    && !/title="Aucun avis en attente"/.test(clientReviewsPage),
+);
+
+record(
+  "Client profile header contains commands instead of static button-like labels",
+  !/Compte sécurisé/.test(clientProfilePage)
+    && /Trouver un professeur/.test(clientProfilePage),
+);
+
+record(
   "Client mobile pages keep app-like compact copy",
   /data-client-page-header-description/.test(clientPrimitives)
     && /data-client-root-tab-header/.test(clientPrimitives)
@@ -379,6 +415,16 @@ record(
     && /Montant à recalculer/.test(clientPricingCopySources)
     && /Calcul à reprendre/.test(clientPricingCopySources)
     && /Calculé à la réservation/.test(clientPricingCopySources),
+);
+
+record(
+  "Client pricing adapts to its panel width instead of the viewport",
+  /containerType:\s*"inline-size"/.test(pricingBreakdown)
+    && /data-client-pricing-header/.test(pricingBreakdown)
+    && /data-client-pricing-line/.test(pricingBreakdown)
+    && /@container\s*\(min-width:\s*520px\)/.test(css)
+    && /@container\s*\(min-width:\s*620px\)/.test(css)
+    && !/min-\[620px\]:grid-cols-\[minmax\(0,1fr\)_minmax\(13rem,auto\)\]/.test(pricingBreakdown),
 );
 
 record(

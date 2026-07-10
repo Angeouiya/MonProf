@@ -178,10 +178,6 @@ export function ProfileClient({
         description={profile?.email}
         showBack={false}
       >
-        <div className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111B4D]">
-          <ShieldCheck className="h-4 w-4" />
-          Compte sécurisé
-        </div>
         <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           <Link href="/client/rechercher">
             Trouver un professeur

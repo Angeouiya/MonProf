@@ -224,11 +224,13 @@ export default async function ClientDashboardPage() {
           <ClientSectionTitle
             title={(
               <span className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
-              Actions requises
+              {pendingValidation.length > 0
+                ? <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
+                : <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />}
+              {pendingValidation.length > 0 ? "Actions requises" : "À suivre"}
               </span>
             )}
-            description="Ce qui mérite votre attention maintenant."
+            description={pendingValidation.length > 0 ? "Ce qui mérite votre attention maintenant." : "Aucune action requise."}
           />
           <div className="mt-4 space-y-3">
             {pendingValidation.length === 0 ? (

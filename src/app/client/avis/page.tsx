@@ -155,18 +155,12 @@ export default async function AvisPage() {
       </div>
       )}
 
-      <section id="avis-a-evaluer" className="scroll-mt-24 space-y-3">
-        <ClientSectionTitle
-          title="À évaluer"
-          description={bookingsToReview.length > 0 ? `${bookingsToReview.length} retour${bookingsToReview.length > 1 ? "s" : ""} qualité attendu${bookingsToReview.length > 1 ? "s" : ""}` : "Tout est à jour"}
-        />
-        {!primaryReviewBooking ? (
-          <ClientEmptyState
-            icon={MessageSquare}
-            title="Aucun avis en attente"
-            description="Les cours terminés à évaluer apparaîtront ici automatiquement."
+      {primaryReviewBooking && (
+        <section id="avis-a-evaluer" className="scroll-mt-24 space-y-3">
+          <ClientSectionTitle
+            title="À évaluer"
+            description={`${bookingsToReview.length} retour${bookingsToReview.length > 1 ? "s" : ""} qualité attendu${bookingsToReview.length > 1 ? "s" : ""}`}
           />
-        ) : (
           <>
             <ClientSurface className="p-4 sm:p-5">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
@@ -233,8 +227,8 @@ export default async function AvisPage() {
               </div>
             )}
           </>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Mes avis */}
       <section className="space-y-3">

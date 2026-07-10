@@ -43,6 +43,20 @@ async function main() {
   });
   assert(sameQuarter.transportFee === 0, "Exact same neighborhood always remains transport-free");
 
+  const spellingVariantQuarter = calculateBookingPricing({
+    category: "formation_professionnelle",
+    deliveryMode: "domicile",
+    packType: "SINGLE",
+    teacherPricePerSession: 20_000,
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoze",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    clientCommuneTransportFeeOverride: 9_000,
+  });
+  assert(spellingVariantQuarter.transportFee === 0, "Known Ivorian neighborhood spelling variants remain transport-free");
+  assert(spellingVariantQuarter.transportRouteLabel === "Cocody (Mermoz) -> Cocody (Mermoz)", "Neighborhood route labels use canonical spelling");
+
   const [commission, communes, quarters] = await Promise.all([
     db.setting.findUnique({ where: { key: "default_commission" } }),
     db.commune.count({ where: { isActive: true } }),
