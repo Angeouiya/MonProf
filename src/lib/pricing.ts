@@ -643,51 +643,8 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   }
 
   const tier = PRICE_TIERS[tierCode];
-  const isQuoteOnly = false;
   const teacherPricePerSession = Math.max(0, Math.round(Number(input.teacherPricePerSession) || 0));
-  const tierSessionAmount = tier.amount ?? 0;
-  const unitSessionAmount = teacherPricePerSession > 0 && tier.amount !== null
-    ? teacherPricePerSession
-    : tierSessionAmount;
-  const quoteReason = undefined;
-
-  if (isQuoteOnly) {
-    return {
-      currency: CURRENCY,
-      priceTierKey: tier.key,
-      priceTierLabel: tier.label,
-      courseAmount: 0,
-      unitSessionAmount: 0,
-      rawCourseAmount: 0,
-      platformCommissionRate: PLATFORM_COMMISSION_RATE,
-      platformCommissionAmount: 0,
-      teacherRate: TEACHER_RATE,
-      teacherPayoutAmount: 0,
-      transportFee: 0,
-      transportFeeKey: transport.key,
-      transportFeeLabel: transport.label,
-      transportRouteLabel: transport.routeLabel,
-      transportRuleLabel: transport.ruleLabel,
-      transportCoveredByTeacherZone: transport.coveredByTeacherZone,
-      materialFee,
-      totalBeforePaymentServiceFee: 0,
-      paymentServiceFeeRate: PAYMENT_SERVICE_FEE_RATE_BPS,
-      paymentServiceFeeAmount: 0,
-      paymentServiceFeeLabel: PAYMENT_SERVICE_FEE_LABEL,
-      totalClientPays: 0,
-      totalTeacherReceives: 0,
-      packKey: pack.key,
-      packLabel: pack.label,
-      numberOfSessions: pack.sessions,
-      discountAmount: 0,
-      discountRate: 0,
-      participantsCount,
-      groupMultiplier,
-      isQuoteOnly: true,
-      quoteReason,
-      ruleContext: context,
-    };
-  }
+  const unitSessionAmount = teacherPricePerSession > 0 ? teacherPricePerSession : tier.amount;
 
   const sessions = Math.max(1, pack.sessions ?? 1);
   const rawCourseAmount = Math.round(unitSessionAmount * sessions * groupMultiplier);

@@ -396,22 +396,11 @@ export async function POST(req: NextRequest) {
   const averageSessionPrice = normalizedSessionsCount > 0 ? Math.round(pricing.courseAmount / normalizedSessionsCount) : 0;
   const extraParticipantCount = Math.max(0, normalizedParticipants - 1);
   const groupSurchargeAmount = Math.max(0, pricing.rawCourseAmount - basePrice);
-  const groupPricingLine = pricing.isQuoteOnly
-    ? "Tarif à finaliser: validation du service client requise."
-    : normalizedGroupType === "SMALL_GROUP"
-      ? `Petit groupe: ${normalizedParticipants} participants, base ${basePrice.toLocaleString("fr-FR")} FCFA + ${extraParticipantCount} x 50% = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
-      : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
-  const transportLine = courseFormat === "HOME"
-    ? pricing.isQuoteOnly
-      ? `Déplacement: ${pricing.transportRouteLabel ?? "trajet à confirmer"} - contrôle service client requis.`
-      : `Déplacement: ${pricing.transportRouteLabel ?? "Côte d'Ivoire"} - ${pricing.transportFee.toLocaleString("fr-FR")} FCFA (${pricing.transportRuleLabel ?? "règle de déplacement"}).`
-    : "Déplacement: aucun frais pour le cours en ligne.";
-  const paymentServiceLine = pricing.isQuoteOnly
-    ? "Frais de service paiement: calculés après validation du devis."
-    : `Frais de service paiement: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
-  const sessionPricingLine = pricing.isQuoteOnly
-    ? `Formule: ${pricing.packLabel}, nombre de séances à confirmer.`
-    : `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
+  const groupPricingLine = normalizedGroupType === "SMALL_GROUP"
+    ? `Petit groupe: ${normalizedParticipants} participants, base ${basePrice.toLocaleString("fr-FR")} FCFA + ${extraParticipantCount} x 50% = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
+    : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
+  const paymentServiceLine = `Frais de service paiement: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
+  const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
   const commissionRate = PLATFORM_COMMISSION_PERCENT;
   const commissionAmount = pricing.platformCommissionAmount;
   const teacherNetAmount = pricing.totalTeacherReceives;
@@ -429,8 +418,6 @@ export async function POST(req: NextRequest) {
 
   const clientName = client?.name ?? "Un client";
   const profName = teacher.professionalName || teacher.fullName;
-  const daysStr = normalizedPreferredDays.join(", ");
-  const needLine = normalizedNeedDescription ? ` Besoin: ${normalizedNeedDescription.replace(/\s+/g, " ").slice(0, 220)}.` : "";
   const scheduleLine = normalizedPreferredTime
     ? `Créneaux demandés: ${normalizedPreferredTime}.`
     : "Créneaux demandés: à confirmer avec le client.";
@@ -485,42 +472,20 @@ export async function POST(req: NextRequest) {
         paymentServiceFeeLabel: pricing.paymentServiceFeeLabel,
         totalClientPays: pricing.totalClientPays,
         totalTeacherReceives: pricing.totalTeacherReceives,
-        isQuoteOnly: pricing.isQuoteOnly,
+        isQuoteOnly: false,
         pricingSnapshot: pricingSnapshotToJson(pricing),
         teacherNetAmount,
-        status: pricing.isQuoteOnly ? "PENDING_ADMIN_VALIDATION" : "PENDING_PAYMENT",
+        status: "PENDING_PAYMENT",
         paymentStatus: "FAILED",
         paymentMethod: null,
       },
     });
-    if (pricing.isQuoteOnly) {
-      await tx.notification.create({
-        data: {
-          userId: null,
-          title: "Nouvelle demande de devis",
-          message: `${clientName} demande un devis pour ${profName} sur ${canonicalSubjectName} ${canonicalLevelName}${daysStr ? `, ${daysStr}` : ""}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} ${transportLine}${needLine} Réservation rattachée au professeur ${profName}. Action requise : chiffrer le prix du cours et le déplacement si nécessaire. Le matériel reste à la charge de l'apprenant et n'est pas facturé par Compétence.`,
-          type: "NEW_BOOKING",
-          recipientType: "ADMIN",
-          channel: "INTERNAL",
-          status: "SENT",
-          priority: "URGENT",
-          bookingId: createdBooking.id,
-          teacherId,
-          clientId: userId,
-          sentAt: now,
-          link: `/admin/professeurs/${teacherId}?tab=cours&bookingId=${createdBooking.id}`,
-          actionLabel: "Ouvrir la fiche professeur",
-        },
-      });
-    }
     await tx.notification.create({
       data: {
         userId,
-        title: pricing.isQuoteOnly ? "Demande enregistrée" : "Brouillon de réservation - paiement requis",
-        message: pricing.isQuoteOnly
-          ? `Votre demande pour le cours de ${canonicalSubjectName} avec ${profName} est enregistrée. ${startDateLine} Le service client vous proposera un devis clair avant tout paiement.`
-          : `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que PayDunya n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
-        type: pricing.isQuoteOnly ? "QUOTE_REQUESTED" : "PAYMENT_PENDING",
+        title: "Brouillon de réservation - paiement requis",
+        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que PayDunya n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
+        type: "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,
         channel: "INTERNAL",
@@ -544,11 +509,9 @@ export async function POST(req: NextRequest) {
         action: "Réservation client rattachée au professeur",
         entityType: "Teacher",
         entityId: teacherId,
-        detail: pricing.isQuoteOnly
-          ? `${clientName} a créé ${createdBooking.reference}. Prix à finaliser pour ${profName}. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine}`
-          : `${clientName} a créé ${createdBooking.reference}. Paiement PayDunya en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} Total PayDunya: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
+        detail: `${clientName} a créé ${createdBooking.reference}. Paiement PayDunya en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} Total PayDunya: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
         oldStatus: "NO_BOOKING",
-        newStatus: pricing.isQuoteOnly ? "QUOTE_REQUESTED" : "PAYDUNYA_PAYMENT_PENDING",
+        newStatus: "PAYDUNYA_PAYMENT_PENDING",
       },
     });
 
@@ -563,67 +526,65 @@ export async function POST(req: NextRequest) {
     raw?: Record<string, unknown>;
     error?: string;
   } | null = null;
-  if (!booking.isQuoteOnly) {
-    try {
-      paydunya = await createPayDunyaCheckoutInvoice({
-        origin: getPayDunyaPublicBaseUrl(req),
-        booking: {
-          id: booking.id,
-          reference: booking.reference,
-          subjectName: booking.subjectName,
-          levelName: booking.levelName,
-          sessionsCount: booking.sessionsCount,
-          totalClientPays: booking.totalClientPays,
-          courseAmount: booking.courseAmount,
-          transportFee: booking.transportFee,
-          paymentServiceFeeAmount: booking.paymentServiceFeeAmount,
-          paymentServiceFeeLabel: booking.paymentServiceFeeLabel,
-        },
-        client: {
-          id: userId,
-          name: clientName,
-          email: client?.email,
-          phone: client?.phone,
-        },
-        teacher: {
-          id: teacher.id,
-          name: profName,
-        },
-      });
-      await db.booking.update({
-        where: { id: booking.id },
-        data: {
-          paydunyaToken: paydunya.token,
-          paydunyaCheckoutUrl: paydunya.checkoutUrl,
-          paydunyaStatus: paydunya.configured ? "PENDING" : "NOT_CONFIGURED",
-          paydunyaFailureReason: paydunya.configured ? null : "PayDunya n'est pas configuré.",
-          paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: compactPayDunyaCreatePayload(paydunya.raw ?? paydunya.responseText),
-        },
-      });
-    } catch (error: any) {
-      const errorMessage = error?.message || "PayDunya indisponible.";
-      console.error("[booking:paydunya_create_failed]", {
-        bookingId: booking.id,
-        bookingReference: booking.reference,
-        reason: errorMessage,
-      });
-      paydunya = {
-        configured: true,
-        checkoutUrl: null,
-        token: null,
-        error: errorMessage,
-      };
-      await db.booking.update({
-        where: { id: booking.id },
-        data: {
-          paydunyaStatus: "CREATE_FAILED",
-          paydunyaFailureReason: errorMessage,
-          paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: errorMessage,
-        },
-      });
-    }
+  try {
+    paydunya = await createPayDunyaCheckoutInvoice({
+      origin: getPayDunyaPublicBaseUrl(req),
+      booking: {
+        id: booking.id,
+        reference: booking.reference,
+        subjectName: booking.subjectName,
+        levelName: booking.levelName,
+        sessionsCount: booking.sessionsCount,
+        totalClientPays: booking.totalClientPays,
+        courseAmount: booking.courseAmount,
+        transportFee: booking.transportFee,
+        paymentServiceFeeAmount: booking.paymentServiceFeeAmount,
+        paymentServiceFeeLabel: booking.paymentServiceFeeLabel,
+      },
+      client: {
+        id: userId,
+        name: clientName,
+        email: client?.email,
+        phone: client?.phone,
+      },
+      teacher: {
+        id: teacher.id,
+        name: profName,
+      },
+    });
+    await db.booking.update({
+      where: { id: booking.id },
+      data: {
+        paydunyaToken: paydunya.token,
+        paydunyaCheckoutUrl: paydunya.checkoutUrl,
+        paydunyaStatus: paydunya.configured ? "PENDING" : "NOT_CONFIGURED",
+        paydunyaFailureReason: paydunya.configured ? null : "PayDunya n'est pas configuré.",
+        paydunyaLastCheckedAt: new Date(),
+        paydunyaLastPayload: compactPayDunyaCreatePayload(paydunya.raw ?? paydunya.responseText),
+      },
+    });
+  } catch (error: any) {
+    const errorMessage = error?.message || "PayDunya indisponible.";
+    console.error("[booking:paydunya_create_failed]", {
+      bookingId: booking.id,
+      bookingReference: booking.reference,
+      reason: errorMessage,
+    });
+    paydunya = {
+      configured: true,
+      checkoutUrl: null,
+      token: null,
+      error: errorMessage,
+    };
+    await db.booking.update({
+      where: { id: booking.id },
+      data: {
+        paydunyaStatus: "CREATE_FAILED",
+        paydunyaFailureReason: errorMessage,
+        paydunyaLastCheckedAt: new Date(),
+        paydunyaLastPayload: errorMessage,
+      },
+    });
   }
 
   return NextResponse.json({

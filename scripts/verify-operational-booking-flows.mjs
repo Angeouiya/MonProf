@@ -12,6 +12,39 @@ const professorRescheduleRoute = read("src/app/api/professor/reschedule-requests
 const adminTeacherPage = read("src/app/admin/professeurs/[id]/page.tsx");
 const adminTeacherPayoutClient = read("src/app/admin/professeurs/[id]/teacher-payout-client.tsx");
 const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.tsx");
+const bookingCreateApi = read("src/app/api/bookings/route.ts");
+const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
+const pricingEngine = read("src/lib/pricing.ts");
+
+record(
+  "Every new booking receives an automatic payable amount",
+  /SUR_DEVIS:[\s\S]*?amount:\s*25000/.test(pricingEngine)
+    && /const unitSessionAmount\s*=\s*teacherPricePerSession\s*>\s*0\s*\?\s*teacherPricePerSession\s*:\s*tier\.amount/.test(pricingEngine)
+    && /isQuoteOnly:\s*false/.test(pricingEngine)
+    && !/if\s*\(isQuoteOnly\)/.test(pricingEngine),
+);
+
+record(
+  "New bookings always enter PayDunya payment before activation",
+  /isQuoteOnly:\s*false/.test(bookingCreateApi)
+    && /status:\s*"PENDING_PAYMENT"/.test(bookingCreateApi)
+    && /title:\s*"Brouillon de réservation - paiement requis"/.test(bookingCreateApi)
+    && /type:\s*"PAYMENT_PENDING"/.test(bookingCreateApi)
+    && /createPayDunyaCheckoutInvoice/.test(bookingCreateApi)
+    && !/pricing\.isQuoteOnly/.test(bookingCreateApi)
+    && !/booking\.isQuoteOnly/.test(bookingCreateApi)
+    && !/QUOTE_REQUESTED/.test(bookingCreateApi),
+);
+
+record(
+  "Client booking has no manual quote fallback",
+  !/pricing\.isQuoteOnly/.test(bookingForm)
+    && !/optionPricing\.isQuoteOnly/.test(bookingForm)
+    && !/Validation service client requise/.test(bookingForm)
+    && !/Envoyer au service client/.test(bookingForm)
+    && !/Montant à recalculer/.test(bookingForm)
+    && /Payer via PayDunya/.test(bookingForm),
+);
 
 record(
   "Teacher unavailable response proposes an automatic replacement to the client",
