@@ -1,6 +1,12 @@
 import { inflateRawSync } from "node:zlib";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export type TeacherCvAnalysisFields = {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  commune?: string;
+  quartier?: string;
   jobTitle?: string;
   bio?: string;
   experienceYears?: number;
@@ -25,16 +31,25 @@ export type TeacherCvAnalysisResult = {
 
 const MAX_PREVIEW_CHARS = 1800;
 const MAX_FIELD_CHARS = 900;
-const MAX_LIST_ITEMS = 8;
+const MAX_LIST_ITEMS = 14;
 
 const SECTION_PATTERNS = {
-  summary: /^(profil|resume|résumé|presentation|présentation|objectif|a propos|à propos|mini[- ]?cv)\b/i,
-  skills: /^(competences|compétences|savoir[- ]?faire|expertise|specialites|spécialités|matieres|matières|modules)\b/i,
+  summary: /^(profil|resume|résumé(?: de carrière)?|presentation|présentation|objectif|a propos|à propos|mini[- ]?cv)\b/i,
+  skills: /^(competences|compétences)(?: clés?)?\b|^(savoir[- ]?faire|expertise|specialites|spécialités|matieres|matières|modules|outils?(?: & logiciels?)?|logiciels?)\b/i,
   experience: /^(experiences?|expériences?|parcours|emploi|emplois|missions?|enseignement|encadrement)\b/i,
   education: /^(formation|formations|diplomes?|diplômes?|etudes|études|cursus|universite|université)\b/i,
   certification: /^(certifications?|attestations?|preuves?|agrements?|agréments?)\b/i,
   achievement: /^(resultats?|résultats?|realisations?|réalisations?|references?|références?|encadrements?)\b/i,
 };
+
+const STOP_SECTION_PATTERN = /^(langues?|atouts?|qualités?|centres? d['’ ]intérêt|loisirs?|références?)(?:\s|$)/i;
+
+const PROFESSIONAL_ROLE_PATTERN = /\b(ingénieur|technicien|responsable|consultant|coordinateur|superviseur|chef|conducteur|formateur|enseignant|professeur|répétiteur|coach|expert|architecte|dessinateur|artisan|gestionnaire|comptable|développeur)\b/i;
+
+const IVOIRIAN_COMMUNES = [
+  "Abobo", "Adjamé", "Anyama", "Attécoubé", "Bingerville", "Cocody", "Koumassi",
+  "Marcory", "Plateau", "Port-Bouët", "Songon", "Treichville", "Yopougon",
+];
 
 const SUBJECT_HINTS = [
   "Mathématiques", "Français", "Anglais", "Physique-Chimie", "SVT", "Informatique",
@@ -57,18 +72,15 @@ export async function analyzeTeacherCv(input: {
   mimeType: string;
 }): Promise<TeacherCvAnalysisResult> {
   const warnings: string[] = [];
-  const text = normalizeExtractedText(extractCvText(input.buffer, input.filename, input.mimeType, warnings));
+  const text = normalizeExtractedText(await extractCvText(input.buffer, input.filename, input.mimeType, warnings));
   if (text.length < 80) {
     warnings.push("Texte exploitable insuffisant. Le CV est peut-être scanné en image ou protégé.");
   }
 
-  const lines = text
-    .split(/\r?\n/)
-    .map(cleanLine)
-    .filter((line) => line.length >= 3)
-    .slice(0, 260);
+  const lines = toLogicalLines(text).slice(0, 260);
   const sections = collectSections(lines);
   const fields = buildTeacherFields(lines, sections);
+  addCompletenessWarnings(fields, warnings, text);
   const detectedSections = buildDetectedSections(sections, fields);
   const confidence = computeConfidence(fields, text.length);
 
@@ -82,7 +94,7 @@ export async function analyzeTeacherCv(input: {
   };
 }
 
-function extractCvText(buffer: Buffer, filename: string, mimeType: string, warnings: string[]) {
+async function extractCvText(buffer: Buffer, filename: string, mimeType: string, warnings: string[]) {
   const lowerName = filename.toLowerCase();
   if (mimeType.includes("text") || lowerName.endsWith(".txt") || lowerName.endsWith(".md")) {
     return decodeBuffer(buffer);
@@ -96,7 +108,7 @@ function extractCvText(buffer: Buffer, filename: string, mimeType: string, warni
     return textFromDocxXml(xml);
   }
   if (mimeType.includes("pdf") || lowerName.endsWith(".pdf")) {
-    const extracted = extractPdfText(buffer);
+    const extracted = await extractPdfText(buffer, warnings);
     if (extracted.length < 80) {
       warnings.push("PDF partiellement lisible. Si le CV est scanné, convertissez-le en PDF texte ou DOCX.");
     }
@@ -147,40 +159,18 @@ function textFromDocxXml(xml: string) {
   );
 }
 
-function extractPdfText(buffer: Buffer) {
-  const raw = buffer.toString("latin1");
-  const chunks: string[] = [raw];
-  const streamRegex = /<<(?:.|\n|\r)*?>>\s*stream\r?\n?([\s\S]*?)\r?\n?endstream/g;
-  let match: RegExpExecArray | null;
-  while ((match = streamRegex.exec(raw))) {
-    const dictionary = match[0].slice(0, Math.max(0, match[0].indexOf("stream")));
-    if (!dictionary.includes("/FlateDecode")) continue;
-    try {
-      chunks.push(inflateRawSync(Buffer.from(match[1], "latin1")).toString("latin1"));
-    } catch {
-      // Ignore unreadable PDF streams; the raw pass below may still find usable text.
-    }
+async function extractPdfText(buffer: Buffer, warnings: string[]) {
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | undefined;
+  try {
+    pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const result = await extractText(pdf, { mergePages: false });
+    return result.text.join("\n");
+  } catch {
+    warnings.push("Le moteur PDF n'a pas pu lire ce document. Vérifiez qu'il n'est ni protégé ni corrompu.");
+    return "";
+  } finally {
+    await pdf?.destroy().catch(() => undefined);
   }
-
-  return chunks
-    .map((chunk) => {
-      const strings = Array.from(chunk.matchAll(/\((?:\\.|[^\\)]){2,}\)\s*Tj/g))
-        .map((item) => decodePdfLiteral(item[0].replace(/\)\s*Tj$/, "").slice(1, -1)));
-      const arrays = Array.from(chunk.matchAll(/\[([\s\S]*?)\]\s*TJ/g))
-        .flatMap((item) => Array.from(item[1].matchAll(/\((?:\\.|[^\\)])+\)/g)).map((part) => decodePdfLiteral(part[0].slice(1, -1))));
-      const fallback = Array.from(chunk.matchAll(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9'’.,:;()\/+\- ]{8,}/g)).map((item) => item[0]);
-      return [...strings, ...arrays, ...fallback].join("\n");
-    })
-    .join("\n");
-}
-
-function decodePdfLiteral(value: string) {
-  return value
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\n")
-    .replace(/\\t/g, " ")
-    .replace(/\\([()\\])/g, "$1")
-    .replace(/\\(\d{3})/g, (_, octal: string) => String.fromCharCode(parseInt(octal, 8)));
 }
 
 function normalizeExtractedText(text: string) {
@@ -194,6 +184,26 @@ function normalizeExtractedText(text: string) {
 
 function cleanLine(line: string) {
   return line.replace(/^[-–—*·\s]+/, "").replace(/\s+/g, " ").trim();
+}
+
+function toLogicalLines(text: string) {
+  const result: string[] = [];
+  let continuingBullet = false;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const raw = rawLine.replace(/\s+/g, " ").trim();
+    if (!raw) continue;
+    const startsBullet = /^[-*·]\s+/.test(raw);
+    const line = cleanLine(raw);
+    if (line.length < 3) continue;
+    const heading = detectSection(line) || STOP_SECTION_PATTERN.test(normalizeForSearch(line)) || /^projets? s[eé]lectionn[eé]s?\b/i.test(line);
+    if (continuingBullet && !startsBullet && !heading && !PROFESSIONAL_ROLE_PATTERN.test(line)) {
+      result[result.length - 1] = `${result[result.length - 1]} ${line}`.slice(0, 360);
+      continue;
+    }
+    result.push(line);
+    continuingBullet = startsBullet;
+  }
+  return result;
 }
 
 function collectSections(lines: string[]) {
@@ -212,7 +222,11 @@ function collectSections(lines: string[]) {
       current = detected;
       continue;
     }
-    if (current && sections[current].length < 18) {
+    if (STOP_SECTION_PATTERN.test(normalizeForSearch(line))) {
+      current = null;
+      continue;
+    }
+    if (current && sections[current].length < 80) {
       sections[current].push(line);
     }
   }
@@ -220,42 +234,45 @@ function collectSections(lines: string[]) {
 }
 
 function detectSection(line: string): keyof typeof SECTION_PATTERNS | null {
+  if (line.length > 65) return null;
   return (Object.keys(SECTION_PATTERNS) as Array<keyof typeof SECTION_PATTERNS>)
     .find((key) => SECTION_PATTERNS[key].test(normalizeForSearch(line))) ?? null;
 }
 
 function buildTeacherFields(lines: string[], sections: Record<keyof typeof SECTION_PATTERNS, string[]>) {
   const allText = lines.join("\n");
+  const identity = detectIdentity(lines, allText);
+  const profileType = detectProfileType(allText);
   const subjectList = findKnownTerms(allText, SUBJECT_HINTS);
+  const explicitSkillText = normalizeForSearch(sections.skills.join(" "));
+  const hintedSkills = findKnownTerms(allText, SKILL_HINTS)
+    .filter((term) => !explicitSkillText.includes(normalizeForSearch(term)));
   const skillList = uniqueLines([
     ...sections.skills,
-    ...findKnownTerms(allText, SKILL_HINTS),
-    ...subjectList.map((subject) => `Enseignement ${subject}`),
+    ...hintedSkills,
+    ...(profileType === "PROFESSIONNEL" ? [] : subjectList.map((subject) => `Enseignement ${subject}`)),
   ]).slice(0, MAX_LIST_ITEMS);
-  const experienceLines = uniqueLines([
-    ...sections.experience,
-    ...lines.filter((line) => /\b(20\d{2}|19\d{2}|professeur|enseignant|formateur|encadr|cours|lycee|lycée|college|collège|universit|cabinet|centre)\b/i.test(line)),
-  ]).slice(0, MAX_LIST_ITEMS);
+  const experienceLines = extractProfessionalExperiences(sections.experience);
   const certificationLines = uniqueLines([
     ...sections.certification,
-    ...sections.education.filter((line) => /\b(master|licence|doctorat|bts|bac|certificat|dipl[oô]me|attestation|universit|école|ecole)\b/i.test(line)),
-  ]).slice(0, 6);
+    ...sections.education.filter((line) => /\b(master|licence|doctorat|bts|bac(?:\+\d)?|certificat|certification|dipl[oô]me|attestation|universit|école|ecole|institut)\b/i.test(line)),
+  ]).slice(0, 8);
   const achievementLines = uniqueLines([
     ...sections.achievement,
-    ...lines.filter((line) => /\b(r[eé]ussite|progression|admis|admission|bac|bepc|concours|[0-9]+\s*(eleves|élèves|apprenants|etudiants|étudiants|personnes))\b/i.test(line)),
-  ]).slice(0, 6);
+    ...lines.filter((line) => /\b(r[eé]ussite|progression|admis|admission|[0-9]+\s*(?:eleves|élèves|apprenants|etudiants|étudiants|personnes|logements|immeubles|localités)|programme résidentiel|cité résidentielle|immobilier (?:privé|résidentiel))\b/i.test(line)),
+  ]).slice(0, 8);
   const summaryLines = uniqueLines([
     ...sections.summary,
     ...lines.filter((line) => /\b(professeur|enseignant|formateur|p[eé]dagogie|exp[eé]rience|sp[eé]cialiste)\b/i.test(line)),
   ]).slice(0, 4);
   const experienceYears = detectExperienceYears(allText);
   const learnersCoached = detectLearnersCoached(allText);
-  const jobTitle = detectJobTitle(lines, subjectList);
-  const diploma = firstUsefulLine(certificationLines) || firstUsefulLine(sections.education);
-  const profileType = detectProfileType(allText);
+  const jobTitle = detectJobTitle(lines, subjectList, identity.fullName);
+  const diploma = detectPrimaryDiploma(certificationLines.length ? certificationLines : sections.education);
   const careerSummary = toParagraph(summaryLines) || buildFallbackSummary(jobTitle, experienceYears, subjectList);
 
   return compactFields({
+    ...identity,
     jobTitle,
     bio: careerSummary,
     experienceYears,
@@ -271,7 +288,7 @@ function buildTeacherFields(lines: string[], sections: Record<keyof typeof SECTI
 }
 
 function detectExperienceYears(text: string) {
-  const matches = Array.from(text.matchAll(/(\d{1,2})\s*(?:\+?\s*)?(ans|annees|années)\s+(?:d['’]\s*)?(experience|expérience|enseignement|encadrement|pratique)/gi));
+  const matches = Array.from(text.matchAll(/(\d{1,2})\s*(?:\+?\s*)?(ans|annees|années)(?:\s+et\s+\d{1,2}\s+mois)?\s+(?:d['’]\s*)?(experience|expérience|enseignement|encadrement|pratique)/gi));
   const values = matches.map((match) => Number(match[1])).filter((value) => Number.isFinite(value) && value >= 0 && value <= 50);
   return values.length ? Math.max(...values) : undefined;
 }
@@ -282,11 +299,95 @@ function detectLearnersCoached(text: string) {
   return values.length ? Math.max(...values) : undefined;
 }
 
-function detectJobTitle(lines: string[], subjects: string[]) {
-  const direct = lines.find((line) => /\b(professeur|enseignant|formateur|r[eé]p[eé]titeur|coach|consultant)\b/i.test(line) && line.length <= 90);
+function detectJobTitle(lines: string[], subjects: string[], fullName?: string) {
+  const header = lines.slice(0, 8).find((line) => (
+    line !== fullName
+    && PROFESSIONAL_ROLE_PATTERN.test(line)
+    && line.length <= 140
+    && !/^(email|téléphone|telephone|localisation|mobilité)\b/i.test(line)
+  ));
+  if (header) return titleCaseProfessional(header);
+  const direct = lines.find((line) => PROFESSIONAL_ROLE_PATTERN.test(line) && line.length <= 90);
   if (direct) return titleCaseProfessional(direct);
   if (subjects[0]) return `Professeur de ${subjects[0]}`;
   return undefined;
+}
+
+function detectIdentity(lines: string[], text: string) {
+  const fullName = lines.slice(0, 5).find((line) => (
+    /^[A-Za-zÀ-ÿ'’-]+(?:\s+[A-Za-zÀ-ÿ'’-]+){1,4}$/.test(line)
+    && !PROFESSIONAL_ROLE_PATTERN.test(line)
+  ));
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]?.toLowerCase();
+  const phoneRaw = text.match(/(?:t[eé]l[eé]phone|mobile|contact)\s*:\s*(\+?\d[\d\s().-]{7,20}\d)/i)?.[1];
+  const phone = phoneRaw ? formatIvorianPhone(phoneRaw) : undefined;
+  const locationLine = lines.find((line) => /^(localisation|adresse|lieu de r[eé]sidence)\s*:/i.test(line));
+  const location = locationLine?.replace(/^[^:]+:\s*/, "").trim();
+  const commune = location
+    ? IVOIRIAN_COMMUNES.find((candidate) => normalizeForSearch(location).includes(normalizeForSearch(candidate)))
+    : undefined;
+  const locationParts = location?.split(",").map((part) => part.trim()).filter(Boolean) ?? [];
+  const quartier = commune
+    ? locationParts.find((part) => normalizeForSearch(part).includes(normalizeForSearch(commune)) && normalizeForSearch(part) !== normalizeForSearch(commune))
+    : undefined;
+  return compactFields({ fullName, email, phone, commune, quartier });
+}
+
+function formatIvorianPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  const local = digits.startsWith("225") ? digits.slice(3) : digits;
+  if (local.length !== 10) return value.replace(/\s+/g, " ").trim();
+  return `+225 ${local.slice(0, 2)} ${local.slice(2, 4)} ${local.slice(4, 6)} ${local.slice(6, 8)} ${local.slice(8, 10)}`;
+}
+
+function extractProfessionalExperiences(lines: string[]) {
+  const experiences: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = cleanLine(lines[index]);
+    if (!PROFESSIONAL_ROLE_PATTERN.test(line) || line.length > 180) continue;
+    let role = line;
+    let next = cleanLine(lines[index + 1] ?? "");
+    const afterNext = cleanLine(lines[index + 2] ?? "");
+    if (next && !/\b(19\d{2}|20\d{2}|depuis|pr[eé]sent|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|abidjan|soubr[eé]|yamoussoukro|bouak[eé])\b/i.test(next)
+      && /\b(19\d{2}|20\d{2}|depuis|pr[eé]sent|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|abidjan|soubr[eé]|yamoussoukro|bouak[eé])\b/i.test(afterNext)) {
+      role = `${role} ${next}`;
+      next = afterNext;
+    }
+    const hasDateOrLocation = /\b(19\d{2}|20\d{2}|depuis|pr[eé]sent|janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre|abidjan|soubr[eé]|yamoussoukro|bouak[eé])\b/i.test(next);
+    experiences.push(hasDateOrLocation ? `${role} | ${next}` : role);
+  }
+  const unique = uniqueLines(experiences).slice(0, 10);
+  return unique.length ? unique : uniqueLines(lines).slice(0, MAX_LIST_ITEMS);
+}
+
+function detectPrimaryDiploma(lines: string[]) {
+  const scored = uniqueLines(lines).map((line) => {
+    const normalized = normalizeForSearch(line);
+    let score = 0;
+    if (/doctorat|phd/.test(normalized)) score = 100;
+    else if (/bac\+?5|master|diplome d[' ]ingenieur/.test(normalized)) score = 90;
+    else if (/bac\+?4|diplome de maitrise/.test(normalized)) score = 80;
+    else if (/bac\+?3|licence/.test(normalized)) score = 70;
+    else if (/bts|dut|bac\+?2/.test(normalized)) score = 60;
+    else if (/bac\b/.test(normalized)) score = 40;
+    else if (/certificat|certification|attestation/.test(normalized)) score = 30;
+    return { line, score };
+  });
+  return scored.sort((a, b) => b.score - a.score)[0]?.line;
+}
+
+function addCompletenessWarnings(fields: TeacherCvAnalysisFields, warnings: string[], text: string) {
+  if (!fields.jobTitle) warnings.push("Titre professionnel non détecté : complétez-le manuellement.");
+  if (!fields.skills) warnings.push("Compétences non détectées : vérifiez le document.");
+  if (!fields.workHistory) warnings.push("Expériences non détectées : complétez le parcours manuellement.");
+  if (!fields.diploma) warnings.push("Diplôme principal non détecté.");
+  if (fields.learnersCoached === undefined) {
+    warnings.push("Nombre d'apprenants encadrés non indiqué dans le CV : ce champ reste à confirmer manuellement.");
+  }
+  const preciseDuration = text.match(/(\d{1,2})\s*ans?\s+et\s+(\d{1,2})\s+mois/i);
+  if (preciseDuration && fields.experienceYears !== undefined) {
+    warnings.push(`Durée exacte détectée : ${preciseDuration[1]} ans et ${preciseDuration[2]} mois. Le champ numérique conserve ${fields.experienceYears} années entières et le mini CV garde le détail.`);
+  }
 }
 
 function detectProfileType(text: string): TeacherCvAnalysisFields["profileType"] {
@@ -359,10 +460,14 @@ function buildDetectedSections(sections: Record<keyof typeof SECTION_PATTERNS, s
 }
 
 function computeConfidence(fields: TeacherCvAnalysisFields, extractedCharacters: number) {
-  const filled = Object.values(fields).filter((value) => value !== undefined && value !== "").length;
-  const base = Math.min(95, Math.max(20, filled * 11));
-  const textBonus = extractedCharacters > 900 ? 10 : extractedCharacters > 350 ? 5 : 0;
-  return Math.min(98, base + textBonus);
+  const weightedChecks: Array<[unknown, number]> = [
+    [fields.jobTitle, 16], [fields.careerSummary, 14], [fields.skills, 16],
+    [fields.workHistory, 18], [fields.diploma, 12], [fields.profileType, 6],
+    [fields.fullName, 6], [fields.email || fields.phone, 5], [fields.teachingAchievements, 4],
+  ];
+  const filledScore = weightedChecks.reduce((total, [value, weight]) => total + (value ? weight : 0), 0);
+  const textScore = extractedCharacters > 1200 ? 3 : extractedCharacters > 400 ? 2 : 0;
+  return Math.min(93, Math.max(15, filledScore + textScore));
 }
 
 function normalizeForSearch(value: string) {

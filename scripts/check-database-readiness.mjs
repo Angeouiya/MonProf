@@ -19,6 +19,7 @@ const criticalTables = [
   ["teacherNotifications", () => db.teacherNotification.count()],
   ["teacherMissionLinks", () => db.teacherMissionLink.count()],
   ["teacherPhotoAssets", () => db.teacherPhotoAsset.count()],
+  ["teacherCvAssets", () => db.teacherCvAsset.count()],
   ["teacherPayoutRequests", () => db.teacherPayoutRequest.count()],
   ["clientRefundRequests", () => db.clientRefundRequest.count()],
   ["adminActionLogs", () => db.adminActionLog.count()],

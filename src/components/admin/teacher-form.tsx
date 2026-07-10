@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Camera, CheckCircle2, Clock, FileText, KeyRound, Loader2, Save, Search, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from "lucide-react";
+import { CalendarClock, Camera, CheckCircle2, Clock, ExternalLink, FileText, KeyRound, Loader2, Save, ScanText, Search, ShieldCheck, Trash2, UploadCloud, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -130,7 +130,7 @@ type Level = { id: string; name: string };
 type Commune = { id: string; name: string };
 type CvAnalysisFields = Partial<Pick<
   FormValues,
-  "jobTitle" | "bio" | "experienceYears" | "diploma" | "cvUrl" | "careerSummary" | "skills" | "workHistory" | "certifications" | "teachingAchievements" | "learnersCoached" | "profileType"
+  "fullName" | "email" | "phone" | "commune" | "quartier" | "jobTitle" | "bio" | "experienceYears" | "diploma" | "cvUrl" | "careerSummary" | "skills" | "workHistory" | "certifications" | "teachingAchievements" | "learnersCoached" | "profileType"
 >>;
 type CvAnalysisResult = {
   fields: CvAnalysisFields;
@@ -140,13 +140,19 @@ type CvAnalysisResult = {
   confidence?: number;
   warnings?: string[];
   filename?: string;
+  cvUrl?: string;
 };
 
 const MAX_PHOTO_SIZE = 4 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_CV_SIZE = 6 * 1024 * 1024;
+const MAX_CV_SIZE = 4 * 1024 * 1024;
 const CV_ACCEPT = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
 const CV_FIELD_LABELS: Partial<Record<keyof CvAnalysisFields, string>> = {
+  fullName: "Nom complet",
+  email: "Email",
+  phone: "Téléphone",
+  commune: "Commune",
+  quartier: "Quartier",
   jobTitle: "Titre professionnel",
   bio: "Bio",
   experienceYears: "Années d'expérience",
@@ -200,7 +206,7 @@ export function TeacherForm({
   const [zoneQuery, setZoneQuery] = useState("");
   const [availability, setAvailability] = useState<Record<string, Record<string, boolean>>>(() => createEmptyAvailability());
 
-  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, control, setValue, getValues, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as any,
     defaultValues: initial
       ? {
@@ -372,28 +378,39 @@ export function TeacherForm({
     }
   };
 
-  const applyCvAnalysis = (fields: CvAnalysisFields, showToast = false) => {
+  const applyCvAnalysis = (fields: CvAnalysisFields, showToast = false, overwrite = false) => {
     let applied = 0;
     const applyString = (name: keyof CvAnalysisFields) => {
       const value = fields[name];
       if (typeof value !== "string" || !value.trim()) return;
+      const currentValue = getValues(name as keyof FormValues);
+      if (!overwrite && typeof currentValue === "string" && currentValue.trim()) return;
       setValue(name as any, value.trim(), { shouldDirty: true, shouldValidate: true });
       applied += 1;
     };
+    applyString("fullName");
+    applyString("email");
+    applyString("phone");
+    applyString("commune");
+    applyString("quartier");
     applyString("jobTitle");
     applyString("bio");
     applyString("diploma");
+    applyString("cvUrl");
     applyString("careerSummary");
     applyString("skills");
     applyString("workHistory");
     applyString("certifications");
     applyString("teachingAchievements");
-    applyString("profileType");
-    if (typeof fields.experienceYears === "number" && Number.isFinite(fields.experienceYears)) {
+    if (typeof fields.profileType === "string" && fields.profileType) {
+      setValue("profileType", fields.profileType, { shouldDirty: true, shouldValidate: true });
+      applied += 1;
+    }
+    if (typeof fields.experienceYears === "number" && Number.isFinite(fields.experienceYears) && (overwrite || !getValues("experienceYears"))) {
       setValue("experienceYears", fields.experienceYears, { shouldDirty: true, shouldValidate: true });
       applied += 1;
     }
-    if (typeof fields.learnersCoached === "number" && Number.isFinite(fields.learnersCoached)) {
+    if (typeof fields.learnersCoached === "number" && Number.isFinite(fields.learnersCoached) && (overwrite || !getValues("learnersCoached"))) {
       setValue("learnersCoached", fields.learnersCoached, { shouldDirty: true, shouldValidate: true });
       applied += 1;
     }
@@ -412,7 +429,7 @@ export function TeacherForm({
       return;
     }
     if (file.size > MAX_CV_SIZE) {
-      setCvError("CV trop lourd. Taille maximale autorisée : 6 Mo.");
+      setCvError("CV trop lourd. Taille maximale autorisée : 4 Mo.");
       return;
     }
     if (file.size <= 0) {
@@ -428,10 +445,26 @@ export function TeacherForm({
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analyse impossible");
+      const responseText = await res.text();
+      let data: CvAnalysisResult & { error?: string } = { fields: {} };
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as CvAnalysisResult & { error?: string };
+        } catch {
+          // Une erreur d'infrastructure ne doit jamais exposer un message JSON technique à l'admin.
+        }
+      }
+      if (!res.ok) {
+        const fallback = res.status === 413
+          ? "CV trop lourd pour l'envoi. Utilisez un fichier de moins de 4 Mo."
+          : "L'analyse du CV n'a pas pu aboutir. Réessayez dans quelques instants.";
+        throw new Error(data.error || fallback);
+      }
+      if (!data.fields || !Object.keys(data.fields).length) {
+        throw new Error("Aucune information professionnelle fiable n'a été extraite de ce CV.");
+      }
       setCvAnalysis(data);
-      applyCvAnalysis(data.fields ?? {});
+      applyCvAnalysis({ ...data.fields, cvUrl: data.cvUrl });
       toast.success("CV analysé et mini CV prérempli");
     } catch (e: any) {
       setCvError(e.message || "Erreur pendant l'analyse du CV.");
@@ -801,12 +834,12 @@ export function TeacherForm({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-                        <Sparkles className="h-4 w-4" />
+                        <ScanText className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
                         <h3 className="text-sm font-bold text-[#111827]">Analyse automatique du CV</h3>
                         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                          Chargez un CV PDF texte, DOCX, TXT ou MD. L'analyse démarre immédiatement et remplit automatiquement le mini CV, les compétences, les expériences, les diplômes et les résultats.
+                          Chargez un CV PDF texte, DOCX, TXT ou MD (4 Mo maximum). L'analyse remplit l'identité disponible, le mini CV, les compétences, les expériences, les diplômes et les réalisations. Le document source reste privé et consultable uniquement par l'administration.
                         </p>
                       </div>
                     </div>
@@ -833,9 +866,9 @@ export function TeacherForm({
                       </label>
                     </Button>
                     {cvAnalysis?.fields && (
-                      <Button type="button" variant="ghost" onClick={() => applyCvAnalysis(cvAnalysis.fields, true)}>
+                      <Button type="button" variant="ghost" onClick={() => applyCvAnalysis({ ...cvAnalysis.fields, cvUrl: cvAnalysis.cvUrl }, true, true)}>
                         <FileText className="mr-2 h-4 w-4" />
-                        Réappliquer
+                        Remplacer par l'analyse
                       </Button>
                     )}
                   </div>
@@ -851,6 +884,7 @@ export function TeacherForm({
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>
                         {Object.values(cvAnalysis.fields ?? {}).filter((value) => value !== undefined && value !== null && value !== "").length} champs professionnels ont été remplis automatiquement. Vous pouvez les contrôler puis enregistrer le professeur.
+                        Les matières et niveaux restent à confirmer dans l'onglet suivant afin d'éviter une attribution erronée.
                       </span>
                     </div>
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -862,6 +896,17 @@ export function TeacherForm({
                         <Badge variant="secondary" className="bg-white text-[#111B4D] ring-1 ring-[#D8DEE9]">
                           Confiance {cvAnalysis.confidence ?? 0}%
                         </Badge>
+                        {cvAnalysis.cvUrl && (
+                          <a
+                            href={cvAnalysis.cvUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[#D8DEE9] px-2 text-xs font-semibold text-[#111B4D] hover:bg-[#F7F8FA]"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Voir le CV source
+                          </a>
+                        )}
                         <span className="text-xs font-semibold text-muted-foreground">
                           {cvAnalysis.extractedCharacters ?? 0} caractères extraits
                         </span>

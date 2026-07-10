@@ -200,6 +200,18 @@ model TeacherPhotoAsset {
   @@index([createdAt])
 }
 
+// Le CV source reste privé et n'est servi qu'aux administrateurs authentifiés.
+model TeacherCvAsset {
+  id           String   @id @default(cuid())
+  originalName String
+  contentType  String
+  data         Bytes
+  size         Int
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum TeacherStatus {
   ACTIVE
   INACTIVE

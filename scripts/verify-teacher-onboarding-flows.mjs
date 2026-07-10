@@ -11,8 +11,13 @@ const scheduling = read("src/lib/scheduling.ts");
 record(
   "CV upload starts analysis and applies every professional field automatically",
   /onChange=\{\(event\)\s*=>\s*\{[\s\S]*?analyzeCv\(event\.target\.files\?\.\[0\]\)/.test(teacherForm)
-    && /setCvAnalysis\(data\);\s*applyCvAnalysis\(data\.fields\s*\?\?\s*\{\}\)/.test(teacherForm)
+    && /setCvAnalysis\(data\);\s*applyCvAnalysis\(\{\s*\.\.\.data\.fields,\s*cvUrl:\s*data\.cvUrl\s*\}\)/.test(teacherForm)
     && [
+      "fullName",
+      "email",
+      "phone",
+      "commune",
+      "quartier",
       "jobTitle",
       "bio",
       "diploma",
@@ -29,7 +34,7 @@ record(
 record(
   "CV analysis endpoint is admin-only and validates file safety",
   /requireAdminApi/.test(cvRoute)
-    && /MAX_CV_SIZE\s*=\s*6\s*\*\s*1024\s*\*\s*1024/.test(cvRoute)
+    && /MAX_CV_SIZE\s*=\s*4\s*\*\s*1024\s*\*\s*1024/.test(cvRoute)
     && /ALLOWED_EXTENSIONS/.test(cvRoute)
     && /analyzeTeacherCv/.test(cvRoute),
 );
