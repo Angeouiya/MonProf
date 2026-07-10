@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canTeacherUsePortal } from "@/lib/teacher-portal";
+import { cache } from "react";
+import { getSessionUser } from "@/lib/session";
 
 export type TeacherSessionUser = {
   id: string;
@@ -12,22 +12,22 @@ export type TeacherSessionUser = {
   role: "TEACHER";
 };
 
-export async function getTeacherSessionUser(): Promise<TeacherSessionUser | null> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== "TEACHER") return null;
-  const teacherId = (session.user as any).teacherId || (session.user as any).id;
+export const getTeacherSessionUser = cache(async (): Promise<TeacherSessionUser | null> => {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser || sessionUser.role !== "TEACHER") return null;
+  const teacherId = sessionUser.teacherId || sessionUser.id;
   if (!teacherId) return null;
 
   return {
     id: teacherId,
     teacherId,
-    name: session.user.name ?? "Professeur",
-    phone: (session.user as any).phone ?? null,
+    name: sessionUser.name ?? "Professeur",
+    phone: sessionUser.phone ?? null,
     role: "TEACHER",
   };
-}
+});
 
-export async function requireTeacher() {
+export const requireTeacher = cache(async () => {
   const sessionTeacher = await getTeacherSessionUser();
   if (!sessionTeacher) redirect("/professeur/connexion");
 
@@ -56,7 +56,7 @@ export async function requireTeacher() {
     session: sessionTeacher,
     teacher,
   };
-}
+});
 
 export async function requireTeacherApi() {
   const sessionTeacher = await getTeacherSessionUser();

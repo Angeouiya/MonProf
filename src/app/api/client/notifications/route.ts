@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 
+export async function GET() {
+  const user = await getSessionUser();
+  if (!user || (user.role !== "CLIENT" && user.role !== "ADMIN")) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
+  const unreadCount = await db.notification.count({
+    where: user.role === "ADMIN"
+      ? { recipientType: "ADMIN", read: false }
+      : {
+          recipientType: "CLIENT",
+          read: false,
+          OR: [{ userId: user.id }, { clientId: user.id }],
+        },
+  });
+
+  return NextResponse.json(
+    { unreadCount },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+}
+
 export async function PATCH(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || user.role !== "CLIENT") {

@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
-import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
+import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
@@ -84,9 +84,8 @@ export default async function RechercherPage({
   let communes: any[] = [];
 
   try {
-    totalVisibleTeachers = await db.teacher.count({ where: visibleTeacherWhere });
-    if (totalVisibleTeachers > 0) {
-      teachers = await db.teacher.findMany({
+    const [teacherResults, catalog] = await Promise.all([
+      db.teacher.findMany({
         where,
         orderBy,
         take: 24,
@@ -94,13 +93,14 @@ export default async function RechercherPage({
           subjects: { include: { subject: true } },
           _count: { select: { reviews: true } },
         },
-      });
-      [subjects, levels, communes] = await Promise.all([
-        getCachedSubjects(),
-        getCachedLevels(),
-        getCachedCommunes(),
-      ]);
-    }
+      }),
+      getCachedTeacherSearchCatalog(),
+    ]);
+    teachers = teacherResults;
+    totalVisibleTeachers = catalog.teacherCount;
+    subjects = catalog.subjects;
+    levels = catalog.levels;
+    communes = catalog.communes;
   } catch (error) {
     console.error("[client-search:query_failed]", error);
   }
@@ -140,7 +140,7 @@ export default async function RechercherPage({
   const onlineCount = items.filter((teacher) => teacher.offersOnline).length;
   const certifiedCount = items.filter((teacher) => teacher.badgeVerified).length;
   const primaryActionHref = items.length > 0 ? "#resultats-professeurs" : "#filtres-professeurs";
-  const hasPublishedTeachers = totalVisibleTeachers > 0;
+  const hasPublishedTeachers = totalVisibleTeachers > 0 || items.length > 0;
 
   return (
     <div className="space-y-5">

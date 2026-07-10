@@ -1,17 +1,16 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { AdminLayout } from "@/components/layouts/admin-layout";
 import { db } from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminRootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/admin/connexion");
-  if ((session.user as any).role === "CLIENT") redirect("/client");
-  if ((session.user as any).role === "TEACHER") redirect("/professeur");
-  if ((session.user as any).role !== "ADMIN") redirect("/");
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) redirect("/admin/connexion");
+  if (sessionUser.role === "CLIENT") redirect("/client");
+  if (sessionUser.role === "TEACHER") redirect("/professeur");
+  if (sessionUser.role !== "ADMIN") redirect("/");
   const [summary] = await db.$queryRaw<Array<{
     notificationCount: number;
     urgentCount: number;
@@ -49,7 +48,7 @@ export default async function AdminRootLayout({ children }: { children: React.Re
 
   return (
     <AdminLayout
-      userName={session.user.name}
+      userName={sessionUser.name}
       notificationCount={notificationCount}
       notificationSummary={{
         total: notificationCount,

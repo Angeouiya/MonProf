@@ -15,39 +15,141 @@ import { ClientNotificationCenter } from "./notification-center-client";
 import { formatDateTime, timeAgo } from "@/lib/format";
 import { notificationChannelLabel, notificationTypeLabel, priorityLabel } from "@/lib/platform-labels";
 import { AlertTriangle, ArrowRight, Bell, CalendarCheck, CheckCircle2, Clock3, LifeBuoy, WalletCards, ShieldCheck } from "lucide-react";
+import type { NotificationChannel, NotificationPriority, NotificationStatus, PaymentStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+type ClientNotificationRow = {
+  notificationId: string;
+  title: string;
+  message: string;
+  type: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  priority: NotificationPriority;
+  read: boolean;
+  link: string | null;
+  actionLabel: string | null;
+  bookingId: string | null;
+  createdAt: Date;
+  sentAt: Date | null;
+  readAt: Date | null;
+  confirmedAt: Date | null;
+  bookingReference: string | null;
+  subjectName: string | null;
+  levelName: string | null;
+  startDate: Date | null;
+  scheduledDate: Date | null;
+  scheduledTime: string | null;
+  preferredTime: string | null;
+  paymentStatus: PaymentStatus | null;
+  teacherId: string | null;
+  teacherFullName: string | null;
+  teacherProfessionalName: string | null;
+  teacherPhotoUrl: string | null;
+  teacherBadgeVerified: boolean | null;
+};
 
 export default async function ClientNotificationsPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const notifications = await db.notification.findMany({
-    where: {
-      recipientType: "CLIENT",
-      OR: [{ userId: user.id }, { clientId: user.id }],
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
-  const bookingIds = Array.from(new Set(notifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
-  const bookings = bookingIds.length
-    ? await db.booking.findMany({
-        where: { id: { in: bookingIds }, clientId: user.id },
-        select: {
-          id: true,
-          reference: true,
-          subjectName: true,
-          levelName: true,
-          startDate: true,
-          scheduledDate: true,
-          scheduledTime: true,
-          preferredTime: true,
-          paymentStatus: true,
-          teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-        },
-      })
-    : [];
+  const rows = await db.$queryRaw<ClientNotificationRow[]>`
+    SELECT
+      n."id" AS "notificationId",
+      n."title",
+      n."message",
+      n."type",
+      n."channel",
+      n."status",
+      n."priority",
+      n."read",
+      n."link",
+      n."actionLabel",
+      n."bookingId",
+      n."createdAt",
+      n."sentAt",
+      n."readAt",
+      n."confirmedAt",
+      b."reference" AS "bookingReference",
+      b."subjectName",
+      b."levelName",
+      b."startDate",
+      b."scheduledDate",
+      b."scheduledTime",
+      b."preferredTime",
+      b."paymentStatus",
+      t."id" AS "teacherId",
+      t."fullName" AS "teacherFullName",
+      t."professionalName" AS "teacherProfessionalName",
+      t."photoUrl" AS "teacherPhotoUrl",
+      t."badgeVerified" AS "teacherBadgeVerified"
+    FROM competence."Notification" n
+    LEFT JOIN competence."Booking" b
+      ON b."id" = n."bookingId" AND b."clientId" = ${user.id}
+    LEFT JOIN competence."Teacher" t ON t."id" = b."teacherId"
+    WHERE n."recipientType" = 'CLIENT'
+      AND (n."userId" = ${user.id} OR n."clientId" = ${user.id})
+    ORDER BY n."createdAt" DESC
+    LIMIT 100
+  `;
+  const notifications = rows.map((row) => ({
+    id: row.notificationId,
+    title: row.title,
+    message: row.message,
+    type: row.type,
+    channel: row.channel,
+    status: row.status,
+    priority: row.priority,
+    read: row.read,
+    link: row.link,
+    actionLabel: row.actionLabel,
+    bookingId: row.bookingId,
+    createdAt: row.createdAt,
+    sentAt: row.sentAt,
+    readAt: row.readAt,
+    confirmedAt: row.confirmedAt,
+  }));
+  const bookingsById = new Map<string, {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+    startDate: Date | null;
+    scheduledDate: Date | null;
+    scheduledTime: string | null;
+    preferredTime: string;
+    paymentStatus: PaymentStatus;
+    teacher: {
+      id: string;
+      fullName: string;
+      professionalName: string | null;
+      photoUrl: string | null;
+      badgeVerified: boolean;
+    };
+  }>();
+  for (const row of rows) {
+    if (!row.bookingId || !row.bookingReference || !row.subjectName || !row.levelName || !row.paymentStatus || !row.teacherId || !row.teacherFullName) continue;
+    bookingsById.set(row.bookingId, {
+      id: row.bookingId,
+      reference: row.bookingReference,
+      subjectName: row.subjectName,
+      levelName: row.levelName,
+      startDate: row.startDate,
+      scheduledDate: row.scheduledDate,
+      scheduledTime: row.scheduledTime,
+      preferredTime: row.preferredTime ?? "",
+      paymentStatus: row.paymentStatus,
+      teacher: {
+        id: row.teacherId,
+        fullName: row.teacherFullName,
+        professionalName: row.teacherProfessionalName,
+        photoUrl: row.teacherPhotoUrl,
+        badgeVerified: row.teacherBadgeVerified ?? false,
+      },
+    });
+  }
+  const bookings = Array.from(bookingsById.values());
   const unreadCount = notifications.filter((notification) => !notification.read).length;
   const serializedNotifications = notifications.map((notification) => ({
     id: notification.id,
@@ -78,7 +180,6 @@ export default async function ClientNotificationsPage() {
   const bookingCount = notifications.filter((notification) => (
     Boolean(notification.bookingId) || ["NEW_BOOKING", "BOOKING_CONFIRMED", "REMINDER", "COURSE_CONFIRMATION"].includes(notification.type)
   )).length;
-  const bookingsById = new Map(bookings.map((booking) => [booking.id, booking]));
   const priorityNotification =
     notifications.find((notification) => !notification.read && ["CRITICAL", "URGENT"].includes(notification.priority)) ??
     notifications.find((notification) => !notification.read && ["PAYMENT_PENDING", "REFUND", "DISPUTE", "DISPUTE_OPENED"].includes(notification.type)) ??

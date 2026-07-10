@@ -193,6 +193,7 @@ function checkProductionScripts() {
   const operationalFlowVerify = pkg.scripts?.["verify:operational-flows"] ?? "";
   const teacherOnboardingVerify = pkg.scripts?.["verify:teacher-onboarding"] ?? "";
   const clientMobileVerify = pkg.scripts?.["verify:client-mobile"] ?? "";
+  const navigationPerformanceVerify = pkg.scripts?.["verify:navigation-performance"] ?? "";
   record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production build runs explicit ESLint gate", productionBuild.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
   record("Production build verifies installable client app shell", productionBuild.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
@@ -201,6 +202,7 @@ function checkProductionScripts() {
   record("Production build verifies client mobile UX gates", productionBuild.includes("npm run verify:client-mobile") && clientMobileVerify.includes("verify-client-mobile-navigation.mjs"));
   record("Production build verifies booking operational flows", productionBuild.includes("npm run verify:operational-flows") && operationalFlowVerify.includes("verify-operational-booking-flows.mjs"));
   record("Production build verifies teacher onboarding flows", productionBuild.includes("npm run verify:teacher-onboarding") && teacherOnboardingVerify.includes("verify-teacher-onboarding-flows.mjs"));
+  record("Production build verifies navigation performance gates", productionBuild.includes("npm run verify:navigation-performance") && navigationPerformanceVerify.includes("verify-navigation-performance.mjs"));
 }
 
 function checkVercelDeploymentConfig() {

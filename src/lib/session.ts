@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export type SessionUser = {
   id: string;
@@ -9,9 +9,10 @@ export type SessionUser = {
   name: string;
   role: "CLIENT" | "ADMIN" | "TEACHER";
   teacherId?: string | null;
+  phone?: string | null;
 };
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const session = await getServerSession(authOptions);
   if (!session?.user) return null;
   return {
@@ -20,8 +21,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     name: session.user.name!,
     role: (session.user as any).role,
     teacherId: (session.user as any).teacherId ?? null,
+    phone: (session.user as any).phone ?? null,
   };
-}
+});
 
 export async function requireClient() {
   const u = await getSessionUser();

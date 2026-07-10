@@ -68,13 +68,14 @@ const CLIENT_PRIORITY_PREFETCH_ROUTES = [...CLIENT_PRIMARY_PREFETCH_ROUTES, ...C
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 18;
 const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 340;
 
-export function ClientLayout({ children, userName, notificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
+export function ClientLayout({ children, userName, notificationCount: initialNotificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(initialNotificationCount);
   const [isOffline, setIsOffline] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
@@ -88,6 +89,27 @@ export function ClientLayout({ children, userName, notificationCount = 0 }: { ch
     || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
   );
   const shouldRenderMobileBottomNav = !hideMobileBottomNav && !open;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/client/notifications", {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (typeof payload?.unreadCount === "number") {
+          setNotificationCount(payload.unreadCount);
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("[client-notifications:count]", error);
+      });
+
+    return () => controller.abort();
+  }, []);
   const closeMobileSurfaces = useCallback(() => {
     setOpen(false);
     setMobileSearchOpen(false);

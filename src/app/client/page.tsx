@@ -44,36 +44,38 @@ export default async function ClientDashboardPage() {
 
   const now = new Date();
 
-  const allClientBookings = await db.booking.findMany({
-    where: { clientId: user.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          jobTitle: true,
-          commune: true,
-          badgeVerified: true,
+  const [allClientBookings, recommended] = await db.$transaction([
+    db.booking.findMany({
+      where: { clientId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            fullName: true,
+            professionalName: true,
+            photoUrl: true,
+            jobTitle: true,
+            commune: true,
+            badgeVerified: true,
+          },
+        },
+        transactions: {
+          where: { type: "CLIENT_PAYMENT" },
+          select: { type: true, status: true, amount: true },
         },
       },
-      transactions: {
-        where: { type: "CLIENT_PAYMENT" },
-        select: { type: true, status: true, amount: true },
+    }),
+    db.teacher.findMany({
+      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+      take: 3,
+      orderBy: { rating: "desc" },
+      include: {
+        subjects: { include: { subject: true } },
+        _count: { select: { reviews: true } },
       },
-    },
-  });
-  const recommended = await db.teacher.findMany({
-    where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-    take: 3,
-    orderBy: { rating: "desc" },
-    include: {
-      subjects: { include: { subject: true } },
-      _count: { select: { reviews: true } },
-    },
-  });
+    }),
+  ]);
   const totalBookings = allClientBookings.length;
   const upcomingBookings = allClientBookings.filter((booking) => ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
   const completedBookings = allClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;

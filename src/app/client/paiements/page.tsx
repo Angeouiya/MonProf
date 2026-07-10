@@ -29,7 +29,8 @@ export default async function PaiementsPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const rawTransactions = await db.transaction.findMany({
+  const [rawTransactions, pendingPaymentBookings] = await db.$transaction([
+    db.transaction.findMany({
     where: {
       booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
       type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] },
@@ -49,8 +50,8 @@ export default async function PaiementsPage() {
         },
       },
     },
-  });
-  const pendingPaymentBookings = await db.booking.findMany({
+    }),
+    db.booking.findMany({
     where: {
       clientId: user.id,
       status: "PENDING_PAYMENT",
@@ -77,7 +78,8 @@ export default async function PaiementsPage() {
         },
       },
     },
-  });
+    }),
+  ]);
   const transactions = rawTransactions.filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking));
 
   const totalDepense = transactions
