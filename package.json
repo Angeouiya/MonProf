@@ -6,11 +6,13 @@
     "dev": "next dev -p 3000",
     "postinstall": "prisma generate",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
-    "build:production": "npm run production:check && npm run typecheck && npm run lint && npm run verify:client-app-shell && npm run verify:client-mobile && npm run verify:navigation-performance && npm run verify:teacher-photo-storage && npm run verify:operational-flows && npm run verify:teacher-onboarding && npm run verify:admin-governance && npm run db:verify && npm run payment:audit && npm run build",
+    "build:production": "npm run production:check && npm run typecheck && npm run lint && npm run verify:client-app-shell && npm run verify:client-mobile && npm run verify:navigation-performance && npm run verify:teacher-photo-storage && npm run verify:operational-flows && npm run verify:teacher-onboarding && npm run verify:admin-governance && npm run verify:web-push && npm run db:verify && npm run payment:audit && npm run build",
     "start": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "db:push": "prisma db push",
+    "db:push": "prisma db push && npm run db:web-push",
+    "db:web-push": "node scripts/install-web-push-outbox.mjs",
+    "db:web-push:configure": "node scripts/configure-web-push-settings.mjs",
     "db:verify": "node scripts/check-database-readiness.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -27,7 +29,8 @@
     "verify:client-mobile": "node scripts/verify-client-mobile-navigation.mjs",
     "verify:client-app-shell": "node scripts/verify-client-app-shell.mjs",
     "verify:navigation-performance": "node scripts/verify-navigation-performance.mjs",
-    "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs"
+    "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs",
+    "verify:web-push": "node scripts/verify-web-push.mjs"
   },
   "prisma": {
     "seed": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts"
@@ -97,6 +100,7 @@
     "unpdf": "^1.6.2",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
+    "web-push": "^3.6.7",
     "z-ai-web-dev-sdk": "^0.0.18",
     "zod": "^4.0.2",
     "zustand": "^5.0.6"
@@ -106,6 +110,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "bun-types": "^1.3.4",
     "eslint": "^9",
     "eslint-config-next": "^16.2.10",

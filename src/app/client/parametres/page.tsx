@@ -15,6 +15,7 @@ import {
 } from "@/components/shared/client-page-primitives";
 import { Button } from "@/components/ui/button";
 import { ClientPasswordSettingsForm } from "./settings-client";
+import { WebPushControl } from "@/components/shared/web-push-control";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,8 @@ export default async function ClientParametresPage() {
           { icon: Lock, label: "OTP", value: "Non utilisé" },
         ]}
       />
+
+      <WebPushControl audienceLabel={ownerAdmin ? "propriétaire" : "client"} />
 
       {CLIENT_COMMAND_CENTERS_ENABLED && (
         <SettingsCommandCenter

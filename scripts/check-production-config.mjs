@@ -30,6 +30,7 @@ checkStrongSecret("NEXTAUTH_SECRET", { minLength: 32 });
 checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
+await checkWebPushConfiguration();
 checkBuildDoesNotIgnoreCodeQualityErrors();
 checkProductionScripts();
 checkVercelDeploymentConfig();
@@ -126,6 +127,32 @@ function checkStrongSecret(key, { minLength }) {
   const value = getEnv(key);
   const ok = value.length >= minLength && !UNSAFE_SECRET_VALUES.has(value);
   record(`${key} is strong and non-placeholder`, ok);
+}
+
+async function checkWebPushConfiguration() {
+  const publicKey = getEnv("NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY");
+  const privateKey = getEnv("WEB_PUSH_VAPID_PRIVATE_KEY");
+  let stored = new Map();
+  if (getEnv("DATABASE_URL")) {
+    const prisma = new PrismaClient();
+    try {
+      const rows = await prisma.setting.findMany({
+        where: { key: { in: ["web_push_vapid_public_key", "web_push_vapid_private_key", "web_push_subject"] } },
+        select: { key: true, value: true },
+      });
+      stored = new Map(rows.map((row) => [row.key, row.value.trim()]));
+    } catch (error) {
+      warnings.push(`Web Push database settings could not be checked: ${error instanceof Error ? error.message : "unknown error"}.`);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+  const effectivePublicKey = publicKey || stored.get("web_push_vapid_public_key") || "";
+  const effectivePrivateKey = privateKey || stored.get("web_push_vapid_private_key") || "";
+  const subject = getEnv("WEB_PUSH_SUBJECT") || stored.get("web_push_subject") || "mailto:contact@competence.ci";
+  record("Web Push VAPID public key is configured", effectivePublicKey.length >= 64);
+  record("Web Push VAPID private key is server-side and configured", effectivePrivateKey.length >= 32);
+  record("Web Push subject is a mailto or HTTPS URL", subject.startsWith("mailto:") || Boolean(parseHttpsUrl(subject)));
 }
 
 function checkPublicUrl(key) {

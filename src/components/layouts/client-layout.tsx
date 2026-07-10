@@ -11,8 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
+import { WebPushRealtime } from "@/components/shared/web-push-realtime";
 import { cn } from "@/lib/utils";
-import { signOut } from "next-auth/react";
+import { secureSignOut } from "@/lib/client-sign-out";
 
 type ClientNavItem = {
   href: string;
@@ -63,7 +64,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
-  const notificationCount = initialNotificationCount;
+  const [notificationCount, setNotificationCount] = useState(initialNotificationCount);
   const [isOffline, setIsOffline] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
@@ -164,6 +165,15 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
       window.removeEventListener("online", syncNetworkState);
       window.removeEventListener("offline", syncNetworkState);
     };
+  }, []);
+
+  useEffect(() => {
+    const updateNotificationCount = (event: Event) => {
+      const count = Number((event as CustomEvent<{ count?: number }>).detail?.count ?? 0);
+      setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0);
+    };
+    window.addEventListener("competence:notification-count", updateNotificationCount);
+    return () => window.removeEventListener("competence:notification-count", updateNotificationCount);
   }, []);
 
   useEffect(() => {
@@ -289,6 +299,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
       onFocusCapture={handleClientFocusPrefetch}
       className="client-shell client-app-root flex min-h-screen flex-col bg-white text-[#111827] antialiased"
     >
+      <WebPushRealtime initialNotificationCount={notificationCount} />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <a
         href="#client-main-content"
@@ -384,7 +395,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Continuer mes actions"
-            onConfirm={() => signOut({ callbackUrl: "/" })}
+            onConfirm={() => secureSignOut("/")}
             trigger={
               <Button
                 variant="ghost"
@@ -632,7 +643,7 @@ function SidebarContent({
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Continuer"
-            onConfirm={() => signOut({ callbackUrl: "/" })}
+            onConfirm={() => secureSignOut("/")}
             trigger={
               <button
                 type="button"

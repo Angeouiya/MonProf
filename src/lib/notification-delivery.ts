@@ -10,11 +10,15 @@ export type DeliveryResult = {
   externalId?: string | null;
 };
 
-export function getNotificationProviderStatus() {
+export function getNotificationProviderStatus(options: { webPushConfigured?: boolean } = {}) {
   return {
     email: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
     sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
     whatsapp: Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
+    webPush: Boolean(
+      options.webPushConfigured
+      || (process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY && process.env.WEB_PUSH_VAPID_PRIVATE_KEY)
+    ),
     cron: Boolean(process.env.CRON_SECRET),
   };
 }

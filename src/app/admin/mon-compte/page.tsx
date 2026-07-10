@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminPasswordForm } from "./password-form";
 import { ADMIN_ROLE_LABELS, normalizeAdminRole } from "@/lib/admin-permissions";
 import { formatDateTime } from "@/lib/format";
+import { WebPushControl } from "@/components/shared/web-push-control";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function AdminAccountPage() {
           <Info label="Mot de passe modifié" value={account.adminPasswordChangedAt ? formatDateTime(account.adminPasswordChangedAt) : "Non renseigné"} />
         </CardContent>
       </Card>
+      <WebPushControl audienceLabel="administration" />
       <AdminPasswordForm />
     </div>
   );

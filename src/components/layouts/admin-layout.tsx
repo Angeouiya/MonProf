@@ -13,8 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
+import { WebPushRealtime } from "@/components/shared/web-push-realtime";
 import { cn } from "@/lib/utils";
-import { signOut } from "next-auth/react";
+import { secureSignOut } from "@/lib/client-sign-out";
 import type { AdminPermission } from "@/lib/admin-permissions";
 import { ADMIN_ROLE_LABELS, hasAdminPermission, normalizeAdminRole } from "@/lib/admin-permissions";
 
@@ -118,6 +119,7 @@ export function AdminLayout({
 
   return (
     <div data-admin-layout data-mobile-menu-open={open ? "true" : "false"} className="admin-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+      <WebPushRealtime initialNotificationCount={summary.total} />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <header data-admin-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex h-14 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -153,7 +155,7 @@ export function AdminLayout({
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Rester dans l'admin"
-            onConfirm={() => signOut({ callbackUrl: "/" })}
+            onConfirm={() => secureSignOut("/")}
             trigger={
               <Button variant="ghost" size="icon" title="Déconnexion">
                 <LogOut className="h-5 w-5" />

@@ -58,6 +58,7 @@ model User {
   teacherAdminMessagesSent      TeacherAdminMessage[]      @relation("TeacherAdminMessageAdminSender")
   passwordResetTokens           PasswordResetToken[]
   communicationCampaigns        CommunicationCampaign[]    @relation("CommunicationCampaignCreator")
+  webPushSubscriptions          WebPushSubscription[]
 
   @@index([role])
   @@index([adminTeamRole, adminAccountStatus])
@@ -190,25 +191,26 @@ model Teacher {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  subjects           TeacherSubject[]
-  levels             TeacherLevel[]
-  zones              TeacherZone[]
-  bookings           Booking[]
-  reviews            Review[]
-  transactions       Transaction[]
-  notifications      TeacherNotification[]
-  missionLinks       TeacherMissionLink[]
-  scheduleProposals  BookingScheduleProposal[]
-  rescheduleRequests BookingRescheduleRequest[]
-  tasks              TeacherTask[]
-  warnings           TeacherWarning[]
-  sanctions          TeacherSanction[]
-  oldReplacements    TeacherReplacement[]       @relation("OldTeacherReplacement")
-  newReplacements    TeacherReplacement[]       @relation("NewTeacherReplacement")
-  paymentAdjustments TeacherPaymentAdjustment[]
-  payoutRecords      TeacherPayoutRecord[]
-  payoutRequests     TeacherPayoutRequest[]
-  adminMessages      TeacherAdminMessage[]
+  subjects             TeacherSubject[]
+  levels               TeacherLevel[]
+  zones                TeacherZone[]
+  bookings             Booking[]
+  reviews              Review[]
+  transactions         Transaction[]
+  notifications        TeacherNotification[]
+  missionLinks         TeacherMissionLink[]
+  scheduleProposals    BookingScheduleProposal[]
+  rescheduleRequests   BookingRescheduleRequest[]
+  tasks                TeacherTask[]
+  warnings             TeacherWarning[]
+  sanctions            TeacherSanction[]
+  oldReplacements      TeacherReplacement[]       @relation("OldTeacherReplacement")
+  newReplacements      TeacherReplacement[]       @relation("NewTeacherReplacement")
+  paymentAdjustments   TeacherPaymentAdjustment[]
+  payoutRecords        TeacherPayoutRecord[]
+  payoutRequests       TeacherPayoutRequest[]
+  adminMessages        TeacherAdminMessage[]
+  webPushSubscriptions WebPushSubscription[]
 
   @@index([status])
   @@index([featured])
@@ -686,6 +688,69 @@ enum NotificationPriority {
   IMPORTANT
   URGENT
   CRITICAL
+}
+
+// Un abonnement correspond à un navigateur/appareil. Les clients et les
+// administrateurs utilisent userId ; l'espace professeur utilise teacherId.
+model WebPushSubscription {
+  id             String    @id @default(cuid())
+  userId         String?
+  teacherId      String?
+  endpoint       String    @unique @db.Text
+  p256dh         String    @db.Text
+  auth           String    @db.Text
+  expirationTime BigInt?
+  userAgent      String?   @db.Text
+  enabled        Boolean   @default(true)
+  failureCount   Int       @default(0)
+  lastSuccessAt  DateTime?
+  lastFailureAt  DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled])
+  @@index([teacherId, enabled])
+  @@index([enabled, updatedAt])
+}
+
+// L'outbox garantit qu'une notification métier validée en base n'est pas
+// perdue si le provider push est momentanément indisponible.
+model WebPushOutbox {
+  id                    String                    @id @default(uuid()) @db.Uuid
+  notificationId        String?                   @unique
+  teacherNotificationId String?                   @unique
+  recipientType         NotificationRecipientType
+  targetUserId          String?
+  targetTeacherId       String?
+  title                 String
+  message               String                    @db.Text
+  link                  String?
+  priority              NotificationPriority      @default(NORMAL)
+  status                WebPushOutboxStatus       @default(PENDING)
+  attempts              Int                       @default(0)
+  nextAttemptAt         DateTime                  @default(now())
+  processedAt           DateTime?
+  lastError             String?                   @db.Text
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([targetUserId, status])
+  @@index([targetTeacherId, status])
+}
+
+enum WebPushOutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  PARTIAL
+  NO_SUBSCRIPTION
+  FAILED
+  DEAD
 }
 
 model TeacherNotification {

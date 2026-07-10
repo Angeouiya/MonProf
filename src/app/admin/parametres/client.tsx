@@ -15,6 +15,7 @@ type ProviderStatus = {
   email: boolean;
   sms: boolean;
   whatsapp: boolean;
+  webPush: boolean;
   cron: boolean;
 };
 
@@ -99,10 +100,11 @@ export function ParametresClient({
                 Les secrets d'envoi restent dans l'environnement serveur. Cette page affiche leur état et pilote seulement les options opérationnelles.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
               <ProviderPill label="Email" ok={providerStatus.email} />
               <ProviderPill label="SMS" ok={providerStatus.sms} />
               <ProviderPill label="WhatsApp" ok={providerStatus.whatsapp} />
+              <ProviderPill label="Web Push" ok={providerStatus.webPush} />
               <ProviderPill label="Cron" ok={providerStatus.cron} />
             </div>
           </div>
@@ -132,7 +134,7 @@ export function ParametresClient({
             </SettingField>
           </div>
           <div className="mt-4 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-            Variables à configurer côté serveur : <span className="text-[#111827]">CRON_SECRET</span>, <span className="text-[#111827]">RESEND_API_KEY</span>, <span className="text-[#111827]">RESEND_FROM_EMAIL</span>, <span className="text-[#111827]">TWILIO_ACCOUNT_SID</span>, <span className="text-[#111827]">TWILIO_AUTH_TOKEN</span>, <span className="text-[#111827]">TWILIO_FROM_NUMBER</span>, <span className="text-[#111827]">WHATSAPP_ACCESS_TOKEN</span>, <span className="text-[#111827]">WHATSAPP_PHONE_NUMBER_ID</span>.
+            Variables à configurer côté serveur : <span className="text-[#111827]">CRON_SECRET</span>, <span className="text-[#111827]">WEB_PUSH_VAPID_PRIVATE_KEY</span>, <span className="text-[#111827]">NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY</span>, <span className="text-[#111827]">RESEND_API_KEY</span>, <span className="text-[#111827]">RESEND_FROM_EMAIL</span>, <span className="text-[#111827]">TWILIO_ACCOUNT_SID</span>, <span className="text-[#111827]">TWILIO_AUTH_TOKEN</span>, <span className="text-[#111827]">TWILIO_FROM_NUMBER</span>, <span className="text-[#111827]">WHATSAPP_ACCESS_TOKEN</span>, <span className="text-[#111827]">WHATSAPP_PHONE_NUMBER_ID</span>.
           </div>
         </div>
 

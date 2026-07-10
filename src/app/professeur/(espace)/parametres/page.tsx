@@ -6,6 +6,7 @@ import { requireTeacher } from "@/lib/teacher-auth";
 import { Button } from "@/components/ui/button";
 import { InfoLine, PortalCard, ProfessorPageHeader } from "@/components/professor/professor-ui";
 import { TeacherPasswordSettingsForm, TeacherPaymentProfileSettingsForm } from "./settings-client";
+import { WebPushControl } from "@/components/shared/web-push-control";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export default async function ProfesseurParametresPage() {
           </Button>
         }
       />
+
+      <WebPushControl audienceLabel="professeur" />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-5">

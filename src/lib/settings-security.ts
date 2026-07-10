@@ -3,6 +3,9 @@ export const SENSITIVE_SETTING_KEYS = new Set([
   "paydunya_public_key",
   "paydunya_private_key",
   "paydunya_token",
+  "web_push_vapid_public_key",
+  "web_push_vapid_private_key",
+  "web_push_subject",
 ]);
 
 export function isSensitiveSettingKey(key: string) {

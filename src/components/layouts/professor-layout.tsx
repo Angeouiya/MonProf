@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
 import {
   Bell,
   BookOpenCheck,
@@ -23,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { WebPushRealtime } from "@/components/shared/web-push-realtime";
+import { secureSignOut } from "@/lib/client-sign-out";
 import { cn } from "@/lib/utils";
 
 type ProfessorNavItem = {
@@ -97,6 +98,7 @@ export function ProfessorLayout({
 
   return (
     <div data-professor-layout data-mobile-menu-open={open ? "true" : "false"} className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
+      <WebPushRealtime initialNotificationCount={notificationCount} />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <header data-professor-topbar className="app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-18 items-center justify-between border-b border-[#E6EAF3] bg-white px-4 py-2 lg:px-6">
         <div className="flex items-center gap-3">
@@ -154,7 +156,7 @@ export function ProfessorLayout({
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Continuer mes missions"
-            onConfirm={() => signOut({ callbackUrl: "/professeur/connexion" })}
+            onConfirm={() => secureSignOut("/professeur/connexion")}
             trigger={
               <Button
                 variant="ghost"
@@ -353,7 +355,7 @@ function SidebarContent({
           ]}
           confirmLabel="Me déconnecter"
           cancelLabel="Rester connecté"
-          onConfirm={() => signOut({ callbackUrl: "/professeur/connexion" })}
+          onConfirm={() => secureSignOut("/professeur/connexion")}
           trigger={
             <Button
               variant="outline"

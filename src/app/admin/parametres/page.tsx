@@ -38,7 +38,11 @@ export default async function AdminParametresPage() {
     notification_from_name: "Compétence",
   };
   const settings = settingsForClient(rows, defaults);
-  const providerStatus = getNotificationProviderStatus();
+  const configuredSettingKeys = new Set(rows.filter((row) => row.value.trim()).map((row) => row.key));
+  const providerStatus = getNotificationProviderStatus({
+    webPushConfigured: configuredSettingKeys.has("web_push_vapid_public_key")
+      && configuredSettingKeys.has("web_push_vapid_private_key"),
+  });
   const databaseStatus = {
     projectLabel: "Supabase Production",
     schema: "competence",

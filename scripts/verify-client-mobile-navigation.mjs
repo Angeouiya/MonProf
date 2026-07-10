@@ -128,8 +128,9 @@ record(
 );
 
 record(
-  "Client shell reuses the server notification count without an immediate duplicate request",
-  /const notificationCount\s*=\s*initialNotificationCount/.test(layout)
+  "Client shell synchronizes its notification count without blocking initial navigation",
+  /competence:notification-count/.test(layout)
+    && /WebPushRealtime/.test(layout)
     && !/fetch\("\/api\/client\/notifications"/.test(layout),
 );
 

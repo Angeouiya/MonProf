@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runNotificationScheduler } from "@/lib/notification-scheduler";
+import { flushWebPushOutbox } from "@/lib/web-push";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ async function runCron(req: NextRequest) {
     adminId: null,
     adminName: "Scheduler Compétence",
   });
+  const webPush = await flushWebPushOutbox(100);
 
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, webPush });
 }
