@@ -18,6 +18,7 @@ const criticalTables = [
   ["disputes", () => db.dispute.count()],
   ["teacherNotifications", () => db.teacherNotification.count()],
   ["teacherMissionLinks", () => db.teacherMissionLink.count()],
+  ["teacherPhotoAssets", () => db.teacherPhotoAsset.count()],
   ["teacherPayoutRequests", () => db.teacherPayoutRequest.count()],
   ["clientRefundRequests", () => db.clientRefundRequest.count()],
   ["adminActionLogs", () => db.adminActionLog.count()],

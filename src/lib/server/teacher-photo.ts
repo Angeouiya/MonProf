@@ -1,6 +1,7 @@
 import { access } from "fs/promises";
 import path from "path";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
+import { db } from "@/lib/db";
 
 export async function validateTeacherPhotoUrlForStorage(value: unknown) {
   const validation = validateTeacherPhotoUrl(value);
@@ -9,6 +10,17 @@ export async function validateTeacherPhotoUrlForStorage(value: unknown) {
   const { photoUrl } = validation;
   if (/^https?:\/\//i.test(photoUrl)) {
     return validation;
+  }
+
+  const managedPhotoMatch = photoUrl.match(/^\/api\/teacher-photos\/([a-z0-9]+)$/i);
+  if (managedPhotoMatch) {
+    const asset = await db.teacherPhotoAsset.findUnique({
+      where: { id: managedPhotoMatch[1] },
+      select: { id: true },
+    });
+    return asset
+      ? validation
+      : { ok: false as const, error: "La photo importée est introuvable. Importez-la à nouveau." };
   }
 
   let decodedPath = photoUrl;

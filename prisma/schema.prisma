@@ -186,6 +186,20 @@ model Teacher {
   @@index([portalAccessEnabled])
 }
 
+// Photos professeur persistantes. Les fonctions Vercel ne peuvent pas écrire
+// dans public/ en production, donc les images optimisées sont servies depuis la base.
+model TeacherPhotoAsset {
+  id          String   @id @default(cuid())
+  contentType String   @default("image/webp")
+  data        Bytes
+  size        Int
+  width       Int
+  height      Int
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum TeacherStatus {
   ACTIVE
   INACTIVE

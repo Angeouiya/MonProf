@@ -1,16 +1,15 @@
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import sharp from "sharp";
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 
-const MAX_SIZE = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-]);
+export const runtime = "nodejs";
+
+const MAX_SIZE = 4 * 1024 * 1024;
+const MIN_DIMENSION = 240;
+const OUTPUT_DIMENSION = 1200;
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -41,50 +40,92 @@ function hasValidImageSignature(buffer: Buffer, mimeType: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  try {
+    if (!(await isAdmin())) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
 
-  const formData = await req.formData();
-  const file = formData.get("file");
+    const formData = await req.formData();
+    const file = formData.get("file");
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Aucune photo reçue." }, { status: 400 });
-  }
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Aucune photo reçue." }, { status: 400 });
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Format non autorisé. Utilisez JPG, JPEG, PNG ou WEBP." },
+        { status: 400 },
+      );
+    }
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json(
+        { error: "Photo trop lourde. Taille maximale autorisée : 4 Mo." },
+        { status: 413 },
+      );
+    }
+    if (file.size <= 0) {
+      return NextResponse.json({ error: "Photo vide ou invalide." }, { status: 400 });
+    }
 
-  const extension = ALLOWED_TYPES.get(file.type);
-  if (!extension) {
+    const input = Buffer.from(await file.arrayBuffer());
+    if (!hasValidImageSignature(input, file.type)) {
+      return NextResponse.json(
+        { error: "Le fichier ne semble pas être une image valide JPG, PNG ou WEBP." },
+        { status: 400 },
+      );
+    }
+
+    const sourceMetadata = await sharp(input, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    }).metadata();
+    if (!sourceMetadata.width || !sourceMetadata.height) {
+      return NextResponse.json({ error: "Dimensions de photo impossibles à lire." }, { status: 400 });
+    }
+    if (sourceMetadata.width < MIN_DIMENSION || sourceMetadata.height < MIN_DIMENSION) {
+      return NextResponse.json(
+        { error: `Photo trop petite. Utilisez une image d'au moins ${MIN_DIMENSION} × ${MIN_DIMENSION} pixels.` },
+        { status: 400 },
+      );
+    }
+
+    const { data, info } = await sharp(input, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    })
+      .rotate()
+      .resize({
+        width: OUTPUT_DIMENSION,
+        height: OUTPUT_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer({ resolveWithObject: true });
+
+    const asset = await db.teacherPhotoAsset.create({
+      data: {
+        contentType: "image/webp",
+        data: Uint8Array.from(data),
+        size: data.length,
+        width: info.width,
+        height: info.height,
+      },
+      select: { id: true, size: true, width: true, height: true },
+    });
+
+    return NextResponse.json({
+      photoUrl: `/api/teacher-photos/${asset.id}`,
+      optimized: true,
+      size: asset.size,
+      width: asset.width,
+      height: asset.height,
+    });
+  } catch (error) {
+    console.error("[teacher-photo-upload]", error);
     return NextResponse.json(
-      { error: "Format non autorisé. Utilisez JPG, JPEG, PNG ou WEBP." },
-      { status: 400 }
+      { error: "La photo n'a pas pu être enregistrée. Réessayez avec une image JPG, PNG ou WEBP." },
+      { status: 500 },
     );
   }
-
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json(
-      { error: "Photo trop lourde. Taille maximale autorisée : 5 Mo." },
-      { status: 400 }
-    );
-  }
-  if (file.size <= 0) {
-    return NextResponse.json({ error: "Photo vide ou invalide." }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  if (!hasValidImageSignature(buffer, file.type)) {
-    return NextResponse.json(
-      { error: "Le fichier ne semble pas être une image valide JPG, PNG ou WEBP." },
-      { status: 400 }
-    );
-  }
-
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "teachers");
-  await mkdir(uploadDir, { recursive: true });
-
-  const filename = `teacher-${Date.now()}-${randomUUID()}.${extension}`;
-  await writeFile(path.join(uploadDir, filename), buffer);
-
-  return NextResponse.json({
-    photoUrl: `/uploads/teachers/${filename}`,
-  });
 }

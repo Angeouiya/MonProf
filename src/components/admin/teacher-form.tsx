@@ -142,7 +142,7 @@ type CvAnalysisResult = {
   filename?: string;
 };
 
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
+const MAX_PHOTO_SIZE = 4 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_CV_SIZE = 6 * 1024 * 1024;
 const CV_ACCEPT = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
@@ -333,7 +333,7 @@ export function TeacherForm({
       return;
     }
     if (file.size > MAX_PHOTO_SIZE) {
-      setPhotoError("Photo trop lourde. Taille maximale autorisée : 5 Mo.");
+      setPhotoError("Photo trop lourde. Taille maximale autorisée : 4 Mo.");
       return;
     }
 
@@ -345,8 +345,24 @@ export function TeacherForm({
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload impossible");
+      const responseText = await res.text();
+      let data: { error?: string; photoUrl?: string } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { error?: string; photoUrl?: string };
+        } catch {
+          // Vercel peut renvoyer une page ou une réponse vide si la taille HTTP est dépassée.
+        }
+      }
+      if (!res.ok) {
+        const fallbackMessage = res.status === 413
+          ? "Photo trop lourde pour l'envoi. Utilisez une image de moins de 4 Mo."
+          : "La photo n'a pas pu être enregistrée. Réessayez dans quelques instants.";
+        throw new Error(data.error || fallbackMessage);
+      }
+      if (!data.photoUrl) {
+        throw new Error("Le serveur n'a pas retourné la photo enregistrée. Réessayez.");
+      }
       setValue("photoUrl", data.photoUrl, { shouldDirty: true, shouldValidate: true });
       toast.success("Photo du professeur ajoutée");
     } catch (e: any) {
@@ -567,7 +583,7 @@ export function TeacherForm({
                     <div>
                       <Label>Photo réelle du professeur *</Label>
                       <p className="text-xs text-muted-foreground">
-                        Obligatoire pour créer ou activer un professeur visible. JPG, JPEG, PNG ou WEBP. Maximum 5 Mo.
+                        Obligatoire pour créer ou activer un professeur visible. JPG, JPEG, PNG ou WEBP. Maximum 4 Mo, optimisée automatiquement.
                       </p>
                     </div>
                     <input
@@ -575,7 +591,11 @@ export function TeacherForm({
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
                       className="hidden"
-                      onChange={(event) => uploadPhoto(event.target.files?.[0])}
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = "";
+                        void uploadPhoto(file);
+                      }}
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" size="sm" asChild disabled={uploadingPhoto}>
@@ -605,7 +625,7 @@ export function TeacherForm({
                         </Button>
                       )}
                     </div>
-                    <Input {...register("photoUrl")} placeholder="/uploads/teachers/photo.jpg" className="max-w-xl" />
+                    <Input {...register("photoUrl")} placeholder="Photo enregistrée automatiquement après import" className="max-w-xl" />
                     {errors.photoUrl?.message && <p className="text-xs font-medium text-destructive">{errors.photoUrl.message}</p>}
                     {photoError && <p className="text-xs font-medium text-destructive">{photoError}</p>}
                     {activeWithoutPhoto && !errors.photoUrl?.message && (
