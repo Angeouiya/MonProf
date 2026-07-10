@@ -6,7 +6,8 @@ export function PageHeader({
   description,
   children,
   className,
-  showBack = true,
+  showBack,
+  rootPage = false,
   backHref,
   backLabel,
 }: {
@@ -15,16 +16,24 @@ export function PageHeader({
   children?: React.ReactNode;
   className?: string;
   showBack?: boolean;
+  rootPage?: boolean;
   backHref?: string;
   backLabel?: string;
 }) {
+  const shouldShowBack = showBack ?? !rootPage;
+
   return (
-    <div data-app-page-header className={cn("page-header flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between min-[640px]:p-5", className)}>
+    <div
+      data-app-page-header
+      data-admin-page-header
+      data-admin-root-header={rootPage ? "true" : "false"}
+      className={cn("page-header flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between min-[640px]:p-5", className)}
+    >
       <div className="flex min-w-0 flex-col gap-3">
-        {showBack && <BackButton fallbackHref={backHref} label={backLabel} />}
+        {shouldShowBack && <BackButton fallbackHref={backHref} label={backLabel} />}
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-normal text-[#111827] sm:text-2xl">{title}</h1>
-          {description && <p className="mt-1 max-w-2xl text-sm leading-6 text-[#64748B]">{description}</p>}
+          {description && <p data-admin-page-description className="mt-1 max-w-2xl text-sm leading-6 text-[#64748B]">{description}</p>}
         </div>
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}

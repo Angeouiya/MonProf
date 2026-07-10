@@ -20,7 +20,7 @@ export default async function AdminAccountPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Mon compte administrateur" description="Espace privé pour contrôler votre identité et votre mot de passe." />
+      <PageHeader title="Mon compte administrateur" description="Espace privé pour contrôler votre identité et votre mot de passe." rootPage />
       <Card className="border-[#E2E8F0] bg-white">
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Info label="Nom" value={account.name} />

@@ -69,7 +69,7 @@ export default async function AdminLitigesPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Litiges" description={`${disputes.length} litige(s)`} />
+      <PageHeader title="Litiges" description={`${disputes.length} litige(s)`} rootPage />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <DisputeSummaryCard label="À traiter" value={`${openCount}`} detail="Ouverts ou en investigation" icon={ShieldAlert} tone={openCount ? "red" : "blue"} />

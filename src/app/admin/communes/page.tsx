@@ -67,7 +67,7 @@ export default async function AdminCommunesPage({ searchParams }: { searchParams
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Communes & quartiers" description="Référentiel géographique, disponibilité et calcul automatique des déplacements">
+      <PageHeader title="Communes & quartiers" description="Référentiel géographique, disponibilité et calcul automatique des déplacements" rootPage>
         <CommunesClient />
       </PageHeader>
 

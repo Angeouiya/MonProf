@@ -17,7 +17,8 @@ export default async function ProfesseurDisponibilitesPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Disponibilités"
-        description="Indiquez vos vrais créneaux disponibles. Une séance dure toujours 2h et chaque modification est visible par le service client."
+        description="Ouvrez les créneaux de 2h que vous pouvez réellement assurer."
+        rootTab
       />
       <PortalCard>
         <TeacherAvailabilityEditor initialAvailability={parseAvailability(current?.availability)} />

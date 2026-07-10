@@ -45,7 +45,8 @@ export default async function ProfesseurMissionsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Mes missions"
-        description="Toutes les réservations attribuées à votre fiche professeur. Les confirmations sont historisées côté service client."
+        description="Confirmez vos cours, consultez les détails et suivez les changements."
+        rootTab
       />
 
       {verifiedBookings.length === 0 ? (

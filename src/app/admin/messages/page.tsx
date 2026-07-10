@@ -98,7 +98,7 @@ export default async function AdminMessagesPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client, ${teacherAdminMessages.length} échange(s) professeur`}>
+      <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client, ${teacherAdminMessages.length} échange(s) professeur`} rootPage>
         <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
           Service client

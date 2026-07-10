@@ -51,7 +51,7 @@ export default async function AdminParametresPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Paramètres plateforme" description="Configuration générale de Compétence">
+      <PageHeader title="Paramètres plateforme" description="Configuration générale de Compétence" rootPage>
         <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-700">
           <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
           Configuration sensible

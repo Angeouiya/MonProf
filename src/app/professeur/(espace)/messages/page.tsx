@@ -10,6 +10,7 @@ import {
   PortalCard,
   ProfessorPageHeader,
   ProfessorStatCard,
+  ProfessorStatGrid,
 } from "@/components/professor/professor-ui";
 import { TeacherServiceClientMessageCompose } from "@/components/professor/teacher-admin-message-compose";
 import { MarkServiceClientMessagesRead } from "@/components/professor/mark-admin-messages-read";
@@ -63,7 +64,8 @@ export default async function ProfesseurMessagesPage() {
       <MarkServiceClientMessagesRead enabled={unreadServiceClientMessages > 0} />
       <ProfessorPageHeader
         title="Messages avec le service client"
-        description="Contactez le service client Compétence pour une mission, un paiement, une disponibilité ou une situation urgente. Chaque échange est enregistré dans votre fiche."
+        description="Échangez avec le service client Compétence."
+        rootTab
         action={(
           <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <a href="#nouveau-message">
@@ -74,11 +76,11 @@ export default async function ProfesseurMessagesPage() {
         )}
       />
 
-      <div className="grid gap-3 min-[760px]:grid-cols-3">
+      <ProfessorStatGrid className="min-[760px]:grid-cols-3">
         <ProfessorStatCard label="Messages ouverts" value={openMessages} detail="Échanges non clôturés" icon="clock" />
         <ProfessorStatCard label="Réponses service client non lues" value={unreadServiceClientMessages} detail="À consulter rapidement" icon="alert" />
         <ProfessorStatCard label="Réponses attendues" value={waitingServiceClient} detail="Le service client doit répondre" icon="calendar" />
-      </div>
+      </ProfessorStatGrid>
 
       <PortalCard id="nouveau-message" className="scroll-mt-24">
         <div className="mb-4 flex items-start gap-3">

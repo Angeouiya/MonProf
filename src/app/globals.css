@@ -5125,6 +5125,81 @@ b {
   pointer-events: none !important;
 }
 
+@media (max-width: 519px) {
+  .professor-shell [data-professor-root-header="true"] {
+    gap: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .professor-shell [data-professor-root-header="true"] [data-professor-page-description] {
+    display: none !important;
+  }
+
+  .professor-shell [data-professor-stat-grid][data-balance-odd="true"] > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 359px) {
+  .professor-shell [data-professor-stat-card] {
+    padding: 0.625rem !important;
+  }
+
+  .professor-shell [data-professor-stat-icon],
+  .professor-shell [data-professor-stat-detail] {
+    display: none !important;
+  }
+
+  .professor-shell [data-professor-stat-value] {
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .professor-shell [data-professor-stat-label] {
+    font-size: 0.6rem !important;
+    line-height: 0.85rem !important;
+  }
+
+  .admin-shell [data-admin-stat-card] {
+    padding: 0.625rem !important;
+  }
+
+  .admin-shell [data-admin-stat-icon],
+  .admin-shell [data-admin-stat-trend] {
+    display: none !important;
+  }
+
+  .admin-shell [data-admin-stat-value] {
+    font-size: 1rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .admin-shell [data-admin-stat-label] {
+    font-size: 0.6rem !important;
+    line-height: 0.85rem !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .admin-shell [data-admin-root-header="true"] {
+    gap: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .admin-shell [data-admin-root-header="true"] [data-admin-page-description] {
+    display: none !important;
+  }
+
+  .admin-shell .grid:has(> [data-admin-stat-card]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .admin-shell .grid:has(> [data-admin-stat-card]) > [data-admin-stat-card]:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
 .client-shell [data-client-mobile-layer],
 .professor-shell [data-professor-mobile-layer],
 .admin-shell [data-admin-mobile-layer] {

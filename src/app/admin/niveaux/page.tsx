@@ -29,7 +29,7 @@ export default async function AdminNiveauxPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Niveaux" description={`${levels.length} niveau(x)`} />
+      <PageHeader title="Niveaux" description={`${levels.length} niveau(x)`} rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Niveaux disponibles" value={levels.length} icon={BookOpen} tone="primary" />

@@ -119,7 +119,7 @@ export default async function AdminNotificationsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Notifications" description={`${notifications.length} notification(s) • ${unreadCount} non lue(s)`}>
+      <PageHeader title="Notifications" description={`${notifications.length} notification(s) • ${unreadCount} non lue(s)`} rootPage>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
           <RunNotificationRemindersClient />
           <NotificationsClient mode="markAll" />

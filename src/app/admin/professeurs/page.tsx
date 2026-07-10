@@ -181,7 +181,7 @@ export default async function AdminProfesseursPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Professeurs" description={`${teachers.length} professeur(s)`}>
+      <PageHeader title="Professeurs" description={`${teachers.length} professeur(s)`} rootPage>
         {admin.adminPermissions?.includes("TEACHERS_MANAGE") && (
           <Button asChild>
             <Link href="/admin/professeurs/nouveau">

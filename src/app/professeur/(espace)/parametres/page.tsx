@@ -34,7 +34,8 @@ export default async function ProfesseurParametresPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paramètres"
-        description="Sécurité de votre accès professeur léger. Aucun OTP n'est demandé : le changement se fait depuis la session connectée."
+        description="Sécurité, notifications et coordonnées de paiement."
+        rootTab
         action={
           <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
             <Link href="/professeur/profil">Voir mon profil</Link>

@@ -13,6 +13,7 @@ import {
   PortalCard,
   ProfessorPageHeader,
   ProfessorStatCard,
+  ProfessorStatGrid,
   StatusPill,
 } from "@/components/professor/professor-ui";
 import { TeacherPayoutRequestForm } from "@/components/professor/teacher-payout-request-form";
@@ -129,17 +130,18 @@ export default async function ProfesseurPaiementsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paiements"
-        description="Suivi de vos paiements : montants nets, versements enregistrés et reçus de paiement."
+        description="Montants disponibles, demandes et reçus."
+        rootTab
       />
 
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-6">
+      <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-6" balanceOdd={false}>
         <ProfessorStatCard label="Net total" value={formatFCFA(totalNet)} detail="Cours validés, reports confirmés et indemnités dues" icon="wallet" />
         <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
         <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
         <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par le service client" icon="wallet" />
         <ProfessorStatCard label="Encore bloqué" value={formatFCFA(blockedAmount)} detail="En attente de confirmation ou contrôle" icon="clock" />
         <ProfessorStatCard label="Retenues" value={formatFCFA(totalRetained)} detail="Retenues validées par le service client" icon="alert" />
-      </div>
+      </ProfessorStatGrid>
 
       <PortalCard>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">

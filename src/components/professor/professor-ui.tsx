@@ -82,7 +82,8 @@ export function ProfessorPageHeader({
   title,
   description,
   action,
-  showBack = true,
+  showBack,
+  rootTab = false,
   backHref,
   backLabel,
 }: {
@@ -90,21 +91,49 @@ export function ProfessorPageHeader({
   description?: string;
   action?: React.ReactNode;
   showBack?: boolean;
+  rootTab?: boolean;
   backHref?: string;
   backLabel?: string;
 }) {
+  const shouldShowBack = showBack ?? !rootTab;
+
   return (
-    <div data-app-page-header data-professor-page-header className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
+    <div
+      data-app-page-header
+      data-professor-page-header
+      data-professor-root-header={rootTab ? "true" : "false"}
+      className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between"
+    >
       <div className="min-w-0">
-        {showBack && (
+        {shouldShowBack && (
           <div className="mb-2">
             <BackButton fallbackHref={backHref} label={backLabel} className="min-h-10 rounded-lg px-3" />
           </div>
         )}
         <h1 className="text-[1.38rem] font-semibold leading-[1.08] tracking-normal text-[#111827] min-[420px]:text-2xl lg:text-3xl">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">{description}</p>}
+        {description && <p data-professor-page-description className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">{description}</p>}
       </div>
       {action && <div data-professor-page-action className="grid w-full min-w-0 gap-2 min-[520px]:w-auto min-[520px]:grid-flow-col min-[640px]:shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+export function ProfessorStatGrid({
+  children,
+  className,
+  balanceOdd = true,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  balanceOdd?: boolean;
+}) {
+  return (
+    <div
+      data-professor-stat-grid
+      data-balance-odd={balanceOdd ? "true" : "false"}
+      className={cn("grid grid-cols-2 gap-2 min-[680px]:gap-3", className)}
+    >
+      {children}
     </div>
   );
 }
@@ -134,14 +163,14 @@ export function ProfessorStatCard({
     <div data-professor-stat-card className="min-w-0 rounded-lg border border-[#E6EAF3] bg-white p-3 min-[520px]:p-4">
       <div className="flex items-start justify-between gap-2.5 min-[520px]:gap-3">
         <div className="min-w-0">
-          <p className="break-words text-[10px] font-semibold uppercase tracking-normal text-[#64748B] min-[420px]:text-[11px] min-[760px]:text-xs">{label}</p>
-          <p className="mt-1 break-words text-xl font-semibold leading-tight tracking-normal text-[#111B4D] min-[420px]:text-2xl">{value}</p>
+          <p data-professor-stat-label className="break-words text-[10px] font-semibold uppercase tracking-normal text-[#64748B] min-[420px]:text-[11px] min-[760px]:text-xs">{label}</p>
+          <p data-professor-stat-value className="mt-1 break-words text-xl font-semibold leading-tight tracking-normal text-[#111B4D] min-[420px]:text-2xl">{value}</p>
         </div>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white min-[420px]:h-10 min-[420px]:w-10">
+        <span data-professor-stat-icon className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white min-[420px]:h-10 min-[420px]:w-10">
           <Icon className="h-4 w-4 min-[420px]:h-5 min-[420px]:w-5" />
         </span>
       </div>
-      {detail && <p className="mt-2 break-words text-[11px] font-semibold leading-4 text-[#64748B] min-[420px]:text-xs min-[420px]:leading-5">{detail}</p>}
+      {detail && <p data-professor-stat-detail className="mt-2 break-words text-[11px] font-semibold leading-4 text-[#64748B] min-[420px]:text-xs min-[420px]:leading-5">{detail}</p>}
     </div>
   );
 }

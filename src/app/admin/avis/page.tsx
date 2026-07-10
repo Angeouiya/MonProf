@@ -94,7 +94,7 @@ export default async function AdminAvisPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Avis & notes" description={`${reviews.length} avis`} />
+      <PageHeader title="Avis & notes" description={`${reviews.length} avis`} rootPage />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <ReviewSummaryCard label="Moyenne filtrée" value={reviews.length ? `${averageRating.toFixed(1)}/5` : "—"} detail={`${publishedReviews} publié(s)`} icon={MessageSquare} tone="blue" />
         <ReviewSummaryCard label="Avis critiques" value={`${lowReviews}`} detail="Notes 1/5 ou 2/5" icon={ShieldAlert} tone={lowReviews ? "red" : "blue"} />

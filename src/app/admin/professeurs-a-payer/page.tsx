@@ -107,7 +107,7 @@ export default async function AdminProfesseursAPayerPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Professeurs à payer" description="Regroupement des paiements à libérer par professeur" />
+      <PageHeader title="Professeurs à payer" description="Regroupement des paiements à libérer par professeur" rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Net total à payer" value={formatFCFA(grandTotal)} icon={Banknote} tone="primary" />

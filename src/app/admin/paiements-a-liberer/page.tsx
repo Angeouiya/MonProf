@@ -57,7 +57,7 @@ export default async function AdminPaiementsALibererPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Paiements à libérer" description="Réservations validées par le client, prêtes à payer au professeur" />
+      <PageHeader title="Paiements à libérer" description="Réservations validées par le client, prêtes à payer au professeur" rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Net total à payer" value={formatFCFA(totalNet)} icon={Banknote} tone="primary" />

@@ -42,7 +42,7 @@ export default async function AdminFondsBloquesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Fonds bloqués" description="Paiements clients en attente de validation ou de réalisation du cours" />
+      <PageHeader title="Fonds bloqués" description="Paiements clients en attente de validation ou de réalisation du cours" rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Fonds bloqués (total)" value={formatFCFA(totalBlocked)} icon={Lock} tone="warning" />

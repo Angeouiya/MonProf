@@ -37,7 +37,8 @@ export default async function ProfesseurProfilPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Mon profil"
-        description="Informations visibles et opérationnelles de votre fiche. Les modifications sensibles sont validées par le service client."
+        description="Vos informations publiques et professionnelles."
+        rootTab
       />
 
       <PortalCard className="grid gap-5 lg:grid-cols-[auto_1fr] lg:items-start">

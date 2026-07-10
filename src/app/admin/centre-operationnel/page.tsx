@@ -167,7 +167,7 @@ export default async function CentreOperationnelPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Centre opérationnel" description="Actions rapides, urgences, remplacements, paiements et qualité professeur.">
+      <PageHeader title="Centre opérationnel" description="Actions rapides, urgences, remplacements, paiements et qualité professeur." rootPage>
         <ReminderScanButton />
       </PageHeader>
 

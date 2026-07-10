@@ -108,7 +108,7 @@ export default async function SuiviProfesseursPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Suivi des professeurs" description="Pilotage qualité, tâches, incidents, paiements et actions rapides par professeur." />
+      <PageHeader title="Suivi des professeurs" description="Pilotage qualité, tâches, incidents, paiements et actions rapides par professeur." rootPage />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard label="Risque critique" value={`${highRiskCount}`} detail={`${watchCount} profil(s) à surveiller`} tone={highRiskCount ? "red" : "blue"} icon={AlertTriangle} />

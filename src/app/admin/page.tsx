@@ -240,7 +240,7 @@ export default async function AdminDashboard() {
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
         description="Pilotage en temps réel"
-        showBack={false}
+        rootPage
       >
         <Button asChild>
           <Link href="/admin/professeurs/nouveau">

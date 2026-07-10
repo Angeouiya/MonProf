@@ -15,6 +15,7 @@ import {
   PortalCard,
   ProfessorPageHeader,
   ProfessorStatCard,
+  ProfessorStatGrid,
   StatusPill,
 } from "@/components/professor/professor-ui";
 
@@ -159,7 +160,7 @@ export default async function ProfesseurDashboardPage() {
       <ProfessorPageHeader
         title={`Bonjour ${teacherName}`}
         description="Missions, disponibilités et paiements."
-        showBack={false}
+        rootTab
         action={(
           <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
             <Link href="/professeur/missions">
@@ -228,12 +229,12 @@ export default async function ProfesseurDashboardPage() {
         </div>
       </PortalCard>
 
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-4">
+      <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-4">
         <ProfessorStatCard label="Cours aujourd'hui" value={verifiedTodayBookings.length} detail="Séances prévues sur la journée" icon="calendar" />
         <ProfessorStatCard label="Missions à confirmer" value={verifiedPendingMissions.length} detail="Répondez rapidement pour éviter les relances" icon="clock" />
         <ProfessorStatCard label="Tâches ouvertes" value={verifiedOpenTasks.length} detail="Demandes du service client en attente" icon="alert" />
         <ProfessorStatCard label="Reste à recevoir" value={formatFCFA(amountToReceive)} detail={`${realizedCount} paiement(s) déjà soldé(s)`} icon="wallet" />
-      </div>
+      </ProfessorStatGrid>
 
       <PortalCard>
         <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">

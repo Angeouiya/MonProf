@@ -95,7 +95,7 @@ export default async function AdminPaiementsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Paiements" description="Paiements clients reçus et versements internes enregistrés aux professeurs" />
+      <PageHeader title="Paiements" description="Paiements clients reçus et versements internes enregistrés aux professeurs" rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total reçu" value={formatFCFA(receivedAmount)} icon={Wallet} tone="primary" />

@@ -23,7 +23,8 @@ export default async function ProfesseurNotificationsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Notifications"
-        description="Messages opérationnels envoyés par le service client : missions, rappels, paiements, avertissements ou consignes."
+        description="Missions, rappels, paiements et consignes."
+        rootTab
         action={<MarkTeacherNotificationsReadButton disabled={unreadCount === 0} />}
       />
 

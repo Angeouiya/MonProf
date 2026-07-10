@@ -98,7 +98,7 @@ export default async function AdminReservationsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Réservations" description={`${bookings.length} réservation(s)`} />
+      <PageHeader title="Réservations" description={`${bookings.length} réservation(s)`} rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SignalCard

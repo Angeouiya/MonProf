@@ -81,13 +81,15 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="grid gap-3 min-[760px]:grid-cols-3">
+      <div className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-3 min-[520px]:p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div data-professor-availability-metrics className="grid grid-cols-2 gap-2 min-[760px]:grid-cols-3 min-[760px]:gap-3">
           <Metric label="Créneaux ouverts" value={selectedSlots} detail={`${selectedHours}h disponibles`} />
           <Metric label="Durée séance" value="2h" detail="Une séance = deux heures" />
-          <Metric label="Validation" value="Service client" detail="Chaque mise à jour est historisée" />
+          <div className="col-span-2 min-[760px]:col-span-1">
+            <Metric label="Validation" value="Service client" detail="Chaque mise à jour est historisée" />
+          </div>
         </div>
-        <div className="grid gap-2 min-[680px]:grid-cols-2 lg:w-[360px]">
+        <div className="grid grid-cols-2 gap-2 lg:w-[360px]">
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekdays")}>Jours ouvrés</Button>
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("weekends")}>Week-end</Button>
           <Button type="button" variant="outline" className="rounded-lg bg-white" onClick={() => setPreset("evenings")}>Soirs</Button>

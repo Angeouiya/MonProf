@@ -32,7 +32,7 @@ export default async function AdminMatieresPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Matières" description={`${subjects.length} matière(s)`} />
+      <PageHeader title="Matières" description={`${subjects.length} matière(s)`} rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Matières disponibles" value={subjects.length} icon={Tag} tone="primary" />

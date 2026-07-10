@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { EmptyProfessorState, PortalCard, ProfessorPageHeader, ProfessorStatCard, StatusPill } from "@/components/professor/professor-ui";
+import { EmptyProfessorState, PortalCard, ProfessorPageHeader, ProfessorStatCard, ProfessorStatGrid, StatusPill } from "@/components/professor/professor-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +60,11 @@ export default async function ProfesseurAvisPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Avis & qualité"
-        description="Suivi qualité visible sur votre fiche professeur : avis clients publiés, score qualité et décisions du service client."
+        description="Avis clients, note du service client et score qualité."
+        rootTab
       />
 
-      <div className="grid gap-3 min-[680px]:grid-cols-2 xl:grid-cols-4">
+      <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-4" balanceOdd={false}>
         <ProfessorStatCard label="Note moyenne" value={`${Number(profile?.rating ?? 0).toFixed(1)}/5`} detail={`${profile?.ratingCount ?? 0} avis publié(s)`} icon="check" />
         <ProfessorStatCard
           label="Note service client"
@@ -73,7 +74,7 @@ export default async function ProfesseurAvisPage() {
         />
         <ProfessorStatCard label="Score qualité" value={`${profile?.qualityScore ?? 0}/100`} detail="Calculé par le service client" icon="calendar" />
         <ProfessorStatCard label="Suivis actifs" value={warnings.length + sanctions.length} detail="Avertissements et sanctions visibles" icon="alert" />
-      </div>
+      </ProfessorStatGrid>
 
       {Number(profile?.adminRating ?? 0) > 0 && (
         <PortalCard>

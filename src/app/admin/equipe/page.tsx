@@ -32,6 +32,7 @@ export default async function AdminTeamPage() {
       <PageHeader
         title="Équipe administratrice"
         description="Rôles, droits d'accès, suspensions et traçabilité des comptes internes."
+        rootPage
       />
       <AdminTeamClient
         currentAdminId={current.id}

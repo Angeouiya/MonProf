@@ -68,7 +68,7 @@ export default async function AdminClientsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Clients" description={`${clients.length} client(s)`} />
+      <PageHeader title="Clients" description={`${clients.length} client(s)`} rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Clients" value={clients.length} icon={Users} tone="primary" />
