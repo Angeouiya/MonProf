@@ -34,7 +34,8 @@ export default async function ServiceClientPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const eligibleBookings = await db.booking.findMany({
+  const [eligibleBookings, myDisputes] = await db.$transaction([
+  db.booking.findMany({
     where: {
       clientId: user.id,
       status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "COURSE_DONE", "PENDING_CLIENT_VALIDATION"] },
@@ -44,8 +45,8 @@ export default async function ServiceClientPage() {
       teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
       disputes: true,
     },
-  });
-  const myDisputes = await db.dispute.findMany({
+  }),
+  db.dispute.findMany({
     where: { openedById: user.id },
     orderBy: { createdAt: "desc" },
     include: {
@@ -56,7 +57,8 @@ export default async function ServiceClientPage() {
         },
       },
     },
-  });
+  }),
+  ]);
   const bookableForDispute = eligibleBookings.filter((b) => b.disputes.length === 0);
   const openDisputes = myDisputes.filter((dispute) => ["OPEN", "INVESTIGATING"].includes(dispute.status));
   const resolvedDisputes = myDisputes.filter((dispute) => ["RESOLVED", "REFUNDED", "REJECTED"].includes(dispute.status));

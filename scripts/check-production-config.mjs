@@ -252,6 +252,10 @@ function checkVercelDeploymentConfig() {
   }
 
   record("Vercel uses the full production build pipeline", config.buildCommand === "npm run build:production");
+  record(
+    "Vercel functions run next to Supabase in London",
+    Array.isArray(config.regions) && config.regions.length === 1 && config.regions[0] === "lhr1",
+  );
 
   const cron = Array.isArray(config.crons)
     ? config.crons.find((item) => item?.path === "/api/cron/notification-reminders")

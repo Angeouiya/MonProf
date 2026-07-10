@@ -28,7 +28,8 @@ export default async function AvisPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const bookingsToReview = await db.booking.findMany({
+  const [bookingsToReview, myReviews] = await db.$transaction([
+  db.booking.findMany({
     where: {
       clientId: user.id,
       status: { in: [...REVIEWABLE_BOOKING_STATUSES] },
@@ -47,8 +48,8 @@ export default async function AvisPage() {
         },
       },
     },
-  });
-  const myReviews = await db.review.findMany({
+  }),
+  db.review.findMany({
     where: { clientId: user.id },
     orderBy: { createdAt: "desc" },
     include: {
@@ -64,7 +65,8 @@ export default async function AvisPage() {
       },
       booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
     },
-  });
+  }),
+  ]);
   const primaryReviewBooking = bookingsToReview[0] ?? null;
   const secondaryReviewBookings = bookingsToReview.slice(1);
   const primaryReviewTeacherName = primaryReviewBooking

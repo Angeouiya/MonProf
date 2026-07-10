@@ -65,7 +65,8 @@ export default async function AdminProfesseursPage({
   }
   if (andFilters.length) where.AND = andFilters;
 
-  const teachers = await db.teacher.findMany({
+  const [teachers, subjects, communes, photoStatsRows] = await db.$transaction([
+  db.teacher.findMany({
     where,
     orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
     include: {
@@ -95,11 +96,10 @@ export default async function AdminProfesseursPage({
       paymentAdjustments: { orderBy: { createdAt: "desc" }, take: 50 },
       _count: { select: { bookings: true, reviews: true } },
     },
-  });
-
-  const subjects = await db.subject.findMany({ orderBy: { name: "asc" } });
-  const communes = await db.commune.findMany({ orderBy: { name: "asc" } });
-  const [photoStats] = await db.$queryRaw<Array<{
+  }),
+  db.subject.findMany({ orderBy: { name: "asc" } }),
+  db.commune.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+  db.$queryRaw<Array<{
     totalTeachersCount: number;
     missingPhotoCount: number;
     activeMissingPhotoCount: number;
@@ -114,7 +114,9 @@ export default async function AdminProfesseursPage({
           AND ("photoUrl" IS NULL OR "photoUrl" = '')
       )::int AS "activeMissingPhotoCount"
     FROM competence."Teacher"
-  `;
+  `,
+  ]);
+  const [photoStats] = photoStatsRows;
   const totalTeachersCount = photoStats?.totalTeachersCount ?? 0;
   const missingPhotoCount = photoStats?.missingPhotoCount ?? 0;
   const activeMissingPhotoCount = photoStats?.activeMissingPhotoCount ?? 0;

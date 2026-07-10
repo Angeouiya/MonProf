@@ -15,6 +15,12 @@ const publicHome = read("src/app/page.tsx");
 const publicTeachers = read("src/app/professeurs/page.tsx");
 const clientBooking = read("src/app/client/reserver/page.tsx");
 const clientRegistration = read("src/app/inscription/page.tsx");
+const clientCourses = read("src/app/client/cours/page.tsx");
+const clientReviews = read("src/app/client/avis/page.tsx");
+const clientSupport = read("src/app/client/service-client/page.tsx");
+const clientSettings = read("src/app/client/parametres/page.tsx");
+const professorDashboard = read("src/app/professeur/(espace)/page.tsx");
+const adminTeachers = read("src/app/admin/professeurs/page.tsx");
 
 check("Client session reads are cached per render", /export const getSessionUser = cache\(async/.test(session));
 check("Professor session and profile reads are cached per render", /export const getTeacherSessionUser = cache\(async/.test(teacherAuth) && /export const requireTeacher = cache\(async/.test(teacherAuth));
@@ -31,6 +37,12 @@ check("Admin dashboard no longer serializes its first metric queries", !/const t
 check("Public home uses one consolidated catalog read", /getCachedTeacherSearchCatalog/.test(publicHome) && !/getCachedSubjects|getCachedLevels|getCachedCommunes/.test(publicHome));
 check("Public teacher search batches results and uses the consolidated catalog", /getCachedTeacherSearchCatalog/.test(publicTeachers) && hasDatabaseTransaction(publicTeachers) && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers));
 check("Client onboarding and booking reuse the consolidated catalog", /getCachedTeacherSearchCatalog/.test(clientBooking) && /getCachedTeacherSearchCatalog/.test(clientRegistration));
+check("Client courses batch tab, overview, and pending reads", hasDatabaseTransaction(clientCourses));
+check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
+check("Client support batches eligible bookings and disputes", hasDatabaseTransaction(clientSupport));
+check("Client settings batch profile and account indicators", hasDatabaseTransaction(clientSettings));
+check("Professor dashboard batches operational and accounting reads", hasDatabaseTransaction(professorDashboard));
+check("Admin teacher list batches profiles, catalogs, and photo stats", hasDatabaseTransaction(adminTeachers));
 
 for (const result of checks) {
   console.log(`${result.ok ? "OK" : "FAIL"} ${result.label}`);

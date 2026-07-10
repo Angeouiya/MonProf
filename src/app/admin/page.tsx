@@ -239,7 +239,8 @@ export default async function AdminDashboard() {
     <div className="space-y-6">
       <PageHeader
         title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Vue d'ensemble de la plateforme Compétence"
+        description="Pilotage en temps réel"
+        showBack={false}
       >
         <Button asChild>
           <Link href="/admin/professeurs/nouveau">
@@ -248,11 +249,27 @@ export default async function AdminDashboard() {
         </Button>
       </PageHeader>
 
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <StatCard label="Clients" value={totalClients} icon={Users} tone="default" />
+        <StatCard label="Professeurs" value={totalTeachers} icon={GraduationCap} tone="default" />
+        <StatCard label="Professeurs actifs" value={activeTeachers} icon={CheckCircle2} tone="success" />
+        <StatCard label="Nouv. résa. (7j)" value={newBookings7d} icon={CalendarRange} tone="default" />
+        <StatCard label="Résa. payées" value={paidBookings} icon={CheckCircle2} tone="primary" />
+        <StatCard label="Cours du jour" value={todayBookings} icon={CalendarDays} tone="default" />
+        <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
+        <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
+        <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
+        <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
+        <StatCard label="CA commission (total)" value={formatFCFA(totalCommission)} icon={TrendingUp} tone="success" />
+        <StatCard label="Commission (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
+        <StatCard label="Versé aux professeurs" value={formatFCFA(totalPaidToTeachers)} icon={Wallet} tone="success" />
+      </div>
+
       <Card className="border-[#E3E8F2] bg-white">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-base">Synchronisation des trois espaces</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Contrôle rapide client, professeur et administration : les réservations non payées restent en brouillon, et seules les preuves PayDunya vérifiées déclenchent le suivi opérationnel.
+        <CardHeader className="space-y-1 pb-3">
+          <CardTitle className="text-base">À traiter</CardTitle>
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            Suivi client, professeur et administration. Seuls les paiements PayDunya vérifiés déclenchent les opérations.
           </p>
         </CardHeader>
         <CardContent>
@@ -296,23 +313,6 @@ export default async function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-        <StatCard label="Clients" value={totalClients} icon={Users} tone="default" />
-        <StatCard label="Professeurs" value={totalTeachers} icon={GraduationCap} tone="default" />
-        <StatCard label="Professeurs actifs" value={activeTeachers} icon={CheckCircle2} tone="success" />
-        <StatCard label="Nouv. résa. (7j)" value={newBookings7d} icon={CalendarRange} tone="default" />
-        <StatCard label="Résa. payées" value={paidBookings} icon={CheckCircle2} tone="primary" />
-        <StatCard label="Cours du jour" value={todayBookings} icon={CalendarDays} tone="default" />
-        <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
-        <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
-        <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
-        <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
-        <StatCard label="CA commission (total)" value={formatFCFA(totalCommission)} icon={TrendingUp} tone="success" />
-        <StatCard label="Commission (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
-        <StatCard label="Versé aux professeurs" value={formatFCFA(totalPaidToTeachers)} icon={Wallet} tone="success" />
-      </div>
 
       {/* Chart */}
       <Card>
@@ -570,7 +570,7 @@ function ControlSpaceCard({
             </span>
             <div className="min-w-0">
               <h2 className="truncate text-sm font-semibold text-[#111827]">{title}</h2>
-              <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{description}</p>
+              <p className="mt-0.5 hidden line-clamp-2 text-xs font-medium leading-5 text-[#64748B] sm:block">{description}</p>
             </div>
           </div>
         </div>

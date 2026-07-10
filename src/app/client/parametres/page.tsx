@@ -25,7 +25,8 @@ export default async function ClientParametresPage() {
   const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, email: sessionUser.email });
   if (sessionUser.role !== "CLIENT" && !ownerAdmin) redirect(sessionUser.role === "ADMIN" ? "/admin" : "/professeur");
 
-  const profile = await db.user.findUnique({
+  const [profile, unreadNotifications, activeBookings] = await db.$transaction([
+  db.user.findUnique({
     where: { id: sessionUser.id },
     select: {
       email: true,
@@ -35,8 +36,8 @@ export default async function ClientParametresPage() {
       quartier: true,
       updatedAt: true,
     },
-  });
-  const unreadNotifications = await db.notification.count({
+  }),
+  db.notification.count({
     where: ownerAdmin
       ? {
           recipientType: "ADMIN",
@@ -47,15 +48,16 @@ export default async function ClientParametresPage() {
           read: false,
           OR: [{ userId: sessionUser.id }, { clientId: sessionUser.id }],
         },
-  });
-  const activeBookings = await db.booking.count({
+  }),
+  db.booking.count({
     where: ownerAdmin
       ? { id: "__owner_admin_no_client_booking__" }
       : {
           clientId: sessionUser.id,
           status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_CLIENT_VALIDATION"] },
         },
-  });
+  }),
+  ]);
   const accountName = profile?.name ?? sessionUser.name ?? (ownerAdmin ? "Propriétaire" : "Client");
   const hasEmail = Boolean(profile?.email ?? sessionUser.email);
   const hasPhone = Boolean(profile?.phone);

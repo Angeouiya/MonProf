@@ -1,5 +1,7 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build:production",
+  "regions": ["lhr1"],
   "crons": [
     {
       "path": "/api/cron/notification-reminders",

@@ -41,7 +41,8 @@ export default async function CoursPage({
   const tabId = sp.tab ?? "avenir";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
 
-  const rawBookings = await db.booking.findMany({
+  const [rawBookings, rawOverviewBookings, pendingCourseBookings] = await db.$transaction([
+  db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({
       clientId: user.id,
       status: { in: tab.statuses as any },
@@ -57,8 +58,8 @@ export default async function CoursPage({
         select: { type: true, status: true, amount: true },
       },
     },
-  });
-  const rawOverviewBookings = await db.booking.findMany({
+  }),
+  db.booking.findMany({
     where: verifiedPayDunyaBookingWhere({
       clientId: user.id,
       status: { in: COURSE_STATUSES as any },
@@ -90,8 +91,8 @@ export default async function CoursPage({
         select: { type: true, status: true, amount: true },
       },
     },
-  });
-  const pendingCourseBookings = await db.booking.findMany({
+  }),
+  db.booking.findMany({
     where: {
       clientId: user.id,
       OR: [
@@ -118,7 +119,8 @@ export default async function CoursPage({
         select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
       },
     },
-  });
+  }),
+  ]);
   const bookings = rawBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
   const overviewBookings = rawOverviewBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
 

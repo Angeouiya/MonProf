@@ -28,141 +28,110 @@ export default async function ProfesseurDashboardPage() {
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
 
-  const fullTeacher = await db.teacher.findUnique({
-    where: { id: teacher.id },
-    include: {
-      subjects: { include: { subject: true }, orderBy: { isPrimary: "desc" } },
-      levels: { include: { level: true } },
-      zones: { include: { commune: true } },
-      reviews: { where: { published: true }, orderBy: { createdAt: "desc" }, take: 3 },
-    },
-  });
-  const upcomingBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      teacherId: teacher.id,
-      status: { notIn: ["CANCELLED", "REFUNDED"] },
+  const [
+    fullTeacher,
+    upcomingBookings,
+    todayBookings,
+    pendingMissions,
+    openTasks,
+    recentNotifications,
+    paymentBookings,
+    adjustments,
+    unreadServiceClientMessageCount,
+    pendingScheduleProposalCount,
+    pendingPayoutRequestCount,
+  ] = await db.$transaction([
+    db.teacher.findUnique({
+      where: { id: teacher.id },
+      include: {
+        subjects: { include: { subject: true }, orderBy: { isPrimary: "desc" } },
+        levels: { include: { level: true } },
+        zones: { include: { commune: true } },
+        reviews: { where: { published: true }, orderBy: { createdAt: "desc" }, take: 3 },
+      },
     }),
-    include: {
-      client: { select: { name: true, phone: true } },
-      transactions: { where: { type: "CLIENT_PAYMENT" } },
-      missionLinks: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
-    orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
-    take: 5,
-  });
-  const todayBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      teacherId: teacher.id,
-      scheduledDate: { gte: todayStart, lt: todayEnd },
-      status: { notIn: ["CANCELLED", "REFUNDED"] },
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ teacherId: teacher.id, status: { notIn: ["CANCELLED", "REFUNDED"] } }),
+      include: {
+        client: { select: { name: true, phone: true } },
+        transactions: { where: { type: "CLIENT_PAYMENT" } },
+        missionLinks: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+      orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
+      take: 5,
     }),
-    include: {
-      client: { select: { name: true, phone: true } },
-      transactions: { where: { type: "CLIENT_PAYMENT" } },
-    },
-    orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
-    take: 5,
-  });
-  const pendingMissions = await db.teacherMissionLink.findMany({
-    where: {
-      teacherId: teacher.id,
-      status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
-      expiresAt: { gte: new Date() },
-      booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) },
-    },
-    include: {
-      booking: {
-        include: {
-          client: { select: { name: true, phone: true } },
-          transactions: { where: { type: "CLIENT_PAYMENT" } },
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({
+        teacherId: teacher.id,
+        scheduledDate: { gte: todayStart, lt: todayEnd },
+        status: { notIn: ["CANCELLED", "REFUNDED"] },
+      }),
+      include: {
+        client: { select: { name: true, phone: true } },
+        transactions: { where: { type: "CLIENT_PAYMENT" } },
+      },
+      orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
+      take: 5,
+    }),
+    db.teacherMissionLink.findMany({
+      where: {
+        teacherId: teacher.id,
+        status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+        expiresAt: { gte: new Date() },
+        booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) },
+      },
+      include: {
+        booking: {
+          include: {
+            client: { select: { name: true, phone: true } },
+            transactions: { where: { type: "CLIENT_PAYMENT" } },
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-  });
-  const openTasks = await db.teacherTask.findMany({
-    where: {
-      teacherId: teacher.id,
-      status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] },
-      booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) },
-    },
-    include: {
-      booking: {
-        select: {
-          reference: true,
-          subjectName: true,
-          levelName: true,
-          paymentStatus: true,
-          totalClientPays: true,
-          totalPrice: true,
-          paydunyaStatus: true,
-          paydunyaVerifiedAt: true,
-          transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    db.teacherTask.findMany({
+      where: {
+        teacherId: teacher.id,
+        status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] },
+        booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) },
+      },
+      include: {
+        booking: {
+          select: {
+            reference: true, subjectName: true, levelName: true, paymentStatus: true,
+            totalClientPays: true, totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
+            transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+          },
         },
       },
-    },
-    orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
-    take: 4,
-  });
-  const recentNotifications = await db.teacherNotification.findMany({
-    where: { teacherId: teacher.id },
-    orderBy: { createdAt: "desc" },
-    take: 4,
-  });
-  const paymentBookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      teacherId: teacher.id,
-      OR: [
-        {
-          teacherNetAmount: { gt: 0 },
-          status: { notIn: ["CANCELLED", "REFUNDED"] },
-        },
-        {
-          status: { in: ["CANCELLED", "REFUNDED"] },
-          paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
-          cancellationPenaltyTeacherAmount: { gt: 0 },
-        },
-      ],
+      orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
+      take: 4,
     }),
-    select: {
-      id: true,
-      status: true,
-      teacherNetAmount: true,
-      teacherPaidAmount: true,
-      cancellationPenaltyTeacherAmount: true,
-      paymentStatus: true,
-      totalClientPays: true,
-      totalPrice: true,
-      paydunyaStatus: true,
-      paydunyaVerifiedAt: true,
-      transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
-    },
-  });
-  const adjustments = await db.teacherPaymentAdjustment.findMany({
-    where: { teacherId: teacher.id },
-    select: { bookingId: true, amount: true, status: true },
-  });
-  const unreadServiceClientMessageCount = await db.teacherAdminMessage.count({
-    where: {
-      teacherId: teacher.id,
-      sender: "ADMIN",
-      readByTeacherAt: null,
-    },
-  });
-  const pendingScheduleProposalCount = await db.bookingScheduleProposal.count({
-    where: {
-      teacherId: teacher.id,
-      status: "PENDING",
-      booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) },
-    },
-  });
-  const pendingPayoutRequestCount = await db.teacherPayoutRequest.count({
-    where: {
-      teacherId: teacher.id,
-      status: "PENDING",
-    },
-  });
+    db.teacherNotification.findMany({ where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 4 }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({
+        teacherId: teacher.id,
+        OR: [
+          { teacherNetAmount: { gt: 0 }, status: { notIn: ["CANCELLED", "REFUNDED"] } },
+          { status: { in: ["CANCELLED", "REFUNDED"] }, paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] }, cancellationPenaltyTeacherAmount: { gt: 0 } },
+        ],
+      }),
+      select: {
+        id: true, status: true, teacherNetAmount: true, teacherPaidAmount: true,
+        cancellationPenaltyTeacherAmount: true, paymentStatus: true, totalClientPays: true,
+        totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
+        transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+      },
+    }),
+    db.teacherPaymentAdjustment.findMany({ where: { teacherId: teacher.id }, select: { bookingId: true, amount: true, status: true } }),
+    db.teacherAdminMessage.count({ where: { teacherId: teacher.id, sender: "ADMIN", readByTeacherAt: null } }),
+    db.bookingScheduleProposal.count({
+      where: { teacherId: teacher.id, status: "PENDING", booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) } },
+    }),
+    db.teacherPayoutRequest.count({ where: { teacherId: teacher.id, status: "PENDING" } }),
+  ]);
 
   const verifiedUpcomingBookings = upcomingBookings.filter(hasVerifiedPayDunyaClientPayment);
   const verifiedTodayBookings = todayBookings.filter(hasVerifiedPayDunyaClientPayment);
@@ -189,7 +158,7 @@ export default async function ProfesseurDashboardPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title={`Bonjour ${teacherName}`}
-        description="Votre espace professeur regroupe vos missions, disponibilités, paiements et notifications envoyées par le service client."
+        description="Missions, disponibilités et paiements."
         showBack={false}
         action={(
           <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
