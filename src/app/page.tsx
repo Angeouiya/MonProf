@@ -31,7 +31,7 @@ import { TeacherCard } from "@/components/shared/teacher-card";
 import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
 import { getLevelCategory, getSubjectCategory } from "@/lib/catalog-taxonomy";
-import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
+import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -89,23 +89,20 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const [featured, activeTeacherCount, subjects, levels, communes] = await Promise.all([
-    db.teacher.findMany({
-      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-      take: 6,
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true } },
-      },
-      orderBy: [{ rating: "desc" }],
-    }),
-    db.teacher.count({
-      where: { status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-    }),
-    getCachedSubjects(),
-    getCachedLevels(),
-    getCachedCommunes(),
-  ]);
+  const catalog = await getCachedTeacherSearchCatalog();
+  const featured = catalog.teacherCount > 0
+    ? await db.teacher.findMany({
+        where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+        take: 6,
+        include: {
+          subjects: { include: { subject: true } },
+          _count: { select: { reviews: true } },
+        },
+        orderBy: [{ rating: "desc" }],
+      })
+    : [];
+  const activeTeacherCount = catalog.teacherCount;
+  const { subjects, levels, communes } = catalog;
 
   const featuredCards = featured.map((t) => ({
     id: t.id,

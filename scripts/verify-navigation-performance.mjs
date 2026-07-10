@@ -11,6 +11,10 @@ const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientPayments = read("src/app/client/paiements/page.tsx");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
+const publicHome = read("src/app/page.tsx");
+const publicTeachers = read("src/app/professeurs/page.tsx");
+const clientBooking = read("src/app/client/reserver/page.tsx");
+const clientRegistration = read("src/app/inscription/page.tsx");
 
 check("Client session reads are cached per render", /export const getSessionUser = cache\(async/.test(session));
 check("Professor session and profile reads are cached per render", /export const getTeacherSessionUser = cache\(async/.test(teacherAuth) && /export const requireTeacher = cache\(async/.test(teacherAuth));
@@ -24,6 +28,9 @@ check("Client payments batch transactions and pending bookings on one pooled con
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
 check("Admin dashboard batches operational indicators on one pooled connection", hasDatabaseTransaction(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
+check("Public home uses one consolidated catalog read", /getCachedTeacherSearchCatalog/.test(publicHome) && !/getCachedSubjects|getCachedLevels|getCachedCommunes/.test(publicHome));
+check("Public teacher search batches results and uses the consolidated catalog", /getCachedTeacherSearchCatalog/.test(publicTeachers) && hasDatabaseTransaction(publicTeachers) && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers));
+check("Client onboarding and booking reuse the consolidated catalog", /getCachedTeacherSearchCatalog/.test(clientBooking) && /getCachedTeacherSearchCatalog/.test(clientRegistration));
 
 for (const result of checks) {
   console.log(`${result.ok ? "OK" : "FAIL"} ${result.label}`);

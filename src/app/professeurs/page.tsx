@@ -16,7 +16,7 @@ import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-
 import { EmptyState } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
-import { getCachedCommunes, getCachedLevels, getCachedSubjects } from "@/lib/catalog-cache";
+import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 
 export const dynamic = "force-dynamic";
@@ -97,12 +97,16 @@ export default async function TeachersPage({
   let communes: any[] = [];
 
   try {
-    totalVisibleTeachers = await db.teacher.count({ where: visibleTeacherWhere });
+    const catalog = await getCachedTeacherSearchCatalog();
+    totalVisibleTeachers = catalog.teacherCount;
+    subjects = catalog.subjects;
+    levels = catalog.levels;
+    communes = catalog.communes;
 
     if (totalVisibleTeachers > 0) {
-      total = await db.teacher.count({ where });
-      teachers = total > 0
-        ? await db.teacher.findMany({
+      const [teacherTotal, teacherRows] = await db.$transaction([
+        db.teacher.count({ where }),
+        db.teacher.findMany({
             where,
             orderBy,
             skip: (page - 1) * PAGE_SIZE,
@@ -111,13 +115,10 @@ export default async function TeachersPage({
               subjects: { include: { subject: true } },
               _count: { select: { reviews: true, bookings: true } },
             },
-          })
-        : [];
-      [subjects, levels, communes] = await Promise.all([
-        getCachedSubjects(),
-        getCachedLevels(),
-        getCachedCommunes(),
+          }),
       ]);
+      total = teacherTotal;
+      teachers = teacherRows;
     }
   } catch (error) {
     console.error("[teachers:public_query_failed]", error);

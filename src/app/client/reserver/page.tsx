@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getCachedCommunes } from "@/lib/catalog-cache";
+import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
 
@@ -23,7 +23,7 @@ export default async function ReserverPage({
   });
   if (!teacher) notFound();
 
-  const communes = await getCachedCommunes();
+  const { communes } = await getCachedTeacherSearchCatalog();
 
   const teacherSubjects = teacher.subjects.map((s) => ({
     id: s.subject.id,
