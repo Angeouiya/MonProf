@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewRatingSelector } from "@/components/shared/review-rating-selector";
 import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shared/important-action-confirm";
-import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink, Trash2 } from "lucide-react";
 import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { RESCHEDULE_POLICY_WINDOWS, getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
@@ -129,6 +129,14 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
     router.refresh();
   }
 
+  async function onDeleteDraft() {
+    const data = await callAction("delete_draft");
+    if (!data) return;
+    toast.success("Brouillon supprimé.");
+    router.replace(data.redirect || "/client/reservations?tab=brouillons");
+    router.refresh();
+  }
+
   async function onConfirmCourse() {
     const data = await callAction("confirm");
     if (!data) return;
@@ -167,6 +175,30 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           <ShieldCheck className="mr-2 h-4 w-4" />
           {loading === "paydunya_verify" ? "Vérification..." : "Vérifier le paiement"}
         </Button>
+        <ImportantActionConfirm
+          title="Supprimer ce brouillon ?"
+          description="Le dossier sera retiré de vos brouillons. Cette action est autorisée uniquement si aucun paiement PayDunya n'a été vérifié et si aucune mission n'a été créée."
+          badge="Suppression définitive"
+          notices={[
+            "Le professeur ne sera pas notifié.",
+            "Aucun paiement vérifié ne peut être supprimé.",
+            "Un lien PayDunya encore actif doit d'abord être annulé ou expiré.",
+            "Vous devrez recommencer une nouvelle réservation si vous changez d'avis.",
+          ]}
+          confirmLabel={loading === "delete_draft" ? "Suppression..." : "Supprimer le brouillon"}
+          cancelLabel="Conserver le brouillon"
+          onConfirm={onDeleteDraft}
+          trigger={
+            <Button
+              variant="outline"
+              className="min-h-11 w-full rounded-lg border-red-300 bg-white text-red-700 hover:border-red-600 hover:bg-white"
+              disabled={loading === "delete_draft"}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {loading === "delete_draft" ? "Suppression..." : "Supprimer le brouillon"}
+            </Button>
+          }
+        />
       </div>
     );
   }

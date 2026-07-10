@@ -73,9 +73,14 @@ export const TRANSPORT_FEES = {
     label: "Cours en ligne",
     amount: 0,
   },
+  SAME_NEIGHBORHOOD: {
+    key: "same_neighborhood",
+    label: "Même quartier exact",
+    amount: 0,
+  },
   SAME_AREA: {
     key: "same_area",
-    label: "Même quartier / même commune proche",
+    label: "Même commune, quartier différent",
     amount: 1000,
   },
   NEAR_COMMUNE: {
@@ -420,19 +425,32 @@ export function calculateGrandAbidjanTransportFee({
 
   if (sameArea(fallbackOrigin, destination)) {
     const sameKnownQuartier = Boolean(originQuartier && destinationQuartier && normalize(originQuartier) === normalize(destinationQuartier));
-    const amount = sameKnownQuartier ? 1000 : 1500;
+    if (sameKnownQuartier) {
+      return {
+        key: TRANSPORT_FEES.SAME_NEIGHBORHOOD.key,
+        label: TRANSPORT_FEES.SAME_NEIGHBORHOOD.label,
+        amount: TRANSPORT_FEES.SAME_NEIGHBORHOOD.amount,
+        originCommune: fallbackOrigin,
+        destinationCommune: destination,
+        originQuartier,
+        destinationQuartier,
+        routeLabel,
+        ruleLabel: "Même quartier exact : aucun frais de déplacement.",
+        coveredByTeacherZone,
+        isGrandAbidjanRoute: true,
+        isQuoteOnly: false,
+      };
+    }
     return {
       key: TRANSPORT_FEES.SAME_AREA.key,
       label: TRANSPORT_FEES.SAME_AREA.label,
-      amount,
+      amount: TRANSPORT_FEES.SAME_AREA.amount,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       originQuartier,
       destinationQuartier,
       routeLabel,
-      ruleLabel: sameKnownQuartier
-        ? "Même quartier : forfait léger appliqué."
-        : "Même commune ou même bassin proche : forfait local appliqué.",
+      ruleLabel: "Même commune, mais quartier différent : forfait local appliqué.",
       coveredByTeacherZone,
       isGrandAbidjanRoute: true,
       isQuoteOnly: false,

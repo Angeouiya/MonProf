@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
-import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
+import { ACTIVE_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/payment-methods";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import { getTeacherFinancialSettlement } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
@@ -125,14 +125,18 @@ export async function POST(req: NextRequest) {
 
     await tx.teacher.update({
       where: { id: teacher.id },
-      data: { lastActivityAt: now },
+      data: {
+        defaultPayoutMethod: method,
+        defaultPayoutPhone: paymentPhone,
+        lastActivityAt: now,
+      },
     });
 
     await tx.notification.create({
       data: {
         userId: null,
         title: "Demande de paiement professeur",
-        message: `${teacherName} demande ${amount.toLocaleString("fr-FR")} FCFA via ${method}. Numéro déclaré : ${paymentPhone}.`,
+        message: `${teacherName} demande ${amount.toLocaleString("fr-FR")} FCFA via ${paymentMethodLabel(method)}. Numéro déclaré : ${paymentPhone}.`,
         type: "TEACHER_PAYOUT_REQUEST",
         recipientType: "ADMIN",
         channel: "INTERNAL",
@@ -150,7 +154,7 @@ export async function POST(req: NextRequest) {
         action: "Demande de paiement professeur",
         entityType: "Teacher",
         entityId: teacher.id,
-        detail: `${teacherName} a demandé ${amount.toLocaleString("fr-FR")} FCFA via ${method}. Référence demande : ${reference}.`,
+        detail: `${teacherName} a demandé ${amount.toLocaleString("fr-FR")} FCFA via ${paymentMethodLabel(method)}. Référence demande : ${reference}.`,
         newStatus: "PENDING_PAYOUT_REQUEST",
       },
     });

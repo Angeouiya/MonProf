@@ -5,18 +5,11 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { formatFCFA } from "@/lib/format";
-import { activePaymentMethodOptions, paymentMethodLabel } from "@/lib/payment-methods";
+import { paymentMethodLabel } from "@/lib/payment-methods";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
+import { PayoutMethodPicker } from "@/components/professor/payout-method-picker";
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -113,7 +106,7 @@ export function TeacherPayoutRequestForm({
         </div>
       </div>
 
-      <div data-professor-payout-fields className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
+      <div data-professor-payout-fields className="mt-4 grid gap-3">
         <div>
           <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Montant demandé</label>
           <Input
@@ -129,21 +122,13 @@ export function TeacherPayoutRequestForm({
           )}
         </div>
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Moyen de paiement</label>
-          <Select value={method} onValueChange={setMethod} disabled={requestableAmount <= 0}>
-            <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {activePaymentMethodOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2">
-            <PaymentMethodLogo method={method} className="h-9 min-w-20 rounded-lg" />
-            <p className="text-xs font-semibold leading-5 text-[#64748B]">
-              Le service client paiera uniquement via le moyen choisi après vérification.
-            </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Choisir où recevoir les fonds</p>
+          <div className="mt-2">
+            <PayoutMethodPicker value={method} onChange={setMethod} disabled={loading} />
           </div>
+          <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">
+            Votre choix est enregistré avec la demande et devient votre préférence pour les prochains paiements.
+          </p>
         </div>
       </div>
 

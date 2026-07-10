@@ -28,6 +28,7 @@ type BookingLike = {
   paidAmount?: number | null;
   scheduledDate?: Date | string | null;
   scheduledTime?: string | null;
+  preferredTime?: string | null;
 };
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -101,7 +102,7 @@ export function getCancellationPolicy(booking: BookingLike, now = new Date(), ac
     return result("TEACHER_FAULT", "Annulation côté professeur", "Le client n'est pas pénalisé. Le service client propose un remplacement, un report ou un remboursement.", 0, baseAmount, serviceFeeAmount, null, null);
   }
 
-  const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime);
+  const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime || booking.preferredTime);
   if (!scheduledAt) {
     return result("UNSCHEDULED", "Cours non encore planifié", "Aucun créneau définitif n'est fixé. L'annulation client reste gratuite.", 0, baseAmount, serviceFeeAmount, null, null);
   }

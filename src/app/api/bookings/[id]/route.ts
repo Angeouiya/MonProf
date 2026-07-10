@@ -250,6 +250,83 @@ export async function PATCH(
   const now = new Date();
 
   switch (action) {
+    case "delete_draft": {
+      if (booking.status !== "PENDING_PAYMENT") {
+        return NextResponse.json({ error: "Seul un brouillon non réservé peut être supprimé." }, { status: 400 });
+      }
+      if (hasVerifiedPayDunyaClientPayment(booking)) {
+        return NextResponse.json({ error: "Ce dossier contient un paiement PayDunya vérifié et ne peut pas être supprimé." }, { status: 409 });
+      }
+
+      const terminalPayDunyaStatuses = ["FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CREATE_FAILED"];
+      const currentPayDunyaStatus = (booking.paydunyaStatus ?? "").toUpperCase();
+      if (booking.paydunyaToken && !terminalPayDunyaStatuses.includes(currentPayDunyaStatus)) {
+        const verification = await reconcilePayDunyaBookingPayment({
+          bookingId: booking.id,
+          expectedClientId: userId,
+          source: "client_draft_delete",
+        });
+        if (verification.verified) {
+          return NextResponse.json({
+            error: "Le paiement vient d'être confirmé par PayDunya. Le dossier est désormais une réservation active et ne peut pas être supprimé.",
+          }, { status: 409 });
+        }
+        if (!terminalPayDunyaStatuses.includes((verification.status ?? "").toUpperCase())) {
+          return NextResponse.json({
+            error: "Le lien PayDunya est encore actif. Annulez le paiement sur PayDunya ou attendez son expiration avant de supprimer ce brouillon.",
+          }, { status: 409 });
+        }
+      }
+
+      const protectedRelations = await db.booking.findUnique({
+        where: { id: booking.id },
+        select: {
+          _count: {
+            select: {
+              transactions: true,
+              reviews: true,
+              disputes: true,
+              teacherTasks: true,
+              teacherWarnings: true,
+              teacherSanctions: true,
+              replacements: true,
+              clientRefundRequests: true,
+              teacherPaymentAdjustments: true,
+              teacherPayoutAllocations: true,
+              missionLinks: true,
+              scheduleProposals: true,
+              rescheduleRequests: true,
+              teacherAdminMessages: true,
+            },
+          },
+        },
+      });
+      if (!protectedRelations || Object.values(protectedRelations._count).some((count) => count > 0)) {
+        return NextResponse.json({
+          error: "Ce brouillon possède déjà un historique opérationnel. Le service client doit l'archiver manuellement.",
+        }, { status: 409 });
+      }
+
+      await db.$transaction(async (tx) => {
+        await tx.notification.deleteMany({ where: { bookingId: booking.id } });
+        await tx.teacherNotification.deleteMany({ where: { bookingId: booking.id } });
+        await tx.clientCommunication.deleteMany({ where: { bookingId: booking.id } });
+        await tx.booking.delete({ where: { id: booking.id } });
+        await tx.adminActionLog.create({
+          data: {
+            action: "Brouillon client supprimé",
+            entityType: "Booking",
+            entityId: booking.id,
+            detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement PayDunya vérifié ni workflow opérationnel n'était rattaché.`,
+            oldStatus: "PENDING_PAYMENT",
+            newStatus: "DRAFT_DELETED",
+          },
+        });
+      });
+
+      return NextResponse.json({ ok: true, redirect: "/client/reservations?tab=brouillons" });
+    }
+
     case "paydunya_checkout": {
       if (booking.isQuoteOnly) {
         return NextResponse.json({ error: "Cette réservation nécessite un contrôle du prix. Le paiement sera disponible après validation du service client." }, { status: 400 });

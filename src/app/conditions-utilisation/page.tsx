@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.",
 };
 
-const version = "05 juillet 2026";
+const version = "10 juillet 2026";
 
 const sections: LegalSection[] = [
   {
@@ -36,7 +36,7 @@ const sections: LegalSection[] = [
   {
     title: "Compte et accès professeur",
     body: [
-      "L'accès professeur est un espace léger, interne et contrôlé. Il permet au professeur de consulter ses missions, confirmer ou refuser une réservation, proposer un créneau, suivre ses paiements, envoyer un message au service client et gérer certaines informations utiles.",
+      "L'accès professeur est un espace léger, interne et contrôlé. Il permet au professeur de consulter ses missions, confirmer sa disponibilité, signaler une indisponibilité selon la règle des 24 heures, proposer un créneau, suivre ses paiements, envoyer un message au service client et gérer certaines informations utiles.",
       "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il peut être retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
       "Le professeur s'engage à fournir une photo réelle, des informations exactes, des disponibilités sincères, un numéro de paiement fiable et à respecter les consignes du service client.",
     ],
@@ -47,6 +47,7 @@ const sections: LegalSection[] = [
       "Une réservation n'est pas active tant que le paiement PayDunya n'est pas effectué et vérifié côté serveur. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
       "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement PayDunya n'est pas validé par le serveur de Compétence.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
+      "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement PayDunya ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
     ],
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
@@ -67,8 +68,9 @@ const sections: LegalSection[] = [
   {
     title: "Disponibilités, horaires et modification de créneau",
     body: [
-      "Les disponibilités affichées ou proposées doivent être interprétées comme des créneaux opérationnels soumis à confirmation. Un professeur peut confirmer, refuser ou proposer un autre créneau lorsqu'il a un empêchement.",
+      "Les disponibilités affichées ou proposées doivent être interprétées comme des créneaux opérationnels soumis à confirmation. Un professeur peut confirmer, signaler une indisponibilité ou proposer un autre créneau selon le délai restant avant le cours.",
       "Si le professeur propose un nouveau créneau, le client peut accepter ou refuser depuis son espace. Une absence de réponse peut entraîner une relance, un remplacement ou une décision du service client.",
+      "À moins de 24 heures du cours, le professeur ne peut pas annuler directement la réservation. Il doit prioritairement proposer un nouveau créneau. En cas d'empêchement absolu signalé comme urgence, la réservation reste active pendant que Compétence recherche automatiquement un remplaçant compatible et soumet la proposition au client.",
       "Compétence peut modifier, remplacer ou annuler une attribution si la qualité du service, la sécurité, le paiement, l'adresse, la disponibilité ou la satisfaction client l'exige.",
     ],
   },
@@ -85,6 +87,7 @@ const sections: LegalSection[] = [
     title: "Remplacement d'un professeur",
     body: [
       "Compétence peut remplacer un professeur en cas d'indisponibilité, retard, absence, litige, mauvaise qualité, suspension, erreur d'affectation ou meilleure solution disponible.",
+      "Lorsqu'un professeur se déclare indisponible, le moteur de remplacement peut sélectionner automatiquement un professeur actif possédant une photo réelle, la même matière, le même niveau, un format et un créneau compatibles, sans conflit actif ni litige récent. Le client reste libre d'accepter ou de refuser cette proposition.",
       "Le client est informé du remplacement lorsque celui-ci impacte la réservation. L'ancien professeur et le nouveau professeur peuvent être notifiés par le service client.",
       "Le remplacement est enregistré dans l'historique de la réservation et peut entraîner un recalcul opérationnel ou financier lorsque la différence est justifiée.",
     ],
@@ -109,6 +112,7 @@ const sections: LegalSection[] = [
     title: "Paiement professeur",
     body: [
       "La comptabilité professeur est interne à Compétence. Le professeur ne dispose pas d'un wallet autonome. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables par le service client.",
+      "Le professeur choisit le moyen sur lequel il souhaite recevoir ses fonds parmi Wave, Orange Money, MTN Money et Moov Money. Il saisit puis confirme deux fois le numéro exact. Ce choix est enregistré comme préférence et peut être modifié dans Paramètres ou lors d'une nouvelle demande.",
       "Lorsqu'un professeur fait une demande de paiement, il doit saisir le montant demandé, le moyen de paiement et confirmer le numéro exact. Une demande de paiement validement envoyée est traitée entre 1 heure et 72 heures ouvrées après contrôle du service client.",
       "Ce délai peut être prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
       "Compétence peut payer partiellement, suspendre, différer, refuser ou ajuster un paiement professeur lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient.",
@@ -120,6 +124,14 @@ const sections: LegalSection[] = [
       "Les clients peuvent laisser des avis et notes lorsque le cours le permet. Le service client peut également attribuer une note qualité interne ou publique selon son contrôle opérationnel.",
       "Compétence peut masquer, corriger, refuser ou modérer un avis abusif, injurieux, mensonger, non pertinent, frauduleux ou contraire à l'intérêt du service.",
       "Les notes et avis servent à améliorer la qualité, orienter les décisions du service client, détecter les litiges et protéger les clients.",
+    ],
+  },
+  {
+    title: "Frais de déplacement",
+    body: [
+      "Les frais de déplacement concernent uniquement les cours à domicile. Aucun frais de déplacement n'est appliqué aux cours en ligne.",
+      "Même quartier exact : lorsque le quartier du professeur et celui du client correspondent dans la même commune, les frais de déplacement sont de 0 FCFA. Lorsque la commune est identique mais le quartier différent, le forfait local affiché avant paiement peut s'appliquer.",
+      "Pour les communes proches, éloignées ou les villes hors Grand Abidjan, la plateforme applique automatiquement le palier publié selon les informations disponibles. Le client doit vérifier la commune, le quartier et le montant avant paiement.",
     ],
   },
   {

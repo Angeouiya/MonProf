@@ -6,6 +6,7 @@ import { requireTeacher } from "@/lib/teacher-auth";
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { getTeacherMissionTiming } from "@/lib/teacher-mission-policy";
 import { Button } from "@/components/ui/button";
 import { MissionResponseActions } from "@/components/professor/mission-response-actions";
 import { ProfessorRescheduleRequestActions } from "@/components/professor/reschedule-request-actions";
@@ -57,6 +58,7 @@ export default async function ProfesseurMissionsPage() {
           {verifiedBookings.map((booking) => {
             const mission = booking.missionLinks[0];
             const pendingReschedule = booking.rescheduleRequests.find((request) => request.status === "AWAITING_TEACHER");
+            const missionTiming = getTeacherMissionTiming(booking);
             const canRespond = Boolean(
               mission
               && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
@@ -112,7 +114,7 @@ export default async function ProfesseurMissionsPage() {
                         <ProfessorRescheduleRequestActions requestId={pendingReschedule.id} />
                       </div>
                     ) : canRespond && mission ? (
-                      <MissionResponseActions token={mission.token} compact />
+                      <MissionResponseActions token={mission.token} compact within24Hours={missionTiming.within24Hours} courseStarted={missionTiming.courseStarted} />
                     ) : (
                       <div className="space-y-3">
                         <p className="text-sm font-semibold leading-6 text-[#64748B]">

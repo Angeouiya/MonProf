@@ -16,15 +16,19 @@ export function MissionResponseActions({
   token,
   disabled,
   compact = false,
+  within24Hours = false,
+  courseStarted = false,
 }: {
   token: string;
   disabled?: boolean;
   compact?: boolean;
+  within24Hours?: boolean;
+  courseStarted?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [response, setResponse] = useState("");
-  const [showReschedule, setShowReschedule] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(within24Hours);
   const [proposalDate, setProposalDate] = useState("");
   const [proposalStartTime, setProposalStartTime] = useState("");
   const [done, setDone] = useState(false);
@@ -38,6 +42,10 @@ export function MissionResponseActions({
     }
     if ((action === "unavailable" || action === "problem" || action === "reschedule") && cleanResponse.length < MIN_RESPONSE_LENGTH_FOR_ISSUE) {
       toast.error("Expliquez brièvement la raison pour aider le service client.");
+      return;
+    }
+    if (action === "unavailable" && courseStarted) {
+      toast.error("Le cours a déjà commencé ou est dépassé. Signalez un problème au service client.");
       return;
     }
     if (action === "reschedule") {
@@ -100,14 +108,24 @@ export function MissionResponseActions({
         </p>
         <p>Obligatoire si vous êtes indisponible, signalez un problème ou proposez un autre créneau.</p>
       </div>
+      {within24Hours && (
+        <div className="rounded-lg border border-[#111B4D] bg-white p-3 text-xs font-semibold leading-5 text-[#111B4D]">
+          À moins de 24h, la réservation ne peut pas être annulée directement par le professeur. Proposez un nouveau créneau. En cas d'empêchement absolu, signalez une urgence : la réservation reste active et un remplaçant compatible est proposé automatiquement au client.
+        </div>
+      )}
       <div className="grid gap-2 min-[760px]:grid-cols-3">
         <Button disabled={disabled || !!loading} onClick={() => send("confirm")} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           Confirmer
         </Button>
-        <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("unavailable")} className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]">
-          {loading === "unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-          Indisponible
+        <Button
+          variant="outline"
+          disabled={disabled || !!loading || courseStarted}
+          onClick={() => send("unavailable")}
+          className={`min-h-11 rounded-lg bg-white ${within24Hours ? "border-red-300 text-red-700" : "border-[#D7DEE9] text-[#111B4D]"}`}
+        >
+          {loading === "unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : within24Hours ? <ShieldAlert className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+          {within24Hours ? "Signaler une urgence" : "Indisponible"}
         </Button>
         <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("problem")} className="min-h-11 rounded-lg border-red-300 bg-white text-red-700">
           {loading === "problem" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
@@ -123,7 +141,7 @@ export function MissionResponseActions({
           className="min-h-11 w-full justify-start rounded-lg border border-[#D7DEE9] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
         >
           <CalendarClock className="h-4 w-4" />
-          Proposer un autre créneau
+          {within24Hours ? "Proposer le nouveau créneau requis" : "Proposer un autre créneau"}
         </Button>
         {showReschedule && (
           <div className="mt-3 space-y-3 border-t border-[#E6EAF3] pt-3">

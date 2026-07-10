@@ -5,6 +5,7 @@ import {
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { findBestReplacementCandidate } from "@/lib/teacher-replacement-matching";
+import { getTeacherMissionTiming } from "@/lib/teacher-mission-policy";
 
 const MIN_RESPONSE_LENGTH_FOR_ISSUE = 10;
 const MAX_RESPONSE_LENGTH = 700;
@@ -87,6 +88,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
 
   const now = new Date();
   const teacherName = mission.teacher.professionalName || mission.teacher.fullName;
+  const missionTiming = getTeacherMissionTiming(mission.booking, now);
+  if (action === "unavailable" && missionTiming.courseStarted) {
+    return NextResponse.json({
+      error: "Le cours a déjà commencé ou est dépassé. Utilisez Signaler un problème pour ouvrir un traitement par le service client.",
+    }, { status: 409 });
+  }
+  const urgentUnavailability = action === "unavailable" && missionTiming.within24Hours;
   if (action === "reschedule") {
     const formattedDate = formatProposalDate(proposedDate!);
     let proposalId = "";
@@ -389,8 +397,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
     await tx.notification.create({
       data: {
         userId: null,
-        title: action === "unavailable" ? "Professeur indisponible" : "Problème signalé par le professeur",
-        message: `${teacherName} a répondu sur la mission ${mission.booking.reference}: ${response || status}. Remplacement recommandé.`,
+        title: urgentUnavailability ? "Urgence professeur à moins de 24h" : action === "unavailable" ? "Professeur indisponible" : "Problème signalé par le professeur",
+        message: `${teacherName} a répondu sur la mission ${mission.booking.reference}: ${response || status}. ${urgentUnavailability ? "Le cours est prévu dans moins de 24h. Remplacement automatique prioritaire." : "Remplacement recommandé."}`,
         type: action === "unavailable" ? "REPLACEMENT_RECOMMENDED" : "TEACHER_PROBLEM",
         recipientType: "ADMIN",
         channel: "INTERNAL",
@@ -542,7 +550,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         action: action === "unavailable" ? "Mission professeur refusée" : "Problème mission signalé",
         entityType: "TeacherMissionLink",
         entityId: mission.id,
-        detail: `${teacherName} a répondu ${status} pour ${mission.booking.reference}${response ? `: ${response}` : "."}`,
+        detail: `${teacherName} a répondu ${status} pour ${mission.booking.reference}${urgentUnavailability ? " à moins de 24h" : ""}${response ? `: ${response}` : "."}`,
         oldStatus: mission.status,
         newStatus: status,
       },

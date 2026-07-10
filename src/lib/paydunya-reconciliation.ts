@@ -12,7 +12,7 @@ type ReconcilePayDunyaInput = {
   bookingReference?: string | null;
   token?: string | null;
   expectedClientId?: string | null;
-  source: "webhook" | "client_return" | "client_manual" | "client_checkout";
+  source: "webhook" | "client_return" | "client_manual" | "client_checkout" | "client_draft_delete";
   incomingStatus?: string | null;
   incomingPayload?: unknown;
   incomingHashVerified?: boolean;
@@ -155,7 +155,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     input.bookingId === booking.id
     && booking.paydunyaToken
     && token === booking.paydunyaToken
-    && (input.source === "client_return" || input.source === "client_manual" || trustedWebhookHash)
+    && (input.source === "client_return" || input.source === "client_manual" || input.source === "client_draft_delete" || trustedWebhookHash)
   );
   const customMatches = foundByStoredToken
     || foundByTrustedBookingAndStoredToken

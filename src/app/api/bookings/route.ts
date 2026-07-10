@@ -410,6 +410,9 @@ export async function POST(req: NextRequest) {
     ...normalizedSelectedSlots.map(availabilitySelectionLabel),
     ...(customTimeRequest ? [customTimeRequest] : []),
   ].join(" ; ");
+  const initialScheduledTime = normalizedSelectedSlots.length > 0
+    ? availabilitySelectionLabel(normalizedSelectedSlots[0])
+    : customTimeRequest || null;
 
   const client = await db.user.findUnique({
     where: { id: userId },
@@ -452,6 +455,7 @@ export async function POST(req: NextRequest) {
         preferredTime: normalizedPreferredTime,
         startDate: parsedStartDate,
         scheduledDate: parsedStartDate,
+        scheduledTime: initialScheduledTime,
         sessionsCount: normalizedSessionsCount,
         packType,
         message: message || null,

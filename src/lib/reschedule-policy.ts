@@ -59,6 +59,7 @@ export type ReschedulePolicyBooking = {
   paymentServiceFeeAmount?: number | null;
   scheduledDate?: Date | string | null;
   scheduledTime?: string | null;
+  preferredTime?: string | null;
 };
 
 export type ReschedulePolicyResult = {
@@ -93,7 +94,7 @@ export function getReschedulePolicy(
   now: Date = new Date(),
 ): ReschedulePolicyResult {
   const baseAmount = getRescheduleBaseAmount(booking);
-  const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime);
+  const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime || booking.preferredTime);
 
   if (!scheduledAt) {
     return result(

@@ -322,7 +322,11 @@ export default function TarifsPage() {
                   {fee.amount === null ? "Forfait appliqué" : formatFCFA(fee.amount)}
                 </p>
                 <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                  Frais affichés avant paiement, sans frais cachés côté client.
+                  {fee.key === "same_neighborhood"
+                    ? "Aucun déplacement facturé lorsque les deux quartiers correspondent exactement."
+                    : fee.key === "online"
+                      ? "Aucun déplacement pour un cours entièrement en ligne."
+                      : "Frais affichés avant paiement, sans frais cachés côté client."}
                 </p>
               </div>
             ))}
@@ -332,7 +336,7 @@ export default function TarifsPage() {
               <div>
                 <p className="text-sm font-semibold text-[#111B4D]">Calcul de déplacement automatique</p>
                 <p className="mt-2 text-sm leading-relaxed text-[#394568]">
-                  À domicile, la plateforme compare la zone du professeur et celle du client : même zone, proche, éloignée ou forfait automatique pour les villes hors matrice.
+                  À domicile, la plateforme compare la commune et le quartier du professeur avec ceux du client : même quartier sans frais, même commune, route proche, route éloignée ou forfait automatique pour les villes hors matrice.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-semibold text-[#111B4D]">
                   {GRAND_ABIDJAN_AREAS.slice(0, 10).map((area) => (

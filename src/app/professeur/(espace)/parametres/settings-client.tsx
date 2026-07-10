@@ -7,15 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
-import { activePaymentMethodOptions, paymentMethodLabel } from "@/lib/payment-methods";
+import { PayoutMethodPicker } from "@/components/professor/payout-method-picker";
+import { paymentMethodLabel } from "@/lib/payment-methods";
 
 function normalizePaymentPhone(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
@@ -140,23 +133,12 @@ export function TeacherPaymentProfileSettingsForm({
 
   return (
     <form onSubmit={submit} className="mt-5 grid gap-4">
-      <div className="grid gap-3 min-[720px]:grid-cols-[minmax(0,1fr)_11rem]">
-        <div className="space-y-1.5">
-          <Label htmlFor="teacher-payout-method">Moyen de paiement préféré</Label>
-          <Select value={method} onValueChange={setMethod}>
-            <SelectTrigger id="teacher-payout-method" className="h-11 rounded-lg border-[#DDE6F7] bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {activePaymentMethodOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-end">
-          <PaymentMethodLogo method={method} className="h-11 w-full rounded-lg" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-[#111827]">Moyen de paiement préféré</p>
+        <PayoutMethodPicker value={method} onChange={setMethod} disabled={saving} />
+        <p className="text-xs font-semibold leading-5 text-[#64748B]">
+          Orange Money, MTN Money, Moov Money ou Wave. Le moyen sélectionné préremplit chaque nouvelle demande.
+        </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

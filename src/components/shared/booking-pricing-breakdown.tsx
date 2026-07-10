@@ -165,7 +165,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                 <PricingLine
                   label="Déplacement"
                   detail={transportRouteLabel ?? "Frais selon zone"}
-                  value={transportFee > 0 ? <Money amount={transportFee} /> : "Inclus"}
+                  value={<Money amount={transportFee} />}
                 />
               )}
               {paymentServiceFeeAmount > 0 && (

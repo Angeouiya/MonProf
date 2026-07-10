@@ -78,7 +78,7 @@ function hasActiveConflict(
   ));
 }
 
-function isAvailabilityCompatible(rawAvailability: string | null, booking: { preferredDays: string; scheduledDate: Date | null; scheduledTime: string | null }) {
+function isAvailabilityCompatible(rawAvailability: string | null, booking: { preferredDays: string; scheduledDate: Date | null; scheduledTime: string | null; preferredTime?: string | null }) {
   const availability = parseAvailability(rawAvailability);
   const requestedDays = Array.from(new Set([
     ...parsePreferredDays(booking.preferredDays).map(dayKeyFromLabel),
@@ -86,7 +86,7 @@ function isAvailabilityCompatible(rawAvailability: string | null, booking: { pre
   ].filter(Boolean)));
   if (requestedDays.length === 0) return true;
 
-  const scheduledSlot = slotKeyFromTime(booking.scheduledTime);
+  const scheduledSlot = slotKeyFromTime(booking.scheduledTime || booking.preferredTime);
   if (scheduledSlot) {
     return requestedDays.some((day) => Boolean(availability[day]?.[scheduledSlot]));
   }

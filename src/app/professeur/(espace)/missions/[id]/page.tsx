@@ -7,6 +7,7 @@ import { requireTeacher } from "@/lib/teacher-auth";
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { getTeacherMissionTiming } from "@/lib/teacher-mission-policy";
 import { Button } from "@/components/ui/button";
 import { MissionResponseActions } from "@/components/professor/mission-response-actions";
 import { ProfessorRescheduleRequestActions } from "@/components/professor/reschedule-request-actions";
@@ -47,6 +48,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
   const rescheduleTeacherSupplement = booking.rescheduleRequests
     .filter((request) => ["AWAITING_TEACHER", "APPLIED"].includes(request.status))
     .reduce((sum, request) => sum + request.feeTeacherAmount, 0);
+  const missionTiming = getTeacherMissionTiming(booking);
 
   return (
     <div className="space-y-6">
@@ -165,7 +167,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
                   <ProfessorRescheduleRequestActions requestId={pendingReschedule.id} />
                 </div>
               ) : activeMission ? (
-                <MissionResponseActions token={activeMission.token} />
+                <MissionResponseActions token={activeMission.token} within24Hours={missionTiming.within24Hours} courseStarted={missionTiming.courseStarted} />
               ) : (
                 <EmptyProfessorState
                   title="Aucune confirmation ouverte"

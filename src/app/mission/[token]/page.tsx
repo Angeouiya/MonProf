@@ -11,6 +11,7 @@ import { buildWhatsAppUrl } from "@/lib/phone";
 import { MissionCopyPanel } from "./mission-copy-panel";
 import { parsePricingSnapshot } from "@/lib/pricing";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { getTeacherMissionTiming } from "@/lib/teacher-mission-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
   const clientWhatsAppUrl = buildWhatsAppUrl(booking.client.phone, clientMessage);
   const clientPhoneHref = booking.client.phone ? `tel:${booking.client.phone.replace(/\s+/g, "")}` : "";
   const displayCourseDate = booking.scheduledDate ?? booking.startDate;
+  const missionTiming = getTeacherMissionTiming(booking);
   const missionSummary = [
     `Mission Compétence - ${booking.reference}`,
     `Professeur : ${teacherName}`,
@@ -247,7 +249,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               </div>
             )}
             <p className="text-xs font-medium text-[#64748B]">Lien valide jusqu'au {formatDateTime(mission.expiresAt)}. Vous ne pouvez accéder qu'à cette mission.</p>
-            <MissionActions token={token} disabled={locked} />
+            <MissionActions token={token} disabled={locked} within24Hours={missionTiming.within24Hours} courseStarted={missionTiming.courseStarted} />
           </CardContent>
         </Card>
 

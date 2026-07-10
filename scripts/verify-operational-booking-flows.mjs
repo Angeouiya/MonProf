@@ -15,6 +15,13 @@ const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.t
 const bookingCreateApi = read("src/app/api/bookings/route.ts");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const pricingEngine = read("src/lib/pricing.ts");
+const replacementEngine = read("src/lib/teacher-replacement-matching.ts");
+const missionPolicy = read("src/lib/teacher-mission-policy.ts");
+const missionActions = read("src/components/professor/mission-response-actions.tsx");
+const payoutPicker = read("src/components/professor/payout-method-picker.tsx");
+const payoutRequestRoute = read("src/app/api/professor/payout-requests/route.ts");
+const termsPage = read("src/app/conditions-utilisation/page.tsx");
+const privacyPage = read("src/app/politique-confidentialite/page.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -28,6 +35,22 @@ record(
   "Online bookings never include a transport fee",
   /ONLINE:\s*\{[\s\S]*?key:\s*"online"[\s\S]*?amount:\s*0/.test(pricingEngine)
     && /input\.deliveryMode\s*!==\s*"domicile"[\s\S]*?key:\s*TRANSPORT_FEES\.ONLINE\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.ONLINE\.amount/.test(pricingEngine),
+);
+
+record(
+  "Exact same-neighborhood home lessons have no transport fee",
+  /SAME_NEIGHBORHOOD:\s*\{[\s\S]*?key:\s*"same_neighborhood"[\s\S]*?amount:\s*0/.test(pricingEngine)
+    && /sameKnownQuartier[\s\S]*?key:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.amount/.test(pricingEngine)
+    && /SAME_AREA:\s*\{[\s\S]*?key:\s*"same_area"[\s\S]*?amount:\s*1000/.test(pricingEngine),
+);
+
+record(
+  "Professor explicitly chooses and persists one of four payout methods",
+  /data-professor-payout-method-picker/.test(payoutPicker)
+    && /role="radiogroup"/.test(payoutPicker)
+    && /activePaymentMethodOptions\.map/.test(payoutPicker)
+    && /defaultPayoutMethod:\s*method/.test(payoutRequestRoute)
+    && /defaultPayoutPhone:\s*paymentPhone/.test(payoutRequestRoute),
 );
 
 record(
@@ -59,6 +82,38 @@ record(
     && /AUTO_REPLACEMENT_PROPOSED/.test(missionRoute)
     && /RESPOND_REPLACEMENT_PROPOSAL/.test(missionRoute)
     && /AUTO_REPLACEMENT_NOT_FOUND/.test(missionRoute),
+);
+
+record(
+  "Teacher unavailability inside 24h prioritizes rescheduling and urgent automatic replacement",
+  /TEACHER_UNAVAILABILITY_NOTICE_HOURS\s*=\s*24/.test(missionPolicy)
+    && /within24Hours/.test(missionPolicy)
+    && /À moins de 24h/.test(missionActions)
+    && /Signaler une urgence/.test(missionActions)
+    && /getTeacherMissionTiming/.test(missionRoute)
+    && /urgentUnavailability/.test(missionRoute)
+    && /findBestReplacementCandidate/.test(missionRoute),
+);
+
+record(
+  "Automatic replacement checks the exact requested time when available",
+  /slotKeyFromTime\(booking\.scheduledTime\s*\|\|\s*booking\.preferredTime\)/.test(replacementEngine)
+    && /sameSubject/.test(replacementEngine)
+    && /sameLevel/.test(replacementEngine)
+    && /!item\.compatibility\.activeConflict/.test(replacementEngine)
+    && /item\.compatibility\.recentDisputeCount\s*===\s*0/.test(replacementEngine),
+);
+
+record(
+  "Client can resume or safely delete an unpaid draft",
+  /case\s+"paydunya_checkout"/.test(bookingApi)
+    && /case\s+"delete_draft"/.test(bookingApi)
+    && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(bookingApi)
+    && /source:\s*"client_draft_delete"/.test(bookingApi)
+    && /terminalPayDunyaStatuses/.test(bookingApi)
+    && /Object\.values\(protectedRelations\._count\)\.some/.test(bookingApi)
+    && /Supprimer le brouillon/.test(bookingActions)
+    && /Payer via PayDunya/.test(bookingActions),
 );
 
 record(
@@ -145,6 +200,17 @@ record(
   /parsedReschedule\.startsAt\.getTime\(\)\s*<\s*now\.getTime\(\)\s*\+\s*2\s*\*\s*60\s*\*\s*60\s*\*\s*1000/.test(bookingApi)
     && /policy\.code\s*===\s*"NO_SHOW"/.test(bookingApi)
     && /Le cours est déjà commencé ou dépassé/.test(bookingApi),
+);
+
+record(
+  "Legal documents describe the current payout, draft, replacement and transport rules",
+  /10 juillet 2026/.test(termsPage)
+    && /brouillon créé avant paiement/.test(termsPage)
+    && /À moins de 24 heures/.test(termsPage)
+    && /Même quartier exact/.test(termsPage)
+    && /10 juillet 2026/.test(privacyPage)
+    && /Données de brouillon/.test(privacyPage)
+    && /moyen Mobile Money préféré/.test(privacyPage),
 );
 
 for (const check of checks) {

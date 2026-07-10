@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.",
 };
 
-const version = "05 juillet 2026";
+const version = "10 juillet 2026";
 
 const sections: LegalSection[] = [
   {
@@ -34,8 +34,9 @@ const sections: LegalSection[] = [
       "Données d'identification : nom, prénom ou nom affiché, email, téléphone, commune, quartier, adresse de cours si nécessaire.",
       "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité.",
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
+      "Données de brouillon : contenu du dossier non payé, référence PayDunya éventuelle, date de création et état de reprise ou de suppression.",
       "Données de paiement : montant payé, frais liés au moyen de paiement, référence PayDunya, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
-      "Données professeur : photo réelle obligatoire, identité, téléphone, email, matières, niveaux, disponibilités, mini-CV, expériences, notes du service client, avis, sanctions, paiements et demandes de paiement.",
+      "Données professeur : photo réelle obligatoire, identité, téléphone, email, matières, niveaux, disponibilités, mini-CV, expériences, notes du service client, avis, sanctions, paiements, moyen Mobile Money préféré, numéro confirmé et demandes de paiement.",
       "Données de communication : notifications, emails, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
       "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes et preuves nécessaires à la lutte contre les faux paiements.",
     ],
@@ -52,6 +53,7 @@ const sections: LegalSection[] = [
       "Vérifier les paiements PayDunya côté serveur avant toute réservation active ou notification professeur.",
       "Notifier les clients, professeurs et l'équipe Compétence sur les événements importants.",
       "Gérer les litiges, sanctions, remplacements, avis, remboursements, paiements professeurs et journaux d'activité.",
+      "Rechercher automatiquement un professeur remplaçant compatible lorsque le professeur initial signale une indisponibilité, puis permettre au client d'accepter ou de refuser la proposition.",
       "Prévenir la fraude, les paiements non vérifiés, les abus, les contournements de plateforme et les comportements non professionnels.",
       "Améliorer l'ergonomie, la qualité du service, la sécurité et la performance de la plateforme.",
     ],
@@ -81,8 +83,9 @@ const sections: LegalSection[] = [
     title: "Paiements et remboursements",
     body: [
       "Aucune réservation active n'est créée tant que le paiement PayDunya n'est pas effectué et vérifié côté serveur. Une réservation non payée reste un brouillon ou une intention de réservation.",
+      "Le client peut reprendre un brouillon depuis son espace ou le supprimer si aucun paiement vérifié ni workflow protégé n'y est rattaché. La suppression retire le dossier et les notifications liées, tout en conservant une trace d'audit minimale non financière nécessaire à la sécurité.",
       "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions du service client.",
-      "Les demandes de paiement des professeurs sont suivies dans la comptabilité interne de Compétence. Un professeur doit saisir le montant demandé, le moyen de paiement et confirmer son numéro. Une erreur de numéro peut retarder ou empêcher le paiement.",
+      "Les demandes de paiement des professeurs sont suivies dans la comptabilité interne de Compétence. Le professeur choisit Wave, Orange Money, MTN Money ou Moov Money, saisit le montant demandé et confirme son numéro. La préférence enregistrée sert uniquement au traitement des versements et peut être modifiée par le professeur.",
     ],
   },
   {
