@@ -24,7 +24,7 @@ type ImportantActionConfirmProps = {
   notices?: string[];
   confirmLabel?: string;
   cancelLabel?: string;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: () => boolean | void | Promise<boolean | void>;
   danger?: boolean;
 };
 
@@ -45,8 +45,8 @@ export function ImportantActionConfirm({
   async function handleConfirm() {
     setSubmitting(true);
     try {
-      await onConfirm();
-      setOpen(false);
+      const completed = await onConfirm();
+      if (completed !== false) setOpen(false);
     } finally {
       setSubmitting(false);
     }

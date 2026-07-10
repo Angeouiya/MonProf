@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { Money } from "@/components/shared/money";
+import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
 
 type ReplacementProposal = {
   id: string;
@@ -58,8 +58,8 @@ export function ReplacementProposalActions({
   const [response, setResponse] = useState("");
   const pendingProposal = proposals.find((proposal) => ["DRAFT", "CLIENT_NOTIFIED"].includes(proposal.status));
 
-  async function respond(action: "accept_replacement_proposal" | "reject_replacement_proposal") {
-    if (!pendingProposal) return;
+  async function respond(action: "accept_replacement_proposal" | "reject_replacement_proposal" | "cancel_after_teacher_unavailable") {
+    if (!pendingProposal) return false;
     setLoading(action);
     try {
       const res = await fetch(`/api/bookings/${bookingId}`, {
@@ -74,15 +74,21 @@ export function ReplacementProposalActions({
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Action impossible");
-        return;
+        return false;
       }
-      toast.success(action === "accept_replacement_proposal"
-        ? "Nouveau professeur accepté. La mission lui est transmise."
-        : "Refus transmis au service client.");
+      toast.success(
+        action === "accept_replacement_proposal"
+          ? "Nouveau professeur accepté. La mission lui est transmise."
+          : action === "cancel_after_teacher_unavailable"
+            ? "Réservation annulée sans pénalité."
+            : "Refus transmis au service client.",
+      );
       setResponse("");
       router.refresh();
+      return true;
     } catch {
       toast.error("Erreur réseau");
+      return false;
     } finally {
       setLoading(null);
     }
@@ -132,14 +138,7 @@ export function ReplacementProposalActions({
           </div>
           <div className="mt-3 grid gap-2 min-[460px]:grid-cols-2">
             <Mini label="Professeur initial" value={oldTeacherName} />
-            <Mini
-              label="Impact comptable"
-              value={mainProposal.financialImpact === 0
-                ? "Aucun"
-                : mainProposal.financialImpact > 0
-                  ? <>+<Money amount={mainProposal.financialImpact} /></>
-                  : <Money amount={Math.abs(mainProposal.financialImpact)} />}
-            />
+            <Mini label="Coût pour vous" value="Aucun supplément" />
           </div>
           {mainProposal.clientMessage && (
             <p className="mt-3 whitespace-pre-line text-sm font-medium leading-6 text-[#64748B]">
@@ -171,15 +170,31 @@ export function ReplacementProposalActions({
                 {loading === "accept_replacement_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Accepter ce professeur
               </Button>
-              <Button
-                variant="outline"
-                disabled={!!loading}
-                onClick={() => respond("reject_replacement_proposal")}
-                className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
-              >
-                {loading === "reject_replacement_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                Refuser
-              </Button>
+              <ImportantActionConfirm
+                trigger={(
+                  <Button
+                    variant="outline"
+                    disabled={!!loading}
+                    className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
+                  >
+                    {loading === "cancel_after_teacher_unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                    Annuler sans pénalité
+                  </Button>
+                )}
+                title="Annuler cette réservation ?"
+                description="Le professeur initial a déclaré son indisponibilité. Vous pouvez donc annuler sans aucune pénalité d'annulation."
+                badge="Indisponibilité professeur"
+                notices={[
+                  "Le professeur proposé ne sera pas affecté.",
+                  "Aucune pénalité client ne sera appliquée.",
+                  "Les éventuels frais techniques PayDunya ne constituent pas une pénalité et restent traités selon les conditions de paiement affichées.",
+                  "Le montant remboursable sera enregistré et vos coordonnées de remboursement pourront être renseignées dans la réservation.",
+                ]}
+                confirmLabel="Confirmer l'annulation"
+                cancelLabel="Garder la réservation"
+                danger
+                onConfirm={() => respond("cancel_after_teacher_unavailable")}
+              />
             </div>
           </>
         )}

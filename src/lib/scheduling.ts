@@ -62,6 +62,14 @@ export function normalizeAvailability(raw?: unknown): AvailabilityGrid {
   return empty;
 }
 
+export function countAvailabilitySlots(raw?: unknown): number {
+  const availability = normalizeAvailability(raw);
+  return WEEK_DAYS.reduce(
+    (total, day) => total + TWO_HOUR_SLOTS.filter((slot) => availability[day.key]?.[slot.key]).length,
+    0,
+  );
+}
+
 export function parseAvailability(raw?: string | null): AvailabilityGrid {
   if (!raw) return createEmptyAvailability();
   try {

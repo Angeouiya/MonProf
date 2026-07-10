@@ -360,7 +360,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         title: { contains: action === "unavailable" ? "Remplacer" : "problème" },
       },
     });
-    if (!existingReplacementTask) {
+    if (!existingReplacementTask && !autoReplacement.candidate) {
       await tx.teacherTask.create({
         data: {
           teacherId: mission.teacherId,
@@ -427,9 +427,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
         `Heure : ${timeLabel}`,
         `Format : ${formatLabel}`,
         autoReplacement.candidate.transportRouteLabel ? `Trajet : ${autoReplacement.candidate.transportRouteLabel}` : "",
-        `Montant professeur ajusté : ${autoReplacement.candidate.netAmount.toLocaleString("fr-FR")} FCFA`,
+        "Aucun supplément ne vous sera demandé pour ce remplacement.",
         "",
-        "Votre paiement reste sécurisé. Vous pouvez accepter ce professeur ou refuser la proposition depuis votre réservation.",
+        "Votre paiement reste sécurisé. Vous pouvez accepter ce professeur ou annuler sans pénalité depuis votre réservation.",
       ].filter(Boolean).join("\n");
       await tx.teacherReplacement.updateMany({
         where: {
@@ -504,18 +504,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
           content: clientMessage,
           priority: "URGENT",
           status: "SENT",
-        },
-      });
-      await tx.teacherTask.create({
-        data: {
-          teacherId: mission.teacherId,
-          bookingId: mission.bookingId,
-          type: "ADMIN_ACTION",
-          title: `Suivre réponse client - remplaçant proposé ${mission.booking.reference}`,
-          description: `${newTeacherName} a été proposé automatiquement. Si le client refuse, choisir un autre profil ou confirmer l'annulation/remboursement.`,
-          priority: "URGENT",
-          status: "TODO",
-          dueAt: new Date(now.getTime() + 2 * 60 * 60 * 1000),
         },
       });
       await tx.adminActionLog.create({

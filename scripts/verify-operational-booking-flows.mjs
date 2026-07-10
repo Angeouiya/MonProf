@@ -56,15 +56,30 @@ record(
 );
 
 record(
-  "Client replacement response applies or rejects the operational workflow",
+  "Client replacement response applies or cancels the operational workflow",
   /case\s+"accept_replacement_proposal"/.test(bookingApi)
     && /case\s+"reject_replacement_proposal"/.test(bookingApi)
+    && /case\s+"cancel_after_teacher_unavailable"/.test(bookingApi)
     && /teacherId:\s*replacement\.newTeacherId/.test(bookingApi)
     && /teacherMissionLink\.create/.test(bookingApi)
     && /AUTO_REPLACEMENT_ACCEPTED/.test(bookingApi)
-    && /AUTO_REPLACEMENT_REJECTED/.test(bookingApi)
     && /accept_replacement_proposal/.test(replacementActions)
-    && /reject_replacement_proposal/.test(replacementActions),
+    && /cancel_after_teacher_unavailable/.test(replacementActions)
+    && /Annuler sans pénalité/.test(replacementActions),
+);
+
+record(
+  "Teacher-caused cancellation never charges a client penalty",
+  /replacement\.reason\s*!==\s*"UNAVAILABLE"/.test(bookingApi)
+    && /getCancellationPolicy\([\s\S]*?now,\s*"TEACHER"\)/.test(bookingApi)
+    && /cancellationFeeRate:\s*0/.test(bookingApi)
+    && /cancellationFeeAmount:\s*0/.test(bookingApi)
+    && /cancellationPenaltyTeacherAmount:\s*0/.test(bookingApi)
+    && /cancellationPenaltyPlatformAmount:\s*0/.test(bookingApi)
+    && /cancellationRefundAmount:\s*policy\.refundAmount/.test(bookingApi)
+    && /Aucun supplément ne vous sera demandé/.test(missionRoute)
+    && !/Montant professeur ajusté/.test(missionRoute)
+    && !/Impact comptable/.test(replacementActions),
 );
 
 record(

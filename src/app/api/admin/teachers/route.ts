@@ -7,6 +7,7 @@ import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
+import { countAvailabilitySlots, normalizeAvailability } from "@/lib/scheduling";
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
@@ -92,6 +93,12 @@ export async function POST(req: NextRequest) {
     if (relationError) {
       return NextResponse.json({ error: relationError }, { status: 400 });
     }
+    const normalizedAvailability = normalizeAvailability(availability);
+    if (isPublicVisibleTeacherStatus(nextStatus) && countAvailabilitySlots(normalizedAvailability) === 0) {
+      return NextResponse.json({
+        error: "Un professeur actif doit avoir au moins une plage horaire de 2h disponible.",
+      }, { status: 400 });
+    }
 
     const teacher = await db.teacher.create({
       data: {
@@ -137,7 +144,7 @@ export async function POST(req: NextRequest) {
         pricePack8: Number(pricePack8) || 72000,
         commissionRate: typeof commissionRate === "number" ? commissionRate : (Number(commissionRate) || PLATFORM_COMMISSION_PERCENT),
         pricingTier: pricingTier || "STANDARD",
-        availability: availability ? (typeof availability === "string" ? availability : JSON.stringify(availability)) : null,
+        availability: availability ? JSON.stringify(normalizedAvailability) : null,
       },
     });
 

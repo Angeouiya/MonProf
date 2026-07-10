@@ -667,7 +667,8 @@ export async function PATCH(
     }
 
     case "accept_replacement_proposal":
-    case "reject_replacement_proposal": {
+    case "reject_replacement_proposal":
+    case "cancel_after_teacher_unavailable": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
         return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
@@ -690,6 +691,139 @@ export async function PATCH(
       const cleanClientResponse = typeof clientResponse === "string" ? clientResponse.trim().slice(0, 700) : "";
       const oldTeacherName = replacement.oldTeacher.professionalName || replacement.oldTeacher.fullName;
       const newTeacherName = replacement.newTeacher.professionalName || replacement.newTeacher.fullName;
+
+      if (action === "cancel_after_teacher_unavailable") {
+        if (replacement.reason !== "UNAVAILABLE") {
+          return NextResponse.json({
+            error: "L'annulation sans pénalité est réservée aux indisponibilités confirmées du professeur.",
+          }, { status: 409 });
+        }
+
+        const paidAggregate = await db.transaction.aggregate({
+          where: {
+            bookingId: booking.id,
+            type: "CLIENT_PAYMENT",
+            status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
+          },
+          _sum: { amount: true },
+        });
+        const paidAmount = Math.max(0, paidAggregate._sum.amount ?? 0);
+        const policy = getCancellationPolicy({
+          ...booking,
+          paidAmount,
+        }, now, "TEACHER");
+        const refundStatus = policy.refundAmount > 0 ? "REFUND_PENDING" : "REFUNDED";
+
+        await db.$transaction(async (tx) => {
+          await tx.teacherReplacement.update({
+            where: { id: replacement.id },
+            data: {
+              status: "CANCELLED",
+              details: `${replacement.details || ""}\nLe client a choisi l'annulation sans pénalité après l'indisponibilité du professeur.${cleanClientResponse ? ` Message: ${cleanClientResponse}` : ""}`.trim(),
+            },
+          });
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              status: "CANCELLED",
+              paymentStatus: refundStatus,
+              cancelledAt: now,
+              cancelledBy: "TEACHER",
+              cancellationReason: "Indisponibilité du professeur",
+              cancellationDetail: cleanClientResponse || "Le client a refusé le remplacement automatique et choisi l'annulation.",
+              cancellationWindow: policy.code,
+              cancellationFeeRate: 0,
+              cancellationFeeAmount: 0,
+              cancellationPenaltyTeacherRate: 0,
+              cancellationPenaltyTeacherAmount: 0,
+              cancellationPenaltyPlatformRate: 0,
+              cancellationPenaltyPlatformAmount: 0,
+              cancellationRefundAmount: policy.refundAmount,
+            },
+          });
+          await tx.transaction.updateMany({
+            where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
+            data: { status: refundStatus },
+          });
+          await tx.teacherTask.updateMany({
+            where: {
+              bookingId: booking.id,
+              status: { notIn: ["DONE", "CANCELLED"] },
+            },
+            data: { status: "CANCELLED", completedAt: now },
+          });
+          await tx.notification.create({
+            data: {
+              userId: booking.clientId,
+              title: "Réservation annulée sans pénalité",
+              message: `Votre réservation ${booking.reference} est annulée à la suite de l'indisponibilité du professeur. Aucune pénalité d'annulation n'est appliquée. Remboursement prévu : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+              type: "TEACHER_UNAVAILABLE_CANCELLATION",
+              recipientType: "CLIENT",
+              recipientName: booking.client.name,
+              channel: "INTERNAL",
+              status: "CONFIRMED",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: replacement.oldTeacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              confirmedAt: now,
+              link: `/client/reservations/${booking.id}`,
+              actionLabel: policy.refundAmount > 0 ? "Renseigner le remboursement" : "Voir l'annulation",
+            },
+          });
+          await tx.notification.create({
+            data: {
+              userId: null,
+              title: "Annulation sans pénalité - professeur indisponible",
+              message: `${booking.client.name} a annulé ${booking.reference} après l'indisponibilité de ${oldTeacherName}. Pénalité client : 0 FCFA. Remboursement à traiter : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA.`,
+              type: "TEACHER_UNAVAILABLE_CANCELLATION",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "URGENT",
+              bookingId: booking.id,
+              teacherId: replacement.oldTeacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              link: `/admin/reservations/${booking.id}`,
+              actionLabel: policy.refundAmount > 0 ? "Traiter le remboursement" : "Voir l'annulation",
+            },
+          });
+          await tx.clientCommunication.create({
+            data: {
+              clientId: booking.clientId,
+              bookingId: booking.id,
+              type: "TEACHER_CHANGE",
+              channel: "INTERNAL",
+              subject: `Annulation sans pénalité - ${booking.reference}`,
+              content: `Le professeur initial est indisponible et vous avez choisi de ne pas accepter le remplaçant proposé. Aucune pénalité d'annulation n'est appliquée. Remboursement prévu : ${policy.refundAmount.toLocaleString("fr-FR")} FCFA. Frais de service paiement non remboursés : ${policy.serviceFeeAmount.toLocaleString("fr-FR")} FCFA.`,
+              priority: "IMPORTANT",
+              status: "SENT",
+            },
+          });
+          await tx.adminActionLog.create({
+            data: {
+              action: "Annulation sans pénalité après indisponibilité professeur",
+              entityType: "TeacherReplacement",
+              entityId: replacement.id,
+              detail: `${booking.client.name} a annulé ${booking.reference}. Cause professeur: ${oldTeacherName} indisponible. Pénalité client: 0 FCFA. Remboursement: ${policy.refundAmount} FCFA. Frais service non remboursés: ${policy.serviceFeeAmount} FCFA.`,
+              oldStatus: "CLIENT_NOTIFIED",
+              newStatus: "CANCELLED_WITHOUT_PENALTY",
+            },
+          });
+        });
+
+        return NextResponse.json({
+          ok: true,
+          cancellation: {
+            reason: "TEACHER_UNAVAILABLE",
+            penaltyAmount: 0,
+            refundAmount: policy.refundAmount,
+            paymentServiceFeeAmount: policy.serviceFeeAmount,
+          },
+        });
+      }
 
       if (action === "reject_replacement_proposal") {
         await db.$transaction(async (tx) => {

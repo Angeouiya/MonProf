@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CalendarClock, Camera, Clock, FileText, KeyRound, Loader2, Save, Search, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from "lucide-react";
+import { CalendarClock, Camera, CheckCircle2, Clock, FileText, KeyRound, Loader2, Save, Search, ShieldCheck, Sparkles, Trash2, UploadCloud, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -786,7 +786,7 @@ export function TeacherForm({
                       <div className="min-w-0">
                         <h3 className="text-sm font-bold text-[#111827]">Analyse automatique du CV</h3>
                         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                          Chargez un CV PDF texte, DOCX, TXT ou MD. Le système extrait le mini CV, les compétences, expériences, diplômes et résultats, puis préremplit les champs modifiables.
+                          Chargez un CV PDF texte, DOCX, TXT ou MD. L'analyse démarre immédiatement et remplit automatiquement le mini CV, les compétences, les expériences, les diplômes et les résultats.
                         </p>
                       </div>
                     </div>
@@ -826,7 +826,14 @@ export function TeacherForm({
                   </p>
                 )}
                 {cvAnalysis && (
-                  <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-2 rounded-lg border border-[#CAD7F2] bg-white px-3 py-2 text-sm font-semibold text-[#111B4D]">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>
+                        {Object.values(cvAnalysis.fields ?? {}).filter((value) => value !== undefined && value !== null && value !== "").length} champs professionnels ont été remplis automatiquement. Vous pouvez les contrôler puis enregistrer le professeur.
+                      </span>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary" className="bg-white text-[#111B4D] ring-1 ring-[#D8DEE9]">
@@ -877,6 +884,7 @@ export function TeacherForm({
                           </p>
                         )}
                       </div>
+                    </div>
                     </div>
                   </div>
                 )}
@@ -1138,7 +1146,7 @@ export function TeacherForm({
                   </p>
                 </div>
               )}
-              <div className="space-y-3 md:hidden">
+              <div className="space-y-3 lg:hidden">
                 {WEEK_DAYS.map((day) => {
                   const selectedCount = TWO_HOUR_SLOTS.filter((slot) => availability[day.key]?.[slot.key]).length;
                   return (
@@ -1167,6 +1175,7 @@ export function TeacherForm({
                               onClick={() => updateAvailability(day.key, slot.key, !checked)}
                               className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${checked ? "border-violet-300 bg-violet-50 text-violet-900" : "border-violet-100 bg-slate-50 text-slate-600 hover:border-violet-200 hover:bg-white"}`}
                               aria-pressed={checked}
+                              aria-label={`${day.label}, plage horaire ${slot.label}`}
                             >
                               {slot.label}
                             </button>
@@ -1178,23 +1187,25 @@ export function TeacherForm({
                 })}
               </div>
 
-              <div className="hidden md:block">
-                <table className="w-full text-sm">
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="min-w-[1060px] w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="py-2 text-left font-medium text-muted-foreground">Jour</th>
+                    <th scope="col" className="py-2 text-left font-medium text-muted-foreground">Jour</th>
                     {TWO_HOUR_SLOTS.map((s) => (
-                      <th key={s.key} className="px-4 py-2 text-center">
+                      <th key={s.key} scope="col" className="px-2 py-2 text-center">
                         <button
                           type="button"
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-violet-50 hover:text-violet-800"
+                          className="min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-violet-50 hover:text-violet-800"
                           onClick={() => setSlotAcrossDays(s.key, !WEEK_DAYS.every((day) => availability[day.key]?.[s.key]))}
+                          aria-label={`Sélectionner la plage ${s.label} pour tous les jours`}
                         >
-                          {s.label}
+                          <span className="block text-[10px] font-medium uppercase text-muted-foreground">Plage horaire</span>
+                          <span className="mt-0.5 block whitespace-nowrap text-[#111827]">{s.label}</span>
                         </button>
                       </th>
                     ))}
-                    <th className="py-2 text-right font-medium text-muted-foreground">Actions</th>
+                    <th scope="col" className="py-2 text-right font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1213,6 +1224,7 @@ export function TeacherForm({
                             <Checkbox
                               checked={!!availability[d.key]?.[s.key]}
                               onCheckedChange={(v) => updateAvailability(d.key, s.key, !!v)}
+                              aria-label={`${d.label}, plage horaire ${s.label}`}
                             />
                           </td>
                         ))}

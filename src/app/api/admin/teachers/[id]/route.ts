@@ -10,6 +10,7 @@ import { getTeacherFinancialSettlement, isTeacherPayableStatus } from "@/lib/tea
 import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { isActivePaymentMethod } from "@/lib/payment-methods";
+import { countAvailabilitySlots, normalizeAvailability, parseAvailability } from "@/lib/scheduling";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -152,6 +153,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         phone: true,
         portalAccessEnabled: true,
         portalPhone: true,
+        availability: true,
         status: true,
         qualityScore: true,
         adminRating: true,
@@ -257,11 +259,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }, { status: 409 });
       }
     }
+    const nextStatus = String(data.status ?? existingTeacher.status);
+    const normalizedAvailability = availability !== undefined
+      ? normalizeAvailability(availability)
+      : parseAvailability(existingTeacher.availability);
+    if (isPublicVisibleTeacherStatus(nextStatus) && countAvailabilitySlots(normalizedAvailability) === 0) {
+      return NextResponse.json({
+        error: "Un professeur actif doit avoir au moins une plage horaire de 2h disponible.",
+      }, { status: 400 });
+    }
     if (availability !== undefined) {
-      data.availability = availability ? (typeof availability === "string" ? availability : JSON.stringify(availability)) : null;
+      data.availability = availability ? JSON.stringify(normalizedAvailability) : null;
     }
 
-    const nextStatus = String(data.status ?? existingTeacher.status);
     const statusChanged = "status" in data && nextStatus !== existingTeacher.status;
     const effectivePhotoUrl = "photoUrl" in data ? data.photoUrl : existingTeacher.photoUrl;
     if (isPublicVisibleTeacherStatus(nextStatus)) {
