@@ -114,50 +114,23 @@ record(
 );
 
 record(
-  "Client navigation prefetch is prioritized without overloading mobile startup",
-  /const CLIENT_NAV_PREFETCH\s*=\s*true\s*;/.test(layout)
-    && /const CLIENT_PRIMARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
-    && /const CLIENT_SECONDARY_PREFETCH_ROUTES\s*=\s*\[/.test(layout)
-    && /const CLIENT_PRIORITY_PREFETCH_ROUTES\s*=\s*\[\.\.\.CLIENT_PRIMARY_PREFETCH_ROUTES,\s*\.\.\.CLIENT_SECONDARY_PREFETCH_ROUTES\]\s*;/.test(layout)
+  "Client navigation prefetch follows user intent without startup fan-out",
+  /const CLIENT_NAV_PREFETCH\s*=\s*false\s*;/.test(layout)
+    && !/CLIENT_PRIMARY_PREFETCH_ROUTES|CLIENT_SECONDARY_PREFETCH_ROUTES|CLIENT_PRIORITY_PREFETCH_ROUTES/.test(layout)
+    && /function maybePrefetchClientNavigation/.test(layout)
+    && /onMouseOverCapture=\{handleClientPrefetchCapture\}/.test(layout)
+    && /onFocusCapture=\{handleClientFocusPrefetch\}/.test(layout)
+    && /onPointerDownCapture=\{handleClientNavigationIntent\}/.test(layout)
     && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*18\s*;/.test(layout)
     && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*340\s*;/.test(layout)
-    && /const routes\s*=\s*desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES\s*;/.test(layout)
-    && /const staggerMs\s*=\s*desktop\s*\?\s*36\s*:\s*70\s*;/.test(layout)
-    && /routes\.map\(\(route,\s*index\)\s*=>\s*\([\s\S]*?index\s*\*\s*staggerMs/.test(layout)
-    && /requestIdleCallback\(\(\)\s*=>\s*\{[\s\S]*?\},\s*\{\s*timeout:\s*desktop\s*\?\s*180\s*:\s*420\s*\}/.test(layout)
-    && /window\.setTimeout\(\(\)\s*=>\s*\{[\s\S]*?\},\s*desktop\s*\?\s*40\s*:\s*180\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
     && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
 );
 
 record(
-  "Client idle prefetch covers core mobile tabs and every desktop client tab",
-  [
-    "/client",
-    "/client/rechercher",
-    "/client/reservations",
-    "/client/paiements",
-    "/client/notifications",
-  ].every((route) => layout.includes(`"${route}"`))
-    && [
-      "/client/cours",
-      "/client/avis",
-      "/client/service-client",
-      "/client/profil",
-      "/client/parametres",
-    ].every((route) => layout.includes(`"${route}"`))
-    && /desktop\s*\?\s*CLIENT_PRIORITY_PREFETCH_ROUTES\s*:\s*CLIENT_PRIMARY_PREFETCH_ROUTES/.test(layout)
-    && /constrainedConnection\s*\|\|\s*lowMemoryDevice\)\s*return/.test(layout)
-    && /deviceMemory/.test(layout)
-    && /3g/i.test(layout)
-    && /connection\?\.saveData/.test(layout),
-);
-
-record(
-  "Client secondary routes prefetch only when the drawer is intentionally opened",
-  /if\s*\(!open\)\s*return\s*;/.test(layout)
-    && /CLIENT_SECONDARY_PREFETCH_ROUTES\.map\(\(route,\s*index\)\s*=>\s*\(/.test(layout)
-    && /70\s*\+\s*index\s*\*\s*45/.test(layout),
+  "Client shell reuses the server notification count without an immediate duplicate request",
+  /const notificationCount\s*=\s*initialNotificationCount/.test(layout)
+    && !/fetch\("\/api\/client\/notifications"/.test(layout),
 );
 
 record(
@@ -279,6 +252,14 @@ record(
     && /\[data-client-root-tab-header="true"\]\s+\[data-client-page-header-eyebrow\]\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
     && /\[data-client-page-header-description\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
     && /\[data-client-section-description\],[\s\S]*?\[data-client-focus-description\]\s*\{[\s\S]*?-webkit-line-clamp:\s*1;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Client dashboard exposes one primary booking action per mobile context",
+  /className="min-h-11 rounded-lg max-md:hidden"/.test(read("src/app/client/page.tsx"))
+    && /\{\(pendingValidation \|\| nextCourse\) && \(/.test(read("src/app/client/page.tsx"))
+    && /Nouveau cours/.test(read("src/app/client/page.tsx"))
+    && !/<Link href="\/client\/rechercher">Réserver<\/Link>/.test(read("src/app/client/page.tsx")),
 );
 
 record(

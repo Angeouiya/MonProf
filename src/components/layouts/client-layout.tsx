@@ -49,22 +49,10 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
-const CLIENT_NAV_PREFETCH = true;
-const CLIENT_PRIMARY_PREFETCH_ROUTES = [
-  "/client",
-  "/client/rechercher",
-  "/client/reservations",
-  "/client/paiements",
-  "/client/notifications",
-];
-const CLIENT_SECONDARY_PREFETCH_ROUTES = [
-  "/client/cours",
-  "/client/avis",
-  "/client/service-client",
-  "/client/profil",
-  "/client/parametres",
-];
-const CLIENT_PRIORITY_PREFETCH_ROUTES = [...CLIENT_PRIMARY_PREFETCH_ROUTES, ...CLIENT_SECONDARY_PREFETCH_ROUTES];
+// Dynamic client pages read operational data from Supabase. Automatic viewport
+// prefetching can fan out those reads before the user has chosen a destination.
+// The shell prefetches on pointer, hover or keyboard intent instead.
+const CLIENT_NAV_PREFETCH = false;
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 18;
 const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 340;
 
@@ -75,7 +63,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(initialNotificationCount);
+  const notificationCount = initialNotificationCount;
   const [isOffline, setIsOffline] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
@@ -90,26 +78,6 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
   );
   const shouldRenderMobileBottomNav = !hideMobileBottomNav && !open;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/client/notifications", {
-      method: "GET",
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => {
-        if (typeof payload?.unreadCount === "number") {
-          setNotificationCount(payload.unreadCount);
-        }
-      })
-      .catch((error) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        console.error("[client-notifications:count]", error);
-      });
-
-    return () => controller.abort();
-  }, []);
   const closeMobileSurfaces = useCallback(() => {
     setOpen(false);
     setMobileSearchOpen(false);
@@ -188,51 +156,6 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
   }, []);
 
   useEffect(() => {
-    const browserNavigator = navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-      deviceMemory?: number;
-    };
-    const connection = browserNavigator.connection;
-    const effectiveType = connection?.effectiveType ?? "";
-    const lowMemoryDevice = typeof browserNavigator.deviceMemory === "number" && browserNavigator.deviceMemory <= 2;
-    const constrainedConnection = connection?.saveData || /(^|-)2g$|slow-2g|3g/i.test(effectiveType);
-    if (constrainedConnection || lowMemoryDevice) return;
-
-    const desktop = window.matchMedia("(min-width: 1024px)").matches;
-    const routes = desktop ? CLIENT_PRIORITY_PREFETCH_ROUTES : CLIENT_PRIMARY_PREFETCH_ROUTES;
-    const staggerMs = desktop ? 36 : 70;
-    const prefetchClientRoutes = () => {
-      const timers = routes.map((route, index) => (
-        window.setTimeout(() => prefetchClientRoute(route), index * staggerMs)
-      ));
-      return () => timers.forEach((timer) => window.clearTimeout(timer));
-    };
-    const browserWindow = window as Window & {
-      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    let cancelStaggeredPrefetch: (() => void) | undefined;
-
-    if (browserWindow.requestIdleCallback) {
-      const idleId = browserWindow.requestIdleCallback(() => {
-        cancelStaggeredPrefetch = prefetchClientRoutes();
-      }, { timeout: desktop ? 180 : 420 });
-      return () => {
-        browserWindow.cancelIdleCallback?.(idleId);
-        cancelStaggeredPrefetch?.();
-      };
-    }
-
-    const timer = window.setTimeout(() => {
-      cancelStaggeredPrefetch = prefetchClientRoutes();
-    }, desktop ? 40 : 180);
-    return () => {
-      window.clearTimeout(timer);
-      cancelStaggeredPrefetch?.();
-    };
-  }, [prefetchClientRoute]);
-
-  useEffect(() => {
     const syncNetworkState = () => setIsOffline(!navigator.onLine);
     syncNetworkState();
     window.addEventListener("online", syncNetworkState);
@@ -242,14 +165,6 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
       window.removeEventListener("offline", syncNetworkState);
     };
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const timers = CLIENT_SECONDARY_PREFETCH_ROUTES.map((route, index) => (
-      window.setTimeout(() => prefetchClientRoute(route), 70 + index * 45)
-    ));
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [open, prefetchClientRoute]);
 
   useEffect(() => {
     if (!open && !mobileSearchOpen) return;

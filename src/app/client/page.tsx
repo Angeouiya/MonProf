@@ -119,13 +119,13 @@ export default async function ClientDashboardPage() {
             : "Réservez, payez via PayDunya et suivez chaque cours depuis un espace clair."
         }
       >
-        <Button asChild className="min-h-11 rounded-lg">
+        <Button asChild className="min-h-11 rounded-lg max-md:hidden">
           <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : "/client/rechercher"}>
             {nextCourse ? "Ouvrir le dossier" : "Trouver un professeur"}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" className="min-h-11 rounded-lg">
+        <Button asChild variant="outline" className="min-h-11 rounded-lg max-md:hidden">
           <Link href="/client/reservations">Réservations</Link>
         </Button>
       </ClientPageHeader>
@@ -195,7 +195,7 @@ export default async function ClientDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
+              <div>
                 <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
@@ -214,12 +214,6 @@ export default async function ClientDashboardPage() {
                     </div>
                   )}
                 </div>
-                <Button asChild className="min-h-11 rounded-lg">
-                  <Link href="/client/rechercher">
-                    Rechercher un professeur
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
               </div>
             )}
           </div>
@@ -303,11 +297,6 @@ export default async function ClientDashboardPage() {
               title="Trouvez votre professeur"
               description="Recherchez par matière, niveau, commune ou concours. Le paiement active la réservation seulement après validation PayDunya."
               compact
-              action={(
-                <Button asChild className="min-h-11 rounded-lg">
-                  <Link href="/client/rechercher">Rechercher</Link>
-                </Button>
-              )}
             />
           ) : (
             <div className="grid gap-3 min-[560px]:grid-cols-2 xl:grid-cols-3">
@@ -438,9 +427,11 @@ function ClientDashboardMobileSummary({
       </div>
 
       <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-dashboard-action-rail aria-label="Actions rapides client">
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="/client/rechercher">Réserver</Link>
-        </Button>
+        {(pendingValidation || nextCourse) && (
+          <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+            <Link href="/client/rechercher">Nouveau cours</Link>
+          </Button>
+        )}
         <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
           <Link href="/client/paiements">Paiements</Link>
         </Button>
