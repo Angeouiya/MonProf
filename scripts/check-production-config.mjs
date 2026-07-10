@@ -188,6 +188,7 @@ function checkProductionScripts() {
   }
 
   const productionBuild = pkg.scripts?.["build:production"] ?? "";
+  const postinstall = pkg.scripts?.postinstall ?? "";
   const typecheck = pkg.scripts?.["typecheck"] ?? "";
   const clientAppShellVerify = pkg.scripts?.["verify:client-app-shell"] ?? "";
   const operationalFlowVerify = pkg.scripts?.["verify:operational-flows"] ?? "";
@@ -196,6 +197,7 @@ function checkProductionScripts() {
   const navigationPerformanceVerify = pkg.scripts?.["verify:navigation-performance"] ?? "";
   const teacherPhotoStorageVerify = pkg.scripts?.["verify:teacher-photo-storage"] ?? "";
   record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
+  record("Production install regenerates Prisma Client", /prisma\s+generate/.test(postinstall));
   record("Production build runs explicit ESLint gate", productionBuild.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
   record("Production build verifies installable client app shell", productionBuild.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
   record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
