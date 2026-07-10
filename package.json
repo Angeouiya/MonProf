@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "postinstall": "prisma generate",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
-    "build:production": "npm run production:check && npm run typecheck && npm run lint && npm run verify:client-app-shell && npm run verify:client-mobile && npm run verify:navigation-performance && npm run verify:teacher-photo-storage && npm run verify:operational-flows && npm run verify:teacher-onboarding && npm run verify:admin-governance && npm run verify:web-push && npm run db:verify && npm run payment:audit && npm run build",
+    "build:production": "npm run production:check && npm run typecheck && npm run lint && npm run verify:client-app-shell && npm run verify:client-mobile && npm run verify:navigation-performance && npm run verify:teacher-photo-storage && npm run verify:operational-flows && npm run verify:teacher-onboarding && npm run verify:admin-governance && npm run verify:web-push && npm run verify:platform-settings && npm run db:verify && npm run payment:audit && npm run build",
     "start": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:seed": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts",
+    "db:sync-catalog": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/sync-production-catalog.ts",
     "db:backfill-admin-team": "node scripts/backfill-admin-team.mjs",
     "payment:audit": "node scripts/audit-payment-integrity.mjs",
     "payment:quarantine": "node scripts/quarantine-unverified-payments.mjs --apply",
@@ -30,7 +31,8 @@
     "verify:client-app-shell": "node scripts/verify-client-app-shell.mjs",
     "verify:navigation-performance": "node scripts/verify-navigation-performance.mjs",
     "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs",
-    "verify:web-push": "node scripts/verify-web-push.mjs"
+    "verify:web-push": "node scripts/verify-web-push.mjs",
+    "verify:platform-settings": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-platform-settings-locations.ts"
   },
   "prisma": {
     "seed": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs prisma/seed.ts"

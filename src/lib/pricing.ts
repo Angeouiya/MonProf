@@ -237,6 +237,24 @@ export type BookingPricingInput = PricingDerivationInput & {
   clientCommune?: string | null;
   clientQuartier?: string | null;
   materialFee?: number;
+  platformCommissionPercent?: number;
+  transportFeeAmounts?: Partial<TransportFeeAmounts>;
+  grandAbidjanCommuneNames?: string[];
+  clientCommuneTransportFeeOverride?: number | null;
+};
+
+export type TransportFeeAmounts = {
+  sameCommune: number;
+  nearCommune: number;
+  farCommune: number;
+  interior: number;
+};
+
+export const DEFAULT_TRANSPORT_FEE_AMOUNTS: TransportFeeAmounts = {
+  sameCommune: TRANSPORT_FEES.SAME_AREA.amount,
+  nearCommune: TRANSPORT_FEES.NEAR_COMMUNE.amount,
+  farCommune: TRANSPORT_FEES.FAR_COMMUNE.amount,
+  interior: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
 };
 
 export type BookingPricingSnapshot = {
@@ -347,12 +365,42 @@ export function getTransportFeeByKey(key?: string | null) {
   return Object.values(TRANSPORT_FEES).find((fee) => fee.key === key) ?? TRANSPORT_FEES.SAME_AREA;
 }
 
-export function getTransportFeeResultByKey(key?: string | null): TransportFeeResult {
+function resolveTransportFeeAmounts(amounts?: Partial<TransportFeeAmounts>): TransportFeeAmounts {
+  return {
+    sameCommune: nonNegativeAmount(amounts?.sameCommune, DEFAULT_TRANSPORT_FEE_AMOUNTS.sameCommune),
+    nearCommune: nonNegativeAmount(amounts?.nearCommune, DEFAULT_TRANSPORT_FEE_AMOUNTS.nearCommune),
+    farCommune: nonNegativeAmount(amounts?.farCommune, DEFAULT_TRANSPORT_FEE_AMOUNTS.farCommune),
+    interior: nonNegativeAmount(amounts?.interior, DEFAULT_TRANSPORT_FEE_AMOUNTS.interior),
+  };
+}
+
+function nonNegativeAmount(value: number | undefined, fallback: number) {
+  return Number.isFinite(value) ? Math.max(0, Math.round(Number(value))) : fallback;
+}
+
+function transportAmountForKey(key: TransportFeeKey, amounts: TransportFeeAmounts) {
+  switch (key) {
+    case TRANSPORT_FEES.ONLINE.key:
+    case TRANSPORT_FEES.SAME_NEIGHBORHOOD.key:
+      return 0;
+    case TRANSPORT_FEES.NEAR_COMMUNE.key:
+      return amounts.nearCommune;
+    case TRANSPORT_FEES.FAR_COMMUNE.key:
+      return amounts.farCommune;
+    case TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key:
+      return amounts.interior;
+    default:
+      return amounts.sameCommune;
+  }
+}
+
+export function getTransportFeeResultByKey(key?: string | null, amounts?: Partial<TransportFeeAmounts>): TransportFeeResult {
   const fee = getTransportFeeByKey(key);
+  const resolvedAmounts = resolveTransportFeeAmounts(amounts);
   return {
     key: fee.key,
     label: fee.label,
-    amount: fee.amount,
+    amount: transportAmountForKey(fee.key, resolvedAmounts),
     originCommune: null,
     destinationCommune: null,
     originQuartier: null,
@@ -371,13 +419,18 @@ export function calculateGrandAbidjanTransportFee({
   teacherZoneNames = [],
   clientCommune,
   clientQuartier,
+  transportFeeAmounts,
+  grandAbidjanCommuneNames = [],
 }: {
   teacherCommune?: string | null;
   teacherQuartier?: string | null;
   teacherZoneNames?: string[];
   clientCommune?: string | null;
   clientQuartier?: string | null;
+  transportFeeAmounts?: Partial<TransportFeeAmounts>;
+  grandAbidjanCommuneNames?: string[];
 }): TransportFeeResult {
+  const amounts = resolveTransportFeeAmounts(transportFeeAmounts);
   const origin = displayAreaName(teacherCommune);
   const destination = displayAreaName(clientCommune);
   const originQuartier = teacherQuartier?.trim() || null;
@@ -393,7 +446,7 @@ export function calculateGrandAbidjanTransportFee({
     return {
       key: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key,
       label: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.label,
-      amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
+      amount: amounts.interior,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       originQuartier,
@@ -406,11 +459,13 @@ export function calculateGrandAbidjanTransportFee({
     };
   }
 
-  if (!isGrandAbidjanArea(fallbackOrigin) || !isGrandAbidjanArea(destination)) {
+  const dynamicGrandAbidjanAreas = new Set(grandAbidjanCommuneNames.map(normalize).filter(Boolean));
+  const isGrandAbidjan = (value: string | null) => isGrandAbidjanArea(value) || dynamicGrandAbidjanAreas.has(normalize(value));
+  if (!isGrandAbidjan(fallbackOrigin) || !isGrandAbidjan(destination)) {
     return {
       key: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key,
       label: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.label,
-      amount: TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.amount,
+      amount: amounts.interior,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       originQuartier,
@@ -444,7 +499,7 @@ export function calculateGrandAbidjanTransportFee({
     return {
       key: TRANSPORT_FEES.SAME_AREA.key,
       label: TRANSPORT_FEES.SAME_AREA.label,
-      amount: TRANSPORT_FEES.SAME_AREA.amount,
+      amount: amounts.sameCommune,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       originQuartier,
@@ -461,7 +516,7 @@ export function calculateGrandAbidjanTransportFee({
     return {
       key: TRANSPORT_FEES.NEAR_COMMUNE.key,
       label: TRANSPORT_FEES.NEAR_COMMUNE.label,
-      amount: TRANSPORT_FEES.NEAR_COMMUNE.amount,
+      amount: amounts.nearCommune,
       originCommune: fallbackOrigin,
       destinationCommune: destination,
       originQuartier,
@@ -477,7 +532,7 @@ export function calculateGrandAbidjanTransportFee({
   return {
     key: TRANSPORT_FEES.FAR_COMMUNE.key,
     label: TRANSPORT_FEES.FAR_COMMUNE.label,
-    amount: TRANSPORT_FEES.FAR_COMMUNE.amount,
+    amount: amounts.farCommune,
     originCommune: fallbackOrigin,
     destinationCommune: destination,
     originQuartier,
@@ -515,10 +570,12 @@ function resolveTransportFee(input: BookingPricingInput): TransportFeeResult {
       teacherZoneNames: input.teacherZoneNames,
       clientCommune: input.clientCommune,
       clientQuartier: input.clientQuartier,
+      transportFeeAmounts: input.transportFeeAmounts,
+      grandAbidjanCommuneNames: input.grandAbidjanCommuneNames,
     });
   }
 
-  return getTransportFeeResultByKey(input.transportFeeKey);
+  return getTransportFeeResultByKey(input.transportFeeKey, input.transportFeeAmounts);
 }
 
 export function getPackConfig(packType: string) {
@@ -684,13 +741,23 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
 
   const sessions = Math.max(1, pack.sessions ?? 1);
   const rawCourseAmount = Math.round(unitSessionAmount * sessions * groupMultiplier);
-  const rawPlatformCommission = Math.round(rawCourseAmount * PLATFORM_COMMISSION_RATE);
+  const commissionPercent = Math.max(0, Math.min(60, Number.isFinite(input.platformCommissionPercent)
+    ? Math.round(Number(input.platformCommissionPercent))
+    : PLATFORM_COMMISSION_PERCENT));
+  const platformCommissionRate = commissionPercent / 100;
+  const teacherRate = 1 - platformCommissionRate;
+  const rawPlatformCommission = Math.round(rawCourseAmount * platformCommissionRate);
   const teacherPayoutAmount = rawCourseAmount - rawPlatformCommission;
   const discountRate = pack.discountRate ?? 0;
   const discountAmount = Math.min(rawPlatformCommission, Math.round(rawCourseAmount * discountRate));
   const courseAmount = rawCourseAmount - discountAmount;
   const platformCommissionAmount = courseAmount - teacherPayoutAmount;
-  const transportFee = transport.amount ?? 0;
+  const transportFeeOverride = Number(input.clientCommuneTransportFeeOverride);
+  const canOverrideTransport = input.deliveryMode === "domicile"
+    && transport.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
+    && Number.isFinite(transportFeeOverride)
+    && transportFeeOverride >= 0;
+  const transportFee = canOverrideTransport ? Math.round(transportFeeOverride) : (transport.amount ?? 0);
   const totalBeforePaymentServiceFee = courseAmount + transportFee + materialFee;
   const paymentServiceFeeAmount = calculatePaymentServiceFee(totalBeforePaymentServiceFee);
   const totalClientPays = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
@@ -703,15 +770,17 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     courseAmount,
     unitSessionAmount,
     rawCourseAmount,
-    platformCommissionRate: PLATFORM_COMMISSION_RATE,
+    platformCommissionRate,
     platformCommissionAmount,
-    teacherRate: TEACHER_RATE,
+    teacherRate,
     teacherPayoutAmount,
     transportFee,
     transportFeeKey: transport.key,
     transportFeeLabel: transport.label,
     transportRouteLabel: transport.routeLabel,
-    transportRuleLabel: transport.ruleLabel,
+    transportRuleLabel: canOverrideTransport
+      ? `${transport.ruleLabel} Forfait particulier configuré pour la destination.`
+      : transport.ruleLabel,
     transportCoveredByTeacherZone: transport.coveredByTeacherZone,
     materialFee,
     totalBeforePaymentServiceFee,

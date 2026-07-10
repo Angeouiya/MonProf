@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
-import { calculateGrandAbidjanTransportFee } from "@/lib/pricing";
+import { calculateGrandAbidjanTransportFee, TRANSPORT_FEES } from "@/lib/pricing";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -104,6 +105,14 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
   });
   if (!booking) return { booking: null, items: [] };
 
+  const [platformSettings, grandAbidjanCommunes, destination] = await Promise.all([
+    getPlatformRuntimeSettings(),
+    db.commune.findMany({ where: { transportClass: "GRAND_ABIDJAN", isActive: true }, select: { name: true } }),
+    booking.commune
+      ? db.commune.findFirst({ where: { name: { equals: booking.commune, mode: "insensitive" }, isActive: true }, select: { transportFeeOverride: true } })
+      : null,
+  ]);
+
   const teachers = await db.teacher.findMany({
     where: {
       id: { not: booking.teacherId },
@@ -159,6 +168,8 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
             teacherZoneNames: zoneNames,
             clientCommune: booking.commune,
             clientQuartier: booking.quartier,
+            transportFeeAmounts: platformSettings.transportFees,
+            grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
           })
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;
@@ -168,7 +179,11 @@ export async function findReplacementCandidatesForBooking(bookingId: string, lim
       const priceDiff = teacher.pricePerSession - booking.unitPrice;
       const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
-      const transportFee = transport?.amount ?? 0;
+      const destinationOverride = destination?.transportFeeOverride;
+      const transportFee = transport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
+        && destinationOverride !== null && destinationOverride !== undefined
+        ? destinationOverride
+        : (transport?.amount ?? 0);
       const netAmount = currentTeacherCourseShare + transportFee;
       const rawScore = [
         sameSubject ? 30 : 0,

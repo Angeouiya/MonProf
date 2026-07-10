@@ -7,7 +7,14 @@ type TeacherSearchCatalog = {
   teacherCount: number;
   subjects: Array<{ id: string; name: string; slug: string; icon: string | null }>;
   levels: Array<{ id: string; name: string; slug: string; order: number }>;
-  communes: Array<{ id: string; name: string; zone: string | null }>;
+  communes: Array<{
+    id: string;
+    name: string;
+    zone: string | null;
+    transportClass: "GRAND_ABIDJAN" | "PERI_URBAN" | "INTERIOR";
+    transportFeeOverride: number | null;
+    quarters: Array<{ id: string; name: string }>;
+  }>;
 };
 
 export const getCachedTeacherSearchCatalog = unstable_cache(
@@ -44,10 +51,25 @@ export const getCachedTeacherSearchCatalog = unstable_cache(
         COALESCE(
           (
             SELECT jsonb_agg(
-              jsonb_build_object('id', "id", 'name', "name", 'zone', "zone")
-              ORDER BY "name" ASC
+              jsonb_build_object(
+                'id', c."id",
+                'name', c."name",
+                'zone', c."zone",
+                'transportClass', c."transportClass",
+                'transportFeeOverride', c."transportFeeOverride",
+                'quarters', COALESCE(
+                  (
+                    SELECT jsonb_agg(jsonb_build_object('id', q."id", 'name', q."name") ORDER BY q."name" ASC)
+                    FROM competence."CommuneQuarter" q
+                    WHERE q."communeId" = c."id" AND q."isActive" = true
+                  ),
+                  '[]'::jsonb
+                )
+              )
+              ORDER BY c."name" ASC
             )
-            FROM competence."Commune"
+            FROM competence."Commune" c
+            WHERE c."isActive" = true
           ),
           '[]'::jsonb
         ) AS "communes"
@@ -116,8 +138,20 @@ export const getCachedLevelsWithTeacherCounts = unstable_cache(
 export const getCachedCommunes = unstable_cache(
   async () =>
     db.commune.findMany({
+      where: { isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, zone: true },
+      select: {
+        id: true,
+        name: true,
+        zone: true,
+        transportClass: true,
+        transportFeeOverride: true,
+        quarters: {
+          where: { isActive: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        },
+      },
     }),
   ["catalog-communes-v1"],
   { revalidate: CATALOG_REVALIDATE_SECONDS, tags: ["catalog-communes"] },
@@ -126,11 +160,19 @@ export const getCachedCommunes = unstable_cache(
 export const getCachedCommunesWithTeacherCounts = unstable_cache(
   async () =>
     db.commune.findMany({
+      where: { isActive: true },
       orderBy: { name: "asc" },
       select: {
         id: true,
         name: true,
         zone: true,
+        transportClass: true,
+        transportFeeOverride: true,
+        quarters: {
+          where: { isActive: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        },
         _count: { select: { teachers: true } },
       },
     }),

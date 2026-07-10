@@ -23,12 +23,16 @@ export function TeacherPayoutRequestForm({
   defaultPhone,
   defaultMethod,
   payoutInstructions,
+  minimumProcessingHours,
+  maximumProcessingHours,
 }: {
   readyToReceive: number;
   pendingRequested: number;
   defaultPhone?: string | null;
   defaultMethod?: string | null;
   payoutInstructions?: string | null;
+  minimumProcessingHours: number;
+  maximumProcessingHours: number;
 }) {
   const router = useRouter();
   const requestableAmount = Math.max(0, readyToReceive - pendingRequested);
@@ -74,7 +78,7 @@ export function TeacherPayoutRequestForm({
         toast.error(data.error || "Impossible d'envoyer la demande.");
         return;
       }
-      toast.success("Demande de paiement envoyée. Traitement prévu entre 1h et 72h après contrôle du service client.");
+      toast.success(`Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h après contrôle du service client.`);
       setAmount("");
       setNote("");
       router.refresh();
@@ -92,7 +96,7 @@ export function TeacherPayoutRequestForm({
             Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle du service client.
           </p>
           <p className="mt-2 rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
-            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par le service client entre 1 heure et 72 heures ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
+            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par le service client entre {minimumProcessingHours} heure(s) et {maximumProcessingHours} heure(s) ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
           </p>
           {payoutInstructions && (
             <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">

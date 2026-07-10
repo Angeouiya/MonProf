@@ -4,16 +4,15 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck } from "lucide-react";
 import { ParametresClient } from "./client";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { getNotificationProviderStatus } from "@/lib/notification-delivery";
-import { settingsForClient } from "@/lib/settings-security";
+import { platformSettingsForForm } from "@/lib/platform-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminParametresPage() {
   await requireAdmin("SETTINGS_MANAGE");
   const rows = await db.setting.findMany();
-  const [schemaStats, teacherCount, subjectCount, levelCount, communeCount, userCount] = await db.$transaction([
+  const [schemaStats, teacherCount, subjectCount, levelCount, communeCount, quarterCount, activeCommuneCount, userCount] = await db.$transaction([
     db.$queryRaw<Array<{ table_schema: string; tables: bigint | number }>>`
       SELECT table_schema, COUNT(*)::int AS tables
       FROM information_schema.tables
@@ -26,18 +25,11 @@ export default async function AdminParametresPage() {
     db.subject.count(),
     db.level.count(),
     db.commune.count(),
+    db.communeQuarter.count(),
+    db.commune.count({ where: { isActive: true } }),
     db.user.count(),
   ]);
-  const defaults: Record<string, string> = {
-    platform_name: "Compétence",
-    default_commission: String(PLATFORM_COMMISSION_PERCENT),
-    support_phone: "+225 01 61 39 39 39",
-    support_email: "contact@competence.ci",
-    notification_cron_enabled: "true",
-    notification_delivery_enabled: "true",
-    notification_from_name: "Compétence",
-  };
-  const settings = settingsForClient(rows, defaults);
+  const settings = platformSettingsForForm(rows);
   const configuredSettingKeys = new Set(rows.filter((row) => row.value.trim()).map((row) => row.key));
   const providerStatus = getNotificationProviderStatus({
     webPushConfigured: configuredSettingKeys.has("web_push_vapid_public_key")
@@ -52,6 +44,8 @@ export default async function AdminParametresPage() {
     subjectCount,
     levelCount,
     communeCount,
+    quarterCount,
+    activeCommuneCount,
     userCount,
   };
 

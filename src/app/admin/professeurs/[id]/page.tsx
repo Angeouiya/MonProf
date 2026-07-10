@@ -45,7 +45,7 @@ import { TeacherCourseQuickActionsClient } from "./teacher-course-quick-actions-
 import { TeacherWarningActionsClient } from "./teacher-warning-actions-client";
 import { TeacherControlPanelClient } from "./teacher-control-panel-client";
 import { TeacherAdminMessagesClient, type TeacherAdminMessageItem } from "@/components/admin/teacher-admin-messages-client";
-import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, PRICE_TIERS, parsePricingSnapshot } from "@/lib/pricing";
+import { PRICE_TIERS, parsePricingSnapshot } from "@/lib/pricing";
 import { AvisClient } from "@/app/admin/avis/client";
 import { formatFCFA, formatDate, formatDateTime, timeAgo } from "@/lib/format";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
@@ -969,8 +969,8 @@ export default async function ProfesseurDetailPage({
               <Separator className="my-4" />
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <InfoBox label="Grille officielle" value="Active" />
-                <InfoBox label="Commission plateforme" value={`${PLATFORM_COMMISSION_PERCENT}% du cours`} />
-                <InfoBox label="Part professeur" value={`${TEACHER_PERCENT}% du cours + déplacement`} />
+                <InfoBox label="Commission plateforme" value={`${teacher.commissionRate}% du cours`} />
+                <InfoBox label="Part professeur" value={`${100 - teacher.commissionRate}% du cours + déplacement`} />
                 <InfoBox
                   label="Paliers"
                   value={[

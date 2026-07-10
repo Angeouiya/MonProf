@@ -23,7 +23,7 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
-import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT } from "@/lib/pricing";
+import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
 
@@ -88,7 +88,7 @@ const schema = z.object({
   pricePerSession: z.coerce.number().min(0).default(10000),
   pricePack4: z.coerce.number().min(0).default(38000),
   pricePack8: z.coerce.number().min(0).default(72000),
-  commissionRate: z.coerce.number().min(0).max(100).default(PLATFORM_COMMISSION_PERCENT),
+  commissionRate: z.coerce.number().min(0).max(60).default(PLATFORM_COMMISSION_PERCENT),
   pricingTier: z.string().default("STANDARD"),
 }).superRefine((values, ctx) => {
   const photoUrl = values.photoUrl?.trim() ?? "";
@@ -130,7 +130,7 @@ type FormValues = z.infer<typeof schema>;
 
 type Subject = { id: string; name: string };
 type Level = { id: string; name: string };
-type Commune = { id: string; name: string };
+type Commune = { id: string; name: string; quarters?: Array<{ id: string; name: string }> };
 type CvAnalysisFields = Partial<Pick<
   FormValues,
   "fullName" | "email" | "phone" | "commune" | "quartier" | "jobTitle" | "bio" | "experienceYears" | "diploma" | "cvUrl" | "careerSummary" | "skills" | "workHistory" | "certifications" | "teachingAchievements" | "learnersCoached" | "profileType"
@@ -183,6 +183,7 @@ export function TeacherForm({
   subjects,
   levels,
   communes,
+  defaultCommissionPercent = PLATFORM_COMMISSION_PERCENT,
 }: {
   mode: "create" | "edit";
   teacherId?: string;
@@ -190,6 +191,7 @@ export function TeacherForm({
   subjects: Subject[];
   levels: Level[];
   communes: Commune[];
+  defaultCommissionPercent?: number;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -220,7 +222,7 @@ export function TeacherForm({
           pricePerSession: initial.pricePerSession ?? 10000,
           pricePack4: initial.pricePack4 ?? 38000,
           pricePack8: initial.pricePack8 ?? 72000,
-          commissionRate: initial.commissionRate ?? PLATFORM_COMMISSION_PERCENT,
+          commissionRate: initial.commissionRate ?? defaultCommissionPercent,
           portalAccessEnabled: initial.portalAccessEnabled ?? false,
           portalPhone: initial.portalPhone || initial.phone || "",
           portalPassword: "",
@@ -236,7 +238,7 @@ export function TeacherForm({
           badgeNew: true,
           offersHome: true,
           offersOnline: true,
-          commissionRate: PLATFORM_COMMISSION_PERCENT,
+          commissionRate: defaultCommissionPercent,
           pricePerHour: 10000,
           pricePerSession: 10000,
           pricePack4: 38000,
@@ -290,6 +292,7 @@ export function TeacherForm({
     badgeVerified,
     status,
     portalAccessEnabled,
+    selectedCommuneName,
   ] = useWatch({
     control,
     name: [
@@ -300,6 +303,7 @@ export function TeacherForm({
       "badgeVerified",
       "status",
       "portalAccessEnabled",
+      "commune",
     ],
   });
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
@@ -312,6 +316,18 @@ export function TeacherForm({
       keywords: commune.name,
     })),
   }], [communes]);
+  const selectedCommune = useMemo(
+    () => communes.find((commune) => normalizeSearch(commune.name) === normalizeSearch(selectedCommuneName ?? "")),
+    [communes, selectedCommuneName],
+  );
+  const quarterSelectionGroups = useMemo(() => [{
+    label: selectedCommune ? `Quartiers - ${selectedCommune.name}` : "Quartiers référencés",
+    options: (selectedCommune?.quarters ?? []).map((quarter) => ({
+      value: quarter.name,
+      label: quarter.name,
+      keywords: `${quarter.name} ${selectedCommune?.name ?? ""}`,
+    })),
+  }], [selectedCommune]);
   const visibleCommunes = useMemo(() => {
     const normalizedQuery = normalizeSearch(zoneQuery);
     if (!normalizedQuery) return communes;
@@ -706,7 +722,21 @@ export function TeacherForm({
                 )} />
               </Field>
               <Field label="Quartier">
-                <Input {...register("quartier")} placeholder="Riviera Palmeraie" />
+                <Controller control={control} name="quartier" render={({ field }) => (
+                  <SearchableCatalogSelect
+                    name="quartier"
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    placeholder="Rechercher ou saisir un quartier"
+                    searchPlaceholder="Tapez le quartier..."
+                    emptyLabel="Aucun quartier référencé"
+                    allLabel="Aucun quartier principal"
+                    groups={quarterSelectionGroups}
+                    allowCustomValue
+                    customValueLabel="Utiliser ce quartier"
+                    triggerClassName="min-h-10"
+                  />
+                )} />
               </Field>
               <Field label="Adresse approx. (indice)">
                 <Input {...register("addressHint")} placeholder="Près de la pharmacie..." />
@@ -1380,7 +1410,7 @@ export function TeacherForm({
                 <Input type="number" min={0} step={500} {...register("pricePack8")} />
               </Field>
               <Field label="Commission officielle (%)">
-                <Input type="number" min={0} max={100} {...register("commissionRate")} />
+                <Input type="number" min={0} max={60} {...register("commissionRate")} />
               </Field>
               <Field label="Tier tarifaire">
                 <Controller control={control} name="pricingTier" render={({ field }) => (
@@ -1406,11 +1436,11 @@ export function TeacherForm({
                 <div className="grid gap-2 text-center sm:grid-cols-3">
                   <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Commission cours</p>
-                    <p className="text-sm font-semibold">{commissionRate ?? PLATFORM_COMMISSION_PERCENT}%</p>
+                    <p className="text-sm font-semibold">{commissionRate ?? defaultCommissionPercent}%</p>
                   </div>
                   <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Part professeur</p>
-                    <p className="text-sm font-semibold">{TEACHER_PERCENT}% + déplacement</p>
+                    <p className="text-sm font-semibold">{100 - Number(commissionRate ?? defaultCommissionPercent)}% + déplacement</p>
                   </div>
                   <div className="rounded-lg border border-violet-100 bg-white p-3">
                     <p className="text-xs text-muted-foreground">Remises packs</p>

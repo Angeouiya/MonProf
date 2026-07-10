@@ -110,12 +110,45 @@ model Level {
 }
 
 model Commune {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  zone      String? // Abidjan, Bingerville, etc.
-  createdAt DateTime @default(now())
+  id                   String                @id @default(cuid())
+  name                 String                @unique
+  slug                 String?               @unique
+  zone                 String? // Région ou district administratif
+  countryCode          String                @default("CI")
+  transportClass       CommuneTransportClass @default(INTERIOR)
+  transportFeeOverride Int?
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @default(now()) @updatedAt
 
   teachers TeacherZone[]
+  quarters CommuneQuarter[]
+
+  @@index([isActive, name])
+  @@index([transportClass, isActive])
+}
+
+model CommuneQuarter {
+  id        String   @id @default(cuid())
+  communeId String
+  name      String
+  slug      String
+  aliases   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commune Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
+
+  @@unique([communeId, name])
+  @@unique([communeId, slug])
+  @@index([communeId, isActive, name])
+}
+
+enum CommuneTransportClass {
+  GRAND_ABIDJAN
+  PERI_URBAN
+  INTERIOR
 }
 
 // ============================================================

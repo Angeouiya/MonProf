@@ -11,6 +11,7 @@ const criticalTables = [
   ["subjects", () => db.subject.count()],
   ["levels", () => db.level.count()],
   ["communes", () => db.commune.count()],
+  ["communeQuarters", () => db.communeQuarter.count()],
   ["bookings", () => db.booking.count()],
   ["transactions", () => db.transaction.count()],
   ["notifications", () => db.notification.count()],
@@ -35,7 +36,7 @@ try {
 
   await checkAdminAccount();
   checkRequiredCatalogs();
-  checkOperationalSettings();
+  await checkOperationalSettings();
   await checkNoDemoAccounts();
 } finally {
   await db.$disconnect();
@@ -120,10 +121,20 @@ function checkRequiredCatalogs() {
   record("Subject catalog is ready", (counts.subjects ?? 0) > 0);
   record("Level catalog is ready", (counts.levels ?? 0) > 0);
   record("Commune catalog is ready", (counts.communes ?? 0) > 0);
+  record("Commune quarter catalog is ready", (counts.communeQuarters ?? 0) > 0);
 }
 
-function checkOperationalSettings() {
+async function checkOperationalSettings() {
   record("Operational settings table is initialized", (counts.settings ?? 0) > 0);
+  const commission = await db.setting.findUnique({ where: { key: "default_commission" } });
+  record("Default platform commission is configured at 30%", commission?.value === "30");
+  const transportKeys = await db.setting.count({ where: { key: { in: [
+    "transport_same_commune_fee",
+    "transport_near_commune_fee",
+    "transport_far_commune_fee",
+    "transport_interior_fee",
+  ] } } });
+  record("All transport fee settings are configured", transportKeys === 4);
 }
 
 async function checkNoDemoAccounts() {

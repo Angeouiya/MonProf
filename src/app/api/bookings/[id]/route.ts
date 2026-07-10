@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { DisputeStatus } from "@prisma/client";
 import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
-import { PLATFORM_COMMISSION_PERCENT, TEACHER_PERCENT, parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
+import { parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
 import { createPayDunyaCheckoutInvoice, createPayDunyaRescheduleFeeInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
 import { createRescheduleAwaitingTeacherNotifications, reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
@@ -1002,7 +1002,7 @@ export async function PATCH(
       const locationLabel = booking.courseFormat === "ONLINE"
         ? (booking.onlineLink || "Lien en ligne à confirmer")
         : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" / ") || "Adresse à confirmer";
-      const nextCommission = booking.commissionAmount || Math.round(((booking.courseAmount || 0) * PLATFORM_COMMISSION_PERCENT) / 100);
+      const nextCommission = booking.commissionAmount;
       const nextTeacherCoursePayout = candidate.teacherCourseShare;
       const nextTransportFee = candidate.transportFee;
       const nextNet = candidate.netAmount;
@@ -1073,9 +1073,9 @@ export async function PATCH(
             teacherId: replacement.newTeacherId,
             status: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status) ? "ASSIGNED" : booking.status,
             assignedAt: booking.assignedAt ?? now,
-            commissionRate: PLATFORM_COMMISSION_PERCENT,
+            commissionRate: booking.commissionRate,
             commissionAmount: nextCommission,
-            teacherRate: TEACHER_PERCENT,
+            teacherRate: booking.teacherRate,
             teacherPayoutAmount: nextTeacherCoursePayout,
             transportFee: nextTransportFee,
             totalTeacherReceives: nextNet,

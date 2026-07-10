@@ -211,6 +211,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     for (const k of ["pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate"]) {
       if (k in data) data[k] = Number(data[k]) || 0;
     }
+    if ("commissionRate" in data) data.commissionRate = Math.max(0, Math.min(60, Math.round(data.commissionRate)));
     if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
       const normalizedPortalPhone = normalizeTeacherPhone(data.portalPhone || data.phone || existingTeacher.phone);
       data.portalPhone = data.portalAccessEnabled === false ? null : normalizedPortalPhone;

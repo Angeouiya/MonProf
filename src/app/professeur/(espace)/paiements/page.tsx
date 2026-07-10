@@ -16,11 +16,13 @@ import {
   StatusPill,
 } from "@/components/professor/professor-ui";
 import { TeacherPayoutRequestForm } from "@/components/professor/teacher-payout-request-form";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurPaiementsPage() {
   const { teacher } = await requireTeacher();
+  const platformSettings = await getPlatformRuntimeSettings();
   const [bookings, adjustments, payouts, payoutRequests] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
@@ -165,6 +167,8 @@ export default async function ProfesseurPaiementsPage() {
           defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
           defaultMethod={teacher.defaultPayoutMethod}
           payoutInstructions={teacher.payoutInstructions}
+          minimumProcessingHours={platformSettings.payoutDelay.minimumHours}
+          maximumProcessingHours={platformSettings.payoutDelay.maximumHours}
         />
 
         <PortalCard>

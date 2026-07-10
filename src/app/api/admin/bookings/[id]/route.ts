@@ -7,12 +7,12 @@ import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
-  PLATFORM_COMMISSION_PERCENT,
-  TEACHER_PERCENT,
+  TRANSPORT_FEES,
   calculateGrandAbidjanTransportFee,
   parsePricingSnapshot,
   pricingSnapshotToJson,
 } from "@/lib/pricing";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   hasRefundableClientFunds,
   hasVerifiedClientFunds,
@@ -311,8 +311,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const newTeacherName = newTeacher.professionalName || newTeacher.fullName;
         const oldNet = booking.teacherNetAmount;
         const courseAmount = booking.courseAmount || Math.max(0, booking.totalPrice - (booking.transportFee || 0) - (booking.materialFee || 0));
-        const nextCommission = booking.commissionAmount || Math.round((courseAmount * PLATFORM_COMMISSION_PERCENT) / 100);
+        const nextCommission = booking.commissionAmount;
         const nextTeacherCoursePayout = booking.teacherPayoutAmount || Math.max(0, courseAmount - nextCommission);
+        const [platformSettings, grandAbidjanCommunes, destination] = await Promise.all([
+          getPlatformRuntimeSettings(),
+          db.commune.findMany({ where: { transportClass: "GRAND_ABIDJAN", isActive: true }, select: { name: true } }),
+          booking.commune
+            ? db.commune.findFirst({ where: { name: { equals: booking.commune, mode: "insensitive" }, isActive: true }, select: { transportFeeOverride: true } })
+            : null,
+        ]);
         const replacementTransport = booking.courseFormat === "HOME"
           ? calculateGrandAbidjanTransportFee({
               teacherCommune: newTeacher.commune,
@@ -320,9 +327,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               teacherZoneNames: newTeacher.zones.map((zone) => zone.commune.name),
               clientCommune: booking.commune,
               clientQuartier: booking.quartier,
+              transportFeeAmounts: platformSettings.transportFees,
+              grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
             })
           : null;
-        const nextTransportFee = replacementTransport?.amount ?? 0;
+        const nextTransportFee = replacementTransport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
+          && destination?.transportFeeOverride !== null && destination?.transportFeeOverride !== undefined
+          ? destination.transportFeeOverride
+          : (replacementTransport?.amount ?? 0);
         const nextNet = nextTeacherCoursePayout + nextTransportFee;
         const financialImpact = nextNet - oldNet;
         const existingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
@@ -404,9 +416,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             teacherId: newTeacherId,
             // Le remplacement conserve la grille officielle de la réservation.
-            commissionRate: PLATFORM_COMMISSION_PERCENT,
+            commissionRate: booking.commissionRate,
             commissionAmount: nextCommission,
-            teacherRate: TEACHER_PERCENT,
+            teacherRate: booking.teacherRate,
             teacherPayoutAmount: nextTeacherCoursePayout,
             transportFee: nextTransportFee,
             transportFeeKey: replacementTransport?.key ?? booking.transportFeeKey,

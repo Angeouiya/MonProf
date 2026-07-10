@@ -67,6 +67,7 @@ type Teacher = {
   rating: number;
   ratingCount: number;
   pricePerSession: number;
+  commissionRate: number;
   badgeVerified: boolean;
   badgeRecommended: boolean;
   badgePremium: boolean;
@@ -79,6 +80,20 @@ type Teacher = {
   zones: string[];
   subjects: { name: string; isPrimary: boolean }[];
   levels: string[];
+};
+
+type CommuneOption = {
+  id: string;
+  name: string;
+  zone: string | null;
+  transportClass: "GRAND_ABIDJAN" | "PERI_URBAN" | "INTERIOR";
+  transportFeeOverride: number | null;
+  quarters: Array<{ id: string; name: string }>;
+};
+
+type PricingConfig = {
+  commissionPercent: number;
+  transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
 };
 
 const STEPS = ["Besoin", "Format", "Disponibilité", "Récapitulatif", "Paiement"];
@@ -120,6 +135,14 @@ const PACK_OPTIONS = [
   { value: "PACK_12", label: COURSE_PACKS.PACK_12.label, count: COURSE_PACKS.PACK_12.sessions },
   { value: "CUSTOM", label: COURSE_PACKS.CUSTOM.label, count: COURSE_PACKS.CUSTOM.sessions },
 ];
+
+function normalizeLocation(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 const PAYMENT_METHODS = activePaymentMethodOptions;
 
 const CLIENT_TYPE_DEFAULT_CATEGORY: Record<string, string> = {
@@ -344,12 +367,13 @@ function buildSessionPreview(timeLabels: string[], customTimeRequest: string, se
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes,
+  teacher, subjects, levels, communes, pricingConfig,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
   levels: { id: string; name: string; slug: string }[];
-  communes: { id: string; name: string }[];
+  communes: CommuneOption[];
+  pricingConfig: PricingConfig;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -474,18 +498,27 @@ export function ReserverForm({
       keywords: subject.slug,
     })),
   }], [displayName, hasTeacherSubjects, subjects]);
+  const grandAbidjanCommunes = useMemo(() => communes.filter((commune) => commune.transportClass === "GRAND_ABIDJAN"), [communes]);
   const communeSelectionGroups = useMemo(() => [{
     label: "Villes de Côte d'Ivoire",
-    options: buildCityOptions(communes.map((commune) => commune.name)),
+    options: buildCityOptions([
+      "Abidjan",
+      ...communes.filter((commune) => commune.transportClass !== "GRAND_ABIDJAN").map((commune) => commune.name),
+    ]),
   }], [communes]);
   const abidjanCommuneGroups = useMemo(() => [{
     label: "Communes du Grand Abidjan",
-    options: buildAbidjanCommuneOptions(),
-  }], []);
+    options: grandAbidjanCommunes.length > 0
+      ? grandAbidjanCommunes.map((commune) => ({ value: commune.name, label: commune.name, keywords: `${commune.name} ${commune.zone ?? ""}` }))
+      : buildAbidjanCommuneOptions(),
+  }], [grandAbidjanCommunes]);
+  const selectedCommune = useMemo(() => communes.find((commune) => normalizeLocation(commune.name) === normalizeLocation(form.commune)), [communes, form.commune]);
   const quartierSelectionGroups = useMemo(() => [{
     label: form.commune ? `Quartiers - ${form.commune}` : form.city ? `Quartiers - ${form.city}` : "Quartiers connus",
-    options: buildQuartierOptions(form.commune || form.city),
-  }], [form.city, form.commune]);
+    options: selectedCommune?.quarters.length
+      ? selectedCommune.quarters.map((quarter) => ({ value: quarter.name, label: quarter.name, keywords: `${quarter.name} ${form.commune}` }))
+      : buildQuartierOptions(form.commune || form.city),
+  }], [form.city, form.commune, selectedCommune]);
   const safeCourseCatalogId = selectedCategoryCourseIds.has(form.courseCatalogId) ? form.courseCatalogId : "";
   const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === safeCourseCatalogId);
   const schoolProgramPayload = buildSchoolProgramSummary({
@@ -517,6 +550,10 @@ export function ReserverForm({
     teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
     clientCommune: canResolveTransport ? form.commune : undefined,
     clientQuartier: canResolveTransport ? form.quartier : undefined,
+    platformCommissionPercent: pricingConfig.commissionPercent,
+    transportFeeAmounts: pricingConfig.transportFees,
+    grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
+    clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
   });
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
@@ -1585,6 +1622,10 @@ export function ReserverForm({
                       teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
                       clientCommune: canResolveTransport ? form.commune : undefined,
                       clientQuartier: canResolveTransport ? form.quartier : undefined,
+                      platformCommissionPercent: pricingConfig.commissionPercent,
+                      transportFeeAmounts: pricingConfig.transportFees,
+                      grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
+                      clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
                     });
                     const count = optionPricing.numberOfSessions ?? 0;
                     const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;

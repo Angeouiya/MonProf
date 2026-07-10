@@ -1,24 +1,20 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useState } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BadgePercent, BellRing, Building2, CheckCircle2, Clock3, Database,
+  Headphones, Loader2, Mail, MapPinned, Route, Save, Settings,
+  ShieldCheck, Smartphone, WalletCards, XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BadgePercent, BellRing, CheckCircle2, Database, Headphones, Loader2, Mail, Save, Settings, Smartphone, XCircle } from "lucide-react";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 
-type ProviderStatus = {
-  email: boolean;
-  sms: boolean;
-  whatsapp: boolean;
-  webPush: boolean;
-  cron: boolean;
-};
-
+type ProviderStatus = { email: boolean; sms: boolean; whatsapp: boolean; webPush: boolean; cron: boolean };
 type DatabaseStatus = {
   projectLabel: string;
   schema: string;
@@ -28,6 +24,8 @@ type DatabaseStatus = {
   subjectCount: number;
   levelCount: number;
   communeCount: number;
+  quarterCount: number;
+  activeCommuneCount: number;
   userCount: number;
 };
 
@@ -41,186 +39,165 @@ export function ParametresClient({
   databaseStatus: DatabaseStatus;
 }) {
   const router = useRouter();
-  const [values, setValues] = useState<Record<string, string>>(initial);
+  const [values, setValues] = useState(initial);
+  const [savedValues, setSavedValues] = useState(initial);
   const [saving, setSaving] = useState(false);
-
-  const set = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
+  const commission = clampNumber(values.default_commission, 30, 0, 60);
+  const teacherShare = 100 - commission;
+  const changed = useMemo(
+    () => Object.keys(savedValues).some((key) => savedValues[key] !== values[key]),
+    [savedValues, values],
+  );
+  const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
 
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/settings", {
+      const response = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success("Paramètres enregistrés");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Impossible d'enregistrer les paramètres.");
+      const nextValues = data.settings ?? values;
+      setValues(nextValues);
+      setSavedValues(nextValues);
+      const synchronized = Number(data.teacherProfilesSynchronized || 0);
+      toast.success(synchronized > 0
+        ? `Paramètres enregistrés. ${synchronized} profil(s) au taux précédent ont été synchronisés.`
+        : "Paramètres enregistrés et appliqués aux nouveaux calculs.");
       router.refresh();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Card className="max-w-6xl overflow-hidden border-[#E3E8F2] bg-white">
-      <CardHeader className="border-b border-[#E3E8F2] bg-white">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Settings className="h-4 w-4 text-[#111B4D]" />
-          Configuration opérationnelle
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6 p-5 sm:p-6">
+    <div className="space-y-5 pb-24">
+      <SettingSection icon={Building2} title="Identité & service client" description="Informations officielles visibles dans les parcours client et professeur.">
         <div className="grid gap-4 md:grid-cols-2">
           <SettingField icon={Settings} label="Nom de la plateforme">
-            <Input value={values.platform_name ?? ""} onChange={(e) => set("platform_name", e.target.value)} />
-          </SettingField>
-          <SettingField icon={BadgePercent} label="Commission par défaut (%)">
-            <Input type="number" min={0} max={100} value={values.default_commission ?? String(PLATFORM_COMMISSION_PERCENT)} onChange={(e) => set("default_commission", e.target.value)} />
+            <Input value={values.platform_name ?? ""} onChange={(event) => set("platform_name", event.target.value)} />
           </SettingField>
           <SettingField icon={Smartphone} label="Téléphone service client">
-            <Input value={values.support_phone ?? ""} onChange={(e) => set("support_phone", e.target.value)} placeholder="+225 01 61 39 39 39" />
+            <Input value={values.support_phone ?? ""} onChange={(event) => set("support_phone", event.target.value)} />
           </SettingField>
           <SettingField icon={Mail} label="Email service client">
-            <Input type="email" value={values.support_email ?? ""} onChange={(e) => set("support_email", e.target.value)} placeholder="contact@competence.ci" />
+            <Input type="email" value={values.support_email ?? ""} onChange={(event) => set("support_email", event.target.value)} />
+          </SettingField>
+          <SettingField icon={BellRing} label="Nom d'expéditeur">
+            <Input value={values.notification_from_name ?? ""} onChange={(event) => set("notification_from_name", event.target.value)} />
           </SettingField>
         </div>
+      </SettingSection>
 
-        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#111827]">
-                <BellRing className="h-4 w-4 text-[#111B4D]" />
-                Notifications, cron et providers réels
-              </p>
-              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                Les secrets d'envoi restent dans l'environnement serveur. Cette page affiche leur état et pilote seulement les options opérationnelles.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
-              <ProviderPill label="Email" ok={providerStatus.email} />
-              <ProviderPill label="SMS" ok={providerStatus.sms} />
-              <ProviderPill label="WhatsApp" ok={providerStatus.whatsapp} />
-              <ProviderPill label="Web Push" ok={providerStatus.webPush} />
-              <ProviderPill label="Cron" ok={providerStatus.cron} />
-            </div>
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <SettingField icon={BellRing} label="Relances automatiques">
-              <select
-                value={values.notification_cron_enabled ?? "true"}
-                onChange={(event) => set("notification_cron_enabled", event.target.value)}
-                className="h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
-              >
-                <option value="true">Actives</option>
-                <option value="false">Désactivées</option>
-              </select>
-            </SettingField>
-            <SettingField icon={BellRing} label="Livraison providers">
-              <select
-                value={values.notification_delivery_enabled ?? "true"}
-                onChange={(event) => set("notification_delivery_enabled", event.target.value)}
-                className="h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
-              >
-                <option value="true">Tenter les envois réels</option>
-                <option value="false">Historiser seulement</option>
-              </select>
-            </SettingField>
-            <SettingField icon={Settings} label="Nom expéditeur">
-              <Input value={values.notification_from_name ?? "Compétence"} onChange={(e) => set("notification_from_name", e.target.value)} />
-            </SettingField>
-          </div>
-          <div className="mt-4 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-            Variables à configurer côté serveur : <span className="text-[#111827]">CRON_SECRET</span>, <span className="text-[#111827]">WEB_PUSH_VAPID_PRIVATE_KEY</span>, <span className="text-[#111827]">NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY</span>, <span className="text-[#111827]">RESEND_API_KEY</span>, <span className="text-[#111827]">RESEND_FROM_EMAIL</span>, <span className="text-[#111827]">TWILIO_ACCOUNT_SID</span>, <span className="text-[#111827]">TWILIO_AUTH_TOKEN</span>, <span className="text-[#111827]">TWILIO_FROM_NUMBER</span>, <span className="text-[#111827]">WHATSAPP_ACCESS_TOKEN</span>, <span className="text-[#111827]">WHATSAPP_PHONE_NUMBER_ID</span>.
+      <SettingSection icon={BadgePercent} title="Commission & reversement" description="Règle comptable appliquée aux nouvelles réservations. Les réservations existantes conservent leur taux d'origine.">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.8fr)]">
+          <SettingField icon={BadgePercent} label="Commission plateforme par défaut (%)">
+            <Input type="number" min={0} max={60} step={1} value={values.default_commission ?? "30"} onChange={(event) => set("default_commission", event.target.value)} />
+            <p className="mt-2 text-xs leading-5 text-[#64748B]">Le taux général est de 30 %. Une exception peut rester définie sur la fiche d'un professeur.</p>
+          </SettingField>
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
+            <Metric label="Plateforme" value={`${commission}%`} />
+            <Metric label="Professeur" value={`${teacherShare}%`} />
+            <p className="col-span-2 text-xs leading-5 text-[#64748B]">Cette répartition est interne. Le client voit uniquement le prix total à payer.</p>
           </div>
         </div>
+      </SettingSection>
 
-        <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 text-sm font-semibold text-[#111827]">
-                <Database className="h-4 w-4 text-[#111B4D]" />
-                Base de données production
-              </p>
-              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                Les tables applicatives sont dans le schéma privé <span className="font-semibold text-[#111827]">{databaseStatus.schema}</span>, pas dans <span className="font-semibold text-[#111827]">public</span>. C'est normal pour éviter d'exposer les données au navigateur.
-              </p>
-            </div>
-            <ProviderPill label={databaseStatus.tableCount > 0 ? "Connectée" : "À vérifier"} ok={databaseStatus.tableCount > 0} />
-          </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <StatusMetric label="Projet" value={databaseStatus.projectLabel} />
-            <StatusMetric label="Schéma actif" value={databaseStatus.schema} />
-            <StatusMetric label="Tables app" value={String(databaseStatus.tableCount)} />
-            <StatusMetric label="Tables public" value={String(databaseStatus.publicTableCount)} />
-            <StatusMetric label="Professeurs" value={String(databaseStatus.teacherCount)} />
-            <StatusMetric label="Matières" value={String(databaseStatus.subjectCount)} />
-            <StatusMetric label="Niveaux" value={String(databaseStatus.levelCount)} />
-            <StatusMetric label="Communes" value={String(databaseStatus.communeCount)} />
-          </div>
+      <SettingSection icon={MapPinned} title="Déplacements" description="Forfaits automatiques pour les cours à domicile. Le même quartier exact reste à 0 FCFA.">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MoneyField label="Même commune" value={values.transport_same_commune_fee} onChange={(value) => set("transport_same_commune_fee", value)} />
+          <MoneyField label="Commune proche" value={values.transport_near_commune_fee} onChange={(value) => set("transport_near_commune_fee", value)} />
+          <MoneyField label="Commune éloignée" value={values.transport_far_commune_fee} onChange={(value) => set("transport_far_commune_fee", value)} />
+          <MoneyField label="Ville intérieure" value={values.transport_interior_fee} onChange={(value) => set("transport_interior_fee", value)} />
         </div>
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#475569]">
+          <Route className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
+          Les classifications, quartiers et éventuels forfaits particuliers se gèrent dans <strong className="text-[#111827]">Communes & quartiers</strong>.
+        </div>
+      </SettingSection>
 
-        <div className="flex flex-col gap-4 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-              <Headphones className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">Ces informations apparaissent dans les parcours de service client.</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Gardez-les à jour pour éviter les ruptures de confiance lors des réservations, litiges et demandes de paiement.
-              </p>
-            </div>
-          </div>
-          <Button onClick={save} disabled={saving} className="sm:w-auto">
-            {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-            Enregistrer
-          </Button>
+      <SettingSection icon={WalletCards} title="Demandes de paiement professeur" description="Délai opérationnel annoncé au professeur après sa demande de paiement.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SettingField icon={Clock3} label="Délai minimum (heures)">
+            <Input type="number" min={1} max={72} value={values.teacher_payout_min_hours ?? "1"} onChange={(event) => set("teacher_payout_min_hours", event.target.value)} />
+          </SettingField>
+          <SettingField icon={Clock3} label="Délai maximum (heures)">
+            <Input type="number" min={1} max={72} value={values.teacher_payout_max_hours ?? "72"} onChange={(event) => set("teacher_payout_max_hours", event.target.value)} />
+          </SettingField>
         </div>
-      </CardContent>
-    </Card>
+      </SettingSection>
+
+      <SettingSection icon={BellRing} title="Notifications & automatisations" description="Pilotage des envois réels et des relances programmées. Les secrets restent exclusivement côté serveur.">
+        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <ProviderPill label="Email" ok={providerStatus.email} />
+          <ProviderPill label="SMS" ok={providerStatus.sms} />
+          <ProviderPill label="WhatsApp" ok={providerStatus.whatsapp} />
+          <ProviderPill label="Web Push" ok={providerStatus.webPush} />
+          <ProviderPill label="Cron" ok={providerStatus.cron} />
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <SelectField label="Relances automatiques" value={values.notification_cron_enabled ?? "true"} onChange={(value) => set("notification_cron_enabled", value)} />
+          <SelectField label="Livraison par les providers" value={values.notification_delivery_enabled ?? "true"} onChange={(value) => set("notification_delivery_enabled", value)} />
+        </div>
+      </SettingSection>
+
+      <SettingSection icon={Database} title="État de la production" description={`Données applicatives isolées dans le schéma PostgreSQL ${databaseStatus.schema}.`}>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Connexion" value={databaseStatus.tableCount > 0 ? "Active" : "À vérifier"} />
+          <Metric label="Tables applicatives" value={String(databaseStatus.tableCount)} />
+          <Metric label="Professeurs" value={String(databaseStatus.teacherCount)} />
+          <Metric label="Utilisateurs" value={String(databaseStatus.userCount)} />
+          <Metric label="Matières" value={String(databaseStatus.subjectCount)} />
+          <Metric label="Niveaux" value={String(databaseStatus.levelCount)} />
+          <Metric label="Communes actives" value={`${databaseStatus.activeCommuneCount}/${databaseStatus.communeCount}`} />
+          <Metric label="Quartiers référencés" value={String(databaseStatus.quarterCount)} />
+        </div>
+      </SettingSection>
+
+      <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-lg border border-[#C9D4EA] bg-white p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white"><ShieldCheck className="h-5 w-5" /></div>
+          <div><p className="text-sm font-semibold text-[#111827]">Configuration sensible et journalisée</p><p className="text-xs leading-5 text-[#64748B]">Les changements affectent uniquement les nouveaux calculs et sont conservés dans le journal admin.</p></div>
+        </div>
+        <Button onClick={save} disabled={saving || !changed} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#0B143D] sm:min-w-48">
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Enregistrer les paramètres
+        </Button>
+      </div>
+    </div>
   );
 }
 
-function StatusMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5">
-      <p className="truncate text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-[#111827]">{value}</p>
-    </div>
-  );
+function SettingSection({ icon: Icon, title, description, children }: { icon: ComponentType<{ className?: string }>; title: string; description: string; children: ReactNode }) {
+  return <Card className="overflow-hidden border-[#DDE6F7] bg-white"><CardContent className="p-0"><div className="flex items-start gap-3 border-b border-[#E7ECF5] p-4 sm:p-5"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white"><Icon className="h-5 w-5" /></span><div><h2 className="text-base font-semibold text-[#111827]">{title}</h2><p className="mt-1 text-sm leading-5 text-[#64748B]">{description}</p></div></div><div className="p-4 sm:p-5">{children}</div></CardContent></Card>;
+}
+
+function SettingField({ icon: Icon, label, children }: { icon: ComponentType<{ className?: string }>; label: string; children: ReactNode }) {
+  return <div className="rounded-lg border border-[#DDE6F7] bg-white p-4"><Label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-[#475569]"><Icon className="h-4 w-4 text-[#111B4D]" />{label}</Label>{children}</div>;
+}
+
+function MoneyField({ label, value, onChange }: { label: string; value?: string; onChange: (value: string) => void }) {
+  return <SettingField icon={MapPinned} label={label}><div className="relative"><Input type="number" min={0} max={100000} step={500} value={value ?? "0"} onChange={(event) => onChange(event.target.value)} className="pr-16" /><span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#64748B]">FCFA</span></div></SettingField>;
+}
+
+function SelectField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <div><Label className="mb-2 block text-xs font-semibold uppercase text-[#475569]">{label}</Label><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"><option value="true">Actives</option><option value="false">Désactivées</option></select></div>;
 }
 
 function ProviderPill({ label, ok }: { label: string; ok: boolean }) {
-  return (
-    <div className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-[#DDE6F7] bg-white px-3 font-semibold text-[#111827]">
-      {ok ? <CheckCircle2 className="h-3.5 w-3.5 text-[#111B4D]" /> : <XCircle className="h-3.5 w-3.5 text-red-600" />}
-      {label}
-    </div>
-  );
+  return <div className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111827]">{ok ? <CheckCircle2 className="h-4 w-4 text-[#111B4D]" /> : <XCircle className="h-4 w-4 text-red-600" />}{label}</div>;
 }
 
-function SettingField({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: any;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
-      <Label className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-600">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-3 py-3"><p className="truncate text-[10px] font-semibold uppercase text-[#64748B]">{label}</p><p className="mt-1 truncate text-sm font-semibold text-[#111827]">{value}</p></div>;
+}
+
+function clampNumber(value: string | undefined, fallback: number, minimum: number, maximum: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(maximum, Math.max(minimum, Math.round(parsed))) : fallback;
 }

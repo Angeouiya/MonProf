@@ -15,12 +15,11 @@ import {
   unavailableSelections,
 } from "@/lib/scheduling";
 import {
-  PLATFORM_COMMISSION_PERCENT,
-  TEACHER_PERCENT,
   calculateBookingPricing,
   parsePricingSnapshot,
   pricingSnapshotToJson,
 } from "@/lib/pricing";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   CLIENT_TYPES,
   COURSE_CATEGORIES,
@@ -370,6 +369,22 @@ export async function POST(req: NextRequest) {
       error: `La réservation doit être faite au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeFr(minimumBookingDeadline)}.`,
     }, { status: 400 });
   }
+  const [platformSettings, clientLocation, grandAbidjanCommunes] = await Promise.all([
+    getPlatformRuntimeSettings(),
+    courseFormat === "HOME" && typeof commune === "string" && commune.trim()
+      ? db.commune.findFirst({
+          where: { name: { equals: commune.trim(), mode: "insensitive" }, isActive: true },
+          select: { transportFeeOverride: true },
+        })
+      : null,
+    db.commune.findMany({
+      where: { transportClass: "GRAND_ABIDJAN", isActive: true },
+      select: { name: true },
+    }),
+  ]);
+  const appliedCommissionPercent = Number.isFinite(teacher.commissionRate)
+    ? Math.max(0, Math.min(60, Math.round(teacher.commissionRate)))
+    : platformSettings.commissionPercent;
   const pricing = calculateBookingPricing({
     category: courseCategory,
     schoolSystem,
@@ -388,6 +403,10 @@ export async function POST(req: NextRequest) {
     teacherZoneNames: courseFormat === "HOME" ? teacher.zones.map((zone) => zone.commune.name) : undefined,
     clientCommune: courseFormat === "HOME" ? commune : undefined,
     clientQuartier: courseFormat === "HOME" ? quartier : undefined,
+    platformCommissionPercent: appliedCommissionPercent,
+    transportFeeAmounts: platformSettings.transportFees,
+    grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
+    clientCommuneTransportFeeOverride: clientLocation?.transportFeeOverride,
   });
   const basePrice = pricing.numberOfSessions ? pricing.unitSessionAmount * pricing.numberOfSessions : 0;
   const unitPrice = pricing.unitSessionAmount;
@@ -401,7 +420,8 @@ export async function POST(req: NextRequest) {
     : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
   const paymentServiceLine = `Frais de service paiement: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
   const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
-  const commissionRate = PLATFORM_COMMISSION_PERCENT;
+  const commissionRate = Math.round(pricing.platformCommissionRate * 100);
+  const teacherRate = 100 - commissionRate;
   const commissionAmount = pricing.platformCommissionAmount;
   const teacherNetAmount = pricing.totalTeacherReceives;
   const teacherCoursePayoutAmount = pricing.teacherPayoutAmount;
@@ -465,7 +485,7 @@ export async function POST(req: NextRequest) {
         courseAmount: pricing.courseAmount,
         commissionRate,
         commissionAmount,
-        teacherRate: TEACHER_PERCENT,
+        teacherRate,
         teacherPayoutAmount: teacherCoursePayoutAmount,
         transportFee: pricing.transportFee,
         transportFeeKey: pricing.transportFeeKey,

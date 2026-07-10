@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,10 @@ export default async function ReserverPage({
   });
   if (!teacher) notFound();
 
-  const { communes } = await getCachedTeacherSearchCatalog();
+  const [{ communes }, platformSettings] = await Promise.all([
+    getCachedTeacherSearchCatalog(),
+    getPlatformRuntimeSettings(),
+  ]);
 
   const teacherSubjects = teacher.subjects.map((s) => ({
     id: s.subject.id,
@@ -48,6 +52,7 @@ export default async function ReserverPage({
           rating: teacher.rating,
           ratingCount: teacher.ratingCount,
           pricePerSession: teacher.pricePerSession,
+          commissionRate: teacher.commissionRate,
           badgeVerified: teacher.badgeVerified,
           badgeRecommended: teacher.badgeRecommended,
           badgePremium: teacher.badgePremium,
@@ -63,7 +68,11 @@ export default async function ReserverPage({
         }}
         subjects={teacherSubjects.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))}
         levels={teacherLevels.map((l) => ({ id: l.id, name: l.name, slug: l.slug }))}
-        communes={communes.map((c) => ({ id: c.id, name: c.name }))}
+        communes={communes}
+        pricingConfig={{
+          commissionPercent: teacher.commissionRate,
+          transportFees: platformSettings.transportFees,
+        }}
       />
     </div>
   );

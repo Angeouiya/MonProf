@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TeacherForm } from "@/components/admin/teacher-form";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,11 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
     },
   });
   if (!teacher) notFound();
-  const [subjects, levels, communes] = await db.$transaction([
+  const [[subjects, levels, communes], settings] = await Promise.all([db.$transaction([
     db.subject.findMany({ orderBy: { name: "asc" } }),
     db.level.findMany({ orderBy: { order: "asc" } }),
-    db.commune.findMany({ orderBy: { name: "asc" } }),
-  ]);
+    db.commune.findMany({ orderBy: { name: "asc" }, include: { quarters: { where: { isActive: true }, orderBy: { name: "asc" } } } }),
+  ]), getPlatformRuntimeSettings()]);
 
   const { portalPasswordHash, ...teacherFormData } = teacher as any;
   const initial = {
@@ -49,7 +50,8 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
         initial={initial}
         subjects={subjects.map((s) => ({ id: s.id, name: s.name }))}
         levels={levels.map((l) => ({ id: l.id, name: l.name }))}
-        communes={communes.map((c) => ({ id: c.id, name: c.name }))}
+        communes={communes.map((c) => ({ id: c.id, name: c.name, quarters: c.quarters.map((q) => ({ id: q.id, name: q.name })) }))}
+        defaultCommissionPercent={settings.commissionPercent}
       />
     </div>
   );

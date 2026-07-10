@@ -3,10 +3,10 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { validateTeacherPhotoUrlForStorage } from "@/lib/server/teacher-photo";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { countAvailabilitySlots, normalizeAvailability } from "@/lib/scheduling";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -95,6 +95,11 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    const platformSettings = await getPlatformRuntimeSettings();
+    const requestedCommission = Number(commissionRate);
+    const appliedCommission = Number.isFinite(requestedCommission)
+      ? Math.max(0, Math.min(60, Math.round(requestedCommission)))
+      : platformSettings.commissionPercent;
     const teacher = await db.teacher.create({
       data: {
         fullName,
@@ -144,7 +149,7 @@ export async function POST(req: NextRequest) {
         pricePerSession: Number(pricePerSession) || 10000,
         pricePack4: Number(pricePack4) || 38000,
         pricePack8: Number(pricePack8) || 72000,
-        commissionRate: typeof commissionRate === "number" ? commissionRate : (Number(commissionRate) || PLATFORM_COMMISSION_PERCENT),
+        commissionRate: appliedCommission,
         pricingTier: pricingTier || "STANDARD",
         availability: availability ? JSON.stringify(normalizedAvailability) : null,
       },
