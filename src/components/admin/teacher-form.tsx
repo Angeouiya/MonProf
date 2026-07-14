@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller, useWatch, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
+import { normalizeTeacherFormInitial } from "@/lib/teacher-form-data";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
 
@@ -128,6 +129,54 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+type TeacherFormTab = "infos" | "acces" | "pro" | "matieres" | "dispo" | "zones" | "tarifs" | "eval";
+
+const FIELD_TAB: Partial<Record<keyof FormValues, TeacherFormTab>> = {
+  fullName: "infos",
+  professionalName: "infos",
+  photoUrl: "infos",
+  phone: "infos",
+  email: "infos",
+  commune: "infos",
+  quartier: "infos",
+  addressHint: "infos",
+  status: "infos",
+  featured: "infos",
+  portalAccessEnabled: "acces",
+  portalPhone: "acces",
+  portalPassword: "acces",
+  jobTitle: "pro",
+  bio: "pro",
+  experienceYears: "pro",
+  diploma: "pro",
+  cvUrl: "pro",
+  careerSummary: "pro",
+  skills: "pro",
+  workHistory: "pro",
+  certifications: "pro",
+  teachingAchievements: "pro",
+  learnersCoached: "pro",
+  profileType: "pro",
+  pricePerHour: "tarifs",
+  pricePerSession: "tarifs",
+  pricePack4: "tarifs",
+  pricePack8: "tarifs",
+  commissionRate: "tarifs",
+  pricingTier: "tarifs",
+  offersHome: "tarifs",
+  offersOnline: "tarifs",
+  offersGroup: "tarifs",
+  adminRating: "eval",
+  adminRatingNote: "eval",
+  adminRatingPublic: "eval",
+  badgeVerified: "eval",
+  badgeRecommended: "eval",
+  badgeNew: "eval",
+  badgePopular: "eval",
+  badgePremium: "eval",
+  internalNote: "eval",
+};
+
 type Subject = { id: string; name: string };
 type Level = { id: string; name: string };
 type Commune = { id: string; name: string; quarters?: Array<{ id: string; name: string }> };
@@ -204,6 +253,7 @@ export function TeacherForm({
   const [analyzingCv, setAnalyzingCv] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [cvAnalysis, setCvAnalysis] = useState<CvAnalysisResult | null>(null);
+  const [activeTab, setActiveTab] = useState<TeacherFormTab>("infos");
 
   // Selections
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, boolean>>({});
@@ -219,7 +269,7 @@ export function TeacherForm({
     resolver: zodResolver(schema) as any,
     defaultValues: initial
       ? {
-          ...initial,
+          ...normalizeTeacherFormInitial(initial),
           experienceYears: initial.experienceYears ?? 0,
           learnersCoached: initial.learnersCoached ?? 0,
           pricePerHour: initial.pricePerHour ?? 10000,
@@ -585,14 +635,23 @@ export function TeacherForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur");
+      const responseText = await res.text();
+      let data: { id?: string; error?: string } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { id?: string; error?: string };
+        } catch {
+          // Une réponse d'infrastructure non JSON ne doit pas masquer le vrai échec.
+        }
+      }
+      if (!res.ok) {
+        throw new Error(data.error || `L'enregistrement a échoué (code ${res.status}).`);
+      }
       toast.success(mode === "create" ? "Professeur créé" : "Professeur mis à jour");
       if (mode === "create" && data.id) {
-        router.push(`/admin/professeurs/${data.id}`);
+        window.location.assign(`/admin/professeurs/${data.id}`);
       } else {
-        router.push(`/admin/professeurs/${teacherId}`);
-        router.refresh();
+        window.location.assign(`/admin/professeurs/${teacherId}?updated=1`);
       }
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'enregistrement");
@@ -606,6 +665,17 @@ export function TeacherForm({
       ...prev,
       [dayKey]: { ...prev[dayKey], [slotKey]: value },
     }));
+  };
+
+  const onInvalid = (validationErrors: FieldErrors<FormValues>) => {
+    const firstField = Object.keys(validationErrors)[0] as keyof FormValues | undefined;
+    const firstError = firstField ? validationErrors[firstField] : undefined;
+    const message = typeof firstError?.message === "string"
+      ? firstError.message
+      : "Vérifiez les champs obligatoires avant d'enregistrer.";
+
+    if (firstField) setActiveTab(FIELD_TAB[firstField] ?? "infos");
+    toast.error(`Enregistrement impossible : ${message}`);
   };
   const setDayAvailability = (dayKey: string, value: boolean) => {
     setAvailability((prev) => ({
@@ -651,8 +721,8 @@ export function TeacherForm({
   const daysWithAvailability = WEEK_DAYS.filter((day) => TWO_HOUR_SLOTS.some((slot) => availability[day.key]?.[slot.key])).length;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-5">
-      <Tabs defaultValue="infos" className="w-full">
+    <form onSubmit={handleSubmit(onSubmit as any, onInvalid)} className="space-y-5">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeacherFormTab)} className="w-full">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 border border-violet-100 bg-white p-1">
           <TabsTrigger value="infos">Informations</TabsTrigger>
           <TabsTrigger value="acces">Accès prof</TabsTrigger>

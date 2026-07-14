@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
@@ -425,7 +426,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ]);
     }
 
-    return NextResponse.json({ ok: true });
+    revalidatePath("/admin/professeurs");
+    revalidatePath(`/admin/professeurs/${id}`);
+    revalidatePath(`/admin/professeurs/${id}/modifier`);
+    revalidatePath("/professeurs");
+    revalidatePath(`/professeurs/${id}`);
+
+    return NextResponse.json({ ok: true, id });
   } catch (e: any) {
     console.error("admin/teachers PATCH error", e);
     if (e?.code === "P2002") {
