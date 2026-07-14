@@ -7,6 +7,7 @@ import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ADMIN_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -15,7 +16,8 @@ export function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const valid = password.length >= 6 && password === confirmPassword && Boolean(token);
+  const strongPassword = password.length >= ADMIN_PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(password) && /\d/.test(password);
+  const valid = strongPassword && password === confirmPassword && Boolean(token);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -73,9 +75,13 @@ export function ResetPasswordForm() {
         />
       </div>
       <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-        <p className={password.length >= 6 ? "text-[#111B4D]" : ""}>
+        <p className={password.length >= ADMIN_PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          6 caractères minimum
+          {ADMIN_PASSWORD_MIN_LENGTH} caractères minimum
+        </p>
+        <p className={/[A-Za-z]/.test(password) && /\d/.test(password) ? "text-[#111B4D]" : ""}>
+          <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
+          Au moins une lettre et un chiffre
         </p>
         <p className={confirmPassword && password === confirmPassword ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />

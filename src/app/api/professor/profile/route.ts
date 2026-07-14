@@ -276,12 +276,16 @@ export async function PATCH(req: NextRequest) {
 
   const oldPassword = typeof body.oldPassword === "string" ? body.oldPassword : "";
   const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  const confirmPassword = typeof body.confirmPassword === "string" ? body.confirmPassword : "";
 
   if (!oldPassword || !newPassword) {
     return NextResponse.json({ error: "Ancien et nouveau mot de passe requis." }, { status: 400 });
   }
   if (newPassword.length < 6) {
     return NextResponse.json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères." }, { status: 400 });
+  }
+  if (newPassword !== confirmPassword) {
+    return NextResponse.json({ error: "Les deux nouveaux mots de passe ne correspondent pas." }, { status: 400 });
   }
 
   const stored = await db.teacher.findUnique({
@@ -301,6 +305,9 @@ export async function PATCH(req: NextRequest) {
   const passwordOk = await bcrypt.compare(oldPassword, stored.portalPasswordHash);
   if (!passwordOk) {
     return NextResponse.json({ error: "Ancien mot de passe incorrect." }, { status: 400 });
+  }
+  if (await bcrypt.compare(newPassword, stored.portalPasswordHash)) {
+    return NextResponse.json({ error: "Choisissez un mot de passe différent de l'actuel." }, { status: 400 });
   }
 
   const now = new Date();

@@ -39,9 +39,17 @@ export function TeacherPasswordSettingsForm() {
       const res = await fetch("/api/professor/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "changePassword", oldPassword, newPassword }),
+        body: JSON.stringify({ action: "changePassword", oldPassword, newPassword, confirmPassword }),
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: { error?: string } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { error?: string };
+        } catch {
+          // Préserver un message lisible si l'infrastructure ne renvoie pas de JSON.
+        }
+      }
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
       toast.success("Mot de passe professeur modifié.");

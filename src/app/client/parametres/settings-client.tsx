@@ -1,17 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ADMIN_PASSWORD_MIN_LENGTH, STANDARD_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?: boolean }) {
+  const router = useRouter();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [visibleFields, setVisibleFields] = useState<Record<PasswordFieldKey, boolean>>({
     current: false,
     next: false,
@@ -19,9 +23,11 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
   });
   const strength = getPasswordStrength(newPassword);
 
+  const minimumLength = ownerAdmin ? ADMIN_PASSWORD_MIN_LENGTH : STANDARD_PASSWORD_MIN_LENGTH;
   const rules = [
     { label: "Ancien mot de passe saisi", ok: oldPassword.trim().length > 0 },
-    { label: "6 caractères minimum", ok: newPassword.length >= 6 },
+    { label: `${minimumLength} caractères minimum`, ok: newPassword.length >= minimumLength },
+    ...(ownerAdmin ? [{ label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) }] : []),
     { label: "Différent de l'ancien", ok: newPassword.length > 0 && newPassword !== oldPassword },
     { label: "Confirmation identique", ok: confirmPassword.length > 0 && newPassword === confirmPassword },
   ];
@@ -39,21 +45,33 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
     }
 
     setSaving(true);
+    setFormError(null);
     try {
       const res = await fetch("/api/client/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "changePassword", oldPassword, newPassword }),
+        body: JSON.stringify({ action: "changePassword", oldPassword, newPassword, confirmPassword }),
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: { error?: string } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { error?: string };
+        } catch {
+          // Une réponse d'infrastructure ne doit pas produire une erreur JSON technique.
+        }
+      }
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
       toast.success(ownerAdmin ? "Mot de passe administrateur modifié." : "Mot de passe client modifié.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Modification impossible.");
+      const message = error instanceof Error ? error.message : "Modification impossible.";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -70,6 +88,12 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         visible={visibleFields.current}
         onToggleVisible={() => toggleVisibility("current")}
       />
+
+      {formError && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">
+          {formError}
+        </p>
+      )}
       <PasswordField
         id="client-new-password"
         label="Nouveau mot de passe"
@@ -101,7 +125,7 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
 
       <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-        {ownerAdmin ? "Modifier le mot de passe administrateur" : "Modifier le mot de passe"}
+        {saving ? "Modification en cours..." : ownerAdmin ? "Modifier le mot de passe administrateur" : "Modifier le mot de passe"}
       </Button>
     </form>
   );

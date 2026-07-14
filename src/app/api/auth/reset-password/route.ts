@@ -3,14 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
+import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
 
-  if (!token || password.length < 6) {
-    return NextResponse.json({ error: "Lien invalide ou mot de passe trop court." }, { status: 400 });
+  if (!token || !password) {
+    return NextResponse.json({ error: "Lien invalide ou mot de passe manquant." }, { status: 400 });
   }
 
   const resetToken = await db.passwordResetToken.findUnique({
@@ -28,15 +29,26 @@ export async function POST(req: NextRequest) {
   }
 
   const ownerAdmin = isOwnerAdminAccount({ role: resetToken.user.role, email: resetToken.user.email });
-  const passwordHash = await bcrypt.hash(password, 10);
+  const validation = validatePasswordForAccount(password, resetToken.user);
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+  if (await bcrypt.compare(password, resetToken.user.passwordHash)) {
+    return NextResponse.json({ error: "Choisissez un mot de passe différent de l'actuel." }, { status: 400 });
+  }
+  const now = new Date();
+  const passwordHash = await bcrypt.hash(password, passwordHashRounds(resetToken.user));
   await db.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        ...(ownerAdmin ? { adminPasswordChangedAt: now } : {}),
+      },
     });
     await tx.passwordResetToken.update({
       where: { id: resetToken.id },
-      data: { usedAt: new Date() },
+      data: { usedAt: now },
     });
     await tx.passwordResetToken.updateMany({
       where: {
@@ -44,7 +56,7 @@ export async function POST(req: NextRequest) {
         usedAt: null,
         id: { not: resetToken.id },
       },
-      data: { usedAt: new Date() },
+      data: { usedAt: now },
     });
     await tx.notification.create({
       data: {
@@ -59,7 +71,7 @@ export async function POST(req: NextRequest) {
         status: "SENT",
         priority: "IMPORTANT",
         clientId: ownerAdmin ? null : resetToken.userId,
-        sentAt: new Date(),
+        sentAt: now,
         link: ownerAdmin ? "/admin/parametres" : "/client/parametres",
         actionLabel: "Voir paramètres",
       },

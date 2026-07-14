@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
+import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -37,7 +38,7 @@ export async function PATCH(req: NextRequest) {
   const userId = (session.user as any).id;
 
   const body = await req.json();
-  const { action, name, phone, commune, quartier, avatarUrl, oldPassword, newPassword } = body;
+  const { action, name, phone, commune, quartier, avatarUrl, oldPassword, newPassword, confirmPassword } = body;
 
   if (action === "changePassword") {
     if (!canUseAccountPasswordFlow({ role, email: session.user.email })) {
@@ -46,21 +47,35 @@ export async function PATCH(req: NextRequest) {
     if (!oldPassword || !newPassword) {
       return NextResponse.json({ error: "Ancien et nouveau mot de passe requis" }, { status: 400 });
     }
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères" }, { status: 400 });
+    if (typeof confirmPassword !== "string" || newPassword !== confirmPassword) {
+      return NextResponse.json({ error: "Les deux nouveaux mots de passe ne correspondent pas." }, { status: 400 });
     }
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    const validation = validatePasswordForAccount(newPassword, user);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
     const ok = await bcrypt.compare(oldPassword, user.passwordHash);
     if (!ok) {
       return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 400 });
     }
-    const newHash = await bcrypt.hash(newPassword, 10);
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      return NextResponse.json({ error: "Choisissez un mot de passe différent de l'actuel." }, { status: 400 });
+    }
+    const now = new Date();
+    const newHash = await bcrypt.hash(newPassword, passwordHashRounds(user));
     await db.$transaction(async (tx) => {
-      await tx.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash: newHash,
+          ...(ownerAdmin ? { adminPasswordChangedAt: now } : {}),
+        },
+      });
       await tx.passwordResetToken.updateMany({
         where: { userId, usedAt: null },
-        data: { usedAt: new Date() },
+        data: { usedAt: now },
       });
       await tx.notification.create({
         data: {
@@ -75,7 +90,7 @@ export async function PATCH(req: NextRequest) {
           status: "SENT",
           priority: "IMPORTANT",
           clientId: ownerAdmin ? null : userId,
-          sentAt: new Date(),
+          sentAt: now,
           link: ownerAdmin ? "/admin/parametres" : "/client/parametres",
           actionLabel: "Voir paramètres",
         },
