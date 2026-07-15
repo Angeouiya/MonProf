@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
+import { sendClientPasswordChangedEmail } from "@/lib/notification-delivery";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -90,8 +92,48 @@ export async function POST(req: NextRequest) {
       });
     }
   });
+  const delivery = await sendClientPasswordChangedEmail({
+    to: resetToken.user.email,
+    name: resetToken.user.name,
+    changedAt: now,
+    securityUrl: absoluteAppUrl("/mot-de-passe-oublie", req),
+    idempotencyKey: `password-reset-done-${resetToken.id}`,
+  });
+  try {
+    await db.notification.create({
+      data: {
+      userId: ownerAdmin ? null : resetToken.userId,
+      title: "Confirmation email de la réinitialisation du mot de passe",
+      message: delivery.ok
+        ? `Un email personnel de confirmation a été envoyé à ${resetToken.user.email}.`
+        : `L'email personnel destiné à ${resetToken.user.email} n'a pas pu être envoyé. ${delivery.message}`,
+      type: delivery.ok ? "PASSWORD_RESET_EMAIL_SENT" : "PASSWORD_RESET_EMAIL_FAILED",
+      recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
+      recipientName: resetToken.user.name,
+      channel: "EMAIL",
+      status: delivery.ok ? "SENT" : "FAILED",
+      priority: delivery.ok ? "IMPORTANT" : "URGENT",
+      clientId: ownerAdmin ? null : resetToken.userId,
+      sentAt: delivery.ok ? now : null,
+      response: [delivery.message, delivery.externalId ? `Identifiant fournisseur : ${delivery.externalId}` : null]
+        .filter(Boolean)
+        .join(" "),
+      link: ownerAdmin ? "/admin/mon-compte" : "/client/parametres",
+      actionLabel: "Voir la sécurité du compte",
+      },
+    });
+  } catch (error) {
+    console.error("password reset email audit error", error);
+  }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    email: {
+      sent: delivery.ok,
+      configured: delivery.configured,
+      message: delivery.message,
+    },
+  });
 }
 
 function hashToken(token: string) {

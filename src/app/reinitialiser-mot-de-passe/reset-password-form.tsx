@@ -32,9 +32,20 @@ export function ResetPasswordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: { error?: string; email?: { sent?: boolean; message?: string } } = {};
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as { error?: string; email?: { sent?: boolean; message?: string } };
+        } catch {
+          // Une réponse d'infrastructure ne doit pas masquer le résultat utilisateur.
+        }
+      }
       if (!res.ok) throw new Error(data.error || "Réinitialisation impossible.");
-      toast.success("Mot de passe modifié. Vous pouvez vous connecter.");
+      toast.success(data.email?.sent
+        ? "Mot de passe modifié. Un email personnel de confirmation vient de vous être envoyé."
+        : "Mot de passe modifié. Vous pouvez vous connecter.");
+      if (!data.email?.sent && data.email?.message) toast.warning(data.email.message);
       router.push("/connexion");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Réinitialisation impossible.");

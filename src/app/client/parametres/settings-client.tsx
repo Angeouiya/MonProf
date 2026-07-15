@@ -53,10 +53,10 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         body: JSON.stringify({ action: "changePassword", oldPassword, newPassword, confirmPassword }),
       });
       const responseText = await res.text();
-      let data: { error?: string } = {};
+      let data: { error?: string; email?: { sent?: boolean; message?: string } } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { error?: string };
+          data = JSON.parse(responseText) as { error?: string; email?: { sent?: boolean; message?: string } };
         } catch {
           // Une réponse d'infrastructure ne doit pas produire une erreur JSON technique.
         }
@@ -64,6 +64,11 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
       toast.success(ownerAdmin ? "Mot de passe administrateur modifié." : "Mot de passe client modifié.");
+      if (data.email?.sent) {
+        toast.success("Un email personnel de confirmation vient de vous être envoyé.");
+      } else {
+        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
+      }
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");

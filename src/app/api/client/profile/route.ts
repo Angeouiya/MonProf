@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
+import { sendClientPasswordChangedEmail } from "@/lib/notification-delivery";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -109,7 +111,47 @@ export async function PATCH(req: NextRequest) {
         });
       }
     });
-    return NextResponse.json({ ok: true });
+    const delivery = await sendClientPasswordChangedEmail({
+      to: user.email,
+      name: user.name,
+      changedAt: now,
+      securityUrl: absoluteAppUrl("/mot-de-passe-oublie", req),
+      idempotencyKey: `password-changed-${user.id}-${now.getTime()}`,
+    });
+    try {
+      await db.notification.create({
+        data: {
+        userId: ownerAdmin ? null : user.id,
+        title: "Confirmation email du changement de mot de passe",
+        message: delivery.ok
+          ? `Un email personnel de confirmation a été envoyé à ${user.email}.`
+          : `L'email personnel destiné à ${user.email} n'a pas pu être envoyé. ${delivery.message}`,
+        type: delivery.ok ? "PASSWORD_CHANGED_EMAIL_SENT" : "PASSWORD_CHANGED_EMAIL_FAILED",
+        recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
+        recipientName: user.name,
+        channel: "EMAIL",
+        status: delivery.ok ? "SENT" : "FAILED",
+        priority: delivery.ok ? "IMPORTANT" : "URGENT",
+        clientId: ownerAdmin ? null : user.id,
+        sentAt: delivery.ok ? now : null,
+        response: [delivery.message, delivery.externalId ? `Identifiant fournisseur : ${delivery.externalId}` : null]
+          .filter(Boolean)
+          .join(" "),
+        link: ownerAdmin ? "/admin/mon-compte" : "/client/parametres",
+        actionLabel: "Voir la sécurité du compte",
+        },
+      });
+    } catch (error) {
+      console.error("client password email audit error", error);
+    }
+    return NextResponse.json({
+      ok: true,
+      email: {
+        sent: delivery.ok,
+        configured: delivery.configured,
+        message: delivery.message,
+      },
+    });
   }
 
   if (ownerAdmin) {
