@@ -5,6 +5,7 @@ import {
   paymentServiceFeeDescription,
 } from "@/lib/payment-service-fees";
 import { ABIDJAN_COMMUNES } from "@/lib/ivory-coast-locations";
+import { isProfessionalLevelSelection } from "@/lib/course-catalog";
 
 export const CURRENCY = "XOF";
 
@@ -102,9 +103,16 @@ export const TRANSPORT_FEES = {
 
 export type TransportFeeCode = keyof typeof TRANSPORT_FEES;
 export type TransportFeeKey = (typeof TRANSPORT_FEES)[TransportFeeCode]["key"];
+export const PENDING_TRANSPORT_FEE_KEY = "pending_location" as const;
+export type ResolvedTransportFeeKey = TransportFeeKey | typeof PENDING_TRANSPORT_FEE_KEY;
+
+export type NeighborhoodAliasMap = {
+  resolved: Record<string, string>;
+  ambiguous: string[];
+};
 
 export type TransportFeeResult = {
-  key: TransportFeeKey;
+  key: ResolvedTransportFeeKey;
   label: string;
   amount: number | null;
   originCommune: string | null;
@@ -235,6 +243,7 @@ export type BookingPricingInput = PricingDerivationInput & {
   transportFeeAmounts?: Partial<TransportFeeAmounts>;
   grandAbidjanCommuneNames?: string[];
   clientCommuneTransportFeeOverride?: number | null;
+  neighborhoodAliases?: NeighborhoodAliasMap;
 };
 
 export type TransportFeeAmounts = {
@@ -269,6 +278,7 @@ export type BookingPricingSnapshot = {
   transportRouteLabel?: string;
   transportRuleLabel?: string;
   transportCoveredByTeacherZone?: boolean;
+  transportFeePending?: boolean;
   materialFee: number;
   totalBeforePaymentServiceFee: number;
   paymentServiceFeeRate: number;
@@ -329,14 +339,93 @@ const NEIGHBORHOOD_DISPLAY_NAMES: Record<string, string> = {
   "deux plateaux": "Deux Plateaux",
 };
 
-function normalizeNeighborhood(value?: string | null) {
+function neighborhoodAliasLookupKey(commune?: string | null, neighborhood?: string | null) {
+  const normalizedCommune = normalize(commune);
+  const normalizedNeighborhood = normalize(neighborhood);
+  return normalizedCommune && normalizedNeighborhood
+    ? `${normalizedCommune}::${normalizedNeighborhood}`
+    : "";
+}
+
+function configuredNeighborhoodName(
+  value?: string | null,
+  commune?: string | null,
+  aliases?: NeighborhoodAliasMap,
+) {
+  const scopedKey = neighborhoodAliasLookupKey(commune, value);
+  return (scopedKey ? aliases?.resolved[scopedKey] : undefined) ?? aliases?.resolved[normalize(value)];
+}
+
+function isAmbiguousNeighborhoodName(
+  value?: string | null,
+  commune?: string | null,
+  aliases?: NeighborhoodAliasMap,
+) {
+  if (!aliases) return false;
+  const scopedKey = neighborhoodAliasLookupKey(commune, value);
+  const fallbackKey = normalize(value);
+  return (scopedKey ? aliases.ambiguous.includes(scopedKey) : false)
+    || aliases.ambiguous.includes(fallbackKey);
+}
+
+function normalizeNeighborhood(
+  value?: string | null,
+  commune?: string | null,
+  aliases?: NeighborhoodAliasMap,
+) {
   const normalized = normalize(value);
+  const configuredCanonicalName = configuredNeighborhoodName(value, commune, aliases);
+  if (configuredCanonicalName) return normalize(configuredCanonicalName);
   return NEIGHBORHOOD_ALIASES[normalized] ?? normalized;
 }
 
-function displayNeighborhoodName(value?: string | null) {
-  const normalized = normalizeNeighborhood(value);
+function displayNeighborhoodName(
+  value?: string | null,
+  commune?: string | null,
+  aliases?: NeighborhoodAliasMap,
+) {
+  const configuredCanonicalName = configuredNeighborhoodName(value, commune, aliases);
+  if (configuredCanonicalName) return configuredCanonicalName;
+  const normalized = normalizeNeighborhood(value, commune, aliases);
   return NEIGHBORHOOD_DISPLAY_NAMES[normalized] ?? (value?.trim() || null);
+}
+
+export function buildNeighborhoodAliasMap(
+  entries: Array<{ name: string; aliases?: string | null; communeName?: string | null }>,
+): NeighborhoodAliasMap {
+  const candidates = new Map<string, Set<string>>();
+  const register = (key: string, canonicalName: string) => {
+    if (!key) return;
+    const existing = candidates.get(key);
+    if (existing) existing.add(canonicalName);
+    else candidates.set(key, new Set([canonicalName]));
+  };
+
+  for (const entry of entries) {
+    const canonicalName = entry.name.trim();
+    if (!canonicalName) continue;
+    const canonicalKey = entry.communeName
+      ? neighborhoodAliasLookupKey(entry.communeName, canonicalName)
+      : normalize(canonicalName);
+    register(canonicalKey, canonicalName);
+    for (const alias of (entry.aliases ?? "").split(/[,;|\n]+/)) {
+      const normalizedAlias = normalize(alias);
+      if (!normalizedAlias) continue;
+      const aliasKey = entry.communeName
+        ? neighborhoodAliasLookupKey(entry.communeName, alias)
+        : normalizedAlias;
+      register(aliasKey, canonicalName);
+    }
+  }
+
+  const resolved: Record<string, string> = {};
+  const ambiguous: string[] = [];
+  for (const [key, names] of Array.from(candidates.entries()).sort(([left], [right]) => left.localeCompare(right, "fr"))) {
+    const canonicalNames = Array.from(names).sort((left, right) => left.localeCompare(right, "fr"));
+    if (canonicalNames.length === 1) resolved[key] = canonicalNames[0];
+    else ambiguous.push(key);
+  }
+  return { resolved, ambiguous };
 }
 
 function includesAny(value: string, needles: string[]) {
@@ -443,6 +532,7 @@ export function calculateGrandAbidjanTransportFee({
   clientQuartier,
   transportFeeAmounts,
   grandAbidjanCommuneNames = [],
+  neighborhoodAliases,
 }: {
   teacherCommune?: string | null;
   teacherQuartier?: string | null;
@@ -451,12 +541,13 @@ export function calculateGrandAbidjanTransportFee({
   clientQuartier?: string | null;
   transportFeeAmounts?: Partial<TransportFeeAmounts>;
   grandAbidjanCommuneNames?: string[];
+  neighborhoodAliases?: NeighborhoodAliasMap;
 }): TransportFeeResult {
   const amounts = resolveTransportFeeAmounts(transportFeeAmounts);
   const origin = displayAreaName(teacherCommune);
   const destination = displayAreaName(clientCommune);
-  const originQuartier = displayNeighborhoodName(teacherQuartier);
-  const destinationQuartier = displayNeighborhoodName(clientQuartier);
+  const originQuartier = displayNeighborhoodName(teacherQuartier, teacherCommune, neighborhoodAliases);
+  const destinationQuartier = displayNeighborhoodName(clientQuartier, clientCommune, neighborhoodAliases);
   const normalizedDestination = normalize(destination);
   const coveredByTeacherZone = teacherZoneNames.some((zone) => normalize(zone) === normalizedDestination);
   // Une zone couverte décrit où le professeur accepte de se déplacer ; ce
@@ -505,10 +596,21 @@ export function calculateGrandAbidjanTransportFee({
   }
 
   if (sameArea(fallbackOrigin, destination)) {
+    const hasAmbiguousQuartier = isAmbiguousNeighborhoodName(
+      teacherQuartier,
+      teacherCommune,
+      neighborhoodAliases,
+    ) || isAmbiguousNeighborhoodName(
+      clientQuartier,
+      clientCommune,
+      neighborhoodAliases,
+    );
     const sameKnownQuartier = Boolean(
-      originQuartier
+      !hasAmbiguousQuartier
+      && originQuartier
       && destinationQuartier
-      && normalizeNeighborhood(originQuartier) === normalizeNeighborhood(destinationQuartier)
+      && normalizeNeighborhood(originQuartier, teacherCommune, neighborhoodAliases)
+        === normalizeNeighborhood(destinationQuartier, clientCommune, neighborhoodAliases)
     );
     if (sameKnownQuartier) {
       return {
@@ -593,6 +695,28 @@ function resolveTransportFee(input: BookingPricingInput): TransportFeeResult {
     };
   }
 
+  if (
+    !input.teacherCommune
+    && !input.clientCommune
+    && !input.teacherZoneNames?.length
+    && !input.transportFeeKey
+  ) {
+    return {
+      key: PENDING_TRANSPORT_FEE_KEY,
+      label: "Déplacement à calculer",
+      amount: null,
+      originCommune: null,
+      destinationCommune: null,
+      originQuartier: null,
+      destinationQuartier: null,
+      routeLabel: "",
+      ruleLabel: "Choisissez la commune du client pour calculer le déplacement.",
+      coveredByTeacherZone: false,
+      isGrandAbidjanRoute: false,
+      isQuoteOnly: false,
+    };
+  }
+
   if (input.teacherCommune || input.clientCommune || input.teacherZoneNames?.length) {
     return calculateGrandAbidjanTransportFee({
       teacherCommune: input.teacherCommune,
@@ -602,6 +726,7 @@ function resolveTransportFee(input: BookingPricingInput): TransportFeeResult {
       clientQuartier: input.clientQuartier,
       transportFeeAmounts: input.transportFeeAmounts,
       grandAbidjanCommuneNames: input.grandAbidjanCommuneNames,
+      neighborhoodAliases: input.neighborhoodAliases,
     });
   }
 
@@ -668,15 +793,12 @@ export function derivePricingContext(input: PricingDerivationInput): PricingInpu
   if (includesAny(text, ["memoire", "rapport de stage", "soutenance"])) levelGroup = "memoire_soutenance";
 
   if (
-    ["formation_professionnelle", "apprentissage_metier"].includes(category)
-    && (
-      includesAnyToken(selectedLevel, [
+    isProfessionalLevelSelection(input.levelName, input.preciseLevel)
+    || (
+      ["formation_professionnelle", "apprentissage_metier"].includes(category)
+      && includesAnyToken(selectedLevel, [
         "avance", "avancee", "avances", "avancees",
-        "professionnel", "professionnelle", "professionnels", "professionnelles",
-        "expert", "experte", "experts", "expertes",
-        "adulte", "adultes",
       ])
-      || selectedLevel === "formation professionnelle"
     )
   ) {
     levelGroup = "professional_advanced";
@@ -709,6 +831,9 @@ export function derivePricingContext(input: PricingDerivationInput): PricingInpu
 
 export function calculatePriceTier(input: PricingInput): PriceTierCode {
   if (input.deliveryMode === "entreprise" || input.isCompanyTraining) return "SUR_DEVIS";
+  // Un niveau explicitement professionnel reste prioritaire, même si un
+  // ancien choix de système scolaire français subsiste dans le formulaire.
+  if (input.levelGroup === "professional_advanced") return "PREMIUM_20000";
 
   if (input.schoolSystem === "francais") {
     if (input.levelGroup === "terminale" || input.exam === "bac_francais_grand_oral_specialites") return "PREMIUM_20000";
@@ -754,7 +879,6 @@ export function calculatePriceTier(input: PricingInput): PriceTierCode {
   if (input.levelGroup === "licence") return "AVANCE_15000";
   if (input.levelGroup === "master") return "PREMIUM_20000";
   if (input.levelGroup === "memoire_soutenance") return "SUR_DEVIS";
-  if (input.levelGroup === "professional_advanced") return "PREMIUM_20000";
 
   if (input.domain === "bureautique_base") return "STANDARD_10000";
   if (input.domain === "excel_powerpoint_canva") return "RENFORCEMENT_12500";
@@ -854,6 +978,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
       ? `${transport.ruleLabel} Forfait particulier configuré pour la destination.`
       : transport.ruleLabel,
     transportCoveredByTeacherZone: transport.coveredByTeacherZone,
+    transportFeePending: transport.key === PENDING_TRANSPORT_FEE_KEY,
     materialFee,
     totalBeforePaymentServiceFee,
     paymentServiceFeeRate: PAYMENT_SERVICE_FEE_RATE_BPS,

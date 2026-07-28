@@ -17,6 +17,7 @@ type BookingPricingBreakdownBaseProps = {
   courseAmount?: number | null;
   transportFee?: number | null;
   transportFeeLabel?: string | null;
+  transportFeePending?: boolean | null;
   transportRouteLabel?: string | null;
   transportRuleLabel?: string | null;
   materialFee?: number | null;
@@ -59,6 +60,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const safeParticipantsCount = Math.max(1, Math.round(Number(participantsCount) || 1));
   const extraParticipants = Math.max(0, safeParticipantsCount - 1);
   const transportFee = props.transportFee ?? 0;
+  const transportFeePending = props.transportFeePending === true;
   const transportRouteLabel = props.transportRouteLabel;
   const transportRuleLabel = props.transportRuleLabel;
   const discountAmount = props.discountAmount ?? 0;
@@ -104,7 +106,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               {isQuoteOnly
                 ? "Calcul automatique à reprendre avant le paiement."
                 : audience === "client"
-                  ? `Séances de 2h, niveau, participants${transportFee > 0 ? ", déplacement" : ""} et frais de service.`
+                  ? `Séances de 2h, niveau, participants${transportFeePending ? ", déplacement à calculer" : transportFee > 0 ? ", déplacement" : ""} et frais de service.`
                   : "Vue interne avec éléments comptables réservés au service client."}
             </p>
           </div>
@@ -215,7 +217,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               ) : (
                 <PricingLine label="Cours" detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""}`} value={<Money amount={courseAmount} />} strong />
               )}
-              {(transportFee > 0 || transportRouteLabel) && (
+              {transportFeePending ? (
+                <PricingLine
+                  label="Déplacement"
+                  detail="Choisissez la commune du client pour obtenir le forfait exact."
+                  value="En attente"
+                />
+              ) : (transportFee > 0 || transportRouteLabel) && (
                 <PricingLine
                   label="Déplacement"
                   detail={`${transportRouteLabel ?? "Frais selon zone"}${safeSessionsCount > 1 ? ` · ${Math.round(transportFee / safeSessionsCount).toLocaleString("fr-FR")} FCFA x ${safeSessionsCount} séances` : ""}`}

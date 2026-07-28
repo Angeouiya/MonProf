@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { PAYDUNYA_CI_CHANNELS } from "@/lib/payment-methods";
+import { productionIntegrationsAreEnabled } from "@/lib/production-integration-policy";
 
 type PayDunyaCheckoutInput = {
   origin: string;
@@ -130,6 +131,11 @@ export function getPayDunyaPublicBaseUrl(req: NextRequest) {
 }
 
 export async function getPayDunyaConfig(): Promise<PayDunyaConfig | null> {
+  // PayDunya is a legacy live provider, but it carries the same production
+  // isolation requirements as Jèko: Preview and Development must neither read
+  // production credentials from Setting nor call the provider.
+  if (!productionIntegrationsAreEnabled()) return null;
+
   if (payDunyaConfigCache && payDunyaConfigCache.expiresAt > Date.now()) {
     return payDunyaConfigCache.value;
   }

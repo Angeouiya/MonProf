@@ -12,6 +12,9 @@ const {
   classifyGmailHttpFailure,
   classifyGoogleOAuthTokenFailure,
 } = jiti("../src/lib/gmail-email.ts");
+const {
+  selectPasswordEmailCandidateBatch,
+} = jiti("../src/lib/password-email-candidate-selection.ts");
 
 const secret = "test-secret-that-is-long-enough-for-outbox-verification";
 const aad = "job-dedupe-key";
@@ -23,9 +26,10 @@ const payload = {
 const encrypted = encryptPasswordEmailPayload(payload, secret, aad);
 assert.deepEqual(decryptPasswordEmailPayload(encrypted, secret, aad), payload);
 assert.doesNotMatch(encrypted.payloadCiphertext, /private@example|raw-secret-token/);
-const corruptedCiphertext = `${encrypted.payloadCiphertext.slice(0, -1)}${
-  encrypted.payloadCiphertext.endsWith("A") ? "B" : "A"
-}`;
+const corruptionIndex = Math.floor(encrypted.payloadCiphertext.length / 2);
+const corruptedCiphertext = `${encrypted.payloadCiphertext.slice(0, corruptionIndex)}${
+  encrypted.payloadCiphertext[corruptionIndex] === "A" ? "B" : "A"
+}${encrypted.payloadCiphertext.slice(corruptionIndex + 1)}`;
 assert.throws(() => decryptPasswordEmailPayload({
   ...encrypted,
   payloadCiphertext: corruptedCiphertext,
@@ -102,6 +106,99 @@ assert.match(cron, /authorization !== `Bearer \$\{configuredSecret\}`/);
 assert.match(cron, /status: 401/);
 assert.ok(vercel.crons.some((item) => item.path === "/api/cron/password-email-outbox" && item.schedule === "*/5 * * * *"));
 assert.doesNotMatch(nextConfig, /env:\s*\{[\s\S]*APP_URL/);
+
+const claimStart = outbox.indexOf("async function claimPasswordEmailJob");
+const claimEnd = outbox.indexOf("async function prepareResetTokenForDelivery", claimStart);
+assert.ok(claimStart >= 0 && claimEnd > claimStart, "La fonction de claim outbox doit exister.");
+const claim = outbox.slice(claimStart, claimEnd);
+assert.match(claim, /processingForAccount[\s\S]*status: "PROCESSING"/);
+assert.match(claim, /executableWhere[\s\S]*availableAt: \{ lte: now \}/);
+assert.match(claim, /firstAvailableReset[\s\S]*kind: "PASSWORD_RESET"/);
+assert.ok(
+  claim.indexOf("const firstAvailableReset") < claim.indexOf("const firstAvailableForAccount"),
+  "Un reset exécutable doit être choisi avant le fallback des confirmations.",
+);
+assert.doesNotMatch(
+  claim,
+  /status: \{ in: ACTIVE_STATUSES \}/,
+  "Un job actif mais encore en backoff ne doit pas bloquer un reset disponible.",
+);
+assert.match(
+  outbox,
+  /const \[resetCandidates, otherCandidates\][\s\S]*kind: "PASSWORD_RESET"[\s\S]*kind: \{ not: "PASSWORD_RESET" \}[\s\S]*selectPasswordEmailCandidateBatch/,
+  "Le flush réel doit fournir deux fenêtres au sélecteur testé avant d'appliquer sa limite globale.",
+);
+
+// Régression comportementale : un `take` rempli de confirmations anciennes
+// ne doit jamais cacher les resets plus récents, et chaque passage doit faire
+// progresser la file jusqu'aux confirmations.
+const batchLimit = 5;
+const oldConfirmations = Array.from({ length: batchLimit }, (_, index) => ({
+  id: `confirmation-${String(index).padStart(2, "0")}`,
+  kind: "PASSWORD_CHANGED",
+  createdAt: new Date(`2026-07-28T10:00:${String(index).padStart(2, "0")}Z`),
+}));
+const newerResets = Array.from({ length: batchLimit + 2 }, (_, index) => ({
+  id: `reset-${String(index).padStart(2, "0")}`,
+  kind: "PASSWORD_RESET",
+  createdAt: new Date(`2026-07-28T11:00:${String(index).padStart(2, "0")}Z`),
+}));
+let pendingCandidates = [...oldConfirmations, ...newerResets];
+const processedBatches = [];
+while (pendingCandidates.length > 0) {
+  const batch = selectPasswordEmailCandidateBatch(pendingCandidates, batchLimit);
+  assert.ok(batch.length > 0, "Chaque passage doit faire progresser la file.");
+  processedBatches.push(batch);
+  const selectedIds = new Set(batch.map((candidate) => candidate.id));
+  pendingCandidates = pendingCandidates.filter((candidate) => !selectedIds.has(candidate.id));
+}
+assert.deepEqual(
+  processedBatches[0].filter((candidate) => candidate.kind === "PASSWORD_RESET").map((candidate) => candidate.id),
+  newerResets.slice(0, batchLimit - 1).map((candidate) => candidate.id),
+  "Le premier batch doit rester majoritairement composé de resets, même s'ils sont plus récents.",
+);
+assert.ok(
+  processedBatches[0].some((candidate) => candidate.kind !== "PASSWORD_RESET"),
+  "Un lot mixte doit aussi faire progresser les confirmations.",
+);
+assert.deepEqual(
+  processedBatches.flat().map((candidate) => candidate.id).sort(),
+  [...oldConfirmations, ...newerResets].map((candidate) => candidate.id).sort(),
+  "Tous les jobs doivent finir par progresser sans starvation.",
+);
+
+// Un flux continu qui remplit chaque nouveau lot de resets doit laisser au
+// moins une place aux confirmations à chaque passage.
+let continuouslyPendingConfirmations = Array.from({ length: 6 }, (_, index) => ({
+  id: `continuous-confirmation-${index}`,
+  kind: "PASSWORD_CHANGED",
+  createdAt: new Date(`2026-07-28T09:00:${String(index).padStart(2, "0")}Z`),
+}));
+for (let cycle = 0; cycle < 3; cycle += 1) {
+  const incomingResets = Array.from({ length: batchLimit }, (_, index) => ({
+    id: `continuous-reset-${cycle}-${index}`,
+    kind: "PASSWORD_RESET",
+    createdAt: new Date(`2026-07-28T12:0${cycle}:${String(index).padStart(2, "0")}Z`),
+  }));
+  const batch = selectPasswordEmailCandidateBatch(
+    [...continuouslyPendingConfirmations, ...incomingResets],
+    batchLimit,
+  );
+  const progressedConfirmationIds = new Set(
+    batch
+      .filter((candidate) => candidate.kind !== "PASSWORD_RESET")
+      .map((candidate) => candidate.id),
+  );
+  assert.ok(progressedConfirmationIds.size >= 1, "Chaque lot mixte doit faire progresser une confirmation.");
+  continuouslyPendingConfirmations = continuouslyPendingConfirmations.filter(
+    (candidate) => !progressedConfirmationIds.has(candidate.id),
+  );
+}
+assert.equal(
+  continuouslyPendingConfirmations.length,
+  3,
+  "Les confirmations doivent progresser même si chaque passage reçoit un nouveau lot complet de resets.",
+);
 
 console.log("Password email outbox verification passed.");
 

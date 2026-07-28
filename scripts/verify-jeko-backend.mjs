@@ -103,8 +103,10 @@ const sweeper = readFileSync(
   new URL("../src/lib/jeko-reconciliation-sweeper.ts", import.meta.url),
   "utf8",
 );
-assert.match(sweeper, /\{ status:\s*"REQUESTING" \}/);
-assert.match(sweeper, /providerOrderId:\s*\{\s*not:\s*null\s*\}/);
+assert.match(sweeper, /attempt\."status" = 'REQUESTING'/);
+assert.match(sweeper, /attempt\."providerOrderId" IS NOT NULL/);
+assert.match(sweeper, /claimJekoPaymentAttemptSweepCandidates/);
+assert.equal(sweeper.match(/FOR UPDATE SKIP LOCKED/g)?.length, 2);
 assert.match(sweeper, /reconcileJekoPaymentAttempt/);
 assert.match(sweeper, /reconcileJekoReschedulePaymentAttempt/);
 assert.match(sweeper, /verifyJekoTeacherPayoutRecord/);

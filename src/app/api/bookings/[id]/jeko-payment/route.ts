@@ -73,6 +73,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       idempotencyKey: true,
       status: true,
       method: true,
+      providerOrderId: true,
+      failureCode: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -117,6 +119,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       bookingId: booking.id,
       idempotencyKey: plan.idempotencyKey,
       paymentMethod: plan.paymentMethod,
+      expectedAmountXof: booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice,
+      expectedPricingSnapshot: booking.pricingSnapshot,
       successUrl: absoluteAppUrl(`/client/reservations/${safeBookingId}?jeko=return`, request),
       errorUrl: absoluteAppUrl(`/client/reservations/${safeBookingId}?jeko=cancelled`, request),
     });
@@ -274,6 +278,7 @@ async function findOwnedBooking(bookingId: string, clientId: string) {
       isQuoteOnly: true,
       totalClientPays: true,
       totalPrice: true,
+      pricingSnapshot: true,
     },
   });
 }
@@ -322,7 +327,9 @@ function publicJekoError(error: unknown) {
   const message = error instanceof Error ? error.message : "Paiement Jèko indisponible.";
   const conflict = message.includes("idempotence")
     || message.includes("fonds sécurisés")
-    || message.includes("PayDunya");
+    || message.includes("PayDunya")
+    || message.includes("tarif a été recalculé")
+    || message.includes("tentative Jèko active");
   return {
     status: conflict ? 409 : 503,
     body: {

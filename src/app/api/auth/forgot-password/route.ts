@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
     appOrigin: getPublicAppOrigin(req),
   });
 
-  if (request.jobId) {
+  // Le cron durable reprendra un job existant. Ne pas lancer un nouveau flush
+  // pour chaque clic répété sur le même lien actif.
+  if (request.jobId && !request.reused) {
     after(async () => {
       try {
         await flushPasswordEmailOutbox({ jobIds: [request.jobId!], limit: 1 });

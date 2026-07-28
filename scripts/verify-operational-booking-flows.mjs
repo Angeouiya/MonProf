@@ -1,10 +1,19 @@
 import fs from "node:fs";
+import { createJiti } from "jiti";
+
+const jiti = createJiti(import.meta.url);
+const {
+  isReschedulableBookingSessionStatus,
+  resolveBookingScheduleSummary,
+  resolveRescheduleSessionTarget,
+} = jiti("../src/lib/reschedule-session-target.ts");
 
 const checks = [];
 
 const missionRoute = read("src/app/api/mission/[token]/route.ts");
 const bookingApi = read("src/app/api/bookings/[id]/route.ts");
 const reschedulePolicy = read("src/lib/reschedule-policy.ts");
+const rescheduleSessionTarget = read("src/lib/reschedule-session-target.ts");
 const rescheduleReconciliation = read("src/lib/paydunya-reschedule-reconciliation.ts");
 const jekoRescheduleReconciliation = read("src/lib/jeko-reschedule-reconciliation.ts");
 const replacementActions = read("src/app/client/reservations/[id]/replacement-proposal-actions.tsx");
@@ -19,6 +28,7 @@ const pricingEngine = read("src/lib/pricing.ts");
 const courseCatalog = read("src/lib/course-catalog.ts");
 const pricingConfirmation = read("src/lib/pricing-confirmation.ts");
 const oneActiveRescheduleMigration = read("prisma/migrations/20260728040000_one_active_reschedule_per_booking/migration.sql");
+const refundActiveRescheduleMigration = read("prisma/migrations/20260728110000_reschedule_refund_active_guard/migration.sql");
 const replacementEngine = read("src/lib/teacher-replacement-matching.ts");
 const missionPolicy = read("src/lib/teacher-mission-policy.ts");
 const missionActions = read("src/components/professor/mission-response-actions.tsx");
@@ -29,7 +39,12 @@ const privacyPage = read("src/app/politique-confidentialite/page.tsx");
 const bookingSessions = read("src/lib/booking-sessions.ts");
 const bookingSessionRoute = read("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts");
 const payoutRoute = read("src/app/api/admin/teacher-payouts/route.ts");
+const payoutRequestReviewRoute = read("src/app/api/admin/teacher-payout-requests/[id]/route.ts");
+const payoutAdjustmentRoute = read("src/app/api/admin/teacher-payment-adjustments/[id]/route.ts");
+const payoutSanctionRoute = read("src/app/api/admin/teacher-sanctions/[id]/route.ts");
+const payoutBalanceLock = read("src/lib/teacher-payout-reservations.ts");
 const payoutReconciliation = read("src/lib/jeko-payout-reconciliation.ts");
+const teacherPayments = read("src/lib/teacher-payments.ts");
 const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 
 record(
@@ -54,14 +69,29 @@ record(
   /SAME_NEIGHBORHOOD:\s*\{[\s\S]*?key:\s*"same_neighborhood"[\s\S]*?amount:\s*0/.test(pricingEngine)
     && /sameKnownQuartier[\s\S]*?key:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.amount/.test(pricingEngine)
     && /NEIGHBORHOOD_ALIASES[\s\S]*?mermoze:\s*"mermoz"/.test(pricingEngine)
-    && /normalizeNeighborhood\(originQuartier\)\s*===\s*normalizeNeighborhood\(destinationQuartier\)/.test(pricingEngine)
+    && /normalizeNeighborhood\(originQuartier,\s*teacherCommune,\s*neighborhoodAliases\)[\s\S]*?===\s*normalizeNeighborhood\(destinationQuartier,\s*clientCommune,\s*neighborhoodAliases\)/.test(pricingEngine)
+    && /buildNeighborhoodAliasMap/.test(pricingEngine)
+    && /neighborhoodAliases:\s*buildNeighborhoodAliasMap\([\s\S]*?neighborhoodAliasRows\.map/.test(bookingCreateApi)
     && /SAME_AREA:\s*\{[\s\S]*?key:\s*"same_area"[\s\S]*?amount:\s*1000/.test(pricingEngine)
     && /transport\.key\s*===\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?transport\.key\s*===\s*TRANSPORT_FEES\.SAME_AREA\.key/.test(pricingEngine),
 );
 
 record(
+  "Home transport remains pending until the client commune is selected",
+  /PENDING_TRANSPORT_FEE_KEY\s*=\s*"pending_location"/.test(pricingEngine)
+    && /key:\s*PENDING_TRANSPORT_FEE_KEY[\s\S]*?amount:\s*null/.test(pricingEngine)
+    && /transportFeePending:\s*transport\.key\s*===\s*PENDING_TRANSPORT_FEE_KEY/.test(pricingEngine)
+    && /pricing\.transportFeePending[\s\S]*?Déplacement en attente du choix de la commune/.test(bookingForm),
+);
+
+record(
   "Client and API enforce the same catalog compatibility rules",
   /export function isCourseCatalogItemCompatible/.test(courseCatalog)
+    && /export function resolveBookingCourseCategory/.test(courseCatalog)
+    && /const canonicalCourseCategory\s*=\s*resolveBookingCourseCategory/.test(bookingCreateApi)
+    && /category:\s*canonicalCourseCategory/.test(bookingCreateApi)
+    && /courseCategory:\s*canonicalCourseCategory/.test(bookingCreateApi)
+    && /disabled=\{courseCategoryResolution\.locked\}/.test(bookingForm)
     && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacherSubjects:\s*teacherSubjectNames/.test(bookingForm)
     && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacher\.subjects\.map/.test(bookingCreateApi),
 );
@@ -318,6 +348,139 @@ record(
     && /syncBookingSessionAggregates/.test(payoutReconciliation),
 );
 
+record(
+  "Jèko drafts and applied retentions serialize on one teacher balance lock",
+  /FROM\s+"Teacher"[\s\S]*?WHERE\s+"id"\s*=\s*\$\{teacherId\}[\s\S]*?FOR UPDATE/.test(payoutBalanceLock)
+    && /lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?teacherPaymentAdjustment\.findMany\([\s\S]*?appliedAdjustmentFingerprint\(currentAppliedAdjustments\)[\s\S]*?teacherPayoutRecord\.create\(/.test(payoutRoute)
+    && /lockTeacherPayoutBalance\(tx,\s*adjustment\.teacherId\)[\s\S]*?teacherPaymentAdjustment\.findUnique\([\s\S]*?hasActiveJekoPayoutReservationInTransaction\([\s\S]*?teacherPaymentAdjustment\.updateMany\(/.test(payoutAdjustmentRoute)
+    && /lockTeacherPayoutBalance\(tx,\s*sanction\.teacherId\)[\s\S]*?teacherSanction\.findUnique\([\s\S]*?hasActiveJekoPayoutReservationInTransaction\([\s\S]*?teacherPaymentAdjustment\.(updateMany|create)\(/.test(payoutSanctionRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutAdjustmentRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutSanctionRoute)
+    && /code\s*===\s*"P2034"/.test(payoutAdjustmentRoute)
+    && /"P2034"\]\.includes\(code\)/.test(payoutSanctionRoute),
+);
+
+record(
+  "Professor payout requests use the exact released session and replacement ledger",
+  /sessions:\s*\{\s*some:\s*\{\s*teacherId:\s*teacher\.id,\s*status:\s*\{\s*in:\s*\["RELEASED",\s*"PARTIALLY_PAID"\]/.test(payoutRequestRoute)
+    && /sessions:\s*\{\s*none:\s*\{\}\s*\}[\s\S]*?teacherNetAmount:\s*\{\s*gt:\s*0\s*\}[\s\S]*?paymentStatus:\s*"TO_PAY_TEACHER"/.test(payoutRequestRoute)
+    && /teacherId:\s*\{\s*not:\s*teacher\.id\s*\}[\s\S]*?sessions:\s*\{\s*some:\s*\{\s*teacherId:\s*teacher\.id/.test(payoutRequestRoute)
+    && /sessions:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}[\s\S]*?releasedAmount:\s*true[\s\S]*?paidAmount:\s*true[\s\S]*?retainedAmount:\s*true/.test(payoutRequestRoute)
+    && /getTeacherFinancialSettlement\(booking, adjustments\)/.test(payoutRequestRoute),
+);
+
+record(
+  "Professor payout request balance and reservation share one serializable transaction",
+  /db\.\$transaction\(async\s*\(tx\)\s*=>\s*\{[\s\S]*?tx\.teacherPayoutRequest\.aggregate\(\{[\s\S]*?tx\.teacherPayoutAllocation\.findMany\(\{[\s\S]*?tx\.teacherPayoutRequest\.create\(\{/.test(payoutRequestRoute)
+    && /payout:\s*\{\s*teacherId:\s*teacher\.id,\s*status:\s*"DRAFT"\s*\}/.test(payoutRequestRoute)
+    && /allocation\.payout\.payoutRequest\?\.status\s*===\s*"PENDING"/.test(payoutRequestRoute)
+    && /readyToReceive\s*-\s*pendingAmount\s*-\s*draftReservedAmount/.test(payoutRequestRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutRequestRoute)
+    && /errorCode\(error\)\s*===\s*"P2034"[\s\S]*?PAYOUT_REQUEST_BALANCE_CONFLICT/.test(payoutRequestRoute),
+);
+
+record(
+  "Admin payouts never fall back to a replaced booking-level balance",
+  /_count:\s*\{\s*select:\s*\{\s*sessions:\s*true\s*\}\s*\}/.test(payoutRoute)
+    && /booking\._count\.sessions\s*>\s*0[\s\S]*?if\s*\(booking\.sessions\.length\s*===\s*0\)\s*continue/.test(payoutRoute),
+);
+
+record(
+  "Pending professor requests reserve the balance without blocking idempotent payout recovery",
+  payoutRoute.indexOf("const existingPayout") >= 0
+    && payoutRoute.indexOf("const existingPayout") < payoutRoute.indexOf("const oldestUnallocatedRequest")
+    && payoutRoute.indexOf("const existing = await tx.teacherPayoutRecord.findUnique")
+      < payoutRoute.indexOf("const currentOldestUnallocatedRequest")
+    && /PENDING_PAYOUT_REQUEST_RESERVED/.test(payoutRoute)
+    && /payoutRecordMatches\(raced/.test(payoutRoute),
+);
+
+record(
+  "Payout request rejection cannot race a Jèko draft transfer",
+  /teacherPayoutRequest\.updateMany\(\{[\s\S]*?status:\s*"PENDING"[\s\S]*?payoutRecordId:\s*null/.test(payoutRequestReviewRoute)
+    && /claimed\.count\s*!==\s*1/.test(payoutRequestReviewRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutRequestReviewRoute)
+    && /PAYOUT_REQUEST_REVIEW_CONFLICT/.test(payoutRequestReviewRoute),
+);
+
+record(
+  "Global retentions are consumed once across paid and legacy history",
+  /getTeacherGlobalRetentionLedger/.test(teacherPayments)
+    && /rawSessionGlobal[\s\S]*?rawLegacyGlobal[\s\S]*?sessionByBooking[\s\S]*?legacyByBooking/.test(teacherPayments)
+    && /bookingSession\.findMany\(\{[\s\S]*?retainedAmount:\s*\{\s*gt:\s*0/.test(payoutRequestRoute)
+    && /status:\s*\{\s*in:\s*\["DRAFT",\s*"PAID"\]\s*\}/.test(payoutRequestRoute)
+    && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutRoute)
+    && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutRequestRoute),
+);
+
+record(
+  "Client reschedules atomically lock the selected eligible session and its exact ledger price",
+  /const requestedSessionId\s*=\s*typeof bookingSessionId\s*===\s*"string"/.test(bookingApi)
+    && /SELECT\s+"id"[\s\S]*?FROM\s+"Booking"[\s\S]*?"id"\s*=\s*\$\{booking\.id\}[\s\S]*?FOR UPDATE/.test(bookingApi)
+    && /requiresVerifiedPayDunyaForOperationalAction\(lockedBooking\)/.test(bookingApi)
+    && /\["PAID",\s*"PENDING_ADMIN_VALIDATION",\s*"CONFIRMED",\s*"ASSIGNED"\]\.includes\(lockedBooking\.status\)/.test(bookingApi)
+    && /SELECT\s+"id"[\s\S]*?FROM\s+"BookingSession"[\s\S]*?"id"\s*=\s*\$\{requestedSessionId\}[\s\S]*?"bookingId"\s*=\s*\$\{booking\.id\}[\s\S]*?FOR UPDATE/.test(bookingApi)
+    && /lockedSession\s*=\s*await tx\.bookingSession\.findUnique/.test(bookingApi)
+    && /!isReschedulableBookingSessionStatus\(lockedSession\.status\)/.test(bookingApi)
+    && /RESCHEDULABLE_BOOKING_SESSION_STATUSES\s*=\s*\["PLANNED",\s*"TEACHER_CONFIRMED"\]/.test(rescheduleSessionTarget)
+    && /unitPrice:\s*lockedSession\.courseAmount[\s\S]*?sessionsCount:\s*1[\s\S]*?scheduledDate:\s*lockedSession\.scheduledDate[\s\S]*?scheduledTime:\s*lockedSession\.scheduledTime/.test(bookingApi)
+    && /bookingSessionId:\s*lockedSession\?\.id\s*\?\?\s*null/.test(bookingApi)
+    && /teacherId:\s*rescheduleTeacherId/.test(bookingApi)
+    && /teacherTask\.create\(\{[\s\S]*?teacherId:\s*request\.teacherId/.test(rescheduleReconciliation)
+    && /teacherNotification\.create\(\{[\s\S]*?teacherId:\s*request\.teacherId/.test(rescheduleReconciliation)
+    && /isolationLevel:\s*"Serializable"/.test(bookingApi),
+);
+
+record(
+  "Professor accepts by session ID with an unambiguous legacy-slot fallback",
+  /bookingSession\.findMany\(\{\s*where:\s*\{\s*bookingId:\s*request\.bookingId\s*\}/.test(professorRescheduleRoute)
+    && /resolveRescheduleSessionTarget\(sessions,\s*\{\s*bookingSessionId:\s*request\.bookingSessionId,\s*oldScheduledDate:\s*request\.oldScheduledDate,\s*oldScheduledTime:\s*request\.oldScheduledTime/.test(professorRescheduleRoute)
+    && /if\s*\(request\.bookingSessionId\s*&&\s*!targetSession\)\s*\{\s*throw new Error\("RESCHEDULE_SESSION_LEDGER_MISSING"\)/.test(professorRescheduleRoute)
+    && /sessions\.length\s*>\s*0[\s\S]*?!targetSession[\s\S]*?targetSession\.teacherId\s*!==\s*teacher\.id[\s\S]*?sessionMatchesRescheduleOrigin/.test(professorRescheduleRoute)
+    && /if\s*\(input\.bookingSessionId\)[\s\S]*?sessions\.find\(\(session\)\s*=>\s*session\.id\s*===\s*input\.bookingSessionId\)[\s\S]*?return exactMatches\.length\s*===\s*1\s*\?\s*exactMatches\[0\]\s*:\s*null/.test(rescheduleSessionTarget)
+    && /code\s*===\s*"RESCHEDULE_SESSION_LEDGER_MISSING"[\s\S]*?status:\s*409/.test(professorRescheduleRoute),
+);
+
+record(
+  "Session targeting scenarios reject invalid IDs, terminal statuses and ambiguous legacy slots",
+  verifyRescheduleSessionTargetScenarios(),
+);
+
+record(
+  "A rescheduled pack keeps its earliest active session as the booking summary",
+  verifyBookingScheduleSummaryScenarios()
+    && /resolveBookingScheduleSummary\(sessions\.map/.test(professorRescheduleRoute)
+    && /scheduledDate:\s*bookingScheduledDate[\s\S]*?startDate:\s*bookingScheduledDate[\s\S]*?scheduledTime:\s*bookingScheduledTime/.test(professorRescheduleRoute),
+);
+
+record(
+  "A pending reschedule refund blocks a second paid reschedule",
+  /status:\s*\{\s*in:\s*\["PAYMENT_PENDING",\s*"PAYMENT_FAILED",\s*"AWAITING_TEACHER",\s*"REFUND_REQUIRED"\]/.test(bookingApi)
+    && /précédent changement de créneau doit être remboursé/.test(bookingApi)
+    && /DROP INDEX "BookingRescheduleRequest_one_active_per_booking"/.test(refundActiveRescheduleMigration)
+    && /CREATE UNIQUE INDEX "BookingRescheduleRequest_one_active_per_booking"/.test(refundActiveRescheduleMigration)
+    && /REFUND_REQUIRED/.test(refundActiveRescheduleMigration)
+    && /HAVING COUNT\(\*\) > 1/.test(refundActiveRescheduleMigration),
+);
+
+record(
+  "Booking cancellation and reschedule creation serialize on the same booking lock",
+  (bookingApi.match(/FROM\s+"Booking"[\s\S]*?FOR UPDATE/g) ?? []).length >= 2
+    && /activeReschedule\s*=\s*await tx\.bookingRescheduleRequest\.findFirst\(\{[\s\S]*?PAYMENT_PENDING[\s\S]*?PAYMENT_FAILED[\s\S]*?AWAITING_TEACHER[\s\S]*?REFUND_REQUIRED/.test(bookingApi)
+    && /purpose:\s*"RESCHEDULE_FEE"[\s\S]*?status:\s*\{\s*in:\s*\["CREATED",\s*"REQUESTING",\s*"PENDING"\]/.test(bookingApi)
+    && /Terminez ou annulez d'abord la demande de changement de créneau en cours/.test(bookingApi),
+);
+
+record(
+  "Accepted reschedules cannot change a balance reserved by a Jèko draft payout",
+  /teacherPayoutRecord\.findFirst\(\{[\s\S]*?provider:\s*"JEKO"[\s\S]*?status:\s*"DRAFT"[\s\S]*?allocations:\s*\{\s*some:\s*\{\s*bookingId:\s*request\.bookingId/.test(professorRescheduleRoute)
+    && /JEKO_PAYOUT_DRAFT_ACTIVE/.test(professorRescheduleRoute)
+    && /bookingSession\.update\(\{[\s\S]*?releasedAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
+    && /isolationLevel:\s*"Serializable"/.test(professorRescheduleRoute)
+    && /code\s*===\s*"P2034"[\s\S]*?RESCHEDULE_PAYOUT_CONFLICT/.test(professorRescheduleRoute),
+);
+
 for (const check of checks) {
   console.log(`${check.ok ? "OK" : "FAIL"} ${check.label}`);
 }
@@ -334,4 +497,106 @@ function read(filePath) {
 
 function record(label, ok) {
   checks.push({ label, ok });
+}
+
+function verifyRescheduleSessionTargetScenarios() {
+  const oldDate = new Date("2026-08-02T00:00:00.000Z");
+  const original = {
+    id: "session-original",
+    teacherId: "teacher-original",
+    status: "PLANNED",
+    scheduledDate: oldDate,
+    scheduledTime: "10h-12h",
+  };
+  const replacement = {
+    ...original,
+    id: "session-replacement",
+    teacherId: "teacher-replacement",
+  };
+  const duplicatedSlot = [original, replacement];
+
+  const selectedById = resolveRescheduleSessionTarget(duplicatedSlot, {
+    bookingSessionId: replacement.id,
+    oldScheduledDate: oldDate,
+    oldScheduledTime: original.scheduledTime,
+  });
+  const invalidId = resolveRescheduleSessionTarget([original], {
+    bookingSessionId: "session-from-another-booking",
+    oldScheduledDate: oldDate,
+    oldScheduledTime: original.scheduledTime,
+  });
+  const uniqueLegacy = resolveRescheduleSessionTarget([original], {
+    bookingSessionId: null,
+    oldScheduledDate: oldDate,
+    oldScheduledTime: original.scheduledTime,
+  });
+  const ambiguousLegacy = resolveRescheduleSessionTarget(duplicatedSlot, {
+    bookingSessionId: null,
+    oldScheduledDate: oldDate,
+    oldScheduledTime: original.scheduledTime,
+  });
+  const missingLegacy = resolveRescheduleSessionTarget([original], {
+    bookingSessionId: null,
+    oldScheduledDate: new Date("2026-08-03T00:00:00.000Z"),
+    oldScheduledTime: original.scheduledTime,
+  });
+  const terminalLegacy = resolveRescheduleSessionTarget([{ ...original, status: "RELEASED" }], {
+    bookingSessionId: null,
+    oldScheduledDate: oldDate,
+    oldScheduledTime: original.scheduledTime,
+  });
+
+  return selectedById?.id === replacement.id
+    && selectedById.teacherId === replacement.teacherId
+    && invalidId === null
+    && uniqueLegacy?.id === original.id
+    && ambiguousLegacy === null
+    && missingLegacy === null
+    && terminalLegacy === null
+    && isReschedulableBookingSessionStatus("PLANNED")
+    && isReschedulableBookingSessionStatus("TEACHER_CONFIRMED")
+    && !isReschedulableBookingSessionStatus("IN_PROGRESS")
+    && !isReschedulableBookingSessionStatus("RELEASED")
+    && !isReschedulableBookingSessionStatus("PARTIALLY_PAID")
+    && !isReschedulableBookingSessionStatus("PAID")
+    && !isReschedulableBookingSessionStatus("DISPUTED");
+}
+
+function verifyBookingScheduleSummaryScenarios() {
+  const first = {
+    id: "session-1",
+    sequence: 1,
+    status: "PLANNED",
+    scheduledDate: new Date("2026-08-02T00:00:00.000Z"),
+    scheduledTime: "10h-12h",
+  };
+  const second = {
+    id: "session-2",
+    sequence: 2,
+    status: "TEACHER_CONFIRMED",
+    scheduledDate: new Date("2026-08-09T00:00:00.000Z"),
+    scheduledTime: "08h-10h",
+  };
+
+  const laterSessionMovedLater = resolveBookingScheduleSummary([
+    first,
+    { ...second, scheduledDate: new Date("2026-08-16T00:00:00.000Z") },
+  ]);
+  const firstSessionMovedAfterSecond = resolveBookingScheduleSummary([
+    { ...first, scheduledDate: new Date("2026-08-20T00:00:00.000Z") },
+    second,
+  ]);
+  const cancelledEarlierSession = resolveBookingScheduleSummary([
+    { ...first, status: "CANCELLED", scheduledDate: new Date("2026-08-01T00:00:00.000Z") },
+    second,
+  ]);
+  const paidEarlierSession = resolveBookingScheduleSummary([
+    { ...first, status: "PAID", scheduledDate: new Date("2026-08-01T00:00:00.000Z") },
+    second,
+  ]);
+
+  return laterSessionMovedLater?.bookingSessionId === first.id
+    && firstSessionMovedAfterSecond?.bookingSessionId === second.id
+    && cancelledEarlierSession?.bookingSessionId === second.id
+    && paidEarlierSession?.bookingSessionId === second.id;
 }

@@ -25,6 +25,29 @@ test("la configuration est bloquée si une variable obligatoire manque", () => {
   );
 });
 
+test("la vérification live est interdite sur un Vercel non-production", () => {
+  const completeConfiguration = {
+    GMAIL_CLIENT_ID: "client-id",
+    GMAIL_CLIENT_SECRET: "client-secret",
+    GMAIL_REFRESH_TOKEN: "refresh-token",
+    GMAIL_SENDER_EMAIL: "diplomateimmobilier99@gmail.com",
+  };
+
+  assert.doesNotThrow(() => readGmailConfiguration(completeConfiguration));
+  assert.doesNotThrow(() => readGmailConfiguration({
+    ...completeConfiguration,
+    VERCEL_ENV: "production",
+  }));
+  assert.throws(
+    () => readGmailConfiguration({ ...completeConfiguration, VERCEL_ENV: "preview" }),
+    /interdite hors Vercel Production/,
+  );
+  assert.throws(
+    () => readGmailConfiguration({ ...completeConfiguration, VERCEL_ENV: "development" }),
+    /interdite hors Vercel Production/,
+  );
+});
+
 test("tokeninfo doit confirmer exactement l'email et le scope gmail.send", () => {
   assert.doesNotThrow(() =>
     validateTokenInfo(

@@ -32,6 +32,15 @@ export function parseArguments(args) {
 }
 
 export function readGmailConfiguration(environment = process.env) {
+  const vercelEnvironment = typeof environment.VERCEL_ENV === "string"
+    ? environment.VERCEL_ENV.trim().toLowerCase()
+    : "";
+  if (vercelEnvironment && vercelEnvironment !== "production") {
+    throw new SafeVerificationError(
+      "La vérification Gmail en direct est interdite hors Vercel Production. Exécutez-la localement sans VERCEL_ENV ou depuis Production.",
+    );
+  }
+
   const missing = REQUIRED_ENVIRONMENT_VARIABLES.filter(
     (name) => typeof environment[name] !== "string" || environment[name].trim().length === 0,
   );

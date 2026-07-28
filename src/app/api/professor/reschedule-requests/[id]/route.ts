@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
+import {
+  isReschedulableBookingSessionStatus,
+  resolveBookingScheduleSummary,
+  resolveRescheduleSessionTarget,
+  sessionMatchesRescheduleOrigin,
+} from "@/lib/reschedule-session-target";
 
 const MAX_RESPONSE_LENGTH = 700;
 
@@ -49,163 +55,225 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const newSlot = `${formatDateFr(request.proposedDate)} · ${request.proposedTime}`;
 
   if (action === "accept") {
-    const applied = await db.$transaction(async (tx) => {
-      const claim = await tx.bookingRescheduleRequest.updateMany({
-        where: { id: request.id, status: "AWAITING_TEACHER" },
-        data: {
-          status: "APPLIED",
-          teacherResponse: response || "Nouveau créneau accepté par le professeur.",
-          teacherRespondedAt: now,
-          appliedAt: now,
-        },
-      });
-      if (claim.count !== 1) return false;
+    let applied: boolean;
+    try {
+      applied = await db.$transaction(async (tx) => {
+        // Le report peut augmenter le releasedAmount de la séance. Le faire
+        // pendant qu'un transfert Jèko a figé ce montant rendrait impossible
+        // sa finalisation locale après un succès externe. Cette lecture et la
+        // mutation de la séance partagent donc le même niveau SERIALIZABLE que
+        // la création du DRAFT de retrait.
+        const activePayout = await tx.teacherPayoutRecord.findFirst({
+          where: {
+            teacherId: teacher.id,
+            provider: "JEKO",
+            status: "DRAFT",
+            allocations: { some: { bookingId: request.bookingId } },
+          },
+          select: { id: true },
+        });
+        if (activePayout) throw new Error("JEKO_PAYOUT_DRAFT_ACTIVE");
 
-      const sessions = await tx.bookingSession.findMany({
-        where: {
-          bookingId: request.bookingId,
-          status: { notIn: ["CANCELLED", "REFUNDED"] },
-        },
-        orderBy: { sequence: "asc" },
-      });
-      const teacherSessions = sessions.filter((session) => session.teacherId === teacher.id);
-      const targetSession = pickRescheduledSession(
-        teacherSessions.length > 0 ? teacherSessions : sessions,
-        request.oldScheduledDate,
-        request.oldScheduledTime,
-      );
-      if (sessions.length > 0 && request.feeTeacherAmount > 0 && targetSession?.teacherId !== teacher.id) {
-        throw new Error("RESCHEDULE_SESSION_LEDGER_MISSING");
-      }
-
-      if (targetSession) {
-        const released = Boolean(targetSession.releasedAt)
-          || ["RELEASED", "PARTIALLY_PAID", "PAID"].includes(targetSession.status);
-        const nextStatus = targetSession.status === "PAID" && request.feeTeacherAmount > 0
-          ? "PARTIALLY_PAID"
-          : targetSession.status;
-        await tx.bookingSession.update({
-          where: { id: targetSession.id },
+        const claim = await tx.bookingRescheduleRequest.updateMany({
+          where: { id: request.id, status: "AWAITING_TEACHER" },
           data: {
-            scheduledDate: request.proposedDate,
-            scheduledTime: request.proposedTime,
-            proposedDate: null,
-            proposedTime: null,
-            teacherCourseAmount: { increment: request.feeTeacherAmount },
-            teacherNetAmount: { increment: request.feeTeacherAmount },
-            ...(released && request.feeTeacherAmount > 0
-              ? { releasedAmount: { increment: request.feeTeacherAmount }, status: nextStatus }
+            status: "APPLIED",
+            teacherResponse: response || "Nouveau créneau accepté par le professeur.",
+            teacherRespondedAt: now,
+            appliedAt: now,
+          },
+        });
+        if (claim.count !== 1) return false;
+
+        const sessions = await tx.bookingSession.findMany({
+          where: { bookingId: request.bookingId },
+          orderBy: { sequence: "asc" },
+        });
+        // Les nouvelles demandes portent l'identifiant immuable de la séance.
+        // Le rapprochement par créneau ne subsiste que pour les lignes legacy
+        // créées avant l'ajout de bookingSessionId et exige un match unique.
+        const targetSession = resolveRescheduleSessionTarget(sessions, {
+          bookingSessionId: request.bookingSessionId,
+          oldScheduledDate: request.oldScheduledDate,
+          oldScheduledTime: request.oldScheduledTime,
+        });
+        if (request.bookingSessionId && !targetSession) {
+          throw new Error("RESCHEDULE_SESSION_LEDGER_MISSING");
+        }
+        if (
+          sessions.length > 0
+          && (
+            !targetSession
+            || targetSession.teacherId !== teacher.id
+            || !isReschedulableBookingSessionStatus(targetSession.status)
+            || !sessionMatchesRescheduleOrigin(targetSession, request.oldScheduledDate, request.oldScheduledTime)
+          )
+        ) {
+          throw new Error("RESCHEDULE_SESSION_LEDGER_MISSING");
+        }
+
+        if (targetSession) {
+          const released = Boolean(targetSession.releasedAt)
+            || ["RELEASED", "PARTIALLY_PAID", "PAID"].includes(targetSession.status);
+          const nextStatus = targetSession.status === "PAID" && request.feeTeacherAmount > 0
+            ? "PARTIALLY_PAID"
+            : targetSession.status;
+          await tx.bookingSession.update({
+            where: { id: targetSession.id },
+            data: {
+              scheduledDate: request.proposedDate,
+              scheduledTime: request.proposedTime,
+              proposedDate: null,
+              proposedTime: null,
+              teacherCourseAmount: { increment: request.feeTeacherAmount },
+              teacherNetAmount: { increment: request.feeTeacherAmount },
+              ...(released && request.feeTeacherAmount > 0
+                ? { releasedAmount: { increment: request.feeTeacherAmount }, status: nextStatus }
+                : {}),
+            },
+          });
+          await tx.bookingSessionHistory.create({
+            data: {
+              bookingSessionId: targetSession.id,
+              actorType: "TEACHER",
+              actorId: teacher.id,
+              action: "RESCHEDULE_ACCEPTED",
+              fromStatus: targetSession.status,
+              toStatus: nextStatus,
+              detail: `Créneau ${oldSlot} remplacé par ${newSlot}. Part professeur du supplément intégrée au ledger de la séance : ${request.feeTeacherAmount} FCFA.`,
+            },
+          });
+        }
+
+        const scheduleSummary = resolveBookingScheduleSummary(sessions.map((session) => (
+          targetSession && session.id === targetSession.id
+            ? {
+                ...session,
+                scheduledDate: request.proposedDate,
+                scheduledTime: request.proposedTime,
+              }
+            : session
+        )));
+        const bookingScheduledDate = scheduleSummary?.scheduledDate ?? request.proposedDate;
+        const bookingScheduledTime = scheduleSummary?.scheduledTime ?? request.proposedTime;
+
+        await tx.booking.update({
+          where: { id: request.bookingId },
+          data: {
+            scheduledDate: bookingScheduledDate,
+            startDate: bookingScheduledDate,
+            scheduledTime: bookingScheduledTime,
+            preferredTime: bookingScheduledTime,
+            teacherPayoutAmount: { increment: request.feeTeacherAmount },
+            ...(sessions.length === 0
+              ? { teacherNetAmount: { increment: request.feeTeacherAmount } }
               : {}),
+            totalTeacherReceives: { increment: request.feeTeacherAmount },
+            commissionAmount: { increment: request.feePlatformAmount },
+            message: `${request.booking.message ?? ""}\n\n[Créneau modifié]: ${oldSlot} -> ${newSlot}. ${request.reason ? `Motif client: ${request.reason}.` : ""}`.trim(),
           },
         });
-        await tx.bookingSessionHistory.create({
+        await tx.teacherTask.updateMany({
+          where: {
+            teacherId: teacher.id,
+            bookingId: request.bookingId,
+            type: "CONFIRM_RESCHEDULE",
+            status: { notIn: ["DONE", "CANCELLED"] },
+          },
+          data: { status: "DONE", completedAt: now },
+        });
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: request.clientId,
+              title: "Nouveau créneau confirmé",
+              message: `${teacherName} a confirmé votre nouveau créneau pour ${request.booking.reference}: ${newSlot}.`,
+              type: "RESCHEDULE_CONFIRMED",
+              recipientType: "CLIENT",
+              recipientName: clientName,
+              channel: "INTERNAL",
+              status: "CONFIRMED",
+              priority: "IMPORTANT",
+              bookingId: request.bookingId,
+              teacherId: teacher.id,
+              clientId: request.clientId,
+              sentAt: now,
+              confirmedAt: now,
+              link: `/client/reservations/${request.bookingId}`,
+              actionLabel: "Voir réservation",
+            },
+            {
+              userId: null,
+              title: "Créneau modifié confirmé",
+              message: `${teacherName} a accepté le nouveau créneau ${newSlot} pour ${request.booking.reference}. Supplément professeur: ${request.feeTeacherAmount.toLocaleString("fr-FR")} FCFA.`,
+              type: "RESCHEDULE_CONFIRMED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "CONFIRMED",
+              priority: "IMPORTANT",
+              bookingId: request.bookingId,
+              teacherId: teacher.id,
+              clientId: request.clientId,
+              sentAt: now,
+              confirmedAt: now,
+              link: `/admin/reservations/${request.bookingId}`,
+              actionLabel: "Voir réservation",
+            },
+          ],
+        });
+        await tx.teacherNotification.create({
           data: {
-            bookingSessionId: targetSession.id,
-            actorType: "TEACHER",
-            actorId: teacher.id,
-            action: "RESCHEDULE_ACCEPTED",
-            fromStatus: targetSession.status,
-            toStatus: nextStatus,
-            detail: `Créneau ${oldSlot} remplacé par ${newSlot}. Part professeur du supplément intégrée au ledger de la séance : ${request.feeTeacherAmount} FCFA.`,
+            teacherId: teacher.id,
+            bookingId: request.bookingId,
+            title: `Créneau confirmé - ${request.booking.reference}`,
+            message: `Vous avez confirmé le nouveau créneau ${newSlot}.`,
+            channel: "INTERNAL",
+            sent: true,
+            status: "CONFIRMED",
+            readAt: now,
           },
         });
-      }
-
-      await tx.booking.update({
-        where: { id: request.bookingId },
-        data: {
-          scheduledDate: request.proposedDate,
-          startDate: request.proposedDate,
-          scheduledTime: request.proposedTime,
-          preferredTime: request.proposedTime,
-          teacherPayoutAmount: { increment: request.feeTeacherAmount },
-          ...(sessions.length === 0
-            ? { teacherNetAmount: { increment: request.feeTeacherAmount } }
-            : {}),
-          totalTeacherReceives: { increment: request.feeTeacherAmount },
-          commissionAmount: { increment: request.feePlatformAmount },
-          message: `${request.booking.message ?? ""}\n\n[Créneau modifié]: ${oldSlot} -> ${newSlot}. ${request.reason ? `Motif client: ${request.reason}.` : ""}`.trim(),
-        },
-      });
-      await tx.teacherTask.updateMany({
-        where: {
-          teacherId: teacher.id,
-          bookingId: request.bookingId,
-          type: "CONFIRM_RESCHEDULE",
-          status: { notIn: ["DONE", "CANCELLED"] },
-        },
-        data: { status: "DONE", completedAt: now },
-      });
-      await tx.notification.createMany({
-        data: [
-          {
-            userId: request.clientId,
-            title: "Nouveau créneau confirmé",
-            message: `${teacherName} a confirmé votre nouveau créneau pour ${request.booking.reference}: ${newSlot}.`,
-            type: "RESCHEDULE_CONFIRMED",
-            recipientType: "CLIENT",
-            recipientName: clientName,
-            channel: "INTERNAL",
-            status: "CONFIRMED",
-            priority: "IMPORTANT",
-            bookingId: request.bookingId,
-            teacherId: teacher.id,
-            clientId: request.clientId,
-            sentAt: now,
-            confirmedAt: now,
-            link: `/client/reservations/${request.bookingId}`,
-            actionLabel: "Voir réservation",
+        await tx.adminActionLog.create({
+          data: {
+            adminId: null,
+            action: "Modification créneau acceptée par professeur",
+            entityType: "BookingRescheduleRequest",
+            entityId: request.id,
+            detail: `${teacherName} a accepté ${newSlot} pour ${request.booking.reference}. Ancien créneau: ${oldSlot}. Part professeur: ${request.feeTeacherAmount} FCFA.`,
+            oldStatus: "AWAITING_TEACHER",
+            newStatus: "APPLIED",
           },
-          {
-            userId: null,
-            title: "Créneau modifié confirmé",
-            message: `${teacherName} a accepté le nouveau créneau ${newSlot} pour ${request.booking.reference}. Supplément professeur: ${request.feeTeacherAmount.toLocaleString("fr-FR")} FCFA.`,
-            type: "RESCHEDULE_CONFIRMED",
-            recipientType: "ADMIN",
-            channel: "INTERNAL",
-            status: "CONFIRMED",
-            priority: "IMPORTANT",
-            bookingId: request.bookingId,
-            teacherId: teacher.id,
-            clientId: request.clientId,
-            sentAt: now,
-            confirmedAt: now,
-            link: `/admin/reservations/${request.bookingId}`,
-            actionLabel: "Voir réservation",
-          },
-        ],
-      });
-      await tx.teacherNotification.create({
-        data: {
-          teacherId: teacher.id,
-          bookingId: request.bookingId,
-          title: `Créneau confirmé - ${request.booking.reference}`,
-          message: `Vous avez confirmé le nouveau créneau ${newSlot}.`,
-          channel: "INTERNAL",
-          sent: true,
-          status: "CONFIRMED",
-          readAt: now,
-        },
-      });
-      await tx.adminActionLog.create({
-        data: {
-          adminId: null,
-          action: "Modification créneau acceptée par professeur",
-          entityType: "BookingRescheduleRequest",
-          entityId: request.id,
-          detail: `${teacherName} a accepté ${newSlot} pour ${request.booking.reference}. Ancien créneau: ${oldSlot}. Part professeur: ${request.feeTeacherAmount} FCFA.`,
-          oldStatus: "AWAITING_TEACHER",
-          newStatus: "APPLIED",
-        },
-      });
-      if (sessions.length > 0) {
-        await syncBookingSessionAggregates(
-          tx as unknown as Parameters<typeof syncBookingSessionAggregates>[0],
-          request.bookingId,
-        );
+        });
+        if (sessions.length > 0) {
+          await syncBookingSessionAggregates(
+            tx as unknown as Parameters<typeof syncBookingSessionAggregates>[0],
+            request.bookingId,
+          );
+        }
+        return true;
+      }, { isolationLevel: "Serializable" });
+    } catch (error) {
+      const code = errorCode(error);
+      if (code === "JEKO_PAYOUT_DRAFT_ACTIVE") {
+        return NextResponse.json({
+          error: "Un retrait Jèko est en cours sur cette réservation. Attendez sa confirmation avant d'accepter le nouveau créneau.",
+          code,
+        }, { status: 409 });
       }
-      return true;
-    });
+      if (code === "RESCHEDULE_SESSION_LEDGER_MISSING") {
+        return NextResponse.json({
+          error: "Le créneau d'origine ne correspond pas à une séance attribuée à votre profil. Aucun planning ni solde n'a été modifié.",
+          code,
+        }, { status: 409 });
+      }
+      if (code === "P2034") {
+        return NextResponse.json({
+          error: "Le solde professeur vient d'être modifié. Actualisez puis acceptez de nouveau le créneau.",
+          code: "RESCHEDULE_PAYOUT_CONFLICT",
+        }, { status: 409 });
+      }
+      throw error;
+    }
     if (!applied) {
       return NextResponse.json({ error: "Cette demande vient d'être traitée depuis une autre fenêtre." }, { status: 409 });
     }
@@ -307,26 +375,10 @@ function formatDateFr(date?: Date | string | null) {
   });
 }
 
-function pickRescheduledSession<T extends {
-  scheduledDate: Date | null;
-  scheduledTime: string | null;
-}>(sessions: T[], oldDate: Date | null, oldTime: string | null) {
-  if (sessions.length === 0) return null;
-  const expectedDay = oldDate ? toUtcDay(oldDate) : null;
-  const exact = sessions.find((session) => (
-    (!expectedDay || (session.scheduledDate && toUtcDay(session.scheduledDate) === expectedDay))
-    && (!oldTime || session.scheduledTime === oldTime)
-  ));
-  if (exact) return exact;
-  if (expectedDay) {
-    const sameDay = sessions.find(
-      (session) => session.scheduledDate && toUtcDay(session.scheduledDate) === expectedDay,
-    );
-    if (sameDay) return sameDay;
+function errorCode(error: unknown) {
+  if (error && typeof error === "object") {
+    if ("code" in error && typeof error.code === "string") return error.code;
+    if ("message" in error && typeof error.message === "string") return error.message;
   }
-  return sessions[0];
-}
-
-function toUtcDay(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return "UNKNOWN";
 }

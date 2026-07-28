@@ -32,7 +32,7 @@ try {
       COUNT(*)::int AS "activeCount",
       ARRAY_AGG("id" ORDER BY "createdAt") AS "requestIds"
     FROM ${qualifiedTable}
-    WHERE "status"::text IN ('PAYMENT_PENDING', 'PAYMENT_FAILED', 'AWAITING_TEACHER')
+    WHERE "status"::text IN ('PAYMENT_PENDING', 'PAYMENT_FAILED', 'AWAITING_TEACHER', 'REFUND_REQUIRED')
     GROUP BY "bookingId"
     HAVING COUNT(*) > 1
     ORDER BY COUNT(*) DESC, "bookingId"
@@ -41,7 +41,7 @@ try {
 
   if (duplicates.length > 0) {
     console.error(
-      "FAIL Active reschedule duplicates must be resolved before Prisma creates the one-active-request index.",
+      "FAIL Financially active reschedule duplicates must be resolved before Prisma creates the one-active-request index.",
     );
     for (const duplicate of duplicates) {
       console.error(
@@ -51,7 +51,7 @@ try {
     process.exit(1);
   }
 
-  console.log("OK No booking has more than one active reschedule request.");
+  console.log("OK No booking has more than one financially active reschedule request.");
 } catch (error) {
   console.error(
     `FAIL Migration preflight could not inspect active reschedules: ${error instanceof Error ? error.message : String(error)}`,

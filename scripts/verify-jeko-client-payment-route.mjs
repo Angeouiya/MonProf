@@ -7,6 +7,7 @@ const {
   isJekoBookingPayable,
   parseJekoCheckoutBody,
   planJekoBookingAttempt,
+  planJekoRescheduleAttempt,
   platformMethodToJeko,
 } = jiti("../src/lib/jeko-client-payment.ts");
 
@@ -84,6 +85,55 @@ assert.deepEqual(retry, {
   paymentMethod: "mtn",
 });
 
+const failedWithProviderIdentity = planJekoBookingAttempt({
+  bookingId: "booking_123",
+  requestedMethod: "mtn",
+  attempts: [{
+    id: "failed_remote",
+    idempotencyKey: "BOOKING:booking_123:JEKO:ATTEMPT:1",
+    status: "FAILED",
+    method: "WAVE",
+    providerOrderId: "jeko_request_123",
+    failureCode: "P2024",
+  }],
+});
+assert.deepEqual(failedWithProviderIdentity, {
+  kind: "reuse",
+  attemptId: "failed_remote",
+  idempotencyKey: "BOOKING:booking_123:JEKO:ATTEMPT:1",
+  paymentMethod: "wave",
+});
+assert.equal(planJekoRescheduleAttempt({
+  rescheduleRequestId: "reschedule_123",
+  requestedMethod: "orange",
+  attempts: [{
+    id: "failed_reschedule_remote",
+    idempotencyKey: "RESCHEDULE:reschedule_123:JEKO:ATTEMPT:1",
+    status: "FAILED",
+    method: "MTN_MONEY",
+    providerOrderId: "jeko_reschedule_123",
+  }],
+}).kind, "reuse");
+
+const confirmedProviderFailure = planJekoBookingAttempt({
+  bookingId: "booking_123",
+  requestedMethod: "orange",
+  attempts: [{
+    id: "failed_confirmed",
+    idempotencyKey: "BOOKING:booking_123:JEKO:ATTEMPT:1",
+    status: "FAILED",
+    method: "WAVE",
+    providerOrderId: "jeko_failed_123",
+    failureCode: "JEKO_PAYMENT_FAILED",
+  }],
+});
+assert.deepEqual(confirmedProviderFailure, {
+  kind: "create",
+  attemptId: null,
+  idempotencyKey: "BOOKING:booking_123:JEKO:ATTEMPT:2",
+  paymentMethod: "orange",
+});
+
 const paid = planJekoBookingAttempt({
   bookingId: "booking_123",
   requestedMethod: "wave",
@@ -116,9 +166,35 @@ assert.doesNotMatch(
 assert.match(provider, /where:\s*\{ id: attempt\.id, status:\s*\{ not:\s*"SUCCEEDED" \} \}/g);
 assert.match(provider, /booking\.paymentProvider === "PAYDUNYA"/);
 assert.match(provider, /booking\.paydunyaToken \|\| booking\.paydunyaCheckoutUrl/);
-assert.match(provider, /const providerClaim = await db\.booking\.updateMany/);
+assert.match(provider, /const providerClaim = await tx\.booking\.updateMany/);
+assert.match(provider, /FROM "Booking"[\s\S]*?FOR UPDATE/);
+assert.match(provider, /booking\.status !== "PENDING_PAYMENT"[\s\S]*?booking\.paymentStatus !== "FAILED"[\s\S]*?booking\.isQuoteOnly/);
+assert.match(provider, /expectedAmountXof[\s\S]*?expectedPricingSnapshot/);
 assert.match(provider, /\{ paymentProvider: null \}[\s\S]*?\{ paymentProvider: "JEKO" \}/);
 assert.match(provider, /Aucun lien Jèko concurrent/);
+assert.equal(
+  provider.match(/let paymentRequest: Awaited<ReturnType<typeof createJekoPaymentRequest>>/g)?.length,
+  2,
+);
+assert.equal(
+  provider.match(/preserveJekoProviderIdentityAfterLocalFailure\(attempt\.id, paymentRequest, error\)/g)?.length,
+  2,
+);
+assert.match(provider, /status: "PENDING",[\s\S]*?failureCode: "JEKO_LOCAL_PERSISTENCE_PENDING"/);
+assert.equal(
+  provider.match(/attempt\.status === "FAILED" && attempt\.providerOrderId/g)?.length,
+  2,
+);
+assert.equal(
+  provider.match(/attempt\.failureCode === "JEKO_PAYMENT_FAILED"/g)?.length,
+  2,
+);
+assert.match(provider, /FROM "BookingRescheduleRequest"[\s\S]*?FOR UPDATE/);
+assert.match(provider, /currentBooking\.status[\s\S]*?"PAID"[\s\S]*?"PENDING_ADMIN_VALIDATION"[\s\S]*?"CONFIRMED"[\s\S]*?"ASSIGNED"/);
+assert.match(
+  provider,
+  /status: "FAILED",[\s\S]{0,180}?providerOrderId: \{ not: null \},[\s\S]{0,220}?failureCode: \{ not: "JEKO_PAYMENT_FAILED" \}/,
+);
 
 const bookingRoute = readFileSync(
   new URL("../src/app/api/bookings/[id]/route.ts", import.meta.url),
@@ -130,5 +206,12 @@ assert.match(bookingRoute, /code:\s*"PAYDUNYA_NEW_CHECKOUT_DISABLED"/g);
 assert.doesNotMatch(bookingRoute, /createPayDunyaCheckoutInvoice/);
 assert.doesNotMatch(bookingRoute, /createPayDunyaRescheduleFeeInvoice/);
 assert.match(bookingRoute, /teacherAdminMessages:\s*true,[\s\S]*?paymentAttempts:\s*true/);
+assert.match(
+  bookingRoute,
+  /case "delete_draft":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDATE[\s\S]*?paymentAttempts:\s*true[\s\S]*?tx\.booking\.delete/,
+);
+assert.match(bookingRoute, /case "cancel":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDATE/);
+assert.match(bookingRoute, /!cancellableStatuses\.includes\(currentBooking\.status\)/);
+assert.match(bookingRoute, /status: "FAILED", providerOrderId: \{ not: null \}/);
 
 console.log("Jèko client payment route verification passed: strict body, provider lock, ambiguous retries and idempotence.");

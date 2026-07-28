@@ -616,6 +616,85 @@ export function findCourseCatalogItem(id?: string | null) {
   return COURSE_CATALOG.find((item) => item.id === id) ?? null;
 }
 
+const PROFESSIONAL_COURSE_CATEGORIES = new Set([
+  "formation_professionnelle",
+  "apprentissage_metier",
+]);
+
+export function isProfessionalLevelSelection(
+  levelName?: string | null,
+  preciseLevel?: string | null,
+) {
+  const level = normalizeCatalogMatchLabel([levelName, preciseLevel].filter(Boolean).join(" "));
+  if (!level) return false;
+
+  return /\b(professionnel|professionnelle|professionnels|professionnelles|adulte|adultes|expert|experte|experts|expertes|reconversion)\b/.test(level)
+    || level.includes("formation professionnelle")
+    || level.includes("apprentissage metier");
+}
+
+/**
+ * La catégorie envoyée par le navigateur ne doit jamais permettre de faire
+ * passer un métier ou un niveau professionnel dans une grille scolaire moins
+ * chère. Le serveur et le formulaire partagent cette canonisation.
+ */
+export function resolveBookingCourseCategory({
+  requestedCategory,
+  levelName,
+  preciseLevel,
+  subjectName,
+  catalogItem,
+}: {
+  requestedCategory: string;
+  levelName?: string | null;
+  preciseLevel?: string | null;
+  subjectName?: string | null;
+  catalogItem?: CourseCatalogItem | null;
+}) {
+  // Un cours catalogue actif est la source la plus précise : sa catégorie
+  // prime sur toute inférence textuelle faite à partir de la matière.
+  if (catalogItem?.actif) {
+    return { category: catalogItem.categorie, locked: true } as const;
+  }
+
+  const normalizedSubject = normalizeCatalogMatchLabel(subjectName).trim();
+  const matchingSubjectCategories = normalizedSubject
+    ? Array.from(new Set(
+        COURSE_CATALOG
+          .filter((item) => (
+            item.actif
+            && normalizeCatalogMatchLabel(item.matiere_ou_competence).trim() === normalizedSubject
+          ))
+          .map((item) => item.categorie),
+      ))
+    : [];
+  const matchingProfessionalCategories = matchingSubjectCategories.filter((category) => (
+    PROFESSIONAL_COURSE_CATEGORIES.has(category)
+  ));
+  const subjectIsExclusivelyProfessional = matchingSubjectCategories.length > 0
+    && matchingProfessionalCategories.length === matchingSubjectCategories.length;
+  const mustUseProfessionalCategory = Boolean(
+    isProfessionalLevelSelection(levelName, preciseLevel)
+    || subjectIsExclusivelyProfessional,
+  );
+
+  if (!mustUseProfessionalCategory) {
+    return { category: requestedCategory, locked: false } as const;
+  }
+
+  // Une formation d'entreprise reste dans sa grille supérieure (25 000 F+).
+  if (requestedCategory === "formation_entreprise") {
+    return { category: requestedCategory, locked: true } as const;
+  }
+  if (PROFESSIONAL_COURSE_CATEGORIES.has(requestedCategory)) {
+    return { category: requestedCategory, locked: true } as const;
+  }
+  if (matchingProfessionalCategories.length === 1) {
+    return { category: matchingProfessionalCategories[0], locked: true } as const;
+  }
+  return { category: "formation_professionnelle", locked: true } as const;
+}
+
 export function resolveCourseCatalogSchoolSystem({
   item,
   requestedSchoolSystem,

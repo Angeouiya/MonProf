@@ -13,16 +13,13 @@ export async function POST(req: NextRequest) {
 }
 
 async function runCron(req: NextRequest) {
-  const configuredSecret = process.env.CRON_SECRET;
-  const auth = req.headers.get("authorization") || "";
-  const headerSecret = req.headers.get("x-cron-secret") || "";
-  const querySecret = req.nextUrl.searchParams.get("secret") || "";
-  const incomingSecret = auth.startsWith("Bearer ")
-    ? auth.slice("Bearer ".length).trim()
-    : headerSecret || querySecret;
-
-  if (!configuredSecret || incomingSecret !== configuredSecret) {
-    return NextResponse.json({ error: "Cron non autorisé" }, { status: 401 });
+  const configuredSecret = process.env.CRON_SECRET?.trim();
+  const authorization = req.headers.get("authorization");
+  if (!configuredSecret || authorization !== `Bearer ${configuredSecret}`) {
+    return NextResponse.json(
+      { error: "Cron non autorisé" },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const result = await runNotificationScheduler({
@@ -32,5 +29,8 @@ async function runCron(req: NextRequest) {
   });
   const webPush = await flushWebPushOutbox(100);
 
-  return NextResponse.json({ ...result, webPush });
+  return NextResponse.json(
+    { ...result, webPush },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

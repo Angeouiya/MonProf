@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
 import { confirmPayDunyaInvoice, type PayDunyaInvoiceStatus } from "@/lib/paydunya";
 import { hasVerifiedPayDunyaClientPayment, VERIFIED_CLIENT_FUND_STATUS_VALUES } from "@/lib/payment-security";
+import { productionIntegrationsAreEnabled } from "@/lib/production-integration-policy";
 
 const SECURED_PAYMENT_STATUSES = new Set<string>(VERIFIED_CLIENT_FUND_STATUS_VALUES);
 type PayDunyaConfirmedInvoice = Awaited<ReturnType<typeof confirmPayDunyaInvoice>>;
@@ -28,6 +29,16 @@ export type ReconcilePayDunyaResult = {
 };
 
 export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaInput): Promise<ReconcilePayDunyaResult> {
+  if (!productionIntegrationsAreEnabled()) {
+    return {
+      bookingId: input.bookingId ?? undefined,
+      verified: false,
+      status: "unknown",
+      action: "not_configured",
+      message: "PayDunya est désactivé sur cet environnement. Aucun paiement n'a été rapproché.",
+    };
+  }
+
   const inputToken = firstString(input.token);
   const bookingWhere: Prisma.BookingWhereInput | null = input.bookingId
     ? { id: input.bookingId }

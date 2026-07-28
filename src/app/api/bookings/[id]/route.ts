@@ -26,6 +26,7 @@ import {
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { distributeAmount, syncBookingSessionAggregates } from "@/lib/booking-sessions";
+import { isReschedulableBookingSessionStatus } from "@/lib/reschedule-session-target";
 
 function parsePreferredDays(value?: string | null) {
   if (!value) return [];
@@ -244,7 +245,17 @@ export async function PATCH(
         where: {
           provider: "JEKO",
           purpose: "BOOKING",
-          status: { in: ["CREATED", "REQUESTING", "PENDING"] },
+          OR: [
+            { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
+            {
+              status: "FAILED",
+              providerOrderId: { not: null },
+              OR: [
+                { failureCode: null },
+                { failureCode: { not: "JEKO_PAYMENT_FAILED" } },
+              ],
+            },
+          ],
         },
         select: { id: true },
         take: 1,
@@ -264,6 +275,7 @@ export async function PATCH(
     rescheduleMessage,
     rescheduleDate,
     rescheduleTime,
+    bookingSessionId,
     rescheduleRequestId,
     proposalId,
     replacementId,
@@ -286,7 +298,17 @@ export async function PATCH(
           bookingId: booking.id,
           provider: "JEKO",
           purpose: "BOOKING",
-          status: { in: ["CREATED", "REQUESTING", "PENDING"] },
+          OR: [
+            { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
+            {
+              status: "FAILED",
+              providerOrderId: { not: null },
+              OR: [
+                { failureCode: null },
+                { failureCode: { not: "JEKO_PAYMENT_FAILED" } },
+              ],
+            },
+          ],
         },
         orderBy: { createdAt: "desc" },
         select: { id: true },
@@ -339,52 +361,117 @@ export async function PATCH(
         }
       }
 
-      const protectedRelations = await db.booking.findUnique({
-        where: { id: booking.id },
-        select: {
-          _count: {
-            select: {
-              transactions: true,
-              reviews: true,
-              disputes: true,
-              teacherTasks: true,
-              teacherWarnings: true,
-              teacherSanctions: true,
-              replacements: true,
-              clientRefundRequests: true,
-              teacherPaymentAdjustments: true,
-              teacherPayoutAllocations: true,
-              missionLinks: true,
-              scheduleProposals: true,
-              rescheduleRequests: true,
-              teacherAdminMessages: true,
-              paymentAttempts: true,
-            },
-          },
-        },
-      });
-      if (!protectedRelations || Object.values(protectedRelations._count).some((count) => count > 0)) {
-        return NextResponse.json({
-          error: "Ce brouillon possède déjà un historique opérationnel. Le service client doit l'archiver manuellement.",
-        }, { status: 409 });
-      }
+      let deletionResult:
+        | { ok: true }
+        | { ok: false; status: number; error: string };
+      try {
+        deletionResult = await db.$transaction(async (tx) => {
+          // Le checkout Jèko prend le même verrou avant de créer sa
+          // tentative. Si le paiement gagne la course, sa ligne est visible
+          // ci-dessous et bloque la suppression ; si la suppression gagne,
+          // Jèko constate ensuite que le brouillon n'existe plus avant tout POST.
+          const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+            SELECT "id"
+            FROM "Booking"
+            WHERE "id" = ${booking.id}
+            FOR UPDATE
+          `);
+          if (locked.length !== 1) {
+            return { ok: false as const, status: 404, error: "Brouillon introuvable." };
+          }
 
-      await db.$transaction(async (tx) => {
-        await tx.notification.deleteMany({ where: { bookingId: booking.id } });
-        await tx.teacherNotification.deleteMany({ where: { bookingId: booking.id } });
-        await tx.clientCommunication.deleteMany({ where: { bookingId: booking.id } });
-        await tx.booking.delete({ where: { id: booking.id } });
-        await tx.adminActionLog.create({
-          data: {
-            action: "Brouillon client supprimé",
-            entityType: "Booking",
-            entityId: booking.id,
-            detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement confirmé côté serveur ni workflow opérationnel n'était rattaché.`,
-            oldStatus: "PENDING_PAYMENT",
-            newStatus: "DRAFT_DELETED",
-          },
-        });
-      });
+          const protectedRelations = await tx.booking.findUnique({
+            where: { id: booking.id },
+            select: {
+              clientId: true,
+              status: true,
+              paymentStatus: true,
+              paymentVerifiedAt: true,
+              paydunyaVerifiedAt: true,
+              paydunyaToken: true,
+              paydunyaStatus: true,
+              _count: {
+                select: {
+                  transactions: true,
+                  reviews: true,
+                  disputes: true,
+                  teacherTasks: true,
+                  teacherWarnings: true,
+                  teacherSanctions: true,
+                  replacements: true,
+                  clientRefundRequests: true,
+                  teacherPaymentAdjustments: true,
+                  teacherPayoutAllocations: true,
+                  missionLinks: true,
+                  scheduleProposals: true,
+                  rescheduleRequests: true,
+                  teacherAdminMessages: true,
+                  paymentAttempts: true,
+                },
+              },
+            },
+          });
+          if (!protectedRelations || protectedRelations.clientId !== userId) {
+            return { ok: false as const, status: 404, error: "Brouillon introuvable." };
+          }
+          if (
+            protectedRelations.status !== "PENDING_PAYMENT"
+            || protectedRelations.paymentStatus !== "FAILED"
+            || protectedRelations.paymentVerifiedAt
+            || protectedRelations.paydunyaVerifiedAt
+          ) {
+            return {
+              ok: false as const,
+              status: 409,
+              error: "Ce dossier a changé ou contient maintenant un paiement et ne peut plus être supprimé.",
+            };
+          }
+          const lockedPayDunyaStatus = (protectedRelations.paydunyaStatus ?? "").toUpperCase();
+          if (
+            protectedRelations.paydunyaToken
+            && !terminalPayDunyaStatuses.includes(lockedPayDunyaStatus)
+          ) {
+            return {
+              ok: false as const,
+              status: 409,
+              error: "Le lien PayDunya est encore actif. Attendez son expiration avant de supprimer ce brouillon.",
+            };
+          }
+          if (Object.values(protectedRelations._count).some((count) => count > 0)) {
+            return {
+              ok: false as const,
+              status: 409,
+              error: "Ce brouillon possède déjà un historique opérationnel. Le service client doit l'archiver manuellement.",
+            };
+          }
+
+          await tx.notification.deleteMany({ where: { bookingId: booking.id } });
+          await tx.teacherNotification.deleteMany({ where: { bookingId: booking.id } });
+          await tx.clientCommunication.deleteMany({ where: { bookingId: booking.id } });
+          await tx.booking.delete({ where: { id: booking.id } });
+          await tx.adminActionLog.create({
+            data: {
+              action: "Brouillon client supprimé",
+              entityType: "Booking",
+              entityId: booking.id,
+              detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement confirmé côté serveur ni workflow opérationnel n'était rattaché.`,
+              oldStatus: "PENDING_PAYMENT",
+              newStatus: "DRAFT_DELETED",
+            },
+          });
+          return { ok: true as const };
+        }, { isolationLevel: "Serializable" });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+          return NextResponse.json({
+            error: "Le brouillon a changé pendant la suppression. Rechargez la page avant de réessayer.",
+          }, { status: 409 });
+        }
+        throw error;
+      }
+      if (!deletionResult.ok) {
+        return NextResponse.json({ error: deletionResult.error }, { status: deletionResult.status });
+      }
 
       return NextResponse.json({ ok: true, redirect: "/client/reservations?tab=brouillons" });
     }
@@ -1343,8 +1430,10 @@ export async function PATCH(
       if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status)) {
         return NextResponse.json({ error: "Cette réservation ne peut pas être déplacée à ce stade." }, { status: 400 });
       }
-      if (!booking.scheduledDate && !booking.startDate) {
-        return NextResponse.json({ error: "Aucun créneau initial n'est fixé. Contactez le service client pour planifier cette réservation." }, { status: 400 });
+
+      const requestedSessionId = typeof bookingSessionId === "string" ? bookingSessionId.trim() : "";
+      if (booking.sessions.length > 0 && !requestedSessionId) {
+        return NextResponse.json({ error: "Choisissez la séance exacte à déplacer." }, { status: 400 });
       }
       const parsedReschedule = parseClientRescheduleInput(rescheduleDate, rescheduleTime);
       if (!parsedReschedule) {
@@ -1353,95 +1442,190 @@ export async function PATCH(
       if (parsedReschedule.startsAt.getTime() < now.getTime() + 2 * 60 * 60 * 1000) {
         return NextResponse.json({ error: "Le nouveau créneau doit commencer au moins 2h après la demande. Pour une urgence, contactez le service client." }, { status: 400 });
       }
-      const currentDate = booking.scheduledDate ?? booking.startDate;
-      const currentTime = booking.scheduledTime || booking.preferredTime;
-      if (currentDate && isSameDate(currentDate, parsedReschedule.date) && currentTime === parsedReschedule.slotLabel) {
-        return NextResponse.json({ error: "Le nouveau créneau est identique au créneau actuel." }, { status: 400 });
-      }
-      const existingAwaiting = await db.bookingRescheduleRequest.findFirst({
-        where: {
-          bookingId: booking.id,
-          status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED", "AWAITING_TEACHER"] },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      if (existingAwaiting) {
-        return NextResponse.json({
-          error: existingAwaiting.status === "AWAITING_TEACHER"
-            ? "Une modification est déjà en attente de réponse du professeur."
-            : existingAwaiting.status === "PAYMENT_FAILED"
-              ? "Une modification existe déjà : relancez son paiement au lieu de créer une seconde demande."
-              : "Une modification est déjà en attente de paiement.",
-        }, { status: 409 });
-      }
-
-      const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
-      const policy = getReschedulePolicy({
-        unitPrice: pricingSnapshot?.unitSessionAmount ?? booking.unitPrice,
-        courseAmount: pricingSnapshot?.courseAmount ?? booking.courseAmount,
-        totalClientPays: pricingSnapshot?.totalClientPays ?? booking.totalClientPays,
-        totalPrice: booking.totalPrice,
-        sessionsCount: pricingSnapshot?.numberOfSessions ?? booking.sessionsCount,
-        paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount,
-        scheduledDate: currentDate,
-        scheduledTime: currentTime,
-      }, now);
-      if (policy.code === "NO_SHOW") {
-        return NextResponse.json({
-          error: "Le cours est déjà commencé ou dépassé. Le service client doit traiter cette modification manuellement.",
-        }, { status: 409 });
-      }
 
       const cleanReason = typeof rescheduleMessage === "string" ? rescheduleMessage.trim().slice(0, 700) : "";
       if (cleanReason.length < 5) {
         return NextResponse.json({ error: "Expliquez brièvement pourquoi vous souhaitez déplacer le créneau." }, { status: 400 });
       }
 
-      const createdRequest = await db.bookingRescheduleRequest.create({
-        data: {
-          bookingId: booking.id,
-          teacherId: booking.teacherId,
-          clientId: booking.clientId,
-          requestedBy: "CLIENT",
-          oldScheduledDate: currentDate,
-          oldScheduledTime: currentTime,
-          proposedDate: parsedReschedule.date,
-          proposedTime: parsedReschedule.slotLabel,
-          reason: cleanReason,
-          status: policy.feeAmount > 0 ? "PAYMENT_PENDING" : "AWAITING_TEACHER",
-          feeWindow: policy.code,
-          feeBaseAmount: policy.baseAmount,
-          feeRate: policy.feeRate,
-          feeAmount: policy.feeAmount,
-          feeTeacherRate: policy.teacherRate,
-          feeTeacherAmount: policy.teacherAmount,
-          feePlatformRate: policy.platformRate,
-          feePlatformAmount: policy.platformAmount,
-          paymentServiceFeeRate: policy.paymentServiceFeeRate,
-          paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
-          paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
-          totalToPay: policy.totalToPay,
-          paymentProvider: policy.feeAmount > 0 ? "JEKO" : null,
-        },
-        include: {
-          booking: {
+      let creationResult;
+      try {
+        creationResult = await db.$transaction(async (tx) => {
+          const lockedBookingRows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+            SELECT "id"
+            FROM "Booking"
+            WHERE "id" = ${booking.id}
+            FOR UPDATE
+          `);
+          if (lockedBookingRows.length !== 1) {
+            return { ok: false as const, status: 404, error: "Réservation introuvable." };
+          }
+          const lockedBooking = await tx.booking.findUnique({
+            where: { id: booking.id },
             include: {
-              client: { select: { name: true } },
-              teacher: { select: { fullName: true, professionalName: true } },
+              transactions: { where: { type: "CLIENT_PAYMENT" }, orderBy: { createdAt: "desc" } },
             },
-          },
-          teacher: { select: { fullName: true, professionalName: true } },
-          client: { select: { name: true } },
-        },
-      }).catch((error: unknown) => {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return null;
+          });
+          if (!lockedBooking || lockedBooking.clientId !== userId) {
+            return { ok: false as const, status: 403, error: "Accès refusé." };
+          }
+          if (requiresVerifiedPayDunyaForOperationalAction(lockedBooking)) {
+            return { ok: false as const, status: 409, error: PAYMENT_PROOF_REQUIRED_ERROR };
+          }
+          if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(lockedBooking.status)) {
+            return { ok: false as const, status: 409, error: "Cette réservation vient de changer d'état et ne peut plus être déplacée." };
+          }
+
+          let lockedSession: (typeof booking.sessions)[number] | null = null;
+          if (requestedSessionId) {
+            // Le verrou fige l'affectation, le statut, le prix et le créneau
+            // jusqu'à ce que la demande qui les photographie soit créée.
+            const lockedRows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+              SELECT "id"
+              FROM "BookingSession"
+              WHERE "id" = ${requestedSessionId} AND "bookingId" = ${booking.id}
+              FOR UPDATE
+            `);
+            if (lockedRows.length !== 1) {
+              return { ok: false as const, status: 400, error: "Cette séance n'appartient pas à la réservation." };
+            }
+            lockedSession = await tx.bookingSession.findUnique({ where: { id: requestedSessionId } });
+            if (!lockedSession) {
+              return { ok: false as const, status: 409, error: "Cette séance vient d'être supprimée. Actualisez la réservation." };
+            }
+            if (!isReschedulableBookingSessionStatus(lockedSession.status)) {
+              return { ok: false as const, status: 409, error: "Seule une séance planifiée ou confirmée peut être déplacée." };
+            }
+            if (!lockedSession.scheduledDate || !lockedSession.scheduledTime) {
+              return { ok: false as const, status: 409, error: "Cette séance n'a pas encore de créneau complet. Contactez le service client." };
+            }
+          } else {
+            const sessionCount = await tx.bookingSession.count({ where: { bookingId: booking.id } });
+            if (sessionCount > 0) {
+              return { ok: false as const, status: 400, error: "Choisissez la séance exacte à déplacer." };
+            }
+          }
+
+          const currentDate = lockedSession?.scheduledDate ?? lockedBooking.scheduledDate ?? lockedBooking.startDate;
+          const currentTime = lockedSession?.scheduledTime ?? (lockedBooking.scheduledTime || lockedBooking.preferredTime);
+          const rescheduleTeacherId = lockedSession?.teacherId ?? lockedBooking.teacherId;
+          if (!currentDate) {
+            return { ok: false as const, status: 400, error: "Aucun créneau initial n'est fixé. Contactez le service client pour planifier cette réservation." };
+          }
+          if (isSameDate(currentDate, parsedReschedule.date) && currentTime === parsedReschedule.slotLabel) {
+            return { ok: false as const, status: 400, error: "Le nouveau créneau est identique au créneau actuel." };
+          }
+
+          const existingAwaiting = await tx.bookingRescheduleRequest.findFirst({
+            where: {
+              bookingId: booking.id,
+              status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED", "AWAITING_TEACHER", "REFUND_REQUIRED"] },
+            },
+            orderBy: { createdAt: "desc" },
+          });
+          if (existingAwaiting) {
+            return {
+              ok: false as const,
+              status: 409,
+              error: existingAwaiting.status === "AWAITING_TEACHER"
+                ? "Une modification est déjà en attente de réponse du professeur."
+                : existingAwaiting.status === "REFUND_REQUIRED"
+                  ? "Le supplément du précédent changement de créneau doit être remboursé avant une nouvelle demande."
+                  : existingAwaiting.status === "PAYMENT_FAILED"
+                    ? "Une modification existe déjà : relancez son paiement au lieu de créer une seconde demande."
+                    : "Une modification est déjà en attente de paiement.",
+            };
+          }
+
+          const pricingSnapshot = parsePricingSnapshot(lockedBooking.pricingSnapshot);
+          const policy = getReschedulePolicy(lockedSession
+            ? {
+                unitPrice: lockedSession.courseAmount,
+                courseAmount: lockedSession.courseAmount,
+                totalClientPays: lockedSession.courseAmount,
+                totalPrice: lockedSession.courseAmount,
+                sessionsCount: 1,
+                paymentServiceFeeAmount: 0,
+                scheduledDate: lockedSession.scheduledDate,
+                scheduledTime: lockedSession.scheduledTime,
+              }
+            : {
+                unitPrice: pricingSnapshot?.unitSessionAmount ?? lockedBooking.unitPrice,
+                courseAmount: pricingSnapshot?.courseAmount ?? lockedBooking.courseAmount,
+                totalClientPays: pricingSnapshot?.totalClientPays ?? lockedBooking.totalClientPays,
+                totalPrice: lockedBooking.totalPrice,
+                sessionsCount: pricingSnapshot?.numberOfSessions ?? lockedBooking.sessionsCount,
+                paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? lockedBooking.paymentServiceFeeAmount,
+                scheduledDate: currentDate,
+                scheduledTime: currentTime,
+              }, now);
+          if (policy.code === "NO_SHOW") {
+            return {
+              ok: false as const,
+              status: 409,
+              error: "Le cours est déjà commencé ou dépassé. Le service client doit traiter cette modification manuellement.",
+            };
+          }
+
+          const createdRequest = await tx.bookingRescheduleRequest.create({
+            data: {
+              bookingId: booking.id,
+              bookingSessionId: lockedSession?.id ?? null,
+              teacherId: rescheduleTeacherId,
+              clientId: lockedBooking.clientId,
+              requestedBy: "CLIENT",
+              oldScheduledDate: currentDate,
+              oldScheduledTime: currentTime,
+              proposedDate: parsedReschedule.date,
+              proposedTime: parsedReschedule.slotLabel,
+              reason: cleanReason,
+              status: policy.feeAmount > 0 ? "PAYMENT_PENDING" : "AWAITING_TEACHER",
+              feeWindow: policy.code,
+              feeBaseAmount: policy.baseAmount,
+              feeRate: policy.feeRate,
+              feeAmount: policy.feeAmount,
+              feeTeacherRate: policy.teacherRate,
+              feeTeacherAmount: policy.teacherAmount,
+              feePlatformRate: policy.platformRate,
+              feePlatformAmount: policy.platformAmount,
+              paymentServiceFeeRate: policy.paymentServiceFeeRate,
+              paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
+              paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
+              totalToPay: policy.totalToPay,
+              paymentProvider: policy.feeAmount > 0 ? "JEKO" : null,
+            },
+            include: {
+              booking: {
+                include: {
+                  client: { select: { name: true } },
+                  teacher: { select: { fullName: true, professionalName: true } },
+                },
+              },
+              teacher: { select: { fullName: true, professionalName: true } },
+              client: { select: { name: true } },
+            },
+          });
+          return { ok: true as const, createdRequest, policy };
+        }, { isolationLevel: "Serializable" });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          return NextResponse.json({
+            error: "Une autre modification de créneau vient d'être créée pour cette réservation. Ouvrez-la au lieu d'en payer une seconde.",
+          }, { status: 409 });
+        }
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+          return NextResponse.json({
+            error: "La séance vient d'être modifiée ou réaffectée. Actualisez avant de recommencer.",
+          }, { status: 409 });
+        }
         throw error;
-      });
-      if (!createdRequest) {
-        return NextResponse.json({
-          error: "Une autre modification de créneau vient d'être créée pour cette réservation. Ouvrez-la au lieu d'en payer une seconde.",
-        }, { status: 409 });
       }
+      if (!creationResult.ok) {
+        return NextResponse.json({
+          error: creationResult.error,
+        }, { status: creationResult.status });
+      }
+      const { createdRequest, policy } = creationResult;
 
       if (policy.feeAmount <= 0) {
         await db.$transaction(async (tx) => {
@@ -1643,7 +1827,14 @@ export async function PATCH(
             provider: "JEKO",
             purpose: "RESCHEDULE_FEE",
           },
-          select: { id: true, idempotencyKey: true, status: true, method: true },
+          select: {
+            id: true,
+            idempotencyKey: true,
+            status: true,
+            method: true,
+            providerOrderId: true,
+            failureCode: true,
+          },
           orderBy: { createdAt: "desc" },
         });
         const plan = planJekoRescheduleAttempt({
@@ -1780,7 +1971,8 @@ export async function PATCH(
     }
 
     case "cancel": {
-      const wasPaid = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "PENDING_CLIENT_VALIDATION"].includes(
+      const cancellableStatuses = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "PENDING_CLIENT_VALIDATION"];
+      const wasPaid = cancellableStatuses.includes(
         booking.status
       ) && hasVerifiedClientFunds(booking.paymentStatus) && hasVerifiedPayDunyaClientPayment(booking);
       const paidAggregate = wasPaid
@@ -1803,31 +1995,96 @@ export async function PATCH(
           : policy.refundAmount >= policy.baseAmount
             ? "REFUND_PENDING"
             : "PARTIAL_REFUND_PENDING";
-      const updated = await db.booking.update({
-        where: { id },
-        data: {
-          status: "CANCELLED",
-          paymentStatus,
-          cancelledAt: now,
-          cancelledBy: "CLIENT",
-          cancellationReason: reason || "Annulation demandée par le client",
-          cancellationDetail: description || null,
-          cancellationWindow: policy.code,
-          cancellationFeeRate: policy.feeRate,
-          cancellationFeeAmount: policy.feeAmount,
-          cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
-          cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
-          cancellationPenaltyPlatformRate: penaltySplit.platformRate,
-          cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
-          cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
-        },
-      });
-      if (wasPaid) {
-        await db.transaction.updateMany({
-          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-          data: { status: paymentStatus },
-        });
+      let cancellationResult;
+      try {
+        cancellationResult = await db.$transaction(async (tx) => {
+          // Partage le verrou de request_reschedule : soit l'annulation gagne
+          // et la création revalide CANCELLED, soit la demande gagne et bloque
+          // l'annulation tant que son paiement/réponse n'est pas terminal.
+          await tx.$queryRaw(Prisma.sql`
+            SELECT "id"
+            FROM "Booking"
+            WHERE "id" = ${booking.id}
+            FOR UPDATE
+          `);
+          const currentBooking = await tx.booking.findUnique({
+            where: { id: booking.id },
+            select: { id: true, clientId: true, status: true },
+          });
+          if (!currentBooking || currentBooking.clientId !== userId) {
+            return { ok: false as const, status: 404, error: "Réservation introuvable." };
+          }
+          if (!cancellableStatuses.includes(currentBooking.status)) {
+            return { ok: false as const, status: 409, error: "Cette réservation ne peut plus être annulée depuis cet écran." };
+          }
+          const activeReschedule = await tx.bookingRescheduleRequest.findFirst({
+            where: {
+              bookingId: booking.id,
+              OR: [
+                { status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED", "AWAITING_TEACHER", "REFUND_REQUIRED"] } },
+                {
+                  paymentAttempts: {
+                    some: {
+                      provider: "JEKO",
+                      purpose: "RESCHEDULE_FEE",
+                      OR: [
+                        { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
+                        { status: "FAILED", providerOrderId: { not: null } },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+            select: { id: true },
+          });
+          if (activeReschedule) {
+            return {
+              ok: false as const,
+              status: 409,
+              error: "Terminez ou annulez d'abord la demande de changement de créneau en cours.",
+            };
+          }
+
+          const updated = await tx.booking.update({
+            where: { id },
+            data: {
+              status: "CANCELLED",
+              paymentStatus,
+              cancelledAt: now,
+              cancelledBy: "CLIENT",
+              cancellationReason: reason || "Annulation demandée par le client",
+              cancellationDetail: description || null,
+              cancellationWindow: policy.code,
+              cancellationFeeRate: policy.feeRate,
+              cancellationFeeAmount: policy.feeAmount,
+              cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
+              cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
+              cancellationPenaltyPlatformRate: penaltySplit.platformRate,
+              cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
+              cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
+            },
+          });
+          if (wasPaid) {
+            await tx.transaction.updateMany({
+              where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
+              data: { status: paymentStatus },
+            });
+          }
+          return { ok: true as const, updated };
+        }, { isolationLevel: "Serializable" });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+          return NextResponse.json({
+            error: "La réservation vient d'être modifiée. Actualisez avant de recommencer.",
+          }, { status: 409 });
+        }
+        throw error;
       }
+      if (!cancellationResult.ok) {
+        return NextResponse.json({ error: cancellationResult.error }, { status: cancellationResult.status });
+      }
+      const { updated } = cancellationResult;
       await db.notification.create({
         data: {
           userId: null,
@@ -2073,6 +2330,7 @@ function serializeRescheduleRequest(request: any) {
   return {
     id: request.id,
     bookingId: request.bookingId,
+    bookingSessionId: request.bookingSessionId,
     status: request.status,
     oldScheduledDate: request.oldScheduledDate,
     oldScheduledTime: request.oldScheduledTime,

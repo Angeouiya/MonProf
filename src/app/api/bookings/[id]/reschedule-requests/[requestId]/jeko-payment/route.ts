@@ -76,7 +76,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       provider: "JEKO",
       purpose: "RESCHEDULE_FEE",
     },
-    select: { id: true, idempotencyKey: true, status: true, method: true },
+    select: {
+      id: true,
+      idempotencyKey: true,
+      status: true,
+      method: true,
+      providerOrderId: true,
+      failureCode: true,
+    },
     orderBy: { createdAt: "desc" },
   });
   const plan = planJekoRescheduleAttempt({

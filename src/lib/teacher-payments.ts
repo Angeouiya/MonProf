@@ -24,6 +24,118 @@ export type TeacherPaymentAdjustment = {
   bookingId?: string | null;
 };
 
+export type TeacherRetentionEvidence = {
+  bookingId: string;
+  retainedAmount: number;
+};
+
+export type TeacherLegacyRetentionEvidence = {
+  bookingId: string;
+  retainedAmountSnapshot: number;
+};
+
+/**
+ * Calcule la part déjà consommée des retenues globales sur tout
+ * l'historique du professeur, y compris les séances déjà payées.
+ *
+ * Pour un booking moderne, retainedAmount persiste sur les séances. Pour un
+ * ancien booking sans ledger, le meilleur justificatif persistant est le plus
+ * grand snapshot d'une allocation DRAFT/PAID. Le résultat conserve aussi
+ * l'affectation legacy par booking : elle doit continuer à réduire le reste
+ * de ce booking après un premier versement partiel.
+ */
+export function getTeacherGlobalRetentionLedger(
+  adjustments: TeacherPaymentAdjustment[],
+  sessionEvidence: TeacherRetentionEvidence[],
+  legacyEvidence: TeacherLegacyRetentionEvidence[] = [],
+) {
+  const globalAdjustmentTotal = adjustments
+    .filter((adjustment) => adjustment.status === "APPLIED" && !adjustment.bookingId)
+    .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
+  const emptyLedger = {
+    total: globalAdjustmentTotal,
+    materialized: 0,
+    remaining: globalAdjustmentTotal,
+    sessionByBooking: new Map<string, number>(),
+    legacyByBooking: new Map<string, number>(),
+  };
+  if (globalAdjustmentTotal <= 0) return emptyLedger;
+
+  const bookingSpecific = new Map<string, number>();
+  for (const adjustment of adjustments) {
+    if (adjustment.status !== "APPLIED" || !adjustment.bookingId) continue;
+    bookingSpecific.set(
+      adjustment.bookingId,
+      (bookingSpecific.get(adjustment.bookingId) ?? 0) + Math.max(0, adjustment.amount),
+    );
+  }
+
+  const sessionRetained = new Map<string, number>();
+  for (const evidence of sessionEvidence) {
+    sessionRetained.set(
+      evidence.bookingId,
+      (sessionRetained.get(evidence.bookingId) ?? 0) + Math.max(0, evidence.retainedAmount),
+    );
+  }
+  const legacyRetained = new Map<string, number>();
+  for (const evidence of legacyEvidence) {
+    legacyRetained.set(
+      evidence.bookingId,
+      Math.max(
+        legacyRetained.get(evidence.bookingId) ?? 0,
+        Math.max(0, evidence.retainedAmountSnapshot),
+      ),
+    );
+  }
+
+  const bookingIds = [...new Set([...sessionRetained.keys(), ...legacyRetained.keys()])].sort();
+  const rawSessionGlobal = new Map<string, number>();
+  const rawLegacyGlobal = new Map<string, number>();
+  for (const bookingId of bookingIds) {
+    const specific = bookingSpecific.get(bookingId) ?? 0;
+    const sessionTotal = sessionRetained.get(bookingId) ?? 0;
+    const legacyTotal = legacyRetained.get(bookingId) ?? 0;
+    rawSessionGlobal.set(bookingId, Math.max(0, sessionTotal - specific));
+    rawLegacyGlobal.set(bookingId, Math.max(0, legacyTotal - Math.max(0, specific - sessionTotal)));
+  }
+
+  // Les retenues de séance sont la preuve la plus forte car elles vivent
+  // directement dans le ledger. Le reliquat global peut ensuite être
+  // affecté aux snapshots legacy, sans jamais dépasser les ajustements APPLIED.
+  let remaining = globalAdjustmentTotal;
+  const sessionByBooking = new Map<string, number>();
+  const legacyByBooking = new Map<string, number>();
+  for (const bookingId of bookingIds) {
+    const assigned = Math.min(remaining, rawSessionGlobal.get(bookingId) ?? 0);
+    if (assigned > 0) sessionByBooking.set(bookingId, assigned);
+    remaining -= assigned;
+  }
+  for (const bookingId of bookingIds) {
+    const assigned = Math.min(remaining, rawLegacyGlobal.get(bookingId) ?? 0);
+    if (assigned > 0) legacyByBooking.set(bookingId, assigned);
+    remaining -= assigned;
+  }
+  return {
+    total: globalAdjustmentTotal,
+    materialized: globalAdjustmentTotal - remaining,
+    remaining,
+    sessionByBooking,
+    legacyByBooking,
+  };
+}
+
+export function getMaterializedTeacherGlobalRetention(
+  adjustments: TeacherPaymentAdjustment[],
+  sessionEvidence: TeacherRetentionEvidence[],
+  legacyEvidence: TeacherLegacyRetentionEvidence[] = [],
+) {
+  return getTeacherGlobalRetentionLedger(
+    adjustments,
+    sessionEvidence,
+    legacyEvidence,
+  ).materialized;
+}
+
 export function getTeacherPayableAmount(booking: TeacherPaymentBooking) {
   const cancellationPenalty = Math.max(0, booking.cancellationPenaltyTeacherAmount ?? 0);
   if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "") && cancellationPenalty > 0) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { TeacherPayoutRequest } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { paymentMethodLabel } from "@/lib/payment-methods";
@@ -62,16 +63,29 @@ export async function PATCH(
   const amountLabel = `${request.amount.toLocaleString("fr-FR")} FCFA`;
   const statusLabel = nextStatus === "REJECTED" ? "rejetée" : "annulée";
 
-  const updated = await db.$transaction(async (tx) => {
-    const saved = await tx.teacherPayoutRequest.update({
-      where: { id: request.id },
-      data: {
-        status: nextStatus,
-        adminNote,
-        reviewedAt: now,
-        reviewedById: admin.id,
-      },
-    });
+  let updated: TeacherPayoutRequest | null;
+  try {
+    updated = await db.$transaction(async (tx) => {
+      // Le claim du rejet et celui du DRAFT Jèko ciblent le même état
+      // PENDING sans payoutRecord. Un seul peut gagner ; on ne peut donc plus
+      // annuler une demande pendant qu'un transfert externe est en cours.
+      const claimed = await tx.teacherPayoutRequest.updateMany({
+        where: {
+          id: request.id,
+          status: "PENDING",
+          payoutRecordId: null,
+        },
+        data: {
+          status: nextStatus,
+          adminNote,
+          reviewedAt: now,
+          reviewedById: admin.id,
+        },
+      });
+      if (claimed.count !== 1) return null;
+      const saved = await tx.teacherPayoutRequest.findUniqueOrThrow({
+        where: { id: request.id },
+      });
 
     await tx.teacherNotification.create({
       data: {
@@ -124,8 +138,32 @@ export async function PATCH(
       },
     });
 
-    return saved;
-  });
+      return saved;
+    }, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (errorCode(error) === "P2034") {
+      return NextResponse.json({
+        error: "La demande vient d'être réservée par un transfert Jèko. Actualisez son statut avant toute autre action.",
+        code: "PAYOUT_REQUEST_REVIEW_CONFLICT",
+      }, { status: 409 });
+    }
+    throw error;
+  }
+
+  if (!updated) {
+    return NextResponse.json({
+      error: "La demande vient d'être traitée ou réservée par un transfert Jèko. Aucun rejet n'a été appliqué.",
+      code: "PAYOUT_REQUEST_ALREADY_CLAIMED",
+    }, { status: 409 });
+  }
 
   return NextResponse.json({ ok: true, request: updated });
+}
+
+function errorCode(error: unknown) {
+  if (error && typeof error === "object") {
+    if ("code" in error && typeof error.code === "string") return error.code;
+    if ("message" in error && typeof error.message === "string") return error.message;
+  }
+  return "UNKNOWN";
 }

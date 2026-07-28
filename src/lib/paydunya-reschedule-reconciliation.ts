@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
 import { confirmPayDunyaInvoice, normalizePayDunyaStatus, type PayDunyaInvoiceStatus } from "@/lib/paydunya";
+import { productionIntegrationsAreEnabled } from "@/lib/production-integration-policy";
 
 type ReconcileReschedulePayDunyaInput = {
   rescheduleRequestId?: string | null;
@@ -27,6 +28,17 @@ export type ReconcileReschedulePayDunyaResult = {
 export async function reconcilePayDunyaReschedulePayment(
   input: ReconcileReschedulePayDunyaInput,
 ): Promise<ReconcileReschedulePayDunyaResult> {
+  if (!productionIntegrationsAreEnabled()) {
+    return {
+      bookingId: input.bookingId ?? undefined,
+      rescheduleRequestId: input.rescheduleRequestId ?? undefined,
+      verified: false,
+      status: "unknown",
+      action: "not_configured",
+      message: "PayDunya est désactivé sur cet environnement. Aucun supplément n'a été rapproché.",
+    };
+  }
+
   const inputToken = firstString(input.token);
   const requestWhere: Prisma.BookingRescheduleRequestWhereInput | null = input.rescheduleRequestId
     ? { id: input.rescheduleRequestId }

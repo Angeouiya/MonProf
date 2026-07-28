@@ -4,7 +4,12 @@ import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { ACTIVE_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
-import { getTeacherPayableAmount, isCancellationPenaltyPayout } from "@/lib/teacher-payments";
+import {
+  getTeacherGlobalRetentionLedger,
+  getTeacherPayableAmount,
+  isCancellationPenaltyPayout,
+} from "@/lib/teacher-payments";
+import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
 import {
   buildJekoPayoutRecordId,
   getStableJekoPayoutReference,
@@ -121,11 +126,12 @@ export async function POST(req: NextRequest) {
               paidAt: true,
             },
           },
+          _count: { select: { sessions: true } },
         },
       },
       paymentAdjustments: {
         where: { status: "APPLIED" },
-        select: { amount: true, bookingId: true },
+        select: { id: true, amount: true, bookingId: true, status: true },
       },
     },
   });
@@ -136,7 +142,8 @@ export async function POST(req: NextRequest) {
 
   // Une réservation conserve son professeur d'origine, mais chaque séance peut être
   // réattribuée. Ces dossiers doivent donc entrer dans la comptabilité du remplaçant.
-  const replacementBookings = await db.booking.findMany({
+  const [replacementBookings, historicalSessionRetentions, historicalLegacyRetentions] = await Promise.all([
+    db.booking.findMany({
     where: {
       teacherId: { not: teacher.id },
       sessions: { some: { teacherId: teacher.id, status: { in: ["RELEASED", "PARTIALLY_PAID"] } } },
@@ -181,8 +188,25 @@ export async function POST(req: NextRequest) {
           paidAt: true,
         },
       },
+      _count: { select: { sessions: true } },
     },
-  });
+    }),
+    db.bookingSession.findMany({
+      where: { teacherId: teacher.id, retainedAmount: { gt: 0 } },
+      select: { bookingId: true, retainedAmount: true },
+    }),
+    db.teacherPayoutAllocation.findMany({
+      where: {
+        bookingSessionId: null,
+        retainedAmountSnapshot: { gt: 0 },
+        payout: {
+          teacherId: teacher.id,
+          status: { in: ["DRAFT", "PAID"] },
+        },
+      },
+      select: { bookingId: true, retainedAmountSnapshot: true },
+    }),
+  ]);
   const teacherBookings = [...teacher.bookings, ...replacementBookings];
 
   const payoutRequest = requestId
@@ -249,17 +273,17 @@ export async function POST(req: NextRequest) {
       error: error instanceof Error ? error.message : "Clé d'idempotence invalide.",
     }, { status: 400 });
   }
+
   const payoutReference = getStableJekoPayoutReference(payoutRecordId);
   const existingPayout = await db.teacherPayoutRecord.findUnique({ where: { id: payoutRecordId } });
   if (existingPayout) {
-    if (
-      existingPayout.teacherId !== teacher.id
-      || existingPayout.amount !== amount
-      || existingPayout.method !== method
-      || existingPayout.paymentPhone !== paymentPhone
-      || existingPayout.reference !== payoutReference
-      || existingPayout.providerReference !== payoutReference
-    ) {
+    if (!payoutRecordMatches(existingPayout, {
+      teacherId: teacher.id,
+      amount,
+      method,
+      paymentPhone,
+      reference: payoutReference,
+    })) {
       return NextResponse.json({ error: "Cette clé d'idempotence appartient à un autre versement." }, { status: 409 });
     }
     if (existingPayout.status === "CANCELLED") {
@@ -270,6 +294,37 @@ export async function POST(req: NextRequest) {
     }
     const result = await processJekoTeacherPayoutRecord(existingPayout.id);
     return payoutResultResponse(result);
+  }
+
+  // Une reprise idempotente doit toujours retrouver son DRAFT/PAID avant
+  // d'examiner les nouvelles demandes. La file FIFO ne s'applique qu'à la
+  // création d'une nouvelle allocation.
+  const oldestUnallocatedRequest = await db.teacherPayoutRequest.findFirst({
+    where: {
+      teacherId: teacher.id,
+      status: "PENDING",
+      payoutRecordId: null,
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, reference: true },
+  });
+  if (!payoutRequest && oldestUnallocatedRequest) {
+    return NextResponse.json({
+      error: `Le solde est déjà réservé par la demande ${oldestUnallocatedRequest.reference}. Traitez ou rejetez d'abord les demandes professeur en attente.`,
+      code: "PENDING_PAYOUT_REQUEST_RESERVED",
+    }, { status: 409 });
+  }
+  if (
+    payoutRequest
+    && !payoutRequest.payoutRecordId
+    && oldestUnallocatedRequest?.id !== payoutRequest.id
+  ) {
+    return NextResponse.json({
+      error: oldestUnallocatedRequest
+        ? `Traitez d'abord la demande professeur la plus ancienne (${oldestUnallocatedRequest.reference}).`
+        : "Cette demande n'est plus disponible pour un versement.",
+      code: "PAYOUT_REQUEST_QUEUE_CHANGED",
+    }, { status: 409 });
   }
 
   const reservedDraftAllocations = await db.teacherPayoutAllocation.findMany({
@@ -284,19 +339,12 @@ export async function POST(req: NextRequest) {
     return map;
   }, new Map<string, number>());
 
-  const persistedGlobalRetentions = teacherBookings.reduce((sum, booking) => {
-    const persisted = booking.sessions.reduce(
-      (sessionSum, session) => sessionSum + Math.max(0, session.retainedAmount),
-      0,
-    );
-    const bookingAdjustments = teacher.paymentAdjustments
-      .filter((adjustment) => adjustment.bookingId === booking.id)
-      .reduce((adjustmentSum, adjustment) => adjustmentSum + Math.max(0, adjustment.amount), 0);
-    return sum + Math.max(0, persisted - bookingAdjustments);
-  }, 0);
-  let globalRetentionLeft = Math.max(0, teacher.paymentAdjustments
-    .filter((adjustment) => !adjustment.bookingId)
-    .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0) - persistedGlobalRetentions);
+  const globalRetentionLedger = getTeacherGlobalRetentionLedger(
+    teacher.paymentAdjustments,
+    historicalSessionRetentions,
+    historicalLegacyRetentions,
+  );
+  let globalRetentionLeft = globalRetentionLedger.remaining;
   type PayoutBooking = (typeof teacherBookings)[number];
   type PayoutSession = PayoutBooking["sessions"][number];
   type DueItem = {
@@ -311,7 +359,12 @@ export async function POST(req: NextRequest) {
 
   for (const booking of teacherBookings.filter((item) => hasVerifiedPayDunyaClientPayment(item))) {
     const cancellationPenaltyPayout = isCancellationPenaltyPayout(booking);
-    if (booking.sessions.length > 0 && !cancellationPenaltyPayout) {
+    if (booking._count.sessions > 0 && !cancellationPenaltyPayout) {
+      // Dès qu'un ledger par séance existe, il est la seule source de
+      // vérité. Une liste vide signifie que ce professeur ne possède plus
+      // aucune séance payable (par exemple après remplacement partiel) ; il
+      // ne faut surtout pas retomber sur teacherNetAmount au niveau Booking.
+      if (booking.sessions.length === 0) continue;
       const persistedBookingRetention = booking.sessions.reduce(
         (sum, session) => sum + Math.max(0, session.retainedAmount),
         0,
@@ -356,9 +409,19 @@ export async function POST(req: NextRequest) {
     const bookingRetention = teacher.paymentAdjustments
       .filter((adjustment) => adjustment.bookingId === booking.id)
       .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
-    const globalRetention = Math.min(Math.max(0, grossRemaining - bookingRetention), globalRetentionLeft);
+    // Un snapshot legacy DRAFT/PAID affecte durablement une part de la
+    // retenue globale à ce booking. Elle doit rester soustraite après un
+    // paiement partiel, même si elle n'a pas de colonne retainedAmount.
+    const historicalGlobalRetention = globalRetentionLedger.legacyByBooking.get(booking.id) ?? 0;
+    const globalRetention = Math.min(
+      Math.max(0, grossRemaining - bookingRetention - historicalGlobalRetention),
+      globalRetentionLeft,
+    );
     globalRetentionLeft -= globalRetention;
-    const retainedAmount = Math.min(grossRemaining, bookingRetention + globalRetention);
+    const retainedAmount = Math.min(
+      grossRemaining,
+      bookingRetention + historicalGlobalRetention + globalRetention,
+    );
     if (grossRemaining > 0 || retainedAmount > 0) {
       const reservedAmount = reservedByItem.get(`booking:${booking.id}`) ?? 0;
       dueItems.push({
@@ -407,8 +470,54 @@ export async function POST(req: NextRequest) {
   ].filter(Boolean).join("\n");
   try {
     await db.$transaction(async (tx) => {
+      // Premier verrou de toute mutation du solde professeur. Une retenue
+      // APPLIED utilise exactement le même mutex et le même ordre.
+      await lockTeacherPayoutBalance(tx, teacher.id);
+
       const existing = await tx.teacherPayoutRecord.findUnique({ where: { id: payoutRecordId } });
-      if (existing) return existing;
+      if (existing) {
+        if (!payoutRecordMatches(existing, {
+          teacherId: teacher.id,
+          amount,
+          method,
+          paymentPhone,
+          reference: payoutReference,
+        })) {
+          throw new Error("PAYOUT_IDEMPOTENCY_MISMATCH");
+        }
+        return existing;
+      }
+
+      // Le calcul d'allocation a volontairement lieu avant la transaction
+      // pour rester court. Sous le verrou, sa source APPLIED doit donc être
+      // relue et correspondre exactement au snapshot utilisé.
+      const currentAppliedAdjustments = await tx.teacherPaymentAdjustment.findMany({
+        where: { teacherId: teacher.id, status: "APPLIED" },
+        select: { id: true, amount: true, bookingId: true, status: true },
+      });
+      if (
+        appliedAdjustmentFingerprint(currentAppliedAdjustments)
+        !== appliedAdjustmentFingerprint(teacher.paymentAdjustments)
+      ) {
+        throw new Error("PAYOUT_BALANCE_CHANGED");
+      }
+
+      const currentOldestUnallocatedRequest = await tx.teacherPayoutRequest.findFirst({
+        where: {
+          teacherId: teacher.id,
+          status: "PENDING",
+          payoutRecordId: null,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      if (payoutRequest) {
+        if (currentOldestUnallocatedRequest?.id !== payoutRequest.id) {
+          throw new Error("PAYOUT_REQUEST_QUEUE_CHANGED");
+        }
+      } else if (currentOldestUnallocatedRequest) {
+        throw new Error("PENDING_PAYOUT_REQUEST_RESERVED");
+      }
 
       const currentDrafts = await tx.teacherPayoutAllocation.findMany({
         where: {
@@ -534,14 +643,45 @@ export async function POST(req: NextRequest) {
     }, { isolationLevel: "Serializable" });
   } catch (error: unknown) {
     const errorCode = getErrorCode(error);
-    if (["P2034", "PAYOUT_BALANCE_CHANGED", "PAYOUT_REQUEST_ALREADY_HANDLED"].includes(errorCode)) {
+    if ([
+      "P2034",
+      "PAYOUT_BALANCE_CHANGED",
+      "PAYOUT_REQUEST_ALREADY_HANDLED",
+      "PAYOUT_REQUEST_QUEUE_CHANGED",
+      "PENDING_PAYOUT_REQUEST_RESERVED",
+      "TEACHER_PAYOUT_LOCK_NOT_FOUND",
+    ].includes(errorCode)) {
       return NextResponse.json({
         error: "Le solde ou la demande vient d'être modifié par une autre action. Actualisez la comptabilité avant de valider à nouveau.",
       }, { status: 409 });
     }
+    if (errorCode === "PAYOUT_IDEMPOTENCY_MISMATCH") {
+      return NextResponse.json({
+        error: "Cette clé d'idempotence appartient à un autre versement.",
+      }, { status: 409 });
+    }
     if (errorCode === "P2002") {
       const raced = await db.teacherPayoutRecord.findUnique({ where: { id: payoutRecordId } });
-      if (raced) return payoutResultResponse(await processJekoTeacherPayoutRecord(raced.id));
+      if (raced) {
+        if (!payoutRecordMatches(raced, {
+          teacherId: teacher.id,
+          amount,
+          method,
+          paymentPhone,
+          reference: payoutReference,
+        })) {
+          return NextResponse.json({
+            error: "Cette clé d'idempotence appartient à un autre versement.",
+          }, { status: 409 });
+        }
+        if (raced.status === "CANCELLED") {
+          return NextResponse.json({
+            error: "La tentative précédente a échoué sans débit. Relancez avec une nouvelle clé d'idempotence.",
+            payoutRecordId: raced.id,
+          }, { status: 409 });
+        }
+        return payoutResultResponse(await processJekoTeacherPayoutRecord(raced.id));
+      }
       return NextResponse.json({ error: "Cette demande de paiement a déjà été utilisée." }, { status: 409 });
     }
     throw error;
@@ -572,6 +712,44 @@ function getErrorCode(error: unknown) {
     if ("message" in error && typeof error.message === "string") return error.message;
   }
   return "UNKNOWN";
+}
+
+function payoutRecordMatches(
+  record: {
+    teacherId: string;
+    amount: number;
+    method: PaymentMethod | null;
+    paymentPhone: string | null;
+    reference: string;
+    providerReference: string | null;
+  },
+  expected: {
+    teacherId: string;
+    amount: number;
+    method: PaymentMethod;
+    paymentPhone: string;
+    reference: string;
+  },
+) {
+  return record.teacherId === expected.teacherId
+    && record.amount === expected.amount
+    && record.method === expected.method
+    && record.paymentPhone === expected.paymentPhone
+    && record.reference === expected.reference
+    && record.providerReference === expected.reference;
+}
+
+function appliedAdjustmentFingerprint(
+  adjustments: Array<{
+    id: string;
+    amount: number;
+    bookingId: string | null;
+  }>,
+) {
+  return adjustments
+    .map((adjustment) => `${adjustment.id}:${adjustment.bookingId ?? "GLOBAL"}:${adjustment.amount}`)
+    .sort()
+    .join("|");
 }
 
 async function resolvePayoutRequestAttemptId(requestId: string) {

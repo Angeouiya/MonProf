@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPayDunyaConfig } from "@/lib/paydunya";
-import { getJekoServerConfig } from "@/lib/jeko-config";
-import { isGmailConfigured } from "@/lib/gmail-email";
+import {
+  getJekoServerConfig,
+  hasJekoEnvironmentConfiguration,
+} from "@/lib/jeko-config";
+import {
+  hasGmailEnvironmentConfiguration,
+  isGmailConfigured,
+} from "@/lib/gmail-email";
+import { getProductionIntegrationPolicy } from "@/lib/production-integration-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +17,25 @@ type HealthStatus = "ok" | "degraded";
 
 export async function GET() {
   const startedAt = Date.now();
+  const integrationPolicy = getProductionIntegrationPolicy();
+  const integrations = {
+    jeko: {
+      configured: hasJekoEnvironmentConfiguration(),
+      runtimeEnabled: Boolean(getJekoServerConfig()),
+      liveVerification: "not_checked_by_health" as const,
+    },
+    gmail: {
+      configured: hasGmailEnvironmentConfiguration(),
+      runtimeEnabled: isGmailConfigured(),
+      liveVerification: "not_checked_by_health" as const,
+    },
+  };
   const checks = {
     database: false,
     catalog: false,
     adminAccount: false,
-    jeko: Boolean(getJekoServerConfig()),
-    gmail: isGmailConfigured(),
+    integrationsConfigured: !integrationPolicy.enabled
+      || (integrations.jeko.runtimeEnabled && integrations.gmail.runtimeEnabled),
   };
   let legacyPaydunya = false;
 
@@ -43,12 +63,21 @@ export async function GET() {
     {
       ok: status === "ok",
       status,
+      scope: "configuration-readiness",
       app: "competence",
       checkedAt: new Date().toISOString(),
       responseTimeMs: Date.now() - startedAt,
       checks,
+      integrationPolicy: {
+        mode: integrationPolicy.mode,
+        vercelEnvironment: integrationPolicy.vercelEnvironment,
+      },
+      integrations,
       legacy: { paydunyaConfigured: legacyPaydunya },
     },
-    { status: status === "ok" ? 200 : 503 },
+    {
+      status: status === "ok" ? 200 : 503,
+      headers: { "Cache-Control": "no-store" },
+    },
   );
 }

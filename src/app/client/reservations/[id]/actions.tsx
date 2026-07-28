@@ -46,8 +46,23 @@ type BookingActionsProps = {
       totalToPay: number;
       createdAt: Date;
     }[];
+    sessions?: {
+      id: string;
+      sequence: number;
+      teacherId: string;
+      scheduledDate: Date | string | null;
+      scheduledTime: string | null;
+      status: string;
+      courseAmount: number;
+      teacher?: {
+        fullName: string;
+        professionalName: string | null;
+      } | null;
+    }[];
   };
 };
+
+type ClientRescheduleSession = NonNullable<BookingActionsProps["booking"]["sessions"]>[number];
 
 const DISPUTE_REASONS = [
   "Professeur absent",
@@ -286,6 +301,16 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [rescheduleAcknowledged, setRescheduleAcknowledged] = useState(false);
+  const rescheduleSessions = useMemo(
+    () => (booking.sessions ?? []).filter(isClientRescheduleEligibleSession),
+    [booking.sessions],
+  );
+  const [rescheduleSessionId, setRescheduleSessionId] = useState(() => (
+    findDefaultRescheduleSessionId(booking, rescheduleSessions)
+  ));
+  const selectedRescheduleSession = rescheduleSessions.find((item) => item.id === rescheduleSessionId)
+    ?? rescheduleSessions[0]
+    ?? null;
   const [cancelReason, setCancelReason] = useState<(typeof CANCELLATION_REASONS)[number]>(CANCELLATION_REASONS[0]);
   const [cancelDesc, setCancelDesc] = useState("");
   const [cancelAcknowledged, setCancelAcknowledged] = useState(false);
@@ -347,6 +372,10 @@ export function BookingActions({ booking }: BookingActionsProps) {
   }
 
   async function onSubmitReschedule() {
+    if ((booking.sessions?.length ?? 0) > 0 && !selectedRescheduleSession) {
+      toast.error("Aucune séance planifiée ne peut être déplacée depuis ce dossier.");
+      return;
+    }
     if (!rescheduleDate || !rescheduleTime) {
       toast.error("Choisissez une nouvelle date et une heure de début.");
       return;
@@ -360,6 +389,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       return;
     }
     const data = await callAction("request_reschedule", {
+      bookingSessionId: selectedRescheduleSession?.id,
       rescheduleDate,
       rescheduleTime,
       rescheduleMessage: rescheduleMsg,
@@ -490,7 +520,18 @@ export function BookingActions({ booking }: BookingActionsProps) {
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0) : 0;
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount });
-  const reschedulePolicy = useMemo(() => getReschedulePolicy(booking), [booking]);
+  const reschedulePolicy = useMemo(() => getReschedulePolicy(selectedRescheduleSession
+    ? {
+        unitPrice: selectedRescheduleSession.courseAmount,
+        courseAmount: selectedRescheduleSession.courseAmount,
+        totalClientPays: selectedRescheduleSession.courseAmount,
+        totalPrice: selectedRescheduleSession.courseAmount,
+        sessionsCount: 1,
+        paymentServiceFeeAmount: 0,
+        scheduledDate: selectedRescheduleSession.scheduledDate,
+        scheduledTime: selectedRescheduleSession.scheduledTime,
+      }
+    : booking), [booking, selectedRescheduleSession]);
   const pendingRescheduleRequest = booking.rescheduleRequests?.find((request) => (
     request.status === "PAYMENT_PENDING"
     || request.status === "PAYMENT_FAILED"
@@ -922,10 +963,30 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <DialogHeader>
                 <DialogTitle>Modifier le créneau du cours</DialogTitle>
                 <DialogDescription>
-                  Choisissez une nouvelle date et une heure de début. Une séance reste fixée sur 2h, et le report peut être payant selon le délai avant le cours initial.
+                  Choisissez la séance à déplacer, puis une nouvelle date et une heure de début. Une séance reste fixée sur 2h, et le report peut être payant selon le délai avant le cours initial.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
+                {rescheduleSessions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="rescheduleSession">Séance à déplacer</Label>
+                    <Select value={selectedRescheduleSession?.id ?? ""} onValueChange={setRescheduleSessionId}>
+                      <SelectTrigger id="rescheduleSession" className="min-h-11">
+                        <SelectValue placeholder="Choisissez une séance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rescheduleSessions.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {rescheduleSessionLabel(item)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs font-medium leading-5 text-[#64748B]">
+                      La demande sera envoyée au professeur actuellement affecté à cette séance, y compris en cas de remplacement.
+                    </p>
+                  </div>
+                )}
                 <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm">
                   <div className="flex flex-col gap-2 min-[560px]:flex-row min-[560px]:items-start min-[560px]:justify-between">
                     <div>
@@ -1298,6 +1359,47 @@ function refundStatusLabel(status: string) {
 function minimumRescheduleDateInput() {
   const date = new Date();
   return formatDateInput(date);
+}
+
+function isClientRescheduleEligibleSession(session: ClientRescheduleSession) {
+  return Boolean(session.scheduledDate && session.scheduledTime)
+    && ["PLANNED", "TEACHER_CONFIRMED"].includes(session.status);
+}
+
+function findDefaultRescheduleSessionId(
+  booking: Pick<Booking, "scheduledDate" | "startDate" | "scheduledTime" | "preferredTime">,
+  sessions: ClientRescheduleSession[],
+) {
+  if (sessions.length === 0) return "";
+  const bookingDate = booking.scheduledDate ?? booking.startDate;
+  const bookingTime = booking.scheduledTime || booking.preferredTime;
+  const exact = sessions.find((session) => (
+    toDateKey(session.scheduledDate) === toDateKey(bookingDate)
+    && session.scheduledTime === bookingTime
+  ));
+  return exact?.id ?? sessions[0].id;
+}
+
+function rescheduleSessionLabel(session: ClientRescheduleSession) {
+  const teacherName = session.teacher?.professionalName || session.teacher?.fullName || "Professeur affecté";
+  return `Séance ${session.sequence} · ${formatRescheduleSessionDate(session.scheduledDate)} · ${session.scheduledTime ?? "horaire à confirmer"} · ${teacherName}`;
+}
+
+function formatRescheduleSessionDate(value: Date | string | null) {
+  if (!value) return "date à confirmer";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "date à confirmer";
+  return date.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function toDateKey(value: Date | string | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 }
 
 function formatDateInput(date: Date) {

@@ -38,6 +38,7 @@ import {
   getPreciseLevelOptions,
   isCourseCatalogItemCompatible,
   isLyceeLevel,
+  resolveBookingCourseCategory,
   validateEducationSelection,
 } from "@/lib/course-catalog";
 import {
@@ -52,6 +53,7 @@ import {
 } from "@/lib/scheduling";
 import {
   COURSE_PACKS,
+  buildNeighborhoodAliasMap,
   calculateBookingPricing,
   packSessionCount,
 } from "@/lib/pricing";
@@ -477,48 +479,53 @@ export function ReserverForm({
     }));
   }
 
-  const categoryCopy = getCategoryCopy(form.courseCategory);
-  const categoryLabel = COURSE_CATEGORIES.find((category) => category.code === form.courseCategory)?.label ?? form.courseCategory;
-  const schoolContext = isSchoolContext(form.courseCategory);
+  const requestedCatalogCourse = COURSE_CATALOG.find((item) => item.id === form.courseCatalogId);
+  const courseCategoryResolution = resolveBookingCourseCategory({
+    requestedCategory: form.courseCategory,
+    levelName: form.levelName,
+    preciseLevel: form.preciseLevel,
+    subjectName: form.subjectName,
+    catalogItem: requestedCatalogCourse,
+  });
+  const effectiveCourseCategory = courseCategoryResolution.category;
+  const categoryCopy = getCategoryCopy(effectiveCourseCategory);
+  const categoryLabel = COURSE_CATEGORIES.find((category) => category.code === effectiveCourseCategory)?.label ?? effectiveCourseCategory;
+  const schoolContext = isSchoolContext(effectiveCourseCategory);
   const hasTeacherLevels = teacher.levels.length > 0;
   const hasTeacherSubjects = teacher.subjects.length > 0;
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
   const isLyceeSelection = schoolContext && isLyceeLevel(form.levelName);
-  const requiresSchoolSystem = form.courseCategory === "soutien_scolaire" || isLyceeSelection;
+  const requiresSchoolSystem = effectiveCourseCategory === "soutien_scolaire" || isLyceeSelection;
   const preciseLevelOptions = isLyceeSelection ? getPreciseLevelOptions(form.schoolSystem) : [];
   const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
-  const selectedCategoryCourses = useMemo(() => (
-    COURSE_CATALOG.filter((item) => isCourseCatalogItemCompatible({
-      item,
-      category: form.courseCategory,
-      schoolSystem: form.schoolSystem,
-      preciseLevel: form.preciseLevel,
-      selectedLevel: form.levelName,
-      teacherLevels: teacher.levels,
-      teacherSubjects: teacherSubjectNames,
-      selectedSubject: form.subjectName,
-    })).sort((a, b) => (
-      a.sous_categorie.localeCompare(b.sous_categorie, "fr")
-      || a.nom.localeCompare(b.nom, "fr")
-    ))
-  ), [form.courseCategory, form.levelName, form.preciseLevel, form.schoolSystem, form.subjectName, teacher.levels, teacherSubjectNames]);
-  const selectedCategoryCourseIds = useMemo(() => new Set(selectedCategoryCourses.map((item) => item.id)), [selectedCategoryCourses]);
-  const selectedCategoryCourseGroups = useMemo(() => {
-    const groups = new Map<string, typeof selectedCategoryCourses>();
-    for (const item of selectedCategoryCourses) {
-      const existing = groups.get(item.sous_categorie);
-      if (existing) existing.push(item);
-      else groups.set(item.sous_categorie, [item]);
-    }
-    return Array.from(groups.entries()).map(([subcategory, items]) => ({
-      label: formatCatalogSubcategory(subcategory),
-      options: items.map((item) => ({
-        value: item.id,
-        label: item.niveau ? `${item.matiere_ou_competence} - ${item.niveau}` : item.nom,
-        keywords: `${item.matiere_ou_competence} ${item.niveau ?? ""} ${item.public_cible} ${item.objectif}`,
-      })),
-    }));
-  }, [selectedCategoryCourses]);
+  const selectedCategoryCourses = COURSE_CATALOG.filter((item) => isCourseCatalogItemCompatible({
+    item,
+    category: effectiveCourseCategory,
+    schoolSystem: form.schoolSystem,
+    preciseLevel: form.preciseLevel,
+    selectedLevel: form.levelName,
+    teacherLevels: teacher.levels,
+    teacherSubjects: teacherSubjectNames,
+    selectedSubject: form.subjectName,
+  })).sort((a, b) => (
+    a.sous_categorie.localeCompare(b.sous_categorie, "fr")
+    || a.nom.localeCompare(b.nom, "fr")
+  ));
+  const selectedCategoryCourseIds = new Set(selectedCategoryCourses.map((item) => item.id));
+  const selectedCategoryCourseGroupMap = new Map<string, typeof selectedCategoryCourses>();
+  for (const item of selectedCategoryCourses) {
+    const existing = selectedCategoryCourseGroupMap.get(item.sous_categorie);
+    if (existing) existing.push(item);
+    else selectedCategoryCourseGroupMap.set(item.sous_categorie, [item]);
+  }
+  const selectedCategoryCourseGroups = Array.from(selectedCategoryCourseGroupMap.entries()).map(([subcategory, items]) => ({
+    label: formatCatalogSubcategory(subcategory),
+    options: items.map((item) => ({
+      value: item.id,
+      label: item.niveau ? `${item.matiere_ou_competence} - ${item.niveau}` : item.nom,
+      keywords: `${item.matiere_ou_competence} ${item.niveau ?? ""} ${item.public_cible} ${item.objectif}`,
+    })),
+  }));
   const levelSelectionGroups = useMemo(() => [{
     label: hasTeacherLevels ? `Niveaux de ${displayName}` : "Niveaux à configurer",
     options: levels.map((level) => ({
@@ -536,6 +543,19 @@ export function ReserverForm({
     })),
   }], [displayName, hasTeacherSubjects, subjects]);
   const grandAbidjanCommunes = useMemo(() => communes.filter((commune) => commune.transportClass === "GRAND_ABIDJAN"), [communes]);
+  const neighborhoodAliases = useMemo(() => {
+    const relevantCommunes = new Set(
+      [teacher.commune, form.commune].map(normalizeLocation).filter(Boolean),
+    );
+    return buildNeighborhoodAliasMap(
+      communes
+        .filter((commune) => relevantCommunes.has(normalizeLocation(commune.name)))
+        .flatMap((commune) => commune.quarters.map((quarter) => ({
+          ...quarter,
+          communeName: commune.name,
+        }))),
+    );
+  }, [communes, form.commune, teacher.commune]);
   const communeSelectionGroups = useMemo(() => [{
     label: "Villes de Côte d'Ivoire",
     options: buildCityOptions([
@@ -560,7 +580,7 @@ export function ReserverForm({
   const selectedCatalogCourse = COURSE_CATALOG.find((item) => item.id === safeCourseCatalogId);
   const schoolProgramPayload = buildSchoolProgramSummary({
     clientType: form.clientType,
-    category: form.courseCategory,
+    category: effectiveCourseCategory,
     schoolSystem: form.schoolSystem,
     preciseLevel: form.preciseLevel,
     courseCatalogId: safeCourseCatalogId,
@@ -570,7 +590,7 @@ export function ReserverForm({
   const deliveryMode = form.courseFormat === "ONLINE" ? "en_ligne" : "domicile";
   const canResolveTransport = form.courseFormat === "HOME" && Boolean(form.commune.trim());
   const pricing = calculateBookingPricing({
-    category: form.courseCategory,
+    category: effectiveCourseCategory,
     schoolSystem: form.schoolSystem,
     levelName: form.levelName,
     preciseLevel: form.preciseLevel,
@@ -591,6 +611,7 @@ export function ReserverForm({
     transportFeeAmounts: pricingConfig.transportFees,
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
     clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
+    neighborhoodAliases,
   });
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
@@ -659,26 +680,46 @@ export function ReserverForm({
           : "";
   function handleClientTypeChange(clientType: string) {
     const nextCategory = CLIENT_TYPE_DEFAULT_CATEGORY[clientType] ?? form.courseCategory;
-    setForm((current) => ({
-      ...current,
-      clientType,
-      courseCategory: nextCategory,
-      levelName: suggestLevelForCategory(teacher.levels, nextCategory, current.levelName),
-      schoolSystem: isSchoolContext(nextCategory) ? current.schoolSystem : "",
-      preciseLevel: isSchoolContext(nextCategory) ? current.preciseLevel : "",
-      courseCatalogId: current.courseCategory === nextCategory ? current.courseCatalogId : "",
-    }));
+    setForm((current) => {
+      const nextLevel = suggestLevelForCategory(teacher.levels, nextCategory, current.levelName);
+      const canonicalCategory = resolveBookingCourseCategory({
+        requestedCategory: nextCategory,
+        levelName: nextLevel,
+        preciseLevel: isSchoolContext(nextCategory) ? current.preciseLevel : "",
+        subjectName: current.subjectName,
+        catalogItem: COURSE_CATALOG.find((item) => item.id === current.courseCatalogId),
+      }).category;
+      return {
+        ...current,
+        clientType,
+        courseCategory: canonicalCategory,
+        levelName: nextLevel,
+        schoolSystem: isSchoolContext(canonicalCategory) ? current.schoolSystem : "",
+        preciseLevel: isSchoolContext(canonicalCategory) ? current.preciseLevel : "",
+        courseCatalogId: current.courseCategory === canonicalCategory ? current.courseCatalogId : "",
+      };
+    });
   }
 
   function handleCourseCategoryChange(courseCategory: string) {
-    setForm((current) => ({
-      ...current,
-      courseCategory,
-      levelName: suggestLevelForCategory(teacher.levels, courseCategory, current.levelName),
-      schoolSystem: isSchoolContext(courseCategory) ? current.schoolSystem : "",
-      preciseLevel: "",
-      courseCatalogId: "",
-    }));
+    setForm((current) => {
+      const nextLevel = suggestLevelForCategory(teacher.levels, courseCategory, current.levelName);
+      const canonicalCategory = resolveBookingCourseCategory({
+        requestedCategory: courseCategory,
+        levelName: nextLevel,
+        preciseLevel: "",
+        subjectName: current.subjectName,
+        catalogItem: null,
+      }).category;
+      return {
+        ...current,
+        courseCategory: canonicalCategory,
+        levelName: nextLevel,
+        schoolSystem: isSchoolContext(canonicalCategory) ? current.schoolSystem : "",
+        preciseLevel: "",
+        courseCatalogId: "",
+      };
+    });
   }
 
   function handleCourseCatalogChange(courseCatalogId: string) {
@@ -686,6 +727,13 @@ export function ReserverForm({
     setForm((current) => ({
       ...current,
       courseCatalogId,
+      courseCategory: resolveBookingCourseCategory({
+        requestedCategory: current.courseCategory,
+        levelName: current.levelName,
+        preciseLevel: current.preciseLevel,
+        subjectName: current.subjectName,
+        catalogItem: course,
+      }).category,
       schoolSystem: course?.systeme_scolaire ?? current.schoolSystem,
     }));
   }
@@ -699,7 +747,7 @@ export function ReserverForm({
       if (!form.levelName) return `Veuillez sélectionner : ${categoryCopy.levelLabel.toLowerCase()}.`;
       if (schoolContext) {
         const educationValidation = validateEducationSelection({
-          category: form.courseCategory,
+          category: effectiveCourseCategory,
           levelName: form.levelName,
           schoolSystem: form.schoolSystem,
           preciseLevel: form.preciseLevel,
@@ -782,7 +830,7 @@ export function ReserverForm({
           levelName: form.levelName,
           objective: form.objective,
           clientType: form.clientType,
-          courseCategory: form.courseCategory,
+          courseCategory: effectiveCourseCategory,
           schoolSystem: form.schoolSystem || undefined,
           preciseLevel: form.preciseLevel || undefined,
           courseCatalogId: safeCourseCatalogId || undefined,
@@ -914,9 +962,11 @@ export function ReserverForm({
               <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
             <p className="mt-2 text-xs font-medium leading-5 text-white">
-              {pricing.transportFee > 0
-                ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
-                : "Aucun frais de déplacement ajouté pour le moment."}
+              {pricing.transportFeePending
+                ? "Déplacement en attente du choix de la commune."
+                : pricing.transportFee > 0
+                  ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
+                  : "Aucun frais de déplacement ajouté."}
             </p>
           </div>
         </div>
@@ -991,14 +1041,20 @@ export function ReserverForm({
                   <Label htmlFor="courseCategory">Catégorie du besoin *</Label>
                   <select
                     id="courseCategory"
-                    value={form.courseCategory}
+                    value={effectiveCourseCategory}
                     onChange={(e) => handleCourseCategoryChange(e.target.value)}
+                    disabled={courseCategoryResolution.locked}
                     className={FIELD_CLASS}
                   >
                     {COURSE_CATEGORIES.map((category) => (
                       <option key={category.code} value={category.code}>{category.label}</option>
                     ))}
                   </select>
+                  {courseCategoryResolution.locked && (
+                    <p className="mt-1 text-xs font-semibold text-[#111B4D]">
+                      Catégorie professionnelle verrouillée selon le métier ou le niveau choisi.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="levelName">{categoryCopy.levelLabel} *</Label>
@@ -1006,11 +1062,24 @@ export function ReserverForm({
                     id="levelName"
                     name="levelName"
                     value={form.levelName}
-                    onValueChange={(value) => setForm((current) => ({
-                      ...current,
-                      levelName: value,
-                      preciseLevel: isSchoolContext(current.courseCategory) && isLyceeLevel(value) ? current.preciseLevel : "",
-                    }))}
+                    onValueChange={(value) => setForm((current) => {
+                      const nextPreciseLevel = isSchoolContext(current.courseCategory) && isLyceeLevel(value)
+                        ? current.preciseLevel
+                        : "";
+                      return {
+                        ...current,
+                        levelName: value,
+                        preciseLevel: nextPreciseLevel,
+                        courseCatalogId: "",
+                        courseCategory: resolveBookingCourseCategory({
+                          requestedCategory: current.courseCategory,
+                          levelName: value,
+                          preciseLevel: nextPreciseLevel,
+                          subjectName: current.subjectName,
+                          catalogItem: null,
+                        }).category,
+                      };
+                    })}
                     placeholder={`Rechercher ${categoryCopy.levelLabel.toLowerCase()}`}
                     searchPlaceholder="Tapez le niveau, profil, diplôme ou concours..."
                     emptyLabel="Aucun niveau configuré pour ce professeur."
@@ -1034,7 +1103,18 @@ export function ReserverForm({
                     id="subjectName"
                     name="subjectName"
                     value={form.subjectName}
-                    onValueChange={(value) => update("subjectName", value)}
+                    onValueChange={(value) => setForm((current) => ({
+                      ...current,
+                      subjectName: value,
+                      courseCatalogId: "",
+                      courseCategory: resolveBookingCourseCategory({
+                        requestedCategory: current.courseCategory,
+                        levelName: current.levelName,
+                        preciseLevel: current.preciseLevel,
+                        subjectName: value,
+                        catalogItem: null,
+                      }).category,
+                    }))}
                     placeholder={`Rechercher ${categoryCopy.subjectLabel.toLowerCase()}`}
                     searchPlaceholder="Tapez une matière, compétence ou module..."
                     emptyLabel="Aucune matière configurée pour ce professeur."
@@ -1289,7 +1369,7 @@ export function ReserverForm({
                 </div>
               )}
 
-              {(form.courseCategory === "apprentissage_metier" || form.courseCategory === "formation_professionnelle") && (
+              {(effectiveCourseCategory === "apprentissage_metier" || effectiveCourseCategory === "formation_professionnelle") && (
                 <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#111827]">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
@@ -1689,7 +1769,7 @@ export function ReserverForm({
                 >
                   {PACK_OPTIONS.map((p) => {
                     const optionPricing = calculateBookingPricing({
-                      category: form.courseCategory,
+                      category: effectiveCourseCategory,
                       schoolSystem: form.schoolSystem,
                       levelName: form.levelName,
                       preciseLevel: form.preciseLevel,
@@ -1710,6 +1790,7 @@ export function ReserverForm({
                       transportFeeAmounts: pricingConfig.transportFees,
                       grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
                       clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
+                      neighborhoodAliases,
                     });
                     const count = optionPricing.numberOfSessions ?? 0;
                     const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;
@@ -1798,7 +1879,7 @@ export function ReserverForm({
                   ) : (
                     form.onlineLink && <Row label="Lien" value={form.onlineLink} />
                   )}
-                  {(form.courseCategory === "apprentissage_metier" || form.courseCategory === "formation_professionnelle") && (
+                  {(effectiveCourseCategory === "apprentissage_metier" || effectiveCourseCategory === "formation_professionnelle") && (
                     <Row label="Matériel" value="Obligatoire côté apprenant, non fourni ni facturé par Compétence" />
                   )}
                   <Row label="Date souhaitée" value={selectedStartDateLabel || "—"} />
@@ -1824,6 +1905,7 @@ export function ReserverForm({
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}
                   transportFeeLabel={pricing.transportFeeLabel}
+                  transportFeePending={pricing.transportFeePending}
                   transportRouteLabel={pricing.transportRouteLabel}
                   transportRuleLabel={pricing.transportRuleLabel}
                   materialFee={pricing.materialFee}
@@ -1917,6 +1999,7 @@ export function ReserverForm({
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}
                   transportFeeLabel={pricing.transportFeeLabel}
+                  transportFeePending={pricing.transportFeePending}
                   transportRouteLabel={pricing.transportRouteLabel}
                   transportRuleLabel={pricing.transportRuleLabel}
                   materialFee={pricing.materialFee}

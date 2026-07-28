@@ -1,4 +1,8 @@
 import "server-only";
+import {
+  productionIntegrationsAreEnabled,
+  type RuntimeEnvironment,
+} from "./production-integration-policy";
 
 export type JekoServerConfig = {
   apiBaseUrl: "https://api.jeko.africa";
@@ -10,10 +14,21 @@ export type JekoServerConfig = {
 };
 
 export function getJekoServerConfig(): JekoServerConfig | null {
-  const apiKey = process.env.JEKO_API_KEY?.trim() ?? "";
-  const apiKeyId = process.env.JEKO_API_KEY_ID?.trim() ?? "";
-  const storeId = process.env.JEKO_STORE_ID?.trim() ?? "";
-  const webhookSecret = process.env.JEKO_WEBHOOK_SECRET?.trim() ?? "";
+  if (!productionIntegrationsAreEnabled()) return null;
+  return readJekoEnvironmentConfig();
+}
+
+export function hasJekoEnvironmentConfiguration() {
+  return Boolean(readJekoEnvironmentConfig());
+}
+
+function readJekoEnvironmentConfig(
+  environment: RuntimeEnvironment = process.env,
+): JekoServerConfig | null {
+  const apiKey = environment.JEKO_API_KEY?.trim() ?? "";
+  const apiKeyId = environment.JEKO_API_KEY_ID?.trim() ?? "";
+  const storeId = environment.JEKO_STORE_ID?.trim() ?? "";
+  const webhookSecret = environment.JEKO_WEBHOOK_SECRET?.trim() ?? "";
   if (!apiKey || !apiKeyId || !storeId || !webhookSecret) return null;
 
   return {
@@ -22,7 +37,7 @@ export function getJekoServerConfig(): JekoServerConfig | null {
     apiKeyId,
     storeId,
     webhookSecret,
-    timeoutMs: normalizeTimeout(process.env.JEKO_API_TIMEOUT_MS),
+    timeoutMs: normalizeTimeout(environment.JEKO_API_TIMEOUT_MS),
   };
 }
 

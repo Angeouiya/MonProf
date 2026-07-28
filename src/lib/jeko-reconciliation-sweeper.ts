@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getJekoServerConfig } from "@/lib/jeko-config";
 import { verifyJekoTeacherPayoutRecord } from "@/lib/jeko-payout-reconciliation";
@@ -40,71 +41,54 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
   const startedAt = new Date();
 
   const [attempts, payouts] = await Promise.all([
-    db.paymentAttempt.findMany({
-      where: {
-        provider: "JEKO",
-        purpose: { in: ["BOOKING", "RESCHEDULE_FEE"] },
-        AND: [
-          {
-            OR: [
-              // REQUESTING sans ID est précisément le cas d'un POST ambigu :
-              // le rapprochement le recherche par référence, sans nouveau POST.
-              { status: "REQUESTING" },
-              { status: { in: ["PENDING", "FAILED"] }, providerOrderId: { not: null } },
-            ],
-          },
-          {
-            OR: [
-              { lastCheckedAt: null, updatedAt: { lte: staleBefore } },
-              { lastCheckedAt: { lte: staleBefore } },
-            ],
-          },
-        ],
-      },
-      select: { id: true, purpose: true },
-      orderBy: { updatedAt: "asc" },
-      take: batchSize,
+    claimJekoPaymentAttemptSweepCandidates({
+      batchSize,
+      staleBefore,
+      claimedAt: startedAt,
     }),
-    db.teacherPayoutRecord.findMany({
-      where: {
-        provider: "JEKO",
-        status: "DRAFT",
-        createdAt: { lte: staleBefore },
-      },
-      select: { id: true },
-      orderBy: { createdAt: "asc" },
-      take: batchSize,
+    claimJekoPayoutSweepCandidates({
+      batchSize,
+      staleBefore,
+      claimedAt: startedAt,
     }),
   ]);
 
-  const jobs: SweepJob[] = [
-    ...attempts.map((attempt) => ({
-      id: attempt.id,
-      kind: attempt.purpose === "RESCHEDULE_FEE" ? "reschedule" as const : "booking" as const,
-      run: async () => {
-        const result = attempt.purpose === "RESCHEDULE_FEE"
-          ? await reconcileJekoReschedulePaymentAttempt(attempt.id, { config })
-          : await reconcileJekoPaymentAttempt(attempt.id, { config });
-        return {
-          action: result.action,
-          ok: !["rejected", "failed"].includes(result.action),
-        };
-      },
-    })),
-    ...payouts.map((payout) => ({
-      id: payout.id,
-      kind: "payout" as const,
-      run: async () => {
-        const result = await verifyJekoTeacherPayoutRecord(payout.id, { config });
-        return {
-          action: result.action,
-          ok: !["rejected", "failed"].includes(result.action),
-        };
-      },
-    })),
-  ];
+  const attemptJobs: SweepJob[] = attempts.map((attempt) => ({
+    id: attempt.id,
+    kind: attempt.purpose === "RESCHEDULE_FEE" ? "reschedule" as const : "booking" as const,
+    run: async () => {
+      const result = attempt.purpose === "RESCHEDULE_FEE"
+        ? await reconcileJekoReschedulePaymentAttempt(attempt.id, { config })
+        : await reconcileJekoPaymentAttempt(attempt.id, { config });
+      return {
+        action: result.action,
+        ok: !["rejected", "failed"].includes(result.action),
+      };
+    },
+  }));
+  const payoutJobs: SweepJob[] = payouts.map((payout) => ({
+    id: payout.id,
+    kind: "payout" as const,
+    run: async () => {
+      const result = await verifyJekoTeacherPayoutRecord(payout.id, { config });
+      return {
+        action: result.action,
+        ok: !["rejected", "failed"].includes(result.action),
+      };
+    },
+  }));
 
-  const results = await runLimited(jobs, CONCURRENCY);
+  // Les appels de paiement client et les retraits disposent chacun de workers
+  // réservés. Ainsi, une série de tentatives lentes ne place jamais tous les
+  // retraits en fin de file jusqu'au timeout du cron.
+  const bothQueuesHaveJobs = attemptJobs.length > 0 && payoutJobs.length > 0;
+  const attemptConcurrency = bothQueuesHaveJobs ? Math.ceil(CONCURRENCY / 2) : CONCURRENCY;
+  const payoutConcurrency = bothQueuesHaveJobs ? Math.floor(CONCURRENCY / 2) : CONCURRENCY;
+  const [attemptResults, payoutResults] = await Promise.all([
+    runLimited(attemptJobs, attemptConcurrency),
+    runLimited(payoutJobs, payoutConcurrency),
+  ]);
+  const results = [...attemptResults, ...payoutResults];
   const failures = results.filter((result) => !result.ok);
   return {
     ok: failures.length === 0,
@@ -120,6 +104,90 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
     actions: countActions(results),
     failures: failures.slice(0, 10),
   };
+}
+
+/**
+ * Comme pour les retraits, le claim des tentatives doit précéder le réseau :
+ * si Jèko lève une exception, lastCheckedAt reste avancé et les autres
+ * tentatives dues peuvent entrer dans les lots suivants. Le verrouillage rend
+ * aussi deux crons concurrents mutuellement exclusifs sur une même tentative.
+ */
+async function claimJekoPaymentAttemptSweepCandidates(input: {
+  batchSize: number;
+  staleBefore: Date;
+  claimedAt: Date;
+}) {
+  return db.$queryRaw<Array<{ id: string; purpose: "BOOKING" | "RESCHEDULE_FEE" }>>(Prisma.sql`
+    WITH "eligibleAttempts" AS (
+      SELECT attempt."id"
+      FROM "PaymentAttempt" AS attempt
+      WHERE attempt."provider" = 'JEKO'::"PaymentProvider"
+        AND attempt."purpose" IN (
+          'BOOKING'::"PaymentAttemptPurpose",
+          'RESCHEDULE_FEE'::"PaymentAttemptPurpose"
+        )
+        AND (
+          attempt."status" = 'REQUESTING'::"PaymentAttemptStatus"
+          OR (
+            attempt."status" = 'PENDING'::"PaymentAttemptStatus"
+            AND attempt."providerOrderId" IS NOT NULL
+          )
+          OR (
+            attempt."status" = 'FAILED'::"PaymentAttemptStatus"
+            AND attempt."providerOrderId" IS NOT NULL
+            AND attempt."failureCode" IS DISTINCT FROM 'JEKO_PAYMENT_FAILED'
+          )
+        )
+        AND COALESCE(attempt."lastCheckedAt", attempt."updatedAt") <= ${input.staleBefore}
+      ORDER BY
+        COALESCE(attempt."lastCheckedAt", attempt."updatedAt") ASC,
+        attempt."createdAt" ASC,
+        attempt."id" ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT ${input.batchSize}
+    )
+    UPDATE "PaymentAttempt" AS attempt
+    SET "lastCheckedAt" = ${input.claimedAt}
+    FROM "eligibleAttempts" AS candidate
+    WHERE attempt."id" = candidate."id"
+    RETURNING attempt."id", attempt."purpose"
+  `);
+}
+
+/**
+ * Réclame atomiquement les retraits dus avant tout appel réseau.
+ *
+ * COALESCE(lastCheckedAt, createdAt) forme une file FIFO des passages dus :
+ * un DRAFT encore jamais vu ne reste pas derrière un ancien DRAFT pending,
+ * et une reprise déjà contrôlée ne peut pas non plus être affamée par un
+ * flux continu de nouveaux retraits. SKIP LOCKED empêche deux crons concurrents
+ * de consommer les mêmes places du lot.
+ */
+async function claimJekoPayoutSweepCandidates(input: {
+  batchSize: number;
+  staleBefore: Date;
+  claimedAt: Date;
+}) {
+  return db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    WITH "eligiblePayouts" AS (
+      SELECT payout."id"
+      FROM "TeacherPayoutRecord" AS payout
+      WHERE payout."provider" = 'JEKO'::"PaymentProvider"
+        AND payout."status" = 'DRAFT'::"TeacherPayoutRecordStatus"
+        AND COALESCE(payout."lastCheckedAt", payout."createdAt") <= ${input.staleBefore}
+      ORDER BY
+        COALESCE(payout."lastCheckedAt", payout."createdAt") ASC,
+        payout."createdAt" ASC,
+        payout."id" ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT ${input.batchSize}
+    )
+    UPDATE "TeacherPayoutRecord" AS payout
+    SET "lastCheckedAt" = ${input.claimedAt}
+    FROM "eligiblePayouts" AS candidate
+    WHERE payout."id" = candidate."id"
+    RETURNING payout."id"
+  `);
 }
 
 async function runLimited(

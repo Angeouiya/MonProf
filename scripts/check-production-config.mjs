@@ -24,8 +24,16 @@ loadEnvFile(".env.production.local");
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
-checkDatabaseUrl("DATABASE_URL", { requirePgbouncer: true, requireSupabaseHost: true });
-checkDatabaseUrl("DIRECT_URL", { requirePgbouncer: false, requireSupabaseHost: true });
+checkDatabaseUrl("DATABASE_URL", {
+  requirePgbouncer: true,
+  requireSupabaseHost: true,
+  expectedRole: "competence_runtime",
+});
+checkDatabaseUrl("DIRECT_URL", {
+  requirePgbouncer: false,
+  requireSupabaseHost: true,
+  expectedRole: "competence_migrator",
+});
 checkStrongSecret("NEXTAUTH_SECRET", { minLength: 32 });
 checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
@@ -102,6 +110,10 @@ function checkDatabaseUrl(key, options) {
   record(`${key} does not target a local database`, !isLocalDatabaseHost(url.hostname));
   if (options.requireSupabaseHost) {
     record(`${key} targets Supabase Postgres`, isSupabaseDatabaseHost(url.hostname));
+  }
+  if (options.expectedRole) {
+    const databaseRole = decodeURIComponent(url.username).split(".")[0];
+    record(`${key} uses the least-privilege ${options.expectedRole} role`, databaseRole === options.expectedRole);
   }
   record(`${key} targets schema=competence`, url.searchParams.get("schema") === "competence");
   if (options.requirePgbouncer) {
@@ -233,6 +245,7 @@ function checkProductionScripts() {
   const clientMobileVerify = pkg.scripts?.["verify:client-mobile"] ?? "";
   const navigationPerformanceVerify = pkg.scripts?.["verify:navigation-performance"] ?? "";
   const teacherPhotoStorageVerify = pkg.scripts?.["verify:teacher-photo-storage"] ?? "";
+  const deploymentSafetyVerify = pkg.scripts?.["verify:deployment-safety"] ?? "";
   const databaseDeploy = pkg.scripts?.["db:deploy"] ?? "";
   record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production install regenerates Prisma Client", /prisma\s+generate/.test(postinstall));
@@ -255,6 +268,11 @@ function checkProductionScripts() {
   record("Production build verifies teacher onboarding flows", productionBuild.includes("npm run verify:teacher-onboarding") && teacherOnboardingVerify.includes("verify-teacher-onboarding-flows.mjs"));
   record("Production build verifies navigation performance gates", productionBuild.includes("npm run verify:navigation-performance") && navigationPerformanceVerify.includes("verify-navigation-performance.mjs"));
   record("Production build verifies persistent teacher photo storage", productionBuild.includes("npm run verify:teacher-photo-storage") && teacherPhotoStorageVerify.includes("verify-teacher-photo-storage.mjs"));
+  record(
+    "Production build verifies Vercel integration isolation and cron authorization",
+    productionBuild.includes("npm run verify:deployment-safety")
+      && deploymentSafetyVerify.includes("verify-deployment-safety.mjs"),
+  );
 }
 
 function checkVercelDeploymentConfig() {
@@ -302,11 +320,32 @@ function checkVercelDeploymentConfig() {
 
   const cronRoute = fs.readFileSync(cronRoutePath, "utf8");
   record(
-    "Notification reminder cron requires CRON_SECRET authorization",
+    "Notification reminder cron requires exact CRON_SECRET Bearer authorization",
     /process\.env\.CRON_SECRET/.test(cronRoute)
       && /authorization/.test(cronRoute)
-      && /Bearer\s/.test(cronRoute)
+      && /authorization !== `Bearer \$\{configuredSecret\}`/.test(cronRoute)
       && /status:\s*401/.test(cronRoute),
+  );
+  record(
+    "Notification reminder cron never accepts a secret in the URL or a fallback header",
+    !/nextUrl\.searchParams/.test(cronRoute) && !/x-cron-secret/i.test(cronRoute),
+  );
+
+  const webPushCronRoutePath = "src/app/api/cron/web-push/route.ts";
+  const webPushCronRoute = fs.existsSync(webPushCronRoutePath)
+    ? fs.readFileSync(webPushCronRoutePath, "utf8")
+    : "";
+  record(
+    "Web Push cron requires exact CRON_SECRET Bearer authorization",
+    /process\.env\.CRON_SECRET/.test(webPushCronRoute)
+      && /authorization !== `Bearer \$\{configuredSecret\}`/.test(webPushCronRoute)
+      && /status:\s*401/.test(webPushCronRoute),
+  );
+  record(
+    "Web Push cron never accepts a secret in the URL or a fallback header",
+    Boolean(webPushCronRoute)
+      && !/nextUrl\.searchParams/.test(webPushCronRoute)
+      && !/x-cron-secret/i.test(webPushCronRoute),
   );
 
   const ignorePath = ".vercelignore";
@@ -353,11 +392,17 @@ function checkHealthEndpoint() {
       && /db\.user\.count/.test(healthRoute),
   );
   record(
-    "Production health endpoint checks Jèko and Gmail without exposing secrets",
+    "Production health endpoint separates configuration from live verification",
     /getJekoServerConfig/.test(healthRoute)
       && /isGmailConfigured/.test(healthRoute)
+      && /hasGmailEnvironmentConfiguration/.test(healthRoute)
+      && /liveVerification:\s*"not_checked_by_health"/.test(healthRoute)
+      && /scope:\s*"configuration-readiness"/.test(healthRoute)
       && !/apiKey|clientSecret|refreshToken|webhookSecret/.test(
-        healthRoute.replace(/getJekoServerConfig|isGmailConfigured/g, ""),
+        healthRoute.replace(
+          /getJekoServerConfig|isGmailConfigured|hasGmailEnvironmentConfiguration/g,
+          "",
+        ),
       ),
   );
 
@@ -375,6 +420,15 @@ function checkHealthEndpoint() {
 }
 
 function checkJekoConfiguration() {
+  if (isVercelNonProductionDeployment()) {
+    const source = fs.readFileSync("src/lib/jeko-config.ts", "utf8");
+    record(
+      "Jèko is disabled by code outside Vercel Production",
+      /if \(!productionIntegrationsAreEnabled\(\)\) return null/.test(source),
+    );
+    return;
+  }
+
   record("Jèko API key is configured server-side", Boolean(getEnv("JEKO_API_KEY")));
   record("Jèko API key id is configured server-side", Boolean(getEnv("JEKO_API_KEY_ID")));
   record("Jèko store id is configured server-side", Boolean(getEnv("JEKO_STORE_ID")));
@@ -382,6 +436,15 @@ function checkJekoConfiguration() {
 }
 
 function checkGmailConfiguration() {
+  if (isVercelNonProductionDeployment()) {
+    const source = fs.readFileSync("src/lib/gmail-email.ts", "utf8");
+    record(
+      "Gmail is disabled by code outside Vercel Production",
+      /if \(!productionIntegrationsAreEnabled\(\)\) return null/.test(source),
+    );
+    return;
+  }
+
   record("Gmail OAuth client id is configured server-side", Boolean(getEnv("GMAIL_CLIENT_ID")));
   record("Gmail OAuth client secret is configured server-side", Boolean(getEnv("GMAIL_CLIENT_SECRET")));
   record("Gmail OAuth refresh token is configured server-side", Boolean(getEnv("GMAIL_REFRESH_TOKEN")));
@@ -389,6 +452,11 @@ function checkGmailConfiguration() {
     "Gmail sender is diplomateimmobilier99@gmail.com",
     getEnv("GMAIL_SENDER_EMAIL").toLowerCase() === "diplomateimmobilier99@gmail.com",
   );
+}
+
+function isVercelNonProductionDeployment() {
+  const vercelEnvironment = getEnv("VERCEL_ENV").toLowerCase();
+  return Boolean(vercelEnvironment && vercelEnvironment !== "production");
 }
 
 async function checkLegacyPayDunyaConfiguration() {

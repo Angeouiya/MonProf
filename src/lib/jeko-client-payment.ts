@@ -12,6 +12,8 @@ export type JekoAttemptSummary = {
   idempotencyKey: string;
   status: string;
   method: string | null;
+  providerOrderId?: string | null;
+  failureCode?: string | null;
 };
 
 export type JekoAttemptPlan =
@@ -83,7 +85,7 @@ export function planJekoBookingAttempt(input: {
     return { kind: "already_paid", attemptId: succeeded.id };
   }
 
-  const active = input.attempts.find((attempt) => ACTIVE_ATTEMPT_STATUSES.has(attempt.status));
+  const active = input.attempts.find(isActiveOrReconcilableAttempt);
   if (active) {
     const paymentMethod = platformMethodToJeko(active.method);
     if (!paymentMethod) {
@@ -123,7 +125,7 @@ export function planJekoRescheduleAttempt(input: {
   const succeeded = input.attempts.find((attempt) => attempt.status === "SUCCEEDED");
   if (succeeded) return { kind: "already_paid", attemptId: succeeded.id };
 
-  const active = input.attempts.find((attempt) => ACTIVE_ATTEMPT_STATUSES.has(attempt.status));
+  const active = input.attempts.find(isActiveOrReconcilableAttempt);
   if (active) {
     const paymentMethod = platformMethodToJeko(active.method);
     if (!paymentMethod) {
@@ -229,6 +231,19 @@ export function platformMethodToJeko(value: string | null | undefined): JekoPaym
     DJAMO: "djamo",
   };
   return value ? methods[value] ?? null : null;
+}
+
+function isActiveOrReconcilableAttempt(attempt: JekoAttemptSummary) {
+  return ACTIVE_ATTEMPT_STATUSES.has(attempt.status)
+    || (
+      attempt.status === "FAILED"
+      && Boolean(attempt.providerOrderId)
+      // Un statut d'erreur confirmé par GET/webhook est terminal et peut
+      // ouvrir une nouvelle tentative. Tous les autres FAILED portant un ID
+      // distant restent ambigus (notamment les anciens échecs de persistance)
+      // et doivent être rapprochés avant tout nouveau POST.
+      && attempt.failureCode !== "JEKO_PAYMENT_FAILED"
+    );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

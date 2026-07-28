@@ -21,6 +21,7 @@ import {
   unavailableSelections,
 } from "@/lib/scheduling";
 import {
+  buildNeighborhoodAliasMap,
   calculateBookingPricing,
   parsePricingSnapshot,
   pricingSnapshotToJson,
@@ -32,6 +33,7 @@ import {
   buildSchoolProgramSummary,
   findCourseCatalogItem,
   isCourseCatalogItemCompatible,
+  resolveBookingCourseCategory,
   resolveCourseCatalogSchoolSystem,
   validateEducationSelection,
 } from "@/lib/course-catalog";
@@ -323,6 +325,13 @@ export async function POST(req: NextRequest) {
   if (courseCatalogId && !catalogCourse) {
     return NextResponse.json({ error: "Cours catalogue invalide." }, { status: 400 });
   }
+  const canonicalCourseCategory = resolveBookingCourseCategory({
+    requestedCategory: courseCategory,
+    levelName: canonicalLevelName,
+    preciseLevel,
+    subjectName: canonicalSubjectName,
+    catalogItem: catalogCourse,
+  }).category;
   const schoolSystemResolution = resolveCourseCatalogSchoolSystem({
     item: catalogCourse,
     requestedSchoolSystem: schoolSystem,
@@ -332,7 +341,7 @@ export async function POST(req: NextRequest) {
   }
   const canonicalSchoolSystem = schoolSystemResolution.schoolSystem;
   const educationValidation = validateEducationSelection({
-    category: courseCategory,
+    category: canonicalCourseCategory,
     levelName: canonicalLevelName,
     schoolSystem: canonicalSchoolSystem,
     preciseLevel,
@@ -342,7 +351,7 @@ export async function POST(req: NextRequest) {
   }
   if (catalogCourse && !isCourseCatalogItemCompatible({
     item: catalogCourse,
-    category: courseCategory,
+    category: canonicalCourseCategory,
     schoolSystem: canonicalSchoolSystem,
     preciseLevel,
     selectedLevel: canonicalLevelName,
@@ -356,7 +365,7 @@ export async function POST(req: NextRequest) {
   }
   const normalizedSchoolProgram = buildSchoolProgramSummary({
     clientType,
-    category: courseCategory,
+    category: canonicalCourseCategory,
     schoolSystem: canonicalSchoolSystem,
     preciseLevel,
     courseCatalogId,
@@ -438,7 +447,12 @@ export async function POST(req: NextRequest) {
       error: `La réservation doit être faite au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeFr(minimumBookingDeadline)}.`,
     }, { status: 400 });
   }
-  const [platformSettings, clientLocation, grandAbidjanCommunes] = await Promise.all([
+  const pricingCommuneNames = Array.from(new Set(
+    [teacher.commune, typeof commune === "string" ? commune : null]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value)),
+  ));
+  const [platformSettings, clientLocation, grandAbidjanCommunes, neighborhoodAliasRows] = await Promise.all([
     getPlatformRuntimeSettings(),
     courseFormat === "HOME" && typeof commune === "string" && commune.trim()
       ? db.commune.findFirst({
@@ -450,12 +464,30 @@ export async function POST(req: NextRequest) {
       where: { transportClass: "GRAND_ABIDJAN", isActive: true },
       select: { name: true },
     }),
+    courseFormat === "HOME" && pricingCommuneNames.length > 0
+      ? db.communeQuarter.findMany({
+          where: {
+            isActive: true,
+            commune: {
+              isActive: true,
+              OR: pricingCommuneNames.map((name) => ({
+                name: { equals: name, mode: "insensitive" as const },
+              })),
+            },
+          },
+          select: {
+            name: true,
+            aliases: true,
+            commune: { select: { name: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
   const appliedCommissionPercent = Number.isFinite(teacher.commissionRate)
     ? Math.max(0, Math.min(60, Math.round(teacher.commissionRate)))
     : platformSettings.commissionPercent;
   const pricing = calculateBookingPricing({
-    category: courseCategory,
+    category: canonicalCourseCategory,
     schoolSystem: canonicalSchoolSystem,
     levelName: canonicalLevelName,
     preciseLevel,
@@ -476,6 +508,13 @@ export async function POST(req: NextRequest) {
     transportFeeAmounts: platformSettings.transportFees,
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
     clientCommuneTransportFeeOverride: clientLocation?.transportFeeOverride,
+    neighborhoodAliases: buildNeighborhoodAliasMap(
+      neighborhoodAliasRows.map((quarter) => ({
+        name: quarter.name,
+        aliases: quarter.aliases,
+        communeName: quarter.commune.name,
+      })),
+    ),
   });
   const canonicalConfirmablePricing = confirmablePricing(pricing);
   const canonicalPricingFingerprint = createPricingConfirmationFingerprint(
@@ -527,7 +566,7 @@ export async function POST(req: NextRequest) {
     levelName: canonicalLevelName,
     objective: nullableTrimmedText(objective),
     clientType,
-    courseCategory,
+    courseCategory: canonicalCourseCategory,
     schoolSystem: canonicalSchoolSystem,
     preciseLevel: nullableTrimmedText(preciseLevel),
     courseCatalogId: catalogCourse?.id ?? null,
@@ -685,6 +724,8 @@ export async function POST(req: NextRequest) {
       // concurrents Wave/Orange doivent viser une seule demande, jamais deux débits.
       idempotencyKey: `BOOKING:${clientCreationKey}`,
       paymentMethod,
+      expectedAmountXof: booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice,
+      expectedPricingSnapshot: booking.pricingSnapshot,
       successUrl: absoluteAppUrl(`/client/reservations/${booking.id}?jeko=return`, req),
       errorUrl: absoluteAppUrl(`/client/reservations/${booking.id}?jeko=cancelled`, req),
     });

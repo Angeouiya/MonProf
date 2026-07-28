@@ -6,6 +6,10 @@ import {
   sumProviderFeeAmounts,
   type FinancialRescheduleLine,
 } from "../src/lib/financial-summary";
+import {
+  getMaterializedTeacherGlobalRetention,
+  getTeacherGlobalRetentionLedger,
+} from "../src/lib/teacher-payments";
 
 const summary = buildPlatformFinancialSummary([
   {
@@ -301,6 +305,63 @@ const retained = buildPlatformFinancialSummary(
 assert.equal(retained.teacherPaid, 4_000);
 assert.equal(retained.teacherRetained, 3_000);
 assert.equal(retained.teacherRemaining, 8_000, "les retenues appliquées réduisent le reste sans devenir un versement");
+
+const materializedGlobalRetention = getMaterializedTeacherGlobalRetention(
+  [
+    { amount: 3_000, status: "APPLIED", bookingId: null },
+    { amount: 1_000, status: "APPLIED", bookingId: "booking-a" },
+  ],
+  [
+    // La séance A peut déjà être PAID et absente des dossiers
+    // actuellement payables : sa retenue reste une preuve historique.
+    { bookingId: "booking-a", retainedAmount: 4_000 },
+  ],
+);
+assert.equal(
+  materializedGlobalRetention,
+  3_000,
+  "une retenue globale matérialisée sur une ancienne séance ne doit jamais être appliquée une seconde fois",
+);
+assert.equal(
+  getMaterializedTeacherGlobalRetention(
+    [{ amount: 3_000, status: "APPLIED", bookingId: null }],
+    [],
+    [
+      { bookingId: "legacy-a", retainedAmountSnapshot: 3_000 },
+      { bookingId: "legacy-a", retainedAmountSnapshot: 3_000 },
+    ],
+  ),
+  3_000,
+  "plusieurs allocations legacy du même booking utilisent le snapshot maximal sans double comptage",
+);
+const partialLegacyLedger = getTeacherGlobalRetentionLedger(
+  [{ amount: 3_000, status: "APPLIED", bookingId: null }],
+  [],
+  [{ bookingId: "legacy-partial", retainedAmountSnapshot: 3_000 }],
+);
+assert.equal(partialLegacyLedger.remaining, 0);
+assert.equal(partialLegacyLedger.legacyByBooking.get("legacy-partial"), 3_000);
+const legacyGrossRemainingAfterFirstPayout = 10_000 - 4_000;
+const legacySecondAndFinalPayout = Math.max(
+  0,
+  legacyGrossRemainingAfterFirstPayout
+    - (partialLegacyLedger.legacyByBooking.get("legacy-partial") ?? 0),
+);
+assert.equal(
+  4_000 + legacySecondAndFinalPayout,
+  7_000,
+  "un versement partiel legacy conserve la retenue affectée à ce booking jusqu'au solde final",
+);
+const mixedRetentionEvidence = getTeacherGlobalRetentionLedger(
+  [{ amount: 5_000, status: "APPLIED", bookingId: null }],
+  [{ bookingId: "mixed-booking", retainedAmount: 3_000 }],
+  [{ bookingId: "mixed-booking", retainedAmountSnapshot: 2_000 }],
+);
+assert.equal(
+  mixedRetentionEvidence.materialized,
+  5_000,
+  "des portions distinctes session puis booking-level s'additionnent sans dépasser l'ajustement global",
+);
 
 const adminDashboardSource = readFileSync(
   new URL("../src/app/admin/page.tsx", import.meta.url),

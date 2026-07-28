@@ -497,6 +497,7 @@ model BookingSession {
   payoutAllocations TeacherPayoutAllocation[]
   history           BookingSessionHistory[]
   disputes          Dispute[]
+  rescheduleRequests BookingRescheduleRequest[]
 
   @@unique([bookingId, sequence])
   @@index([bookingId, status])
@@ -687,6 +688,7 @@ model PaymentAttempt {
   @@index([rescheduleRequestId, provider, status])
   @@index([provider, status, createdAt])
   @@index([storeId, provider, createdAt])
+  @@index([provider, purpose, status, lastCheckedAt, updatedAt], map: "PaymentAttempt_jeko_sweep_idx")
 }
 
 model PaymentEvent {
@@ -1101,6 +1103,7 @@ enum ScheduleProposalStatus {
 model BookingRescheduleRequest {
   id                      String                  @id @default(cuid())
   bookingId               String
+  bookingSessionId        String?
   teacherId               String
   clientId                String
   requestedBy             RescheduleRequestActor  @default(CLIENT)
@@ -1145,14 +1148,16 @@ model BookingRescheduleRequest {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
-  booking           Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  teacher           Teacher          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  client            User             @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
-  transaction       Transaction?      @relation("RescheduleFeeTransaction")
-  refundTransaction Transaction?      @relation("RescheduleRefundTransaction", fields: [refundTransactionId], references: [id], onDelete: SetNull)
+  booking           Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingSession    BookingSession?    @relation(fields: [bookingSessionId], references: [id], onDelete: SetNull)
+  teacher           Teacher           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  client            User              @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
+  transaction       Transaction?       @relation("RescheduleFeeTransaction")
+  refundTransaction Transaction?       @relation("RescheduleRefundTransaction", fields: [refundTransactionId], references: [id], onDelete: SetNull)
   paymentAttempts   PaymentAttempt[]
 
   @@index([bookingId, status])
+  @@index([bookingSessionId])
   @@index([teacherId, status])
   @@index([clientId, createdAt])
   @@index([paymentProvider, status])
@@ -1510,6 +1515,7 @@ model TeacherPayoutRecord {
   note                         String?
   status                       TeacherPayoutRecordStatus @default(PAID)
   paidAt                       DateTime?
+  lastCheckedAt                DateTime?
   createdAt                    DateTime                  @default(now())
   createdById                  String?
 
@@ -1521,6 +1527,7 @@ model TeacherPayoutRecord {
   @@index([teacherId, paidAt])
   @@index([createdById])
   @@index([provider, status, paidAt])
+  @@index([provider, status, lastCheckedAt, createdAt], map: "TeacherPayoutRecord_jeko_sweep_idx")
 }
 
 model TeacherPayoutRequest {

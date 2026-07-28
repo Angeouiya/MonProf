@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createJekoPaymentRequest, JekoApiError } from "@/lib/jeko";
 import { validateJekoRescheduleFinancialSnapshot } from "@/lib/jeko-client-payment";
@@ -25,6 +25,8 @@ export type CreateJekoBookingCheckoutInput = {
   bookingId: string;
   idempotencyKey: string;
   paymentMethod: JekoPaymentMethod;
+  expectedAmountXof: number;
+  expectedPricingSnapshot: string | null;
   successUrl: string;
   errorUrl: string;
 };
@@ -61,110 +63,168 @@ export async function createJekoBookingCheckout(
   const bookingId = input.bookingId.trim();
   if (!bookingId) throw new Error("Réservation manquante.");
 
-  const booking = await db.booking.findUnique({
-    where: { id: bookingId },
-    select: {
-      id: true,
-      reference: true,
-      paymentStatus: true,
-      paymentProvider: true,
-      paydunyaToken: true,
-      paydunyaCheckoutUrl: true,
-      paydunyaStatus: true,
-      paydunyaVerifiedAt: true,
-      totalClientPays: true,
-      totalPrice: true,
-      courseAmount: true,
-      transportFee: true,
-      paymentServiceFeeAmount: true,
-      commissionAmount: true,
-      teacherNetAmount: true,
-      totalTeacherReceives: true,
-    },
-  });
-  if (!booking) throw new Error("Réservation introuvable.");
-  if (SECURED_PAYMENT_STATUSES.has(booking.paymentStatus)) {
-    throw new Error("Cette réservation possède déjà des fonds sécurisés.");
-  }
-  const paydunyaStatus = booking.paydunyaStatus?.trim().toUpperCase() ?? "";
-  const paydunyaTerminalFailure = ["FAILED", "CANCELLED", "CANCELED", "EXPIRED"].includes(
-    paydunyaStatus,
-  );
-  const activePayDunyaCheckout = Boolean(
-    (booking.paydunyaToken || booking.paydunyaCheckoutUrl) && !paydunyaTerminalFailure,
-  );
-  if (
-    booking.paymentProvider === "PAYDUNYA"
-    || booking.paydunyaVerifiedAt
-    || activePayDunyaCheckout
-  ) {
-    throw new Error(
-      "Cette réservation est déjà affectée à PayDunya. Aucun lien Jèko concurrent ne peut être ouvert.",
-    );
-  }
+  const prepared = await db.$transaction(async (tx) => {
+    const lockedBooking = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id"
+      FROM "Booking"
+      WHERE "id" = ${bookingId}
+      FOR UPDATE
+    `);
+    if (lockedBooking.length === 0) throw new Error("Réservation introuvable.");
 
-  // Verrou inter-fournisseurs posé en base avant tout appel externe. Les
-  // anciens brouillons sans provider sont ainsi revendiqués par Jèko de façon
-  // atomique ; un autre checkout doit observer JEKO et s'arrêter.
-  const providerClaim = await db.booking.updateMany({
-    where: {
-      id: booking.id,
-      paymentStatus: "FAILED",
-      paydunyaVerifiedAt: null,
-      OR: [
-        { paymentProvider: null },
-        { paymentProvider: "JEKO" },
-      ],
-    },
-    data: {
-      paymentProvider: "JEKO",
-      providerPaymentStatus: "PENDING",
-      paymentVerifiedAt: null,
-    },
-  });
-  if (providerClaim.count === 0) {
-    throw new Error("Cette réservation a été revendiquée par un autre fournisseur de paiement.");
-  }
-
-  const amountXof = booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice;
-  const providerAmountMinor = xofToJekoAmountCents(amountXof);
-  const reference = buildJekoReference(booking.reference, idempotencyKey);
-  const snapshot = {
-    provider: "JEKO" as const,
-    purpose: "BOOKING" as const,
-    bookingId: booking.id,
-    rescheduleRequestId: null,
-    idempotencyKey,
-    reference,
-    currency: "XOF",
-    amountXof,
-    providerAmountMinor,
-    courseAmountXof: booking.courseAmount,
-    transportAmountXof: booking.transportFee,
-    serviceFeeAmountXof: booking.paymentServiceFeeAmount,
-    commissionAmountXof: booking.commissionAmount,
-    teacherAmountXof: booking.totalTeacherReceives > 0
-      ? booking.totalTeacherReceives
-      : booking.teacherNetAmount,
-    method: toPlatformPaymentMethod(input.paymentMethod),
-  };
-
-  let attempt = await db.paymentAttempt.findUnique({ where: { idempotencyKey } });
-  if (!attempt) {
-    try {
-      attempt = await db.paymentAttempt.create({
-        data: {
-          ...snapshot,
-          status: "CREATED",
-        },
-      });
-    } catch (error) {
-      if (!isUniqueConstraintError(error)) throw error;
-      attempt = await db.paymentAttempt.findUnique({ where: { idempotencyKey } });
+    // Relecture obligatoire sous le même verrou que le repricing : aucune
+    // tentative n'est créée depuis un snapshot lu avant l'attente du verrou.
+    const booking = await tx.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        paymentStatus: true,
+        isQuoteOnly: true,
+        paymentProvider: true,
+        paydunyaToken: true,
+        paydunyaCheckoutUrl: true,
+        paydunyaStatus: true,
+        paydunyaVerifiedAt: true,
+        totalClientPays: true,
+        totalPrice: true,
+        courseAmount: true,
+        transportFee: true,
+        paymentServiceFeeAmount: true,
+        commissionAmount: true,
+        teacherNetAmount: true,
+        totalTeacherReceives: true,
+        pricingSnapshot: true,
+      },
+    });
+    if (SECURED_PAYMENT_STATUSES.has(booking.paymentStatus)) {
+      throw new Error("Cette réservation possède déjà des fonds sécurisés.");
     }
-  }
-  if (!attempt) throw new Error("Impossible de créer la tentative de paiement.");
-  assertAttemptMatchesSnapshot(attempt, snapshot);
+    if (
+      booking.status !== "PENDING_PAYMENT"
+      || booking.paymentStatus !== "FAILED"
+      || booking.isQuoteOnly
+    ) {
+      throw new Error("Cette réservation n'est plus payable par Jèko.");
+    }
+    const paydunyaStatus = booking.paydunyaStatus?.trim().toUpperCase() ?? "";
+    const paydunyaTerminalFailure = ["FAILED", "CANCELLED", "CANCELED", "EXPIRED"].includes(
+      paydunyaStatus,
+    );
+    const activePayDunyaCheckout = Boolean(
+      (booking.paydunyaToken || booking.paydunyaCheckoutUrl) && !paydunyaTerminalFailure,
+    );
+    if (
+      booking.paymentProvider === "PAYDUNYA"
+      || booking.paydunyaVerifiedAt
+      || activePayDunyaCheckout
+    ) {
+      throw new Error(
+        "Cette réservation est déjà affectée à PayDunya. Aucun lien Jèko concurrent ne peut être ouvert.",
+      );
+    }
+
+    const amountXof = booking.totalClientPays > 0 ? booking.totalClientPays : booking.totalPrice;
+    if (
+      amountXof !== input.expectedAmountXof
+      || booking.pricingSnapshot !== input.expectedPricingSnapshot
+    ) {
+      throw new Error(
+        "Le tarif a été recalculé. Vérifiez le nouveau détail puis confirmez-le avant d'ouvrir Jèko.",
+      );
+    }
+
+    // Verrou inter-fournisseurs posé en base avant tout appel externe. Les
+    // anciens brouillons sans provider sont ainsi revendiqués par Jèko de façon
+    // atomique ; un autre checkout doit observer JEKO et s'arrêter.
+    const providerClaim = await tx.booking.updateMany({
+      where: {
+        id: booking.id,
+        status: "PENDING_PAYMENT",
+        paymentStatus: "FAILED",
+        isQuoteOnly: false,
+        paydunyaVerifiedAt: null,
+        OR: [
+          { paymentProvider: null },
+          { paymentProvider: "JEKO" },
+        ],
+      },
+      data: {
+        paymentProvider: "JEKO",
+        providerPaymentStatus: "PENDING",
+        paymentVerifiedAt: null,
+      },
+    });
+    if (providerClaim.count === 0) {
+      throw new Error("Cette réservation a été revendiquée par un autre fournisseur de paiement.");
+    }
+
+    const providerAmountMinor = xofToJekoAmountCents(amountXof);
+    const reference = buildJekoReference(booking.reference, idempotencyKey);
+    const snapshot = {
+      provider: "JEKO" as const,
+      purpose: "BOOKING" as const,
+      bookingId: booking.id,
+      rescheduleRequestId: null,
+      idempotencyKey,
+      reference,
+      currency: "XOF",
+      amountXof,
+      providerAmountMinor,
+      courseAmountXof: booking.courseAmount,
+      transportAmountXof: booking.transportFee,
+      serviceFeeAmountXof: booking.paymentServiceFeeAmount,
+      commissionAmountXof: booking.commissionAmount,
+      teacherAmountXof: booking.totalTeacherReceives > 0
+        ? booking.totalTeacherReceives
+        : booking.teacherNetAmount,
+      method: toPlatformPaymentMethod(input.paymentMethod),
+    };
+
+    let attempt = await tx.paymentAttempt.findUnique({ where: { idempotencyKey } });
+    if (!attempt) {
+      const concurrentAttempt = await tx.paymentAttempt.findFirst({
+        where: {
+          bookingId: booking.id,
+          provider: "JEKO",
+          purpose: "BOOKING",
+          OR: [
+            { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
+            {
+              status: "FAILED",
+              providerOrderId: { not: null },
+              OR: [
+                { failureCode: null },
+                { failureCode: { not: "JEKO_PAYMENT_FAILED" } },
+              ],
+            },
+          ],
+        },
+        select: { id: true },
+      });
+      if (concurrentAttempt) {
+        throw new Error("Une tentative Jèko active existe déjà. Rechargez avant de poursuivre.");
+      }
+      try {
+        attempt = await tx.paymentAttempt.create({
+          data: {
+            ...snapshot,
+            status: "CREATED",
+          },
+        });
+      } catch (error) {
+        if (!isUniqueConstraintError(error)) throw error;
+        attempt = await tx.paymentAttempt.findUnique({ where: { idempotencyKey } });
+      }
+    }
+    if (!attempt) throw new Error("Impossible de créer la tentative de paiement.");
+    assertAttemptMatchesSnapshot(attempt, snapshot);
+    return { attempt, amountXof, providerAmountMinor, reference };
+  });
+
+  let attempt = prepared.attempt;
+  const { amountXof, providerAmountMinor, reference } = prepared;
 
   if (attempt.status === "SUCCEEDED") {
     return checkoutResult(attempt, "succeeded");
@@ -181,6 +241,18 @@ export async function createJekoBookingCheckout(
     }
     const current = await db.paymentAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
     return checkoutResult(current, "processing");
+  }
+
+  // FAILED avec une identité distante reste rapprochable. Le sweeper et le
+  // GET serveur doivent d'abord confirmer son issue ; renvoyer un nouveau POST
+  // ici ouvrirait une seconde demande alors que la première peut encore payer.
+  if (attempt.status === "FAILED" && attempt.providerOrderId) {
+    if (attempt.failureCode === "JEKO_PAYMENT_FAILED") {
+      throw new Error(
+        "Cette clé d'idempotence correspond à un échec Jèko confirmé. Une nouvelle tentative est requise.",
+      );
+    }
+    return checkoutResult(attempt, "processing");
   }
 
   const claimed = await db.paymentAttempt.updateMany({
@@ -209,38 +281,15 @@ export async function createJekoBookingCheckout(
     return checkoutResult(current, current.status === "SUCCEEDED" ? "succeeded" : "processing");
   }
 
+  let paymentRequest: Awaited<ReturnType<typeof createJekoPaymentRequest>>;
   try {
-    const paymentRequest = await createJekoPaymentRequest({
+    paymentRequest = await createJekoPaymentRequest({
       reference,
       amountXof,
       paymentMethod: input.paymentMethod,
       successUrl: appendAttemptId(input.successUrl, attempt.id),
       errorUrl: appendAttemptId(input.errorUrl, attempt.id),
     });
-    const updated = await db.paymentAttempt.update({
-      where: { id: attempt.id },
-      data: {
-        // La réponse de création ne constitue jamais une preuve de paiement.
-        // Seul le rapprochement GET + webhook peut passer à SUCCEEDED.
-        status: "PENDING",
-        providerOrderId: paymentRequest.id,
-        checkoutUrl: paymentRequest.redirectUrl,
-        storeId: paymentRequest.storeId,
-        responsePayload: toJson(paymentRequest.raw),
-        lastCheckedAt: new Date(),
-        verifiedAt: null,
-        completedAt: null,
-      },
-    });
-    await db.booking.updateMany({
-      where: { id: booking.id, paymentStatus: "FAILED" },
-      data: {
-        paymentProvider: "JEKO",
-        providerPaymentStatus: "PENDING",
-        paymentVerifiedAt: null,
-      },
-    });
-    return checkoutResult(updated, "pending");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Création Jèko impossible.";
     const ambiguousProviderOutcome = isAmbiguousJekoCreateOutcome(error);
@@ -251,7 +300,7 @@ export async function createJekoBookingCheckout(
         return checkoutResult(recoveredAttempt, "pending");
       }
       await db.booking.updateMany({
-        where: { id: booking.id, paymentStatus: "FAILED", paymentProvider: "JEKO" },
+        where: { id: bookingId, paymentStatus: "FAILED", paymentProvider: "JEKO" },
         data: {
           providerPaymentStatus: recovery.action === "rejected" ? "ERROR" : "PENDING",
           paymentVerifiedAt: null,
@@ -272,13 +321,68 @@ export async function createJekoBookingCheckout(
       },
     });
     await db.booking.updateMany({
-      where: { id: booking.id, paymentStatus: "FAILED" },
+      where: { id: bookingId, paymentStatus: "FAILED" },
       data: {
         paymentProvider: "JEKO",
         providerPaymentStatus: "ERROR",
         paymentVerifiedAt: null,
       },
     });
+    throw error;
+  }
+
+  try {
+    const updated = await db.$transaction(async (tx) => {
+      const persisted = await tx.paymentAttempt.updateMany({
+        where: { id: attempt.id, status: "REQUESTING" },
+        data: {
+          // La réponse de création ne constitue jamais une preuve de paiement.
+          // Seul le rapprochement GET + webhook peut passer à SUCCEEDED.
+          status: "PENDING",
+          providerOrderId: paymentRequest.id,
+          checkoutUrl: paymentRequest.redirectUrl,
+          storeId: paymentRequest.storeId,
+          responsePayload: toJson(paymentRequest.raw),
+          lastCheckedAt: new Date(),
+          failureCode: null,
+          failureReason: null,
+          verifiedAt: null,
+          completedAt: null,
+        },
+      });
+      const current = await tx.paymentAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
+      if (persisted.count === 0) {
+        if (current.status === "SUCCEEDED") return current;
+        if (
+          current.status === "PENDING"
+          && current.providerOrderId === paymentRequest.id
+          && current.reference === reference
+        ) return current;
+        throw new Error("La tentative Jèko a changé pendant la persistance de la réponse fournisseur.");
+      }
+
+      const bookingClaim = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          status: "PENDING_PAYMENT",
+          paymentStatus: "FAILED",
+          isQuoteOnly: false,
+          paymentProvider: "JEKO",
+          paydunyaVerifiedAt: null,
+        },
+        data: {
+          providerPaymentStatus: "PENDING",
+          paymentVerifiedAt: null,
+        },
+      });
+      if (bookingClaim.count !== 1) {
+        throw new Error("La réservation a changé après la création de la demande Jèko.");
+      }
+      return current;
+    });
+    return checkoutResult(updated, updated.status === "SUCCEEDED" ? "succeeded" : "pending");
+  } catch (error) {
+    await preserveJekoProviderIdentityAfterLocalFailure(attempt.id, paymentRequest, error);
     throw error;
   }
 }
@@ -296,69 +400,118 @@ export async function createJekoRescheduleCheckout(
   const rescheduleRequestId = input.rescheduleRequestId.trim();
   if (!bookingId || !rescheduleRequestId) throw new Error("Demande de modification manquante.");
 
-  const request = await db.bookingRescheduleRequest.findFirst({
-    where: { id: rescheduleRequestId, bookingId },
-    select: {
-      id: true,
-      bookingId: true,
-      status: true,
-      totalToPay: true,
-      feeAmount: true,
-      feePlatformAmount: true,
-      feeTeacherAmount: true,
-      paymentServiceFeeAmount: true,
-      paidAt: true,
-      paymentProvider: true,
-      booking: { select: { reference: true } },
-    },
-  });
-  if (!request) throw new Error("Demande de modification introuvable.");
-  if (request.paymentProvider !== "JEKO") {
-    throw new Error("Cette demande n'est pas explicitement affectée à Jèko.");
-  }
-  if (
-    request.paidAt
-    || !["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(request.status)
-    || !Number.isSafeInteger(request.totalToPay)
-    || request.totalToPay <= 0
-  ) {
-    throw new Error("Ce supplément n'est plus payable.");
-  }
-  const invalidFinancialSnapshot = validateJekoRescheduleFinancialSnapshot(request);
-  if (invalidFinancialSnapshot) throw new Error(invalidFinancialSnapshot);
-
-  const amountXof = request.totalToPay;
-  const providerAmountMinor = xofToJekoAmountCents(amountXof);
-  const reference = buildJekoReference(`${request.booking.reference}-RS`, idempotencyKey);
-  const snapshot = {
-    provider: "JEKO" as const,
-    purpose: "RESCHEDULE_FEE" as const,
-    bookingId: request.bookingId,
-    rescheduleRequestId: request.id,
-    idempotencyKey,
-    reference,
-    currency: "XOF",
-    amountXof,
-    providerAmountMinor,
-    courseAmountXof: request.feeAmount,
-    transportAmountXof: 0,
-    serviceFeeAmountXof: request.paymentServiceFeeAmount,
-    commissionAmountXof: request.feePlatformAmount,
-    teacherAmountXof: request.feeTeacherAmount,
-    method: toPlatformPaymentMethod(input.paymentMethod),
-  };
-
-  let attempt = await db.paymentAttempt.findUnique({ where: { idempotencyKey } });
-  if (!attempt) {
-    try {
-      attempt = await db.paymentAttempt.create({ data: { ...snapshot, status: "CREATED" } });
-    } catch (error) {
-      if (!isUniqueConstraintError(error)) throw error;
-      attempt = await db.paymentAttempt.findUnique({ where: { idempotencyKey } });
+  const prepared = await db.$transaction(async (tx) => {
+    const lockedBooking = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id"
+      FROM "Booking"
+      WHERE "id" = ${bookingId}
+      FOR UPDATE
+    `);
+    if (lockedBooking.length !== 1) throw new Error("Réservation introuvable.");
+    const currentBooking = await tx.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      select: { id: true, reference: true, status: true },
+    });
+    if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(currentBooking.status)) {
+      throw new Error("La réservation n'accepte plus le paiement d'un supplément de créneau.");
     }
-  }
-  if (!attempt) throw new Error("Impossible de créer la tentative de supplément.");
-  assertAttemptMatchesSnapshot(attempt, snapshot);
+
+    const lockedRequest = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id"
+      FROM "BookingRescheduleRequest"
+      WHERE "id" = ${rescheduleRequestId} AND "bookingId" = ${bookingId}
+      FOR UPDATE
+    `);
+    if (lockedRequest.length !== 1) throw new Error("Demande de modification introuvable.");
+    const request = await tx.bookingRescheduleRequest.findFirst({
+      where: { id: rescheduleRequestId, bookingId },
+      select: {
+        id: true,
+        bookingId: true,
+        status: true,
+        totalToPay: true,
+        feeAmount: true,
+        feePlatformAmount: true,
+        feeTeacherAmount: true,
+        paymentServiceFeeAmount: true,
+        paidAt: true,
+        paymentProvider: true,
+      },
+    });
+    if (!request) throw new Error("Demande de modification introuvable.");
+    if (request.paymentProvider !== "JEKO") {
+      throw new Error("Cette demande n'est pas explicitement affectée à Jèko.");
+    }
+    if (
+      request.paidAt
+      || !["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(request.status)
+      || !Number.isSafeInteger(request.totalToPay)
+      || request.totalToPay <= 0
+    ) {
+      throw new Error("Ce supplément n'est plus payable.");
+    }
+    const invalidFinancialSnapshot = validateJekoRescheduleFinancialSnapshot(request);
+    if (invalidFinancialSnapshot) throw new Error(invalidFinancialSnapshot);
+
+    const amountXof = request.totalToPay;
+    const providerAmountMinor = xofToJekoAmountCents(amountXof);
+    const reference = buildJekoReference(`${currentBooking.reference}-RS`, idempotencyKey);
+    const snapshot = {
+      provider: "JEKO" as const,
+      purpose: "RESCHEDULE_FEE" as const,
+      bookingId: request.bookingId,
+      rescheduleRequestId: request.id,
+      idempotencyKey,
+      reference,
+      currency: "XOF",
+      amountXof,
+      providerAmountMinor,
+      courseAmountXof: request.feeAmount,
+      transportAmountXof: 0,
+      serviceFeeAmountXof: request.paymentServiceFeeAmount,
+      commissionAmountXof: request.feePlatformAmount,
+      teacherAmountXof: request.feeTeacherAmount,
+      method: toPlatformPaymentMethod(input.paymentMethod),
+    };
+
+    let attempt = await tx.paymentAttempt.findUnique({ where: { idempotencyKey } });
+    if (!attempt) {
+      const concurrentAttempt = await tx.paymentAttempt.findFirst({
+        where: {
+          rescheduleRequestId: request.id,
+          provider: "JEKO",
+          purpose: "RESCHEDULE_FEE",
+          OR: [
+            { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
+            {
+              status: "FAILED",
+              providerOrderId: { not: null },
+              OR: [
+                { failureCode: null },
+                { failureCode: { not: "JEKO_PAYMENT_FAILED" } },
+              ],
+            },
+          ],
+        },
+        select: { id: true },
+      });
+      if (concurrentAttempt) {
+        throw new Error("Une tentative Jèko rapprochable existe déjà pour ce supplément.");
+      }
+      try {
+        attempt = await tx.paymentAttempt.create({ data: { ...snapshot, status: "CREATED" } });
+      } catch (error) {
+        if (!isUniqueConstraintError(error)) throw error;
+        attempt = await tx.paymentAttempt.findUnique({ where: { idempotencyKey } });
+      }
+    }
+    if (!attempt) throw new Error("Impossible de créer la tentative de supplément.");
+    assertAttemptMatchesSnapshot(attempt, snapshot);
+    return { request, attempt, amountXof, providerAmountMinor, reference };
+  }, { isolationLevel: "Serializable" });
+
+  const { request, amountXof, providerAmountMinor, reference } = prepared;
+  let attempt = prepared.attempt;
 
   if (attempt.status === "SUCCEEDED") {
     return { ...checkoutResult(attempt, "succeeded"), rescheduleRequestId: request.id };
@@ -378,6 +531,15 @@ export async function createJekoRescheduleCheckout(
     }
     const current = await db.paymentAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
     return { ...checkoutResult(current, "processing"), rescheduleRequestId: request.id };
+  }
+
+  if (attempt.status === "FAILED" && attempt.providerOrderId) {
+    if (attempt.failureCode === "JEKO_PAYMENT_FAILED") {
+      throw new Error(
+        "Cette clé d'idempotence correspond à un échec Jèko confirmé. Une nouvelle tentative est requise.",
+      );
+    }
+    return { ...checkoutResult(attempt, "processing"), rescheduleRequestId: request.id };
   }
 
   const claimed = await db.paymentAttempt.updateMany({
@@ -411,32 +573,15 @@ export async function createJekoRescheduleCheckout(
     };
   }
 
+  let paymentRequest: Awaited<ReturnType<typeof createJekoPaymentRequest>>;
   try {
-    const paymentRequest = await createJekoPaymentRequest({
+    paymentRequest = await createJekoPaymentRequest({
       reference,
       amountXof,
       paymentMethod: input.paymentMethod,
       successUrl: appendAttemptId(input.successUrl, attempt.id),
       errorUrl: appendAttemptId(input.errorUrl, attempt.id),
     });
-    const updated = await db.paymentAttempt.update({
-      where: { id: attempt.id },
-      data: {
-        status: "PENDING",
-        providerOrderId: paymentRequest.id,
-        checkoutUrl: paymentRequest.redirectUrl,
-        storeId: paymentRequest.storeId,
-        responsePayload: toJson(paymentRequest.raw),
-        lastCheckedAt: new Date(),
-        verifiedAt: null,
-        completedAt: null,
-      },
-    });
-    await db.bookingRescheduleRequest.updateMany({
-      where: { id: request.id, paidAt: null },
-      data: { status: "PAYMENT_PENDING" },
-    });
-    return { ...checkoutResult(updated, "pending"), rescheduleRequestId: request.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Création Jèko impossible.";
     const ambiguousProviderOutcome = isAmbiguousJekoCreateOutcome(error);
@@ -470,6 +615,61 @@ export async function createJekoRescheduleCheckout(
         data: { status: "PAYMENT_FAILED" },
       }),
     ]);
+    throw error;
+  }
+
+  try {
+    const updated = await db.$transaction(async (tx) => {
+      const persisted = await tx.paymentAttempt.updateMany({
+        where: { id: attempt.id, status: "REQUESTING" },
+        data: {
+          status: "PENDING",
+          providerOrderId: paymentRequest.id,
+          checkoutUrl: paymentRequest.redirectUrl,
+          storeId: paymentRequest.storeId,
+          responsePayload: toJson(paymentRequest.raw),
+          lastCheckedAt: new Date(),
+          failureCode: null,
+          failureReason: null,
+          verifiedAt: null,
+          completedAt: null,
+        },
+      });
+      const current = await tx.paymentAttempt.findUniqueOrThrow({ where: { id: attempt.id } });
+      if (persisted.count === 0) {
+        if (current.status === "SUCCEEDED") return current;
+        if (
+          current.status === "PENDING"
+          && current.providerOrderId === paymentRequest.id
+          && current.reference === reference
+        ) return current;
+        throw new Error("La tentative du supplément a changé pendant la persistance Jèko.");
+      }
+
+      const requestClaim = await tx.bookingRescheduleRequest.updateMany({
+        where: {
+          id: request.id,
+          bookingId,
+          paymentProvider: "JEKO",
+          paidAt: null,
+          status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED"] },
+          booking: {
+            status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"] },
+          },
+        },
+        data: { status: "PAYMENT_PENDING" },
+      });
+      if (requestClaim.count !== 1) {
+        throw new Error("La demande de modification n'est plus payable après la création Jèko.");
+      }
+      return current;
+    });
+    return {
+      ...checkoutResult(updated, updated.status === "SUCCEEDED" ? "succeeded" : "pending"),
+      rescheduleRequestId: request.id,
+    };
+  } catch (error) {
+    await preserveJekoProviderIdentityAfterLocalFailure(attempt.id, paymentRequest, error);
     throw error;
   }
 }
@@ -525,6 +725,40 @@ function assertAttemptMatchesSnapshot(
     || attempt.method !== snapshot.method
   ) {
     throw new Error("La clé d'idempotence correspond à une autre tentative de paiement.");
+  }
+}
+
+async function preserveJekoProviderIdentityAfterLocalFailure(
+  attemptId: string,
+  paymentRequest: Awaited<ReturnType<typeof createJekoPaymentRequest>>,
+  persistenceError: unknown,
+) {
+  const message = persistenceError instanceof Error
+    ? persistenceError.message
+    : "Persistance locale Jèko indisponible.";
+  try {
+    await db.paymentAttempt.updateMany({
+      where: { id: attemptId, status: "REQUESTING" },
+      data: {
+        // Le POST distant a répondu : cet état doit rester rapprochable et
+        // ne doit jamais être compté comme une tentative terminale réessayable.
+        status: "PENDING",
+        providerOrderId: paymentRequest.id,
+        checkoutUrl: paymentRequest.redirectUrl,
+        storeId: paymentRequest.storeId,
+        responsePayload: toJson(paymentRequest.raw),
+        failureCode: "JEKO_LOCAL_PERSISTENCE_PENDING",
+        failureReason: `Réponse Jèko reçue ; reprise locale requise : ${message}`.slice(0, 500),
+        lastCheckedAt: new Date(),
+      },
+    });
+  } catch (recoveryError) {
+    // La tentative reste REQUESTING si la base est indisponible. Sa référence
+    // stable permettra au sweeper de retrouver l'objet distant sans nouveau POST.
+    console.error("[jeko:provider_identity_persistence_deferred]", {
+      attemptId,
+      message: recoveryError instanceof Error ? recoveryError.message : "Erreur SQL inconnue",
+    });
   }
 }
 

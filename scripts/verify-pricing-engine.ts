@@ -2,11 +2,15 @@ import assert from "node:assert/strict";
 import {
   calculateBookingPricing,
   calculateGrandAbidjanTransportFee,
+  buildNeighborhoodAliasMap,
   GRAND_ABIDJAN_NEAR_ROUTES,
+  PENDING_TRANSPORT_FEE_KEY,
 } from "../src/lib/pricing";
 import {
+  COURSE_CATALOG,
   findCourseCatalogItem,
   isCourseCatalogItemCompatible,
+  resolveBookingCourseCategory,
   resolveCourseCatalogSchoolSystem,
   validateEducationSelection,
 } from "../src/lib/course-catalog";
@@ -48,6 +52,60 @@ function verifyProfessionalPricing() {
 
   assert.equal(explicitProfessionalLevel.priceTierKey, "premium_20000");
   assert.equal(explicitProfessionalLevel.unitSessionAmount, 20_000);
+
+  const categoryBypassAttempt = calculateBookingPricing(baseBooking({
+    category: "soutien_scolaire",
+    schoolSystem: "ivoirien",
+    levelName: "Formation professionnelle",
+    subjectName: "Couture",
+    teacherPricePerSession: 2_000,
+  }));
+  assert.equal(categoryBypassAttempt.priceTierKey, "premium_20000");
+  assert.equal(categoryBypassAttempt.unitSessionAmount, 20_000);
+
+  const canonicalProfessionalCategory = resolveBookingCourseCategory({
+    requestedCategory: "soutien_scolaire",
+    levelName: "Formation professionnelle",
+    subjectName: "Couture",
+  });
+  assert.deepEqual(canonicalProfessionalCategory, {
+    category: "formation_professionnelle",
+    locked: true,
+  });
+
+  const staleFrenchSystem = calculateBookingPricing(baseBooking({
+    category: "formation_professionnelle",
+    schoolSystem: "francais",
+    levelName: "Formation professionnelle",
+    subjectName: "Couture",
+    teacherPricePerSession: 2_000,
+  }));
+  assert.equal(staleFrenchSystem.priceTierKey, "premium_20000");
+  assert.equal(staleFrenchSystem.unitSessionAmount, 20_000);
+
+  const higherEducationPython = COURSE_CATALOG.find((item) => (
+    item.actif
+    && item.categorie === "enseignement_superieur"
+    && item.matiere_ou_competence === "Python"
+  ));
+  assert.ok(higherEducationPython, "Le catalogue supérieur Python doit exister");
+  assert.deepEqual(resolveBookingCourseCategory({
+    requestedCategory: "formation_professionnelle",
+    levelName: "Licence",
+    subjectName: "Python",
+    catalogItem: higherEducationPython,
+  }), {
+    category: "enseignement_superieur",
+    locked: true,
+  });
+  assert.deepEqual(resolveBookingCourseCategory({
+    requestedCategory: "enseignement_superieur",
+    levelName: "Licence",
+    subjectName: "Python",
+  }), {
+    category: "enseignement_superieur",
+    locked: false,
+  });
 
   for (const actualLevelName of ["Formation professionnelle", "Adultes"]) {
     for (const indicativeTeacherPrice of [2_000, 10_000]) {
@@ -112,6 +170,16 @@ function verifyProfessionalPricing() {
 }
 
 function verifyTransportMatrix() {
+  const pendingLocation = calculateBookingPricing(baseBooking({
+    deliveryMode: "domicile",
+    packType: "PACK_4",
+    teacherPricePerSession: 10_000,
+  }));
+  assert.equal(pendingLocation.transportFeeKey, PENDING_TRANSPORT_FEE_KEY);
+  assert.equal(pendingLocation.transportFeePending, true);
+  assert.equal(pendingLocation.transportFeePerSession, 0);
+  assert.equal(pendingLocation.transportFee, 0);
+
   const sameNeighborhood = calculateBookingPricing(baseBooking({
     levelName: "CP1",
     deliveryMode: "domicile",
@@ -133,6 +201,56 @@ function verifyTransportMatrix() {
   });
   assert.equal(same.key, "same_area");
   assert.equal(same.amount, 1_000);
+
+  const configuredAliases = buildNeighborhoodAliasMap([
+    { name: "Riviera Palmeraie", aliases: "Palmeraie, Riviera P" },
+  ]);
+  const configuredAliasNeighborhood = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Palmeraie",
+    clientCommune: "Cocody",
+    clientQuartier: "Riviera Palmeraie",
+    neighborhoodAliases: configuredAliases,
+  });
+  assert.equal(configuredAliasNeighborhood.key, "same_neighborhood");
+  assert.equal(configuredAliasNeighborhood.amount, 0);
+  assert.equal(
+    configuredAliasNeighborhood.routeLabel,
+    "Cocody (Riviera Palmeraie) -> Cocody (Riviera Palmeraie)",
+  );
+
+  const scopedAliases = buildNeighborhoodAliasMap([
+    { communeName: "Cocody", name: "Riviera Palmeraie", aliases: "Centre" },
+    { communeName: "Riviera", name: "Riviera Golf", aliases: "Centre" },
+  ]);
+  const sameAliasInDifferentAreas = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Centre",
+    clientCommune: "Riviera",
+    clientQuartier: "Centre",
+    neighborhoodAliases: scopedAliases,
+  });
+  assert.equal(sameAliasInDifferentAreas.key, "same_area");
+  assert.equal(sameAliasInDifferentAreas.amount, 1_000);
+
+  const duplicateAliasEntries = [
+    { communeName: "Cocody", name: "Quartier Alpha", aliases: "Centre" },
+    { communeName: "Cocody", name: "Quartier Bêta", aliases: "Centre" },
+  ];
+  const ambiguousAliases = buildNeighborhoodAliasMap(duplicateAliasEntries);
+  const reversedAmbiguousAliases = buildNeighborhoodAliasMap([...duplicateAliasEntries].reverse());
+  assert.deepEqual(ambiguousAliases, reversedAmbiguousAliases);
+  assert.equal(ambiguousAliases.resolved["cocody::centre"], undefined);
+  assert.deepEqual(ambiguousAliases.ambiguous, ["cocody::centre"]);
+  const ambiguousSameText = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Centre",
+    clientCommune: "Cocody",
+    clientQuartier: "Centre",
+    neighborhoodAliases: ambiguousAliases,
+  });
+  assert.equal(ambiguousSameText.key, "same_area");
+  assert.equal(ambiguousSameText.amount, 1_000);
 
   const near = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",

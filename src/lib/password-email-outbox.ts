@@ -13,6 +13,7 @@ import {
   encryptPasswordEmailPayload,
   passwordEmailIdentifier,
 } from "@/lib/password-email-outbox-crypto";
+import { selectPasswordEmailCandidateBatch } from "@/lib/password-email-candidate-selection";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const CONFIRMATION_JOB_TTL_MS = 24 * 60 * 60 * 1000;
@@ -79,20 +80,6 @@ export async function requestPasswordResetEmail(input: {
           where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
         });
 
-        const existing = await tx.passwordEmailOutbox.findFirst({
-          where: {
-            kind: "PASSWORD_RESET",
-            routingHash,
-            status: { in: ACTIVE_STATUSES },
-            expiresAt: { gt: now },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          select: { id: true, status: true },
-        });
-        if (existing) {
-          return { accepted: true, jobId: existing.id, reused: true };
-        }
-
         const windowStart = new Date(now.getTime() - PASSWORD_RESET_REQUEST_WINDOW_MS);
         const [recentIpRequests, recentAccountRequests] = await Promise.all([
           tx.passwordResetRequestAudit.count({ where: { ipHash, createdAt: { gte: windowStart } } }),
@@ -113,6 +100,23 @@ export async function requestPasswordResetEmail(input: {
           },
           select: { id: true },
         });
+
+        // Une demande répétée suit exactement le même chemin d'audit et de
+        // quota qu'une première demande. Elle peut réutiliser le lien actif,
+        // mais elle ne contourne jamais les limites par compte ou par IP.
+        const existing = await tx.passwordEmailOutbox.findFirst({
+          where: {
+            kind: "PASSWORD_RESET",
+            routingHash,
+            status: { in: ACTIVE_STATUSES },
+            expiresAt: { gt: now },
+          },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          select: { id: true, status: true },
+        });
+        if (existing) {
+          return { accepted: true, jobId: existing.id, reused: true };
+        }
 
         const target = await resolveClientResetTarget(tx, normalizedEmail);
         if (!target) {
@@ -275,17 +279,39 @@ export async function flushPasswordEmailOutbox(options: {
   });
   const expired = await expireActivePasswordEmailJobs(now);
 
-  const candidates = await db.passwordEmailOutbox.findMany({
-    where: {
-      ...(options.jobIds?.length ? { id: { in: options.jobIds } } : {}),
-      status: { in: ["PENDING", "RETRY"] },
-      availableAt: { lte: now },
-      expiresAt: { gt: new Date(now.getTime() + OUTBOX_MIN_DELIVERY_WINDOW_MS) },
-    },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    take: limit,
-    select: { id: true },
-  });
+  const candidateWhere = {
+    ...(options.jobIds?.length ? { id: { in: options.jobIds } } : {}),
+    status: { in: ["PENDING", "RETRY"] },
+    availableAt: { lte: now },
+    expiresAt: { gt: new Date(now.getTime() + OUTBOX_MIN_DELIVERY_WINDOW_MS) },
+  } satisfies Prisma.PasswordEmailOutboxWhereInput;
+  const candidateOrder: Prisma.PasswordEmailOutboxOrderByWithRelationInput[] = [
+    { createdAt: "asc" },
+    { id: "asc" },
+  ];
+  const candidateSelect = { id: true, kind: true, createdAt: true } as const;
+
+  // Le `take` s'applique après avoir réservé une fenêtre équivalente
+  // aux resets. Ainsi, un lot de confirmations plus anciennes ne peut jamais
+  // masquer tous les resets plus récents du batch global.
+  const [resetCandidates, otherCandidates] = await Promise.all([
+    db.passwordEmailOutbox.findMany({
+      where: { ...candidateWhere, kind: "PASSWORD_RESET" },
+      orderBy: candidateOrder,
+      take: limit,
+      select: candidateSelect,
+    }),
+    db.passwordEmailOutbox.findMany({
+      where: { ...candidateWhere, kind: { not: "PASSWORD_RESET" } },
+      orderBy: candidateOrder,
+      take: limit,
+      select: candidateSelect,
+    }),
+  ]);
+  const candidates = selectPasswordEmailCandidateBatch(
+    [...resetCandidates, ...otherCandidates],
+    limit,
+  );
 
   const summary = {
     selected: candidates.length,
@@ -502,16 +528,40 @@ async function claimPasswordEmailJob(jobId: string) {
         return null;
       }
 
-      const firstForAccount = await tx.passwordEmailOutbox.findFirst({
+      // Un seul envoi par compte peut être en cours. Le verrou logique est
+      // doublé par l'index partiel PROCESSING afin de rester sûr entre workers.
+      const processingForAccount = await tx.passwordEmailOutbox.findFirst({
         where: {
           accountHash: candidate.accountHash,
-          status: { in: ACTIVE_STATUSES },
+          status: "PROCESSING",
           expiresAt: { gt: now },
         },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         select: { id: true },
       });
-      if (firstForAccount?.id !== candidate.id) return null;
+      if (processingForAccount) return null;
+
+      const executableWhere = {
+        accountHash: candidate.accountHash,
+        status: { in: ["PENDING", "RETRY"] },
+        availableAt: { lte: now },
+        expiresAt: { gt: new Date(now.getTime() + OUTBOX_MIN_DELIVERY_WINDOW_MS) },
+      } satisfies Prisma.PasswordEmailOutboxWhereInput;
+
+      // Un reset disponible est prioritaire sur les confirmations. Un ancien
+      // PASSWORD_CHANGED encore en backoff ne peut donc plus bloquer le lien
+      // de récupération. Dans chaque classe, l'ordre reste déterministe.
+      const firstAvailableReset = await tx.passwordEmailOutbox.findFirst({
+        where: { ...executableWhere, kind: "PASSWORD_RESET" },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      const firstAvailableForAccount = firstAvailableReset ?? await tx.passwordEmailOutbox.findFirst({
+        where: executableWhere,
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true },
+      });
+      if (firstAvailableForAccount?.id !== candidate.id) return null;
 
       const claimed = await tx.passwordEmailOutbox.updateMany({
         where: {

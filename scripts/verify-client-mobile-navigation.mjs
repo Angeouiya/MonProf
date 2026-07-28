@@ -429,12 +429,15 @@ record(
 
 record(
   "Client can resume and verify paid reschedule supplements from the booking detail",
-  /paydunyaCheckoutUrl:\s*request\.paydunyaCheckoutUrl/.test(clientReservationDetail)
+  /paymentProvider:\s*request\.paymentProvider/.test(clientReservationDetail)
+    && /paydunyaCheckoutUrl:\s*request\.paydunyaCheckoutUrl/.test(clientReservationDetail)
     && /<ClientRescheduleRequestPanel\s+bookingId=\{booking\.id\}\s+requests=\{rescheduleRequests\}\s*\/>/.test(clientReservationDetail)
     && /action:\s*"reschedule_fee_checkout"/.test(clientReschedulePanel)
     && /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel)
+    && /latest\.paymentProvider\s*===\s*"JEKO"/.test(clientReschedulePanel)
     && /case\s+"reschedule_fee_checkout"/.test(bookingApi)
-    && /createPayDunyaRescheduleFeeInvoice/.test(bookingApi),
+    && /createJekoRescheduleCheckout/.test(bookingApi)
+    && /reconcileJekoReschedulePaymentAttempt/.test(bookingApi),
 );
 
 record(

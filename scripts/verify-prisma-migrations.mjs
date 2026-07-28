@@ -73,6 +73,31 @@ checkDirectoryContainsSql("20260728070000_teacher_temporary_password", [
   'ALTER TABLE "Teacher"',
   'ADD COLUMN "portalPasswordMustChange" BOOLEAN NOT NULL DEFAULT false',
 ]);
+checkDirectoryContainsSql("20260728090000_jeko_payout_sweep_fairness", [
+  'ALTER TABLE "TeacherPayoutRecord"',
+  'ADD COLUMN "lastCheckedAt" TIMESTAMP(3)',
+  'CREATE INDEX "TeacherPayoutRecord_jeko_sweep_idx"',
+  'CREATE INDEX "PaymentAttempt_jeko_sweep_idx"',
+  'CREATE INDEX "TeacherPayoutRecord_jeko_sweep_due_expr_idx"',
+  'CREATE INDEX "PaymentAttempt_jeko_sweep_due_expr_idx"',
+  'COALESCE("lastCheckedAt", "createdAt")',
+  'COALESCE("lastCheckedAt", "updatedAt")',
+  '"failureCode" IS DISTINCT FROM \'JEKO_PAYMENT_FAILED\'',
+]);
+checkDirectoryContainsSql("20260728100000_booking_reschedule_session_target", [
+  'ALTER TABLE "BookingRescheduleRequest"',
+  'ADD COLUMN "bookingSessionId" TEXT',
+  'CREATE INDEX "BookingRescheduleRequest_bookingSessionId_idx"',
+  'ADD CONSTRAINT "BookingRescheduleRequest_bookingSessionId_fkey"',
+  'REFERENCES "BookingSession"("id")',
+]);
+checkDirectoryContainsSql("20260728110000_reschedule_refund_active_guard", [
+  'DROP INDEX "BookingRescheduleRequest_one_active_per_booking"',
+  'CREATE UNIQUE INDEX "BookingRescheduleRequest_one_active_per_booking"',
+  "'REFUND_REQUIRED'::\"RescheduleRequestStatus\"",
+  'HAVING COUNT(*) > 1',
+  'RAISE EXCEPTION',
+]);
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const deployScript = packageJson.scripts?.["db:deploy"] ?? "";
@@ -91,6 +116,7 @@ record(
   migrationPreflight.includes("PAYMENT_PENDING")
     && migrationPreflight.includes("PAYMENT_FAILED")
     && migrationPreflight.includes("AWAITING_TEACHER")
+    && migrationPreflight.includes("REFUND_REQUIRED")
     && migrationPreflight.includes("HAVING COUNT(*) > 1"),
 );
 
