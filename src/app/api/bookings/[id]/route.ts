@@ -3,13 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { DisputeStatus } from "@prisma/client";
+import { DisputeStatus, Prisma } from "@prisma/client";
 import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
-import { createPayDunyaCheckoutInvoice, createPayDunyaRescheduleFeeInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
+import { reconcileJekoPaymentAttempt } from "@/lib/jeko-reconciliation";
 import { createRescheduleAwaitingTeacherNotifications, reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
+import { planJekoRescheduleAttempt, platformMethodToJeko } from "@/lib/jeko-client-payment";
+import { reconcileJekoReschedulePaymentAttempt } from "@/lib/jeko-reschedule-reconciliation";
+import { isAllowedJekoRedirectUrl } from "@/lib/jeko-utils";
+import { createJekoRescheduleCheckout } from "@/lib/payment-provider";
 import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { absoluteAppUrl } from "@/lib/public-url";
@@ -18,7 +22,7 @@ import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
   isPaymentReadyForCourseProgressWithProof,
-  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  PAYMENT_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { distributeAmount, syncBookingSessionAggregates } from "@/lib/booking-sessions";
@@ -236,6 +240,15 @@ export async function PATCH(
       teacher: { select: { id: true, fullName: true, professionalName: true } },
       client: { select: { id: true, name: true, email: true, phone: true } },
       sessions: { orderBy: { sequence: "asc" } },
+      paymentAttempts: {
+        where: {
+          provider: "JEKO",
+          purpose: "BOOKING",
+          status: { in: ["CREATED", "REQUESTING", "PENDING"] },
+        },
+        select: { id: true },
+        take: 1,
+      },
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
@@ -265,7 +278,45 @@ export async function PATCH(
         return NextResponse.json({ error: "Seul un brouillon non réservé peut être supprimé." }, { status: 400 });
       }
       if (hasVerifiedPayDunyaClientPayment(booking)) {
-        return NextResponse.json({ error: "Ce dossier contient un paiement PayDunya vérifié et ne peut pas être supprimé." }, { status: 409 });
+        return NextResponse.json({ error: "Ce dossier contient un paiement vérifié et ne peut pas être supprimé." }, { status: 409 });
+      }
+
+      const activeJekoAttempt = await db.paymentAttempt.findFirst({
+        where: {
+          bookingId: booking.id,
+          provider: "JEKO",
+          purpose: "BOOKING",
+          status: { in: ["CREATED", "REQUESTING", "PENDING"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      if (activeJekoAttempt) {
+        try {
+          const verification = await reconcileJekoPaymentAttempt(activeJekoAttempt.id, {
+            expectedBookingId: booking.id,
+            expectedClientId: userId,
+          });
+          if (verification.verified) {
+            return NextResponse.json({
+              error: "Le paiement vient d'être confirmé par Jèko. Le dossier est désormais actif et ne peut pas être supprimé.",
+            }, { status: 409 });
+          }
+          if (!["failed", "rejected"].includes(verification.action)) {
+            return NextResponse.json({
+              error: "Le lien Jèko est encore actif. Annulez le paiement sur Jèko ou attendez son expiration avant de supprimer ce brouillon.",
+            }, { status: 409 });
+          }
+        } catch (error) {
+          console.error("[booking:delete_draft_jeko_check_failed]", {
+            bookingId: booking.id,
+            attemptId: activeJekoAttempt.id,
+            reason: error instanceof Error ? error.message : "unknown",
+          });
+          return NextResponse.json({
+            error: "La tentative Jèko ne peut pas encore être contrôlée. Le brouillon reste conservé pour éviter de perdre un paiement en cours.",
+          }, { status: 409 });
+        }
       }
 
       const terminalPayDunyaStatuses = ["FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CREATE_FAILED"];
@@ -307,6 +358,7 @@ export async function PATCH(
               scheduleProposals: true,
               rescheduleRequests: true,
               teacherAdminMessages: true,
+              paymentAttempts: true,
             },
           },
         },
@@ -327,7 +379,7 @@ export async function PATCH(
             action: "Brouillon client supprimé",
             entityType: "Booking",
             entityId: booking.id,
-            detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement PayDunya vérifié ni workflow opérationnel n'était rattaché.`,
+            detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement confirmé côté serveur ni workflow opérationnel n'était rattaché.`,
             oldStatus: "PENDING_PAYMENT",
             newStatus: "DRAFT_DELETED",
           },
@@ -338,6 +390,12 @@ export async function PATCH(
     }
 
     case "paydunya_checkout": {
+      if (booking.paymentProvider === "JEKO" || booking.paymentAttempts.length > 0) {
+        return NextResponse.json({
+          error: "Cette réservation est déjà affectée à Jèko. Aucun second lien PayDunya ne peut être ouvert.",
+          code: "PAYMENT_PROVIDER_LOCKED",
+        }, { status: 409 });
+      }
       if (booking.isQuoteOnly) {
         return NextResponse.json({ error: "Cette réservation nécessite un contrôle du prix. Le paiement sera disponible après validation du service client." }, { status: 400 });
       }
@@ -362,121 +420,20 @@ export async function PATCH(
         });
       }
 
-      const detailedBooking = await db.booking.findUnique({
-        where: { id },
-        include: {
-          client: { select: { id: true, name: true, email: true, phone: true } },
-          teacher: { select: { id: true, fullName: true, professionalName: true } },
-        },
-      });
-      if (!detailedBooking) {
-        return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
-      }
-
-      const pricingSnapshot = parsePricingSnapshot(detailedBooking.pricingSnapshot);
-      let payment: Awaited<ReturnType<typeof createPayDunyaCheckoutInvoice>>;
-      try {
-        payment = await createPayDunyaCheckoutInvoice({
-          origin: getPayDunyaPublicBaseUrl(req),
-          booking: {
-            id: detailedBooking.id,
-            reference: detailedBooking.reference,
-            subjectName: detailedBooking.subjectName,
-            levelName: detailedBooking.levelName,
-            sessionsCount: pricingSnapshot?.numberOfSessions ?? detailedBooking.sessionsCount,
-            totalClientPays: pricingSnapshot?.totalClientPays ?? detailedBooking.totalClientPays ?? detailedBooking.totalPrice,
-            courseAmount: pricingSnapshot?.courseAmount ?? detailedBooking.courseAmount,
-            transportFee: pricingSnapshot?.transportFee ?? detailedBooking.transportFee,
-            paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? detailedBooking.paymentServiceFeeAmount,
-            paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? detailedBooking.paymentServiceFeeLabel,
-          },
-          client: {
-            id: detailedBooking.client.id,
-            name: detailedBooking.client.name,
-            email: detailedBooking.client.email,
-            phone: detailedBooking.client.phone,
-          },
-          teacher: {
-            id: detailedBooking.teacher.id,
-            name: detailedBooking.teacher.professionalName || detailedBooking.teacher.fullName,
-          },
-        });
-      } catch (error: any) {
-        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement.";
-        await db.booking.update({
-          where: { id: booking.id },
-          data: {
-            paydunyaStatus: "CREATE_FAILED",
-            paydunyaFailureReason: errorMessage,
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: errorMessage,
-          },
-        });
-        return NextResponse.json({
-          error: errorMessage,
-          payment: {
-            provider: "PAYDUNYA",
-            configured: true,
-            checkoutUrl: null,
-          },
-        }, { status: 503 });
-      }
-
-      if (!payment.configured || !payment.checkoutUrl) {
-        await db.booking.update({
-          where: { id: booking.id },
-          data: {
-            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
-            paydunyaFailureReason: payment.configured
-              ? "PayDunya n'a pas retourné de lien de paiement."
-              : "PayDunya n'est pas encore configuré sur cette installation.",
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-          },
-        });
-        return NextResponse.json({
-          error: payment.configured
-            ? "PayDunya n'a pas retourné de lien de paiement."
-            : "PayDunya n'est pas encore configuré sur cette installation.",
-          payment: {
-            provider: "PAYDUNYA",
-            configured: payment.configured,
-            checkoutUrl: payment.checkoutUrl,
-          },
-        }, { status: 503 });
-      }
-
-      await db.booking.update({
-        where: { id: booking.id },
-        data: {
-          paydunyaToken: payment.token,
-          paydunyaCheckoutUrl: payment.checkoutUrl,
-          paydunyaStatus: "PENDING",
-          paydunyaFailureReason: null,
-          paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-        },
-      });
-
-      await db.adminActionLog.create({
-        data: {
-          adminId: null,
-          action: "Relance paiement PayDunya",
-          entityType: "Booking",
-          entityId: booking.id,
-          detail: `Le client a demandé un nouveau lien PayDunya pour ${booking.reference}. Référence PayDunya créée côté serveur.`,
-          oldStatus: booking.paymentStatus,
-          newStatus: "PAYDUNYA_CHECKOUT_CREATED",
-        },
-      });
-
+      // PayDunya reste lisible et rapprochable pour l'historique, mais aucun
+      // nouvel objet distant ne doit plus être créé. Cette coupure explicite
+      // ferme la course avec Jèko sur les anciens brouillons sans provider.
       return NextResponse.json({
+        error: "La création de nouveaux paiements PayDunya est désactivée. Reprenez ce brouillon avec le paiement Jèko sécurisé.",
+        code: "PAYDUNYA_NEW_CHECKOUT_DISABLED",
         payment: {
           provider: "PAYDUNYA",
-          configured: payment.configured,
-          checkoutUrl: payment.checkoutUrl,
+          configured: false,
+          checkoutUrl: null,
+          migrationProvider: "JEKO",
         },
-      });
+      }, { status: 409 });
+
     }
 
     case "paydunya_verify": {
@@ -560,7 +517,7 @@ export async function PATCH(
       }
       if (!isPaymentReadyForCourseProgressWithProof(booking)) {
         return NextResponse.json({
-          error: "Impossible de confirmer ce cours: le paiement PayDunya n'est pas vérifié et bloqué.",
+          error: "Impossible de confirmer ce cours : le paiement n'est pas confirmé côté serveur et bloqué.",
         }, { status: 409 });
       }
       const updated = await db.booking.update({
@@ -595,7 +552,7 @@ export async function PATCH(
     case "accept_schedule_proposal":
     case "reject_schedule_proposal": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+        return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
       if (typeof proposalId !== "string" || !proposalId) {
         return NextResponse.json({ error: "Proposition de créneau introuvable." }, { status: 400 });
@@ -806,7 +763,7 @@ export async function PATCH(
     case "reject_replacement_proposal":
     case "cancel_after_teacher_unavailable": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+        return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
       if (typeof replacementId !== "string" || !replacementId) {
         return NextResponse.json({ error: "Proposition de professeur introuvable." }, { status: 400 });
@@ -1340,7 +1297,7 @@ export async function PATCH(
     case "open_dispute": {
       if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
         return NextResponse.json({
-          error: "Un litige financier ne peut être ouvert qu'après un paiement PayDunya vérifié.",
+          error: "Un litige financier ne peut être ouvert qu'après confirmation serveur du paiement.",
         }, { status: 409 });
       }
       const r = reason || "Problème signalé par le client";
@@ -1381,7 +1338,7 @@ export async function PATCH(
 
     case "request_reschedule": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+        return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
       if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(booking.status)) {
         return NextResponse.json({ error: "Cette réservation ne peut pas être déplacée à ce stade." }, { status: 400 });
@@ -1404,15 +1361,17 @@ export async function PATCH(
       const existingAwaiting = await db.bookingRescheduleRequest.findFirst({
         where: {
           bookingId: booking.id,
-          status: { in: ["PAYMENT_PENDING", "AWAITING_TEACHER"] },
+          status: { in: ["PAYMENT_PENDING", "PAYMENT_FAILED", "AWAITING_TEACHER"] },
         },
         orderBy: { createdAt: "desc" },
       });
       if (existingAwaiting) {
         return NextResponse.json({
-          error: existingAwaiting.status === "PAYMENT_PENDING"
-            ? "Une modification est déjà en attente de paiement."
-            : "Une modification est déjà en attente de réponse du professeur.",
+          error: existingAwaiting.status === "AWAITING_TEACHER"
+            ? "Une modification est déjà en attente de réponse du professeur."
+            : existingAwaiting.status === "PAYMENT_FAILED"
+              ? "Une modification existe déjà : relancez son paiement au lieu de créer une seconde demande."
+              : "Une modification est déjà en attente de paiement.",
         }, { status: 409 });
       }
 
@@ -1462,6 +1421,7 @@ export async function PATCH(
           paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
           paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
           totalToPay: policy.totalToPay,
+          paymentProvider: policy.feeAmount > 0 ? "JEKO" : null,
         },
         include: {
           booking: {
@@ -1473,7 +1433,15 @@ export async function PATCH(
           teacher: { select: { fullName: true, professionalName: true } },
           client: { select: { name: true } },
         },
+      }).catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return null;
+        throw error;
       });
+      if (!createdRequest) {
+        return NextResponse.json({
+          error: "Une autre modification de créneau vient d'être créée pour cette réservation. Ouvrez-la au lieu d'en payer une seconde.",
+        }, { status: 409 });
+      }
 
       if (policy.feeAmount <= 0) {
         await db.$transaction(async (tx) => {
@@ -1498,87 +1466,50 @@ export async function PATCH(
         });
       }
 
-      let payment: Awaited<ReturnType<typeof createPayDunyaRescheduleFeeInvoice>>;
-      try {
-        payment = await createPayDunyaRescheduleFeeInvoice({
-          origin: getPayDunyaPublicBaseUrl(req),
-          booking: {
-            id: booking.id,
-            reference: booking.reference,
-            subjectName: booking.subjectName,
-            levelName: booking.levelName,
-          },
-          rescheduleRequest: {
-            id: createdRequest.id,
-            oldScheduledTime: currentTime,
-            proposedTime: parsedReschedule.slotLabel,
-            feeAmount: policy.feeAmount,
-            paymentServiceFeeAmount: policy.paymentServiceFeeAmount,
-            paymentServiceFeeLabel: policy.paymentServiceFeeLabel,
-            totalToPay: policy.totalToPay,
-          },
-          client: {
-            id: booking.client.id,
-            name: booking.client.name,
-            email: booking.client.email,
-            phone: booking.client.phone,
-          },
-          teacher: {
-            id: booking.teacher.id,
-            name: booking.teacher.professionalName || booking.teacher.fullName,
-          },
-        });
-      } catch (error: any) {
-        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement du supplément.";
-        await db.bookingRescheduleRequest.update({
-          where: { id: createdRequest.id },
-          data: {
-            status: "PAYMENT_FAILED",
-            paydunyaStatus: "CREATE_FAILED",
-            paydunyaFailureReason: errorMessage,
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: errorMessage,
-          },
-        });
-        return NextResponse.json({ error: errorMessage }, { status: 503 });
+      const paymentMethod = platformMethodToJeko(booking.paymentMethod);
+      if (!paymentMethod) {
+        return NextResponse.json({
+          error: "Choisissez un moyen Jèko pris en charge pour payer ce supplément.",
+          code: "JEKO_PAYMENT_METHOD_REQUIRED",
+          rescheduleRequest: serializeRescheduleRequest(createdRequest),
+          paymentEndpoint: `/api/bookings/${booking.id}/reschedule-requests/${createdRequest.id}/jeko-payment`,
+        }, { status: 409 });
       }
 
-      if (!payment.configured || !payment.checkoutUrl) {
-        await db.bookingRescheduleRequest.update({
-          where: { id: createdRequest.id },
-          data: {
-            status: "PAYMENT_FAILED",
-            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
-            paydunyaFailureReason: payment.configured
-              ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
-              : "PayDunya n'est pas encore configuré sur cette installation.",
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-          },
+      let payment: Awaited<ReturnType<typeof createJekoRescheduleCheckout>>;
+      try {
+        const safeBookingId = encodeURIComponent(booking.id);
+        const safeRequestId = encodeURIComponent(createdRequest.id);
+        payment = await createJekoRescheduleCheckout({
+          bookingId: booking.id,
+          rescheduleRequestId: createdRequest.id,
+          idempotencyKey: `RESCHEDULE:${createdRequest.id}:JEKO:ATTEMPT:1`,
+          paymentMethod,
+          successUrl: absoluteAppUrl(
+            `/client/reservations/${safeBookingId}?jekoReschedule=return&rescheduleRequestId=${safeRequestId}`,
+            req,
+          ),
+          errorUrl: absoluteAppUrl(
+            `/client/reservations/${safeBookingId}?jekoReschedule=cancelled&rescheduleRequestId=${safeRequestId}`,
+            req,
+          ),
+        });
+      } catch (error) {
+        console.error("[jeko:reschedule_initial_checkout_failed]", {
+          bookingId: booking.id,
+          rescheduleRequestId: createdRequest.id,
+          message: error instanceof Error ? error.message : "Erreur inconnue",
         });
         return NextResponse.json({
-          error: payment.configured
-            ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
-            : "PayDunya n'est pas encore configuré sur cette installation.",
+          error: "Le supplément Jèko n'a pas pu être préparé. Vous pouvez le relancer sans double débit.",
+          rescheduleRequest: serializeRescheduleRequest(createdRequest),
         }, { status: 503 });
       }
-
-      const updatedRequest = await db.bookingRescheduleRequest.update({
-        where: { id: createdRequest.id },
-        data: {
-          paydunyaToken: payment.token,
-          paydunyaCheckoutUrl: payment.checkoutUrl,
-          paydunyaStatus: "PENDING",
-          paydunyaFailureReason: null,
-          paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-        },
-      });
 
       await db.adminActionLog.create({
         data: {
           adminId: null,
-          action: "Supplément modification PayDunya créé",
+          action: "Supplément modification Jèko créé",
           entityType: "BookingRescheduleRequest",
           entityId: createdRequest.id,
           detail: `${booking.client.name} doit payer ${policy.totalToPay.toLocaleString("fr-FR")} FCFA pour déplacer ${booking.reference}. Frais: ${policy.feeAmount.toLocaleString("fr-FR")} FCFA, service: ${policy.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA.`,
@@ -1589,12 +1520,17 @@ export async function PATCH(
 
       return NextResponse.json({
         ok: true,
-        rescheduleRequest: serializeRescheduleRequest(updatedRequest),
+        rescheduleRequest: serializeRescheduleRequest(createdRequest),
         policy,
         payment: {
-          provider: "PAYDUNYA",
-          configured: payment.configured,
-          checkoutUrl: payment.checkoutUrl,
+          provider: "JEKO",
+          purpose: "RESCHEDULE_FEE",
+          configured: true,
+          attemptId: payment.attemptId,
+          reference: payment.reference,
+          amount: payment.amountXof,
+          status: payment.status,
+          checkoutUrl: isAllowedJekoRedirectUrl(payment.checkoutUrl) ? payment.checkoutUrl : null,
         },
         message: "Supplément requis avant transmission au professeur.",
       });
@@ -1603,23 +1539,74 @@ export async function PATCH(
     case "reschedule_fee_verify": {
       const requestId = typeof rescheduleRequestId === "string" ? rescheduleRequestId : null;
       const token = typeof body.token === "string" ? body.token : null;
-      const result = await reconcilePayDunyaReschedulePayment({
-        bookingId: booking.id,
-        rescheduleRequestId: requestId,
-        token,
-        expectedClientId: booking.clientId,
-        source: "client_manual",
-        incomingPayload: body,
+      if (!requestId && !token) {
+        return NextResponse.json({ error: "Demande de modification introuvable." }, { status: 400 });
+      }
+      const request = await db.bookingRescheduleRequest.findFirst({
+        where: {
+          bookingId: booking.id,
+          clientId: booking.clientId,
+          OR: [
+            ...(requestId ? [{ id: requestId }] : []),
+            ...(token ? [{ paydunyaToken: token }] : []),
+          ],
+        },
       });
-      return NextResponse.json({
-        ok: result.verified,
-        payment: result,
-      }, { status: result.action === "rejected" ? 409 : 200 });
+      if (!request) return NextResponse.json({ error: "Demande de modification introuvable." }, { status: 404 });
+
+      if (request.paymentProvider !== "JEKO") {
+        const result = await reconcilePayDunyaReschedulePayment({
+          bookingId: booking.id,
+          rescheduleRequestId: request.id,
+          token,
+          expectedClientId: booking.clientId,
+          source: "client_manual",
+          incomingPayload: body,
+        });
+        return NextResponse.json({
+          ok: result.verified,
+          payment: { provider: "PAYDUNYA", ...result },
+        }, { status: result.action === "rejected" ? 409 : 200 });
+      }
+
+      const attempt = await db.paymentAttempt.findFirst({
+        where: {
+          bookingId: booking.id,
+          rescheduleRequestId: request.id,
+          provider: "JEKO",
+          purpose: "RESCHEDULE_FEE",
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!attempt) {
+        return NextResponse.json({ error: "Aucune tentative Jèko pour ce supplément." }, { status: 404 });
+      }
+      try {
+        const result = await reconcileJekoReschedulePaymentAttempt(attempt.id, {
+          expectedBookingId: booking.id,
+          expectedClientId: booking.clientId,
+          expectedRescheduleRequestId: request.id,
+        });
+        return NextResponse.json({
+          ok: result.verified,
+          payment: { provider: "JEKO", purpose: "RESCHEDULE_FEE", ...result },
+        }, { status: result.action === "rejected" ? 409 : 200 });
+      } catch (error) {
+        console.error("[jeko:reschedule_manual_verification_failed]", {
+          bookingId: booking.id,
+          rescheduleRequestId: request.id,
+          attemptId: attempt.id,
+          message: error instanceof Error ? error.message : "Erreur inconnue",
+        });
+        return NextResponse.json({
+          error: "La confirmation Jèko est temporairement indisponible. Aucun supplément n'a été validé.",
+        }, { status: 503 });
+      }
     }
 
     case "reschedule_fee_checkout": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+        return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
       const requestId = typeof rescheduleRequestId === "string" ? rescheduleRequestId : null;
       if (!requestId) {
@@ -1634,10 +1621,94 @@ export async function PATCH(
         },
       });
       if (!request) {
-        return NextResponse.json({ error: "Aucun supplément PayDunya à payer pour cette demande." }, { status: 404 });
+        return NextResponse.json({ error: "Aucun supplément à payer pour cette demande." }, { status: 404 });
       }
       if (request.feeAmount <= 0 || request.totalToPay <= 0) {
         return NextResponse.json({ error: "Cette modification ne nécessite pas de supplément." }, { status: 400 });
+      }
+
+      if (request.paymentProvider === "JEKO") {
+        const paymentMethod = platformMethodToJeko(booking.paymentMethod);
+        if (!paymentMethod) {
+          return NextResponse.json({
+            error: "Choisissez un moyen Jèko pris en charge pour payer ce supplément.",
+            code: "JEKO_PAYMENT_METHOD_REQUIRED",
+            paymentEndpoint: `/api/bookings/${booking.id}/reschedule-requests/${request.id}/jeko-payment`,
+          }, { status: 409 });
+        }
+        const attempts = await db.paymentAttempt.findMany({
+          where: {
+            bookingId: booking.id,
+            rescheduleRequestId: request.id,
+            provider: "JEKO",
+            purpose: "RESCHEDULE_FEE",
+          },
+          select: { id: true, idempotencyKey: true, status: true, method: true },
+          orderBy: { createdAt: "desc" },
+        });
+        const plan = planJekoRescheduleAttempt({
+          rescheduleRequestId: request.id,
+          requestedMethod: paymentMethod,
+          attempts,
+        });
+        if (plan.kind === "already_paid") {
+          const result = await reconcileJekoReschedulePaymentAttempt(plan.attemptId, {
+            expectedBookingId: booking.id,
+            expectedClientId: booking.clientId,
+            expectedRescheduleRequestId: request.id,
+          });
+          return NextResponse.json({
+            ok: result.verified,
+            payment: { provider: "JEKO", purpose: "RESCHEDULE_FEE", ...result, checkoutUrl: null },
+          }, { status: result.verified ? 200 : 409 });
+        }
+        if (plan.kind === "blocked") {
+          return NextResponse.json({ error: plan.reason, attemptId: plan.attemptId }, { status: 409 });
+        }
+
+        try {
+          const safeBookingId = encodeURIComponent(booking.id);
+          const safeRequestId = encodeURIComponent(request.id);
+          const payment = await createJekoRescheduleCheckout({
+            bookingId: booking.id,
+            rescheduleRequestId: request.id,
+            idempotencyKey: plan.idempotencyKey,
+            paymentMethod: plan.paymentMethod,
+            successUrl: absoluteAppUrl(
+              `/client/reservations/${safeBookingId}?jekoReschedule=return&rescheduleRequestId=${safeRequestId}`,
+              req,
+            ),
+            errorUrl: absoluteAppUrl(
+              `/client/reservations/${safeBookingId}?jekoReschedule=cancelled&rescheduleRequestId=${safeRequestId}`,
+              req,
+            ),
+          });
+          return NextResponse.json({
+            ok: true,
+            payment: {
+              provider: "JEKO",
+              purpose: "RESCHEDULE_FEE",
+              configured: true,
+              attemptId: payment.attemptId,
+              reference: payment.reference,
+              amount: payment.amountXof,
+              status: payment.status,
+              checkoutUrl: isAllowedJekoRedirectUrl(payment.checkoutUrl) ? payment.checkoutUrl : null,
+              message: plan.kind === "reuse"
+                ? "Lien Jèko du supplément réutilisé."
+                : "Lien Jèko du supplément créé.",
+            },
+          });
+        } catch (error) {
+          console.error("[jeko:reschedule_checkout_retry_failed]", {
+            bookingId: booking.id,
+            rescheduleRequestId: request.id,
+            message: error instanceof Error ? error.message : "Erreur inconnue",
+          });
+          return NextResponse.json({
+            error: "Jèko n'a pas pu préparer le supplément. Vous pouvez réessayer sans risque de double débit.",
+          }, { status: 503 });
+        }
       }
 
       const reusableStatus = (request.paydunyaStatus ?? "").toUpperCase();
@@ -1658,111 +1729,25 @@ export async function PATCH(
         });
       }
 
-      let payment: Awaited<ReturnType<typeof createPayDunyaRescheduleFeeInvoice>>;
-      try {
-        payment = await createPayDunyaRescheduleFeeInvoice({
-          origin: getPayDunyaPublicBaseUrl(req),
-          booking: {
-            id: booking.id,
-            reference: booking.reference,
-            subjectName: booking.subjectName,
-            levelName: booking.levelName,
-          },
-          rescheduleRequest: {
-            id: request.id,
-            oldScheduledTime: request.oldScheduledTime,
-            proposedTime: request.proposedTime,
-            feeAmount: request.feeAmount,
-            paymentServiceFeeAmount: request.paymentServiceFeeAmount,
-            paymentServiceFeeLabel: request.paymentServiceFeeLabel,
-            totalToPay: request.totalToPay,
-          },
-          client: {
-            id: booking.client.id,
-            name: booking.client.name,
-            email: booking.client.email,
-            phone: booking.client.phone,
-          },
-          teacher: {
-            id: booking.teacher.id,
-            name: booking.teacher.professionalName || booking.teacher.fullName,
-          },
-        });
-      } catch (error: any) {
-        const errorMessage = error?.message || "PayDunya a refusé la création du lien de paiement du supplément.";
-        await db.bookingRescheduleRequest.update({
-          where: { id: request.id },
-          data: {
-            status: "PAYMENT_FAILED",
-            paydunyaStatus: "CREATE_FAILED",
-            paydunyaFailureReason: errorMessage,
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: errorMessage,
-          },
-        });
-        return NextResponse.json({ error: errorMessage }, { status: 503 });
-      }
-
-      if (!payment.configured || !payment.checkoutUrl) {
-        await db.bookingRescheduleRequest.update({
-          where: { id: request.id },
-          data: {
-            status: "PAYMENT_FAILED",
-            paydunyaStatus: payment.configured ? "CREATE_FAILED" : "NOT_CONFIGURED",
-            paydunyaFailureReason: payment.configured
-              ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
-              : "PayDunya n'est pas encore configuré sur cette installation.",
-            paydunyaLastCheckedAt: new Date(),
-            paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-          },
-        });
-        return NextResponse.json({
-          error: payment.configured
-            ? "PayDunya n'a pas retourné de lien de paiement pour le supplément."
-            : "PayDunya n'est pas encore configuré sur cette installation.",
-        }, { status: 503 });
-      }
-
-      await db.bookingRescheduleRequest.update({
-        where: { id: request.id },
-        data: {
-          status: "PAYMENT_PENDING",
-          paydunyaToken: payment.token,
-          paydunyaCheckoutUrl: payment.checkoutUrl,
-          paydunyaStatus: "PENDING",
-          paydunyaFailureReason: null,
-          paydunyaLastCheckedAt: new Date(),
-          paydunyaLastPayload: compactPayDunyaCreatePayload(payment.raw ?? payment.responseText),
-        },
-      });
-
-      await db.adminActionLog.create({
-        data: {
-          adminId: null,
-          action: "Supplément modification PayDunya relancé",
-          entityType: "BookingRescheduleRequest",
-          entityId: request.id,
-          detail: `${booking.client.name} a relancé le paiement du supplément ${request.totalToPay.toLocaleString("fr-FR")} FCFA pour ${booking.reference}.`,
-          oldStatus: request.status,
-          newStatus: "PAYMENT_PENDING",
-        },
-      });
-
+      // Les anciens liens PayDunya existants restent réutilisables et leurs
+      // callbacks restent rapprochés. En revanche, toute nouvelle création est
+      // coupée afin qu'une demande nullable ne puisse pas courir contre Jèko.
       return NextResponse.json({
-        ok: true,
+        error: "La création de nouveaux suppléments PayDunya est désactivée. Le service client doit migrer explicitement la demande vers Jèko.",
+        code: "PAYDUNYA_NEW_CHECKOUT_DISABLED",
         payment: {
           provider: "PAYDUNYA",
-          configured: payment.configured,
-          checkoutUrl: payment.checkoutUrl,
-          status: "PENDING",
-          message: "Lien PayDunya du supplément créé.",
+          configured: false,
+          checkoutUrl: null,
+          migrationProvider: "JEKO",
         },
-      });
+      }, { status: 409 });
+
     }
 
     case "reschedule": {
       if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-        return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+        return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
       }
       const updated = await db.booking.update({
         where: { id },
@@ -2052,15 +2037,6 @@ export async function PATCH(
   }
 }
 
-function compactPayDunyaCreatePayload(value: unknown) {
-  if (value == null) return null;
-  try {
-    return JSON.stringify(value).slice(0, 2000);
-  } catch {
-    return String(value).slice(0, 2000);
-  }
-}
-
 function parseClientRescheduleInput(dateValue: unknown, timeValue: unknown) {
   if (typeof dateValue !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return null;
   const date = new Date(`${dateValue}T00:00:00.000Z`);
@@ -2114,6 +2090,7 @@ function serializeRescheduleRequest(request: any) {
     paymentServiceFeeAmount: request.paymentServiceFeeAmount,
     paymentServiceFeeLabel: request.paymentServiceFeeLabel,
     totalToPay: request.totalToPay,
+    paymentProvider: request.paymentProvider,
     paydunyaStatus: request.paydunyaStatus,
     paydunyaVerifiedAt: request.paydunyaVerifiedAt,
     paidAt: request.paidAt,

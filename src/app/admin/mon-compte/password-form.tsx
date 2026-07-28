@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,10 +43,10 @@ export function AdminPasswordForm() {
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
       });
       const responseText = await res.text();
-      let data: { error?: string } = {};
+      let data: { error?: string; email?: { queued?: boolean; message?: string } } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { error?: string };
+          data = JSON.parse(responseText) as { error?: string; email?: { queued?: boolean; message?: string } };
         } catch {
           // Conserver un message compréhensible même si l'infrastructure ne renvoie pas de JSON.
         }
@@ -53,6 +54,13 @@ export function AdminPasswordForm() {
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       toast.success("Mot de passe administrateur modifié et action historisée.");
+      if (data.email?.queued) {
+        toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
+      } else {
+        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
+      }
+      await signOut({ redirect: false });
+      router.replace("/admin/connexion?passwordChanged=1");
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Modification impossible.";

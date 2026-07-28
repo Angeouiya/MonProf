@@ -38,7 +38,7 @@ export default async function AdminTeamPage() {
         currentAdminId={current.id}
         admins={admins.map((admin) => ({
           ...admin,
-          adminTeamRole: admin.adminTeamRole || (admin.email.toLowerCase() === "angeouiya@gmail.com" ? "OWNER" : "SUPER_ADMIN"),
+          adminTeamRole: admin.adminTeamRole || "SUPER_ADMIN",
           adminAccountStatus: admin.adminAccountStatus || "ACTIVE",
           adminPermissions: resolveAdminPermissions(admin),
           usesRoleDefaults: !Array.isArray(admin.adminPermissions),

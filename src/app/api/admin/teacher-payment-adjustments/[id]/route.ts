@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
+import { hasActiveJekoPayoutReservation } from "@/lib/teacher-payout-reservations";
 
 const MAX_DECISION_NOTE_LENGTH = 700;
 
@@ -39,6 +40,14 @@ export async function PATCH(
   }
   if (adjustment.status !== "PENDING") {
     return NextResponse.json({ error: "Cette retenue a déjà été traitée." }, { status: 409 });
+  }
+  if (
+    action === "apply"
+    && await hasActiveJekoPayoutReservation(adjustment.teacherId, adjustment.bookingId)
+  ) {
+    return NextResponse.json({
+      error: "Une tentative Jèko est en cours sur ce solde. Confirmez ou annulez d'abord ce transfert avant d'appliquer la retenue.",
+    }, { status: 409 });
   }
 
   if (action === "apply" && adjustment.booking) {

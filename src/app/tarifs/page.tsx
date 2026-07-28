@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { formatFCFA } from "@/lib/format";
+import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
 import { GRAND_ABIDJAN_AREAS, GRAND_ABIDJAN_NEAR_ROUTES, PRICE_TIERS, TRANSPORT_FEES } from "@/lib/pricing";
 
 const TIERS = [
@@ -77,14 +78,14 @@ const PACKS = [
   {
     name: "Pack 8 séances",
     desc: "Deux mois de cours pour consolider les acquis.",
-    priceNote: "Remise 5% intégrée",
+    priceNote: "Jusqu’à 5 % selon la commission",
     icon: Package,
     useCases: ["Préparation BAC", "Pré-rentrée", "Ciblage concours"],
   },
   {
     name: "Pack 12 séances",
     desc: "Un trimestre complet pour un objectif long terme.",
-    priceNote: "Remise 7% intégrée",
+    priceNote: "Jusqu’à 7 % selon la commission",
     icon: Package,
     useCases: ["Trimestre complet", "Concours ENA/INFAS", "Préparation longue"],
   },
@@ -100,8 +101,8 @@ const PACKS = [
 const PAYMENT_STEPS = [
   {
     icon: WalletCards,
-    title: "PayDunya",
-    text: "Le paiement se fait uniquement sur PayDunya.",
+    title: "Jèko",
+    text: "Le paiement se fait sur la page sécurisée Jèko.",
   },
   {
     icon: Lock,
@@ -178,7 +179,7 @@ const CANCELLATION_EXAMPLE_AMOUNT = 20000;
 const FAQ = [
   {
     q: "Le prix affiché est-il le prix final ?",
-    a: "Oui. Le prix est calculé automatiquement par la plateforme selon le besoin, le niveau, le système scolaire, le format, le pack et le déplacement. Le client paie ensuite directement via PayDunya.",
+    a: "Le tarif de la fiche professeur est indicatif. Dans la réservation, la plateforme calcule le total exact selon le métier, le niveau, le système scolaire, le format, le pack et le déplacement, puis l'affiche avant le paiement Jèko.",
   },
   {
     q: "Quand le paiement est-il finalisé ?",
@@ -226,7 +227,7 @@ export default function TarifsPage() {
               Tarifs clairs, paiement sécurisé
             </h1>
             <p className="mt-4 text-base font-medium leading-7 text-[#64748B] sm:text-lg">
-              Le client voit le total avant paiement. PayDunya gère le paiement, Compétence suit le dossier jusqu'à confirmation.
+              Le client voit le total avant paiement. Jèko gère l'encaissement sécurisé, Compétence suit le dossier jusqu'à confirmation.
             </p>
           </div>
         </div>
@@ -236,10 +237,10 @@ export default function TarifsPage() {
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
-            Grille tarifaire officielle
+            Paliers indicatifs, total final calculé
           </h2>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B] sm:text-base">
-            Le prix dépend du besoin, du niveau, du format et du déplacement. Le minimum 7 500 F reste réservé aux cas simples.
+            Les montants ci-dessous sont des bases. Au moment de réserver, le serveur recalcule le prix exact selon le métier, le niveau, le format, le pack, le nombre d'apprenants et le trajet. Le minimum 7 500 F reste réservé aux cas simples.
           </p>
 
           <div className="mt-6 grid gap-3 min-[760px]:grid-cols-3">
@@ -258,6 +259,33 @@ export default function TarifsPage() {
               value="Total clair"
               text="Le client voit le cours, le déplacement éventuel et le total."
             />
+          </div>
+
+          <div className="mt-6 rounded-lg border-2 border-[#111B4D] bg-[#F5F7FF] p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#56617F]">Formule appliquée avant Jèko</p>
+                <h3 className="mt-1 text-xl font-semibold text-[#111827]">Cours + déplacement + frais de service = total à payer</h3>
+                <p className="mt-2 text-sm font-medium leading-6 text-[#56617F]">
+                  Le prix indicatif du professeur est un minimum : la plateforme retient le plus élevé entre ce minimum et le palier calculé. Les frais de service représentent {paymentServiceFeeDescription()}.
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#111B4D] px-4 py-3 text-white lg:max-w-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#DDE6F7]">Exemple demandé</p>
+                <p className="mt-1 text-sm font-semibold leading-6">
+                  Formation professionnelle + niveau « Formation professionnelle » ou « Adultes » : le palier devient {formatFCFA(PRICE_TIERS.PREMIUM_20000.amount)}, même si l'indicatif professeur était de 2 000 ou 10 000 FCFA.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <FormulaStep label="1. Cours" text="Palier métier/niveau ou minimum professeur, le plus élevé des deux." />
+              <FormulaStep label="2. Pack et groupe" text="Nombre de séances, remise du pack et +50% par apprenant supplémentaire." />
+              <FormulaStep label="3. Déplacement" text="Forfait par séance selon quartier, commune et distance ; zéro en ligne ou même quartier." />
+              <FormulaStep label="4. Service" text={`${paymentServiceFeeDescription()}, ajouté après le cours et le déplacement.`} />
+            </div>
+            <p className="mt-4 border-t border-[#CAD7F2] pt-3 text-xs font-semibold leading-5 text-[#394568]">
+              Les frais techniques réellement facturés par Jèko sont suivis séparément dans le dashboard Compétence. Ils ne diminuent pas le montant net exact promis au professeur lors de son retrait.
+            </p>
           </div>
 
           <div className="mt-8 rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-4">
@@ -415,7 +443,7 @@ export default function TarifsPage() {
               Paiement sécurisé
             </span>
             <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">
-              Paiement sécurisé PayDunya
+              Paiement sécurisé Jèko
             </h2>
             <p className="mt-3 text-sm font-medium text-[#64748B] sm:text-base">
               Aucun numéro ni moyen de paiement n'est saisi sur Compétence.
@@ -584,6 +612,15 @@ function TariffSignal({
       <p className="text-xs font-semibold uppercase tracking-wide text-[#56617F]">{label}</p>
       <p className="mt-1 text-xl font-semibold text-[#111B4D]">{value}</p>
       <p className="mt-1 text-sm font-medium leading-5 text-[#64748B]">{text}</p>
+    </div>
+  );
+}
+
+function FormulaStep({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-[#CAD7F2] bg-white p-4">
+      <p className="text-sm font-semibold text-[#111B4D]">{label}</p>
+      <p className="mt-1 text-xs font-medium leading-5 text-[#56617F]">{text}</p>
     </div>
   );
 }

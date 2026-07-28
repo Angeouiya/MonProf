@@ -67,6 +67,19 @@ export async function reconcilePayDunyaReschedulePayment(
     };
   }
 
+  // A Jèko request must never be re-routed through the legacy reconciler,
+  // even if malformed historical-looking fields are present.
+  if (request.paymentProvider === "JEKO") {
+    return {
+      bookingId: request.bookingId,
+      rescheduleRequestId: request.id,
+      verified: false,
+      status: "rejected",
+      action: "rejected",
+      message: "Cette demande est affectée à Jèko et ne peut pas être rapprochée par PayDunya.",
+    };
+  }
+
   if (input.expectedClientId && request.clientId !== input.expectedClientId) {
     await markSuspiciousReschedulePayment({
       request,
@@ -93,6 +106,7 @@ export async function reconcilePayDunyaReschedulePayment(
     await db.bookingRescheduleRequest.update({
       where: { id: request.id },
       data: {
+        paymentProvider: "PAYDUNYA",
         paydunyaStatus: "MISSING_TOKEN",
         paydunyaFailureReason: "Token PayDunya manquant: impossible de vérifier le supplément.",
         paydunyaLastCheckedAt: new Date(),
@@ -183,6 +197,7 @@ export async function reconcilePayDunyaReschedulePayment(
     await db.bookingRescheduleRequest.update({
       where: { id: request.id },
       data: {
+        paymentProvider: "PAYDUNYA",
         paydunyaToken: request.paydunyaToken ?? token,
         paydunyaStatus: "NOT_CONFIGURED",
         paydunyaFailureReason: confirmation.responseText ?? "PayDunya n'est pas configuré.",
@@ -254,6 +269,7 @@ export async function reconcilePayDunyaReschedulePayment(
         where: { id: request.id },
         data: {
           status: alreadyPaid ? request.status : "AWAITING_TEACHER",
+          paymentProvider: "PAYDUNYA",
           paydunyaToken: request.paydunyaToken ?? token,
           paydunyaStatus: "COMPLETED",
           paydunyaReceiptUrl: confirmation.receiptUrl,
@@ -327,6 +343,7 @@ export async function reconcilePayDunyaReschedulePayment(
     where: { id: request.id },
     data: {
       status: failed ? "PAYMENT_FAILED" : request.status,
+      paymentProvider: "PAYDUNYA",
       paydunyaToken: request.paydunyaToken ?? token,
       paydunyaStatus: confirmation.status.toUpperCase(),
       paydunyaReceiptUrl: confirmation.receiptUrl,
@@ -479,6 +496,7 @@ async function markSuspiciousReschedulePayment({
       where: { id: request.id },
       data: {
         status: "PAYMENT_FAILED",
+        paymentProvider: "PAYDUNYA",
         paydunyaStatus: "REJECTED",
         paydunyaFailureReason: reason,
         paydunyaLastCheckedAt: now,

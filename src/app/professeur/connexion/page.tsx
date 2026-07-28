@@ -72,7 +72,9 @@ function ProfesseurConnexionContent() {
       }
 
       toast.success("Connexion professeur réussie.");
-      const target = from.startsWith("/professeur") ? from : "/professeur";
+      const target = me?.user?.portalPasswordMustChange
+        ? "/professeur/parametres?motDePasseTemporaire=1"
+        : from.startsWith("/professeur") ? from : "/professeur";
       router.replace(target);
       router.refresh();
     } catch {
@@ -183,12 +185,18 @@ function ProfesseurConnexionContent() {
                   {loading ? "Connexion..." : "Entrer dans l'espace professeur"}
                   {!loading && <ArrowRight className="h-4 w-4" />}
                 </Button>
+                <Link href="mailto:diplomateimmobilier99@gmail.com?subject=Mot%20de%20passe%20temporaire%20professeur%20Comp%C3%A9tence" className="inline-flex min-h-10 items-center text-sm font-semibold text-[#111B4D] hover:underline">
+                  Mot de passe oublié ? Contacter le service client
+                </Link>
               </form>
 
               <div className="mt-5 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
                 <p className="font-semibold uppercase tracking-wide text-[#111B4D]">Important</p>
                 <p className="mt-1">
                   Ce portail ne permet pas de créer un compte professeur. Aucun code SMS n'est envoyé : le numéro sert uniquement d'identifiant et l'accès est activé ou désactivé par le service client.
+                </p>
+                <p className="mt-2">
+                  En cas d'oubli, le service client vous remet un mot de passe temporaire. Vous devrez le remplacer dès la prochaine connexion.
                 </p>
                 <p className="mt-2">
                   Avant l'activation des identifiants, le professeur doit lire et accepter le cadre Compétence présenté par le service client :{" "}

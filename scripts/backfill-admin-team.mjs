@@ -9,15 +9,30 @@ if (!process.env.DATABASE_URL && fs.existsSync(".env")) {
 
 const prisma = new PrismaClient();
 try {
+  const currentOwner = await prisma.user.findFirst({
+    where: { role: "ADMIN", adminTeamRole: "OWNER" },
+    select: { id: true },
+  });
+  let initializedOwners = 0;
+  if (!currentOwner) {
+    const firstAdmin = await prisma.user.findFirst({
+      where: { role: "ADMIN" },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    if (firstAdmin) {
+      await prisma.user.update({
+        where: { id: firstAdmin.id },
+        data: { adminTeamRole: "OWNER", adminAccountStatus: "ACTIVE", adminAccessEnabled: true, adminDeletedAt: null },
+      });
+      initializedOwners = 1;
+    }
+  }
   const activeDefaults = await prisma.user.updateMany({
     where: { role: "ADMIN", adminTeamRole: null },
     data: { adminTeamRole: "SUPER_ADMIN", adminAccountStatus: "ACTIVE", adminAccessEnabled: true },
   });
-  const owner = await prisma.user.updateMany({
-    where: { role: "ADMIN", email: { equals: "angeouiya@gmail.com", mode: "insensitive" } },
-    data: { adminTeamRole: "OWNER", adminAccountStatus: "ACTIVE", adminAccessEnabled: true, adminDeletedAt: null },
-  });
-  console.log(JSON.stringify({ initializedAdmins: activeDefaults.count, initializedOwners: owner.count }, null, 2));
+  console.log(JSON.stringify({ initializedAdmins: activeDefaults.count, initializedOwners }, null, 2));
 } finally {
   await prisma.$disconnect();
 }

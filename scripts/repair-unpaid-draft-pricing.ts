@@ -131,7 +131,7 @@ async function main() {
       db.notification.updateMany({
         where: { bookingId: booking.id, type: "PAYMENT_PENDING" },
         data: {
-          message: `Le montant du brouillon ${booking.reference} a été recalculé selon la zone et les paramètres en vigueur. Total PayDunya : ${pricing.totalClientPays.toLocaleString("fr-FR")} FCFA. Aucun professeur n'est notifié avant confirmation serveur du paiement.`,
+          message: `Le montant du brouillon ${booking.reference} a été recalculé selon la zone et les paramètres en vigueur. Total Jèko : ${pricing.totalClientPays.toLocaleString("fr-FR")} FCFA. Aucun professeur n'est notifié avant confirmation serveur du paiement.`,
         },
       }),
       db.adminActionLog.create({

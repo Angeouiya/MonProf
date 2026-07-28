@@ -11,6 +11,9 @@ type BookingPricingBreakdownBaseProps = {
   groupType: string;
   packType: string;
   priceTierKey?: string | null;
+  priceTierLabel?: string | null;
+  teacherIndicativePrice?: number | null;
+  paymentProviderLabel?: string | null;
   courseAmount?: number | null;
   transportFee?: number | null;
   transportFeeLabel?: string | null;
@@ -60,7 +63,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const transportRuleLabel = props.transportRuleLabel;
   const discountAmount = props.discountAmount ?? 0;
   const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
-  const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service paiement";
+  const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service Compétence";
+  const paymentProviderLabel = props.paymentProviderLabel?.trim() || "le prestataire de paiement sécurisé";
+  const teacherIndicativePrice = Math.max(0, Math.round(Number(props.teacherIndicativePrice) || 0));
   const totalBeforePaymentServiceFee = props.totalBeforePaymentServiceFee ?? Math.max(0, totalPrice - paymentServiceFeeAmount);
   const indicativeSessionAmount = Math.max(0, Math.round(Number(unitPrice) || 0));
   const persistedCourseAmount = props.courseAmount ?? indicativeSessionAmount;
@@ -70,10 +75,17 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const isQuoteOnly = props.isQuoteOnly === true;
   const baseFormulaAmount = indicativeSessionAmount * safeSessionsCount;
   const groupSurchargeAmount = Math.max(0, Math.round(baseFormulaAmount * Math.max(0, safeParticipantsCount - 1) * 0.5));
+  const rawFormulaAmount = baseFormulaAmount + groupSurchargeAmount;
+  const effectiveDiscountPercent = rawFormulaAmount > 0
+    ? Number(((discountAmount / rawFormulaAmount) * 100).toFixed(1))
+    : 0;
   const averageSessionPrice = Math.round(courseAmount / safeSessionsCount);
   const totalHours = safeSessionsCount * 2;
   const isGroup = groupType === "SMALL_GROUP" || safeParticipantsCount > 1;
   const adminProps = props as BookingPricingBreakdownAdminProps;
+  const teacherCourseRate = adminProps.commissionRate === undefined
+    ? null
+    : Math.min(100, Math.max(0, 100 - adminProps.commissionRate));
 
   return (
     <section
@@ -90,9 +102,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <p className="text-sm font-semibold text-[#111827]">Coût de la réservation</p>
             <p className="mt-1 hidden text-sm font-medium leading-6 text-[#64748B] sm:block" data-client-pricing-helper>
               {isQuoteOnly
-                ? "Calcul automatique à reprendre avant PayDunya."
+                ? "Calcul automatique à reprendre avant le paiement."
                 : audience === "client"
-                  ? `Séances de 2h, participants${transportFee > 0 ? ", déplacement" : ""} et frais PayDunya.`
+                  ? `Séances de 2h, niveau, participants${transportFee > 0 ? ", déplacement" : ""} et frais de service.`
                   : "Vue interne avec éléments comptables réservés au service client."}
             </p>
           </div>
@@ -107,7 +119,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
           </p>
           {!isQuoteOnly && (
             <p className="mt-1 text-xs font-semibold leading-5 text-white">
-              PayDunya uniquement
+              Paiement via {paymentProviderLabel}
             </p>
           )}
         </div>
@@ -133,6 +145,28 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         />
       </div>
 
+      {audience === "client" && !isQuoteOnly && (
+        <div className="mt-3 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-3 text-xs font-medium leading-5 text-[#312E81]">
+          <p className="font-bold">Pourquoi ce prix peut différer du profil</p>
+          <p className="mt-1">
+            Le prix du professeur est indicatif et sert de minimum. La plateforme applique ensuite le palier du métier, du cours et du niveau choisis, puis conserve le montant le plus élevé.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {teacherIndicativePrice > 0 && (
+              <span className="rounded-md border border-[#C7D2FE] bg-white px-2 py-1 font-semibold">
+                Minimum professeur : <Money amount={teacherIndicativePrice} />
+              </span>
+            )}
+            <span className="rounded-md border border-[#C7D2FE] bg-white px-2 py-1 font-semibold">
+              Palier appliqué : {props.priceTierLabel || props.priceTierKey || "calcul automatique"}
+            </span>
+            <span className="rounded-md border border-[#C7D2FE] bg-white px-2 py-1 font-semibold">
+              Prix retenu : <Money amount={indicativeSessionAmount} /> / séance
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5" data-client-pricing-detail>
         <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3" data-client-pricing-detail-header>
           <div>
@@ -152,14 +186,30 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
 
         <div className="mt-3 space-y-2 text-sm">
           {isQuoteOnly ? (
-            <PricingLine label="Montant" value="À recalculer avant PayDunya" strong />
+            <PricingLine label="Montant" value="À recalculer avant paiement" strong />
           ) : (
             <>
               {isGroup ? (
                 <>
                   <PricingLine label="Base séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
                   <PricingLine label="Majoration groupe" detail={`${extraParticipants} participant${extraParticipants > 1 ? "s" : ""} en plus`} value={<Money amount={groupSurchargeAmount} />} />
-                  {discountAmount > 0 && <PricingLine label="Remise pack" value={<Money amount={discountAmount} />} />}
+                  {discountAmount > 0 && (
+                    <PricingLine
+                      label="Remise pack"
+                      detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
+                      value={<Money amount={discountAmount} />}
+                    />
+                  )}
+                  <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} strong />
+                </>
+              ) : discountAmount > 0 ? (
+                <>
+                  <PricingLine label="Base séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
+                  <PricingLine
+                    label="Remise pack"
+                    detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
+                    value={<Money amount={discountAmount} />}
+                  />
                   <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} strong />
                 </>
               ) : (
@@ -179,7 +229,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                 </>
               )}
               <div className="mt-3 border-t border-[#E3E8F2] pt-3">
-                <PricingLine label="Total à payer via PayDunya" value={<Money amount={totalPrice} className="text-[#111B4D]" />} strong />
+                <PricingLine label={`Total à payer via ${paymentProviderLabel}`} value={<Money amount={totalPrice} className="text-[#111B4D]" />} strong />
               </div>
             </>
           )}
@@ -196,14 +246,18 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       {audience === "client" && (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-          <span>Paiement sécurisé sur PayDunya. Le numéro et le moyen de paiement sont choisis uniquement sur PayDunya, puis vérifiés côté serveur.</span>
+          <span>Paiement sécurisé via {paymentProviderLabel}. La réservation n'est activée qu'après confirmation signée et vérification côté serveur.</span>
         </div>
       )}
 
       {audience === "admin" && (
         <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[#E3E8F2] pt-3" data-client-pricing-admin>
           <PricingMini label="Commission" value={<Money amount={adminProps.commissionAmount ?? 0} />} detail={adminProps.commissionRate !== undefined ? `${adminProps.commissionRate}%` : undefined} />
-          <PricingMini label="Part prof cours" value={<Money amount={adminProps.teacherPayoutAmount ?? adminProps.teacherNetAmount ?? 0} />} detail="70% du cours" />
+          <PricingMini
+            label="Part prof cours"
+            value={<Money amount={adminProps.teacherPayoutAmount ?? adminProps.teacherNetAmount ?? 0} />}
+            detail={teacherCourseRate === null ? "Part professeur du cours" : `${teacherCourseRate}% du cours`}
+          />
           <PricingMini label="Total prof" value={<Money amount={adminProps.totalTeacherReceives ?? adminProps.teacherNetAmount ?? 0} />} detail={transportFee > 0 ? "Part cours + déplacement" : "Part cours"} />
         </div>
       )}

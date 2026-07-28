@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PayoutMethodPicker } from "@/components/professor/payout-method-picker";
 import { paymentMethodLabel } from "@/lib/payment-methods";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 function normalizePaymentPhone(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
 }
 
 export function TeacherPasswordSettingsForm() {
+  const router = useRouter();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,7 +26,8 @@ export function TeacherPasswordSettingsForm() {
 
   const rules = [
     { label: "Ancien mot de passe saisi", ok: oldPassword.trim().length > 0 },
-    { label: "6 caractères minimum", ok: newPassword.length >= 6 },
+    { label: `${PASSWORD_MIN_LENGTH} caractères minimum`, ok: newPassword.length >= PASSWORD_MIN_LENGTH },
+    { label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) },
     { label: "Confirmation identique", ok: confirmPassword.length > 0 && newPassword === confirmPassword },
   ];
   const canSubmit = rules.every((rule) => rule.ok) && !saving;
@@ -42,10 +47,10 @@ export function TeacherPasswordSettingsForm() {
         body: JSON.stringify({ action: "changePassword", oldPassword, newPassword, confirmPassword }),
       });
       const responseText = await res.text();
-      let data: { error?: string } = {};
+      let data: { error?: string; email?: { queued?: boolean; message?: string } } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { error?: string };
+          data = JSON.parse(responseText) as { error?: string; email?: { queued?: boolean; message?: string } };
         } catch {
           // Préserver un message lisible si l'infrastructure ne renvoie pas de JSON.
         }
@@ -53,9 +58,17 @@ export function TeacherPasswordSettingsForm() {
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
       toast.success("Mot de passe professeur modifié.");
+      if (data.email?.queued) {
+        toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
+      } else {
+        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
+      }
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      await signOut({ redirect: false });
+      router.replace("/professeur/connexion?passwordChanged=1");
+      router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Modification impossible.");
     } finally {
@@ -69,7 +82,7 @@ export function TeacherPasswordSettingsForm() {
       <PasswordField id="teacher-new-password" label="Nouveau mot de passe" value={newPassword} onChange={setNewPassword} autoComplete="new-password" />
       <PasswordField id="teacher-confirm-password" label="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" />
 
-      <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-3">
+      <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-4">
         {rules.map((rule) => (
           <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>
             <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />

@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { refreshTeacherPublicRating } from "@/lib/reviews";
-import { PAYDUNYA_PROOF_REQUIRED_ERROR, requiresVerifiedPayDunyaForOperationalAction } from "@/lib/payment-security";
+import { PAYMENT_PROOF_REQUIRED_ERROR, requiresVerifiedPayDunyaForOperationalAction } from "@/lib/payment-security";
 
 const MAX_REVIEW_COMMENT_LENGTH = 900;
 const MIN_LOW_RATING_COMMENT_LENGTH = 20;
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Avis possible après confirmation du cours par le client" }, { status: 400 });
   }
   if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+    return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
 
   const existing = await db.review.findFirst({ where: { bookingId, clientId: userId } });

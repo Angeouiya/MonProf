@@ -29,6 +29,10 @@ checkDatabaseUrl("DIRECT_URL", { requirePgbouncer: false, requireSupabaseHost: t
 checkStrongSecret("NEXTAUTH_SECRET", { minLength: 32 });
 checkPublicUrl("NEXT_PUBLIC_APP_URL");
 checkOptionalPublicUrl("NEXTAUTH_URL");
+record(
+  "Compétence service fee is exactly 3 percent",
+  Number(getEnv("NEXT_PUBLIC_PAYMENT_SERVICE_FEE_RATE_BPS") || "300") === 300,
+);
 checkStrongSecret("CRON_SECRET", { minLength: 24 });
 await checkWebPushConfiguration();
 checkBuildDoesNotIgnoreCodeQualityErrors();
@@ -37,7 +41,9 @@ checkVercelDeploymentConfig();
 checkSupabaseDeploymentConfig();
 checkHealthEndpoint();
 checkNoPublicPayDunyaSecrets();
-await checkPayDunyaConfiguration();
+checkJekoConfiguration();
+checkGmailConfiguration();
+await checkLegacyPayDunyaConfiguration();
 
 for (const warning of warnings) {
   console.warn(`WARN ${warning}`);
@@ -159,18 +165,18 @@ function checkPublicUrl(key) {
   const value = getEnv(key);
   const url = parseHttpsUrl(value);
   record(`${key} is HTTPS`, Boolean(url));
-  if (url) record(`${key} uses competence.ci`, url.hostname === "competence.ci");
+  if (url) record(`${key} uses the canonical www.competence.ci domain`, url.hostname === "www.competence.ci");
 }
 
 function checkOptionalPublicUrl(key) {
   const value = getEnv(key);
   if (!value) {
-    warnings.push(`${key} is not set; NextAuth will infer the host on some platforms, but Vercel production should set it to https://competence.ci.`);
+    warnings.push(`${key} is not set; NextAuth will infer the host on some platforms, but Vercel production should set it to https://www.competence.ci.`);
     return;
   }
   const url = parseHttpsUrl(value);
   record(`${key} is HTTPS when provided`, Boolean(url));
-  if (url) record(`${key} uses competence.ci when provided`, url.hostname === "competence.ci");
+  if (url) record(`${key} uses www.competence.ci when provided`, url.hostname === "www.competence.ci");
 }
 
 function parseHttpsUrl(value) {
@@ -183,8 +189,12 @@ function parseHttpsUrl(value) {
 }
 
 function checkNoPublicPayDunyaSecrets() {
-  const leakedPublicKeys = Object.keys(process.env).filter((key) => key.startsWith("NEXT_PUBLIC_PAYDUNYA"));
-  record("No PayDunya secret is exposed through NEXT_PUBLIC_*", leakedPublicKeys.length === 0);
+  const leakedPublicKeys = Object.keys(process.env).filter((key) => (
+    key.startsWith("NEXT_PUBLIC_PAYDUNYA")
+    || key.startsWith("NEXT_PUBLIC_JEKO")
+    || key.startsWith("NEXT_PUBLIC_GMAIL")
+  ));
+  record("No payment or Gmail secret is exposed through NEXT_PUBLIC_*", leakedPublicKeys.length === 0);
 }
 
 function checkBuildDoesNotIgnoreCodeQualityErrors() {
@@ -223,8 +233,19 @@ function checkProductionScripts() {
   const clientMobileVerify = pkg.scripts?.["verify:client-mobile"] ?? "";
   const navigationPerformanceVerify = pkg.scripts?.["verify:navigation-performance"] ?? "";
   const teacherPhotoStorageVerify = pkg.scripts?.["verify:teacher-photo-storage"] ?? "";
+  const databaseDeploy = pkg.scripts?.["db:deploy"] ?? "";
   record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production install regenerates Prisma Client", /prisma\s+generate/.test(postinstall));
+  record("Production database deploy applies versioned migrations", /prisma\s+migrate\s+deploy/.test(databaseDeploy));
+  record(
+    "Production database deploy safely adopts the legacy Prisma baseline",
+    databaseDeploy.startsWith("node scripts/ensure-prisma-migration-baseline.mjs"),
+  );
+  record(
+    "Production build verifies Prisma migration completeness",
+    productionBuild.includes("npm run verify:migrations")
+      && (pkg.scripts?.["verify:migrations"] ?? "").includes("verify-prisma-migrations.mjs"),
+  );
   record("Production build runs explicit ESLint gate", productionBuild.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
   record("Production build verifies installable client app shell", productionBuild.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
   record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
@@ -263,6 +284,14 @@ function checkVercelDeploymentConfig() {
   record("Vercel notification reminder cron is configured", Boolean(cron));
   if (cron) {
     record("Vercel notification reminder cron runs daily", cron.schedule === "0 8 * * *");
+  }
+
+  const passwordEmailCron = Array.isArray(config.crons)
+    ? config.crons.find((item) => item?.path === "/api/cron/password-email-outbox")
+    : null;
+  record("Vercel password email outbox cron is configured", Boolean(passwordEmailCron));
+  if (passwordEmailCron) {
+    record("Vercel password email outbox cron runs every five minutes", passwordEmailCron.schedule === "*/5 * * * *");
   }
 
   const cronRoutePath = "src/app/api/cron/notification-reminders/route.ts";
@@ -324,13 +353,45 @@ function checkHealthEndpoint() {
       && /db\.user\.count/.test(healthRoute),
   );
   record(
-    "Production health endpoint checks PayDunya without exposing secrets",
-    /getPayDunyaConfig/.test(healthRoute)
-      && !/masterKey|privateKey|publicKey|token/.test(healthRoute.replace(/getPayDunyaConfig/g, "")),
+    "Production health endpoint checks Jèko and Gmail without exposing secrets",
+    /getJekoServerConfig/.test(healthRoute)
+      && /isGmailConfigured/.test(healthRoute)
+      && !/apiKey|clientSecret|refreshToken|webhookSecret/.test(
+        healthRoute.replace(/getJekoServerConfig|isGmailConfigured/g, ""),
+      ),
+  );
+
+  const passwordEmailCronRoutePath = "src/app/api/cron/password-email-outbox/route.ts";
+  const passwordEmailCronRoute = fs.existsSync(passwordEmailCronRoutePath)
+    ? fs.readFileSync(passwordEmailCronRoutePath, "utf8")
+    : "";
+  record(
+    "Password email outbox cron requires CRON_SECRET authorization",
+    /process\.env\.CRON_SECRET/.test(passwordEmailCronRoute)
+      && /authorization/.test(passwordEmailCronRoute)
+      && /Bearer /.test(passwordEmailCronRoute)
+      && /status:\s*401/.test(passwordEmailCronRoute),
   );
 }
 
-async function checkPayDunyaConfiguration() {
+function checkJekoConfiguration() {
+  record("Jèko API key is configured server-side", Boolean(getEnv("JEKO_API_KEY")));
+  record("Jèko API key id is configured server-side", Boolean(getEnv("JEKO_API_KEY_ID")));
+  record("Jèko store id is configured server-side", Boolean(getEnv("JEKO_STORE_ID")));
+  record("Jèko webhook secret is strong and server-side", getEnv("JEKO_WEBHOOK_SECRET").length >= 24);
+}
+
+function checkGmailConfiguration() {
+  record("Gmail OAuth client id is configured server-side", Boolean(getEnv("GMAIL_CLIENT_ID")));
+  record("Gmail OAuth client secret is configured server-side", Boolean(getEnv("GMAIL_CLIENT_SECRET")));
+  record("Gmail OAuth refresh token is configured server-side", Boolean(getEnv("GMAIL_REFRESH_TOKEN")));
+  record(
+    "Gmail sender is diplomateimmobilier99@gmail.com",
+    getEnv("GMAIL_SENDER_EMAIL").toLowerCase() === "diplomateimmobilier99@gmail.com",
+  );
+}
+
+async function checkLegacyPayDunyaConfiguration() {
   const envConfig = {
     masterKey: Boolean(getEnv("PAYDUNYA_MASTER_KEY")),
     publicKey: Boolean(getEnv("PAYDUNYA_PUBLIC_KEY")),
@@ -370,11 +431,14 @@ async function checkPayDunyaConfiguration() {
     mode: settingsConfig?.mode || envConfig.mode,
   };
 
-  record("PayDunya master key is configured server-side", effective.masterKey);
-  record("PayDunya public key is configured server-side", effective.publicKey);
-  record("PayDunya private key is configured server-side", effective.privateKey);
-  record("PayDunya token is configured server-side", effective.token);
-  record("PayDunya mode is live", effective.mode === "live");
+  const legacyReady = effective.masterKey
+    && effective.publicKey
+    && effective.privateKey
+    && effective.token
+    && effective.mode === "live";
+  if (!legacyReady) {
+    warnings.push("PayDunya legacy credentials are incomplete; old pending PayDunya returns cannot be reconciled until they are restored.");
+  }
 }
 
 function normalizeMode(value) {

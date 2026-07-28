@@ -318,7 +318,7 @@ function ReleaseActions({
 }) {
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
-      <PayTeacherButton bookingId={bookingId} amount={amount} teacherName={teacherName} />
+      <PayTeacherButton bookingId={bookingId} teacherId={teacherId} amount={amount} teacherName={teacherName} />
       <Button asChild size="sm" variant="outline" className={compact ? "h-11 rounded-lg" : undefined}>
         <Link href={`/admin/professeurs/${teacherId}?tab=paiements&bookingId=${bookingId}`}>
           <Wallet className="mr-1.5 h-4 w-4" />

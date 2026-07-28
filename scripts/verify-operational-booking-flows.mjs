@@ -6,6 +6,7 @@ const missionRoute = read("src/app/api/mission/[token]/route.ts");
 const bookingApi = read("src/app/api/bookings/[id]/route.ts");
 const reschedulePolicy = read("src/lib/reschedule-policy.ts");
 const rescheduleReconciliation = read("src/lib/paydunya-reschedule-reconciliation.ts");
+const jekoRescheduleReconciliation = read("src/lib/jeko-reschedule-reconciliation.ts");
 const replacementActions = read("src/app/client/reservations/[id]/replacement-proposal-actions.tsx");
 const bookingActions = read("src/app/client/reservations/[id]/actions.tsx");
 const professorRescheduleRoute = read("src/app/api/professor/reschedule-requests/[id]/route.ts");
@@ -15,6 +16,9 @@ const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.t
 const bookingCreateApi = read("src/app/api/bookings/route.ts");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const pricingEngine = read("src/lib/pricing.ts");
+const courseCatalog = read("src/lib/course-catalog.ts");
+const pricingConfirmation = read("src/lib/pricing-confirmation.ts");
+const oneActiveRescheduleMigration = read("prisma/migrations/20260728040000_one_active_reschedule_per_booking/migration.sql");
 const replacementEngine = read("src/lib/teacher-replacement-matching.ts");
 const missionPolicy = read("src/lib/teacher-mission-policy.ts");
 const missionActions = read("src/components/professor/mission-response-actions.tsx");
@@ -25,12 +29,16 @@ const privacyPage = read("src/app/politique-confidentialite/page.tsx");
 const bookingSessions = read("src/lib/booking-sessions.ts");
 const bookingSessionRoute = read("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts");
 const payoutRoute = read("src/app/api/admin/teacher-payouts/route.ts");
+const payoutReconciliation = read("src/lib/jeko-payout-reconciliation.ts");
 const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
   /SUR_DEVIS:[\s\S]*?amount:\s*25000/.test(pricingEngine)
-    && /const unitSessionAmount\s*=\s*teacherPricePerSession\s*>\s*0\s*\?\s*teacherPricePerSession\s*:\s*tier\.amount/.test(pricingEngine)
+    && /const teacherPricePerSession\s*=\s*Math\.max\(0,\s*Math\.round\(Number\(input\.teacherPricePerSession\)\s*\|\|\s*0\)\)/.test(pricingEngine)
+    && /const unitSessionAmount\s*=\s*Math\.max\(tier\.amount,\s*teacherPricePerSession\)/.test(pricingEngine)
+    && /const isTeacherPriceFloorApplied\s*=\s*teacherPricePerSession\s*>\s*tier\.amount/.test(pricingEngine)
+    && /priceTierLabel:\s*isTeacherPriceFloorApplied\s*\?\s*"Minimum indicatif du professeur"\s*:\s*tier\.label/.test(pricingEngine)
     && /isQuoteOnly:\s*false/.test(pricingEngine)
     && !/if\s*\(isQuoteOnly\)/.test(pricingEngine),
 );
@@ -47,7 +55,32 @@ record(
     && /sameKnownQuartier[\s\S]*?key:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?amount:\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.amount/.test(pricingEngine)
     && /NEIGHBORHOOD_ALIASES[\s\S]*?mermoze:\s*"mermoz"/.test(pricingEngine)
     && /normalizeNeighborhood\(originQuartier\)\s*===\s*normalizeNeighborhood\(destinationQuartier\)/.test(pricingEngine)
-    && /SAME_AREA:\s*\{[\s\S]*?key:\s*"same_area"[\s\S]*?amount:\s*1000/.test(pricingEngine),
+    && /SAME_AREA:\s*\{[\s\S]*?key:\s*"same_area"[\s\S]*?amount:\s*1000/.test(pricingEngine)
+    && /transport\.key\s*===\s*TRANSPORT_FEES\.SAME_NEIGHBORHOOD\.key[\s\S]*?transport\.key\s*===\s*TRANSPORT_FEES\.SAME_AREA\.key/.test(pricingEngine),
+);
+
+record(
+  "Client and API enforce the same catalog compatibility rules",
+  /export function isCourseCatalogItemCompatible/.test(courseCatalog)
+    && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacherSubjects:\s*teacherSubjectNames/.test(bookingForm)
+    && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacher\.subjects\.map/.test(bookingCreateApi),
+);
+
+record(
+  "A changed server price requires explicit confirmation before Jèko",
+  /expectedPricingMatches\(expectedPricing,\s*canonicalConfirmablePricing\)/.test(bookingCreateApi)
+    && /code:\s*"PRICE_CHANGED"/.test(bookingCreateApi)
+    && /createPricingConfirmationFingerprint/.test(pricingConfirmation)
+    && /confirmedPricingFingerprint/.test(bookingForm)
+    && /Le tarif a été recalculé/.test(bookingForm),
+);
+
+record(
+  "Initial payments and active reschedules cannot fan out into duplicate charges",
+  /idempotencyKey:\s*`BOOKING:\$\{clientCreationKey\}`/.test(bookingCreateApi)
+    && !/idempotencyKey:\s*`BOOKING:\$\{clientCreationKey\}:\$\{paymentMethod\}`/.test(bookingCreateApi)
+    && /PAYMENT_PENDING[\s\S]*PAYMENT_FAILED[\s\S]*AWAITING_TEACHER/.test(bookingApi)
+    && /CREATE UNIQUE INDEX[\s\S]*one_active_per_booking[\s\S]*PAYMENT_FAILED/.test(oneActiveRescheduleMigration),
 );
 
 record(
@@ -60,12 +93,25 @@ record(
 );
 
 record(
-  "New bookings always enter PayDunya payment before activation",
+  "New bookings always enter idempotent Jèko payment before activation",
   /isQuoteOnly:\s*false/.test(bookingCreateApi)
     && /status:\s*"PENDING_PAYMENT"/.test(bookingCreateApi)
+    && /paymentStatus:\s*"FAILED"/.test(bookingCreateApi)
+    && (
+      /paymentProvider:\s*"JEKO"/.test(bookingCreateApi)
+      || (
+        /const\s+bookingPaymentProvider(?::[^=]+)?\s*=\s*"JEKO"/.test(bookingCreateApi)
+        && /paymentProvider:\s*bookingPaymentProvider/.test(bookingCreateApi)
+      )
+    )
+    && /providerPaymentStatus:\s*"PENDING"/.test(bookingCreateApi)
     && /title:\s*"Brouillon de réservation - paiement requis"/.test(bookingCreateApi)
     && /type:\s*"PAYMENT_PENDING"/.test(bookingCreateApi)
-    && /createPayDunyaCheckoutInvoice/.test(bookingCreateApi)
+    && /createJekoBookingCheckout/.test(bookingCreateApi)
+    && /idempotencyKey:\s*`BOOKING:\$\{clientCreationKey\}`/.test(bookingCreateApi)
+    && /successUrl:\s*absoluteAppUrl\(`\/client\/reservations\/\$\{booking\.id\}\?jeko=return`/.test(bookingCreateApi)
+    && /errorUrl:\s*absoluteAppUrl\(`\/client\/reservations\/\$\{booking\.id\}\?jeko=cancelled`/.test(bookingCreateApi)
+    && !/createPayDunyaCheckoutInvoice/.test(bookingCreateApi)
     && !/pricing\.isQuoteOnly/.test(bookingCreateApi)
     && !/booking\.isQuoteOnly/.test(bookingCreateApi)
     && !/QUOTE_REQUESTED/.test(bookingCreateApi),
@@ -78,7 +124,9 @@ record(
     && !/Validation service client requise/.test(bookingForm)
     && !/Envoyer au service client/.test(bookingForm)
     && !/Montant à recalculer/.test(bookingForm)
-    && /Payer via PayDunya/.test(bookingForm),
+    && /paymentProviderLabel="Jèko"/.test(bookingForm)
+    && /Payer via Jèko/.test(bookingForm)
+    && !/Payer via PayDunya/.test(bookingForm),
 );
 
 record(
@@ -169,9 +217,14 @@ record(
 record(
   "Paid reschedule supplements are verified before the teacher is notified",
   /status:\s*policy\.feeAmount\s*>\s*0\s*\?\s*"PAYMENT_PENDING"\s*:\s*"AWAITING_TEACHER"/.test(bookingApi)
-    && /createPayDunyaRescheduleFeeInvoice/.test(bookingApi)
+    && /createJekoRescheduleCheckout/.test(bookingApi)
     && /case\s+"reschedule_fee_verify"/.test(bookingApi)
+    && /paymentProvider:\s*policy\.feeAmount\s*>\s*0\s*\?\s*"JEKO"\s*:\s*null/.test(bookingApi)
+    && /if\s*\(request\.paymentProvider\s*!==\s*"JEKO"\)/.test(bookingApi)
     && /reconcilePayDunyaReschedulePayment/.test(bookingApi)
+    && /reconcileJekoReschedulePaymentAttempt/.test(bookingApi)
+    && /createRescheduleAwaitingTeacherNotifications/.test(jekoRescheduleReconciliation)
+    && /status:\s*"AWAITING_TEACHER"/.test(jekoRescheduleReconciliation)
     && /if\s*\(!alreadyPaid\)\s*\{[\s\S]*?createRescheduleAwaitingTeacherNotifications/.test(rescheduleReconciliation),
 );
 
@@ -187,9 +240,13 @@ record(
 
 record(
   "Accepted reschedules increase the professor accounting base",
-  /teacherPayoutAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
+  /bookingRescheduleRequest\.updateMany\(\{[\s\S]*?status:\s*"AWAITING_TEACHER"[\s\S]*?if\s*\(claim\.count\s*!==\s*1\)\s*return false/.test(professorRescheduleRoute)
+    && /teacherPayoutAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
     && /teacherNetAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
-    && /commissionAmount:\s*\{\s*increment:\s*request\.feePlatformAmount\s*\}/.test(professorRescheduleRoute),
+    && /commissionAmount:\s*\{\s*increment:\s*request\.feePlatformAmount\s*\}/.test(professorRescheduleRoute)
+    && /bookingSession\.update\(\{[\s\S]*?teacherCourseAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}[\s\S]*?releasedAmount:\s*\{\s*increment:\s*request\.feeTeacherAmount\s*\}/.test(professorRescheduleRoute)
+    && /action:\s*"RESCHEDULE_ACCEPTED"/.test(professorRescheduleRoute)
+    && /syncBookingSessionAggregates/.test(professorRescheduleRoute),
 );
 
 record(
@@ -245,11 +302,20 @@ record(
 );
 
 record(
-  "Professor payouts are allocated and locked at session level",
-  /bookingSessionId: allocation\.item\.session\?\.id/.test(payoutRoute)
-    && /paidAmount: item\.session\.paidAmount/.test(payoutRoute)
-    && /releasedAmount: item\.session\.releasedAmount/.test(payoutRoute)
-    && /syncBookingSessionAggregates/.test(payoutRoute),
+  "Professor payouts reserve exact session snapshots and debit only after Jèko confirmation",
+  /status:\s*"DRAFT"/.test(payoutRoute)
+    && /bookingSessionId:\s*allocation\.item\.session\?\.id\s*\?\?\s*null/.test(payoutRoute)
+    && /paidAmountBefore: allocation\.item\.paid/.test(payoutRoute)
+    && /releasedAmountSnapshot: allocation\.item\.payableAmount/.test(payoutRoute)
+    && /retainedAmountSnapshot: allocation\.item\.retainedAmount/.test(payoutRoute)
+    && /ledger professeur ne sera débité qu'après confirmation finale/i.test(payoutRoute)
+    && /if\s*\(transition\s*===\s*"finalize"\)/.test(payoutReconciliation)
+    && /where:\s*\{ id: record\.id, status: "DRAFT" \}/.test(payoutReconciliation)
+    && /session\.paidAmount\s*!==\s*allocation\.paidAmountBefore/.test(payoutReconciliation)
+    && /session\.releasedAmount\s*!==\s*allocation\.releasedAmountSnapshot/.test(payoutReconciliation)
+    && /const newPaid\s*=\s*allocation\.paidAmountBefore\s*\+\s*allocation\.amount/.test(payoutReconciliation)
+    && /paidAmount:\s*newPaid/.test(payoutReconciliation)
+    && /syncBookingSessionAggregates/.test(payoutReconciliation),
 );
 
 for (const check of checks) {

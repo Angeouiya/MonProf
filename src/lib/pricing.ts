@@ -123,18 +123,12 @@ export const GRAND_ABIDJAN_AREAS = [
 ] as const;
 
 export const GRAND_ABIDJAN_NEAR_ROUTES = [
-  ["Cocody", "Angré"],
-  ["Cocody", "Riviera"],
-  ["Cocody", "Deux Plateaux"],
   ["Cocody", "Plateau"],
   ["Cocody", "Adjamé"],
   ["Cocody", "Marcory"],
   ["Cocody", "Koumassi"],
   ["Cocody", "Bingerville"],
-  ["Angré", "Riviera"],
-  ["Angré", "Deux Plateaux"],
   ["Angré", "Bingerville"],
-  ["Riviera", "Deux Plateaux"],
   ["Riviera", "Bingerville"],
   ["Plateau", "Treichville"],
   ["Plateau", "Adjamé"],
@@ -349,6 +343,11 @@ function includesAny(value: string, needles: string[]) {
   return needles.some((needle) => value.includes(needle));
 }
 
+function includesAnyToken(value: string, tokens: string[]) {
+  const words = new Set(value.split(" ").filter(Boolean));
+  return tokens.some((token) => words.has(token));
+}
+
 function displayAreaName(value?: string | null) {
   const normalized = normalize(value);
   return GRAND_ABIDJAN_AREAS.find((area) => normalize(area) === normalized) ?? (value?.trim() || null);
@@ -460,7 +459,11 @@ export function calculateGrandAbidjanTransportFee({
   const destinationQuartier = displayNeighborhoodName(clientQuartier);
   const normalizedDestination = normalize(destination);
   const coveredByTeacherZone = teacherZoneNames.some((zone) => normalize(zone) === normalizedDestination);
-  const fallbackOrigin = origin || teacherZoneNames.map(displayAreaName).find(Boolean) || null;
+  // Une zone couverte décrit où le professeur accepte de se déplacer ; ce
+  // n'est pas son point de départ. Utiliser la première zone rendait le prix
+  // dépendant de l'ordre de retour de la base de données. Sans commune
+  // principale, on conserve donc un calcul prudent et déterministe.
+  const fallbackOrigin = origin;
   const routeLabel = fallbackOrigin && destination
     ? `${fallbackOrigin}${originQuartier ? ` (${originQuartier})` : ""} -> ${destination}${destinationQuartier ? ` (${destinationQuartier})` : ""}`
     : "Trajet a confirmer";
@@ -616,6 +619,7 @@ export function packSessionCount(packType: string) {
 export function derivePricingContext(input: PricingDerivationInput): PricingInput {
   const category = input.category;
   const schoolSystem = input.schoolSystem || undefined;
+  const selectedLevel = normalize([input.levelName, input.preciseLevel].filter(Boolean).join(" "));
   const text = normalize([
     input.levelName,
     input.preciseLevel,
@@ -657,12 +661,31 @@ export function derivePricingContext(input: PricingDerivationInput): PricingInpu
   }
 
   if (includesAny(text, ["bts"])) levelGroup = "bts";
-  if (includesAny(text, ["licence", "l1", "l2", "l3"])) levelGroup = "licence";
-  if (includesAny(text, ["master", "m1", "m2"])) levelGroup = "master";
+  if (includesAny(text, ["licence"]) || includesAnyToken(text, ["l1", "l2", "l3"])) levelGroup = "licence";
+  // Les codes courts doivent correspondre à un mot complet : "m2" ne doit
+  // pas faire passer un niveau "CM2" dans le palier Master.
+  if (includesAny(text, ["master"]) || includesAnyToken(text, ["m1", "m2"])) levelGroup = "master";
   if (includesAny(text, ["memoire", "rapport de stage", "soutenance"])) levelGroup = "memoire_soutenance";
 
+  if (
+    ["formation_professionnelle", "apprentissage_metier"].includes(category)
+    && (
+      includesAnyToken(selectedLevel, [
+        "avance", "avancee", "avances", "avancees",
+        "professionnel", "professionnelle", "professionnels", "professionnelles",
+        "expert", "experte", "experts", "expertes",
+        "adulte", "adultes",
+      ])
+      || selectedLevel === "formation professionnelle"
+    )
+  ) {
+    levelGroup = "professional_advanced";
+  }
+
   if (includesAny(text, ["initiation informatique", "utilisation ordinateur"])) domain = "bureautique_base";
-  if (includesAny(text, ["word", "powerpoint", "excel debutant", "canva"])) domain = "excel_powerpoint_canva";
+  if (includesAnyToken(text, ["word"]) || includesAny(text, ["powerpoint", "excel debutant", "canva"])) {
+    domain = "excel_powerpoint_canva";
+  }
   if (includesAny(text, ["excel avance", "comptabilite", "marketing digital", "anglais professionnel", "community management", "logistique", "gestion de stock", "entrepreneuriat", "business plan"])) {
     domain = "comptabilite_marketing_anglais_pro";
   }
@@ -731,13 +754,16 @@ export function calculatePriceTier(input: PricingInput): PriceTierCode {
   if (input.levelGroup === "licence") return "AVANCE_15000";
   if (input.levelGroup === "master") return "PREMIUM_20000";
   if (input.levelGroup === "memoire_soutenance") return "SUR_DEVIS";
+  if (input.levelGroup === "professional_advanced") return "PREMIUM_20000";
 
   if (input.domain === "bureautique_base") return "STANDARD_10000";
   if (input.domain === "excel_powerpoint_canva") return "RENFORCEMENT_12500";
   if (input.domain === "comptabilite_marketing_anglais_pro") return "AVANCE_15000";
   if (input.domain === "data_dev_btp_cyber_cloud") return "PREMIUM_20000";
 
-  if (input.category === "enseignement_superieur" || input.category === "formation_professionnelle") return "AVANCE_15000";
+  if (["enseignement_superieur", "formation_professionnelle", "apprentissage_metier"].includes(input.category)) {
+    return "AVANCE_15000";
+  }
   if (input.category === "langues_communication") return "RENFORCEMENT_12500";
 
   return "STANDARD_10000";
@@ -748,7 +774,11 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const context = derivePricingContext({
     ...input,
     isTeacherNearby: input.isTeacherNearby ?? (
-      input.deliveryMode === "domicile" && transport.key === TRANSPORT_FEES.SAME_AREA.key
+      input.deliveryMode === "domicile"
+      && (
+        transport.key === TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
+        || transport.key === TRANSPORT_FEES.SAME_AREA.key
+      )
     ),
   });
   let tierCode = calculatePriceTier(context);
@@ -764,7 +794,10 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
 
   const tier = PRICE_TIERS[tierCode];
   const teacherPricePerSession = Math.max(0, Math.round(Number(input.teacherPricePerSession) || 0));
-  const unitSessionAmount = teacherPricePerSession > 0 ? teacherPricePerSession : tier.amount;
+  // Le prix affiché par le professeur est un minimum indicatif. Il ne doit pas
+  // annuler un palier plus élevé calculé à partir du métier et du niveau.
+  const isTeacherPriceFloorApplied = teacherPricePerSession > tier.amount;
+  const unitSessionAmount = Math.max(tier.amount, teacherPricePerSession);
 
   const sessions = Math.max(1, pack.sessions ?? 1);
   const rawCourseAmount = Math.round(unitSessionAmount * sessions * groupMultiplier);
@@ -775,11 +808,21 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const teacherRate = 1 - platformCommissionRate;
   const rawPlatformCommission = Math.round(rawCourseAmount * platformCommissionRate);
   const teacherPayoutAmount = rawCourseAmount - rawPlatformCommission;
-  const discountRate = pack.discountRate ?? 0;
-  const discountAmount = Math.min(rawPlatformCommission, Math.round(rawCourseAmount * discountRate));
+  const maximumDiscountRate = pack.discountRate ?? 0;
+  const discountAmount = Math.min(rawPlatformCommission, Math.round(rawCourseAmount * maximumDiscountRate));
+  // Le snapshot expose le taux réellement accordé. Lorsque la commission
+  // est inférieure à la remise maximale du pack, afficher 5 % ou 7 % serait
+  // incohérent avec le montant effectivement déduit.
+  const discountRate = rawCourseAmount > 0 ? discountAmount / rawCourseAmount : 0;
   const courseAmount = rawCourseAmount - discountAmount;
   const platformCommissionAmount = courseAmount - teacherPayoutAmount;
-  const transportFeeOverride = Number(input.clientCommuneTransportFeeOverride);
+  // Number(null) vaut 0 en JavaScript. Sans cette garde, une commune dont le
+  // forfait particulier n'est pas renseigné annule le transport calculé.
+  const hasTransportFeeOverride = input.clientCommuneTransportFeeOverride !== null
+    && input.clientCommuneTransportFeeOverride !== undefined;
+  const transportFeeOverride = hasTransportFeeOverride
+    ? Number(input.clientCommuneTransportFeeOverride)
+    : Number.NaN;
   const canOverrideTransport = input.deliveryMode === "domicile"
     && transport.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
     && Number.isFinite(transportFeeOverride)
@@ -794,7 +837,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   return {
     currency: CURRENCY,
     priceTierKey: tier.key,
-    priceTierLabel: teacherPricePerSession > 0 ? "Prix professeur" : tier.label,
+    priceTierLabel: isTeacherPriceFloorApplied ? "Minimum indicatif du professeur" : tier.label,
     courseAmount,
     unitSessionAmount,
     rawCourseAmount,

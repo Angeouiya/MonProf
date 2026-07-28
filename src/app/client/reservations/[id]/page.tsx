@@ -19,6 +19,8 @@ import { parsePricingSnapshot } from "@/lib/pricing";
 import { dayLabel } from "@/lib/scheduling";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
 import { reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
+import { reconcileJekoPaymentAttempt } from "@/lib/jeko-reconciliation";
+import { reconcileJekoReschedulePaymentAttempt } from "@/lib/jeko-reschedule-reconciliation";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
   Home, Video, User, Users, Calendar, Clock, MapPin, MessageSquare,
@@ -84,6 +86,11 @@ export default async function ReservationDetailPage({
         select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, phone: true, badgeVerified: true },
       },
       transactions: { where: { type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] } }, orderBy: { createdAt: "asc" } },
+      paymentAttempts: {
+        where: { provider: "JEKO", purpose: "BOOKING" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
       reviews: { where: { clientId: user.id } },
       disputes: { orderBy: { createdAt: "desc" } },
       clientRefundRequests: { orderBy: { createdAt: "desc" } },
@@ -144,7 +151,92 @@ export default async function ReservationDetailPage({
         })
     : null;
 
-  if (paydunyaReturnCheck) {
+  const isJekoReturn = sp.jeko === "return";
+  const cancelledOnJeko = sp.jeko === "cancelled";
+  let jekoReturnCheck: Awaited<ReturnType<typeof reconcileJekoPaymentAttempt>> | null = null;
+  let jekoReturnError: string | null = null;
+  if (isJekoReturn) {
+    const attemptId = typeof sp.attempt === "string" && sp.attempt.trim()
+      ? sp.attempt.trim()
+      : booking.paymentAttempts[0]?.id;
+    if (!attemptId) {
+      jekoReturnError = "Aucune tentative Jèko ne correspond à ce dossier.";
+    } else {
+      try {
+        jekoReturnCheck = await reconcileJekoPaymentAttempt(attemptId, {
+          expectedClientId: user.id,
+          expectedBookingId: booking.id,
+        });
+      } catch (error) {
+        console.error("[client:jeko_return_check_failed]", {
+          bookingId: booking.id,
+          attemptId,
+          reason: error instanceof Error ? error.message : "unknown",
+        });
+        jekoReturnError = "La confirmation Jèko n'est pas encore disponible. Vous pouvez relancer la vérification depuis ce dossier.";
+      }
+    }
+  }
+
+  const isJekoRescheduleReturn = sp.jekoReschedule === "return";
+  const cancelledOnJekoReschedule = sp.jekoReschedule === "cancelled";
+  let jekoRescheduleReturnCheck: Awaited<ReturnType<typeof reconcileJekoReschedulePaymentAttempt>> | null = null;
+  let jekoRescheduleReturnError: string | null = null;
+  let jekoRescheduleAmount = 0;
+  if (isJekoRescheduleReturn) {
+    const rescheduleRequestId = typeof sp.rescheduleRequestId === "string"
+      ? sp.rescheduleRequestId.trim()
+      : "";
+    const ownedRequest = booking.rescheduleRequests.find((request) => request.id === rescheduleRequestId);
+    if (!ownedRequest) {
+      jekoRescheduleReturnError = "La demande de modification ne correspond pas à ce dossier.";
+    } else {
+      jekoRescheduleAmount = ownedRequest.totalToPay;
+      const explicitAttemptId = typeof sp.attempt === "string" ? sp.attempt.trim() : "";
+      const attempt = explicitAttemptId
+        ? await db.paymentAttempt.findFirst({
+            where: {
+              id: explicitAttemptId,
+              bookingId: booking.id,
+              rescheduleRequestId: ownedRequest.id,
+              provider: "JEKO",
+              purpose: "RESCHEDULE_FEE",
+            },
+            select: { id: true },
+          })
+        : await db.paymentAttempt.findFirst({
+            where: {
+              bookingId: booking.id,
+              rescheduleRequestId: ownedRequest.id,
+              provider: "JEKO",
+              purpose: "RESCHEDULE_FEE",
+            },
+            orderBy: { createdAt: "desc" },
+            select: { id: true },
+          });
+      if (!attempt) {
+        jekoRescheduleReturnError = "Aucune tentative Jèko ne correspond à ce supplément.";
+      } else {
+        try {
+          jekoRescheduleReturnCheck = await reconcileJekoReschedulePaymentAttempt(attempt.id, {
+            expectedClientId: user.id,
+            expectedBookingId: booking.id,
+            expectedRescheduleRequestId: ownedRequest.id,
+          });
+        } catch (error) {
+          console.error("[client:jeko_reschedule_return_check_failed]", {
+            bookingId: booking.id,
+            rescheduleRequestId: ownedRequest.id,
+            attemptId: attempt.id,
+            reason: error instanceof Error ? error.message : "unknown",
+          });
+          jekoRescheduleReturnError = "La confirmation Jèko du supplément n'est pas encore disponible. Vous pouvez relancer la vérification depuis ce dossier.";
+        }
+      }
+    }
+  }
+
+  if (paydunyaReturnCheck || jekoReturnCheck || jekoRescheduleReturnCheck) {
     const refreshedBooking = await db.booking.findUnique({
       where: { id },
       include: {
@@ -152,6 +244,11 @@ export default async function ReservationDetailPage({
           select: { id: true, fullName: true, professionalName: true, photoUrl: true, jobTitle: true, commune: true, phone: true, badgeVerified: true },
         },
         transactions: { where: { type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] } }, orderBy: { createdAt: "asc" } },
+        paymentAttempts: {
+          where: { provider: "JEKO", purpose: "BOOKING" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
         reviews: { where: { clientId: user.id } },
         disputes: { orderBy: { createdAt: "desc" } },
         clientRefundRequests: { orderBy: { createdAt: "desc" } },
@@ -194,6 +291,11 @@ export default async function ReservationDetailPage({
   }
 
   const name = booking.teacher.professionalName || booking.teacher.fullName;
+  const paymentProviderLabel = booking.paymentProvider === "JEKO"
+    ? "Jèko"
+    : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
+      ? "PayDunya (historique)"
+      : "Paiement sécurisé";
   const preferredDays: string[] = booking.preferredDays ? JSON.parse(booking.preferredDays) : [];
   const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
   const displayUnitPrice = pricingSnapshot?.unitSessionAmount ?? booking.unitPrice;
@@ -229,6 +331,8 @@ export default async function ReservationDetailPage({
     && !paymentConfirmed
     && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(booking.paymentStatus);
   const returnedFromPayDunya = isPayDunyaReturn;
+  const returnedFromJeko = isJekoReturn;
+  const returnedFromJekoReschedule = isJekoRescheduleReturn;
   const cancelledOnPayDunya = sp.paydunya === "cancelled";
   const scheduleProposals = booking.scheduleProposals.map((proposal) => ({
     id: proposal.id,
@@ -290,6 +394,7 @@ export default async function ReservationDetailPage({
     paymentServiceFeeAmount: request.paymentServiceFeeAmount,
     paymentServiceFeeLabel: request.paymentServiceFeeLabel,
     totalToPay: request.totalToPay,
+    paymentProvider: request.paymentProvider,
     paydunyaStatus: request.paydunyaStatus,
     paydunyaCheckoutUrl: request.paydunyaCheckoutUrl,
     paidAt: request.paidAt?.toISOString() ?? null,
@@ -303,7 +408,7 @@ export default async function ReservationDetailPage({
   // Timeline
   const timeline = [
     { label: canShowOperationalProgress ? "Réservation créée" : "Brouillon créé", date: booking.createdAt, done: true },
-    { label: canShowOperationalProgress ? "Paiement PayDunya vérifié" : "Paiement PayDunya à finaliser", date: paymentConfirmed ? booking.createdAt : null, done: paymentConfirmed },
+    { label: canShowOperationalProgress ? `Paiement ${paymentProviderLabel} vérifié` : `Paiement ${paymentProviderLabel} à finaliser`, date: paymentConfirmed ? booking.createdAt : null, done: paymentConfirmed },
     {
       label: canShowOperationalProgress ? "Validée par le service client" : "Validation service client après paiement",
       date: canShowOperationalProgress ? booking.confirmedAt : null,
@@ -336,12 +441,12 @@ export default async function ReservationDetailPage({
   ];
   const timelineDescription = canShowOperationalProgress
     ? "Chaque étape reste visible jusqu'à la clôture du cours."
-    : "Aucune étape opérationnelle ne démarre tant que PayDunya n'a pas confirmé le paiement côté serveur.";
+    : `Aucune étape opérationnelle ne démarre tant que ${paymentProviderLabel} n'a pas confirmé le paiement côté serveur.`;
   const firstPendingTimelineIndex = timeline.findIndex((step) => !step.done);
   const processSteps = timeline.map((step, index) => ({
     label: step.label,
     date: step.done && step.date ? formatDate(step.date) : undefined,
-    hint: getTimelineStepHint(step.label, canShowOperationalProgress),
+    hint: getTimelineStepHint(step.label, canShowOperationalProgress, paymentProviderLabel),
     state: step.done
       ? "done" as const
       : index === firstPendingTimelineIndex
@@ -355,6 +460,7 @@ export default async function ReservationDetailPage({
     isQuoteOnly: booking.isQuoteOnly,
     hasDispute: booking.disputes.length > 0,
     paymentAwaitingProof,
+    paymentProviderLabel,
   });
   const {
     paydunyaToken: _paydunyaToken,
@@ -375,6 +481,78 @@ export default async function ReservationDetailPage({
           <ReservationStatusChip label="Paiement" value={formatClientPaymentStatus(booking.paymentStatus, booking.isQuoteOnly)} />
         </div>
       </ClientPageHeader>
+
+      {returnedFromJeko && paymentConfirmed && (
+        <div className="flex items-start gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-4">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <div className="text-sm">
+            <p className="font-semibold text-emerald-900">Paiement Jèko confirmé</p>
+            <p className="mt-1 leading-6 text-emerald-900/80">
+              Votre paiement de <strong><Money amount={displayTotalPrice} /></strong> a été contrôlé directement auprès de Jèko. La réservation peut maintenant suivre son traitement Compétence.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {returnedFromJekoReschedule && jekoRescheduleReturnCheck?.verified && (
+        <div className="flex items-start gap-3 rounded-lg border border-emerald-300 bg-emerald-50 p-4">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <div className="text-sm">
+            <p className="font-semibold text-emerald-900">Supplément Jèko confirmé</p>
+            <p className="mt-1 leading-6 text-emerald-900/80">
+              Le supplément de <strong><Money amount={jekoRescheduleAmount} /></strong> a été contrôlé directement auprès de Jèko. La demande de nouveau créneau est maintenant transmise au professeur.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {returnedFromJekoReschedule && !jekoRescheduleReturnCheck?.verified && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-900">Supplément Jèko en cours de vérification</p>
+            <p className="mt-1 leading-6 text-amber-900/80">
+              Le retour du navigateur n'est pas une preuve de paiement. {jekoRescheduleReturnCheck?.message || jekoRescheduleReturnError || "Compétence attend la confirmation serveur Jèko."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {cancelledOnJekoReschedule && (
+        <div className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
+          <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
+          <div className="text-sm">
+            <p className="font-semibold text-[#111B4D]">Supplément Jèko non finalisé</p>
+            <p className="mt-1 leading-6 text-[#64748B]">
+              Le nouveau créneau n'a pas été transmis au professeur. Vous pouvez reprendre ce paiement sans créer une seconde demande.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {returnedFromJeko && !paymentConfirmed && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-900">Paiement Jèko en cours de vérification</p>
+            <p className="mt-1 leading-6 text-amber-900/80">
+              Le retour navigateur n'est jamais considéré comme une preuve à lui seul. {jekoReturnCheck?.message || jekoReturnError || "Compétence attend la confirmation serveur Jèko."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {cancelledOnJeko && !paymentConfirmed && (
+        <div className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
+          <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
+          <div className="text-sm">
+            <p className="font-semibold text-[#111B4D]">Paiement Jèko non finalisé</p>
+            <p className="mt-1 leading-6 text-[#64748B]">
+              Le dossier reste un brouillon. Vous pouvez reprendre le paiement Jèko depuis les actions ci-dessous sans modifier le montant calculé.
+            </p>
+          </div>
+        </div>
+      )}
 
       {returnedFromPayDunya && paymentConfirmed && (
         <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
@@ -625,6 +803,8 @@ export default async function ReservationDetailPage({
             groupType={booking.groupType}
             packType={booking.packType}
             priceTierKey={booking.priceTierKey}
+            priceTierLabel={pricingSnapshot?.priceTierLabel}
+            paymentProviderLabel={paymentProviderLabel}
             courseAmount={displayCourseAmount}
             transportFee={displayTransportFee}
             transportFeeLabel={pricingSnapshot?.transportFeeLabel}
@@ -666,12 +846,14 @@ function getClientSituation({
   isQuoteOnly,
   hasDispute,
   paymentAwaitingProof,
+  paymentProviderLabel,
 }: {
   status: string;
   paymentStatus: string;
   isQuoteOnly: boolean;
   hasDispute: boolean;
   paymentAwaitingProof: boolean;
+  paymentProviderLabel: string;
 }) {
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
@@ -700,7 +882,7 @@ function getClientSituation({
   if (isQuoteOnly) {
     return {
       title: "Calcul à reprendre",
-      description: "Le service client reprend le calcul automatique avant PayDunya.",
+      description: `Le service client reprend le calcul automatique avant ${paymentProviderLabel}.`,
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -708,7 +890,7 @@ function getClientSituation({
   if (paymentAwaitingProof) {
     return {
       title: "Paiement en vérification",
-      description: "Confirmation serveur PayDunya en attente.",
+      description: `Confirmation serveur ${paymentProviderLabel} en attente.`,
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -716,7 +898,7 @@ function getClientSituation({
   if (status === "PENDING_PAYMENT" && paymentStatus === "FAILED") {
     return {
       title: "Brouillon non réservé",
-      description: "Le paiement se fait uniquement sur PayDunya. Aucun professeur n'est notifié tant que PayDunya n'a pas confirmé le paiement côté serveur.",
+      description: `Le paiement se fait uniquement sur ${paymentProviderLabel}. Aucun professeur n'est notifié tant que ${paymentProviderLabel} n'a pas confirmé le paiement côté serveur.`,
       icon: <Hourglass className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -864,9 +1046,9 @@ function formatSchoolProgramDisplay(value?: string | null) {
   return parts.length > 0 ? parts.join(" · ") : value.trim();
 }
 
-function getTimelineStepHint(label: string, canShowOperationalProgress: boolean) {
+function getTimelineStepHint(label: string, canShowOperationalProgress: boolean, paymentProviderLabel: string) {
   if (!canShowOperationalProgress) {
-    if (label.includes("Paiement")) return "À faire sur PayDunya";
+    if (label.includes("Paiement")) return `À faire sur ${paymentProviderLabel}`;
     if (label.includes("Validation")) return "Après confirmation serveur";
     return "En attente du paiement";
   }

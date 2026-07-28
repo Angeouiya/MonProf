@@ -114,7 +114,7 @@ export function ParametresClient({
           <RuleMetric icon={Clock3} label="Anticipation" value="24 heures" detail="Réservation impossible sous ce délai" />
           <RuleMetric icon={CalendarClock} label="Durée séance" value="2 heures" detail="Créneaux détaillés de 08h à 22h" />
           <RuleMetric icon={UsersRound} label="Groupe" value="+50 %" detail="Par participant supplémentaire" />
-          <RuleMetric icon={ShieldCheck} label="Paiement" value="PayDunya vérifié" detail="Aucune réservation avant confirmation serveur" />
+          <RuleMetric icon={ShieldCheck} label="Paiement" value="Jèko vérifié" detail="Aucune réservation avant confirmation serveur" />
         </div>
         <p className="mt-4 text-xs font-medium leading-5 text-[#64748B]">
           Ces garanties structurantes sont verrouillées pour éviter qu'un changement de saisie rende les réservations ou la comptabilité incohérentes.

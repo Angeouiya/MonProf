@@ -41,6 +41,7 @@ export async function PATCH(
           phone: true,
         },
       },
+      payoutRecord: { select: { reference: true, status: true } },
     },
   });
 
@@ -49,6 +50,11 @@ export async function PATCH(
   }
   if (request.status !== "PENDING") {
     return NextResponse.json({ error: "Cette demande de paiement a déjà été traitée." }, { status: 400 });
+  }
+  if (request.payoutRecord?.status === "DRAFT") {
+    return NextResponse.json({
+      error: `Le transfert Jèko ${request.payoutRecord.reference} est en cours. Vérifiez d'abord son statut ; la demande sera automatiquement libérée si Jèko confirme l'échec.`,
+    }, { status: 409 });
   }
 
   const now = new Date();

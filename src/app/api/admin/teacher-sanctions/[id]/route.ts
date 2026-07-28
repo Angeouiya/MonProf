@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { teacherSanctionTypeLabel } from "@/lib/teacher-discipline-labels";
+import { hasActiveJekoPayoutReservation } from "@/lib/teacher-payout-reservations";
 
 export async function PATCH(
   req: NextRequest,
@@ -31,6 +32,15 @@ export async function PATCH(
   }
   if (sanction.financial && decisionNote.length < 10) {
     return NextResponse.json({ error: "Une sanction financière doit avoir une justification admin d'au moins 10 caractères." }, { status: 400 });
+  }
+  if (
+    action === "apply"
+    && sanction.financial
+    && await hasActiveJekoPayoutReservation(sanction.teacherId, sanction.bookingId)
+  ) {
+    return NextResponse.json({
+      error: "Une tentative Jèko est en cours sur ce solde. Confirmez ou annulez d'abord ce transfert avant d'appliquer la sanction financière.",
+    }, { status: 409 });
   }
 
   const nextStatus = action === "apply" ? "APPLIED" : "CANCELLED";

@@ -7,16 +7,16 @@ import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ADMIN_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const strongPassword = password.length >= ADMIN_PASSWORD_MIN_LENGTH && /[A-Za-z]/.test(password) && /\d/.test(password);
+  const strongPassword = isPasswordCompliant(password);
   const valid = strongPassword && password === confirmPassword && Boolean(token);
 
   async function submit(event: React.FormEvent) {
@@ -33,20 +33,20 @@ export function ResetPasswordForm() {
         body: JSON.stringify({ token, password }),
       });
       const responseText = await res.text();
-      let data: { error?: string; email?: { sent?: boolean; message?: string } } = {};
+      let data: { error?: string; redirectTo?: string; email?: { sent?: boolean; queued?: boolean; message?: string } } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { error?: string; email?: { sent?: boolean; message?: string } };
+          data = JSON.parse(responseText) as { error?: string; redirectTo?: string; email?: { sent?: boolean; queued?: boolean; message?: string } };
         } catch {
           // Une réponse d'infrastructure ne doit pas masquer le résultat utilisateur.
         }
       }
       if (!res.ok) throw new Error(data.error || "Réinitialisation impossible.");
-      toast.success(data.email?.sent
-        ? "Mot de passe modifié. Un email personnel de confirmation vient de vous être envoyé."
+      toast.success(data.email?.queued
+        ? "Mot de passe modifié. La confirmation email est prise en charge automatiquement."
         : "Mot de passe modifié. Vous pouvez vous connecter.");
-      if (!data.email?.sent && data.email?.message) toast.warning(data.email.message);
-      router.push("/connexion");
+      if (!data.email?.queued && data.email?.message) toast.warning(data.email.message);
+      router.push(data.redirectTo || loginHref);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Réinitialisation impossible.");
     } finally {
@@ -86,9 +86,9 @@ export function ResetPasswordForm() {
         />
       </div>
       <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-        <p className={password.length >= ADMIN_PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
+        <p className={password.length >= PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          {ADMIN_PASSWORD_MIN_LENGTH} caractères minimum
+          {PASSWORD_MIN_LENGTH} caractères minimum
         </p>
         <p className={/[A-Za-z]/.test(password) && /\d/.test(password) ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />

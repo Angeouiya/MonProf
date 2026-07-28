@@ -28,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 type Commune = { id: string; name: string };
 
@@ -104,8 +105,8 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       setError("Numéro de téléphone invalide.");
       return;
     }
-    if (form.password.length < 6) {
-      setError("Le mot de passe doit comporter au moins 6 caractères.");
+    if (!isPasswordCompliant(form.password)) {
+      setError(`Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -327,7 +328,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     required
                     value={form.password}
                     onChange={(e) => update("password", e.target.value)}
-                    placeholder="Minimum 6 caractères"
+                    placeholder={`${PASSWORD_MIN_LENGTH} caractères, avec une lettre et un chiffre`}
                     className={PASSWORD_FIELD_CLASS}
                   />
                   <button

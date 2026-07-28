@@ -9,6 +9,7 @@ import {
   normalizeAdminRole,
   resolveAdminPermissions,
 } from "@/lib/admin-permissions";
+import { isCurrentSessionVersion } from "@/lib/session-revocation";
 
 const DEV_NEXTAUTH_SECRET = "monprof-ci-dev-secret-change-me";
 const UNSAFE_NEXTAUTH_SECRETS = new Set(["", "change-me", DEV_NEXTAUTH_SECRET]);
@@ -63,6 +64,7 @@ export const authOptions: NextAuthOptions = {
           adminTeamRole: user.role === "ADMIN" ? normalizeAdminRole(user.adminTeamRole) : null,
           adminPermissions: user.role === "ADMIN" ? resolveAdminPermissions(user) : [],
           adminAccountStatus: user.adminAccountStatus,
+          sessionVersion: user.sessionVersion,
         } as any;
       },
     }),
@@ -99,6 +101,8 @@ export const authOptions: NextAuthOptions = {
           name: teacher.professionalName || teacher.fullName,
           phone: teacher.phone,
           role: "TEACHER",
+          portalPasswordMustChange: teacher.portalPasswordMustChange,
+          sessionVersion: teacher.sessionVersion,
         } as any;
       },
     }),
@@ -114,18 +118,29 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.teacherId = (user as any).teacherId;
         token.phone = (user as any).phone;
+        token.portalPasswordMustChange = (user as any).portalPasswordMustChange;
         token.adminTeamRole = (user as any).adminTeamRole;
         token.adminPermissions = (user as any).adminPermissions;
         token.adminAccountStatus = (user as any).adminAccountStatus;
+        token.sessionVersion = (user as any).sessionVersion;
+        token.sessionInvalidated = false;
+        return token;
+      }
+
+      if (token.sessionInvalidated === true) return token;
+      if (!await isPersistedSessionCurrent(token)) {
+        return { sessionInvalidated: true };
       }
       return token;
     },
     async session({ session, token }) {
+      if (token.sessionInvalidated === true) return null as any;
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
         (session.user as any).teacherId = token.teacherId;
         (session.user as any).phone = token.phone;
+        (session.user as any).portalPasswordMustChange = token.portalPasswordMustChange;
         (session.user as any).adminTeamRole = token.adminTeamRole;
         (session.user as any).adminPermissions = token.adminPermissions;
         (session.user as any).adminAccountStatus = token.adminAccountStatus;
@@ -135,3 +150,48 @@ export const authOptions: NextAuthOptions = {
   },
   secret: getNextAuthSecret(),
 };
+
+async function isPersistedSessionCurrent(token: Record<string, unknown>) {
+  const role = token.role;
+  const tokenVersion = token.sessionVersion;
+
+  if (role === "TEACHER") {
+    const teacherId = typeof token.teacherId === "string"
+      ? token.teacherId
+      : typeof token.id === "string" ? token.id : "";
+    if (!teacherId) return false;
+
+    const teacher = await db.teacher.findUnique({
+      where: { id: teacherId },
+      select: {
+        sessionVersion: true,
+        status: true,
+        portalAccessEnabled: true,
+        portalPasswordHash: true,
+      },
+    });
+    return Boolean(
+      teacher
+      && canTeacherUsePortal(teacher)
+      && isCurrentSessionVersion(tokenVersion, teacher.sessionVersion),
+    );
+  }
+
+  if ((role === "CLIENT" || role === "ADMIN") && typeof token.id === "string") {
+    const user = await db.user.findUnique({
+      where: { id: token.id },
+      select: {
+        role: true,
+        sessionVersion: true,
+        adminAccessEnabled: true,
+        adminAccountStatus: true,
+        adminDeletedAt: true,
+      },
+    });
+    if (!user || user.role !== role) return false;
+    if (role === "ADMIN" && !isActiveAdminAccount(user)) return false;
+    return isCurrentSessionVersion(tokenVersion, user.sessionVersion);
+  }
+
+  return false;
+}

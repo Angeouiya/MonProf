@@ -20,7 +20,7 @@ const ACCOUNT_BENEFITS = [
 const ADMIN_BENEFITS = [
   { icon: ClipboardCheck, title: "Pilotage opérationnel", text: "Réservations, remplacements, urgences et tâches professeurs sont centralisés." },
   { icon: Users, title: "Contrôle professeurs", text: "Fiches internes, statuts, sanctions, paiements et historiques restent suivis par le service client." },
-  { icon: Bell, title: "Notifications critiques", text: "Alertes, relances PayDunya, litiges et actions à traiter sont visibles dès l'entrée." },
+  { icon: Bell, title: "Notifications critiques", text: "Alertes de paiement, litiges et actions à traiter sont visibles dès l'entrée." },
 ];
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
@@ -210,7 +210,7 @@ function ConnexionContent() {
                 <div className="flex items-center justify-between gap-3">
                   <Label htmlFor="password">Mot de passe</Label>
                   {!isAdminAuth && (
-                    <Link href="/mot-de-passe-oublie" className="inline-flex min-h-11 items-center text-xs font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                    <Link href="/mot-de-passe-oublie?compte=client" className="inline-flex min-h-11 items-center text-xs font-semibold text-[#111B4D] underline-offset-4 hover:underline">
                       Mot de passe oublié ?
                     </Link>
                   )}

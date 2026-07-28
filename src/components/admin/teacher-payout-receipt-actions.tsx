@@ -23,10 +23,13 @@ type PayoutReceiptRecord = {
   reference: string;
   amount: number;
   method?: string | null;
+  provider?: string | null;
+  transferFeeAmount?: number | null;
+  transferFeeCoveredByPlatform?: number | null;
   paymentPhone?: string | null;
   note?: string | null;
   status?: string | null;
-  paidAt: string | Date;
+  paidAt: string | Date | null;
   createdBy?: { name?: string | null } | null;
   allocations: PayoutReceiptAllocation[];
 };
@@ -50,6 +53,8 @@ export function TeacherPayoutReceiptActions({
   compact?: boolean;
   issuerLabel?: string;
 }) {
+  if (record.status && record.status !== "PAID") return null;
+
   const receipt = buildPayoutReceiptText(teacherName, record, issuerLabel);
   const whatsAppUrl = buildWhatsAppUrl(teacherPhone, receipt);
 
@@ -118,6 +123,7 @@ export function TeacherPayoutReceiptActions({
 
 function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord, issuerLabel?: string) {
   const issuer = issuerLabel ?? record.createdBy?.name ?? "Service client";
+  const publicNote = publicReceiptNote(record.note);
   const allocationLines = record.allocations.length
     ? record.allocations.map((allocation) => (
         `- ${allocation.booking.reference}${allocation.bookingSession ? ` · séance ${allocation.bookingSession.sequence}` : ""} | ${allocation.booking.subjectName} (${allocation.booking.levelName}) : ${formatFCFA(allocation.amount)}`
@@ -128,23 +134,28 @@ function buildPayoutReceiptText(teacherName: string, record: PayoutReceiptRecord
     "Facture / reçu de paiement professeur - Compétence",
     `Professeur : ${teacherName}`,
     `Référence document : ${record.reference}`,
-    `Montant versé : ${formatFCFA(record.amount)}`,
+    `Montant net exact remis au professeur : ${formatFCFA(record.amount)}`,
+    `Frais techniques du transfert : ${formatFCFA(record.transferFeeAmount ?? 0)}`,
+    `Frais de transfert pris en charge par Compétence : ${formatFCFA(record.transferFeeCoveredByPlatform ?? 0)}`,
+    "Montant déduit du net professeur : 0 FCFA",
+    `Prestataire : ${payoutProviderLabel(record.provider)}`,
     `Méthode de paiement : ${paymentMethodLabel(record.method)}`,
     record.paymentPhone ? `Numéro de paiement : ${record.paymentPhone}` : "",
     `Statut : ${record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé"}`,
-    `Date : ${formatDateTime(record.paidAt)}`,
+    `Date : ${record.paidAt ? formatDateTime(record.paidAt) : "Confirmation indisponible"}`,
     `Enregistré par : ${issuer}`,
-    record.note ? `Note service client : ${record.note}` : "",
+    publicNote ? `Note service client : ${publicNote}` : "",
     "",
     "Réservations imputées :",
     ...allocationLines,
     "",
-    "Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par le service client et doit être conservée avec la preuve opérateur si disponible.",
+    "Cette facture/reçu confirme que le professeur a reçu le net exact affiché. Les frais techniques de transfert sont supportés par Compétence et ne sont jamais déduits du net professeur.",
   ].filter(Boolean).join("\n");
 }
 
 function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord, issuerLabel?: string) {
   const issuer = issuerLabel ?? record.createdBy?.name ?? "Service client";
+  const publicNote = publicReceiptNote(record.note);
   const rows = record.allocations.length
     ? record.allocations.map((allocation) => `
       <tr>
@@ -204,12 +215,16 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
       <span class="pill">${escapeHtml(record.status ? PAYOUT_STATUS_LABELS[record.status] ?? record.status : "Payé")}</span>
     </section>
     <section class="grid">
-      <div class="box total"><span>Montant versé</span><strong>${escapeHtml(formatFCFA(record.amount))}</strong></div>
+      <div class="box total"><span>Montant net exact remis au professeur</span><strong>${escapeHtml(formatFCFA(record.amount))}</strong></div>
+      <div class="box"><span>Frais techniques du transfert</span><strong>${escapeHtml(formatFCFA(record.transferFeeAmount ?? 0))}</strong></div>
+      <div class="box"><span>Frais de transfert couverts par Compétence</span><strong>${escapeHtml(formatFCFA(record.transferFeeCoveredByPlatform ?? 0))}</strong></div>
+      <div class="box"><span>Déduit du net professeur</span><strong>0 FCFA</strong></div>
+      <div class="box"><span>Prestataire</span><strong>${escapeHtml(payoutProviderLabel(record.provider))}</strong></div>
       <div class="box"><span>Professeur</span><strong>${escapeHtml(teacherName)}</strong></div>
       <div class="box"><span>Référence document</span><strong>${escapeHtml(record.reference)}</strong></div>
       <div class="box"><span>Méthode</span><strong>${escapeHtml(paymentMethodLabel(record.method))}</strong></div>
       ${record.paymentPhone ? `<div class="box"><span>Numéro payé</span><strong>${escapeHtml(record.paymentPhone)}</strong></div>` : ""}
-      <div class="box"><span>Date</span><strong>${escapeHtml(formatDateTime(record.paidAt))}</strong></div>
+      <div class="box"><span>Date</span><strong>${escapeHtml(record.paidAt ? formatDateTime(record.paidAt) : "Confirmation indisponible")}</strong></div>
       <div class="box"><span>Enregistré par</span><strong>${escapeHtml(issuer)}</strong></div>
       <div class="box"><span>Plateforme</span><strong>Compétence</strong></div>
     </section>
@@ -220,9 +235,9 @@ function buildPayoutReceiptHtml(teacherName: string, record: PayoutReceiptRecord
         <tbody>${rows}</tbody>
       </table>
     </section>
-    ${record.note ? `<section class="note"><strong>Note service client</strong><br />${escapeHtml(record.note)}</section>` : ""}
+    ${publicNote ? `<section class="note"><strong>Note service client</strong><br />${escapeHtml(publicNote)}</section>` : ""}
     <footer>
-      Cette facture/reçu est une trace comptable interne Compétence. Elle confirme le versement enregistré par le service client et doit être conservée avec la preuve opérateur si disponible.
+      Cette facture/reçu confirme que le professeur a reçu le net exact affiché. Les frais techniques de transfert sont supportés par Compétence et ne sont jamais déduits du net professeur.
     </footer>
   </main>
 </body>
@@ -236,4 +251,15 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function publicReceiptNote(note: string | null | undefined) {
+  const publicPart = note?.split(/\n\[/, 1)[0]?.trim();
+  return publicPart && !publicPart.startsWith("[") ? publicPart : null;
+}
+
+function payoutProviderLabel(provider?: string | null) {
+  if (provider === "JEKO") return "Jèko";
+  if (provider === "PAYDUNYA") return "PayDunya (historique)";
+  return "Versement historique / interne";
 }

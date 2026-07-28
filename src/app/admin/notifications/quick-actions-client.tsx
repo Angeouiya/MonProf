@@ -25,7 +25,7 @@ type NotificationQuickActionBooking = {
 };
 
 const bookingStatusLabels: Record<string, string> = {
-  PENDING_PAYMENT: "Brouillon PayDunya",
+  PENDING_PAYMENT: "Brouillon de paiement",
   PAID: "Payée",
   PENDING_ADMIN_VALIDATION: "Validation admin requise",
   CONFIRMED: "Confirmée",

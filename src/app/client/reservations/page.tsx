@@ -247,7 +247,7 @@ function ReservationMobilePriorityCard({
   const hint = priority
     ? `${priority.reference} · ${priority.dateLabel} · ${priority.timeLabel}`
     : draftCount > 0
-      ? "Aucun professeur n'est notifié avant paiement PayDunya vérifié."
+      ? "Aucun professeur n'est notifié avant confirmation serveur du paiement."
       : "Choisissez un professeur et une séance de 2h.";
 
   return (
@@ -339,7 +339,7 @@ function ReservationCommandCenter({
               </h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
                 {hasDrafts
-                  ? "Une réservation devient active uniquement après confirmation serveur PayDunya. Aucun professeur n'est notifié avant paiement vérifié."
+                  ? "Une réservation devient active uniquement après confirmation serveur du paiement. Aucun professeur n'est notifié avant cette vérification."
                   : "Les dossiers affichés ici relient professeur, date, paiement, validation client et suivi service client."}
               </p>
             </div>
@@ -355,7 +355,7 @@ function ReservationCommandCenter({
           <ClientProcessTracker
             steps={[
               {
-                label: "PayDunya vérifié",
+                label: "Paiement vérifié",
                 hint: hasDrafts ? `${draftCount} brouillon(s) à finaliser.` : "Aucun brouillon bloquant.",
                 state: hasDrafts ? "current" : totalCount > 0 ? "done" : "pending",
               },
@@ -399,7 +399,7 @@ function ReservationCommandCenter({
                   {priority
                     ? `${priority.teacherName} · ${priority.subjectName} · ${priority.levelName} · ${priority.dateLabel} · ${priority.timeLabel}`
                     : hasDrafts
-                      ? "Ouvrez les brouillons pour reprendre le paiement PayDunya."
+                      ? "Ouvrez les brouillons pour reprendre le paiement sécurisé."
                       : "Lancez une recherche pour réserver une séance de 2h."}
                 </p>
               </div>
@@ -476,21 +476,21 @@ function getClientReservationStep(status: BookingStatus, paymentStatus: PaymentS
   if (status === "PENDING_PAYMENT" && !paymentVerified) {
     return {
       label: "Brouillon non réservé",
-      hint: "Ce dossier n'est pas une réservation active : aucun professeur ni service client opérationnel n'est notifié tant que PayDunya n'a pas confirmé le paiement.",
+      hint: "Ce dossier n'est pas une réservation active : aucun professeur ni service client opérationnel n'est notifié tant que le prestataire n'a pas confirmé le paiement.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }
   if (!paymentVerified && SECURED_PAYMENT_STATUSES.includes(paymentStatus)) {
     return {
       label: "Paiement en vérification",
-      hint: "Compétence attend la confirmation serveur PayDunya avant d'activer le suivi financier.",
+      hint: "Compétence attend la confirmation serveur du prestataire avant d'activer le suivi financier.",
       className: "border-[#DDE6F7] bg-white text-[#111B4D]",
     };
   }
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
       label: "Calcul à reprendre",
-      hint: "Le service client reprend le calcul automatique avant PayDunya.",
+      hint: "Le service client reprend le calcul automatique avant paiement.",
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };
   }

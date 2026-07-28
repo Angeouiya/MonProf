@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireTeacher } from "@/lib/teacher-auth";
+import { requireTeacherApi } from "@/lib/teacher-auth";
+import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
 
 const MAX_RESPONSE_LENGTH = 700;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { teacher } = await requireTeacher();
+  const teacher = await requireTeacherApi();
+  if (!teacher) {
+    return NextResponse.json({ error: "Remplacez d'abord le mot de passe temporaire transmis par le service client." }, { status: 403 });
+  }
   const { id } = await params;
   const body = await req.json();
   const action = typeof body.action === "string" ? body.action : "";
@@ -45,7 +49,68 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const newSlot = `${formatDateFr(request.proposedDate)} · ${request.proposedTime}`;
 
   if (action === "accept") {
-    await db.$transaction(async (tx) => {
+    const applied = await db.$transaction(async (tx) => {
+      const claim = await tx.bookingRescheduleRequest.updateMany({
+        where: { id: request.id, status: "AWAITING_TEACHER" },
+        data: {
+          status: "APPLIED",
+          teacherResponse: response || "Nouveau créneau accepté par le professeur.",
+          teacherRespondedAt: now,
+          appliedAt: now,
+        },
+      });
+      if (claim.count !== 1) return false;
+
+      const sessions = await tx.bookingSession.findMany({
+        where: {
+          bookingId: request.bookingId,
+          status: { notIn: ["CANCELLED", "REFUNDED"] },
+        },
+        orderBy: { sequence: "asc" },
+      });
+      const teacherSessions = sessions.filter((session) => session.teacherId === teacher.id);
+      const targetSession = pickRescheduledSession(
+        teacherSessions.length > 0 ? teacherSessions : sessions,
+        request.oldScheduledDate,
+        request.oldScheduledTime,
+      );
+      if (sessions.length > 0 && request.feeTeacherAmount > 0 && targetSession?.teacherId !== teacher.id) {
+        throw new Error("RESCHEDULE_SESSION_LEDGER_MISSING");
+      }
+
+      if (targetSession) {
+        const released = Boolean(targetSession.releasedAt)
+          || ["RELEASED", "PARTIALLY_PAID", "PAID"].includes(targetSession.status);
+        const nextStatus = targetSession.status === "PAID" && request.feeTeacherAmount > 0
+          ? "PARTIALLY_PAID"
+          : targetSession.status;
+        await tx.bookingSession.update({
+          where: { id: targetSession.id },
+          data: {
+            scheduledDate: request.proposedDate,
+            scheduledTime: request.proposedTime,
+            proposedDate: null,
+            proposedTime: null,
+            teacherCourseAmount: { increment: request.feeTeacherAmount },
+            teacherNetAmount: { increment: request.feeTeacherAmount },
+            ...(released && request.feeTeacherAmount > 0
+              ? { releasedAmount: { increment: request.feeTeacherAmount }, status: nextStatus }
+              : {}),
+          },
+        });
+        await tx.bookingSessionHistory.create({
+          data: {
+            bookingSessionId: targetSession.id,
+            actorType: "TEACHER",
+            actorId: teacher.id,
+            action: "RESCHEDULE_ACCEPTED",
+            fromStatus: targetSession.status,
+            toStatus: nextStatus,
+            detail: `Créneau ${oldSlot} remplacé par ${newSlot}. Part professeur du supplément intégrée au ledger de la séance : ${request.feeTeacherAmount} FCFA.`,
+          },
+        });
+      }
+
       await tx.booking.update({
         where: { id: request.bookingId },
         data: {
@@ -54,19 +119,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           scheduledTime: request.proposedTime,
           preferredTime: request.proposedTime,
           teacherPayoutAmount: { increment: request.feeTeacherAmount },
-          teacherNetAmount: { increment: request.feeTeacherAmount },
+          ...(sessions.length === 0
+            ? { teacherNetAmount: { increment: request.feeTeacherAmount } }
+            : {}),
           totalTeacherReceives: { increment: request.feeTeacherAmount },
           commissionAmount: { increment: request.feePlatformAmount },
           message: `${request.booking.message ?? ""}\n\n[Créneau modifié]: ${oldSlot} -> ${newSlot}. ${request.reason ? `Motif client: ${request.reason}.` : ""}`.trim(),
-        },
-      });
-      await tx.bookingRescheduleRequest.update({
-        where: { id: request.id },
-        data: {
-          status: "APPLIED",
-          teacherResponse: response || "Nouveau créneau accepté par le professeur.",
-          teacherRespondedAt: now,
-          appliedAt: now,
         },
       });
       await tx.teacherTask.updateMany({
@@ -140,19 +198,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           newStatus: "APPLIED",
         },
       });
+      if (sessions.length > 0) {
+        await syncBookingSessionAggregates(
+          tx as unknown as Parameters<typeof syncBookingSessionAggregates>[0],
+          request.bookingId,
+        );
+      }
+      return true;
     });
+    if (!applied) {
+      return NextResponse.json({ error: "Cette demande vient d'être traitée depuis une autre fenêtre." }, { status: 409 });
+    }
     return NextResponse.json({ ok: true, status: "APPLIED" });
   }
 
-  await db.$transaction(async (tx) => {
-    await tx.bookingRescheduleRequest.update({
-      where: { id: request.id },
+  const rejected = await db.$transaction(async (tx) => {
+    const claim = await tx.bookingRescheduleRequest.updateMany({
+      where: { id: request.id, status: "AWAITING_TEACHER" },
       data: {
         status: request.feeAmount > 0 ? "REFUND_REQUIRED" : "TEACHER_REJECTED",
         teacherResponse: response,
         teacherRespondedAt: now,
       },
     });
+    if (claim.count !== 1) return false;
     if (request.transaction) {
       await tx.transaction.update({
         where: { id: request.transaction.id },
@@ -216,7 +285,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         newStatus: request.feeAmount > 0 ? "REFUND_REQUIRED" : "TEACHER_REJECTED",
       },
     });
+    return true;
   });
+
+  if (!rejected) {
+    return NextResponse.json({ error: "Cette demande vient d'être traitée depuis une autre fenêtre." }, { status: 409 });
+  }
 
   return NextResponse.json({ ok: true, status: request.feeAmount > 0 ? "REFUND_REQUIRED" : "TEACHER_REJECTED" });
 }
@@ -231,4 +305,28 @@ function formatDateFr(date?: Date | string | null) {
     month: "long",
     year: "numeric",
   });
+}
+
+function pickRescheduledSession<T extends {
+  scheduledDate: Date | null;
+  scheduledTime: string | null;
+}>(sessions: T[], oldDate: Date | null, oldTime: string | null) {
+  if (sessions.length === 0) return null;
+  const expectedDay = oldDate ? toUtcDay(oldDate) : null;
+  const exact = sessions.find((session) => (
+    (!expectedDay || (session.scheduledDate && toUtcDay(session.scheduledDate) === expectedDay))
+    && (!oldTime || session.scheduledTime === oldTime)
+  ));
+  if (exact) return exact;
+  if (expectedDay) {
+    const sameDay = sessions.find(
+      (session) => session.scheduledDate && toUtcDay(session.scheduledDate) === expectedDay,
+    );
+    if (sameDay) return sameDay;
+  }
+  return sessions[0];
+}
+
+function toUtcDay(date: Date) {
+  return date.toISOString().slice(0, 10);
 }

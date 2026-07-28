@@ -616,6 +616,110 @@ export function findCourseCatalogItem(id?: string | null) {
   return COURSE_CATALOG.find((item) => item.id === id) ?? null;
 }
 
+export function resolveCourseCatalogSchoolSystem({
+  item,
+  requestedSchoolSystem,
+}: {
+  item?: CourseCatalogItem | null;
+  requestedSchoolSystem?: string | null;
+}) {
+  const requested = requestedSchoolSystem || null;
+  if (requested && !isSchoolSystem(requested)) {
+    return { ok: false as const, error: "Système scolaire invalide." };
+  }
+  if (item?.systeme_scolaire && requested && item.systeme_scolaire !== requested) {
+    return {
+      ok: false as const,
+      error: "Le système scolaire du cours catalogue ne correspond pas au système choisi.",
+    };
+  }
+  return {
+    ok: true as const,
+    schoolSystem: item?.systeme_scolaire ?? requested,
+  };
+}
+
+function normalizeCatalogMatchLabel(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .toLowerCase();
+}
+
+function catalogLevelMatchesSelection(catalogLevel: string, selectedLevel: string) {
+  const catalog = normalizeCatalogMatchLabel(catalogLevel).trim();
+  const selected = normalizeCatalogMatchLabel(selectedLevel).trim();
+  if (!catalog || !selected) return false;
+  if (catalog === selected || catalog.includes(selected) || selected.includes(catalog)) return true;
+
+  const isOneOf = (...levels: string[]) => levels.some((level) => catalog === level || catalog.includes(level));
+  if (/maternelle|prescolaire/.test(selected)) return /maternelle/.test(catalog);
+  if (/cp\s+ce1|cp1\s+ce1|cycle\s+2/.test(selected)) return isOneOf("cp", "cp1", "cp2", "ce1");
+  if (/ce2\s+cm2|cycle\s+3/.test(selected)) return isOneOf("ce2", "cm1", "cm2", "preparation cepe");
+  if (/primaire/.test(selected)) return isOneOf(
+    "cp", "cp1", "cp2", "ce1", "ce2", "cm1", "cm2", "preparation cepe",
+  );
+  if (/college/.test(selected)) return isOneOf(
+    "6e", "5e", "4e", "3e", "preparation bepc", "preparation brevet dnb",
+  );
+  if (/lycee/.test(selected)) return /seconde|2nde|premiere|1ere|terminale|preparation bac/.test(catalog);
+  if (/universite|superieur/.test(selected)) return /bts|licence|master|memoire|soutenance/.test(catalog);
+  if (/\bcepe\b/.test(selected)) return /cepe/.test(catalog);
+  if (/\bbepc\b|\bbrevet\b/.test(selected)) return /bepc|brevet/.test(catalog);
+  if (/\bbac\b/.test(selected)) return /bac|terminale/.test(catalog);
+
+  return false;
+}
+
+export function isCourseCatalogItemCompatible({
+  item,
+  category,
+  schoolSystem,
+  preciseLevel,
+  selectedLevel,
+  teacherLevels = [],
+  teacherSubjects,
+  selectedSubject,
+}: {
+  item: CourseCatalogItem;
+  category: string;
+  schoolSystem?: string | null;
+  preciseLevel?: string | null;
+  selectedLevel?: string | null;
+  teacherLevels?: string[];
+  teacherSubjects: string[];
+  selectedSubject?: string | null;
+}) {
+  if (!item.actif || item.categorie !== category) return false;
+  if (item.systeme_scolaire && !schoolSystem) return false;
+  if (schoolSystem && item.systeme_scolaire && item.systeme_scolaire !== schoolSystem) return false;
+  if (preciseLevel && item.niveau && item.niveau !== preciseLevel) return false;
+  if (item.niveau && !preciseLevel) {
+    const permittedLevels = selectedLevel ? [selectedLevel] : teacherLevels;
+    if (permittedLevels.length > 0 && !permittedLevels.some((level) => catalogLevelMatchesSelection(item.niveau!, level))) {
+      return false;
+    }
+  }
+
+  const itemSubject = normalizeCatalogMatchLabel(item.matiere_ou_competence);
+  const itemName = normalizeCatalogMatchLabel(item.nom);
+  const selected = normalizeCatalogMatchLabel(selectedSubject);
+  const allowedSubjects = teacherSubjects.map(normalizeCatalogMatchLabel).filter(Boolean);
+
+  if (selected) {
+    return itemSubject.includes(selected)
+      || selected.includes(itemSubject)
+      || itemName.includes(selected);
+  }
+
+  return allowedSubjects.some((allowed) => (
+    itemSubject.includes(allowed)
+    || allowed.includes(itemSubject)
+    || itemName.includes(allowed)
+  ));
+}
+
 export function isLyceeLevel(levelName?: string | null) {
   if (!levelName) return false;
   const normalized = slugify(levelName);
@@ -632,18 +736,30 @@ export function isSchoolSystem(value: unknown): value is SchoolSystem {
 }
 
 export function validateEducationSelection({
+  category,
   levelName,
   schoolSystem,
   preciseLevel,
 }: {
+  category?: string | null;
   levelName: string;
   schoolSystem?: string | null;
   preciseLevel?: string | null;
 }) {
-  if (!isLyceeLevel(levelName)) return { ok: true as const };
-  if (!isSchoolSystem(schoolSystem)) {
-    return { ok: false as const, error: "Pour le lycée, choisissez le système scolaire : ivoirien, français, international ou autre." };
+  const isLycee = isLyceeLevel(levelName);
+  const requiresSchoolSystem = category === "soutien_scolaire" || isLycee;
+  if (schoolSystem && !isSchoolSystem(schoolSystem)) {
+    return { ok: false as const, error: "Choisissez un système scolaire valide : ivoirien, français, international ou autre." };
   }
+  if (requiresSchoolSystem && !isSchoolSystem(schoolSystem)) {
+    return {
+      ok: false as const,
+      error: isLycee
+        ? "Pour le lycée, choisissez le système scolaire : ivoirien, français, international ou autre."
+        : "Choisissez le système scolaire pour appliquer la grille correspondant au programme de l'apprenant.",
+    };
+  }
+  if (!isLycee) return { ok: true as const };
   const options = getPreciseLevelOptions(schoolSystem);
   if (!preciseLevel || !options.includes(preciseLevel)) {
     return { ok: false as const, error: "Pour le lycée, choisissez la classe ou série correspondant au système scolaire." };

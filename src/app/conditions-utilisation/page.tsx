@@ -44,16 +44,16 @@ const sections: LegalSection[] = [
   {
     title: "Réservations et paiement client",
     body: [
-      "Une réservation n'est pas active tant que le paiement PayDunya n'est pas effectué et vérifié côté serveur. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
-      "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement PayDunya n'est pas validé par le serveur de Compétence.",
+      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par le prestataire. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
+      "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
-      "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement PayDunya ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
+      "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
     ],
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
-      "Le paiement se fait via PayDunya. Le client choisit le moyen de paiement directement sur PayDunya.",
-      "Les frais de service du moyen de paiement peuvent s'ajouter au montant du cours selon le canal utilisé.",
+      "Pour les nouvelles réservations, le paiement se fait via Jèko. Le client choisit son moyen de paiement sur la page sécurisée du prestataire. Les anciens dossiers PayDunya restent conservés dans l'historique.",
+      "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Les frais propres au prestataire de paiement sont suivis séparément par la plateforme.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
     ],
   },
@@ -156,7 +156,7 @@ const sections: LegalSection[] = [
     title: "Responsabilité de Compétence",
     body: [
       "Compétence met en œuvre des moyens sérieux pour vérifier les professeurs, sécuriser les paiements, organiser les cours et suivre la qualité, mais ne garantit pas un résultat scolaire, professionnel, concours ou financier déterminé.",
-      "La responsabilité de Compétence ne peut être engagée pour une information fausse fournie par un utilisateur, un cas de force majeure, une indisponibilité technique externe, un incident de paiement PayDunya, une erreur de numéro fournie par le professeur ou le client, ou un comportement fautif d'une partie.",
+      "La responsabilité de Compétence ne peut être engagée pour une information fausse fournie par un utilisateur, un cas de force majeure, une indisponibilité technique externe, un incident du prestataire de paiement, une erreur de numéro fournie par le professeur ou le client, ou un comportement fautif d'une partie.",
       "Compétence peut suspendre temporairement un service ou une action lorsque cela est nécessaire pour la maintenance, la sécurité, la fraude, le contrôle de qualité, le litige ou la conformité.",
     ],
   },

@@ -95,6 +95,9 @@ export function TeacherPayoutRequestForm({
           <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
             Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle du service client.
           </p>
+          <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold leading-5 text-emerald-800">
+            Montant exact garanti : les frais de transfert ou de retrait sont payés par Compétence et ne sont jamais déduits de votre solde.
+          </p>
           <p className="mt-2 rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
             Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par le service client entre {minimumProcessingHours} heure(s) et {maximumProcessingHours} heure(s) ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
           </p>
@@ -123,6 +126,11 @@ export function TeacherPayoutRequestForm({
           />
           {cleanAmount > requestableAmount && (
             <p className="mt-1 text-xs font-semibold text-red-700">Le montant dépasse le disponible ({formatFCFA(requestableAmount)}).</p>
+          )}
+          {cleanAmount > 0 && cleanAmount <= requestableAmount && (
+            <p className="mt-1 text-xs font-bold text-emerald-700">
+              Vous recevrez exactement {formatFCFA(cleanAmount)} sur le numéro confirmé.
+            </p>
           )}
         </div>
         <div>

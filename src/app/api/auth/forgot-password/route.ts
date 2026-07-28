@@ -1,85 +1,49 @@
-import { createHash, randomBytes } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { sendClientResetPasswordEmail } from "@/lib/notification-delivery";
-import { canUseAccountPasswordFlow } from "@/lib/owner-account";
-import { absoluteAppUrl } from "@/lib/public-url";
+import { after, NextRequest, NextResponse } from "next/server";
+import {
+  flushPasswordEmailOutbox,
+  requestPasswordResetEmail,
+} from "@/lib/password-email-outbox";
+import { getPublicAppOrigin } from "@/lib/public-url";
 
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+export const maxDuration = 30;
+
+const GENERIC_RESPONSE = {
+  ok: true,
+  message: "Si un compte Compétence existe avec cet email, un lien de réinitialisation sera envoyé.",
+};
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const email = typeof body.email === "string" ? body.email.toLowerCase().trim() : "";
   if (!email || !email.includes("@")) {
     return NextResponse.json({ error: "Adresse email invalide." }, { status: 400 });
   }
 
-  const genericResponse = {
-    ok: true,
-    message: "Si un compte Compétence existe avec cet email, un lien de réinitialisation vient d'être envoyé.",
-  };
-
-  const user = await db.user.findUnique({ where: { email } });
-  if (!user || !canUseAccountPasswordFlow({ role: user.role, email: user.email })) {
-    return NextResponse.json(genericResponse);
-  }
-
-  const token = randomBytes(32).toString("hex");
-  const tokenHash = hashToken(token);
-  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-  const resetUrl = absoluteAppUrl(`/reinitialiser-mot-de-passe?token=${token}`, req);
-
-  await db.$transaction(async (tx) => {
-    await tx.passwordResetToken.updateMany({
-      where: { userId: user.id, usedAt: null },
-      data: { usedAt: new Date() },
-    });
-    await tx.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
-    });
+  const request = await requestPasswordResetEmail({
+    email,
+    clientIdentifier: getClientIdentifier(req),
+    appOrigin: getPublicAppOrigin(req),
   });
 
-  const delivery = await sendClientResetPasswordEmail({
-    to: user.email,
-    name: user.name,
-    resetUrl,
-  });
-
-  if (!delivery.ok) {
-    const ownerAdmin = user.role === "ADMIN";
-    await db.notification.create({
-      data: {
-        userId: null,
-        title: "Email mot de passe oublié non envoyé",
-        message: `Demande de réinitialisation pour ${user.email}. ${delivery.message}`,
-        type: "PASSWORD_RESET_EMAIL_FAILED",
-        recipientType: "ADMIN",
-        channel: "INTERNAL",
-        status: "FAILED",
-        priority: "URGENT",
-        clientId: ownerAdmin ? null : user.id,
-        sentAt: new Date(),
-        link: ownerAdmin ? "/admin/parametres" : `/admin/clients/${user.id}`,
-        actionLabel: ownerAdmin ? "Voir paramètres" : "Voir client",
-      },
+  if (request.jobId) {
+    after(async () => {
+      try {
+        await flushPasswordEmailOutbox({ jobIds: [request.jobId!], limit: 1 });
+      } catch (error) {
+        console.error(
+          "[password-reset] Immediate outbox flush failed; the cron will retry.",
+          error instanceof Error ? error.message : error,
+        );
+      }
     });
   }
 
-  return NextResponse.json({
-    ...genericResponse,
-    delivery: {
-      configured: delivery.configured,
-      ok: delivery.ok,
-      message: delivery.message,
-    },
-    devResetUrl: process.env.NODE_ENV === "production" ? undefined : resetUrl,
-  });
+  return NextResponse.json(GENERIC_RESPONSE);
 }
 
-function hashToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
+function getClientIdentifier(req: NextRequest) {
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const direct = req.headers.get("x-real-ip")?.trim();
+  if (forwarded || direct) return forwarded || direct || "unknown";
+  return `unknown:${(req.headers.get("user-agent") || "unknown").slice(0, 200)}`;
 }

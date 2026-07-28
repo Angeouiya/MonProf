@@ -31,6 +31,7 @@ export type ClientPaymentHistoryItem = {
   amount: number;
   method: string | null;
   createdAt: string;
+  paymentProvider: string | null;
   booking: {
     id: string;
     reference: string;
@@ -38,6 +39,11 @@ export type ClientPaymentHistoryItem = {
     levelName: string;
     startDate: string | null;
     scheduledDate: string | null;
+    courseAmount: number;
+    transportFee: number;
+    paymentServiceFeeAmount: number;
+    totalClientPays: number;
+    paymentProvider: string | null;
     teacher: {
       fullName: string;
       professionalName: string | null;
@@ -85,6 +91,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
         transaction.booking.levelName,
         teacherName,
         clientPaymentChannelLabel(transaction.method),
+        paymentProviderLabel(transaction.paymentProvider),
         getClientTransactionStatusLabel(transaction.type, transaction.status),
         getPaymentHint(transaction.type, transaction.status),
         courseDateLabel(transaction),
@@ -171,8 +178,8 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
         <ClientEmptyState icon={Search} title="Aucun mouvement trouvé" description="Essayez un autre filtre, une référence ou le nom du professeur." compact />
       ) : (
         <div aria-live="polite" data-client-payment-results>
-          <div className="hidden xl:block">
-            <table className="w-full text-sm">
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="min-w-[1320px] text-sm">
               <thead>
                 <tr className="border-b border-[#E3E8F2] bg-white text-left text-xs uppercase tracking-wide text-[#64748B]">
                   <th className="px-4 py-3 font-semibold">Date</th>
@@ -180,6 +187,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
                   <th className="px-4 py-3 font-semibold">Professeur</th>
                   <th className="px-4 py-3 font-semibold">Matière</th>
                   <th className="px-4 py-3 font-semibold">Canal</th>
+                  <th className="px-4 py-3 font-semibold">Ventilation du total</th>
                   <th className="px-4 py-3 text-right font-semibold">Montant</th>
                   <th className="px-4 py-3 font-semibold">Statut</th>
                   <th className="px-4 py-3 text-right font-semibold">Action</th>
@@ -188,7 +196,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
               {groupedTransactions.map((group) => (
                 <tbody key={group.key} className="divide-y divide-[#E3E8F2]" data-client-payment-group>
                   <tr>
-                    <td colSpan={8} className="border-b border-[#E3E8F2] bg-white px-4 py-2">
+                    <td colSpan={9} className="border-b border-[#E3E8F2] bg-white px-4 py-2">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{group.label}</span>
                         <span className="rounded-lg border border-[#D8DEE9] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
@@ -254,7 +262,13 @@ function PaymentDesktopRow({ transaction }: { transaction: ClientPaymentHistoryI
         <p className="text-xs text-[#64748B]">{transaction.booking.levelName}</p>
         <p className="mt-0.5 text-xs font-semibold text-[#64748B]">{courseDateLabel(transaction)}</p>
       </td>
-      <td className="px-4 py-3 text-[#64748B]">{clientPaymentChannelLabel(transaction.method)}</td>
+      <td className="px-4 py-3 text-[#64748B]">
+        <p>{clientPaymentChannelLabel(transaction.method)}</p>
+        <p className="mt-0.5 text-[11px] font-semibold text-[#111B4D]">{paymentProviderLabel(transaction.paymentProvider)}</p>
+      </td>
+      <td className="min-w-64 px-4 py-3">
+        <ClientBookingBreakdown transaction={transaction} compact />
+      </td>
       <td className="px-4 py-3 text-right font-semibold tabular-nums text-[#111827]">
         {transaction.type === "REFUND" ? "+" : ""}
         <Money amount={transaction.amount} />
@@ -308,7 +322,7 @@ function PaymentMobileCard({ transaction }: { transaction: ClientPaymentHistoryI
         className="mt-3"
         items={[
           { label: "Date", value: courseDateLabel(transaction) },
-          { label: "Canal", value: clientPaymentChannelLabel(transaction.method) },
+          { label: "Canal", value: `${paymentProviderLabel(transaction.paymentProvider)} · ${clientPaymentChannelLabel(transaction.method)}` },
           { label: "État", value: getClientTransactionStatusLabel(transaction.type, transaction.status), strong: true },
         ]}
       />
@@ -318,6 +332,8 @@ function PaymentMobileCard({ transaction }: { transaction: ClientPaymentHistoryI
         label="Sécurité du paiement"
         hint={getPaymentHint(transaction.type, transaction.status)}
       />
+
+      <ClientBookingBreakdown transaction={transaction} />
 
       <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
         <p className="break-words text-xs font-medium leading-5 text-[#64748B]">
@@ -337,6 +353,39 @@ function courseDateLabel(transaction: ClientPaymentHistoryItem) {
   if (transaction.booking.scheduledDate) return formatDate(transaction.booking.scheduledDate);
   if (transaction.booking.startDate) return `${formatDate(transaction.booking.startDate)} demandée`;
   return "Date à confirmer";
+}
+
+function ClientBookingBreakdown({
+  transaction,
+  compact = false,
+}: {
+  transaction: ClientPaymentHistoryItem;
+  compact?: boolean;
+}) {
+  const booking = transaction.booking;
+  const courseLabel = transaction.type === "RESCHEDULE_FEE" ? "Frais de report" : "Cours";
+  return (
+    <div className={compact ? "grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]" : "mt-3 rounded-lg border border-[#C7D2FE] bg-[#F8FAFF] p-3"}>
+      {!compact && <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-[#111B4D]">Détail payé par le client</p>}
+      <ClientBreakdownLine label={courseLabel} value={booking.courseAmount} compact={compact} />
+      <ClientBreakdownLine label="Transport" value={booking.transportFee} compact={compact} />
+      <ClientBreakdownLine label="Service (3 %)" value={booking.paymentServiceFeeAmount} compact={compact} />
+      <ClientBreakdownLine label="Total" value={booking.totalClientPays} compact={compact} strong />
+    </div>
+  );
+}
+
+function ClientBreakdownLine({ label, value, compact, strong = false }: { label: string; value: number; compact: boolean; strong?: boolean }) {
+  return (
+    <div className={compact ? "flex items-center justify-between gap-2" : "flex items-center justify-between gap-3 border-t border-[#E0E7FF] py-1.5 first:border-t-0"}>
+      <span className={strong ? "font-black text-[#111B4D]" : "font-semibold text-[#64748B]"}>{label}</span>
+      <Money amount={value} className={strong ? "font-black text-[#111B4D]" : "font-bold text-[#111827]"} />
+    </div>
+  );
+}
+
+function paymentProviderLabel(provider?: string | null) {
+  return provider === "PAYDUNYA" ? "PayDunya (historique)" : "Jèko";
 }
 
 function groupTransactionsByDate(transactions: ClientPaymentHistoryItem[]) {

@@ -3,10 +3,10 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { ADMIN_TEAM_ROLES, normalizeAdminRole } from "@/lib/admin-permissions";
-import { isOwnerAdminEmail } from "@/lib/owner-account";
+import { isPasswordCompliant, passwordHashRounds } from "@/lib/password-policy";
 
 function validPassword(password: string) {
-  return password.length >= 10 && /[A-Za-z]/.test(password) && /\d/.test(password);
+  return isPasswordCompliant(password);
 }
 
 export async function POST(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const phone = typeof body.phone === "string" && body.phone.trim() ? body.phone.trim() : null;
   const password = typeof body.password === "string" ? body.password : "";
   const requestedRole = normalizeAdminRole(body.adminTeamRole);
-  const adminTeamRole = requestedRole === "OWNER" && !isOwnerAdminEmail(email) ? "SUPER_ADMIN" : requestedRole;
+  const adminTeamRole = requestedRole === "OWNER" ? "SUPER_ADMIN" : requestedRole;
 
   if (name.length < 2 || !/^\S+@\S+\.\S+$/.test(email)) {
     return NextResponse.json({ error: "Nom et adresse email valide requis." }, { status: 400 });
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         name,
         email,
         phone,
-        passwordHash: await bcrypt.hash(password, 12),
+        passwordHash: await bcrypt.hash(password, passwordHashRounds({ role: "ADMIN" })),
         role: "ADMIN",
         adminTeamRole,
         adminAccountStatus: "ACTIVE",

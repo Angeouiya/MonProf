@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
-  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  PAYMENT_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { findBestReplacementCandidate } from "@/lib/teacher-replacement-matching";
@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ to
     return NextResponse.json({ error: "Cette mission a déjà reçu une réponse." }, { status: 409 });
   }
   if (requiresVerifiedPayDunyaForOperationalAction(mission.booking)) {
-    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+    return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
 
   const now = new Date();

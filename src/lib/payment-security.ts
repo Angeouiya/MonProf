@@ -36,7 +36,7 @@ type TransactionLike = {
   amount?: number | null;
 };
 
-type PayDunyaPaymentProofLike = {
+type ClientPaymentProofLike = {
   isQuoteOnly?: boolean | null;
   status?: string | null;
   paymentStatus?: string | null;
@@ -44,13 +44,18 @@ type PayDunyaPaymentProofLike = {
   totalPrice?: number | null;
   paydunyaStatus?: string | null;
   paydunyaVerifiedAt?: Date | string | null;
+  paymentProvider?: string | null;
+  providerPaymentStatus?: string | null;
+  paymentVerifiedAt?: Date | string | null;
   transactions?: TransactionLike[] | null;
 };
 
-export const PAYDUNYA_PROOF_REQUIRED_ERROR =
-  "Action bloquée: la réservation n'est pas active tant que PayDunya n'a pas confirmé le paiement via vérification serveur.";
+export const PAYMENT_PROOF_REQUIRED_ERROR =
+  "Action bloquée : la réservation n'est pas active tant que le prestataire n'a pas confirmé le paiement par vérification serveur.";
+/** @deprecated Conserve la compatibilité des anciens imports PayDunya. */
+export const PAYDUNYA_PROOF_REQUIRED_ERROR = PAYMENT_PROOF_REQUIRED_ERROR;
 
-export const OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA = [
+export const OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT = [
   "PAID",
   "PENDING_ADMIN_VALIDATION",
   "CONFIRMED",
@@ -63,8 +68,10 @@ export const OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA = [
   "TEACHER_PAID",
   "DISPUTED",
 ] as const;
+/** @deprecated Conserve la compatibilité des anciens imports PayDunya. */
+export const OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA = OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT;
 
-export function getExpectedClientPaymentAmount(booking: PayDunyaPaymentProofLike) {
+export function getExpectedClientPaymentAmount(booking: ClientPaymentProofLike) {
   const totalClientPays = Math.max(0, booking.totalClientPays ?? 0);
   const totalPrice = Math.max(0, booking.totalPrice ?? 0);
   return totalClientPays > 0 ? totalClientPays : totalPrice;
@@ -90,12 +97,22 @@ export function hasVerifiedClientPaymentTransaction(transactions: TransactionLik
   )));
 }
 
-export function hasCompletedPayDunyaProof(booking: PayDunyaPaymentProofLike) {
+export function hasCompletedPayDunyaProof(booking: ClientPaymentProofLike) {
   return Boolean(booking.paydunyaVerifiedAt)
     && (booking.paydunyaStatus ?? "").trim().toUpperCase() === "COMPLETED";
 }
 
-export function getVerifiedPayDunyaClientPaymentTransaction(booking: PayDunyaPaymentProofLike) {
+export function hasCompletedJekoProof(booking: ClientPaymentProofLike) {
+  return booking.paymentProvider === "JEKO"
+    && Boolean(booking.paymentVerifiedAt)
+    && (booking.providerPaymentStatus ?? "").trim().toUpperCase() === "SUCCESS";
+}
+
+export function hasCompletedClientPaymentProviderProof(booking: ClientPaymentProofLike) {
+  return hasCompletedPayDunyaProof(booking) || hasCompletedJekoProof(booking);
+}
+
+export function getVerifiedClientPaymentTransaction(booking: ClientPaymentProofLike) {
   const expectedAmount = getExpectedClientPaymentAmount(booking);
   if (expectedAmount <= 0) return null;
   return booking.transactions?.find((transaction) => (
@@ -105,31 +122,44 @@ export function getVerifiedPayDunyaClientPaymentTransaction(booking: PayDunyaPay
   )) ?? null;
 }
 
-export function hasVerifiedPayDunyaClientPayment(booking: PayDunyaPaymentProofLike) {
+export function hasVerifiedClientPayment(booking: ClientPaymentProofLike) {
   return hasVerifiedClientFunds(booking.paymentStatus)
-    && hasCompletedPayDunyaProof(booking)
-    && Boolean(getVerifiedPayDunyaClientPaymentTransaction(booking));
+    && hasCompletedClientPaymentProviderProof(booking)
+    && Boolean(getVerifiedClientPaymentTransaction(booking));
 }
 
-export function isPaymentReadyForCourseProgressWithProof(booking: PayDunyaPaymentProofLike) {
+/** @deprecated Le nom historique vérifie désormais PayDunya ou Jèko. */
+export function getVerifiedPayDunyaClientPaymentTransaction(booking: ClientPaymentProofLike) {
+  return getVerifiedClientPaymentTransaction(booking);
+}
+
+/** @deprecated Le nom historique vérifie désormais PayDunya ou Jèko. */
+export function hasVerifiedPayDunyaClientPayment(booking: ClientPaymentProofLike) {
+  return hasVerifiedClientPayment(booking);
+}
+
+export function isPaymentReadyForCourseProgressWithProof(booking: ClientPaymentProofLike) {
   return isPaymentReadyForCourseProgress(booking.paymentStatus)
-    && hasVerifiedPayDunyaClientPayment(booking);
+    && hasVerifiedClientPayment(booking);
 }
 
 export function isOperationalBookingStatus(status?: string | null) {
-  return OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA.includes(
-    status as (typeof OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYDUNYA)[number],
+  return OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT.includes(
+    status as (typeof OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT)[number],
   );
 }
 
-export function requiresVerifiedPayDunyaForOperationalAction(booking: PayDunyaPaymentProofLike) {
-  return !hasVerifiedPayDunyaClientPayment(booking);
+export function requiresVerifiedPaymentForOperationalAction(booking: ClientPaymentProofLike) {
+  return !hasVerifiedClientPayment(booking);
 }
 
-const VERIFIED_PAYDUNYA_BOOKING_FILTER = {
+/** @deprecated Le nom historique vérifie désormais PayDunya ou Jèko. */
+export function requiresVerifiedPayDunyaForOperationalAction(booking: ClientPaymentProofLike) {
+  return requiresVerifiedPaymentForOperationalAction(booking);
+}
+
+const VERIFIED_CLIENT_PAYMENT_BOOKING_FILTER = {
   paymentStatus: { in: VERIFIED_CLIENT_FUND_STATUS_VALUES },
-  paydunyaStatus: "COMPLETED",
-  paydunyaVerifiedAt: { not: null },
   transactions: {
     some: {
       type: "CLIENT_PAYMENT",
@@ -137,13 +167,29 @@ const VERIFIED_PAYDUNYA_BOOKING_FILTER = {
       amount: { gt: 0 },
     },
   },
+  OR: [
+    {
+      paydunyaStatus: "COMPLETED",
+      paydunyaVerifiedAt: { not: null },
+    },
+    {
+      paymentProvider: "JEKO",
+      providerPaymentStatus: "SUCCESS",
+      paymentVerifiedAt: { not: null },
+    },
+  ],
 } satisfies Prisma.BookingWhereInput;
 
-export function verifiedPayDunyaBookingWhere(where: Prisma.BookingWhereInput = {}): Prisma.BookingWhereInput {
+export function verifiedClientPaymentBookingWhere(where: Prisma.BookingWhereInput = {}): Prisma.BookingWhereInput {
   return {
     AND: [
       where,
-      VERIFIED_PAYDUNYA_BOOKING_FILTER,
+      VERIFIED_CLIENT_PAYMENT_BOOKING_FILTER,
     ],
   };
+}
+
+/** @deprecated Le nom historique filtre désormais les paiements PayDunya et Jèko. */
+export function verifiedPayDunyaBookingWhere(where: Prisma.BookingWhereInput = {}): Prisma.BookingWhereInput {
+  return verifiedClientPaymentBookingWhere(where);
 }

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
+import { requireTeacherApi } from "@/lib/teacher-auth";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
@@ -62,8 +63,22 @@ export async function PATCH(
 ) {
   const auth = await getServerSession(authOptions);
   if (!auth?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  const actorId = (auth.user as any).id as string;
+  let actorId = (auth.user as any).id as string;
   const role = (auth.user as any).role as PortalRole;
+  let authenticatedTeacherId: string | null = null;
+
+  if (role === "TEACHER") {
+    const teacher = await requireTeacherApi();
+    if (!teacher) {
+      return NextResponse.json(
+        { error: "Accès refusé : remplacez d'abord votre mot de passe temporaire avant de gérer vos séances." },
+        { status: 403 },
+      );
+    }
+    authenticatedTeacherId = teacher.id;
+    actorId = teacher.id;
+  }
+
   const { id: bookingId, sessionId } = await params;
   const body = await req.json();
   const action = typeof body.action === "string" ? body.action : "";
@@ -90,11 +105,11 @@ export async function PATCH(
   if (role === "CLIENT" && courseSession.booking.clientId !== actorId) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
-  if (role === "TEACHER" && courseSession.teacherId !== actorId) {
+  if (role === "TEACHER" && courseSession.teacherId !== authenticatedTeacherId) {
     return NextResponse.json({ error: "Cette séance ne vous est pas attribuée" }, { status: 403 });
   }
   if (!hasVerifiedPayDunyaClientPayment(courseSession.booking)) {
-    return NextResponse.json({ error: "Le paiement PayDunya du pack n'est pas vérifié." }, { status: 409 });
+    return NextResponse.json({ error: "Le paiement du pack n'est pas confirmé côté serveur." }, { status: 409 });
   }
 
   const now = new Date();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { ArrowRight, Eye, EyeOff, Info, Lock, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -89,12 +90,12 @@ export default function AdminConnexionPage() {
               Console de contrôle Compétence.
             </h1>
             <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-[#64748B]">
-              Gérez les professeurs, réservations, paiements PayDunya, remboursements, notifications, litiges et actions opérationnelles depuis un espace protégé.
+              Gérez les professeurs, réservations, paiements Jèko et historiques PayDunya, remboursements, notifications, litiges et actions opérationnelles depuis un espace protégé.
             </p>
             <div className="mt-6 grid max-w-xl gap-3">
               {[
                 "Accès réservé aux comptes administrateurs",
-                "Aucune clé PayDunya n'est exposée côté client",
+                "Aucune clé de paiement n'est exposée côté client",
                 "Réservations activées uniquement après preuve serveur",
               ].map((item) => (
                 <div key={item} className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
@@ -192,7 +193,7 @@ export default function AdminConnexionPage() {
               </form>
 
               <p className="mt-4 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
-                Pour modifier ou récupérer un accès administrateur, utilisez uniquement un compte créé par le propriétaire de la plateforme.
+                En cas d'oubli, contactez le propriétaire de la plateforme. La récupération publique par email est réservée aux clients.
               </p>
             </div>
           </div>

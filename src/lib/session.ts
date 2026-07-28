@@ -18,6 +18,7 @@ export type SessionUser = {
   role: "CLIENT" | "ADMIN" | "TEACHER";
   teacherId?: string | null;
   phone?: string | null;
+  portalPasswordMustChange?: boolean;
   adminTeamRole?: string | null;
   adminPermissions?: AdminPermission[];
 };
@@ -32,6 +33,9 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     role: (session.user as any).role,
     teacherId: (session.user as any).teacherId ?? null,
     phone: (session.user as any).phone ?? null,
+    portalPasswordMustChange: Boolean((session.user as any).portalPasswordMustChange),
+    adminTeamRole: (session.user as any).adminTeamRole ?? null,
+    adminPermissions: (session.user as any).adminPermissions ?? [],
   };
 });
 

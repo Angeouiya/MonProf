@@ -16,6 +16,7 @@ export const rescheduleRequestStatusLabels: Record<string, string> = {
   TEACHER_REJECTED: "Refusé par le professeur",
   CANCELLED: "Annulé",
   REFUND_REQUIRED: "Remboursement à traiter",
+  REFUNDED: "Supplément remboursé",
 };
 
 export const packTypeLabels: Record<string, string> = {

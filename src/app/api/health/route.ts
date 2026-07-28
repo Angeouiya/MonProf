@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPayDunyaConfig } from "@/lib/paydunya";
+import { getJekoServerConfig } from "@/lib/jeko-config";
+import { isGmailConfigured } from "@/lib/gmail-email";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +14,10 @@ export async function GET() {
     database: false,
     catalog: false,
     adminAccount: false,
-    paydunya: false,
+    jeko: Boolean(getJekoServerConfig()),
+    gmail: isGmailConfigured(),
   };
+  let legacyPaydunya = false;
 
   try {
     await db.$queryRaw`SELECT 1`;
@@ -24,12 +28,12 @@ export async function GET() {
       db.level.count(),
       db.commune.count(),
       db.user.count({ where: { role: "ADMIN" } }),
-      getPayDunyaConfig(),
+      getPayDunyaConfig().catch(() => null),
     ]);
 
     checks.catalog = subjects > 0 && levels > 0 && communes > 0;
     checks.adminAccount = admins > 0;
-    checks.paydunya = Boolean(paydunyaConfig);
+    legacyPaydunya = Boolean(paydunyaConfig);
   } catch {
     // Keep the response intentionally non-sensitive; logs can carry details server-side.
   }
@@ -43,6 +47,7 @@ export async function GET() {
       checkedAt: new Date().toISOString(),
       responseTimeMs: Date.now() - startedAt,
       checks,
+      legacy: { paydunyaConfigured: legacyPaydunya },
     },
     { status: status === "ok" ? 200 : 503 },
   );

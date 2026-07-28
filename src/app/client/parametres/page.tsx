@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientParametresPage() {
   const sessionUser = await getSessionUser();
   if (!sessionUser) redirect("/connexion?from=/client/parametres");
-  const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, email: sessionUser.email });
+  const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, adminTeamRole: sessionUser.adminTeamRole });
   if (sessionUser.role !== "CLIENT" && !ownerAdmin) redirect(sessionUser.role === "ADMIN" ? "/admin" : "/professeur");
 
   const [profile, unreadNotifications, activeBookings] = await db.$transaction([

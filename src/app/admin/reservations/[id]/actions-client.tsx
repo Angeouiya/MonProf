@@ -133,6 +133,8 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const [cancelDesc, setCancelDesc] = useState("Annulation décidée par le service client.");
   const [payTeacherMethod, setPayTeacherMethod] = useState("WAVE");
   const [payTeacherPhone, setPayTeacherPhone] = useState(booking.teacher.phone ?? "");
+  const [payTeacherPhoneConfirm, setPayTeacherPhoneConfirm] = useState("");
+  const [payTeacherIdempotencyKey, setPayTeacherIdempotencyKey] = useState("");
   const [refundExternalReference, setRefundExternalReference] = useState("");
   const didAutoPay = useRef(false);
   const didAutoReplace = useRef(false);
@@ -142,7 +144,9 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount }, new Date(), cancelActor);
   const cancellationPenaltySplit = getCancellationPenaltySplit(cancellationPolicy, cancelActor);
   const normalizedPayTeacherPhone = normalizePaymentPhone(payTeacherPhone);
+  const normalizedPayTeacherPhoneConfirm = normalizePaymentPhone(payTeacherPhoneConfirm);
   const payTeacherPhoneInvalid = normalizedPayTeacherPhone.length < 8 || normalizedPayTeacherPhone.length > 20;
+  const payTeacherPhoneMismatch = normalizedPayTeacherPhone !== normalizedPayTeacherPhoneConfirm;
   const latestRefundRequest = booking.clientRefundRequests?.[0] ?? null;
   const refundableAmount = booking.cancellationRefundAmount || Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
   const refundDetailsMissing = refundableAmount > 0 && !latestRefundRequest;
@@ -168,6 +172,47 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       router.refresh();
     } catch (e: any) {
       toast.error(e.message);
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const payTeacherWithJeko = async () => {
+    if (payTeacherPhoneInvalid || payTeacherPhoneMismatch || teacherRemainingAmount <= 0) return;
+    setLoading("pay_teacher");
+    const submissionKey = payTeacherIdempotencyKey || crypto.randomUUID();
+    if (!payTeacherIdempotencyKey) setPayTeacherIdempotencyKey(submissionKey);
+    try {
+      const res = await fetch("/api/admin/teacher-payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teacherId: booking.teacher.id,
+          bookingId: booking.id,
+          amount: teacherRemainingAmount,
+          method: payTeacherMethod,
+          paymentPhone: normalizedPayTeacherPhone,
+          paymentPhoneConfirm: normalizedPayTeacherPhoneConfirm,
+          idempotencyKey: submissionKey,
+          note: `Versement ciblé depuis la réservation ${booking.reference}`,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.payout?.action === "failed") setPayTeacherIdempotencyKey("");
+        throw new Error(data.error || "Versement Jèko impossible.");
+      }
+      setPayTeacherOpen(false);
+      if (data.pending) {
+        toast.info("Transfert Jèko lancé. Le solde reste inchangé jusqu'à la confirmation finale.");
+      } else {
+        toast.success(`Versement Jèko confirmé : ${formatFCFA(teacherRemainingAmount)}`);
+        setPayTeacherIdempotencyKey("");
+        setPayTeacherPhoneConfirm("");
+      }
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Versement Jèko impossible.");
     } finally {
       setLoading(null);
     }
@@ -377,6 +422,7 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                   <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
                   <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
                   <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
+                  <SelectItem value="DJAMO">Djamo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -390,24 +436,39 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
                 className="mt-1"
               />
               <p className={payTeacherPhoneInvalid ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
-                Ce numéro figurera sur le reçu du professeur.
+                Le net exact sera envoyé à ce numéro via Jèko.
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Confirmer le numéro</Label>
+              <Input
+                inputMode="tel"
+                value={payTeacherPhoneConfirm}
+                onChange={(event) => setPayTeacherPhoneConfirm(event.target.value)}
+                placeholder="Retapez le numéro de paiement"
+                className="mt-1"
+              />
+              <p className={payTeacherPhoneConfirm && payTeacherPhoneMismatch ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
+                {payTeacherPhoneConfirm && payTeacherPhoneMismatch
+                  ? "Les deux numéros ne correspondent pas."
+                  : "Double saisie obligatoire avant le transfert."}
               </p>
             </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              disabled={payTeacherPhoneInvalid || loading === "pay_teacher"}
+              disabled={payTeacherPhoneInvalid || payTeacherPhoneMismatch || loading === "pay_teacher"}
               onClick={(event) => {
                 event.preventDefault();
-                if (payTeacherPhoneInvalid) {
-                  toast.error("Saisissez le numéro exact du paiement Mobile Money.");
+                if (payTeacherPhoneInvalid || payTeacherPhoneMismatch) {
+                  toast.error("Saisissez et confirmez le numéro exact du paiement Mobile Money.");
                   return;
                 }
-                doAction("pay_teacher", { method: payTeacherMethod, paymentPhone: normalizedPayTeacherPhone });
+                void payTeacherWithJeko();
               }}
             >
-              Confirmer le paiement
+              Lancer le versement Jèko
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

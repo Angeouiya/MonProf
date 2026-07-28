@@ -74,6 +74,9 @@ export default async function CoursPage({
       totalClientPays: true,
       paydunyaStatus: true,
       paydunyaVerifiedAt: true,
+      paymentProvider: true,
+      providerPaymentStatus: true,
+      paymentVerifiedAt: true,
       isQuoteOnly: true,
       reference: true,
       subjectName: true,
@@ -177,7 +180,7 @@ export default async function CoursPage({
       amountLabel,
       step.label,
       step.hint,
-      "PayDunya confirmé",
+      "Paiement confirmé côté serveur",
     ].join(" "));
 
     return {
@@ -205,7 +208,7 @@ export default async function CoursPage({
       <ClientPageHeader
         eyebrow="Cours"
         title="Cours"
-        description="Suivez uniquement les cours activés après validation serveur PayDunya. Les demandes non payées restent séparées."
+        description="Suivez uniquement les cours activés après confirmation serveur du paiement. Les demandes non payées restent séparées."
         showBack={false}
       />
 
@@ -315,7 +318,7 @@ function CourseMobilePriorityCard({
   const description = nextCourse
     ? `${nextCourse.teacherName} · ${nextCourse.dateLabel} · ${nextCourse.timeLabel}`
     : pendingCount > 0
-      ? "Aucun professeur n'est notifié avant paiement PayDunya vérifié."
+      ? "Aucun professeur n'est notifié avant confirmation serveur du paiement."
       : "Choisissez un professeur et un créneau pour démarrer.";
 
   return (
@@ -393,7 +396,7 @@ function CourseCommandCenter({
                         : "Réservez un cours pour démarrer."}
               </h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-                Les cours listés ici existent uniquement après paiement PayDunya vérifié côté serveur. Les demandes non payées ne préviennent ni le professeur ni le service client.
+                Les cours listés ici existent uniquement après confirmation serveur du paiement. Les demandes non payées ne préviennent ni le professeur ni le service client.
               </p>
             </div>
           </div>
@@ -452,7 +455,7 @@ function CourseCommandCenter({
                   {nextCourse
                     ? `${nextCourse.reference} · ${nextCourse.teacherName} · ${nextCourse.levelName} · ${nextCourse.dateLabel} · ${nextCourse.timeLabel} · ${nextCourse.formatLabel}`
                     : pendingCount > 0
-                      ? "Finalisez le paiement PayDunya pour créer un vrai cours."
+                      ? "Finalisez le paiement sécurisé pour créer un vrai cours."
                       : "Choisissez un professeur, une date et une séance de 2h."}
                 </p>
               </div>
@@ -462,7 +465,7 @@ function CourseCommandCenter({
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Suivi</p>
                   <p className="mt-1 text-sm font-semibold leading-5 text-[#111827]">{nextCourse.stepHint}</p>
                   <p className="mt-2 inline-flex min-h-7 items-center rounded-lg border border-[#D8DEE9] bg-white px-2 text-xs font-semibold text-[#111B4D]">
-                    PayDunya confirmé
+                    Paiement confirmé
                   </p>
                 </div>
               )}
@@ -527,7 +530,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Demandes non actives</p>
           <h2 className="text-lg font-semibold leading-6 text-[#111827]">À finaliser avant réservation</h2>
           <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-            Ces demandes ne bloquent aucun créneau professeur tant que le paiement PayDunya n'est pas confirmé.
+            Ces demandes ne bloquent aucun créneau professeur tant que le paiement n'est pas confirmé côté serveur.
           </p>
         </div>
         <span className="inline-flex min-h-9 items-center rounded-lg border border-[#D8DEE9] bg-white px-3 text-xs font-semibold text-[#111B4D]">
@@ -580,7 +583,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 className="mt-3"
                 label={state.label}
                 hint={state.hint}
-                aside={booking.isQuoteOnly ? "Dossier" : "PayDunya"}
+                aside={booking.isQuoteOnly ? "Dossier" : "Paiement sécurisé"}
               />
 
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
@@ -592,7 +595,7 @@ function PendingCoursesPanel({ bookings }: { bookings: PendingCourseBooking[] })
                 </Button>
                 <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                   <Link href={booking.isQuoteOnly ? `/client/reservations/${booking.id}` : `/client/reservations/${booking.id}?payment=pending`}>
-                    {booking.isQuoteOnly ? "Suivre le dossier" : "Payer via PayDunya"}
+                    {booking.isQuoteOnly ? "Suivre le dossier" : "Finaliser le paiement"}
                   </Link>
                 </Button>
               </div>
@@ -612,13 +615,13 @@ function getPendingCourseState(booking: Pick<PendingCourseBooking, "isQuoteOnly"
   if (booking.isQuoteOnly) {
     return {
       label: "Calcul à reprendre",
-      hint: "Le service client reprend le calcul automatique avant PayDunya. Le cours n'est pas encore réservé.",
+      hint: "Le service client reprend le calcul automatique avant paiement. Le cours n'est pas encore réservé.",
     };
   }
 
   return {
     label: "Brouillon non réservé",
-    hint: "Payez via PayDunya pour activer le dossier. Aucune notification professeur n'est envoyée avant validation serveur.",
+    hint: "Payez via Jèko pour activer le dossier. Aucune notification professeur n'est envoyée avant confirmation serveur.",
   };
 }
 
@@ -626,7 +629,7 @@ function getCourseStep(status: BookingStatus, paymentStatus: PaymentStatus) {
   if (status === "PENDING_ADMIN_VALIDATION" && paymentStatus === "FAILED") {
     return {
       label: "Calcul à reprendre",
-      hint: "Le service client reprend le calcul automatique avant PayDunya.",
+      hint: "Le service client reprend le calcul automatique avant paiement.",
       icon: Clock,
       className: "border-[#E3E8F2] bg-white text-[#111B4D]",
     };

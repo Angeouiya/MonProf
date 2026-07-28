@@ -11,7 +11,7 @@ export default async function ProfilPage() {
   const sessionUser = await getSessionUser();
   if (!sessionUser) redirect("/connexion?from=/client/profil");
 
-  const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, email: sessionUser.email });
+  const ownerAdmin = isOwnerAdminAccount({ role: sessionUser.role, adminTeamRole: sessionUser.adminTeamRole });
   if (sessionUser.role === "TEACHER") redirect("/professeur");
   if (sessionUser.role !== "CLIENT" && !ownerAdmin) redirect("/admin");
 

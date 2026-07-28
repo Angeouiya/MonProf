@@ -1,5 +1,5 @@
 export const PAYMENT_SERVICE_FEE_RATE_BPS = readFeeRateBps();
-export const PAYMENT_SERVICE_FEE_LABEL = "Frais de service paiement";
+export const PAYMENT_SERVICE_FEE_LABEL = "Frais de service Compétence";
 
 export function calculatePaymentServiceFee(amount: number) {
   const baseAmount = Math.max(0, Math.round(Number(amount) || 0));

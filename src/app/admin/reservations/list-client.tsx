@@ -13,7 +13,7 @@ import { Search, X } from "lucide-react";
 import { CLIENT_TYPES, COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 
 const STATUSES = [
-  { v: "PENDING_PAYMENT", l: "Brouillon PayDunya" },
+  { v: "PENDING_PAYMENT", l: "Brouillon de paiement" },
   { v: "PAID", l: "Payée" },
   { v: "PENDING_ADMIN_VALIDATION", l: "Validation admin" },
   { v: "CONFIRMED", l: "Confirmée" },

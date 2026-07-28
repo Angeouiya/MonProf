@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import { ACTIVE_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/payment-methods";
+import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
+import {
+  enqueuePasswordChangedEmailInTransaction,
+  flushPasswordEmailOutbox,
+} from "@/lib/password-email-outbox";
+import { absoluteAppUrl } from "@/lib/public-url";
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
 const PROFESSIONAL_PROFILE_LIMITS = {
@@ -63,13 +69,19 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const teacher = await requireTeacherApi();
+  const teacher = await requireTeacherApi({ allowPasswordChangeRequired: true });
   if (!teacher) {
     return NextResponse.json({ error: "Accès professeur non autorisé" }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));
   const action = typeof body.action === "string" ? body.action : "";
+
+  if (teacher.portalPasswordMustChange && action !== "changePassword") {
+    return NextResponse.json({
+      error: "Remplacez d'abord le mot de passe temporaire transmis par le service client.",
+    }, { status: 403 });
+  }
 
   if (action === "updateProfessionalProfile") {
     const careerSummary = cleanText(body.careerSummary);
@@ -281,11 +293,12 @@ export async function PATCH(req: NextRequest) {
   if (!oldPassword || !newPassword) {
     return NextResponse.json({ error: "Ancien et nouveau mot de passe requis." }, { status: 400 });
   }
-  if (newPassword.length < 6) {
-    return NextResponse.json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères." }, { status: 400 });
-  }
   if (newPassword !== confirmPassword) {
     return NextResponse.json({ error: "Les deux nouveaux mots de passe ne correspondent pas." }, { status: 400 });
+  }
+  const validation = validatePasswordForAccount(newPassword, { role: "TEACHER" });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
   const stored = await db.teacher.findUnique({
@@ -294,6 +307,7 @@ export async function PATCH(req: NextRequest) {
       id: true,
       fullName: true,
       professionalName: true,
+      email: true,
       portalPasswordHash: true,
     },
   });
@@ -312,15 +326,22 @@ export async function PATCH(req: NextRequest) {
 
   const now = new Date();
   const teacherName = stored.professionalName || stored.fullName;
-  const newHash = await bcrypt.hash(newPassword, 10);
+  const newHash = await bcrypt.hash(newPassword, passwordHashRounds({ role: "TEACHER" }));
 
-  await db.$transaction(async (tx) => {
+  const confirmationJobId = await db.$transaction(async (tx) => {
     await tx.teacher.update({
       where: { id: stored.id },
       data: {
         portalPasswordHash: newHash,
+        portalPasswordMustChange: false,
+        sessionVersion: { increment: 1 },
         lastActivityAt: now,
       },
+    });
+
+    await tx.teacherPasswordResetToken.updateMany({
+      where: { teacherId: stored.id, usedAt: null },
+      data: { usedAt: now },
     });
 
     await tx.teacherNotification.create({
@@ -343,7 +364,38 @@ export async function PATCH(req: NextRequest) {
         newStatus: "TEACHER_PASSWORD_UPDATED",
       },
     });
+
+    if (!stored.email) return null;
+    return enqueuePasswordChangedEmailInTransaction(tx, {
+      accountType: "PROFESSOR",
+      email: stored.email,
+      name: teacherName,
+      changedAt: now,
+      securityUrl: absoluteAppUrl("/contact", req),
+      accountLabel: "espace professeur Compétence",
+      sourceTokenId: `teacher-self-service:${stored.id}:${now.toISOString()}`,
+      teacherId: stored.id,
+    });
   });
 
-  return NextResponse.json({ ok: true });
+  if (confirmationJobId) {
+    after(async () => {
+      try {
+        await flushPasswordEmailOutbox({ jobIds: [confirmationJobId], limit: 1 });
+      } catch (error) {
+        console.error("[password-change] Immediate teacher confirmation flush failed; the cron will retry.", error);
+      }
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    email: {
+      sent: false,
+      queued: Boolean(confirmationJobId),
+      message: confirmationJobId
+        ? "Confirmation email prise en charge automatiquement."
+        : "Ajoutez une adresse email à la fiche professeur pour recevoir les confirmations de sécurité.",
+    },
+  });
 }

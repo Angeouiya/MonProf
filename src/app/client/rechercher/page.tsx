@@ -565,7 +565,7 @@ function SearchCommandCenter({
             <div className="mt-auto rounded-lg border border-[#E3E8F2] bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#111827]">
-                Le prix affiché reste indicatif. Le total final est confirmé dans la réservation avant PayDunya.
+                Le prix affiché reste indicatif. Le total final est confirmé dans la réservation avant le paiement Jèko.
               </p>
             </div>
           </div>

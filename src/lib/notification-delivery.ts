@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
+import { isGmailConfigured, sendGmailEmail } from "@/lib/gmail-email";
+import { passwordChangedEmailTemplate, passwordResetEmailTemplate } from "@/lib/password-email-templates";
 import { normalizeIvorianPhoneForWhatsApp } from "@/lib/phone";
 
 export type DeliveryResult = {
   ok: boolean;
-  provider: "resend" | "twilio" | "whatsapp-cloud" | "internal";
+  provider: "gmail" | "resend" | "twilio" | "whatsapp-cloud" | "internal";
   configured: boolean;
   skipped?: boolean;
   message: string;
@@ -12,7 +14,7 @@ export type DeliveryResult = {
 
 export function getNotificationProviderStatus(options: { webPushConfigured?: boolean } = {}) {
   return {
-    email: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
+    email: isGmailConfigured() || isResendConfigured(),
     sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
     whatsapp: Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
     webPush: Boolean(
@@ -24,6 +26,50 @@ export function getNotificationProviderStatus(options: { webPushConfigured?: boo
 }
 
 export async function sendEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  idempotencyKey?: string;
+}) {
+  const gmail = await sendGmailEmail(input);
+  if (gmail.ok) {
+    return {
+      ...gmail,
+      provider: "gmail",
+    } satisfies DeliveryResult;
+  }
+
+  const resendConfigured = isResendConfigured();
+  if (resendConfigured) {
+    const resend = await sendResendEmail(input);
+    if (resend.ok) {
+      return {
+        ...resend,
+        message: gmail.configured
+          ? "Email envoyé par le fournisseur de secours Resend. Gmail est temporairement indisponible."
+          : resend.message,
+      } satisfies DeliveryResult;
+    }
+    return {
+      ...resend,
+      message: gmail.configured
+        ? "L'envoi a échoué avec Gmail et avec le fournisseur de secours."
+        : resend.message,
+    } satisfies DeliveryResult;
+  }
+
+  return {
+    ...gmail,
+    provider: "gmail",
+    configured: gmail.configured,
+    message: gmail.configured
+      ? gmail.message
+      : "Aucun fournisseur email n'est configuré. Configurez Gmail OAuth ou Resend.",
+  } satisfies DeliveryResult;
+}
+
+async function sendResendEmail(input: {
   to: string;
   subject: string;
   text: string;
@@ -218,21 +264,23 @@ export async function dispatchPendingTeacherNotifications(limit = 50) {
   return summarizeResults(results);
 }
 
-export async function sendClientResetPasswordEmail(input: { to: string; name: string; resetUrl: string }) {
-  return sendEmail({
+export async function sendClientResetPasswordEmail(input: {
+  to: string;
+  name: string;
+  resetUrl: string;
+  idempotencyKey: string;
+}) {
+  const content = passwordResetEmailTemplate({
+    name: input.name,
+    resetUrl: input.resetUrl,
+    expiresInMinutes: 60,
+  });
+  return sendGmailSecurityEmail({
     to: input.to,
     subject: "Réinitialisation de votre mot de passe Compétence",
-    text: [
-      `Bonjour ${input.name},`,
-      "",
-      "Vous avez demandé la réinitialisation de votre mot de passe Compétence.",
-      "Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :",
-      input.resetUrl,
-      "",
-      "Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
-      "",
-      "Compétence",
-    ].join("\n"),
+    text: content.text,
+    html: content.html,
+    idempotencyKey: input.idempotencyKey,
   });
 }
 
@@ -242,55 +290,44 @@ export async function sendClientPasswordChangedEmail(input: {
   changedAt: Date;
   securityUrl: string;
   idempotencyKey: string;
+  accountLabel?: string;
 }) {
   const changedAtLabel = new Intl.DateTimeFormat("fr-CI", {
     dateStyle: "full",
     timeStyle: "short",
     timeZone: "Africa/Abidjan",
   }).format(input.changedAt);
-  const safeName = escapeHtml(input.name || "Client");
-  const safeSecurityUrl = escapeHtml(input.securityUrl);
+  const content = passwordChangedEmailTemplate({
+    name: input.name,
+    changedAtLabel,
+    securityUrl: input.securityUrl,
+    accountLabel: input.accountLabel,
+  });
 
-  return sendEmail({
+  return sendGmailSecurityEmail({
     to: input.to,
     subject: "Votre mot de passe Compétence a été modifié",
     idempotencyKey: input.idempotencyKey,
-    text: [
-      `Bonjour ${input.name || "Client"},`,
-      "",
-      "Votre mot de passe Compétence vient d'être modifié avec succès.",
-      `Date et heure : ${changedAtLabel} (heure de Côte d'Ivoire).`,
-      "",
-      "Si vous êtes à l'origine de cette action, aucune intervention supplémentaire n'est nécessaire.",
-      "Si vous n'avez pas effectué cette modification, sécurisez immédiatement votre compte :",
-      input.securityUrl,
-      "",
-      "Le service client Compétence ne vous demandera jamais votre mot de passe par email, SMS ou WhatsApp.",
-      "",
-      "Compétence",
-    ].join("\n"),
-    html: `<!doctype html>
-      <html lang="fr">
-        <body style="margin:0;background:#f4f6f9;font-family:Arial,sans-serif;color:#111827">
-          <div style="max-width:600px;margin:0 auto;padding:28px 16px">
-            <div style="background:#ffffff;border:1px solid #dfe5ee;border-radius:8px;overflow:hidden">
-              <div style="background:#111b4d;color:#ffffff;padding:22px 24px;font-size:20px;font-weight:700">Compétence</div>
-              <div style="padding:26px 24px">
-                <p style="margin:0 0 16px;font-size:16px">Bonjour ${safeName},</p>
-                <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#111827">Votre mot de passe a été modifié</h1>
-                <p style="margin:0 0 8px;font-size:15px;line-height:1.6">La modification a été enregistrée le <strong>${escapeHtml(changedAtLabel)}</strong>, heure de Côte d'Ivoire.</p>
-                <p style="margin:0 0 20px;font-size:15px;line-height:1.6">Si vous êtes à l'origine de cette action, aucune intervention supplémentaire n'est nécessaire.</p>
-                <div style="border:1px solid #f0c7c7;border-radius:8px;padding:16px;background:#ffffff">
-                  <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#8a1c1c"><strong>Vous ne reconnaissez pas cette action ?</strong><br>Sécurisez immédiatement votre compte.</p>
-                  <a href="${safeSecurityUrl}" style="display:inline-block;background:#111b4d;color:#ffffff;text-decoration:none;border-radius:7px;padding:12px 16px;font-size:14px;font-weight:700">Sécuriser mon compte</a>
-                </div>
-                <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#64748b">Le service client Compétence ne vous demandera jamais votre mot de passe par email, SMS ou WhatsApp.</p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>`,
+    text: content.text,
+    html: content.html,
   });
+}
+
+async function sendGmailSecurityEmail(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  idempotencyKey?: string;
+}) {
+  const gmail = await sendGmailEmail(input);
+  return {
+    ...gmail,
+    provider: "gmail",
+    message: gmail.configured
+      ? gmail.message
+      : "Gmail Compétence n'est pas configuré. Aucun autre expéditeur n'est autorisé pour les emails de sécurité.",
+  } satisfies DeliveryResult;
 }
 
 function summarizeResults(results: DeliveryResult[]) {
@@ -327,14 +364,8 @@ function errorMessage(data: any, fallback: string) {
   return fallback;
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "'": "&#39;",
-    '"': "&quot;",
-  })[character] ?? character);
+function isResendConfigured() {
+  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
 }
 
 async function getBooleanSetting(key: string, fallback: boolean) {

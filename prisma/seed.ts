@@ -576,9 +576,9 @@ async function main() {
   }
 
   console.log("👤 Création admin + client démo...");
-  const adminPass = await bcrypt.hash("admin123", 10);
-  const clientPass = await bcrypt.hash("client123", 10);
-  const teacherPass = await bcrypt.hash("prof123", 10);
+  const adminPass = await bcrypt.hash("AdminDemo123", 12);
+  const clientPass = await bcrypt.hash("ClientDemo123", 10);
+  const teacherPass = await bcrypt.hash("ProfDemo123", 10);
   const admin = await prisma.user.create({
     data: {
       email: "admin@monprof.ci",
@@ -586,6 +586,9 @@ async function main() {
       phone: "+225 07 00 00 00 00",
       passwordHash: adminPass,
       role: "ADMIN",
+      adminTeamRole: "OWNER",
+      adminAccountStatus: "ACTIVE",
+      adminAccessEnabled: true,
     },
   });
   const client = await prisma.user.create({
@@ -1017,9 +1020,9 @@ async function main() {
 
   console.log("\n✅ Seed terminé!");
   console.log("─".repeat(50));
-  console.log("👤 Admin: admin@monprof.ci / admin123");
-  console.log("👤 Client (Mme Amon): amon@demo.ci / client123");
-  console.log("👤 Client (M. Kouassi): kouassi@demo.ci / client123");
+  console.log("👤 Admin: admin@monprof.ci / AdminDemo123");
+  console.log("👤 Client (Mme Amon): amon@demo.ci / ClientDemo123");
+  console.log("👤 Client (M. Kouassi): kouassi@demo.ci / ClientDemo123");
   console.log("─".repeat(50));
 }
 

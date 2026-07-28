@@ -31,9 +31,9 @@ export function getPaymentHint(type: string, status: string) {
   if (type === "REFUND") return "Remboursement enregistré dans l'historique de votre réservation.";
   if (type === "RESCHEDULE_FEE") {
     if (status === "REFUND_PENDING") return "Le professeur a refusé le nouveau créneau : le service client contrôle le remboursement du supplément.";
-    return "Supplément PayDunya confirmé pour demander un changement de créneau au professeur.";
+    return "Supplément confirmé côté serveur pour demander un changement de créneau au professeur.";
   }
-  if (status === "BLOCKED") return "Paiement confirmé par PayDunya et gardé bloqué jusqu'à la confirmation du cours.";
+  if (status === "BLOCKED") return "Paiement confirmé côté serveur et gardé bloqué jusqu'à la confirmation du cours.";
   if (status === "TO_PAY_TEACHER") return "Cours confirmé : le service client finalise le dossier.";
   if (status === "TEACHER_PAID") return "Cours clôturé dans votre espace client.";
   if (status === "REFUND_PENDING" || status === "PARTIAL_REFUND_PENDING") return "Le service client traite le dépôt de remboursement.";
@@ -42,7 +42,7 @@ export function getPaymentHint(type: string, status: string) {
 }
 
 export function clientPaymentChannelLabel(method?: string | null) {
-  return method ? paymentMethodLabel(method) : "PayDunya Checkout";
+  return method ? paymentMethodLabel(method) : "Paiement sécurisé";
 }
 
 export function getClientPaymentFilter(type: string, status: string): ClientPaymentFilter {

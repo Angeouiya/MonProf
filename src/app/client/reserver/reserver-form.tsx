@@ -10,6 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { BackButton } from "@/components/shared/back-button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
@@ -26,6 +36,7 @@ import {
   SCHOOL_SYSTEMS,
   buildSchoolProgramSummary,
   getPreciseLevelOptions,
+  isCourseCatalogItemCompatible,
   isLyceeLevel,
   validateEducationSelection,
 } from "@/lib/course-catalog";
@@ -53,7 +64,7 @@ import {
 } from "@/lib/ivory-coast-locations";
 import {
   ArrowLeft, ArrowRight, Home, Video, User, Users,
-  ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink,
+  ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink, AlertTriangle,
 } from "lucide-react";
 
 type Teacher = {
@@ -96,6 +107,28 @@ type PricingConfig = {
   transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
 };
 
+type PriceChangeNotice = {
+  fingerprint: string;
+  previous: {
+    courseAmount: number;
+    transportFee: number;
+    paymentServiceFeeAmount: number;
+    totalClientPays: number;
+  };
+  current: {
+    unitSessionAmount: number;
+    courseAmount: number;
+    transportFee: number;
+    paymentServiceFeeAmount: number;
+    totalClientPays: number;
+    priceTierKey: string;
+    priceTierLabel: string;
+    transportFeeLabel: string | null;
+    transportRouteLabel: string | null;
+    numberOfSessions: number;
+  };
+};
+
 const STEPS = ["Besoin", "Format", "Disponibilité", "Récapitulatif", "Paiement"];
 const STEP_DETAILS = [
   {
@@ -116,7 +149,7 @@ const STEP_DETAILS = [
   },
   {
     title: "Paiement",
-    description: "Contrôlez le dossier puis finalisez le paiement sur PayDunya.",
+    description: "Contrôlez le dossier, choisissez votre moyen puis finalisez le paiement sécurisé sur Jèko.",
   },
 ] as const;
 const FIELD_CLASS = "mt-1.5 w-full rounded-lg border border-[#DDE6F7] bg-white py-2.5 pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
@@ -241,35 +274,6 @@ function isSchoolContext(category: string) {
   return category === "soutien_scolaire" || category === "preparation_examens";
 }
 
-function normalizeForMatch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/gi, " ")
-    .toLowerCase();
-}
-
-function isCatalogCourseCoveredByTeacher(
-  item: (typeof COURSE_CATALOG)[number],
-  teacherSubjects: string[],
-  selectedSubject: string,
-) {
-  const subject = normalizeForMatch(item.matiere_ou_competence);
-  const name = normalizeForMatch(item.nom);
-  const selected = normalizeForMatch(selectedSubject);
-  const allowedSubjects = teacherSubjects.map(normalizeForMatch).filter(Boolean);
-
-  if (selected && (subject.includes(selected) || selected.includes(subject) || name.includes(selected))) {
-    return true;
-  }
-
-  return allowedSubjects.some((allowed) => (
-    subject.includes(allowed)
-    || allowed.includes(subject)
-    || name.includes(allowed)
-  ));
-}
-
 const CATEGORY_LEVEL_PATTERNS: Record<string, RegExp> = {
   soutien_scolaire: /(maternelle|primaire|cp|ce1|ce2|cm1|cm2|college|6e|5e|4e|3e|lycee|seconde|premiere|terminale|bac|bepc|cepe)/,
   preparation_examens: /(concours|cepe|bepc|bac|brevet|toeic|toefl|ielts|test|certification)/,
@@ -366,6 +370,31 @@ function buildSessionPreview(timeLabels: string[], customTimeRequest: string, se
   }));
 }
 
+function normalizeForMatch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .toLowerCase();
+}
+
+function createClientCreationKey() {
+  const randomPart = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `booking:${randomPart}`;
+}
+
+function toJekoPaymentMethod(method: string) {
+  const methods: Record<string, string> = {
+    WAVE: "wave",
+    ORANGE_MONEY: "orange",
+    MTN_MONEY: "mtn",
+    MOOV_MONEY: "moov",
+    DJAMO: "djamo",
+  };
+  return methods[method] ?? "wave";
+}
+
 export function ReserverForm({
   teacher, subjects, levels, communes, pricingConfig,
 }: {
@@ -378,6 +407,9 @@ export function ReserverForm({
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [clientCreationKey] = useState(createClientCreationKey);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("WAVE");
+  const [priceChangeNotice, setPriceChangeNotice] = useState<PriceChangeNotice | null>(null);
   const displayName = teacher.professionalName || teacher.fullName;
   const teacherAvailability = parseAvailability(teacher.availability);
   const todayIso = useMemo(() => toDateInputValue(new Date()), []);
@@ -452,19 +484,24 @@ export function ReserverForm({
   const hasTeacherSubjects = teacher.subjects.length > 0;
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
   const isLyceeSelection = schoolContext && isLyceeLevel(form.levelName);
+  const requiresSchoolSystem = form.courseCategory === "soutien_scolaire" || isLyceeSelection;
   const preciseLevelOptions = isLyceeSelection ? getPreciseLevelOptions(form.schoolSystem) : [];
   const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
   const selectedCategoryCourses = useMemo(() => (
-    COURSE_CATALOG.filter((item) => (
-      item.categorie === form.courseCategory
-      && (!form.schoolSystem || !item.systeme_scolaire || item.systeme_scolaire === form.schoolSystem)
-      && (!form.preciseLevel || !item.niveau || item.niveau === form.preciseLevel)
-      && isCatalogCourseCoveredByTeacher(item, teacherSubjectNames, form.subjectName)
-    )).sort((a, b) => (
+    COURSE_CATALOG.filter((item) => isCourseCatalogItemCompatible({
+      item,
+      category: form.courseCategory,
+      schoolSystem: form.schoolSystem,
+      preciseLevel: form.preciseLevel,
+      selectedLevel: form.levelName,
+      teacherLevels: teacher.levels,
+      teacherSubjects: teacherSubjectNames,
+      selectedSubject: form.subjectName,
+    })).sort((a, b) => (
       a.sous_categorie.localeCompare(b.sous_categorie, "fr")
       || a.nom.localeCompare(b.nom, "fr")
     ))
-  ), [form.courseCategory, form.preciseLevel, form.schoolSystem, form.subjectName, teacherSubjectNames]);
+  ), [form.courseCategory, form.levelName, form.preciseLevel, form.schoolSystem, form.subjectName, teacher.levels, teacherSubjectNames]);
   const selectedCategoryCourseIds = useMemo(() => new Set(selectedCategoryCourses.map((item) => item.id)), [selectedCategoryCourses]);
   const selectedCategoryCourseGroups = useMemo(() => {
     const groups = new Map<string, typeof selectedCategoryCourses>();
@@ -644,6 +681,15 @@ export function ReserverForm({
     }));
   }
 
+  function handleCourseCatalogChange(courseCatalogId: string) {
+    const course = COURSE_CATALOG.find((item) => item.id === courseCatalogId);
+    setForm((current) => ({
+      ...current,
+      courseCatalogId,
+      schoolSystem: course?.systeme_scolaire ?? current.schoolSystem,
+    }));
+  }
+
   function validateStep(s: number): string | null {
     if (s === 0) {
       if (!form.clientType) return "Veuillez sélectionner le type de client.";
@@ -653,6 +699,7 @@ export function ReserverForm({
       if (!form.levelName) return `Veuillez sélectionner : ${categoryCopy.levelLabel.toLowerCase()}.`;
       if (schoolContext) {
         const educationValidation = validateEducationSelection({
+          category: form.courseCategory,
           levelName: form.levelName,
           schoolSystem: form.schoolSystem,
           preciseLevel: form.preciseLevel,
@@ -718,7 +765,7 @@ export function ReserverForm({
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function submit() {
+  async function submit(confirmedPricingFingerprint?: string) {
     const err = [0, 1, 2, 3, 4].map(validateStep).find(Boolean);
     if (err) {
       toast.error(err);
@@ -760,18 +807,53 @@ export function ReserverForm({
           sessionsCount: PACK_OPTIONS.find((p) => p.value === form.packType)?.count ?? 1,
           packType: form.packType,
           message: form.message.trim(),
+          clientCreationKey,
+          paymentMethod: toJekoPaymentMethod(selectedPaymentMethod),
+          expectedPricing: {
+            unitSessionAmount: pricing.unitSessionAmount,
+            courseAmount: pricing.courseAmount,
+            transportFee: pricing.transportFee,
+            paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+            totalClientPays: pricing.totalClientPays,
+            priceTierKey: pricing.priceTierKey,
+          },
+          confirmedPricingFingerprint,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (
+          res.status === 409
+          && data.code === "PRICE_CHANGED"
+          && data.requiresPriceConfirmation === true
+          && typeof data.pricingFingerprint === "string"
+          && data.pricing
+        ) {
+          setPriceChangeNotice({
+            fingerprint: data.pricingFingerprint,
+            previous: {
+              courseAmount: pricing.courseAmount,
+              transportFee: pricing.transportFee,
+              paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+              totalClientPays: pricing.totalClientPays,
+            },
+            current: data.pricing,
+          });
+          toast.info("Le tarif a changé : votre confirmation est requise avant Jèko.");
+          return;
+        }
         toast.error(data.error || "Erreur lors de la réservation");
         return;
       }
+      setPriceChangeNotice(null);
       if (data.payment?.checkoutUrl) {
-        toast.success("Redirection vers PayDunya...");
+        toast.success("Redirection vers Jèko...");
         window.location.assign(data.payment.checkoutUrl);
+      } else if (data.payment?.status === "succeeded") {
+        toast.success("Paiement Jèko déjà confirmé.");
+        router.push(`/client/reservations/${data.booking.id}?jeko=confirmed`);
       } else {
-        toast.error(data.payment?.error || "PayDunya n'a pas renvoyé de lien de paiement. Le dossier reste en brouillon et aucun professeur n'est notifié.");
+        toast.error(data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement. Le dossier reste en brouillon et aucun professeur n'est notifié.");
         router.push(`/client/reservations/${data.booking.id}?payment=pending`);
       }
     } catch (e: any) {
@@ -782,7 +864,7 @@ export function ReserverForm({
   }
 
   const isFinalStep = step === STEPS.length - 1;
-  const primaryActionLabel = isFinalStep ? "Payer via PayDunya" : "Continuer";
+  const primaryActionLabel = isFinalStep ? "Payer via Jèko" : "Continuer";
   const primaryActionDisabled = submitting || (isFinalStep && !isScheduleReadyForPayment);
   const handlePrimaryAction = () => {
     if (isFinalStep) {
@@ -970,11 +1052,11 @@ export function ReserverForm({
                     </p>
                   )}
                 </div>
-                {isLyceeSelection && (
+                {requiresSchoolSystem && (
                   <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="grid gap-4 min-[720px]:grid-cols-2">
+                    <div className={`grid gap-4 ${isLyceeSelection ? "min-[720px]:grid-cols-2" : ""}`}>
                       <div>
-                        <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
+                        <Label htmlFor="schoolSystem">Système scolaire *</Label>
                         <select
                           id="schoolSystem"
                           value={form.schoolSystem}
@@ -987,23 +1069,25 @@ export function ReserverForm({
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <Label htmlFor="preciseLevel">Classe, série ou voie *</Label>
-                        <select
-                          id="preciseLevel"
-                          value={form.preciseLevel}
-                          onChange={(e) => setForm((current) => ({ ...current, preciseLevel: e.target.value, courseCatalogId: "" }))}
-                          className={FIELD_CLASS}
-                        >
-                          <option value="">Sélectionner...</option>
-                          {preciseLevelOptions.map((level) => (
-                            <option key={level} value={level}>{level}</option>
-                          ))}
-                        </select>
-                      </div>
+                      {isLyceeSelection && (
+                        <div>
+                          <Label htmlFor="preciseLevel">Classe, série ou voie *</Label>
+                          <select
+                            id="preciseLevel"
+                            value={form.preciseLevel}
+                            onChange={(e) => setForm((current) => ({ ...current, preciseLevel: e.target.value, courseCatalogId: "" }))}
+                            className={FIELD_CLASS}
+                          >
+                            <option value="">Sélectionner...</option>
+                            {preciseLevelOptions.map((level) => (
+                              <option key={level} value={level}>{level}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <p className="mt-3 text-xs font-medium text-[#6B7280]">
-                      Le système scolaire est obligatoire au lycée pour ne pas mélanger les séries ivoiriennes, le lycée français et les programmes internationaux.
+                      Le système scolaire détermine la grille et empêche de mélanger programmes ivoirien, français et internationaux.
                     </p>
                   </div>
                 )}
@@ -1012,7 +1096,7 @@ export function ReserverForm({
                   <SearchableCatalogSelect
                     id="courseCatalogId"
                     value={safeCourseCatalogId}
-                    onValueChange={(value) => update("courseCatalogId", value)}
+                    onValueChange={handleCourseCatalogChange}
                     name="courseCatalogId"
                     placeholder="Rechercher un cours compatible"
                     searchPlaceholder="Tapez une matière, un niveau ou un mot-clé..."
@@ -1645,7 +1729,7 @@ export function ReserverForm({
                             </span>
                             {optionPricing.discountAmount > 0 && (
                               <span className="mt-0.5 block text-xs font-semibold text-[#111B4D]">
-                                Remise pack {formatFCFA(optionPricing.discountAmount)} déjà intégrée
+                                Remise pack {formatFCFA(optionPricing.discountAmount)} (taux réellement appliqué : {formatDiscountRate(optionPricing.discountRate)})
                               </span>
                             )}
                           </span>
@@ -1734,6 +1818,9 @@ export function ReserverForm({
                   groupType={form.groupType}
                   packType={form.packType}
                   priceTierKey={pricing.priceTierKey}
+                  priceTierLabel={pricing.priceTierLabel}
+                  teacherIndicativePrice={teacher.pricePerSession}
+                  paymentProviderLabel="Jèko"
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}
                   transportFeeLabel={pricing.transportFeeLabel}
@@ -1772,7 +1859,7 @@ export function ReserverForm({
                 <div className="flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs font-medium leading-5 text-[#64748B]">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
                   <span>
-                    Le paiement sera finalisé sur PayDunya, confirmé côté serveur, puis gardé sécurisé jusqu'à votre confirmation après le cours.
+                    Le paiement sera finalisé sur Jèko, confirmé côté serveur, puis gardé sécurisé jusqu'à votre confirmation après le cours.
                   </span>
                 </div>
               </div>
@@ -1785,7 +1872,7 @@ export function ReserverForm({
               <StepIntro
                 step="Étape 5"
                 title="Paiement sécurisé"
-                description="Contrôlez le dossier. Le moyen de paiement et les informations de paiement seront gérés uniquement sur PayDunya."
+                description="Contrôlez le dossier, choisissez le moyen de paiement puis poursuivez sur la page sécurisée Jèko."
               />
 
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
@@ -1824,6 +1911,9 @@ export function ReserverForm({
                   groupType={form.groupType}
                   packType={form.packType}
                   priceTierKey={pricing.priceTierKey}
+                  priceTierLabel={pricing.priceTierLabel}
+                  teacherIndicativePrice={teacher.pricePerSession}
+                  paymentProviderLabel="Jèko"
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}
                   transportFeeLabel={pricing.transportFeeLabel}
@@ -1842,35 +1932,43 @@ export function ReserverForm({
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <PayDunyaMark />
+                        <JekoMark />
                         <span className="inline-flex min-h-8 items-center rounded-lg border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D]">
                           Confirmation sécurisée
                         </span>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
-                        Compétence ne collecte aucune information Mobile Money et ne vous fait plus choisir le moyen de paiement ici.
-                        PayDunya affichera les options disponibles, collectera les informations nécessaires et confirmera automatiquement le paiement à la plateforme.
+                        Compétence ne collecte aucun code secret Mobile Money. Votre choix est transmis à Jèko, qui collecte les informations nécessaires et confirme automatiquement le paiement à la plateforme.
                       </p>
                     </div>
                     <div className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-right">
-                      <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant PayDunya</p>
+                      <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant Jèko</p>
                       <p className="mt-1 text-2xl font-semibold text-[#111B4D]">{formatFCFA(totalPrice)}</p>
                     </div>
                   </div>
 
                   <div className="p-4">
-                    <p className="text-sm font-semibold text-[#111827]">Moyens disponibles sur PayDunya Côte d'Ivoire</p>
-                    <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-4">
+                    <p className="text-sm font-semibold text-[#111827]">Choisissez votre moyen de paiement Jèko</p>
+                    <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 lg:grid-cols-5" role="group" aria-label="Moyen de paiement Jèko">
                       {PAYMENT_METHODS.map((m) => (
-                        <div key={m.value} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-center">
+                        <button
+                          key={m.value}
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod(m.value)}
+                          aria-pressed={selectedPaymentMethod === m.value}
+                          className={selectedPaymentMethod === m.value
+                            ? "flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border-2 border-[#111B4D] bg-[#EEF2FF] p-2.5 text-center ring-2 ring-[#C7D2FE]"
+                            : "flex min-h-20 flex-col items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-center transition hover:border-[#818CF8]"}
+                        >
                           <PaymentMethodLogo method={m.value} className="h-10 w-full min-w-0" />
                           <span className="text-xs font-semibold text-[#111827]">{m.label}</span>
-                        </div>
+                          {selectedPaymentMethod === m.value && <span className="text-[10px] font-bold uppercase text-[#3730A3]">Sélectionné</span>}
+                        </button>
                       ))}
                     </div>
                     <p className="mt-3 flex gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                      Le bouton final ouvre PayDunya. La réservation ne sera marquée payée qu'après confirmation serveur PayDunya.
+                      Le bouton final ouvre Jèko avec le moyen choisi. La réservation ne sera marquée payée qu'après confirmation signée et contrôle serveur.
                     </p>
                   </div>
               </div>
@@ -1893,11 +1991,11 @@ export function ReserverForm({
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={submit} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg min-[640px]:w-auto">
+              <Button type="button" onClick={() => void submit()} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg min-[640px]:w-auto">
                 {submitting ? (
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
-                  <><ExternalLink className="mr-2 h-4 w-4" /> Payer via PayDunya</>
+                  <><ExternalLink className="mr-2 h-4 w-4" /> Payer via Jèko</>
                 )}
               </Button>
             )}
@@ -1955,8 +2053,86 @@ export function ReserverForm({
           </Button>
         </div>
       </div>
+
+      <AlertDialog
+        open={Boolean(priceChangeNotice)}
+        onOpenChange={(open) => {
+          if (!open && !submitting) setPriceChangeNotice(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-xl border-[#F5C451] p-0">
+          <AlertDialogHeader className="border-b border-[#F3E3B1] bg-[#FFF9E8] p-5 text-left">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F5C451] text-[#4A3300]">
+                <AlertTriangle className="h-5 w-5" />
+              </span>
+              <div>
+                <AlertDialogTitle className="text-[#2F2300]">Le tarif a été recalculé</AlertDialogTitle>
+                <AlertDialogDescription className="mt-1 leading-5 text-[#6C550D]">
+                  Une donnée tarifaire a changé depuis l'affichage initial. Aucun paiement n'a été lancé : contrôlez le nouveau montant avant de continuer vers Jèko.
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+
+          {priceChangeNotice && (
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-[#E3E8F2] bg-[#F8FAFC] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Montant affiché avant</p>
+                  <p className="mt-1 text-2xl font-semibold text-[#64748B] line-through decoration-[#B42318]">
+                    {formatFCFA(priceChangeNotice.previous.totalClientPays)}
+                  </p>
+                </div>
+                <div className="rounded-lg border-2 border-[#111B4D] bg-[#EEF2FF] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#111B4D]">Nouveau total Jèko</p>
+                  <p className="mt-1 text-2xl font-bold text-[#111B4D]">
+                    {formatFCFA(priceChangeNotice.current.totalClientPays)}
+                  </p>
+                </div>
+              </div>
+
+              <dl className="divide-y divide-[#E6EAF3] rounded-lg border border-[#E3E8F2] px-4 text-sm">
+                <PriceConfirmationRow label={`Cours · ${priceChangeNotice.current.priceTierLabel}`} value={priceChangeNotice.current.courseAmount} />
+                <PriceConfirmationRow label={priceChangeNotice.current.transportRouteLabel || "Déplacement"} value={priceChangeNotice.current.transportFee} />
+                <PriceConfirmationRow label="Frais de service Compétence" value={priceChangeNotice.current.paymentServiceFeeAmount} />
+                <PriceConfirmationRow label="Total confirmé" value={priceChangeNotice.current.totalClientPays} strong />
+              </dl>
+            </div>
+          )}
+
+          <AlertDialogFooter className="border-t border-[#E6EAF3] p-5">
+            <AlertDialogCancel disabled={submitting}>Revenir et modifier</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!priceChangeNotice || submitting}
+              onClick={() => {
+                if (!priceChangeNotice) return;
+                const fingerprint = priceChangeNotice.fingerprint;
+                setPriceChangeNotice(null);
+                void submit(fingerprint);
+              }}
+              className="bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+            >
+              Confirmer {priceChangeNotice ? formatFCFA(priceChangeNotice.current.totalClientPays) : "le tarif"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+}
+
+function PriceConfirmationRow({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <dt className={strong ? "font-bold text-[#111827]" : "font-medium text-[#64748B]"}>{label}</dt>
+      <dd className={strong ? "shrink-0 font-bold text-[#111B4D]" : "shrink-0 font-semibold text-[#111827]"}>{formatFCFA(value)}</dd>
+    </div>
+  );
+}
+
+function formatDiscountRate(rate: number) {
+  return `${Number((Math.max(0, rate) * 100).toFixed(1)).toLocaleString("fr-FR")} %`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -2002,14 +2178,14 @@ function SummaryLine({ icon, label, value, flat = false }: { icon: ReactNode; la
   );
 }
 
-function PayDunyaMark() {
+function JekoMark() {
   return (
-    <span className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3" aria-label="PayDunya Checkout">
+    <span className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3" aria-label="Jèko Checkout">
       <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#111B4D] text-[11px] font-semibold text-white">
-        PD
+        JÈ
       </span>
       <span className="text-sm font-semibold tracking-normal text-[#111827]">
-        PayDunya
+        Jèko
         <span className="ml-1 font-semibold text-[#64748B]">Checkout</span>
       </span>
     </span>

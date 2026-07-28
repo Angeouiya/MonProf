@@ -179,7 +179,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Brouillons PayDunya</p>
+              <p className="text-xs text-muted-foreground">Brouillons de paiement</p>
               <p className="mt-1 text-2xl font-semibold text-slate-900">{draftBookings.length}</p>
             </CardContent>
           </Card>
@@ -236,9 +236,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               <div className="flex items-start gap-3">
                 <WalletCards className="mt-0.5 h-5 w-5 text-[#111B4D]" />
                 <div>
-                  <p className="text-sm font-bold text-[#111827]">Brouillons de paiement PayDunya</p>
+                  <p className="text-sm font-bold text-[#111827]">Brouillons de paiement</p>
                   <p className="mt-1 text-sm text-[#64748B]">
-                    Ces dossiers ne sont pas des réservations actives. Aucun professeur n'est notifié et aucune mission n'est créée tant que PayDunya ne confirme pas le paiement côté serveur.
+                    Ces dossiers ne sont pas des réservations actives. Aucun professeur n'est notifié et aucune mission n'est créée tant que le prestataire ne confirme pas le paiement côté serveur.
                   </p>
                 </div>
               </div>

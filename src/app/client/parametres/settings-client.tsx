@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ADMIN_PASSWORD_MIN_LENGTH, STANDARD_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?: boolean }) {
   const router = useRouter();
@@ -23,11 +24,10 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
   });
   const strength = getPasswordStrength(newPassword);
 
-  const minimumLength = ownerAdmin ? ADMIN_PASSWORD_MIN_LENGTH : STANDARD_PASSWORD_MIN_LENGTH;
   const rules = [
     { label: "Ancien mot de passe saisi", ok: oldPassword.trim().length > 0 },
-    { label: `${minimumLength} caractères minimum`, ok: newPassword.length >= minimumLength },
-    ...(ownerAdmin ? [{ label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) }] : []),
+    { label: `${PASSWORD_MIN_LENGTH} caractères minimum`, ok: newPassword.length >= PASSWORD_MIN_LENGTH },
+    { label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) },
     { label: "Différent de l'ancien", ok: newPassword.length > 0 && newPassword !== oldPassword },
     { label: "Confirmation identique", ok: confirmPassword.length > 0 && newPassword === confirmPassword },
   ];
@@ -53,10 +53,10 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         body: JSON.stringify({ action: "changePassword", oldPassword, newPassword, confirmPassword }),
       });
       const responseText = await res.text();
-      let data: { error?: string; email?: { sent?: boolean; message?: string } } = {};
+      let data: { error?: string; email?: { queued?: boolean; message?: string } } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { error?: string; email?: { sent?: boolean; message?: string } };
+          data = JSON.parse(responseText) as { error?: string; email?: { queued?: boolean; message?: string } };
         } catch {
           // Une réponse d'infrastructure ne doit pas produire une erreur JSON technique.
         }
@@ -64,14 +64,16 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
       toast.success(ownerAdmin ? "Mot de passe administrateur modifié." : "Mot de passe client modifié.");
-      if (data.email?.sent) {
-        toast.success("Un email personnel de confirmation vient de vous être envoyé.");
+      if (data.email?.queued) {
+        toast.success("L'email personnel de confirmation est pris en charge automatiquement.");
       } else {
         toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
       }
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      await signOut({ redirect: false });
+      router.replace(ownerAdmin ? "/admin/connexion?passwordChanged=1" : "/connexion?passwordChanged=1");
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Modification impossible.";
@@ -206,8 +208,8 @@ function getPasswordStrength(value: string) {
   if (!value) return { score: 0, label: "À définir" };
 
   let score = 0;
-  if (value.length >= 6) score += 1;
-  if (value.length >= 10) score += 1;
+  if (value.length >= PASSWORD_MIN_LENGTH) score += 1;
+  if (value.length >= PASSWORD_MIN_LENGTH + 2) score += 1;
   if (/[A-Za-z]/.test(value) && /\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
 

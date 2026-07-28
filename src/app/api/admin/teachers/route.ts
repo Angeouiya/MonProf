@@ -7,6 +7,8 @@ import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { countAvailabilitySlots, normalizeAvailability } from "@/lib/scheduling";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH, passwordHashRounds } from "@/lib/password-policy";
+import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -57,8 +59,8 @@ export async function POST(req: NextRequest) {
       if (!normalizedPortalPhone) {
         return NextResponse.json({ error: "Téléphone de connexion professeur requis." }, { status: 400 });
       }
-      if (typeof portalPassword !== "string" || portalPassword.trim().length < 6) {
-        return NextResponse.json({ error: "Mot de passe professeur requis (6 caractères minimum)." }, { status: 400 });
+      if (typeof portalPassword !== "string" || !isPasswordCompliant(portalPassword.trim())) {
+        return NextResponse.json({ error: `Mot de passe professeur requis (${PASSWORD_MIN_LENGTH} caractères minimum, une lettre et un chiffre).` }, { status: 400 });
       }
       const existingPortalPhone = await db.teacher.findFirst({
         where: { portalPhone: normalizedPortalPhone },
@@ -71,6 +73,17 @@ export async function POST(req: NextRequest) {
       }
     }
     const nextStatus = status || "ACTIVE";
+    const normalizedCommune = typeof commune === "string" ? commune.trim() : "";
+    const effectiveOffersHome = offersHome ?? true;
+    if (requiresTeacherHomeCommune({
+      status: nextStatus,
+      offersHome: effectiveOffersHome,
+      commune: normalizedCommune,
+    })) {
+      return NextResponse.json({
+        error: "Une commune principale est obligatoire pour activer un professeur qui propose les cours à domicile.",
+      }, { status: 400 });
+    }
     const rawPhotoUrl = typeof photoUrl === "string" ? photoUrl.trim() : "";
     let storedPhotoUrl: string | null = null;
     if (isPublicVisibleTeacherStatus(nextStatus) || rawPhotoUrl) {
@@ -100,6 +113,12 @@ export async function POST(req: NextRequest) {
     const appliedCommission = Number.isFinite(requestedCommission)
       ? Math.max(0, Math.min(60, Math.round(requestedCommission)))
       : platformSettings.commissionPercent;
+    const normalizedPricePerHour = Number.isFinite(Number(pricePerHour))
+      ? Math.max(0, Math.round(Number(pricePerHour)))
+      : 10_000;
+    const normalizedPricePerSession = Number.isFinite(Number(pricePerSession))
+      ? Math.max(0, Math.round(Number(pricePerSession)))
+      : 10_000;
     const teacher = await db.teacher.create({
       data: {
         fullName,
@@ -107,12 +126,13 @@ export async function POST(req: NextRequest) {
         photoUrl: storedPhotoUrl,
         phone,
         email: email || null,
-        commune: commune || null,
+        commune: normalizedCommune || null,
         quartier: quartier || null,
         addressHint: addressHint || null,
         portalAccessEnabled: enablePortal,
         portalPhone: enablePortal ? normalizedPortalPhone : null,
-        portalPasswordHash: enablePortal ? await bcrypt.hash(portalPassword.trim(), 10) : null,
+        portalPasswordHash: enablePortal ? await bcrypt.hash(portalPassword.trim(), passwordHashRounds({ role: "TEACHER" })) : null,
+        portalPasswordMustChange: enablePortal,
         jobTitle,
         bio,
         experienceYears: Number(experienceYears) || 0,
@@ -142,11 +162,11 @@ export async function POST(req: NextRequest) {
         badgePopular: !!badgePopular,
         badgePremium: !!badgePremium,
         internalNote: internalNote || null,
-        offersHome: offersHome ?? true,
+        offersHome: effectiveOffersHome,
         offersOnline: offersOnline ?? true,
         offersGroup: !!offersGroup,
-        pricePerHour: Number(pricePerHour) || 10000,
-        pricePerSession: Number(pricePerSession) || 10000,
+        pricePerHour: normalizedPricePerHour,
+        pricePerSession: normalizedPricePerSession,
         pricePack4: Number(pricePack4) || 38000,
         pricePack8: Number(pricePack8) || 72000,
         commissionRate: appliedCommission,

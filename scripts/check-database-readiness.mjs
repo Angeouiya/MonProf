@@ -27,6 +27,9 @@ const criticalTables = [
   ["adminActionLogs", () => db.adminActionLog.count()],
   ["settings", () => db.setting.count()],
   ["passwordResetTokens", () => db.passwordResetToken.count()],
+  ["teacherPasswordResetTokens", () => db.teacherPasswordResetToken.count()],
+  ["passwordResetRequestAudits", () => db.passwordResetRequestAudit.count()],
+  ["passwordEmailOutbox", () => db.passwordEmailOutbox.count()],
 ];
 
 try {

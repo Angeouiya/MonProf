@@ -25,6 +25,8 @@ import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DA
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { normalizeTeacherFormInitial } from "@/lib/teacher-form-data";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
 
@@ -93,6 +95,13 @@ const schema = z.object({
   pricingTier: z.string().default("STANDARD"),
 }).superRefine((values, ctx) => {
   const photoUrl = values.photoUrl?.trim() ?? "";
+  if (requiresTeacherHomeCommune(values)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["commune"],
+      message: "Une commune principale est obligatoire pour calculer les déplacements d'un professeur actif à domicile.",
+    });
+  }
   if (isPublicVisibleTeacherStatus(values.status) && !photoUrl) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -117,11 +126,11 @@ const schema = z.object({
         message: "Téléphone de connexion requis pour activer l'espace professeur.",
       });
     }
-    if (values.portalPassword && values.portalPassword.length < 6) {
+    if (values.portalPassword && !isPasswordCompliant(values.portalPassword)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["portalPassword"],
-        message: "Le mot de passe professeur doit contenir au moins 6 caractères.",
+        message: `Le mot de passe professeur doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`,
       });
     }
   }
@@ -611,8 +620,8 @@ export function TeacherForm({
         toast.error("Définissez le mot de passe d'accès professeur. Aucun OTP ne sera demandé.");
         return;
       }
-      if (portalPassword && portalPassword.length < 6) {
-        toast.error("Le mot de passe professeur doit contenir au moins 6 caractères.");
+      if (portalPassword && !isPasswordCompliant(portalPassword)) {
+        toast.error(`Le mot de passe professeur doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
         return;
       }
     }
@@ -636,10 +645,10 @@ export function TeacherForm({
         body: JSON.stringify(payload),
       });
       const responseText = await res.text();
-      let data: { id?: string; error?: string } = {};
+      let data: { id?: string; error?: string; passwordEmail?: { ok?: boolean; message?: string } | null } = {};
       if (responseText) {
         try {
-          data = JSON.parse(responseText) as { id?: string; error?: string };
+          data = JSON.parse(responseText) as { id?: string; error?: string; passwordEmail?: { ok?: boolean; message?: string } | null };
         } catch {
           // Une réponse d'infrastructure non JSON ne doit pas masquer le vrai échec.
         }
@@ -648,6 +657,8 @@ export function TeacherForm({
         throw new Error(data.error || `L'enregistrement a échoué (code ${res.status}).`);
       }
       toast.success(mode === "create" ? "Professeur créé" : "Professeur mis à jour");
+      if (data.passwordEmail?.ok) toast.success("Le professeur a reçu un email Compétence de confirmation.");
+      else if (data.passwordEmail) toast.warning(data.passwordEmail.message || "L'email de confirmation est en attente.");
       if (mode === "create" && data.id) {
         window.location.assign(`/admin/professeurs/${data.id}`);
       } else {
@@ -908,15 +919,18 @@ export function TeacherForm({
                 </p>
               </Field>
               <Field
-                label={mode === "create" ? "Mot de passe d'accès" : "Nouveau mot de passe d'accès"}
+                label={mode === "create" ? "Mot de passe temporaire" : "Nouveau mot de passe temporaire"}
                 error={errors.portalPassword?.message}
               >
                 <Input
                   type="text"
                   {...register("portalPassword")}
-                  placeholder={mode === "create" ? "Ex: prof123" : "Laisser vide pour conserver l'ancien"}
+                  placeholder={mode === "create" ? "Ex : Professeur2026" : "Laisser vide pour conserver l'ancien"}
                   disabled={!portalAccessEnabled}
                 />
+                <p className="text-xs font-medium leading-5 text-muted-foreground">
+                  Transmettez-le directement au professeur. Il sera obligé de créer son mot de passe personnel à la prochaine connexion.
+                </p>
               </Field>
 
               <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/45 p-4">
@@ -1521,12 +1535,15 @@ export function TeacherForm({
           <Card>
             <CardHeader><CardTitle className="text-base">Tarification (FCFA)</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Field label="Tarif / heure">
+              <Field label="Tarif horaire interne (informatif)">
                 <Input type="number" min={0} step={500} {...register("pricePerHour")} />
               </Field>
-              <Field label="Tarif / séance">
+              <Field label="Prix indicatif / séance de 2h (référence publique)">
                 <Input type="number" min={0} step={500} {...register("pricePerSession")} />
               </Field>
+              <p className="text-xs font-medium leading-5 text-muted-foreground sm:col-span-2">
+                Le calcul de réservation utilise le prix par séance comme minimum indicatif. Le tarif horaire reste informatif et ne remplace jamais cette référence.
+              </p>
               <Field label="Pack 4 séances">
                 <Input type="number" min={0} step={500} {...register("pricePack4")} />
               </Field>

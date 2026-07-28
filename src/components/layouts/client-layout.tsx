@@ -391,7 +391,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
             notices={[
               notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
               "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
-              "Restez sur la page si vous devez encore confirmer un cours, payer via PayDunya ou renseigner un numéro de remboursement.",
+              "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Continuer mes actions"
@@ -639,7 +639,7 @@ function SidebarContent({
             notices={[
               notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
               "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
-              "Restez sur la page si vous devez encore confirmer un cours, payer via PayDunya ou renseigner un numéro de remboursement.",
+              "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
             ]}
             confirmLabel="Me déconnecter"
             cancelLabel="Continuer"
@@ -745,7 +745,7 @@ function getCurrentSection(pathname: string | null) {
     return { label: "Cours", hint: "Séances à suivre" };
   }
   if (pathname.startsWith("/client/paiements")) {
-    return { label: "Paiements", hint: "PayDunya sécurisé" };
+    return { label: "Paiements", hint: "Jèko sécurisé" };
   }
   if (pathname.startsWith("/client/notifications")) {
     return { label: "Notifications", mobileLabel: "Alertes", hint: "Actions importantes" };

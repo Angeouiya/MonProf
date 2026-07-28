@@ -1,14 +1,18 @@
 import { createHash } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
-import { sendClientPasswordChangedEmail } from "@/lib/notification-delivery";
+import {
+  enqueuePasswordChangedEmailInTransaction,
+  flushPasswordEmailOutbox,
+} from "@/lib/password-email-outbox";
 import { absoluteAppUrl } from "@/lib/public-url";
 
+export const maxDuration = 30;
+
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
 
@@ -20,17 +24,21 @@ export async function POST(req: NextRequest) {
     where: { tokenHash: hashToken(token) },
     include: { user: true },
   });
+  const now = new Date();
 
+  // La réinitialisation publique est volontairement réservée aux clients.
+  // Les administrateurs suivent le circuit interne et les professeurs reçoivent
+  // un mot de passe temporaire attribué par le service client.
   if (
-    !resetToken ||
-    resetToken.usedAt ||
-    resetToken.expiresAt < new Date() ||
-    !canUseAccountPasswordFlow({ role: resetToken.user.role, email: resetToken.user.email })
+    !resetToken
+    || resetToken.user.role !== "CLIENT"
+    || resetToken.usedAt
+    || !resetToken.deliveredAt
+    || resetToken.expiresAt < now
   ) {
     return NextResponse.json({ error: "Ce lien est invalide ou expiré." }, { status: 400 });
   }
 
-  const ownerAdmin = isOwnerAdminAccount({ role: resetToken.user.role, email: resetToken.user.email });
   const validation = validatePasswordForAccount(password, resetToken.user);
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
@@ -38,104 +46,102 @@ export async function POST(req: NextRequest) {
   if (await bcrypt.compare(password, resetToken.user.passwordHash)) {
     return NextResponse.json({ error: "Choisissez un mot de passe différent de l'actuel." }, { status: 400 });
   }
-  const now = new Date();
+
   const passwordHash = await bcrypt.hash(password, passwordHashRounds(resetToken.user));
-  await db.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: resetToken.userId },
-      data: {
-        passwordHash,
-        ...(ownerAdmin ? { adminPasswordChangedAt: now } : {}),
-      },
-    });
-    await tx.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: now },
-    });
-    await tx.passwordResetToken.updateMany({
-      where: {
-        userId: resetToken.userId,
-        usedAt: null,
-        id: { not: resetToken.id },
-      },
-      data: { usedAt: now },
-    });
-    await tx.notification.create({
-      data: {
-        userId: ownerAdmin ? null : resetToken.userId,
-        title: "Mot de passe modifié",
-        message: ownerAdmin
-          ? "Le mot de passe du compte administrateur propriétaire a été réinitialisé avec succès."
-          : "Votre mot de passe Compétence a été réinitialisé avec succès.",
-        type: "PASSWORD_RESET_DONE",
-        recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
-        channel: "INTERNAL",
-        status: "SENT",
-        priority: "IMPORTANT",
-        clientId: ownerAdmin ? null : resetToken.userId,
-        sentAt: now,
-        link: ownerAdmin ? "/admin/parametres" : "/client/parametres",
-        actionLabel: "Voir paramètres",
-      },
-    });
-    if (ownerAdmin) {
-      await tx.adminActionLog.create({
+  let confirmationJobId: string | null = null;
+  try {
+    confirmationJobId = await db.$transaction(async (tx) => {
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: {
+          id: resetToken.id,
+          usedAt: null,
+          deliveredAt: { not: null },
+          expiresAt: { gt: now },
+        },
+        data: { usedAt: now },
+      });
+      if (claimed.count !== 1) throw new Error("RESET_TOKEN_ALREADY_USED");
+
+      const updated = await tx.user.updateMany({
+        where: { id: resetToken.userId, role: "CLIENT" },
         data: {
-          adminId: resetToken.userId,
-          action: "OWNER_ADMIN_PASSWORD_RESET",
-          entityType: "User",
-          entityId: resetToken.userId,
-          detail: "Réinitialisation du mot de passe du compte administrateur propriétaire via lien email sécurisé.",
-          oldStatus: "PASSWORD_ACTIVE",
-          newStatus: "PASSWORD_RESET",
+          passwordHash,
+          sessionVersion: { increment: 1 },
         },
       });
-    }
-  });
-  const delivery = await sendClientPasswordChangedEmail({
-    to: resetToken.user.email,
-    name: resetToken.user.name,
-    changedAt: now,
-    securityUrl: absoluteAppUrl("/mot-de-passe-oublie", req),
-    idempotencyKey: `password-reset-done-${resetToken.id}`,
-  });
-  try {
-    await db.notification.create({
-      data: {
-      userId: ownerAdmin ? null : resetToken.userId,
-      title: "Confirmation email de la réinitialisation du mot de passe",
-      message: delivery.ok
-        ? `Un email personnel de confirmation a été envoyé à ${resetToken.user.email}.`
-        : `L'email personnel destiné à ${resetToken.user.email} n'a pas pu être envoyé. ${delivery.message}`,
-      type: delivery.ok ? "PASSWORD_RESET_EMAIL_SENT" : "PASSWORD_RESET_EMAIL_FAILED",
-      recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
-      recipientName: resetToken.user.name,
-      channel: "EMAIL",
-      status: delivery.ok ? "SENT" : "FAILED",
-      priority: delivery.ok ? "IMPORTANT" : "URGENT",
-      clientId: ownerAdmin ? null : resetToken.userId,
-      sentAt: delivery.ok ? now : null,
-      response: [delivery.message, delivery.externalId ? `Identifiant fournisseur : ${delivery.externalId}` : null]
-        .filter(Boolean)
-        .join(" "),
-      link: ownerAdmin ? "/admin/mon-compte" : "/client/parametres",
-      actionLabel: "Voir la sécurité du compte",
-      },
+      if (updated.count !== 1) throw new Error("RESET_TOKEN_ACCOUNT_NOT_CLIENT");
+
+      await tx.passwordResetToken.updateMany({
+        where: {
+          userId: resetToken.userId,
+          usedAt: null,
+          id: { not: resetToken.id },
+        },
+        data: { usedAt: now },
+      });
+      await tx.notification.create({
+        data: {
+          userId: resetToken.userId,
+          title: "Mot de passe modifié",
+          message: "Votre mot de passe client Compétence a été réinitialisé avec succès.",
+          type: "PASSWORD_RESET_DONE",
+          recipientType: "CLIENT",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "IMPORTANT",
+          clientId: resetToken.userId,
+          sentAt: now,
+          link: "/client/parametres",
+          actionLabel: "Voir mes paramètres",
+        },
+      });
+
+      return enqueuePasswordChangedEmailInTransaction(tx, {
+        accountType: "CLIENT",
+        email: resetToken.user.email,
+        name: resetToken.user.name,
+        changedAt: now,
+        securityUrl: absoluteAppUrl("/mot-de-passe-oublie", req),
+        accountLabel: "compte client Compétence",
+        sourceTokenId: resetToken.id,
+        userId: resetToken.userId,
+      });
     });
   } catch (error) {
-    console.error("password reset email audit error", error);
+    if (isResetTokenClaimError(error)) {
+      return NextResponse.json({ error: "Ce lien est invalide ou expiré." }, { status: 400 });
+    }
+    throw error;
+  }
+
+  if (confirmationJobId) {
+    after(async () => {
+      try {
+        await flushPasswordEmailOutbox({ jobIds: [confirmationJobId!], limit: 1 });
+      } catch (error) {
+        console.error("[password-reset] Immediate confirmation flush failed; the cron will retry.", error);
+      }
+    });
   }
 
   return NextResponse.json({
     ok: true,
     email: {
-      sent: delivery.ok,
-      configured: delivery.configured,
-      message: delivery.message,
+      sent: false,
+      queued: Boolean(confirmationJobId),
+      message: confirmationJobId
+        ? "Confirmation email planifiée et prise en charge automatiquement."
+        : "Confirmation email non planifiée; le mot de passe a bien été modifié.",
     },
+    redirectTo: "/connexion",
   });
 }
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function isResetTokenClaimError(error: unknown) {
+  return error instanceof Error
+    && (error.message === "RESET_TOKEN_ALREADY_USED" || error.message === "RESET_TOKEN_ACCOUNT_NOT_CLIENT");
 }

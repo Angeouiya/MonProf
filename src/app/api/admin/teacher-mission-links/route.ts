@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import {
-  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  PAYMENT_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { absoluteAppUrl } from "@/lib/public-url";
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Mission introuvable pour ce professeur" }, { status: 404 });
   }
   if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+    return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
   const settingsRows = await db.setting.findMany({
     where: { key: { in: ["support_phone", "support_email"] } },

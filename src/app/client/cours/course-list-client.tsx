@@ -202,7 +202,7 @@ export function CourseListClient({
         <ClientEmptyState
           icon={BookOpen}
           title={hasSearch ? activeFilter.emptyTitle : "Aucun cours vérifié dans cette catégorie"}
-          description={hasSearch ? "Essayez un autre professeur, une autre matière ou une autre date." : "Un cours apparaît ici seulement après paiement PayDunya confirmé côté serveur."}
+          description={hasSearch ? "Essayez un autre professeur, une autre matière ou une autre date." : "Un cours apparaît ici seulement après confirmation serveur du paiement."}
           action={
             <Button asChild size="sm" className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
               <Link href={fallbackHref}>Réserver un cours</Link>
@@ -270,7 +270,7 @@ function CourseCard({ course }: { course: ClientCourseListItem }) {
           ]}
         />
 
-        <ClientRecordStatusLine className="mt-3" label={course.stepLabel} hint={course.stepHint} aside="PayDunya confirmé" />
+        <ClientRecordStatusLine className="mt-3" label={course.stepLabel} hint={course.stepHint} aside="Paiement confirmé" />
 
         <div className="mt-3 grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_auto] min-[520px]:items-center">
           <p className="text-xs font-medium leading-5 text-[#64748B]">

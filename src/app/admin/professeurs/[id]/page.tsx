@@ -228,7 +228,7 @@ export default async function ProfesseurDetailPage({
         },
         payoutRequests: {
           include: {
-            payoutRecord: { select: { reference: true } },
+            payoutRecord: { select: { reference: true, status: true } },
           },
           orderBy: { createdAt: "desc" },
           take: 50,
@@ -420,7 +420,8 @@ export default async function ProfesseurDetailPage({
     paymentPhone: record.paymentPhone,
     note: record.note,
     status: record.status,
-    paidAt: record.paidAt.toISOString(),
+    createdAt: record.createdAt.toISOString(),
+    paidAt: record.paidAt?.toISOString() ?? null,
     createdBy: record.createdBy,
     allocations: record.allocations.map((allocation) => ({
       id: allocation.id,
@@ -993,8 +994,8 @@ export default async function ProfesseurDetailPage({
             <CardHeader><CardTitle className="text-base">Tarification</CardTitle></CardHeader>
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <PriceCard label="Tarif / heure" amount={teacher.pricePerHour} />
-                <PriceCard label="Tarif / séance" amount={teacher.pricePerSession} />
+                <PriceCard label="Tarif horaire informatif" amount={teacher.pricePerHour} />
+                <PriceCard label="Minimum indicatif / séance 2h" amount={teacher.pricePerSession} />
                 <PriceCard label="Pack 4 séances" amount={teacher.pricePack4} />
                 <PriceCard label="Pack 8 séances" amount={teacher.pricePack8} />
               </div>

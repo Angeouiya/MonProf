@@ -216,7 +216,7 @@ export default async function AdminRefundsPage({
         <RefundMetric label="À rembourser client" value={formatFCFA(refundTotal)} detail="Montant prévu hors frais service." icon={RefreshCw} tone="primary" />
         <RefundMetric label="Indemnités professeurs" value={formatFCFA(teacherPenaltyTotal)} detail="Part de pénalité due aux professeurs." icon={Banknote} tone="primary" />
         <RefundMetric label="Part plateforme" value={formatFCFA(platformPenaltyTotal)} detail="Part interne conservée sur pénalité." icon={Scale} tone="neutral" />
-        <RefundMetric label="Frais service non remboursés" value={formatFCFA(serviceFeeTotal)} detail="Frais opérateur PayDunya/Mobile Money." icon={Wallet} tone="neutral" />
+        <RefundMetric label="Frais service non remboursés" value={formatFCFA(serviceFeeTotal)} detail="Frais de service Compétence ; les frais du prestataire sont suivis séparément." icon={Wallet} tone="neutral" />
       </div>
 
       <Card className="border-[#E3E8F2] bg-white">

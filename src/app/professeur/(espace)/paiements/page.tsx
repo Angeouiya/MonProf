@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ReceiptText } from "lucide-react";
+import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatFCFA } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-methods";
@@ -66,6 +66,9 @@ export default async function ProfesseurPaiementsPage() {
         totalPrice: true,
         paydunyaStatus: true,
         paydunyaVerifiedAt: true,
+        paymentProvider: true,
+        providerPaymentStatus: true,
+        paymentVerifiedAt: true,
         transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
         sessions: {
           where: { teacherId: teacher.id },
@@ -133,6 +136,11 @@ export default async function ProfesseurPaiementsPage() {
     .filter((request) => request.status === "PENDING")
     .reduce((sum, request) => sum + request.amount, 0);
   const requestableAmount = Math.max(0, readyToReceive - pendingRequested);
+  const paidPayouts = payouts.filter((payout) => payout.status === "PAID");
+  const transferFeesCovered = paidPayouts.reduce(
+    (sum, payout) => sum + Math.max(0, payout.transferFeeCoveredByPlatform),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -141,6 +149,31 @@ export default async function ProfesseurPaiementsPage() {
         description="Montants disponibles, demandes et reçus."
         rootTab
       />
+
+      <section aria-labelledby="teacher-exact-balance" className="overflow-hidden rounded-xl border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <div className="flex items-center gap-2 text-[#C7D2FE]">
+              <ShieldCheck className="h-5 w-5" aria-hidden />
+              <p className="text-xs font-black uppercase tracking-[0.16em]">Montant exact garanti</p>
+            </div>
+            <h2 id="teacher-exact-balance" className="mt-2 text-2xl font-black sm:text-3xl">{formatFCFA(remaining)} à recevoir</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#E0E7FF]">
+              Le montant affiché est votre net : aucun frais Jèko de transfert ou de retrait n'est retranché. Compétence prend ces frais à sa charge.
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 lg:min-w-64 lg:text-right">
+            <p className="text-xs font-bold uppercase tracking-wide text-[#C7D2FE]">Disponible maintenant</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">{formatFCFA(readyToReceive)}</p>
+          </div>
+        </div>
+        <div className="grid gap-2 border-t border-white/15 bg-white/5 p-4 min-[520px]:grid-cols-4 sm:px-6">
+          <TeacherExactMetric label="Net total généré" value={totalNet} />
+          <TeacherExactMetric label="Déjà payé" value={totalPaid} />
+          <TeacherExactMetric label="Reste exact" value={remaining} emphasized />
+          <TeacherExactMetric label="Frais couverts par Compétence" value={transferFeesCovered} />
+        </div>
+      </section>
 
       <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-6" balanceOdd={false}>
         <ProfessorStatCard label="Net prévu" value={formatFCFA(totalNet)} detail="Toutes les séances attribuées, libérées ou encore bloquées" icon="wallet" />
@@ -227,19 +260,30 @@ export default async function ProfesseurPaiementsPage() {
                     <div className="mt-3 rounded-lg border border-[#D7DEE9] bg-white p-3">
                       <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Facture liée</p>
-                          <p className="mt-1 font-mono text-sm font-semibold text-[#111827]">{request.payoutRecord.reference}</p>
-                          <p className="mt-1 text-xs font-semibold text-[#64748B]">
-                            Document généré après validation et versement par le service client.
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+                            {request.payoutRecord.status === "PAID" ? "Facture liée" : "Transfert lié"}
                           </p>
+                          <p className="mt-1 font-mono text-sm font-semibold text-[#111827]">{request.payoutRecord.reference}</p>
+                           <p className="mt-1 text-xs font-semibold text-[#64748B]">
+                             {request.payoutRecord.status === "PAID"
+                               ? "Document généré après validation et versement par le service client."
+                               : "Transfert Jèko en attente de confirmation. Votre solde n'est pas encore marqué comme payé."}
+                           </p>
+                           {request.payoutRecord.status === "PAID" && (
+                             <p className="mt-2 text-xs font-black text-emerald-700">
+                               Net exact reçu : {formatFCFA(request.payoutRecord.amount)} · Frais couverts : {formatFCFA(request.payoutRecord.transferFeeCoveredByPlatform)}
+                             </p>
+                           )}
                         </div>
-                        <TeacherPayoutReceiptActions
-                          compact
-                          teacherName={teacher.professionalName || teacher.fullName}
-                          teacherPhone={teacher.phone}
-                          record={request.payoutRecord}
-                          issuerLabel="Service client"
-                        />
+                        {request.payoutRecord.status === "PAID" && (
+                          <TeacherPayoutReceiptActions
+                            compact
+                            teacherName={teacher.professionalName || teacher.fullName}
+                            teacherPhone={teacher.phone}
+                            record={request.payoutRecord}
+                            issuerLabel="Service client"
+                          />
+                        )}
                       </div>
                     </div>
                   )}
@@ -307,15 +351,40 @@ export default async function ProfesseurPaiementsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#111827]">{payout.reference}</p>
-                      <p className="text-xs font-semibold text-[#64748B]">{formatDateTime(payout.paidAt)}</p>
+                      <p className="text-xs font-semibold text-[#64748B]">
+                        {payout.paidAt
+                          ? `Confirmé le ${formatDateTime(payout.paidAt)}`
+                          : `Initié le ${formatDateTime(payout.createdAt)}`}
+                      </p>
                     </div>
-                    <p className="text-sm font-semibold text-[#111B4D]">{formatFCFA(payout.amount)}</p>
+                    <div className="text-right">
+                      <p className={payout.status === "PAID"
+                        ? "text-[10px] font-black uppercase tracking-wide text-emerald-700"
+                        : payout.status === "DRAFT"
+                          ? "text-[10px] font-black uppercase tracking-wide text-amber-700"
+                          : "text-[10px] font-black uppercase tracking-wide text-red-700"}
+                      >
+                        {payout.status === "PAID"
+                          ? "Net exact reçu"
+                          : payout.status === "DRAFT" ? "Montant en traitement" : "Tentative annulée"}
+                      </p>
+                      <p className={payout.status === "PAID"
+                        ? "mt-0.5 text-sm font-black text-emerald-800"
+                        : payout.status === "DRAFT"
+                          ? "mt-0.5 text-sm font-black text-amber-800"
+                          : "mt-0.5 text-sm font-black text-red-800"}
+                      >
+                        {formatFCFA(payout.amount)}
+                      </p>
+                    </div>
                   </div>
                   <div className="mt-3">
                     <InfoLine label="Méthode" value={payout.method ? paymentMethodLabel(payout.method) : "Non précisée"} />
                     {payout.paymentPhone && <InfoLine label="Numéro payé" value={payout.paymentPhone} />}
-                    <InfoLine label="Statut" value={payout.status} />
+                    <InfoLine label="Statut" value={payoutStatusLabel(payout.status)} />
                     <InfoLine label="Réservations" value={`${payout.allocations.length} ligne(s)`} />
+                    <InfoLine label="Frais de transfert pris en charge" value={formatFCFA(payout.transferFeeCoveredByPlatform)} />
+                    <InfoLine label="Montant déduit du net" value={formatFCFA(0)} />
                   </div>
                   {payout.allocations.length > 0 && (
                     <div className="mt-3 grid gap-2">
@@ -327,16 +396,30 @@ export default async function ProfesseurPaiementsPage() {
                       ))}
                     </div>
                   )}
-                  {payout.note && <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">{payout.note}</p>}
-                  <div className="mt-3">
-                    <TeacherPayoutReceiptActions
-                      compact
-                      teacherName={teacher.professionalName || teacher.fullName}
-                      teacherPhone={teacher.phone}
-                      record={payout}
-                      issuerLabel="Service client"
-                    />
-                  </div>
+                  {publicPayoutNote(payout.note) && (
+                    <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">{publicPayoutNote(payout.note)}</p>
+                  )}
+                  {payout.status !== "PAID" && (
+                    <p className={payout.status === "DRAFT"
+                      ? "mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900"
+                      : "mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-800"}
+                    >
+                      {payout.status === "DRAFT"
+                        ? "En attente de confirmation Jèko : ce montant n'est pas encore comptabilisé comme reçu."
+                        : "La tentative a été annulée sans débit de votre solde. Le montant reste demandable s'il est toujours payable."}
+                    </p>
+                  )}
+                  {payout.status === "PAID" && (
+                    <div className="mt-3">
+                      <TeacherPayoutReceiptActions
+                        compact
+                        teacherName={teacher.professionalName || teacher.fullName}
+                        teacherPhone={teacher.phone}
+                        record={payout}
+                        issuerLabel="Service client"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -354,4 +437,28 @@ function AccountingMini({ label, value, strong = false }: { label: string; value
       <p className={strong ? "mt-0.5 text-sm font-semibold text-[#111B4D]" : "mt-0.5 text-sm font-semibold text-[#111827]"}>{value}</p>
     </div>
   );
+}
+
+function TeacherExactMetric({ label, value, emphasized = false }: { label: string; value: number; emphasized?: boolean }) {
+  return (
+    <div className={emphasized ? "rounded-lg border border-emerald-300 bg-emerald-400/15 px-3 py-3" : "rounded-lg border border-white/15 bg-white/10 px-3 py-3"}>
+      <div className="flex items-center gap-2">
+        <WalletCards className="h-4 w-4 text-[#C7D2FE]" aria-hidden />
+        <p className="text-[10px] font-bold uppercase tracking-wide text-[#C7D2FE]">{label}</p>
+      </div>
+      <p className="mt-1 text-sm font-black tabular-nums text-white">{formatFCFA(value)}</p>
+    </div>
+  );
+}
+
+function payoutStatusLabel(status: string) {
+  if (status === "PAID") return "Payé";
+  if (status === "DRAFT") return "En attente de confirmation Jèko";
+  if (status === "CANCELLED") return "Annulé sans débit";
+  return status;
+}
+
+function publicPayoutNote(note: string | null) {
+  const publicPart = note?.split(/\n\[/, 1)[0]?.trim();
+  return publicPart && !publicPart.startsWith("[") ? publicPart : null;
 }

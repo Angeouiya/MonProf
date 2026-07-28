@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH, passwordHashRounds } from "@/lib/password-policy";
 
 const schema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
   email: z.string().email("Email invalide"),
   phone: z.string().min(8, "Téléphone invalide").optional().or(z.literal("")),
-  password: z.string().min(6, "Mot de passe trop court (6 caractères min.)"),
+  password: z.string().refine(
+    isPasswordCompliant,
+    `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`,
+  ),
   commune: z.string().optional(),
   quartier: z.string().optional(),
   legalAccepted: z.boolean().optional(),
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Un compte existe déjà avec cet email." }, { status: 409 });
   }
 
-  const hash = await bcrypt.hash(password, 10);
+  const hash = await bcrypt.hash(password, passwordHashRounds({ role: "CLIENT" }));
   const user = await db.user.create({
     data: {
       email: email.toLowerCase().trim(),

@@ -39,7 +39,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827]">Mission non activée</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-            Cette mission n'est pas disponible tant que le paiement PayDunya n'a pas été confirmé par vérification serveur. Contactez le service client Compétence si vous avez reçu ce lien par erreur.
+            Cette mission n'est pas disponible tant que le prestataire de paiement n'a pas confirmé le règlement côté serveur. Contactez le service client Compétence si vous avez reçu ce lien par erreur.
           </p>
         </div>
       </main>

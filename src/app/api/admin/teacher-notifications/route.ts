@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { deliverTeacherNotification } from "@/lib/notification-delivery";
 import {
-  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  PAYMENT_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 
@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
             totalPrice: true,
             paydunyaStatus: true,
             paydunyaVerifiedAt: true,
+            paymentProvider: true,
+            providerPaymentStatus: true,
+            paymentVerifiedAt: true,
             assignedAt: true,
             clientId: true,
             client: { select: { name: true } },
@@ -86,7 +89,7 @@ export async function POST(req: NextRequest) {
   const now = new Date();
 
   if (booking && manualCallConfirmed && requiresVerifiedPayDunyaForOperationalAction(booking)) {
-    return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+    return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
   }
 
   const notif = await db.$transaction(async (tx) => {

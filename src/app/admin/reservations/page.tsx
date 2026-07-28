@@ -318,7 +318,7 @@ function getReservationRisk(status: string, paymentStatus: string, scheduledDate
   if (claimsPaid && !paymentVerified) {
     return {
       label: "Paiement à vérifier",
-      hint: "Statut financier ignoré tant qu'aucune preuve PayDunya serveur n'est attachée.",
+      hint: "Statut financier ignoré tant qu'aucune preuve serveur du prestataire de paiement n'est attachée.",
       className: "border-red-200 bg-red-50 text-red-700",
       urgent: true,
     };

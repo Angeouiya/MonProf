@@ -249,6 +249,10 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
     const nextTransactionStatus = alreadyPaid && booking.transactions[0]?.status
       ? booking.transactions[0].status
       : nextPaymentStatus;
+    const providerConflict = Boolean(
+      booking.paymentProvider && booking.paymentProvider !== "PAYDUNYA",
+    );
+    const preserveAnotherProvider = alreadyPaid && providerConflict;
 
     await db.$transaction(async (tx) => {
       await tx.booking.update({
@@ -264,6 +268,9 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
           paydunyaLastCheckedAt: now,
           paydunyaFailureReason: null,
           paydunyaLastPayload: lastPayload,
+          paymentProvider: preserveAnotherProvider ? booking.paymentProvider : "PAYDUNYA",
+          providerPaymentStatus: preserveAnotherProvider ? booking.providerPaymentStatus : "SUCCESS",
+          paymentVerifiedAt: preserveAnotherProvider ? booking.paymentVerifiedAt : now,
         },
       });
 
@@ -410,13 +417,34 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
         }
       }
 
+      if (providerConflict) {
+        await tx.notification.create({
+          data: {
+            userId: null,
+            title: "Double encaissement potentiel",
+            message: `PayDunya vient de confirmer ${booking.reference}, alors que le dossier était déjà affecté à ${booking.paymentProvider}. Contrôlez les deux fournisseurs avant toute restitution ou libération.`,
+            type: "PAYMENT_PROVIDER_CONFLICT",
+            recipientType: "ADMIN",
+            channel: "INTERNAL",
+            status: "SENT",
+            priority: "URGENT",
+            bookingId: booking.id,
+            teacherId: booking.teacherId,
+            clientId: booking.clientId,
+            sentAt: now,
+            link: `/admin/reservations/${booking.id}`,
+            actionLabel: "Contrôler les encaissements",
+          },
+        });
+      }
+
       await tx.adminActionLog.create({
         data: {
           adminId: null,
           action: "Paiement PayDunya vérifié serveur",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Référence PayDunya: ${maskPayDunyaReference(token)}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.`,
+          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Référence PayDunya: ${maskPayDunyaReference(token)}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.${providerConflict ? ` ALERTE : le fournisseur local était ${booking.paymentProvider}; risque de double encaissement.` : ""}`,
           oldStatus: booking.paymentStatus,
           newStatus: nextPaymentStatus,
         },

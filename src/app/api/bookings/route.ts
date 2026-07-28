@@ -3,7 +3,13 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateReference } from "@/lib/format";
-import { PackType, CourseFormat, GroupType } from "@prisma/client";
+import {
+  PackType,
+  CourseFormat,
+  GroupType,
+  type PaymentMethod,
+  type PaymentProvider,
+} from "@prisma/client";
 import {
   MIN_BOOKING_NOTICE_HOURS,
   availabilitySelectionLabel,
@@ -25,14 +31,32 @@ import {
   COURSE_CATEGORIES,
   buildSchoolProgramSummary,
   findCourseCatalogItem,
+  isCourseCatalogItemCompatible,
+  resolveCourseCatalogSchoolSystem,
   validateEducationSelection,
 } from "@/lib/course-catalog";
-import { createPayDunyaCheckoutInvoice, getPayDunyaPublicBaseUrl } from "@/lib/paydunya";
 import { buildBookingSessionRows } from "@/lib/booking-sessions";
+import { createJekoBookingCheckout } from "@/lib/payment-provider";
+import { JEKO_PAYMENT_METHODS, type JekoPaymentMethod } from "@/lib/jeko-utils";
+import { absoluteAppUrl } from "@/lib/public-url";
+import {
+  confirmablePricing,
+  createPricingConfirmationFingerprint,
+  expectedPricingMatches,
+  publicAuthoritativePricing,
+} from "@/lib/pricing-confirmation";
+import { bookingDraftMatchesExpected } from "@/lib/booking-draft-consistency";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
 const PACK_TYPES: PackType[] = ["SINGLE", "PACK_4", "PACK_8", "PACK_12", "EXAM_PREP", "CUSTOM"];
+const JEKO_PLATFORM_PAYMENT_METHODS: Record<JekoPaymentMethod, PaymentMethod> = {
+  wave: "WAVE",
+  orange: "ORANGE_MONEY",
+  mtn: "MTN_MONEY",
+  moov: "MOOV_MONEY",
+  djamo: "DJAMO",
+};
 
 function normalizeLabel(value: unknown) {
   if (typeof value !== "string") return "";
@@ -55,6 +79,16 @@ function isGroupType(value: unknown): value is GroupType {
 
 function isPackType(value: unknown): value is PackType {
   return typeof value === "string" && PACK_TYPES.includes(value as PackType);
+}
+
+function isJekoPaymentMethod(value: unknown): value is JekoPaymentMethod {
+  return typeof value === "string" && JEKO_PAYMENT_METHODS.includes(value as JekoPaymentMethod);
+}
+
+function normalizeClientCreationKey(value: unknown) {
+  if (typeof value !== "string") return null;
+  const key = value.trim();
+  return key.length >= 16 && key.length <= 140 && /^[A-Za-z0-9._:-]+$/.test(key) ? key : null;
 }
 
 function parsePreferredDays(value: unknown): string[] {
@@ -163,6 +197,9 @@ function publicBookingPayload(b: any) {
     status: b.status,
     paymentStatus: b.paymentStatus,
     paymentMethod: b.paymentMethod,
+    paymentProvider: b.paymentProvider,
+    providerPaymentStatus: b.providerPaymentStatus,
+    paymentVerifiedAt: b.paymentVerifiedAt,
     createdAt: b.createdAt,
     confirmedAt: b.confirmedAt,
     courseDoneAt: b.courseDoneAt,
@@ -231,10 +268,21 @@ export async function POST(req: NextRequest) {
     clientType, courseCategory, schoolSystem, preciseLevel, courseCatalogId,
     courseFormat, groupType, commune, quartier, addressHint, onlineLink,
     preferredDays, selectedTimeSlots, preferredTime, customStartTime, startDate, packType, message, participantsCount,
+    clientCreationKey: rawClientCreationKey, paymentMethod: rawPaymentMethod,
+    expectedPricing, confirmedPricingFingerprint,
   } = body;
+
+  const clientCreationKey = normalizeClientCreationKey(rawClientCreationKey);
+  const paymentMethod = isJekoPaymentMethod(rawPaymentMethod) ? rawPaymentMethod : null;
 
   if (!teacherId || !subjectName || !levelName || !courseFormat || !packType || !clientType || !courseCategory) {
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+  }
+  if (!clientCreationKey) {
+    return NextResponse.json({ error: "Clé de création de réservation invalide. Rechargez la page puis réessayez." }, { status: 400 });
+  }
+  if (!paymentMethod) {
+    return NextResponse.json({ error: "Choisissez un moyen de paiement Jèko valide." }, { status: 400 });
   }
   if (!CLIENT_TYPES.includes(clientType)) {
     return NextResponse.json({ error: "Type de client invalide." }, { status: 400 });
@@ -271,25 +319,45 @@ export async function POST(req: NextRequest) {
   }
   const canonicalSubjectName = teacherSubject.subject.name;
   const canonicalLevelName = teacherLevel.level.name;
+  const catalogCourse = courseCatalogId ? findCourseCatalogItem(courseCatalogId) : null;
+  if (courseCatalogId && !catalogCourse) {
+    return NextResponse.json({ error: "Cours catalogue invalide." }, { status: 400 });
+  }
+  const schoolSystemResolution = resolveCourseCatalogSchoolSystem({
+    item: catalogCourse,
+    requestedSchoolSystem: schoolSystem,
+  });
+  if (!schoolSystemResolution.ok) {
+    return NextResponse.json({ error: schoolSystemResolution.error }, { status: 400 });
+  }
+  const canonicalSchoolSystem = schoolSystemResolution.schoolSystem;
   const educationValidation = validateEducationSelection({
+    category: courseCategory,
     levelName: canonicalLevelName,
-    schoolSystem,
+    schoolSystem: canonicalSchoolSystem,
     preciseLevel,
   });
   if (!educationValidation.ok) {
     return NextResponse.json({ error: educationValidation.error }, { status: 400 });
   }
-  const catalogCourse = courseCatalogId ? findCourseCatalogItem(courseCatalogId) : null;
-  if (courseCatalogId && !catalogCourse) {
-    return NextResponse.json({ error: "Cours catalogue invalide." }, { status: 400 });
-  }
-  if (catalogCourse && catalogCourse.categorie !== courseCategory) {
-    return NextResponse.json({ error: "Le cours catalogue ne correspond pas à la catégorie choisie." }, { status: 400 });
+  if (catalogCourse && !isCourseCatalogItemCompatible({
+    item: catalogCourse,
+    category: courseCategory,
+    schoolSystem: canonicalSchoolSystem,
+    preciseLevel,
+    selectedLevel: canonicalLevelName,
+    teacherLevels: teacher.levels.map((item) => item.level.name),
+    teacherSubjects: teacher.subjects.map((item) => item.subject.name),
+    selectedSubject: canonicalSubjectName,
+  })) {
+    return NextResponse.json({
+      error: "Le cours catalogue ne correspond pas à la matière, au niveau ou au système scolaire choisis.",
+    }, { status: 400 });
   }
   const normalizedSchoolProgram = buildSchoolProgramSummary({
     clientType,
     category: courseCategory,
-    schoolSystem,
+    schoolSystem: canonicalSchoolSystem,
     preciseLevel,
     courseCatalogId,
     freeProgram: typeof schoolProgram === "string" ? schoolProgram.trim() : "",
@@ -388,7 +456,7 @@ export async function POST(req: NextRequest) {
     : platformSettings.commissionPercent;
   const pricing = calculateBookingPricing({
     category: courseCategory,
-    schoolSystem,
+    schoolSystem: canonicalSchoolSystem,
     levelName: canonicalLevelName,
     preciseLevel,
     subjectName: canonicalSubjectName,
@@ -409,6 +477,22 @@ export async function POST(req: NextRequest) {
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
     clientCommuneTransportFeeOverride: clientLocation?.transportFeeOverride,
   });
+  const canonicalConfirmablePricing = confirmablePricing(pricing);
+  const canonicalPricingFingerprint = createPricingConfirmationFingerprint(
+    canonicalConfirmablePricing,
+    clientCreationKey,
+  );
+  const hasConfirmedCurrentServerPrice = typeof confirmedPricingFingerprint === "string"
+    && confirmedPricingFingerprint === canonicalPricingFingerprint;
+  if (!expectedPricingMatches(expectedPricing, canonicalConfirmablePricing) && !hasConfirmedCurrentServerPrice) {
+    return NextResponse.json({
+      code: "PRICE_CHANGED",
+      error: "Le tarif a été recalculé. Vérifiez le nouveau détail puis confirmez-le avant d'ouvrir Jèko.",
+      requiresPriceConfirmation: true,
+      pricingFingerprint: canonicalPricingFingerprint,
+      pricing: publicAuthoritativePricing(pricing),
+    }, { status: 409 });
+  }
   const basePrice = pricing.numberOfSessions ? pricing.unitSessionAmount * pricing.numberOfSessions : 0;
   const unitPrice = pricing.unitSessionAmount;
   const normalizedSessionsCount = pricing.numberOfSessions ?? 0;
@@ -419,7 +503,7 @@ export async function POST(req: NextRequest) {
   const groupPricingLine = normalizedGroupType === "SMALL_GROUP"
     ? `Petit groupe: ${normalizedParticipants} participants, base ${basePrice.toLocaleString("fr-FR")} FCFA + ${extraParticipantCount} x 50% = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
     : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
-  const paymentServiceLine = `Frais de service paiement: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
+  const paymentServiceLine = `Frais de service Compétence: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
   const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
   const commissionRate = Math.round(pricing.platformCommissionRate * 100);
   const teacherRate = 100 - commissionRate;
@@ -434,6 +518,60 @@ export async function POST(req: NextRequest) {
   const initialScheduledTime = normalizedSelectedSlots.length > 0
     ? availabilitySelectionLabel(normalizedSelectedSlots[0])
     : customTimeRequest || null;
+  const serializedPricingSnapshot = pricingSnapshotToJson(pricing);
+  const bookingPaymentMethod: PaymentMethod = JEKO_PLATFORM_PAYMENT_METHODS[paymentMethod];
+  const bookingPaymentProvider: PaymentProvider = "JEKO";
+  const expectedDraftFields = {
+    teacherId,
+    subjectName: canonicalSubjectName,
+    levelName: canonicalLevelName,
+    objective: nullableTrimmedText(objective),
+    clientType,
+    courseCategory,
+    schoolSystem: canonicalSchoolSystem,
+    preciseLevel: nullableTrimmedText(preciseLevel),
+    courseCatalogId: catalogCourse?.id ?? null,
+    courseCatalogName: catalogCourse?.nom ?? null,
+    schoolProgram: normalizedSchoolProgram || null,
+    needDescription: normalizedNeedDescription || null,
+    courseFormat,
+    groupType: normalizedGroupType,
+    participantsCount: normalizedParticipants,
+    commune: courseFormat === "HOME" ? nullableTrimmedText(commune) : null,
+    quartier: courseFormat === "HOME" ? nullableTrimmedText(quartier) : null,
+    addressHint: courseFormat === "HOME" ? nullableTrimmedText(addressHint) : null,
+    onlineLink: courseFormat === "ONLINE" ? nullableTrimmedText(onlineLink) : null,
+    preferredDays: JSON.stringify(normalizedPreferredDays),
+    preferredTime: normalizedPreferredTime,
+    startDate: parsedStartDate,
+    scheduledDate: parsedStartDate,
+    scheduledTime: initialScheduledTime,
+    sessionsCount: normalizedSessionsCount,
+    packType,
+    message: nullableTrimmedText(message),
+    unitPrice,
+    totalPrice,
+    priceTierKey: pricing.priceTierKey,
+    courseAmount: pricing.courseAmount,
+    commissionRate,
+    commissionAmount,
+    teacherRate,
+    teacherPayoutAmount: teacherCoursePayoutAmount,
+    transportFee: pricing.transportFee,
+    transportFeeKey: pricing.transportFeeKey,
+    materialFee: pricing.materialFee,
+    discountAmount: pricing.discountAmount,
+    paymentServiceFeeRate: pricing.paymentServiceFeeRate,
+    paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+    paymentServiceFeeLabel: pricing.paymentServiceFeeLabel,
+    totalClientPays: pricing.totalClientPays,
+    totalTeacherReceives: pricing.totalTeacherReceives,
+    isQuoteOnly: false,
+    pricingSnapshot: serializedPricingSnapshot,
+    teacherNetAmount,
+    paymentMethod: bookingPaymentMethod,
+    paymentProvider: bookingPaymentProvider,
+  };
 
   const client = await db.user.findUnique({
     where: { id: userId },
@@ -448,61 +586,24 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const startDateLine = `Date souhaitée: ${formatDateFr(parsedStartDate)}.`;
 
-  const booking = await db.$transaction(async (tx) => {
+  let booking = await db.booking.findUnique({ where: { clientCreationKey } });
+  let bookingCreatedNow = false;
+  if (booking && booking.clientId !== userId) {
+    return NextResponse.json({ error: "Cette clé de création appartient à un autre compte." }, { status: 409 });
+  }
+
+  if (!booking) {
+    try {
+      booking = await db.$transaction(async (tx) => {
     const createdBooking = await tx.booking.create({
       data: {
         reference: generateReference("MP"),
+        clientCreationKey,
         clientId: userId,
-        teacherId,
-        subjectName: canonicalSubjectName,
-        levelName: canonicalLevelName,
-        objective: objective || null,
-        clientType,
-        courseCategory,
-        schoolSystem: typeof schoolSystem === "string" && schoolSystem ? schoolSystem : null,
-        preciseLevel: typeof preciseLevel === "string" && preciseLevel ? preciseLevel : null,
-        courseCatalogId: catalogCourse?.id ?? null,
-        courseCatalogName: catalogCourse?.nom ?? null,
-        schoolProgram: normalizedSchoolProgram || null,
-        needDescription: normalizedNeedDescription || null,
-        courseFormat,
-        groupType: normalizedGroupType,
-        participantsCount: normalizedParticipants,
-        commune: courseFormat === "HOME" ? (commune || null) : null,
-        quartier: courseFormat === "HOME" ? (quartier || null) : null,
-        addressHint: courseFormat === "HOME" ? (addressHint || null) : null,
-        onlineLink: courseFormat === "ONLINE" ? (onlineLink || null) : null,
-        preferredDays: JSON.stringify(normalizedPreferredDays),
-        preferredTime: normalizedPreferredTime,
-        startDate: parsedStartDate,
-        scheduledDate: parsedStartDate,
-        scheduledTime: initialScheduledTime,
-        sessionsCount: normalizedSessionsCount,
-        packType,
-        message: message || null,
-        unitPrice,
-        totalPrice,
-        priceTierKey: pricing.priceTierKey,
-        courseAmount: pricing.courseAmount,
-        commissionRate,
-        commissionAmount,
-        teacherRate,
-        teacherPayoutAmount: teacherCoursePayoutAmount,
-        transportFee: pricing.transportFee,
-        transportFeeKey: pricing.transportFeeKey,
-        materialFee: pricing.materialFee,
-        discountAmount: pricing.discountAmount,
-        paymentServiceFeeRate: pricing.paymentServiceFeeRate,
-        paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
-        paymentServiceFeeLabel: pricing.paymentServiceFeeLabel,
-        totalClientPays: pricing.totalClientPays,
-        totalTeacherReceives: pricing.totalTeacherReceives,
-        isQuoteOnly: false,
-        pricingSnapshot: pricingSnapshotToJson(pricing),
-        teacherNetAmount,
+        ...expectedDraftFields,
         status: "PENDING_PAYMENT",
         paymentStatus: "FAILED",
-        paymentMethod: null,
+        providerPaymentStatus: "PENDING",
       },
     });
     await tx.bookingSession.createMany({
@@ -523,7 +624,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         title: "Brouillon de réservation - paiement requis",
-        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que PayDunya n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. PayDunya affichera Wave, Orange Money, MTN Money ou Moov Money sur sa page sécurisée. Aucun numéro n'est saisi sur Compétence.`,
+        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que Jèko n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. Le paiement est finalisé sur la page sécurisée Jèko et validé uniquement après confirmation serveur.`,
         type: "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,
@@ -548,81 +649,51 @@ export async function POST(req: NextRequest) {
         action: "Réservation client rattachée au professeur",
         entityType: "Teacher",
         entityId: teacherId,
-        detail: `${clientName} a créé ${createdBooking.reference}. Paiement PayDunya en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} Total PayDunya: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
+        detail: `${clientName} a créé ${createdBooking.reference}. Paiement Jèko en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} Total Jèko: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
         oldStatus: "NO_BOOKING",
-        newStatus: "PAYDUNYA_PAYMENT_PENDING",
+        newStatus: "JEKO_PAYMENT_PENDING",
       },
     });
 
-    return createdBooking;
-  });
+        return createdBooking;
+      });
+      bookingCreatedNow = true;
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
+      booking = await db.booking.findUnique({ where: { clientCreationKey } });
+      if (!booking || booking.clientId !== userId) throw error;
+    }
+  }
 
-  let paydunya: {
-    configured: boolean;
-    checkoutUrl: string | null;
-    token: string | null;
-    responseText?: string;
-    raw?: Record<string, unknown>;
-    error?: string;
-  } | null = null;
+  if (!booking) {
+    return NextResponse.json({ error: "Impossible de retrouver le brouillon de réservation." }, { status: 500 });
+  }
+
+  if (!bookingDraftMatchesExpected(booking, expectedDraftFields)) {
+    return NextResponse.json({
+      error: "Ce brouillon a déjà été créé avec un autre calcul. Ouvrez-le depuis vos paiements ou rechargez la page pour créer un nouveau dossier.",
+      bookingId: booking.id,
+    }, { status: 409 });
+  }
+
+  let jeko: Awaited<ReturnType<typeof createJekoBookingCheckout>> | null = null;
+  let paymentError: string | null = null;
   try {
-    paydunya = await createPayDunyaCheckoutInvoice({
-      origin: getPayDunyaPublicBaseUrl(req),
-      booking: {
-        id: booking.id,
-        reference: booking.reference,
-        subjectName: booking.subjectName,
-        levelName: booking.levelName,
-        sessionsCount: booking.sessionsCount,
-        totalClientPays: booking.totalClientPays,
-        courseAmount: booking.courseAmount,
-        transportFee: booking.transportFee,
-        paymentServiceFeeAmount: booking.paymentServiceFeeAmount,
-        paymentServiceFeeLabel: booking.paymentServiceFeeLabel,
-      },
-      client: {
-        id: userId,
-        name: clientName,
-        email: client?.email,
-        phone: client?.phone,
-      },
-      teacher: {
-        id: teacher.id,
-        name: profName,
-      },
+    jeko = await createJekoBookingCheckout({
+      bookingId: booking.id,
+      // La méthode ne fait volontairement pas partie de la clé : deux clics
+      // concurrents Wave/Orange doivent viser une seule demande, jamais deux débits.
+      idempotencyKey: `BOOKING:${clientCreationKey}`,
+      paymentMethod,
+      successUrl: absoluteAppUrl(`/client/reservations/${booking.id}?jeko=return`, req),
+      errorUrl: absoluteAppUrl(`/client/reservations/${booking.id}?jeko=cancelled`, req),
     });
-    await db.booking.update({
-      where: { id: booking.id },
-      data: {
-        paydunyaToken: paydunya.token,
-        paydunyaCheckoutUrl: paydunya.checkoutUrl,
-        paydunyaStatus: paydunya.configured ? "PENDING" : "NOT_CONFIGURED",
-        paydunyaFailureReason: paydunya.configured ? null : "PayDunya n'est pas configuré.",
-        paydunyaLastCheckedAt: new Date(),
-        paydunyaLastPayload: compactPayDunyaCreatePayload(paydunya.raw ?? paydunya.responseText),
-      },
-    });
-  } catch (error: any) {
-    const errorMessage = error?.message || "PayDunya indisponible.";
-    console.error("[booking:paydunya_create_failed]", {
+  } catch (error: unknown) {
+    paymentError = error instanceof Error ? error.message : "Jèko est temporairement indisponible.";
+    console.error("[booking:jeko_create_failed]", {
       bookingId: booking.id,
       bookingReference: booking.reference,
-      reason: errorMessage,
-    });
-    paydunya = {
-      configured: true,
-      checkoutUrl: null,
-      token: null,
-      error: errorMessage,
-    };
-    await db.booking.update({
-      where: { id: booking.id },
-      data: {
-        paydunyaStatus: "CREATE_FAILED",
-        paydunyaFailureReason: errorMessage,
-        paydunyaLastCheckedAt: new Date(),
-        paydunyaLastPayload: errorMessage,
-      },
+      reason: paymentError,
     });
   }
 
@@ -640,22 +711,34 @@ export async function POST(req: NextRequest) {
       },
       reviews: [],
     }),
-    payment: paydunya
+    payment: jeko
       ? {
-          provider: "PAYDUNYA",
-          configured: paydunya.configured,
-          checkoutUrl: paydunya.checkoutUrl,
-          error: paydunya.error,
+          provider: "JEKO",
+          configured: true,
+          status: jeko.status,
+          attemptId: jeko.attemptId,
+          reference: jeko.reference,
+          amount: jeko.amountXof,
+          checkoutUrl: jeko.checkoutUrl,
+          error: null,
         }
-      : null,
-  }, { status: 201 });
+      : {
+          provider: "JEKO",
+          configured: false,
+          status: "failed",
+          checkoutUrl: null,
+          error: paymentError,
+        },
+  }, { status: bookingCreatedNow ? 201 : 200 });
 }
 
-function compactPayDunyaCreatePayload(value: unknown) {
-  if (value == null) return null;
-  try {
-    return JSON.stringify(value).slice(0, 2000);
-  } catch {
-    return String(value).slice(0, 2000);
-  }
+function nullableTrimmedText(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "P2002";
 }

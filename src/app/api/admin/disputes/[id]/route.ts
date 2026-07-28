@@ -129,7 +129,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       case "resolve":
         if (!verifiedClientPaymentExists) {
           return NextResponse.json({
-            error: "Impossible de libérer un paiement: aucun paiement client PayDunya vérifié n'existe pour cette réservation.",
+            error: "Impossible de libérer un paiement : aucun paiement client confirmé côté serveur n'existe pour cette réservation.",
           }, { status: 409 });
         }
         await db.dispute.update({
@@ -154,7 +154,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       case "refund": {
         if (!verifiedClientPaymentExists || !hasRefundableClientFunds(activeDispute.booking.paymentStatus)) {
           return NextResponse.json({
-            error: "Impossible de rembourser: aucun paiement PayDunya remboursable n'est vérifié sur cette réservation.",
+            error: "Impossible de rembourser : aucun paiement remboursable confirmé côté serveur n'existe pour cette réservation.",
           }, { status: 409 });
         }
         await db.dispute.update({
@@ -196,7 +196,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       case "reject":
         if (!verifiedClientPaymentExists) {
           return NextResponse.json({
-            error: "Impossible de libérer un paiement: aucun paiement client PayDunya vérifié n'existe pour cette réservation.",
+            error: "Impossible de libérer un paiement : aucun paiement client confirmé côté serveur n'existe pour cette réservation.",
           }, { status: 409 });
         }
         await db.dispute.update({

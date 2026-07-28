@@ -1,8 +1,9 @@
 "use client";
 
-const FALLBACK_PUBLIC_ORIGIN = "https://competence.ci";
+const FALLBACK_PUBLIC_ORIGIN = "https://www.competence.ci";
 
 export function getClientPublicOrigin() {
+  if (typeof window !== "undefined") return window.location.origin;
   const configured = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL);
   return configured ?? FALLBACK_PUBLIC_ORIGIN;
 }

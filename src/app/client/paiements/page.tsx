@@ -37,11 +37,21 @@ export default async function PaiementsPage() {
     },
     orderBy: { createdAt: "desc" },
     include: {
+      rescheduleRequest: {
+        select: {
+          paymentProvider: true,
+          feeAmount: true,
+          paymentServiceFeeAmount: true,
+          totalToPay: true,
+        },
+      },
       booking: {
         select: {
           id: true, reference: true, subjectName: true, levelName: true, schoolProgram: true,
           startDate: true, scheduledDate: true, paymentStatus: true, totalClientPays: true, totalPrice: true,
+          courseAmount: true, transportFee: true, paymentServiceFeeAmount: true,
           paydunyaStatus: true, paydunyaVerifiedAt: true,
+          paymentProvider: true, providerPaymentStatus: true, paymentVerifiedAt: true,
           transactions: {
             where: { type: "CLIENT_PAYMENT" },
             select: { type: true, status: true, amount: true },
@@ -69,6 +79,11 @@ export default async function PaiementsPage() {
       scheduledDate: true,
       totalClientPays: true,
       totalPrice: true,
+      courseAmount: true,
+      transportFee: true,
+      paymentServiceFeeAmount: true,
+      paymentProvider: true,
+      paydunyaCheckoutUrl: true,
       teacher: {
         select: {
           fullName: true,
@@ -92,7 +107,13 @@ export default async function PaiementsPage() {
     .filter((t) => t.type === "REFUND")
     .reduce((sum, t) => sum + t.amount, 0);
   const secureTransactions = transactions.filter((t) => (t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE") && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(t.status));
-  const lastSecureTransaction = secureTransactions[0] ?? transactions[0] ?? null;
+  const lastSecureTransactionSource = secureTransactions[0] ?? transactions[0] ?? null;
+  const lastSecureTransaction = lastSecureTransactionSource
+    ? {
+        ...lastSecureTransactionSource,
+        effectivePaymentProvider: transactionPaymentProvider(lastSecureTransactionSource),
+      }
+    : null;
   const priorityPendingBooking = pendingPaymentBookings[0] ?? null;
   const paymentHistory: ClientPaymentHistoryItem[] = transactions.map((transaction) => ({
     id: transaction.id,
@@ -102,6 +123,7 @@ export default async function PaiementsPage() {
     amount: transaction.amount,
     method: transaction.method,
     createdAt: transaction.createdAt.toISOString(),
+    paymentProvider: transactionPaymentProvider(transaction),
     booking: {
       id: transaction.booking.id,
       reference: transaction.booking.reference,
@@ -109,6 +131,17 @@ export default async function PaiementsPage() {
       levelName: transaction.booking.levelName,
       startDate: transaction.booking.startDate?.toISOString() ?? null,
       scheduledDate: transaction.booking.scheduledDate?.toISOString() ?? null,
+      courseAmount: transaction.type === "RESCHEDULE_FEE"
+        ? transaction.rescheduleRequest?.feeAmount ?? transaction.amount
+        : transaction.booking.courseAmount,
+      transportFee: transaction.type === "RESCHEDULE_FEE" ? 0 : transaction.booking.transportFee,
+      paymentServiceFeeAmount: transaction.type === "RESCHEDULE_FEE"
+        ? transaction.rescheduleRequest?.paymentServiceFeeAmount ?? 0
+        : transaction.booking.paymentServiceFeeAmount,
+      totalClientPays: transaction.type === "RESCHEDULE_FEE"
+        ? transaction.rescheduleRequest?.totalToPay ?? transaction.amount
+        : transaction.booking.totalClientPays,
+      paymentProvider: transaction.booking.paymentProvider ?? (transaction.booking.paydunyaVerifiedAt ? "PAYDUNYA" : "JEKO"),
       teacher: {
         fullName: transaction.booking.teacher.fullName,
         professionalName: transaction.booking.teacher.professionalName,
@@ -173,7 +206,7 @@ export default async function PaiementsPage() {
           icon={ReceiptText}
           eyebrow="Dernier mouvement"
           title={<Money amount={lastSecureTransaction.amount} />}
-          description={`${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)} · ${lastSecureTransaction.booking.reference}`}
+          description={`${formatDate(lastSecureTransaction.createdAt)} · ${paymentProviderLabel(lastSecureTransaction.effectivePaymentProvider)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)} · ${lastSecureTransaction.booking.reference}`}
           action={
             <Button asChild className="min-h-11 w-full rounded-lg">
               <Link href={`/client/reservations/${lastSecureTransaction.booking.id}`}>
@@ -196,7 +229,7 @@ export default async function PaiementsPage() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Historique vérifié</p>
               <h2 className="mt-1 text-base font-semibold leading-6 text-[#111827]">Aucun paiement serveur confirmé</h2>
               <p className="mt-1 text-sm font-medium leading-6 text-[#52627A]">
-                Vos demandes ci-dessus restent en brouillon jusqu'au retour PayDunya validé côté serveur.
+                Vos demandes ci-dessus restent en brouillon jusqu'à la confirmation serveur du prestataire de paiement.
               </p>
             </div>
             <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
@@ -233,8 +266,8 @@ function PaymentMobilePriorityCard({
   const hint = pendingBooking
     ? `${pendingBooking.subjectName} · ${pendingBooking.levelName}`
     : lastSecureTransaction
-      ? `${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
-      : "PayDunya active la réservation uniquement après confirmation serveur.";
+      ? `${formatDate(lastSecureTransaction.createdAt)} · ${paymentProviderLabel(lastSecureTransaction.effectivePaymentProvider)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
+      : "Jèko active la réservation uniquement après confirmation serveur.";
 
   return (
     <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-payment-mobile-priority>
@@ -260,7 +293,7 @@ function PaymentMobilePriorityCard({
         <ClientInfoPill label="Attente" value={pendingCount} strong={pendingCount > 0} />
       </div>
 
-      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-payment-method-rail aria-label="Moyens PayDunya disponibles">
+      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-payment-method-rail aria-label="Moyens de paiement Jèko disponibles">
         {ACTIVE_PAYMENT_METHODS.map((method) => (
           <PaymentMethodLogo key={method} method={method} className="h-10 w-28 shrink-0 rounded-lg" />
         ))}
@@ -290,7 +323,10 @@ type PaymentCommandCenterProps = {
       reference: string;
       subjectName: string;
       levelName: string;
+      paymentProvider: string | null;
+      paydunyaVerifiedAt: Date | null;
     };
+    effectivePaymentProvider: string | null;
   } | null;
 };
 
@@ -305,7 +341,7 @@ function PaymentCommandCenter({
   const pendingBooking = priorityPendingBooking;
   const hasPending = Boolean(pendingBooking);
   const latestLabel = lastSecureTransaction
-    ? `${formatDate(lastSecureTransaction.createdAt)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
+    ? `${formatDate(lastSecureTransaction.createdAt)} · ${paymentProviderLabel(lastSecureTransaction.effectivePaymentProvider)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
     : "Aucun mouvement confirmé";
   const actionHref = pendingBooking
     ? `/client/reservations/${pendingBooking.id}?payment=pending`
@@ -313,7 +349,7 @@ function PaymentCommandCenter({
       ? `/client/reservations/${lastSecureTransaction.booking.id}`
       : "/client/rechercher";
   const actionLabel = pendingBooking
-    ? "Payer via PayDunya"
+    ? "Payer via Jèko"
     : lastSecureTransaction
       ? "Ouvrir le dernier dossier"
       : "Trouver un professeur";
@@ -333,7 +369,7 @@ function PaymentCommandCenter({
               </h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
                 {hasPending
-                  ? "Finalisez le paiement sur PayDunya pour activer la réservation. Aucun professeur n'est notifié avant la confirmation serveur."
+                  ? "Finalisez le paiement sur Jèko pour activer la réservation. Aucun professeur n'est notifié avant la confirmation serveur."
                   : "Chaque mouvement affiché ici provient d'un paiement ou remboursement rattaché à une réservation vérifiée."}
               </p>
             </div>
@@ -350,8 +386,15 @@ function PaymentCommandCenter({
 
           <ClientProcessTracker
             steps={[
-              { label: "PayDunya", hint: "Paiement hors plateforme Compétence.", state: lastSecureTransaction ? "done" : hasPending ? "current" : "pending" },
-              { label: "Confirmation serveur", hint: "Activation uniquement après preuve PayDunya.", state: lastSecureTransaction ? "done" : "pending" },
+              {
+                label: paymentProviderLabel(
+                  lastSecureTransaction?.effectivePaymentProvider ?? pendingBooking?.paymentProvider,
+                  Boolean(!lastSecureTransaction && pendingBooking?.paydunyaCheckoutUrl),
+                ),
+                hint: "Paiement sur la page sécurisée du prestataire.",
+                state: lastSecureTransaction ? "done" : hasPending ? "current" : "pending",
+              },
+              { label: "Confirmation serveur", hint: "Activation uniquement après preuve vérifiée.", state: lastSecureTransaction ? "done" : "pending" },
               { label: "Fonds sécurisés", hint: "Suivi du cours, remboursement ou clôture.", state: fondsBloques > 0 ? "current" : lastSecureTransaction ? "done" : "pending" },
             ]}
           />
@@ -366,7 +409,7 @@ function PaymentCommandCenter({
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[#111827]">Règle claire</p>
-                  <p className="text-xs font-medium leading-5 text-[#64748B]">Numéro et moyen choisis uniquement sur PayDunya.</p>
+                  <p className="text-xs font-medium leading-5 text-[#64748B]">Numéro et moyen choisis uniquement sur la page Jèko sécurisée.</p>
                 </div>
               </div>
 
@@ -398,7 +441,7 @@ function PaymentCommandCenter({
 
             <p className="text-xs font-medium leading-5 text-[#64748B]">
               {pendingCount > 0
-                ? `${pendingCount} dossier(s) attendent encore PayDunya.`
+                ? `${pendingCount} dossier(s) attendent encore la confirmation Jèko.`
                 : "Aucun dossier en attente de paiement."}
             </p>
           </div>
@@ -417,6 +460,11 @@ type PendingPaymentBooking = {
   scheduledDate: Date | null;
   totalClientPays: number;
   totalPrice: number;
+  courseAmount: number;
+  transportFee: number;
+  paymentServiceFeeAmount: number;
+  paymentProvider: string | null;
+  paydunyaCheckoutUrl: string | null;
   teacher: {
     fullName: string;
     professionalName: string | null;
@@ -435,9 +483,9 @@ function PaymentTrustPanel() {
           </span>
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Validation serveur obligatoire</p>
-            <h2 className="mt-1 text-lg font-semibold leading-6 text-[#111827]">Aucune réservation active sans PayDunya vérifié.</h2>
+            <h2 className="mt-1 text-lg font-semibold leading-6 text-[#111827]">Aucune réservation active sans paiement vérifié.</h2>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-              Vous ne saisissez aucun numéro ici. Le paiement se fait sur PayDunya, puis Compétence active le dossier uniquement après confirmation serveur.
+              Vous ne saisissez aucun numéro ici. Le paiement se fait sur Jèko, puis Compétence active le dossier uniquement après confirmation serveur. Les anciens paiements PayDunya restent visibles dans l'historique.
             </p>
           </div>
         </div>
@@ -457,9 +505,9 @@ function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] 
       <div className="flex min-w-0 flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">À finaliser</p>
-          <h2 className="text-lg font-semibold leading-6 text-[#111827]">Paiements PayDunya en attente</h2>
+          <h2 className="text-lg font-semibold leading-6 text-[#111827]">Paiements Jèko en attente</h2>
           <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-            Ces demandes ne réservent aucun créneau tant que PayDunya n'a pas confirmé le paiement côté serveur.
+            Ces demandes ne réservent aucun créneau tant que Jèko n'a pas confirmé le paiement côté serveur.
           </p>
         </div>
         <span className="inline-flex min-h-9 items-center rounded-lg border border-[#D8DEE9] bg-white px-3 text-xs font-semibold text-[#111B4D]">
@@ -499,14 +547,22 @@ function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] 
                 items={[
                   { label: "Date", value: requestedDate },
                   { label: "Montant", value: <Money amount={getPendingBookingAmount(booking)} />, strong: true },
+                  { label: "Prestataire", value: paymentProviderLabel(booking.paymentProvider, Boolean(booking.paydunyaCheckoutUrl)), strong: true },
                   { label: "État", value: "Brouillon non réservé", strong: true },
                 ]}
+              />
+
+              <ClientBookingAmountBreakdown
+                courseAmount={booking.courseAmount}
+                transportFee={booking.transportFee}
+                serviceFeeAmount={booking.paymentServiceFeeAmount}
+                totalAmount={getPendingBookingAmount(booking)}
               />
 
               <ClientRecordStatusLine
                 className="mt-3"
                 label="Action attendue"
-                hint="Payez via PayDunya, puis utilisez la vérification serveur sur le dossier si vous revenez sur la plateforme."
+                hint="Payez via Jèko, puis utilisez la vérification serveur sur le dossier si vous revenez sur la plateforme."
               />
 
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
@@ -518,7 +574,7 @@ function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] 
                 </Button>
                 <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                   <Link href={`/client/reservations/${booking.id}?payment=pending`}>
-                    Payer via PayDunya
+                    Payer via Jèko
                   </Link>
                 </Button>
               </div>
@@ -534,6 +590,55 @@ function getPendingBookingAmount(booking: Pick<PendingPaymentBooking, "totalClie
   return Math.max(0, booking.totalClientPays || booking.totalPrice || 0);
 }
 
+function ClientBookingAmountBreakdown({
+  courseAmount,
+  transportFee,
+  serviceFeeAmount,
+  totalAmount,
+}: {
+  courseAmount: number;
+  transportFee: number;
+  serviceFeeAmount: number;
+  totalAmount: number;
+}) {
+  return (
+    <div className="mt-3 rounded-lg border border-[#C7D2FE] bg-[#F8FAFF] p-3">
+      <p className="text-[10px] font-black uppercase tracking-wide text-[#111B4D]">Détail du montant</p>
+      <div className="mt-2 grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
+        <ClientAmountMini label="Cours" value={courseAmount} />
+        <ClientAmountMini label="Transport" value={transportFee} />
+        <ClientAmountMini label="Service (3 %)" value={serviceFeeAmount} />
+        <ClientAmountMini label="Total à payer" value={totalAmount} strong />
+      </div>
+    </div>
+  );
+}
+
+function ClientAmountMini({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
+  return (
+    <div className={strong ? "rounded-lg border border-[#818CF8] bg-white px-2.5 py-2" : "rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-2"}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <Money amount={value} className={strong ? "mt-1 text-xs font-black text-[#111B4D]" : "mt-1 text-xs font-bold text-[#111827]"} />
+    </div>
+  );
+}
+
+function paymentProviderLabel(provider?: string | null, hasLegacyPayDunyaProof = false) {
+  return provider === "PAYDUNYA" || hasLegacyPayDunyaProof ? "PayDunya (historique)" : "Jèko";
+}
+
+function transactionPaymentProvider(transaction: {
+  type: string;
+  rescheduleRequest?: { paymentProvider: string | null } | null;
+  booking: { paymentProvider: string | null; paydunyaVerifiedAt: Date | null };
+}) {
+  const bookingProvider = transaction.booking.paymentProvider
+    ?? (transaction.booking.paydunyaVerifiedAt ? "PAYDUNYA" : "JEKO");
+  return transaction.type === "RESCHEDULE_FEE"
+    ? transaction.rescheduleRequest?.paymentProvider ?? bookingProvider
+    : bookingProvider;
+}
+
 function PaymentEmptyState() {
   return (
     <div data-client-payment-empty>
@@ -547,7 +652,7 @@ function PaymentEmptyState() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Paiement sécurisé</p>
               <h2 className="mt-1 text-xl font-semibold leading-tight text-[#111827]">Aucun paiement pour le moment</h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-                Après réservation, le paiement se fait sur PayDunya. Compétence vérifie le retour serveur avant d'afficher la transaction ici.
+                Après réservation, le paiement se fait sur Jèko. Compétence vérifie le retour serveur avant d'afficher la transaction ici.
               </p>
             </div>
           </div>
@@ -561,14 +666,14 @@ function PaymentEmptyState() {
 
         <div className="grid gap-2 min-[520px]:grid-cols-3">
           <ClientInfoPill label="Étape 1" value="Choisir un professeur" />
-          <ClientInfoPill label="Étape 2" value="Payer via PayDunya" />
+          <ClientInfoPill label="Étape 2" value="Payer via Jèko" />
           <ClientInfoPill label="Étape 3" value="Fonds sécurisés" />
         </div>
 
         <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
           <div className="flex items-center gap-2">
             <LockKeyhole className="h-4 w-4 text-[#111B4D]" />
-            <p className="text-sm font-semibold text-[#111827]">Moyens acceptés sur PayDunya</p>
+            <p className="text-sm font-semibold text-[#111827]">Moyens acceptés sur Jèko</p>
           </div>
           <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[560px]:grid-cols-4">
             {ACTIVE_PAYMENT_METHODS.map((method) => (
@@ -576,7 +681,7 @@ function PaymentEmptyState() {
             ))}
           </div>
           <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-            Aucun numéro de paiement n'est saisi dans votre espace client. La validation vient de la confirmation serveur PayDunya.
+            Aucun numéro de paiement n'est saisi dans votre espace client. La validation vient de la confirmation serveur Jèko.
           </p>
         </div>
       </ClientSurface>

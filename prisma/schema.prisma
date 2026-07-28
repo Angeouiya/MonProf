@@ -20,6 +20,7 @@ model User {
   name                   String
   phone                  String?
   passwordHash           String
+  sessionVersion         Int                 @default(0)
   role                   UserRole            @default(CLIENT)
   commune                String?
   quartier               String?
@@ -169,6 +170,8 @@ model Teacher {
   portalAccessEnabled    Boolean            @default(false)
   portalPhone            String?            @unique
   portalPasswordHash     String?
+  portalPasswordMustChange Boolean          @default(false)
+  sessionVersion         Int                @default(0)
   portalLastLoginAt      DateTime?
   defaultPayoutMethod    PaymentMethod?
   defaultPayoutPhone     String?
@@ -237,15 +240,16 @@ model Teacher {
   tasks                TeacherTask[]
   warnings             TeacherWarning[]
   sanctions            TeacherSanction[]
-  oldReplacements      TeacherReplacement[]       @relation("OldTeacherReplacement")
-  newReplacements      TeacherReplacement[]       @relation("NewTeacherReplacement")
+  oldReplacements      TeacherReplacement[]        @relation("OldTeacherReplacement")
+  newReplacements      TeacherReplacement[]        @relation("NewTeacherReplacement")
   paymentAdjustments   TeacherPaymentAdjustment[]
   payoutRecords        TeacherPayoutRecord[]
   payoutRequests       TeacherPayoutRequest[]
   adminMessages        TeacherAdminMessage[]
   webPushSubscriptions WebPushSubscription[]
-  bookingSessions      BookingSession[]           @relation("BookingSessionTeacher")
-  proposedSessions     BookingSession[]           @relation("BookingSessionProposedTeacher")
+  bookingSessions      BookingSession[]            @relation("BookingSessionTeacher")
+  proposedSessions     BookingSession[]            @relation("BookingSessionProposedTeacher")
+  passwordResetTokens  TeacherPasswordResetToken[]
 
   @@index([status])
   @@index([featured])
@@ -338,8 +342,9 @@ model TeacherZone {
 // RÉSERVATION (Booking)
 // ============================================================
 model Booking {
-  id                                String         @id @default(cuid())
-  reference                         String         @unique // MP-XXXX
+  id                                String           @id @default(cuid())
+  reference                         String           @unique // MP-XXXX
+  clientCreationKey                 String?          @unique
   clientId                          String
   teacherId                         String
   // Détails cours
@@ -355,8 +360,8 @@ model Booking {
   schoolProgram                     String? // Programme scolaire (ex: "Programme officiel CI", "Edexcel", etc.)
   needDescription                   String? // Description du besoin
   courseFormat                      CourseFormat
-  groupType                         GroupType      @default(INDIVIDUAL)
-  participantsCount                 Int            @default(1)
+  groupType                         GroupType        @default(INDIVIDUAL)
+  participantsCount                 Int              @default(1)
   commune                           String?
   quartier                          String?
   addressHint                       String?
@@ -367,37 +372,40 @@ model Booking {
   startDate                         DateTime? // Date de début souhaitée
   scheduledDate                     DateTime?
   scheduledTime                     String?
-  sessionsCount                     Int            @default(1)
-  packType                          PackType       @default(SINGLE)
+  sessionsCount                     Int              @default(1)
+  packType                          PackType         @default(SINGLE)
   message                           String?
   // Montants (FCFA)
   unitPrice                         Int
   totalPrice                        Int
   priceTierKey                      String?
-  courseAmount                      Int            @default(0)
-  commissionRate                    Int            @default(30)
-  commissionAmount                  Int            @default(0)
-  teacherRate                       Int            @default(70)
-  teacherPayoutAmount               Int            @default(0)
-  transportFee                      Int            @default(0)
+  courseAmount                      Int              @default(0)
+  commissionRate                    Int              @default(30)
+  commissionAmount                  Int              @default(0)
+  teacherRate                       Int              @default(70)
+  teacherPayoutAmount               Int              @default(0)
+  transportFee                      Int              @default(0)
   transportFeeKey                   String?
-  materialFee                       Int            @default(0)
-  discountAmount                    Int            @default(0)
-  paymentServiceFeeRate             Int            @default(0) // basis points, ex: 300 = 3%
-  paymentServiceFeeAmount           Int            @default(0)
+  materialFee                       Int              @default(0)
+  discountAmount                    Int              @default(0)
+  paymentServiceFeeRate             Int              @default(0) // basis points, ex: 300 = 3%
+  paymentServiceFeeAmount           Int              @default(0)
   paymentServiceFeeLabel            String?
-  totalClientPays                   Int            @default(0)
-  totalTeacherReceives              Int            @default(0)
-  isQuoteOnly                       Boolean        @default(false)
+  totalClientPays                   Int              @default(0)
+  totalTeacherReceives              Int              @default(0)
+  isQuoteOnly                       Boolean          @default(false)
   pricingSnapshot                   String?
-  teacherNetAmount                  Int            @default(0)
-  teacherPaidAmount                 Int            @default(0)
+  teacherNetAmount                  Int              @default(0)
+  teacherPaidAmount                 Int              @default(0)
   // Statuts
-  status                            BookingStatus  @default(PENDING_PAYMENT)
-  paymentStatus                     PaymentStatus  @default(FAILED)
+  status                            BookingStatus    @default(PENDING_PAYMENT)
+  paymentStatus                     PaymentStatus    @default(FAILED)
   paymentMethod                     PaymentMethod?
+  paymentProvider                   PaymentProvider?
+  providerPaymentStatus             String?
+  paymentVerifiedAt                 DateTime?
   // PayDunya anti-fraude et rapprochement serveur-à-serveur
-  paydunyaToken                     String?        @unique
+  paydunyaToken                     String?          @unique
   paydunyaCheckoutUrl               String?
   paydunyaStatus                    String?
   paydunyaReceiptUrl                String?
@@ -406,8 +414,8 @@ model Booking {
   paydunyaFailureReason             String?
   paydunyaLastPayload               String?
   // Méta
-  createdAt                         DateTime       @default(now())
-  updatedAt                         DateTime       @updatedAt
+  createdAt                         DateTime         @default(now())
+  updatedAt                         DateTime         @updatedAt
   confirmedAt                       DateTime?
   assignedAt                        DateTime?
   courseDoneAt                      DateTime?
@@ -418,13 +426,13 @@ model Booking {
   cancellationReason                String?
   cancellationDetail                String?
   cancellationWindow                String?
-  cancellationFeeRate               Int            @default(0)
-  cancellationFeeAmount             Int            @default(0)
-  cancellationPenaltyTeacherRate    Int            @default(0)
-  cancellationPenaltyTeacherAmount  Int            @default(0)
-  cancellationPenaltyPlatformRate   Int            @default(0)
-  cancellationPenaltyPlatformAmount Int            @default(0)
-  cancellationRefundAmount          Int            @default(0)
+  cancellationFeeRate               Int              @default(0)
+  cancellationFeeAmount             Int              @default(0)
+  cancellationPenaltyTeacherRate    Int              @default(0)
+  cancellationPenaltyTeacherAmount  Int              @default(0)
+  cancellationPenaltyPlatformRate   Int              @default(0)
+  cancellationPenaltyPlatformAmount Int              @default(0)
+  cancellationRefundAmount          Int              @default(0)
 
   client                    User                       @relation(fields: [clientId], references: [id])
   teacher                   Teacher                    @relation(fields: [teacherId], references: [id])
@@ -444,10 +452,12 @@ model Booking {
   rescheduleRequests        BookingRescheduleRequest[]
   teacherAdminMessages      TeacherAdminMessage[]
   sessions                  BookingSession[]
+  paymentAttempts           PaymentAttempt[]
 
   @@index([clientId])
   @@index([teacherId])
   @@index([status])
+  @@index([paymentProvider, providerPaymentStatus, paymentVerifiedAt])
 }
 
 // Une réservation de pack est payée en une fois, mais exploitée et comptabilisée
@@ -585,6 +595,7 @@ enum PaymentMethod {
   ORANGE_MONEY
   MTN_MONEY
   MOOV_MONEY
+  DJAMO
   CARD
 }
 
@@ -608,7 +619,9 @@ model Transaction {
 
   booking           Booking                   @relation(fields: [bookingId], references: [id])
   teacher           Teacher                   @relation(fields: [teacherId], references: [id])
-  rescheduleRequest BookingRescheduleRequest? @relation(fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
+  rescheduleRequest         BookingRescheduleRequest? @relation("RescheduleFeeTransaction", fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
+  refundedRescheduleRequest BookingRescheduleRequest? @relation("RescheduleRefundTransaction")
+  paymentAttempt            PaymentAttempt?
 }
 
 enum TransactionType {
@@ -617,6 +630,127 @@ enum TransactionType {
   TEACHER_PAYOUT
   REFUND
   COMMISSION
+}
+
+// ============================================================
+// TENTATIVES ET ÉVÉNEMENTS DE PAIEMENT MULTI-FOURNISSEUR
+// ============================================================
+// Les colonnes PayDunya historiques de Booking restent inchangées. Ces modèles
+// portent les nouvelles intégrations (Jèko en premier) et figent les montants
+// présentés au client avant toute redirection vers un fournisseur externe.
+model PaymentAttempt {
+  id                     String                @id @default(cuid())
+  provider               PaymentProvider
+  purpose                PaymentAttemptPurpose @default(BOOKING)
+  status                 PaymentAttemptStatus  @default(CREATED)
+  bookingId              String?
+  rescheduleRequestId    String?
+  transactionId          String?               @unique
+  idempotencyKey         String                @unique
+  reference              String                @unique
+  providerOrderId        String?               @unique
+  providerToken          String?               @unique
+  checkoutUrl            String?
+  storeId                String?
+  currency               String                @default("XOF")
+  // Montant majeur lisible dans l'application (1 = 1 FCFA).
+  amountXof              Int
+  // Montant mineur transmis au fournisseur. Jèko attend amountCents = FCFA x 100.
+  providerAmountMinor    Int
+  courseAmountXof        Int                   @default(0)
+  transportAmountXof     Int                   @default(0)
+  serviceFeeAmountXof    Int                   @default(0)
+  commissionAmountXof    Int                   @default(0)
+  teacherAmountXof       Int                   @default(0)
+  providerFeeAmountXof   Int                   @default(0)
+  providerFeeAmountMinor Int                   @default(0)
+  method                 PaymentMethod?
+  failureCode            String?
+  failureReason          String?
+  requestPayload         Json?
+  responsePayload        Json?
+  requestedAt            DateTime?
+  lastCheckedAt          DateTime?
+  verifiedAt             DateTime?
+  completedAt            DateTime?
+  failedAt               DateTime?
+  expiresAt              DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  booking           Booking?                  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  rescheduleRequest BookingRescheduleRequest? @relation(fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
+  transaction       Transaction?              @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  events            PaymentEvent[]
+
+  @@index([bookingId, provider, status])
+  @@index([rescheduleRequestId, provider, status])
+  @@index([provider, status, createdAt])
+  @@index([storeId, provider, createdAt])
+}
+
+model PaymentEvent {
+  id                     String                    @id @default(cuid())
+  provider               PaymentProvider
+  paymentAttemptId       String?
+  dedupeKey              String                    @unique
+  providerEventId        String
+  eventType              String
+  status                 PaymentEventStatus        @default(RECEIVED)
+  verificationSource     PaymentVerificationSource @default(WEBHOOK)
+  signatureValid         Boolean                   @default(false)
+  providerOrderId        String?
+  reference              String?
+  storeId                String?
+  currency               String?
+  amountXof              Int?
+  providerAmountMinor    Int?
+  providerFeeAmountXof   Int?
+  providerFeeAmountMinor Int?
+  payloadSha256          String
+  payload                Json
+  processingError        String?
+  receivedAt             DateTime                  @default(now())
+  processedAt            DateTime?
+
+  paymentAttempt PaymentAttempt? @relation(fields: [paymentAttemptId], references: [id], onDelete: SetNull)
+
+  @@index([paymentAttemptId, receivedAt])
+  @@index([provider, providerEventId])
+  @@index([provider, status, receivedAt])
+}
+
+enum PaymentProvider {
+  PAYDUNYA
+  JEKO
+}
+
+enum PaymentAttemptPurpose {
+  BOOKING
+  RESCHEDULE_FEE
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  REQUESTING
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+  REJECTED
+}
+
+enum PaymentEventStatus {
+  RECEIVED
+  PROCESSED
+  REJECTED
+  FAILED
+}
+
+enum PaymentVerificationSource {
+  WEBHOOK
+  SERVER_CONFIRMATION
 }
 
 // ============================================================
@@ -988,6 +1122,9 @@ model BookingRescheduleRequest {
   paymentServiceFeeAmount Int                     @default(0)
   paymentServiceFeeLabel  String?
   totalToPay              Int                     @default(0)
+  // Nullable preserves the historical ambiguity: null records are never
+  // eligible for Jèko and remain on the legacy/manual PayDunya path.
+  paymentProvider         PaymentProvider?
   paydunyaToken           String?                 @unique
   paydunyaCheckoutUrl     String?
   paydunyaStatus          String?
@@ -1001,17 +1138,24 @@ model BookingRescheduleRequest {
   paidAt                  DateTime?
   teacherRespondedAt      DateTime?
   appliedAt               DateTime?
+  refundedAmount          Int                     @default(0)
+  refundExternalReference String?                 @unique
+  refundTransactionId     String?                 @unique
+  refundedAt              DateTime?
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
-  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  client      User         @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
-  transaction Transaction?
+  booking           Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  teacher           Teacher          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  client            User             @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
+  transaction       Transaction?      @relation("RescheduleFeeTransaction")
+  refundTransaction Transaction?      @relation("RescheduleRefundTransaction", fields: [refundTransactionId], references: [id], onDelete: SetNull)
+  paymentAttempts   PaymentAttempt[]
 
   @@index([bookingId, status])
   @@index([teacherId, status])
   @@index([clientId, createdAt])
+  @@index([paymentProvider, status])
   @@index([paydunyaToken])
 }
 
@@ -1029,6 +1173,7 @@ enum RescheduleRequestStatus {
   TEACHER_REJECTED
   CANCELLED
   REFUND_REQUIRED
+  REFUNDED
 }
 
 // ============================================================
@@ -1350,17 +1495,23 @@ enum TeacherPaymentAdjustmentStatus {
 }
 
 model TeacherPayoutRecord {
-  id           String                    @id @default(cuid())
-  reference    String                    @unique
-  teacherId    String
-  amount       Int
-  method       PaymentMethod?
-  paymentPhone String?
-  note         String?
-  status       TeacherPayoutRecordStatus @default(PAID)
-  paidAt       DateTime                  @default(now())
-  createdAt    DateTime                  @default(now())
-  createdById  String?
+  id                           String                    @id @default(cuid())
+  reference                    String                    @unique
+  teacherId                    String
+  amount                       Int // montant net promis et remis au professeur, sans retenue de frais
+  method                       PaymentMethod?
+  paymentPhone                 String?
+  provider                     PaymentProvider?
+  providerReference            String?                   @unique
+  transferFeeAmount            Int                       @default(0)
+  transferFeeAmountMinor       Int                       @default(0)
+  transferFeeCoveredByPlatform Int                       @default(0)
+  transferFeeCoveredByPlatformMinor Int                  @default(0)
+  note                         String?
+  status                       TeacherPayoutRecordStatus @default(PAID)
+  paidAt                       DateTime?
+  createdAt                    DateTime                  @default(now())
+  createdById                  String?
 
   teacher       Teacher                   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   createdBy     User?                     @relation("TeacherPayoutCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1369,6 +1520,7 @@ model TeacherPayoutRecord {
 
   @@index([teacherId, paidAt])
   @@index([createdById])
+  @@index([provider, status, paidAt])
 }
 
 model TeacherPayoutRequest {
@@ -1396,12 +1548,15 @@ model TeacherPayoutRequest {
 }
 
 model TeacherPayoutAllocation {
-  id               String   @id @default(cuid())
-  payoutId         String
-  bookingId        String
-  bookingSessionId String?
-  amount           Int
-  createdAt        DateTime @default(now())
+  id                     String   @id @default(cuid())
+  payoutId               String
+  bookingId              String
+  bookingSessionId       String?
+  amount                 Int
+  paidAmountBefore       Int      @default(0)
+  releasedAmountSnapshot Int      @default(0)
+  retainedAmountSnapshot Int      @default(0)
+  createdAt              DateTime @default(now())
 
   payout         TeacherPayoutRecord @relation(fields: [payoutId], references: [id], onDelete: Cascade)
   booking        Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -1473,11 +1628,77 @@ model PasswordResetToken {
   userId    String
   tokenHash String    @unique
   expiresAt DateTime
+  deliveredAt DateTime?
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model TeacherPasswordResetToken {
+  id        String    @id @default(cuid())
+  teacherId String
+  tokenHash String    @unique
+  expiresAt DateTime
+  deliveredAt DateTime?
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId, expiresAt])
+  @@index([expiresAt])
+}
+
+/// Journal minimal et pseudonymisé des demandes de réinitialisation.
+/// Il permet un quota uniforme, y compris lorsque le compte demandé n'existe pas.
+model PasswordResetRequestAudit {
+  id          String   @id @default(cuid())
+  ipHash      String
+  accountHash String
+  accountType String
+  createdAt   DateTime @default(now())
+
+  emailOutbox PasswordEmailOutbox?
+
+  @@index([ipHash, createdAt])
+  @@index([accountHash, createdAt])
+  @@index([createdAt])
+}
+
+/// File d'envoi persistante des emails de sécurité. Aucune adresse, aucun nom
+/// et aucun token brut ne sont stockés en clair : le payload est chiffré AES-GCM.
+model PasswordEmailOutbox {
+  id                String   @id @default(cuid())
+  requestAuditId    String?  @unique
+  kind              String
+  accountHash       String
+  routingHash       String
+  dedupeKey         String   @unique
+  payloadCiphertext String?
+  payloadIv         String?
+  payloadAuthTag    String?
+  status            String   @default("PENDING")
+  attempts          Int      @default(0)
+  availableAt       DateTime @default(now())
+  lockedAt          DateTime?
+  ambiguousAt       DateTime?
+  acceptedAt        DateTime?
+  sentAt            DateTime?
+  failedAt          DateTime?
+  externalId        String?
+  lastError         String?
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  requestAudit PasswordResetRequestAudit? @relation(fields: [requestAuditId], references: [id], onDelete: SetNull)
+
+  @@index([status, availableAt])
+  @@index([accountHash, status, createdAt])
+  @@index([routingHash, status])
   @@index([expiresAt])
 }

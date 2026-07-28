@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bell, BookOpenCheck, CalendarClock, ClipboardList, CreditCard, MessageSquareText, UserRound } from "lucide-react";
+import { ArrowRight, Bell, BookOpenCheck, CalendarClock, ClipboardList, CreditCard, MessageSquareText, ShieldCheck, UserRound } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
@@ -41,6 +41,7 @@ export default async function ProfesseurDashboardPage() {
     unreadServiceClientMessageCount,
     pendingScheduleProposalCount,
     pendingPayoutRequestCount,
+    payoutFeesCoveredAgg,
   ] = await db.$transaction([
     db.teacher.findUnique({
       where: { id: teacher.id },
@@ -103,6 +104,7 @@ export default async function ProfesseurDashboardPage() {
           select: {
             reference: true, subjectName: true, levelName: true, paymentStatus: true,
             totalClientPays: true, totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
+            paymentProvider: true, providerPaymentStatus: true, paymentVerifiedAt: true,
             transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
           },
         },
@@ -125,6 +127,7 @@ export default async function ProfesseurDashboardPage() {
         id: true, status: true, teacherNetAmount: true, teacherPaidAmount: true,
         cancellationPenaltyTeacherAmount: true, paymentStatus: true, totalClientPays: true,
         totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
+        paymentProvider: true, providerPaymentStatus: true, paymentVerifiedAt: true,
         transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
         sessions: {
           where: { teacherId: teacher.id },
@@ -138,6 +141,10 @@ export default async function ProfesseurDashboardPage() {
       where: { teacherId: teacher.id, status: "PENDING", booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) } },
     }),
     db.teacherPayoutRequest.count({ where: { teacherId: teacher.id, status: "PENDING" } }),
+    db.teacherPayoutRecord.aggregate({
+      where: { teacherId: teacher.id, status: "PAID" },
+      _sum: { transferFeeCoveredByPlatform: true },
+    }),
   ]);
 
   const verifiedUpcomingBookings = upcomingBookings.filter(hasVerifiedPayDunyaClientPayment);
@@ -159,6 +166,7 @@ export default async function ProfesseurDashboardPage() {
     ?? "Matière à confirmer";
   const payoutProfileReady = Boolean(fullTeacher?.defaultPayoutMethod && fullTeacher?.defaultPayoutPhone);
   const profileReady = Boolean(fullTeacher?.careerSummary || fullTeacher?.workHistory || fullTeacher?.skills);
+  const payoutFeesCovered = payoutFeesCoveredAgg._sum.transferFeeCoveredByPlatform ?? 0;
 
   return (
     <div className="space-y-6">
@@ -175,6 +183,33 @@ export default async function ProfesseurDashboardPage() {
           </Button>
         )}
       />
+
+      <section aria-label="Solde professeur exact" className="overflow-hidden rounded-xl border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm">
+        <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div>
+            <div className="flex items-center gap-2 text-[#C7D2FE]">
+              <ShieldCheck className="h-5 w-5" aria-hidden />
+              <p className="text-xs font-black uppercase tracking-[0.16em]">Votre solde, sans déduction</p>
+            </div>
+            <p className="mt-2 text-3xl font-black tabular-nums">{formatFCFA(amountToReceive)}</p>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#E0E7FF]">
+              Vous recevez exactement le net affiché. Les frais de transfert Jèko sont payés par Compétence et ne diminuent jamais ce montant.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:min-w-[25rem]">
+            <DashboardBalanceMini label="Demandable" value={readyToRequestAmount} emphasized />
+            <DashboardBalanceMini label="Encore bloqué" value={blockedTeacherAmount} />
+            <DashboardBalanceMini label="Frais couverts" value={payoutFeesCovered} />
+            <DashboardBalanceMini label="Déduit de votre net" value={0} emphasized />
+          </div>
+        </div>
+        <div className="border-t border-white/15 bg-white/5 px-5 py-3 sm:px-6">
+          <Link href="/professeur/paiements" className="inline-flex items-center text-sm font-black text-white hover:text-[#C7D2FE]">
+            Voir le décompte complet
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+      </section>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-6">
         <ProfessorQuickLink
@@ -503,6 +538,15 @@ function ProfessorControlStep({
       <p className="mt-2 truncate text-sm font-semibold text-[#111827]">{value}</p>
       <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#64748B]">{detail}</p>
     </Link>
+  );
+}
+
+function DashboardBalanceMini({ label, value, emphasized = false }: { label: string; value: number; emphasized?: boolean }) {
+  return (
+    <div className={emphasized ? "rounded-lg border border-emerald-300 bg-emerald-400/15 px-3 py-3" : "rounded-lg border border-white/15 bg-white/10 px-3 py-3"}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#C7D2FE]">{label}</p>
+      <p className="mt-1 text-sm font-black tabular-nums text-white">{formatFCFA(value)}</p>
+    </div>
   );
 }
 

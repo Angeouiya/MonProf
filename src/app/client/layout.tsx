@@ -9,7 +9,7 @@ export default async function ClientRootLayout({ children }: { children: React.R
   const sessionUser = await getSessionUser();
   if (!sessionUser) redirect("/connexion?from=/client");
   const role = sessionUser.role;
-  const ownerAdmin = isOwnerAdminAccount({ role, email: sessionUser.email });
+  const ownerAdmin = isOwnerAdminAccount({ role, adminTeamRole: sessionUser.adminTeamRole });
   if (role === "TEACHER") redirect("/professeur");
   if (role !== "CLIENT" && !ownerAdmin) redirect("/admin");
 

@@ -31,6 +31,7 @@ export function PayAllTeacherButton({
   teacherPhone,
   pendingRetentions = 0,
   retainedTotal = 0,
+  payoutPending = false,
 }: {
   teacherId: string;
   total: number;
@@ -39,6 +40,7 @@ export function PayAllTeacherButton({
   teacherPhone?: string | null;
   pendingRetentions?: number;
   retainedTotal?: number;
+  payoutPending?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -48,6 +50,7 @@ export function PayAllTeacherButton({
   const [reference, setReference] = useState("");
   const [amount, setAmount] = useState(String(total));
   const [note, setNote] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
   const normalizedPaymentPhone = normalizePaymentPhone(paymentPhone);
   const normalizedPaymentPhoneConfirm = normalizePaymentPhone(paymentPhoneConfirm);
@@ -82,6 +85,8 @@ export function PayAllTeacherButton({
     }
     setLoading(true);
     try {
+      const submissionKey = idempotencyKey || crypto.randomUUID();
+      if (!idempotencyKey) setIdempotencyKey(submissionKey);
       const res = await fetch("/api/admin/teacher-payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,12 +97,22 @@ export function PayAllTeacherButton({
           paymentPhone: normalizedPaymentPhone,
           paymentPhoneConfirm: normalizedPaymentPhoneConfirm,
           reference,
+          idempotencyKey: submissionKey,
           note: note.trim() || `Paiement ${cleanAmount === total ? "total" : "partiel"} depuis Professeurs à payer (${count} cours suivis)`,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Paiement impossible.");
-      toast.success(`Paiement enregistré pour ${teacherName}: ${formatFCFA(cleanAmount)}`);
+      if (!res.ok) {
+        if (data.payout?.action === "failed") setIdempotencyKey("");
+        throw new Error(data.error || "Paiement impossible.");
+      }
+      if (data.pending) {
+        toast.info(`Transfert Jèko lancé pour ${teacherName}. Le solde sera débité uniquement après confirmation.`);
+        router.refresh();
+        return;
+      }
+      toast.success(`Versement Jèko confirmé pour ${teacherName}: ${formatFCFA(cleanAmount)}`);
+      setIdempotencyKey("");
       setReference("");
       setNote("");
       setPaymentPhone(teacherPhone ?? "");
@@ -114,9 +129,9 @@ export function PayAllTeacherButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button disabled={loading} className="w-full sm:w-auto">
+        <Button disabled={loading || payoutPending} className="w-full sm:w-auto">
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Banknote className="mr-1.5 h-4 w-4" />}
-          Enregistrer paiement
+          {payoutPending ? "Confirmation Jèko en attente" : "Lancer le versement Jèko"}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
@@ -163,6 +178,7 @@ export function PayAllTeacherButton({
                 <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
                 <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
                 <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
+                <SelectItem value="DJAMO">Djamo</SelectItem>
               </SelectContent>
             </Select>
           </div>

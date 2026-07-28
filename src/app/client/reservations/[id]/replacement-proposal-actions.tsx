@@ -187,7 +187,7 @@ export function ReplacementProposalActions({
                 notices={[
                   "Le professeur proposé ne sera pas affecté.",
                   "Aucune pénalité client ne sera appliquée.",
-                  "Les éventuels frais techniques PayDunya ne constituent pas une pénalité et restent traités selon les conditions de paiement affichées.",
+                  "Les éventuels frais techniques du prestataire de paiement ne constituent pas une pénalité et restent traités selon les conditions de paiement affichées.",
                   "Le montant remboursable sera enregistré et vos coordonnées de remboursement pourront être renseignées dans la réservation.",
                 ]}
                 confirmLabel="Confirmer l'annulation"

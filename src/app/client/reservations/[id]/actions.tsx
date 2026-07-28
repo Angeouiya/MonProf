@@ -40,6 +40,8 @@ type BookingActionsProps = {
     rescheduleRequests?: {
       id: string;
       status: string;
+      paymentProvider?: "PAYDUNYA" | "JEKO" | null;
+      paydunyaStatus?: string | null;
       paydunyaCheckoutUrl?: string | null;
       totalToPay: number;
       createdAt: Date;
@@ -68,7 +70,15 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const status = booking.status;
   const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
-  const canResumePayDunya = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
+  const providerIsJeko = booking.paymentProvider === "JEKO";
+  const providerLabel = providerIsJeko
+    ? "Jèko"
+    : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
+      ? "PayDunya (historique)"
+      : "Paiement sécurisé";
+  const paymentActionKey = providerIsJeko ? "jeko_checkout" : "paydunya_checkout";
+  const verificationActionKey = providerIsJeko ? "jeko_verify" : "paydunya_verify";
+  const canResumePayment = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
 
   async function callAction(action: string) {
     setLoading(action);
@@ -92,20 +102,24 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
     }
   }
 
-  async function onResumePayDunya() {
-    setLoading("paydunya_checkout");
+  async function onResumePayment() {
+    setLoading(paymentActionKey);
     try {
-      const res = await fetch(`/api/bookings/${booking.id}`, {
-        method: "PATCH",
+      const res = await fetch(providerIsJeko
+        ? `/api/bookings/${booking.id}/jeko-payment`
+        : `/api/bookings/${booking.id}`, {
+        method: providerIsJeko ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "paydunya_checkout" }),
+        body: JSON.stringify(providerIsJeko
+          ? { paymentMethod: toJekoPaymentMethod(booking.paymentMethod) }
+          : { action: "paydunya_checkout" }),
       });
       const data = await res.json();
       if (!res.ok || !data.payment?.checkoutUrl) {
-        toast.error(data.error || "Impossible d'ouvrir PayDunya pour le moment.");
+        toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
-      toast.success("Ouverture de PayDunya...");
+      toast.success(`Ouverture de ${providerLabel}...`);
       window.location.assign(data.payment.checkoutUrl);
     } catch {
       toast.error("Erreur réseau");
@@ -114,14 +128,28 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
     }
   }
 
-  async function onVerifyPayDunya() {
-    const data = await callAction("paydunya_verify");
+  async function onVerifyPayment() {
+    let data;
+    if (providerIsJeko) {
+      setLoading(verificationActionKey);
+      try {
+        const res = await fetch(`/api/bookings/${booking.id}/jeko-payment`, { cache: "no-store" });
+        data = await res.json();
+        if (!res.ok) toast.error(data.error || "Vérification Jèko impossible.");
+      } catch {
+        toast.error("Erreur réseau");
+      } finally {
+        setLoading(null);
+      }
+    } else {
+      data = await callAction("paydunya_verify");
+    }
     if (!data) {
       router.refresh();
       return;
     }
-    const message = data.payment?.message || "Vérification PayDunya terminée.";
-    if (data.payment?.verified) {
+    const message = data.payment?.message || `Vérification ${providerLabel} terminée.`;
+    if (data.payment?.verified || data.payment?.status === "success") {
       toast.success(message);
     } else {
       toast(message);
@@ -144,45 +172,45 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
     router.refresh();
   }
 
-  if (canResumePayDunya) {
+  if (canResumePayment) {
     return (
       <div className="mt-4 grid gap-2">
         <ImportantActionConfirm
-          title="Ouvrir PayDunya ?"
-          description="Vous allez quitter Compétence pour finaliser le paiement sur PayDunya. Le moyen de paiement et le numéro seront saisis uniquement sur PayDunya."
+          title={`Ouvrir ${providerLabel} ?`}
+          description={`Vous allez quitter Compétence pour finaliser le paiement sur ${providerLabel}. Le montant est relu depuis votre dossier et ne peut pas être modifié par le navigateur.`}
           badge="Paiement sécurisé"
           notices={[
-            "Aucune réservation n'est confirmée sans paiement PayDunya vérifié côté serveur.",
+            `Aucune réservation n'est confirmée sans paiement ${providerLabel} vérifié côté serveur.`,
             "Le montant affiché inclut les frais de service du moyen de paiement.",
             "Après paiement, revenez sur ce dossier pour suivre la validation du service client.",
           ]}
-          confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+          confirmLabel={loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
           cancelLabel="Rester ici"
-          onConfirm={onResumePayDunya}
+          onConfirm={onResumePayment}
           trigger={
-            <Button className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "paydunya_checkout"}>
+            <Button className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === paymentActionKey}>
               <ExternalLink className="mr-2 h-4 w-4" />
-              {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+              {loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
             </Button>
           }
         />
         <Button
           variant="outline"
           className="min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
-          onClick={onVerifyPayDunya}
-          disabled={loading === "paydunya_verify"}
+          onClick={onVerifyPayment}
+          disabled={loading === verificationActionKey}
         >
           <ShieldCheck className="mr-2 h-4 w-4" />
-          {loading === "paydunya_verify" ? "Vérification..." : "Vérifier le paiement"}
+          {loading === verificationActionKey ? "Vérification..." : "Vérifier le paiement"}
         </Button>
         <ImportantActionConfirm
           title="Supprimer ce brouillon ?"
-          description="Le dossier sera retiré de vos brouillons. Cette action est autorisée uniquement si aucun paiement PayDunya n'a été vérifié et si aucune mission n'a été créée."
+          description={`Le dossier sera retiré de vos brouillons. Cette action est autorisée uniquement si aucun paiement ${providerLabel} n'a été vérifié et si aucune mission n'a été créée.`}
           badge="Suppression définitive"
           notices={[
             "Le professeur ne sera pas notifié.",
             "Aucun paiement vérifié ne peut être supprimé.",
-            "Un lien PayDunya encore actif doit d'abord être annulé ou expiré.",
+            `Un lien ${providerLabel} encore actif doit d'abord être annulé ou expiré.`,
             "Vous devrez recommencer une nouvelle réservation si vous changez d'avis.",
           ]}
           confirmLabel={loading === "delete_draft" ? "Suppression..." : "Supprimer le brouillon"}
@@ -338,7 +366,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
     });
     if (data) {
       if (typeof data === "object" && data.payment?.checkoutUrl) {
-        toast.success("Ouverture de PayDunya pour le supplément...");
+        const paymentProvider = data.payment.provider === "PAYDUNYA" ? "PayDunya" : "Jèko";
+        toast.success(`Ouverture de ${paymentProvider} pour le supplément...`);
         window.location.assign(data.payment.checkoutUrl);
         return;
       }
@@ -350,6 +379,27 @@ export function BookingActions({ booking }: BookingActionsProps) {
       setRescheduleAcknowledged(false);
       router.refresh();
     }
+  }
+
+  async function onResumeReschedulePayment() {
+    if (!pendingRescheduleRequest) return;
+    const data = await callAction("reschedule_fee_checkout", {
+      rescheduleRequestId: pendingRescheduleRequest.id,
+    });
+    if (!data || typeof data !== "object") return;
+    const checkoutUrl = data.payment?.checkoutUrl;
+    if (!checkoutUrl) {
+      if (data.payment?.verified) {
+        toast.success(data.payment.message || "Supplément confirmé.");
+        router.refresh();
+      } else {
+        toast.error(data.payment?.message || "Le lien de paiement n'est pas encore disponible.");
+      }
+      return;
+    }
+    const paymentProvider = data.payment.provider === "PAYDUNYA" ? "PayDunya" : "Jèko";
+    toast.success(`Ouverture de ${paymentProvider}...`);
+    window.location.assign(checkoutUrl);
   }
 
   async function onCancel() {
@@ -442,19 +492,33 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount });
   const reschedulePolicy = useMemo(() => getReschedulePolicy(booking), [booking]);
   const pendingRescheduleRequest = booking.rescheduleRequests?.find((request) => (
-    request.status === "PAYMENT_PENDING" || request.status === "AWAITING_TEACHER"
+    request.status === "PAYMENT_PENDING"
+    || request.status === "PAYMENT_FAILED"
+    || request.status === "AWAITING_TEACHER"
   ));
+  const isJekoReschedule = pendingRescheduleRequest?.paymentProvider === "JEKO";
+  const isHistoricalReschedulePayDunya = Boolean(pendingRescheduleRequest && !isJekoReschedule);
+  const reschedulePaymentProviderLabel = isJekoReschedule ? "Jèko" : "PayDunya (historique)";
   const canReview = isReviewableBookingStatus(status);
   const canCancel = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(status);
   const canRequestReschedule = canCancel && paymentVerified && !pendingRescheduleRequest;
-  const canResumePayDunya = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
+  const providerIsJeko = booking.paymentProvider === "JEKO";
+  const providerLabel = providerIsJeko
+    ? "Jèko"
+    : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
+      ? "PayDunya (historique)"
+      : "Paiement sécurisé";
+  const paymentActionKey = providerIsJeko ? "jeko_checkout" : "paydunya_checkout";
+  const verificationActionKey = providerIsJeko ? "jeko_verify" : "paydunya_verify";
+  const canResumePayment = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
   const foregroundNotice = getForegroundNotice({
     status,
     canCancel,
-    canResumePayDunya,
+    canResumePayDunya: canResumePayment,
     cancellationRefundAmount: booking.cancellationRefundAmount,
     hasRefundRequest: Boolean(latestRefundRequest),
     hasDispute,
+    paymentProviderLabel: providerLabel,
   });
   const actionSummary = getActionSummary({
     status,
@@ -465,22 +529,27 @@ export function BookingActions({ booking }: BookingActionsProps) {
     canReview,
     canCancel,
     paymentVerified,
+    paymentProviderLabel: providerLabel,
   });
 
-  async function onResumePayDunya() {
-    setLoading("paydunya_checkout");
+  async function onResumePayment() {
+    setLoading(paymentActionKey);
     try {
-      const res = await fetch(`/api/bookings/${booking.id}`, {
-        method: "PATCH",
+      const res = await fetch(providerIsJeko
+        ? `/api/bookings/${booking.id}/jeko-payment`
+        : `/api/bookings/${booking.id}`, {
+        method: providerIsJeko ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "paydunya_checkout" }),
+        body: JSON.stringify(providerIsJeko
+          ? { paymentMethod: toJekoPaymentMethod(booking.paymentMethod) }
+          : { action: "paydunya_checkout" }),
       });
       const data = await res.json();
       if (!res.ok || !data.payment?.checkoutUrl) {
-        toast.error(data.error || "Impossible d'ouvrir PayDunya pour le moment.");
+        toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
-      toast.success("Ouverture de PayDunya...");
+      toast.success(`Ouverture de ${providerLabel}...`);
       window.location.assign(data.payment.checkoutUrl);
     } catch {
       toast.error("Erreur réseau");
@@ -489,22 +558,24 @@ export function BookingActions({ booking }: BookingActionsProps) {
     }
   }
 
-  async function onVerifyPayDunya() {
-    setLoading("paydunya_verify");
+  async function onVerifyPayment() {
+    setLoading(verificationActionKey);
     try {
-      const res = await fetch(`/api/bookings/${booking.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "paydunya_verify" }),
-      });
+      const res = providerIsJeko
+        ? await fetch(`/api/bookings/${booking.id}/jeko-payment`, { cache: "no-store" })
+        : await fetch(`/api/bookings/${booking.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "paydunya_verify" }),
+          });
       const data = await res.json();
-      const message = data.payment?.message || data.error || "Vérification PayDunya terminée.";
+      const message = data.payment?.message || data.error || `Vérification ${providerLabel} terminée.`;
       if (!res.ok) {
         toast.error(message);
         router.refresh();
         return;
       }
-      if (data.payment?.verified) {
+      if (data.payment?.verified || data.payment?.status === "success") {
         toast.success(message);
       } else {
         toast(message);
@@ -546,7 +617,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
           />
         )}
 
-        {canResumePayDunya && (
+        {canResumePayment && (
           <>
             <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D]">
               <div className="flex items-center gap-2 font-semibold">
@@ -554,39 +625,39 @@ export function BookingActions({ booking }: BookingActionsProps) {
                 Brouillon non réservé
               </div>
               <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                Le moyen de paiement et le numéro sont saisis uniquement sur PayDunya. Compétence valide le dossier après contrôle serveur.
+                Le paiement est finalisé sur {providerLabel}. Compétence relit le montant du dossier et ne l'active qu'après contrôle serveur.
               </p>
             </div>
             <ImportantActionConfirm
-              title="Ouvrir PayDunya ?"
-              description="Vous allez quitter Compétence pour finaliser le paiement sur PayDunya. Le moyen de paiement et le numéro seront saisis uniquement sur PayDunya."
+              title={`Ouvrir ${providerLabel} ?`}
+              description={`Vous allez quitter Compétence pour finaliser le paiement sur ${providerLabel}. Le montant est relu depuis votre dossier et ne peut pas être modifié par le navigateur.`}
               badge="Paiement sécurisé"
               notices={[
-                "Aucun paiement n'est validé sans confirmation serveur PayDunya.",
+                `Aucun paiement n'est validé sans confirmation serveur ${providerLabel}.`,
                 "Le montant affiché inclut les frais de service du moyen de paiement.",
                 "Après paiement, revenez sur le dossier pour suivre la validation du service client.",
               ]}
-              confirmLabel={loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+              confirmLabel={loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
               cancelLabel="Rester sur le dossier"
-              onConfirm={onResumePayDunya}
+              onConfirm={onResumePayment}
               trigger={
                 <Button
                   className="min-h-11 w-full rounded-lg"
-                  disabled={loading === "paydunya_checkout"}
+                  disabled={loading === paymentActionKey}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
-                  {loading === "paydunya_checkout" ? "Ouverture..." : "Payer via PayDunya"}
+                  {loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
                 </Button>
               }
             />
             <Button
               variant="outline"
               className="min-h-11 w-full rounded-lg"
-              onClick={onVerifyPayDunya}
-              disabled={loading === "paydunya_verify"}
+              onClick={onVerifyPayment}
+              disabled={loading === verificationActionKey}
             >
               <ShieldCheck className="mr-2 h-4 w-4" />
-              {loading === "paydunya_verify" ? "Vérification..." : "Vérifier le paiement PayDunya"}
+              {loading === verificationActionKey ? "Vérification..." : `Vérifier le paiement ${providerLabel}`}
             </Button>
           </>
         )}
@@ -808,15 +879,26 @@ export function BookingActions({ booking }: BookingActionsProps) {
               Modification de créneau en cours
             </div>
             <p className="mt-1 text-xs leading-5 text-[#64748B]">
-              {pendingRescheduleRequest.status === "PAYMENT_PENDING"
-                ? `Un supplément de ${formatFCFA(pendingRescheduleRequest.totalToPay)} est en attente de paiement PayDunya.`
+              {["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(pendingRescheduleRequest.status)
+                ? `Un supplément de ${formatFCFA(pendingRescheduleRequest.totalToPay)} est en attente de paiement ${reschedulePaymentProviderLabel}.`
                 : "Votre demande est transmise au professeur. Vous serez notifié dès sa réponse."}
             </p>
-            {pendingRescheduleRequest.status === "PAYMENT_PENDING" && pendingRescheduleRequest.paydunyaCheckoutUrl && (
+            {["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(pendingRescheduleRequest.status) && isHistoricalReschedulePayDunya && pendingRescheduleRequest.paydunyaCheckoutUrl && (
               <Button asChild className="mt-3 min-h-11 w-full rounded-lg">
                 <a href={pendingRescheduleRequest.paydunyaCheckoutUrl}>
-                  Payer via PayDunya
+                  Payer via PayDunya (historique)
                 </a>
+              </Button>
+            )}
+            {["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(pendingRescheduleRequest.status) && !isHistoricalReschedulePayDunya && (
+              <Button
+                type="button"
+                onClick={onResumeReschedulePayment}
+                disabled={loading === "reschedule_fee_checkout"}
+                className="mt-3 min-h-11 w-full rounded-lg"
+              >
+                {loading === "reschedule_fee_checkout" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                Payer via Jèko
               </Button>
             )}
           </div>
@@ -865,7 +947,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                       <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.feeAmount)}</p>
                     </div>
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
-                      <p className="text-[#64748B]">Frais service</p>
+                      <p className="text-[#64748B]">Frais service Compétence</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(reschedulePolicy.paymentServiceFeeAmount)}</p>
                     </div>
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-2">
@@ -875,7 +957,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   </div>
                   {reschedulePolicy.feeAmount > 0 && (
                     <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">
-                      Après paiement PayDunya vérifié, la demande part au professeur. Le créneau change seulement quand le professeur confirme.
+                      Après paiement Jèko vérifié côté serveur, la demande part au professeur. Le créneau change seulement quand le professeur confirme.
                     </p>
                   )}
                   <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">
@@ -915,7 +997,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     })}
                   </div>
                   <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-                    Le moyen et le numéro de paiement restent saisis uniquement sur PayDunya. Le professeur n'est notifié qu'après confirmation serveur si un supplément est dû.
+                    Le moyen et le numéro de paiement restent saisis sur la page sécurisée Jèko. Le professeur n'est notifié qu'après confirmation serveur si un supplément est dû.
                   </p>
                 </div>
 
@@ -959,7 +1041,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     className="mt-0.5"
                   />
                   <span className="leading-5 text-[#475569]">
-                    Je comprends que le supplément éventuel est calculé selon le délai avant le cours, que PayDunya peut ajouter des frais de service, et que le nouveau créneau doit être confirmé par le professeur.
+                    Je comprends que le supplément est calculé selon le délai avant le cours, que les frais de service Compétence de 3 % sont affichés avant paiement, et que le nouveau créneau doit être confirmé par le professeur.
                   </span>
                 </label>
               </div>
@@ -1225,6 +1307,17 @@ function formatDateInput(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function toJekoPaymentMethod(method: string | null | undefined) {
+  const methods: Record<string, "wave" | "orange" | "mtn" | "moov" | "djamo"> = {
+    WAVE: "wave",
+    ORANGE_MONEY: "orange",
+    MTN_MONEY: "mtn",
+    MOOV_MONEY: "moov",
+    DJAMO: "djamo",
+  };
+  return (method && methods[method]) || "wave";
+}
+
 function getForegroundNotice({
   status,
   canCancel,
@@ -1232,6 +1325,7 @@ function getForegroundNotice({
   cancellationRefundAmount,
   hasRefundRequest,
   hasDispute,
+  paymentProviderLabel,
 }: {
   status: string;
   canCancel: boolean;
@@ -1239,11 +1333,12 @@ function getForegroundNotice({
   cancellationRefundAmount: number;
   hasRefundRequest: boolean;
   hasDispute: boolean;
+  paymentProviderLabel: string;
 }) {
   if (canResumePayDunya) {
     return {
       title: "Action à terminer : paiement",
-      description: "Ce dossier n'est pas une réservation active tant que PayDunya n'a pas confirmé le paiement côté serveur. Continuez le paiement pour éviter l'expiration du brouillon.",
+      description: `Ce dossier n'est pas une réservation active tant que ${paymentProviderLabel} n'a pas confirmé le paiement côté serveur. Continuez le paiement pour éviter l'expiration du brouillon.`,
     };
   }
   if (status === "PENDING_CLIENT_VALIDATION") {
@@ -1282,6 +1377,7 @@ function getActionSummary({
   canReview,
   canCancel,
   paymentVerified,
+  paymentProviderLabel,
 }: {
   status: string;
   paymentStatus: string;
@@ -1291,6 +1387,7 @@ function getActionSummary({
   canReview: boolean;
   canCancel: boolean;
   paymentVerified: boolean;
+  paymentProviderLabel: string;
 }) {
   if (status === "DISPUTED" || paymentStatus === "DISPUTED" || hasDispute) {
     return {
@@ -1327,7 +1424,7 @@ function getActionSummary({
   if (isQuoteOnly) {
     return {
       title: "Calcul à reprendre",
-      description: "Aucun paiement n'est encaissé tant que le calcul automatique n'est pas prêt pour PayDunya.",
+      description: `Aucun paiement n'est encaissé tant que le calcul automatique n'est pas prêt pour ${paymentProviderLabel}.`,
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -1335,7 +1432,7 @@ function getActionSummary({
   if (status === "PENDING_PAYMENT" && paymentStatus === "FAILED") {
     return {
       title: "Brouillon non réservé",
-      description: "Ouvrez PayDunya pour sélectionner le moyen de paiement et compléter les informations nécessaires. Le professeur n'est pas notifié avant confirmation serveur.",
+      description: `Ouvrez ${paymentProviderLabel} pour compléter le paiement. Le professeur n'est pas notifié avant confirmation serveur.`,
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };
@@ -1343,7 +1440,7 @@ function getActionSummary({
   if (!paymentVerified && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(paymentStatus)) {
     return {
       title: "Paiement en vérification",
-      description: "Le dossier attend une preuve PayDunya serveur avant toute confirmation financière visible côté client.",
+      description: `Le dossier attend une preuve ${paymentProviderLabel} serveur avant toute confirmation financière visible côté client.`,
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

@@ -1,12 +1,17 @@
 import { db } from "@/lib/db";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { ProfessorLayout } from "@/components/layouts/professor-layout";
+import { TemporaryPasswordGate } from "@/components/professor/temporary-password-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurProtectedLayout({ children }: { children: React.ReactNode }) {
   const { teacher } = await requireTeacher();
   const teacherName = teacher.professionalName || teacher.fullName;
+
+  if (teacher.portalPasswordMustChange) {
+    return <TemporaryPasswordGate teacherName={teacherName} />;
+  }
 
   const now = new Date();
   const [summary] = await db.$queryRaw<Array<{

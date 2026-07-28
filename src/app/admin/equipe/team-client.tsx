@@ -21,6 +21,7 @@ import {
   type AdminTeamRoleValue,
 } from "@/lib/admin-permissions";
 import { formatDateTime } from "@/lib/format";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 type TeamAdmin = {
   id: string;
@@ -44,6 +45,10 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "SUPPORT" });
 
   const createAdmin = async () => {
+    if (!isPasswordCompliant(form.password)) {
+      toast.error(`Le mot de passe temporaire doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch("/api/admin/team", {
@@ -74,7 +79,7 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
           <Field label="Nom"><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label="Email"><Input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></Field>
           <Field label="Téléphone"><Input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></Field>
-          <Field label="Mot de passe temporaire"><Input type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></Field>
+          <Field label="Mot de passe temporaire"><Input type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={`${PASSWORD_MIN_LENGTH} caractères, lettre + chiffre`} /></Field>
           <Field label="Rôle">
             <Select value={form.role} onValueChange={(role) => setForm({ ...form, role })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -132,7 +137,7 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
     finally { setLoading(false); }
   };
   const resetPassword = async () => {
-    if (!password) return toast.error("Saisissez le nouveau mot de passe temporaire.");
+    if (!isPasswordCompliant(password)) return toast.error(`Le nouveau mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/team/${admin.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset_password", password }) });
@@ -140,6 +145,8 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
       if (!res.ok) throw new Error(data.error || "Réinitialisation impossible.");
       setPassword("");
       toast.success("Mot de passe temporaire remplacé.");
+      if (data.email?.queued) toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
+      else toast.warning(data.email?.message || "L'email de confirmation est en attente.");
       router.refresh();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Réinitialisation impossible."); }
     finally { setLoading(false); }

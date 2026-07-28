@@ -1,5 +1,3 @@
-import { isOwnerAdminEmail } from "@/lib/owner-account";
-
 export const ADMIN_PERMISSIONS = [
   "DASHBOARD_VIEW",
   "OPERATIONS_MANAGE",
@@ -119,7 +117,6 @@ export function resolveAdminPermissions(input: {
   adminTeamRole?: string | null;
   adminPermissions?: unknown;
 }) {
-  if (isOwnerAdminEmail(input.email)) return [...ADMIN_ROLE_PERMISSIONS.OWNER];
   const role = normalizeAdminRole(input.adminTeamRole);
   if (Array.isArray(input.adminPermissions)) {
     return Array.from(new Set(input.adminPermissions.filter(isPermission)));

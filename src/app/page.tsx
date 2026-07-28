@@ -79,7 +79,7 @@ const STEPS = [
   {
     icon: WalletCards,
     title: "Payer",
-    text: "PayDunya sécurise le paiement jusqu'au cours.",
+    text: "Jèko sécurise le paiement jusqu'au cours.",
   },
   {
     icon: Wallet,
@@ -142,13 +142,13 @@ export default async function HomePage() {
           <div className="mx-auto max-w-5xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Côte d'Ivoire · professeurs vérifiés · paiement PayDunya
+              Côte d'Ivoire · professeurs vérifiés · paiement Jèko
             </div>
             <h1 className="mx-auto max-w-4xl text-3xl font-semibold text-[#111827] text-balance sm:text-4xl lg:text-4xl">
               Réservez un professeur vérifié, avec un suivi clair jusqu'au cours.
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#475569] sm:text-lg">
-              Un professeur, un créneau, un paiement PayDunya et un espace client pour suivre le dossier.
+              Un professeur, un créneau, un paiement Jèko et un espace client pour suivre le dossier.
             </p>
             <div className="mx-auto mt-5 hidden max-w-2xl grid-cols-3 gap-2 text-center text-xs font-semibold text-[#111B4D] min-[430px]:grid">
               <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
@@ -282,7 +282,7 @@ export default async function HomePage() {
               </p>
               <ul className="mt-6 space-y-3">
                 {[
-                  "Prix affiché = prix payé",
+                  "Total exact confirmé avant paiement",
                   "Fonds bloqués jusqu'à la fin du cours",
                   "Remboursement possible en cas de litige",
                   "Packs avantageux pour un suivi régulier",
@@ -325,8 +325,8 @@ export default async function HomePage() {
                 </tbody>
               </table>
               <div className="border-t border-[#E3E8F2] bg-white px-4 py-3 text-xs text-[#64748B]">
-                Tarifs indicatifs. Prix final affiché sur chaque profil de
-                professeur.
+                Tarifs de base indicatifs. La réservation recalcule le total
+                exact selon le métier, le niveau, le format, le pack et le trajet.
               </div>
             </div>
           </div>

@@ -29,7 +29,8 @@ type PayoutRecord = {
   paymentPhone?: string | null;
   note: string | null;
   status: string;
-  paidAt: string;
+  createdAt: string;
+  paidAt: string | null;
   createdBy?: { name: string } | null;
   allocations: {
     id: string;
@@ -49,7 +50,7 @@ type PayoutRequest = {
   adminNote: string | null;
   createdAt: string;
   reviewedAt: string | null;
-  payoutRecord?: { reference: string } | null;
+  payoutRecord?: { reference: string; status: string } | null;
 };
 
 type AccountingLedgerRow = {
@@ -167,6 +168,7 @@ export function TeacherPayoutClient({
   const [paymentPhoneConfirm, setPaymentPhoneConfirm] = useState(initialRequest?.paymentPhone ?? teacherPhone ?? "");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState(initialRequest ? buildPayoutRequestNote(initialRequest) : "");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
   const [activeRequestId, setActiveRequestId] = useState<string | null>(initialRequest?.id ?? null);
   const [ledgerQuery, setLedgerQuery] = useState("");
   const [ledgerStatus, setLedgerStatus] = useState("all");
@@ -174,6 +176,7 @@ export function TeacherPayoutClient({
   const [ledgerEnd, setLedgerEnd] = useState("");
   const [loading, setLoading] = useState(false);
   const [requestActionLoading, setRequestActionLoading] = useState<string | null>(null);
+  const [verifyingRecordId, setVerifyingRecordId] = useState<string | null>(null);
 
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
   const activeRequest = useMemo(
@@ -253,8 +256,10 @@ export function TeacherPayoutClient({
     }));
     const payoutRows = records.map((record) => ({
       id: `payout-${record.id}`,
-      date: record.paidAt,
-      title: `Versement enregistré - ${record.reference}`,
+      date: record.paidAt ?? record.createdAt,
+      title: record.status === "PAID"
+        ? `Versement confirmé - ${record.reference}`
+        : `Tentative de versement - ${record.reference}`,
       description: `${paymentMethodLabel(record.method)}${record.createdBy?.name ? ` · ${record.createdBy.name}` : ""}`,
       status: PAYOUT_RECORD_STATUS_LABELS[record.status] ?? record.status,
       amount: record.amount,
@@ -571,10 +576,36 @@ export function TeacherPayoutClient({
     }
   };
 
+  const verifyPayout = async (record: PayoutRecord) => {
+    if (record.status !== "DRAFT") return;
+    setVerifyingRecordId(record.id);
+    try {
+      const res = await fetch(`/api/admin/teacher-payouts/${record.id}/verify`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && res.status !== 202) {
+        throw new Error(data.error || data.payout?.message || "Vérification Jèko impossible.");
+      }
+      if (res.status === 202 || data.pending) {
+        toast.info("Jèko n'a pas encore confirmé le transfert. Le solde reste inchangé.");
+      } else {
+        toast.success("Versement Jèko confirmé et comptabilisé.");
+      }
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Vérification Jèko impossible.");
+    } finally {
+      setVerifyingRecordId(null);
+    }
+  };
+
   const submit = async () => {
     if (!canSubmit) return;
     setLoading(true);
     try {
+      const submissionKey = activeRequest?.id
+        ? `teacher-payout-request:${activeRequest.id}`
+        : idempotencyKey || crypto.randomUUID();
+      if (!activeRequest?.id && !idempotencyKey) setIdempotencyKey(submissionKey);
       const res = await fetch("/api/admin/teacher-payouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -586,13 +617,23 @@ export function TeacherPayoutClient({
           paymentPhone: normalizedPaymentPhone,
           paymentPhoneConfirm: normalizedPaymentPhoneConfirm,
           reference,
+          idempotencyKey: submissionKey,
           note,
           requestId: activeRequest?.id,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Paiement impossible.");
-      toast.success(`Paiement enregistré : ${formatFCFA(cleanAmount)}`);
+      if (!res.ok) {
+        if (data.payout?.action === "failed") setIdempotencyKey("");
+        throw new Error(data.error || "Paiement impossible.");
+      }
+      if (data.pending) {
+        toast.info("Transfert Jèko lancé. Aucun solde professeur n'est débité avant la confirmation finale.");
+        router.refresh();
+        return;
+      }
+      toast.success(`Versement Jèko confirmé : ${formatFCFA(cleanAmount)}`);
+      setIdempotencyKey("");
       setReference("");
       setNote("");
       setPaymentPhone(teacherPhone ?? "");
@@ -735,6 +776,7 @@ export function TeacherPayoutClient({
             <div className="mt-4 grid gap-3">
               {payoutRequests.slice(0, 5).map((request) => {
                 const isPending = request.status === "PENDING";
+                const transferInProgress = request.payoutRecord?.status === "DRAFT";
                 const canUseRequest = isPending && request.amount <= payoutLimit;
                 const isActive = activeRequestId === request.id;
                 return (
@@ -748,7 +790,7 @@ export function TeacherPayoutClient({
                           </Badge>
                           {request.payoutRecord?.reference && (
                             <Badge variant="outline" className="border-blue-200 bg-white text-blue-800">
-                              Reçu {request.payoutRecord.reference}
+                              {request.payoutRecord.status === "PAID" ? "Reçu" : "Transfert"} {request.payoutRecord.reference}
                             </Badge>
                           )}
                         </div>
@@ -777,11 +819,11 @@ export function TeacherPayoutClient({
                             type="button"
                             variant="outline"
                             className="border-red-200 bg-white text-red-700 hover:bg-white"
-                            disabled={requestActionLoading === request.id}
+                            disabled={transferInProgress || requestActionLoading === request.id}
                             onClick={() => reviewPayoutRequest(request, "reject")}
                           >
                             {requestActionLoading === request.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-1.5 h-4 w-4" />}
-                            Rejeter
+                            {transferInProgress ? "Transfert en cours" : "Rejeter"}
                           </Button>
                         )}
                       </div>
@@ -1026,6 +1068,7 @@ export function TeacherPayoutClient({
                     <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
                     <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
                     <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
+                    <SelectItem value="DJAMO">Djamo</SelectItem>
                   </SelectContent>
                 </Select>
                 {requestMethodMismatch && activeRequest ? (
@@ -1081,7 +1124,7 @@ export function TeacherPayoutClient({
               <div className="flex items-end">
                 <Button className="w-full" disabled={!canSubmit} onClick={submit}>
                   {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
-                  Enregistrer le versement
+                  Lancer le versement Jèko
                 </Button>
               </div>
             </div>
@@ -1202,7 +1245,9 @@ export function TeacherPayoutClient({
                     <div>
                       <p className="font-mono text-sm font-bold text-foreground">{record.reference}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatDateTime(record.paidAt)} {record.createdBy?.name ? `par ${record.createdBy.name}` : ""}
+                        {record.paidAt
+                          ? `Confirmé le ${formatDateTime(record.paidAt)}`
+                          : `Initié le ${formatDateTime(record.createdAt)}`} {record.createdBy?.name ? `par ${record.createdBy.name}` : ""}
                       </p>
                       {record.paymentPhone && (
                         <p className="mt-1 text-xs font-medium text-muted-foreground">
@@ -1211,13 +1256,37 @@ export function TeacherPayoutClient({
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <Badge
+                        variant="outline"
+                        className={record.status === "PAID"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          : record.status === "DRAFT"
+                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                            : "border-red-200 bg-red-50 text-red-800"}
+                      >
+                        {PAYOUT_RECORD_STATUS_LABELS[record.status] ?? record.status}
+                      </Badge>
                       <Badge variant="outline">{paymentMethodLabel(record.method)}</Badge>
                       <Badge className="bg-blue-50 text-blue-800 border-blue-100">{formatFCFA(record.amount)}</Badge>
-                      <TeacherPayoutReceiptActions
-                        teacherName={teacherName}
-                        teacherPhone={teacherPhone}
-                        record={record}
-                      />
+                      {record.status === "DRAFT" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={verifyingRecordId === record.id}
+                          onClick={() => void verifyPayout(record)}
+                        >
+                          {verifyingRecordId === record.id && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                          Vérifier Jèko
+                        </Button>
+                      )}
+                      {record.status === "PAID" && (
+                        <TeacherPayoutReceiptActions
+                          teacherName={teacherName}
+                          teacherPhone={teacherPhone}
+                          record={record}
+                        />
+                      )}
                     </div>
                   </div>
                   {record.note && <p className="mt-2 text-sm text-muted-foreground">{record.note}</p>}

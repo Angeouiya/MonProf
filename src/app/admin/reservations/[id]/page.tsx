@@ -30,6 +30,8 @@ import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 import { COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-catalog";
 import { parsePricingSnapshot } from "@/lib/pricing";
 import { BookingSessionLedger } from "@/components/shared/booking-session-ledger";
+import { hasAdminPermission } from "@/lib/admin-permissions";
+import { RescheduleRefundButton } from "./reschedule-refund-button";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,8 @@ function schoolSystemLabel(value?: string | null) {
 }
 
 export default async function ReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin("BOOKINGS_VIEW");
+  const admin = await requireAdmin("BOOKINGS_VIEW");
+  const canManageFinance = hasAdminPermission(admin.adminPermissions, "FINANCE_MANAGE");
   const { id } = await params;
 
   const booking = await db.booking.findUnique({
@@ -67,6 +70,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       rescheduleRequests: {
         include: {
           transaction: true,
+          refundTransaction: true,
           client: { select: { name: true, phone: true, email: true } },
           teacher: { select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
         },
@@ -396,6 +400,8 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             packType={booking.packType}
             audience="admin"
             priceTierKey={booking.priceTierKey}
+            priceTierLabel={pricingSnapshot?.priceTierLabel}
+            paymentProviderLabel={booking.paymentProvider === "JEKO" ? "Jèko" : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt ? "PayDunya (historique)" : "Paiement sécurisé"}
             courseAmount={displayCourseAmount}
             transportFee={displayTransportFee}
             transportFeeLabel={pricingSnapshot?.transportFeeLabel}
@@ -538,10 +544,29 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                         Transaction : {request.transaction.reference} · {transactionTypeLabel(request.transaction.type)} · {formatFCFA(request.transaction.amount)}
                       </p>
                     )}
-                    {request.status === "REFUND_REQUIRED" && (
-                      <Button asChild size="sm" className="mt-3 rounded-lg">
-                        <Link href={`/admin/remboursements?bookingId=${booking.id}`}>Traiter le remboursement</Link>
-                      </Button>
+                    {request.status === "REFUND_REQUIRED" && canManageFinance && (
+                      <RescheduleRefundButton
+                        rescheduleRequestId={request.id}
+                        bookingReference={booking.reference}
+                        clientName={request.client.name}
+                        clientPhone={request.client.phone}
+                        amount={request.totalToPay}
+                        paymentMethod={request.transaction?.method ?? null}
+                      />
+                    )}
+                    {request.status === "REFUND_REQUIRED" && !canManageFinance && (
+                      <p className="mt-3 text-xs font-semibold text-amber-700">
+                        Une autorisation Finance est requise pour clôturer ce remboursement.
+                      </p>
+                    )}
+                    {request.status === "REFUNDED" && (
+                      <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                        <p className="font-semibold">Supplément remboursé : {formatFCFA(request.refundedAmount)}</p>
+                        <p className="mt-0.5">Référence dépôt : {request.refundExternalReference ?? "—"}</p>
+                        {request.refundTransaction && (
+                          <p className="mt-0.5 font-mono">Ledger : {request.refundTransaction.reference}</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

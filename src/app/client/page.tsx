@@ -116,7 +116,7 @@ export default async function ClientDashboardPage() {
         description={
           nextCourse
             ? `${nextCourse.subjectName} avec ${nextCourseTeacherName} · ${nextCourseDate} · ${nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer"}`
-            : "Réservez, payez via PayDunya et suivez chaque cours depuis un espace clair."
+            : "Réservez, payez via Jèko et suivez chaque cours depuis un espace clair."
         }
       >
         <Button asChild className="min-h-11 rounded-lg max-md:hidden">
@@ -203,7 +203,7 @@ export default async function ClientDashboardPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="text-base font-semibold leading-6 text-[#111827]">Aucun cours planifié</p>
-                      <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">Choisissez un professeur, une date et un créneau. Le paiement reste sécurisé par PayDunya.</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">Choisissez un professeur, une date et un créneau. Le paiement est sécurisé et confirmé côté serveur.</p>
                     </div>
                   </div>
                   {recentBookings.length > 0 && (
@@ -297,7 +297,7 @@ export default async function ClientDashboardPage() {
             <ClientEmptyState
               icon={Search}
               title="Trouvez votre professeur"
-              description="Recherchez par matière, niveau, commune ou concours. Le paiement active la réservation seulement après validation PayDunya."
+              description="Recherchez par matière, niveau, commune ou concours. Le paiement active la réservation seulement après confirmation serveur."
               compact
             />
           ) : (
@@ -305,7 +305,7 @@ export default async function ClientDashboardPage() {
               {recommended.map((t, index) => {
                 const displayName = t.professionalName || t.fullName;
                 const primarySubject = t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name;
-                const indicativePrice = t.pricePerSession || t.pricePerHour || 0;
+                const indicativePrice = Math.max(0, t.pricePerSession);
                 return (
                   <Link
                     key={`${t.id}-${index}`}

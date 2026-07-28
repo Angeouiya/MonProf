@@ -5,6 +5,7 @@ export const ACTIVE_PAYMENT_METHODS = [
   "ORANGE_MONEY",
   "MTN_MONEY",
   "MOOV_MONEY",
+  "DJAMO",
 ] as const satisfies readonly PaymentMethod[];
 
 export type ActivePaymentMethod = (typeof ACTIVE_PAYMENT_METHODS)[number];
@@ -14,6 +15,7 @@ export const paymentMethodLabels: Record<string, string> = {
   ORANGE_MONEY: "Orange Money",
   MTN_MONEY: "MTN Money",
   MOOV_MONEY: "Moov Money",
+  DJAMO: "Djamo",
   CARD: "Méthode retirée",
 };
 

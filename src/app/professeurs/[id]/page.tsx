@@ -91,7 +91,10 @@ export default async function TeacherDetailPage({
   const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
   const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
-  const sessionPriceLabel = formatFCFA(teacher.pricePerSession || teacher.pricePerHour || 0);
+  const indicativeSessionPrice = Math.max(0, teacher.pricePerSession);
+  const sessionPriceLabel = indicativeSessionPrice > 0
+    ? formatFCFA(indicativeSessionPrice)
+    : "Calculé à la réservation";
 
   const reserveHref = session?.user
     ? `/client/reserver?teacherId=${teacher.id}`
@@ -176,7 +179,7 @@ export default async function TeacherDetailPage({
                 </span>
                 <span className="hidden text-[#CBD5E1] sm:inline">·</span>
                 <span className="font-semibold text-[#111827]">
-                  {sessionPriceLabel} / séance
+                  {indicativeSessionPrice > 0 ? `${sessionPriceLabel} / séance` : sessionPriceLabel}
                 </span>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#111B4D]">
@@ -211,7 +214,7 @@ export default async function TeacherDetailPage({
           <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 min-[760px]:grid-cols-3">
             <MiniStat label="Cours attribués" value={teacher._count.bookings} />
             <MiniStat label="Avis vérifiés" value={totalReviews} />
-            <MiniStat label="Prix indicatif" value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />} />
+            <MiniStat label="Prix indicatif" value={sessionPriceLabel} />
           </div>
           </div>
 
@@ -519,7 +522,7 @@ export default async function TeacherDetailPage({
                 <div className="mt-4 grid gap-3 min-[760px]:grid-cols-3">
                   <PriceTile
                     label="Prix indicatif"
-                    value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />}
+                    value={sessionPriceLabel}
                     sub="Séance de 2h"
                     highlight
                   />
@@ -632,7 +635,7 @@ export default async function TeacherDetailPage({
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
                 <div className="mt-1">
                   <span className="text-2xl font-semibold text-[#111827]">
-                    <Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />
+                    {sessionPriceLabel}
                   </span>
                   <p className="mt-1 text-sm font-medium text-[#64748B]">Séance de 2h, total confirmé avant paiement.</p>
                 </div>

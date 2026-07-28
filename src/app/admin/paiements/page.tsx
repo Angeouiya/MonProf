@@ -17,11 +17,18 @@ import { formatFCFA, formatDate, formatDateTime } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/platform-labels";
 import { PaiementsFiltersClient } from "./filters-client";
 import { TeacherPayoutReceiptActions } from "@/components/admin/teacher-payout-receipt-actions";
+import { FinancialOverview } from "@/components/admin/financial-overview";
+import {
+  buildPlatformFinancialSummary,
+  providerFeeFinancialFields,
+  sumProviderFeeAmounts,
+} from "@/lib/financial-summary";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-const VALID_METHODS = ["WAVE","ORANGE_MONEY","MTN_MONEY","MOOV_MONEY"];
+const VALID_METHODS = ["WAVE","ORANGE_MONEY","MTN_MONEY","MOOV_MONEY","DJAMO"];
 const VALID_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUND_PENDING","PARTIAL_REFUND_PENDING","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
 
 export default async function AdminPaiementsPage({
@@ -33,31 +40,58 @@ export default async function AdminPaiementsPage({
   const sp = await searchParams;
   const method = sp.method && VALID_METHODS.includes(sp.method) ? sp.method : undefined;
   const status = sp.status && VALID_STATUSES.includes(sp.status) ? sp.status : undefined;
-  const from = sp.from ? new Date(sp.from) : undefined;
-  const to = sp.to ? new Date(sp.to) : undefined;
+  const fromCandidate = sp.from ? new Date(`${sp.from}T00:00:00.000Z`) : undefined;
+  const toCandidate = sp.to ? new Date(`${sp.to}T00:00:00.000Z`) : undefined;
+  const from = fromCandidate && !Number.isNaN(fromCandidate.getTime()) ? fromCandidate : undefined;
+  const to = toCandidate && !Number.isNaN(toCandidate.getTime()) ? toCandidate : undefined;
 
-  const where: any = { type: "CLIENT_PAYMENT" };
-  where.booking = { is: verifiedPayDunyaBookingWhere() };
-  if (method) where.method = method;
-  if (status) where.status = status;
+  const transactionScope: Prisma.TransactionWhereInput = { type: "CLIENT_PAYMENT" };
+  if (method) transactionScope.method = method as Prisma.EnumPaymentMethodFilter["equals"];
+  if (status) transactionScope.status = status as Prisma.EnumPaymentStatusFilter["equals"];
   if (from || to) {
-    where.createdAt = {};
-    if (from) where.createdAt.gte = from;
-    if (to) where.createdAt.lte = new Date(to.getTime() + 24*60*60*1000);
+    const createdAt: Prisma.DateTimeFilter = {};
+    if (from) createdAt.gte = from;
+    if (to) createdAt.lt = new Date(to.getTime() + 24*60*60*1000);
+    transactionScope.createdAt = createdAt;
   }
+  const where: Prisma.TransactionWhereInput = {
+    ...transactionScope,
+    booking: { is: verifiedPayDunyaBookingWhere() },
+  };
 
-  const [rawTxs, teacherPayouts, teacherPayoutAgg] = await db.$transaction([
+  const [
+    rawTxs,
+    rawFilteredStatusTotals,
+    cancelledCommissionBookings,
+    teacherPayouts,
+    financialBookings,
+    financialPayouts,
+    appliedTeacherAdjustments,
+  ] = await db.$transaction([
     db.transaction.findMany({
       where,
       orderBy: { createdAt: "desc" },
       include: {
         booking: {
           select: {
-            id: true, reference: true, subjectName: true, levelName: true, paymentStatus: true,
-            totalClientPays: true, totalPrice: true, paydunyaStatus: true, paydunyaVerifiedAt: true,
+            id: true, reference: true, subjectName: true, levelName: true, status: true, paymentStatus: true,
+            totalClientPays: true, totalPrice: true, courseAmount: true, transportFee: true,
+            paymentServiceFeeRate: true, paymentServiceFeeAmount: true,
+            commissionAmount: true, cancellationPenaltyPlatformAmount: true,
+            teacherNetAmount: true, teacherPaidAmount: true, cancellationPenaltyTeacherAmount: true,
+            paydunyaStatus: true, paydunyaVerifiedAt: true,
+            paymentProvider: true, providerPaymentStatus: true, paymentVerifiedAt: true,
+            paymentAttempts: {
+              where: { provider: "JEKO", purpose: "BOOKING", status: "SUCCEEDED" },
+              select: { providerFeeAmountXof: true, providerFeeAmountMinor: true },
+            },
             transactions: {
               where: { type: "CLIENT_PAYMENT" },
               select: { type: true, status: true, amount: true },
+            },
+            teacherPaymentAdjustments: {
+              where: { status: "APPLIED" },
+              select: { amount: true },
             },
             client: { select: { name: true } },
           },
@@ -65,6 +99,26 @@ export default async function AdminPaiementsPage({
         teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
       },
       take: 300,
+    }),
+    db.transaction.groupBy({
+      by: ["status"],
+      where,
+      orderBy: { status: "asc" },
+      _count: { _all: true },
+      _sum: { amount: true, commission: true },
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({
+        status: { in: ["CANCELLED", "REFUNDED"] },
+        transactions: { some: transactionScope },
+      }),
+      select: {
+        cancellationPenaltyPlatformAmount: true,
+        transactions: {
+          where: transactionScope,
+          select: { commission: true },
+        },
+      },
     }),
     db.teacherPayoutRecord.findMany({
       where: { status: "PAID" },
@@ -78,30 +132,155 @@ export default async function AdminPaiementsPage({
       },
       take: 100,
     }),
-    db.teacherPayoutRecord.aggregate({
-      where: { status: "PAID" },
-      _sum: { amount: true },
-      _count: { _all: true },
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere(),
+      select: {
+        status: true,
+        paymentStatus: true,
+        paydunyaStatus: true,
+        paydunyaVerifiedAt: true,
+        paymentProvider: true,
+        providerPaymentStatus: true,
+        paymentVerifiedAt: true,
+        totalClientPays: true,
+        courseAmount: true,
+        transportFee: true,
+        paymentServiceFeeAmount: true,
+        commissionAmount: true,
+        teacherNetAmount: true,
+        teacherPaidAmount: true,
+        cancellationPenaltyTeacherAmount: true,
+        cancellationPenaltyPlatformAmount: true,
+        teacherPayoutAllocations: {
+          where: { payout: { status: "PAID" } },
+          select: { amount: true },
+        },
+        paymentAttempts: {
+          where: { provider: "JEKO", purpose: "BOOKING", status: "SUCCEEDED" },
+          select: { providerFeeAmountXof: true, providerFeeAmountMinor: true },
+        },
+        rescheduleRequests: {
+          where: { paidAt: { not: null } },
+          select: {
+            status: true,
+            paidAt: true,
+            totalToPay: true,
+            feeAmount: true,
+            paymentServiceFeeAmount: true,
+            feePlatformAmount: true,
+            feeTeacherAmount: true,
+            transaction: { select: { status: true } },
+            paymentAttempts: {
+              where: { provider: "JEKO", purpose: "RESCHEDULE_FEE", status: "SUCCEEDED" },
+              select: { providerFeeAmountXof: true, providerFeeAmountMinor: true },
+            },
+          },
+        },
+        transactions: {
+          where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } },
+          select: { type: true, amount: true, status: true },
+        },
+      },
+    }),
+    db.teacherPayoutRecord.findMany({
+      where: { status: { in: ["PAID", "CANCELLED"] } },
+      select: {
+        amount: true,
+        transferFeeCoveredByPlatform: true,
+        transferFeeCoveredByPlatformMinor: true,
+        status: true,
+      },
+    }),
+    db.teacherPaymentAdjustment.findMany({
+      where: { status: "APPLIED" },
+      select: { amount: true, status: true },
     }),
   ]);
+  // Prisma perd la forme précise des agrégats groupBy dans le tuple
+  // hétérogène de $transaction, bien que ces deux agrégats soient requis
+  // explicitement ci-dessus.
+  const filteredStatusTotals = rawFilteredStatusTotals as Array<{
+    status: string;
+    _count: { _all: number };
+    _sum: { amount: number | null; commission: number | null };
+  }>;
   const txs = rawTxs.filter((tx) => tx.booking && hasVerifiedPayDunyaClientPayment(tx.booking));
-  const receivedAmount = txs.reduce((sum, tx) => sum + tx.amount, 0);
-  const commissionAmount = txs.reduce((sum, tx) => sum + tx.commission, 0);
-  const blockedAmount = txs.filter((tx) => tx.status === "BLOCKED").reduce((sum, tx) => sum + tx.amount, 0);
-  const disputedAmount = txs.filter((tx) => tx.status === "DISPUTED").reduce((sum, tx) => sum + tx.amount, 0);
-  const toPayTeacherAmount = txs.filter((tx) => tx.status === "TO_PAY_TEACHER").reduce((sum, tx) => sum + tx.amount, 0);
-  const paidTeacherAmount = teacherPayoutAgg._sum.amount ?? 0;
-  const financialAttentionCount = txs.filter((tx) => ["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "RETAINED"].includes(tx.status)).length;
+  const transactionCount = filteredStatusTotals.reduce((sum, row) => sum + row._count._all, 0);
+  const receivedAmount = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
+  const recordedCommission = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.commission ?? 0), 0);
+  const cancelledRecordedCommission = cancelledCommissionBookings.reduce(
+    (sum, booking) => sum + booking.transactions.reduce((bookingSum, transaction) => bookingSum + transaction.commission, 0),
+    0,
+  );
+  const cancellationPenaltyCommission = cancelledCommissionBookings.reduce(
+    (sum, booking) => sum + Math.max(0, booking.cancellationPenaltyPlatformAmount),
+    0,
+  );
+  const commissionAmount = Math.max(
+    0,
+    recordedCommission - cancelledRecordedCommission + cancellationPenaltyCommission,
+  );
+  const statusAmount = (targetStatus: string) => filteredStatusTotals
+    .filter((row) => row.status === targetStatus)
+    .reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
+  const blockedAmount = statusAmount("BLOCKED");
+  const disputedAmount = statusAmount("DISPUTED");
+  const toPayTeacherAmount = statusAmount("TO_PAY_TEACHER");
+  const attentionStatuses = new Set(["BLOCKED", "DISPUTED", "TO_PAY_TEACHER", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "RETAINED"]);
+  const financialAttentionCount = filteredStatusTotals
+    .filter((row) => attentionStatuses.has(row.status))
+    .reduce((sum, row) => sum + row._count._all, 0);
+  const averageAmount = transactionCount > 0 ? Math.round(receivedAmount / transactionCount) : 0;
+  const hasTruncatedTransactions = transactionCount > txs.length;
+  const financialSummary = buildPlatformFinancialSummary(
+    financialBookings.filter(hasVerifiedPayDunyaClientPayment).map((booking) => ({
+      ...booking,
+      paidPayoutAllocationAmount: booking.teacherPayoutAllocations.reduce(
+        (sum, allocation) => sum + Math.max(0, allocation.amount),
+        0,
+      ),
+      ...providerFeeFinancialFields(booking.paymentAttempts),
+      refunds: booking.transactions.filter((transaction) => (
+        transaction.type === "REFUND"
+        && ["REFUNDED", "PARTIALLY_REFUNDED"].includes(transaction.status)
+      )),
+      reschedules: booking.rescheduleRequests.map((request) => ({
+        ...request,
+        transactionStatus: request.transaction?.status ?? null,
+        ...providerFeeFinancialFields(request.paymentAttempts),
+      })),
+    })),
+    financialPayouts,
+    appliedTeacherAdjustments,
+  );
 
   return (
     <div className="space-y-5">
       <PageHeader title="Paiements" description="Paiements clients reçus et versements internes enregistrés aux professeurs" rootPage />
 
+      <FinancialOverview summary={financialSummary} />
+
+      <div className="rounded-xl border border-[#DDE6F7] bg-white p-4">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4F46E5]">Registre filtrable</p>
+            <h2 className="mt-1 text-lg font-black text-[#111827]">Résultats des filtres</h2>
+            <p className="mt-1 text-xs font-semibold text-[#64748B]">
+              Les totaux ci-dessous portent sur toutes les transactions correspondantes ; la table affiche au maximum les 300 plus récentes.
+            </p>
+          </div>
+          <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-800">
+            {transactionCount} transaction{transactionCount > 1 ? "s" : ""}
+          </Badge>
+        </div>
+        <PaiementsFiltersClient filters={{ method: method ?? "", status: status ?? "", from: sp.from ?? "", to: sp.to ?? "" }} />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total reçu" value={formatFCFA(receivedAmount)} icon={Wallet} tone="primary" />
-        <StatCard label="Total commission" value={formatFCFA(commissionAmount)} icon={TrendingUp} tone="success" />
-        <StatCard label="Transactions" value={txs.length} icon={Banknote} />
-        <StatCard label="Versé aux professeurs" value={formatFCFA(paidTeacherAmount)} icon={Banknote} tone="warning" />
+        <StatCard label="Montant filtré" value={formatFCFA(receivedAmount)} icon={Wallet} tone="primary" />
+        <StatCard label="Commission réelle filtrée" value={formatFCFA(commissionAmount)} icon={TrendingUp} tone="success" />
+        <StatCard label="Transactions filtrées" value={transactionCount} icon={Banknote} />
+        <StatCard label="Montant moyen" value={formatFCFA(averageAmount)} icon={Banknote} tone="warning" />
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -131,14 +310,20 @@ export default async function AdminPaiementsPage({
         />
       </div>
 
-      <PaiementsFiltersClient filters={{ method: method ?? "", status: status ?? "", from: sp.from ?? "", to: sp.to ?? "" }} />
-
       {txs.length === 0 ? (
         <EmptyState icon={Wallet} title="Aucun paiement" description="Aucune transaction ne correspond." />
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Paiements clients</CardTitle>
+          <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="text-base">Paiements clients</CardTitle>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                {hasTruncatedTransactions
+                  ? `${txs.length} lignes affichées sur ${transactionCount} ; les cartes ci-dessus couvrent bien la totalité.`
+                  : `${transactionCount} ligne${transactionCount > 1 ? "s" : ""} affichée${transactionCount > 1 ? "s" : ""}.`}
+              </p>
+            </div>
+            {hasTruncatedTransactions && <Badge variant="secondary">300 plus récentes</Badge>}
           </CardHeader>
           <CardContent className="space-y-3 p-4 md:p-0">
             <div className="grid gap-3 md:hidden">
@@ -205,6 +390,22 @@ export default async function AdminPaiementsPage({
                       </div>
 
                       {t.booking && (
+                        <BookingFinancialBreakdown
+                          provider={t.booking.paymentProvider}
+                          legacyPayDunya={Boolean(t.booking.paydunyaVerifiedAt)}
+                          courseAmount={t.booking.courseAmount}
+                          transportFee={t.booking.transportFee}
+                          serviceFeeAmount={t.booking.paymentServiceFeeAmount}
+                          providerFeeAmount={sumProviderFeeAmounts(t.booking.paymentAttempts)}
+                          commissionAmount={getActualBookingCommission(t.booking)}
+                          teacherNetAmount={getActualBookingTeacherNet(t.booking)}
+                          teacherPaidAmount={t.booking.teacherPaidAmount}
+                          teacherRetainedAmount={sumAppliedBookingRetentions(t.booking)}
+                          clientTotal={t.booking.totalClientPays}
+                        />
+                      )}
+
+                      {t.booking && (
                         <PaymentActions bookingId={t.booking.id} teacherId={t.teacher?.id ?? null} compact />
                       )}
                     </CardContent>
@@ -214,7 +415,7 @@ export default async function AdminPaiementsPage({
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-            <Table>
+            <Table className="min-w-[1480px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Réf</TableHead>
@@ -223,8 +424,16 @@ export default async function AdminPaiementsPage({
                   <TableHead>Professeur</TableHead>
                   <TableHead className="hidden lg:table-cell">Date</TableHead>
                   <TableHead className="hidden md:table-cell">Méthode</TableHead>
-                  <TableHead className="text-right">Montant</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Commission</TableHead>
+                  <TableHead className="text-right">Total client</TableHead>
+                  <TableHead className="text-right">Cours</TableHead>
+                  <TableHead className="text-right">Transport</TableHead>
+                  <TableHead className="text-right">Service 3 %</TableHead>
+                  <TableHead className="text-right">Frais Jèko</TableHead>
+                  <TableHead className="text-right">Commission</TableHead>
+                  <TableHead className="text-right">Net prof</TableHead>
+                  <TableHead className="text-right">Payé prof</TableHead>
+                  <TableHead className="text-right">Retenues</TableHead>
+                  <TableHead className="text-right">Reste prof</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
@@ -261,9 +470,25 @@ export default async function AdminPaiementsPage({
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDate(t.createdAt)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">{t.method ? paymentMethodLabel(t.method) : "—"}</TableCell>
-                      <TableCell className="text-right"><Money amount={t.amount} className="text-sm font-medium" /></TableCell>
-                      <TableCell className="text-right hidden md:table-cell"><Money amount={t.commission} className="text-sm" muted /></TableCell>
+                      <TableCell className="hidden md:table-cell text-sm">
+                        <p>{t.method ? paymentMethodLabel(t.method) : "—"}</p>
+                        <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">{paymentProviderLabel(t.booking?.paymentProvider, Boolean(t.booking?.paydunyaVerifiedAt))}</p>
+                      </TableCell>
+                      <FinancialTableAmount value={t.booking?.totalClientPays ?? t.amount} strong />
+                      <FinancialTableAmount value={t.booking?.courseAmount ?? 0} />
+                      <FinancialTableAmount value={t.booking?.transportFee ?? 0} />
+                      <FinancialTableAmount value={t.booking?.paymentServiceFeeAmount ?? 0} />
+                      <FinancialTableAmount value={sumProviderFeeAmounts(t.booking?.paymentAttempts)} muted />
+                      <FinancialTableAmount value={t.booking ? getActualBookingCommission(t.booking) : t.commission} />
+                      <FinancialTableAmount value={t.booking ? getActualBookingTeacherNet(t.booking) : 0} />
+                      <FinancialTableAmount value={t.booking?.teacherPaidAmount ?? 0} />
+                      <FinancialTableAmount value={t.booking ? sumAppliedBookingRetentions(t.booking) : 0} muted />
+                      <FinancialTableAmount value={t.booking ? Math.max(
+                        0,
+                        getActualBookingTeacherNet(t.booking)
+                          - t.booking.teacherPaidAmount
+                          - sumAppliedBookingRetentions(t.booking),
+                      ) : 0} strong />
                       <TableCell>
                         <div className="space-y-1">
                           <PaymentStatusBadge status={t.status} />
@@ -311,9 +536,20 @@ export default async function AdminPaiementsPage({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-mono text-xs font-bold text-primary">{payout.reference}</p>
-                          <p className="mt-1 truncate text-xs text-muted-foreground">{formatDateTime(payout.paidAt)}</p>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">{payout.paidAt ? formatDateTime(payout.paidAt) : "Confirmation indisponible"}</p>
+                          <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700">Montant exact reçu</p>
                         </div>
                         <Money amount={payout.amount} className="shrink-0 text-sm font-black" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs">
+                        <PayoutFeeLine label="Net remis au professeur" value={payout.amount} strong />
+                        <PayoutFeeLine label="Frais de transfert couverts" value={payout.transferFeeCoveredByPlatform} />
+                        <PayoutFeeLine label="Frais réels prestataire" value={payout.transferFeeAmount} />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Prestataire</p>
+                          <p className="mt-1 font-black text-[#111827]">{paymentProviderLabel(payout.provider)}</p>
+                        </div>
                       </div>
 
                       <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
@@ -384,7 +620,9 @@ export default async function AdminPaiementsPage({
                 <TableHead className="hidden md:table-cell">Allocations</TableHead>
                 <TableHead className="hidden lg:table-cell">Date</TableHead>
                 <TableHead className="hidden md:table-cell">Méthode</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
+                <TableHead className="text-right">Net exact reçu</TableHead>
+                <TableHead className="text-right">Frais transfert couverts</TableHead>
+                <TableHead>Prestataire</TableHead>
                 <TableHead className="hidden xl:table-cell">Admin</TableHead>
                 <TableHead className="text-right">Facture/reçu</TableHead>
               </TableRow>
@@ -392,7 +630,7 @@ export default async function AdminPaiementsPage({
             <TableBody>
               {teacherPayouts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-6 text-center text-sm text-muted-foreground">
                     Aucun versement professeur enregistré.
                   </TableCell>
                 </TableRow>
@@ -427,9 +665,14 @@ export default async function AdminPaiementsPage({
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDateTime(payout.paidAt)}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{payout.paidAt ? formatDateTime(payout.paidAt) : "Confirmation indisponible"}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{payout.method ? paymentMethodLabel(payout.method) : "—"}</TableCell>
-                  <TableCell className="text-right"><Money amount={payout.amount} className="text-sm font-semibold" /></TableCell>
+                  <TableCell className="text-right"><Money amount={payout.amount} className="text-sm font-black text-emerald-700" /></TableCell>
+                  <TableCell className="text-right">
+                    <Money amount={payout.transferFeeCoveredByPlatform} className="text-sm font-semibold" />
+                    <p className="text-[10px] font-semibold text-muted-foreground">par Compétence</p>
+                  </TableCell>
+                  <TableCell className="text-sm font-semibold">{paymentProviderLabel(payout.provider)}</TableCell>
                   <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">{payout.createdBy?.name ?? "—"}</TableCell>
                   <TableCell className="text-right">
                     <TeacherPayoutReceiptActions
@@ -447,6 +690,124 @@ export default async function AdminPaiementsPage({
       </Card>
     </div>
   );
+}
+
+function BookingFinancialBreakdown({
+  provider,
+  legacyPayDunya,
+  courseAmount,
+  transportFee,
+  serviceFeeAmount,
+  providerFeeAmount,
+  commissionAmount,
+  teacherNetAmount,
+  teacherPaidAmount,
+  teacherRetainedAmount,
+  clientTotal,
+}: {
+  provider: string | null;
+  legacyPayDunya: boolean;
+  courseAmount: number;
+  transportFee: number;
+  serviceFeeAmount: number;
+  providerFeeAmount: number;
+  commissionAmount: number;
+  teacherNetAmount: number;
+  teacherPaidAmount: number;
+  teacherRetainedAmount: number;
+  clientTotal: number;
+}) {
+  const teacherBalance = teacherNetAmount - teacherPaidAmount - teacherRetainedAmount;
+  const teacherRemaining = Math.max(0, teacherBalance);
+  const teacherOverpaid = Math.max(0, -teacherBalance);
+
+  return (
+    <div className="rounded-lg border border-[#C7D2FE] bg-[#F8FAFF] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] font-black uppercase tracking-wide text-[#111B4D]">Ventilation financière complète</p>
+        <span className="rounded-full border border-[#C7D2FE] bg-white px-2 py-1 text-[10px] font-bold text-[#3730A3]">
+          {paymentProviderLabel(provider, legacyPayDunya)}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 min-[520px]:grid-cols-3">
+        <FinancialMini label="Cours" value={courseAmount} />
+        <FinancialMini label="Transport" value={transportFee} />
+        <FinancialMini label="Service 3 %" value={serviceFeeAmount} />
+        <FinancialMini label="Frais Jèko" value={providerFeeAmount} muted />
+        <FinancialMini label="Commission" value={commissionAmount} />
+        <FinancialMini label="Total client" value={clientTotal} strong />
+        <FinancialMini label="Net professeur" value={teacherNetAmount} />
+        <FinancialMini label="Déjà payé" value={teacherPaidAmount} />
+        <FinancialMini label="Retenues" value={teacherRetainedAmount} muted />
+        <FinancialMini label="Reste professeur" value={teacherRemaining} strong />
+        <FinancialMini label="Surpaiement à régulariser" value={teacherOverpaid} strong={teacherOverpaid > 0} muted={teacherOverpaid === 0} />
+      </div>
+    </div>
+  );
+}
+
+function FinancialMini({ label, value, strong = false, muted = false }: { label: string; value: number; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className={strong ? "rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2" : "rounded-lg border border-[#E2E8F0] bg-white px-2.5 py-2"}>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <Money amount={value} className={muted ? "mt-1 text-xs font-bold text-[#64748B]" : strong ? "mt-1 text-xs font-black text-emerald-800" : "mt-1 text-xs font-black text-[#111827]"} />
+    </div>
+  );
+}
+
+function FinancialTableAmount({ value, strong = false, muted = false }: { value: number; strong?: boolean; muted?: boolean }) {
+  return (
+    <TableCell className="whitespace-nowrap text-right">
+      <Money
+        amount={value}
+        className={muted ? "text-xs font-semibold text-muted-foreground" : strong ? "text-xs font-black text-[#111B4D]" : "text-xs font-semibold"}
+      />
+    </TableCell>
+  );
+}
+
+function PayoutFeeLine({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">{label}</p>
+      <Money amount={value} className={strong ? "mt-1 font-black text-emerald-800" : "mt-1 font-black text-[#111827]"} />
+    </div>
+  );
+}
+
+function getActualBookingCommission(booking: {
+  status?: string | null;
+  commissionAmount?: number | null;
+  cancellationPenaltyPlatformAmount?: number | null;
+}) {
+  return ["CANCELLED", "REFUNDED"].includes(booking.status?.trim().toUpperCase() ?? "")
+    ? Math.max(0, booking.cancellationPenaltyPlatformAmount ?? 0)
+    : Math.max(0, booking.commissionAmount ?? 0);
+}
+
+function getActualBookingTeacherNet(booking: {
+  status?: string | null;
+  teacherNetAmount?: number | null;
+  cancellationPenaltyTeacherAmount?: number | null;
+}) {
+  return ["CANCELLED", "REFUNDED"].includes(booking.status?.trim().toUpperCase() ?? "")
+    ? Math.max(0, booking.cancellationPenaltyTeacherAmount ?? 0)
+    : Math.max(0, booking.teacherNetAmount ?? 0);
+}
+
+function sumAppliedBookingRetentions(booking: {
+  teacherPaymentAdjustments?: Array<{ amount?: number | null }> | null;
+}) {
+  return (booking.teacherPaymentAdjustments ?? []).reduce(
+    (sum, adjustment) => sum + Math.max(0, adjustment.amount ?? 0),
+    0,
+  );
+}
+
+function paymentProviderLabel(provider?: string | null, hasLegacyPayDunyaProof = false) {
+  if (provider === "PAYDUNYA" || hasLegacyPayDunyaProof) return "PayDunya (historique)";
+  if (provider === "JEKO") return "Jèko";
+  return "Versement historique";
 }
 
 function SignalCard({

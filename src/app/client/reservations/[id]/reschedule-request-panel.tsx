@@ -23,6 +23,7 @@ type RescheduleRequest = {
   paymentServiceFeeAmount: number;
   paymentServiceFeeLabel: string | null;
   totalToPay: number;
+  paymentProvider: "PAYDUNYA" | "JEKO" | null;
   paydunyaStatus: string | null;
   paydunyaCheckoutUrl?: string | null;
   paidAt: string | null;
@@ -44,6 +45,8 @@ export function ClientRescheduleRequestPanel({
   const [loading, setLoading] = useState<"checkout" | "verify" | null>(null);
   if (requests.length === 0) return null;
   const latest = requests[0];
+  const isJeko = latest.paymentProvider === "JEKO";
+  const providerLabel = isJeko ? "Jèko" : "PayDunya (historique)";
 
   async function openSupplementCheckout() {
     setLoading("checkout");
@@ -59,10 +62,11 @@ export function ClientRescheduleRequestPanel({
       const data = await res.json();
       const checkoutUrl = data.payment?.checkoutUrl || latest.paydunyaCheckoutUrl;
       if (!res.ok || !checkoutUrl) {
-        toast.error(data.error || "Impossible d'ouvrir PayDunya pour ce supplément.");
+        toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour ce supplément.`);
         return;
       }
-      toast.success("Ouverture de PayDunya...");
+      const responseProvider = data.payment?.provider === "PAYDUNYA" ? "PayDunya (historique)" : providerLabel;
+      toast.success(`Ouverture de ${responseProvider}...`);
       window.location.assign(checkoutUrl);
     } catch {
       toast.error("Erreur réseau");
@@ -83,7 +87,7 @@ export function ClientRescheduleRequestPanel({
         }),
       });
       const data = await res.json();
-      const message = data.payment?.message || data.error || "Vérification PayDunya terminée.";
+      const message = data.payment?.message || data.error || `Vérification ${providerLabel} terminée.`;
       if (!res.ok) {
         toast.error(message);
         return;
@@ -142,7 +146,7 @@ export function ClientRescheduleRequestPanel({
             <div className="mt-3 rounded-lg border border-[#DDE6F7] bg-white p-3">
               <div className="flex items-start gap-2 text-xs font-semibold leading-5 text-[#64748B]">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                <span>Le nouveau créneau n'est pas transmis au professeur tant que PayDunya n'a pas confirmé le supplément côté serveur.</span>
+                <span>Le nouveau créneau n'est pas transmis au professeur tant que {providerLabel} n'a pas confirmé le supplément côté serveur.</span>
               </div>
               <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
                 <Button
@@ -151,7 +155,7 @@ export function ClientRescheduleRequestPanel({
                   className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
                 >
                   {loading === "checkout" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                  Payer via PayDunya
+                  Payer via {providerLabel}
                 </Button>
                 <Button
                   variant="outline"
@@ -168,7 +172,7 @@ export function ClientRescheduleRequestPanel({
           {latest.status === "PAYMENT_FAILED" && (
             <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
               <p className="text-xs font-semibold leading-5 text-[#64748B]">
-                Le précédent lien PayDunya n'a pas abouti. Vous pouvez relancer un lien sécurisé sans créer une nouvelle demande.
+                Le précédent lien {providerLabel} n'a pas abouti. Vous pouvez relancer un lien sécurisé sans créer une nouvelle demande.
               </p>
               <Button
                 onClick={openSupplementCheckout}
@@ -176,13 +180,13 @@ export function ClientRescheduleRequestPanel({
                 className="mt-3 min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
               >
                 {loading === "checkout" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                Relancer PayDunya
+                Relancer {providerLabel}
               </Button>
             </div>
           )}
-          {paymentRequired && latest.paydunyaStatus && (
+          {paymentRequired && !isJeko && latest.paydunyaStatus && (
             <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
-              État PayDunya : {latest.paydunyaStatus}
+              État PayDunya historique : {latest.paydunyaStatus}
             </p>
           )}
         </div>
@@ -220,6 +224,7 @@ function statusLabel(status: string) {
     TEACHER_REJECTED: "Créneau refusé par le professeur",
     CANCELLED: "Demande annulée",
     REFUND_REQUIRED: "Contrôle remboursement requis",
+    REFUNDED: "Supplément remboursé",
   };
   return labels[status] ?? status;
 }

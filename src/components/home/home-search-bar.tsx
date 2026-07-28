@@ -114,7 +114,7 @@ export function HomeSearchBar({
       <div className="mt-3 hidden flex-col gap-1.5 border-t border-[#EEF2F7] pt-3 text-xs font-semibold text-[#64748B] min-[560px]:flex min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
         <span>Cours à domicile ou en ligne</span>
         <span>Séances de 2h, réservation au moins 24h avant</span>
-        <span>Paiement PayDunya protégé</span>
+        <span>Paiement Jèko protégé</span>
       </div>
     </form>
   );

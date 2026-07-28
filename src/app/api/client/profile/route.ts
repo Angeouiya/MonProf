@@ -1,18 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { canUseAccountPasswordFlow, isOwnerAdminAccount } from "@/lib/owner-account";
 import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-policy";
-import { sendClientPasswordChangedEmail } from "@/lib/notification-delivery";
+import {
+  enqueuePasswordChangedEmailInTransaction,
+  flushPasswordEmailOutbox,
+} from "@/lib/password-email-outbox";
 import { absoluteAppUrl } from "@/lib/public-url";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const role = (session.user as any).role;
-  const ownerAdmin = isOwnerAdminAccount({ role, email: session.user.email });
+  const ownerAdmin = isOwnerAdminAccount({ role, adminTeamRole: (session.user as any).adminTeamRole });
   if (role !== "CLIENT" && !ownerAdmin) {
     return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
   }
@@ -33,7 +36,7 @@ export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const role = (session.user as any).role;
-  const ownerAdmin = isOwnerAdminAccount({ role, email: session.user.email });
+  const ownerAdmin = isOwnerAdminAccount({ role, adminTeamRole: (session.user as any).adminTeamRole });
   if (role !== "CLIENT" && !ownerAdmin) {
     return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
   }
@@ -43,7 +46,7 @@ export async function PATCH(req: NextRequest) {
   const { action, name, phone, commune, quartier, avatarUrl, oldPassword, newPassword, confirmPassword } = body;
 
   if (action === "changePassword") {
-    if (!canUseAccountPasswordFlow({ role, email: session.user.email })) {
+    if (!canUseAccountPasswordFlow({ role })) {
       return NextResponse.json({ error: "Compte non autorisé pour cette opération." }, { status: 403 });
     }
     if (!oldPassword || !newPassword) {
@@ -67,11 +70,12 @@ export async function PATCH(req: NextRequest) {
     }
     const now = new Date();
     const newHash = await bcrypt.hash(newPassword, passwordHashRounds(user));
-    await db.$transaction(async (tx) => {
+    const confirmationJobId = await db.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: userId },
         data: {
           passwordHash: newHash,
+          sessionVersion: { increment: 1 },
           ...(ownerAdmin ? { adminPasswordChangedAt: now } : {}),
         },
       });
@@ -110,46 +114,35 @@ export async function PATCH(req: NextRequest) {
           },
         });
       }
-    });
-    const delivery = await sendClientPasswordChangedEmail({
-      to: user.email,
-      name: user.name,
-      changedAt: now,
-      securityUrl: absoluteAppUrl("/mot-de-passe-oublie", req),
-      idempotencyKey: `password-changed-${user.id}-${now.getTime()}`,
-    });
-    try {
-      await db.notification.create({
-        data: {
-        userId: ownerAdmin ? null : user.id,
-        title: "Confirmation email du changement de mot de passe",
-        message: delivery.ok
-          ? `Un email personnel de confirmation a été envoyé à ${user.email}.`
-          : `L'email personnel destiné à ${user.email} n'a pas pu être envoyé. ${delivery.message}`,
-        type: delivery.ok ? "PASSWORD_CHANGED_EMAIL_SENT" : "PASSWORD_CHANGED_EMAIL_FAILED",
-        recipientType: ownerAdmin ? "ADMIN" : "CLIENT",
-        recipientName: user.name,
-        channel: "EMAIL",
-        status: delivery.ok ? "SENT" : "FAILED",
-        priority: delivery.ok ? "IMPORTANT" : "URGENT",
-        clientId: ownerAdmin ? null : user.id,
-        sentAt: delivery.ok ? now : null,
-        response: [delivery.message, delivery.externalId ? `Identifiant fournisseur : ${delivery.externalId}` : null]
-          .filter(Boolean)
-          .join(" "),
-        link: ownerAdmin ? "/admin/mon-compte" : "/client/parametres",
-        actionLabel: "Voir la sécurité du compte",
-        },
+
+      return enqueuePasswordChangedEmailInTransaction(tx, {
+        accountType: ownerAdmin ? "ADMIN" : "CLIENT",
+        email: user.email,
+        name: user.name,
+        changedAt: now,
+        securityUrl: absoluteAppUrl(ownerAdmin ? "/contact" : "/mot-de-passe-oublie", req),
+        accountLabel: ownerAdmin ? "compte administrateur Compétence" : "compte client Compétence",
+        sourceTokenId: `self-service:${user.id}:${now.toISOString()}`,
+        userId: user.id,
       });
-    } catch (error) {
-      console.error("client password email audit error", error);
+    });
+    if (confirmationJobId) {
+      after(async () => {
+        try {
+          await flushPasswordEmailOutbox({ jobIds: [confirmationJobId], limit: 1 });
+        } catch (error) {
+          console.error("[password-change] Immediate client confirmation flush failed; the cron will retry.", error);
+        }
+      });
     }
     return NextResponse.json({
       ok: true,
       email: {
-        sent: delivery.ok,
-        configured: delivery.configured,
-        message: delivery.message,
+        sent: false,
+        queued: Boolean(confirmationJobId),
+        message: confirmationJobId
+          ? "Confirmation email prise en charge automatiquement."
+          : "Confirmation email en attente de configuration.",
       },
     });
   }

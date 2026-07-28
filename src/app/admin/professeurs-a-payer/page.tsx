@@ -44,9 +44,9 @@ export default async function AdminProfesseursAPayerPage() {
           phone: true,
           badgeVerified: true,
           payoutRecords: {
-            orderBy: { paidAt: "desc" },
-            take: 1,
-            select: { reference: true, amount: true, method: true, paidAt: true },
+            orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+            take: 5,
+            select: { reference: true, amount: true, method: true, status: true, paidAt: true, createdAt: true },
           },
           paymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
         },
@@ -61,8 +61,8 @@ export default async function AdminProfesseursAPayerPage() {
             select: {
               id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true,
               payoutRecords: {
-                orderBy: { paidAt: "desc" }, take: 1,
-                select: { reference: true, amount: true, method: true, paidAt: true },
+                orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }], take: 5,
+                select: { reference: true, amount: true, method: true, status: true, paidAt: true, createdAt: true },
               },
               paymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
             },
@@ -170,6 +170,7 @@ export default async function AdminProfesseursAPayerPage() {
             const hasPartial = g.rows.some((row) => row.partiallyPaid);
             const hasCancellationPenalty = g.rows.some((row) => row.cancellationPenalty);
             const hasPendingRetention = g.pendingRetentions > 0;
+            const hasPendingPayout = g.teacher.payoutRecords.some((payout: { status: string }) => payout.status === "DRAFT");
             return (
             <Card key={g.teacher.id}>
               <CardHeader className="flex flex-col gap-3 space-y-0 lg:flex-row lg:items-center lg:justify-between">
@@ -199,6 +200,7 @@ export default async function AdminProfesseursAPayerPage() {
                       {hasCancellationPenalty && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">Indemnité annulation</Badge>}
                       {hasPendingRetention && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Retenue à valider</Badge>}
                       {g.retainedTotal > 0 && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Retenu {formatFCFA(g.retainedTotal)}</Badge>}
+                      {hasPendingPayout && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">Confirmation Jèko en attente</Badge>}
                     </div>
                     <LastPayoutLine payout={g.teacher.payoutRecords[0]} />
                   </div>
@@ -219,6 +221,7 @@ export default async function AdminProfesseursAPayerPage() {
                     teacherPhone={g.teacher.phone}
                     pendingRetentions={g.pendingRetentions}
                     retainedTotal={g.retainedTotal}
+                    payoutPending={hasPendingPayout}
                   />
                   <CopyTeacherPaymentSummaryButton
                     teacherName={g.teacher.professionalName || g.teacher.fullName}
@@ -334,7 +337,7 @@ export default async function AdminProfesseursAPayerPage() {
 function LastPayoutLine({
   payout,
 }: {
-  payout?: { reference: string; amount: number; method: string | null; paidAt: Date } | null;
+  payout?: { reference: string; amount: number; method: string | null; status: string; paidAt: Date | null; createdAt: Date } | null;
 }) {
   if (!payout) {
     return (
@@ -345,12 +348,19 @@ function LastPayoutLine({
     );
   }
 
+  const isPending = payout.status === "DRAFT";
+  const isCancelled = payout.status === "CANCELLED";
   return (
-    <p className="mt-2 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-full border border-blue-100 bg-blue-50/70 px-2.5 py-1 text-[11px] font-medium text-blue-950/78">
+    <p className={isPending
+      ? "mt-2 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-900"
+      : isCancelled
+        ? "mt-2 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-800"
+        : "mt-2 inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-full border border-blue-100 bg-blue-50/70 px-2.5 py-1 text-[11px] font-medium text-blue-950/78"}
+    >
       <Clock className="h-3.5 w-3.5" />
-      <span>Dernier paiement : {formatFCFA(payout.amount)}</span>
+      <span>{isPending ? "Transfert en cours" : isCancelled ? "Tentative annulée" : "Dernier paiement"} : {formatFCFA(payout.amount)}</span>
       <span>· {paymentMethodLabel(payout.method)}</span>
-      <span>· {formatDate(payout.paidAt)}</span>
+      <span>· {formatDate(payout.paidAt ?? payout.createdAt)}</span>
       <span className="font-mono">{payout.reference}</span>
     </p>
   );

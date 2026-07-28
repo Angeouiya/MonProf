@@ -6,6 +6,14 @@
     {
       "path": "/api/cron/notification-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/password-email-outbox",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/jeko-reconciliation",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

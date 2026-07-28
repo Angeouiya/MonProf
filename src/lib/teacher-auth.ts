@@ -9,6 +9,7 @@ export type TeacherSessionUser = {
   teacherId: string;
   name: string;
   phone?: string | null;
+  portalPasswordMustChange: boolean;
   role: "TEACHER";
 };
 
@@ -23,6 +24,7 @@ export const getTeacherSessionUser = cache(async (): Promise<TeacherSessionUser 
     teacherId,
     name: sessionUser.name ?? "Professeur",
     phone: sessionUser.phone ?? null,
+    portalPasswordMustChange: Boolean(sessionUser.portalPasswordMustChange),
     role: "TEACHER",
   };
 });
@@ -45,6 +47,7 @@ export const requireTeacher = cache(async () => {
       status: true,
       portalAccessEnabled: true,
       portalPasswordHash: true,
+      portalPasswordMustChange: true,
     },
   });
 
@@ -58,7 +61,7 @@ export const requireTeacher = cache(async () => {
   };
 });
 
-export async function requireTeacherApi() {
+export async function requireTeacherApi(options: { allowPasswordChangeRequired?: boolean } = {}) {
   const sessionTeacher = await getTeacherSessionUser();
   if (!sessionTeacher) return null;
 
@@ -75,9 +78,11 @@ export async function requireTeacherApi() {
       status: true,
       portalAccessEnabled: true,
       portalPasswordHash: true,
+      portalPasswordMustChange: true,
     },
   });
 
   if (!teacher || !canTeacherUsePortal(teacher)) return null;
+  if (teacher.portalPasswordMustChange && !options.allowPasswordChangeRequired) return null;
   return teacher;
 }

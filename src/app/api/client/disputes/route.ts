@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
   if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
     return NextResponse.json({
-      error: "Un litige financier ne peut être ouvert qu'après un paiement PayDunya vérifié.",
+      error: "Un litige financier ne peut être ouvert qu'après confirmation serveur du paiement.",
     }, { status: 409 });
   }
 

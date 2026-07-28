@@ -1,10 +1,13 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import type { PaymentMethod } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
-import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
+import {
+  buildBookingRefundLedgerReference,
+  calculateRemainingBookingRefund,
+  FINALIZED_BOOKING_REFUND_STATUSES,
+} from "@/lib/booking-refund";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   TRANSPORT_FEES,
@@ -14,11 +17,15 @@ import {
 } from "@/lib/pricing";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
+  buildTeacherReplacementSessionSnapshots,
+  calculateReplacementTransportTotal,
+} from "@/lib/teacher-replacement-financials";
+import {
   hasRefundableClientFunds,
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
   isPaymentReadyForCourseProgressWithProof,
-  PAYDUNYA_PROOF_REQUIRED_ERROR,
+  PAYMENT_PROOF_REQUIRED_ERROR,
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { absoluteAppUrl } from "@/lib/public-url";
@@ -27,10 +34,16 @@ const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"
 const RECENT_ISSUE_DAYS = 90;
 const REPLACEABLE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "DISPUTED"] as const;
 const REPLACEABLE_PAYMENT_STATUSES = ["RECEIVED", "BLOCKED", "VALIDATED", "DISPUTED"] as const;
-const ACTIVE_PAYOUT_METHODS = ["WAVE", "ORANGE_MONEY", "MTN_MONEY", "MOOV_MONEY"] as const;
 
-async function isAdmin() {
-  return Boolean(await requireAdminApi("BOOKINGS_MANAGE"));
+class BookingRefundWorkflowError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string,
+  ) {
+    super(message);
+    this.name = "BookingRefundWorkflowError";
+  }
 }
 
 async function getAdmin() {
@@ -41,10 +54,6 @@ function includesNormalized(values: string[], target?: string | null) {
   if (!target) return false;
   const normalizedTarget = target.trim().toLocaleLowerCase("fr-FR");
   return values.some((value) => value.trim().toLocaleLowerCase("fr-FR") === normalizedTarget);
-}
-
-function normalizePhone(value: unknown) {
-  return typeof value === "string" ? value.replace(/[^\d+]/g, "").trim() : "";
 }
 
 function parsePreferredDays(value?: string | null) {
@@ -141,12 +150,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) {
+  const body = await req.json();
+  const action: string = body.action;
+  const authorizedAdmin = await requireAdminApi(action === "refund" ? "FINANCE_MANAGE" : "BOOKINGS_MANAGE");
+  if (!authorizedAdmin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const { id } = await params;
-  const body = await req.json();
-  const action: string = body.action;
 
   const booking = await db.booking.findUnique({
     where: { id },
@@ -170,7 +180,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });
         }
         if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-          return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+          return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         await db.booking.update({
           where: { id },
@@ -192,7 +202,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           return NextResponse.json({ error: "Action non permise pour ce statut" }, { status: 400 });
         }
         if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-          return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+          return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         await db.booking.update({
           where: { id },
@@ -241,7 +251,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           return NextResponse.json({ error: "Cette réservation n'est plus remplaçable avec ce statut de paiement." }, { status: 400 });
         }
         if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
-          return NextResponse.json({ error: PAYDUNYA_PROOF_REQUIRED_ERROR }, { status: 409 });
+          return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
         if ((booking.teacherPaidAmount || 0) > 0) {
           return NextResponse.json({ error: "Un versement professeur est déjà enregistré sur cette réservation. Traitez la comptabilité avant remplacement." }, { status: 400 });
@@ -332,10 +342,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
             })
           : null;
-        const nextTransportFee = replacementTransport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
-          && destination?.transportFeeOverride !== null && destination?.transportFeeOverride !== undefined
-          ? destination.transportFeeOverride
-          : (replacementTransport?.amount ?? 0);
+        const nextTransportFeePerSession = booking.courseFormat !== "HOME"
+          ? 0
+          : replacementTransport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
+            && destination?.transportFeeOverride !== null && destination?.transportFeeOverride !== undefined
+            ? destination.transportFeeOverride
+            : (replacementTransport?.amount ?? 0);
+        const { transportFee: nextTransportFee, transportFeePerSession } = calculateReplacementTransportTotal(
+          nextTransportFeePerSession,
+          booking.sessionsCount,
+        );
         const nextNet = nextTeacherCoursePayout + nextTransportFee;
         const financialImpact = nextNet - oldNet;
         const existingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
@@ -343,6 +359,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? pricingSnapshotToJson({
               ...existingSnapshot,
               transportFee: nextTransportFee,
+              transportFeePerSession,
               transportFeeKey: replacementTransport?.key ?? existingSnapshot.transportFeeKey,
               transportFeeLabel: replacementTransport?.label ?? existingSnapshot.transportFeeLabel,
               transportRouteLabel: replacementTransport?.routeLabel ?? existingSnapshot.transportRouteLabel,
@@ -405,37 +422,124 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           `Lieu : ${locationLabel}`,
           `Format : ${formatLabel}`,
           replacementTransport ? `Trajet déplacement : ${replacementTransport.routeLabel}` : "",
-          replacementTransport ? `Frais déplacement : ${nextTransportFee.toLocaleString("fr-FR")} FCFA` : "",
+          replacementTransport ? `Frais déplacement : ${transportFeePerSession.toLocaleString("fr-FR")} FCFA par séance, soit ${nextTransportFee.toLocaleString("fr-FR")} FCFA pour le pack` : "",
           `Montant net à recevoir : ${nextNet.toLocaleString("fr-FR")} FCFA`,
           "",
           `Lien mission sécurisé : ${absoluteMissionUrl}`,
           "",
           "Merci de confirmer rapidement votre disponibilité.",
         ].join("\n");
-        await db.booking.update({
-          where: { id },
-          data: {
-            teacherId: newTeacherId,
-            // Le remplacement conserve la grille officielle de la réservation.
-            commissionRate: booking.commissionRate,
+        await db.$transaction(async (tx) => {
+          const currentBooking = await tx.booking.findUnique({
+            where: { id: booking.id },
+            select: { teacherId: true, teacherPaidAmount: true },
+          });
+          if (!currentBooking || currentBooking.teacherId !== booking.teacherId || currentBooking.teacherPaidAmount > 0) {
+            throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+          }
+
+          const currentSessions = await tx.bookingSession.findMany({
+            where: { bookingId: booking.id },
+            orderBy: { sequence: "asc" },
+            include: {
+              payoutAllocations: {
+                select: { payout: { select: { status: true } } },
+              },
+            },
+          });
+          const sessionSnapshots = buildTeacherReplacementSessionSnapshots({
+            sessions: currentSessions.map((session) => ({
+              id: session.id,
+              status: session.status,
+              completedAt: session.completedAt,
+              clientValidatedAt: session.clientValidatedAt,
+              releasedAt: session.releasedAt,
+              paidAt: session.paidAt,
+              releasedAmount: session.releasedAmount,
+              paidAmount: session.paidAmount,
+              retainedAmount: session.retainedAmount,
+              payoutStatuses: session.payoutAllocations.map((allocation) => allocation.payout.status),
+            })),
+            expectedSessionsCount: booking.sessionsCount,
+            newTeacherId,
+            courseAmount,
             commissionAmount: nextCommission,
-            teacherRate: booking.teacherRate,
-            teacherPayoutAmount: nextTeacherCoursePayout,
+            teacherCourseAmount: nextTeacherCoursePayout,
             transportFee: nextTransportFee,
-            transportFeeKey: replacementTransport?.key ?? booking.transportFeeKey,
-            totalTeacherReceives: nextNet,
-            teacherNetAmount: nextNet,
-            pricingSnapshot: nextPricingSnapshot,
-          },
-        });
-        await db.transaction.updateMany({
-          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-          data: {
-            teacherId: newTeacherId,
-            commission: nextCommission,
-            teacherNet: nextNet,
-          },
-        });
+          });
+
+          await tx.booking.update({
+            where: { id },
+            data: {
+              teacherId: newTeacherId,
+              // Le remplacement conserve la grille officielle de la réservation et le paiement client vérifié.
+              commissionRate: booking.commissionRate,
+              commissionAmount: nextCommission,
+              teacherRate: booking.teacherRate,
+              teacherPayoutAmount: nextTeacherCoursePayout,
+              transportFee: nextTransportFee,
+              transportFeeKey: replacementTransport?.key ?? booking.transportFeeKey,
+              totalTeacherReceives: nextNet,
+              teacherNetAmount: nextNet,
+              pricingSnapshot: nextPricingSnapshot,
+            },
+          });
+          await tx.transaction.updateMany({
+            where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
+            data: {
+              teacherId: newTeacherId,
+              commission: nextCommission,
+              teacherNet: nextNet,
+            },
+          });
+          for (const session of sessionSnapshots) {
+            await tx.bookingSession.update({
+              where: { id: session.id },
+              data: {
+                teacherId: session.teacherId,
+                proposedTeacherId: null,
+                status: session.status,
+                courseAmount: session.courseAmount,
+                commissionAmount: session.commissionAmount,
+                teacherCourseAmount: session.teacherCourseAmount,
+                transportFee: session.transportFee,
+                teacherNetAmount: session.teacherNetAmount,
+                proposedDate: null,
+                proposedTime: null,
+                unavailableReason: null,
+              },
+            });
+          }
+          await tx.bookingSessionHistory.createMany({
+            data: sessionSnapshots.map((session) => ({
+              bookingSessionId: session.id,
+              actorType: "ADMIN",
+              actorId: admin?.id,
+              action: "TEACHER_REPLACED",
+              fromStatus: currentSessions.find((item) => item.id === session.id)?.status,
+              toStatus: session.status,
+              oldTeacherId: booking.teacherId,
+              newTeacherId,
+              detail: `Remplacement global ${booking.reference}. Snapshot net séance: ${session.teacherNetAmount} FCFA, dont transport ${session.transportFee} FCFA.`,
+            })),
+          });
+          await tx.teacherReplacement.create({
+            data: {
+              bookingId: booking.id,
+              oldTeacherId: booking.teacherId,
+              newTeacherId,
+              reason,
+              details,
+              financialImpact,
+              clientMessage,
+              oldTeacherMessage,
+              newTeacherMessage,
+              status: "APPLIED",
+              createdById: admin?.id,
+              appliedAt: now,
+            },
+          });
+        }, { isolationLevel: "Serializable" });
         await db.teacherTask.updateMany({
           where: {
             teacherId: booking.teacherId,
@@ -468,22 +572,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             readAt: now,
             status: "EXPIRED",
             response: `Clôturé automatiquement après remplacement par ${newTeacherName}.`,
-          },
-        });
-        await db.teacherReplacement.create({
-          data: {
-            bookingId: booking.id,
-            oldTeacherId: booking.teacherId,
-            newTeacherId,
-            reason,
-            details,
-            financialImpact,
-            clientMessage,
-            oldTeacherMessage,
-            newTeacherMessage,
-            status: "APPLIED",
-            createdById: admin?.id,
-            appliedAt: now,
           },
         });
         await db.teacherNotification.createMany({
@@ -629,7 +717,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
         if (!isPaymentReadyForCourseProgressWithProof(booking)) {
           return NextResponse.json({
-            error: "Impossible de marquer le cours terminé: le paiement PayDunya n'est pas vérifié et bloqué.",
+            error: "Impossible de marquer le cours terminé : le paiement n'est pas confirmé côté serveur et bloqué.",
           }, { status: 409 });
         }
         await db.booking.update({
@@ -649,110 +737,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ ok: true });
       }
       case "pay_teacher": {
-        if (booking.sessions.length > 0) {
-          return NextResponse.json({ error: "Utilisez la comptabilité professeur : seuls les montants libérés séance par séance sont payables." }, { status: 409 });
-        }
-        if (booking.paymentStatus !== "TO_PAY_TEACHER") {
-          return NextResponse.json({ error: "Le paiement n'est pas à libérer" }, { status: 400 });
-        }
-        if (!hasVerifiedPayDunyaClientPayment(booking)) {
-          return NextResponse.json({
-            error: "Impossible de payer le professeur: aucun paiement client PayDunya vérifié n'est rattaché à cette réservation.",
-          }, { status: 409 });
-        }
-        const admin = await getAdmin();
-        const payoutMethod = typeof body.method === "string" && ACTIVE_PAYOUT_METHODS.includes(body.method as (typeof ACTIVE_PAYOUT_METHODS)[number])
-          ? (body.method as PaymentMethod)
-          : booking.paymentMethod;
-        const paymentPhone = normalizePhone(body.paymentPhone);
-        const alreadyPaid = booking.teacherPaidAmount || 0;
-        const retained = booking.teacherPaymentAdjustments.reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0);
-        const remaining = Math.max(0, booking.teacherNetAmount - alreadyPaid - retained);
-        if (remaining <= 0) {
-          if (alreadyPaid + retained >= booking.teacherNetAmount) {
-            await db.booking.update({
-              where: { id },
-              data: {
-                status: "TEACHER_PAID",
-                paymentStatus: "TEACHER_PAID",
-                teacherPaidAt: now,
-              },
-            });
-            return NextResponse.json({ ok: true, settledByRetention: true });
-          }
-          return NextResponse.json({ error: "Cette réservation est déjà soldée côté professeur." }, { status: 400 });
-        }
-        if (!payoutMethod || !ACTIVE_PAYOUT_METHODS.includes(payoutMethod as (typeof ACTIVE_PAYOUT_METHODS)[number])) {
-          return NextResponse.json({ error: "Choisissez le moyen de paiement professeur." }, { status: 400 });
-        }
-        if (paymentPhone.length < 8 || paymentPhone.length > 20) {
-          return NextResponse.json({ error: "Numéro de paiement professeur requis et invalide." }, { status: 400 });
-        }
-        await db.$transaction(async (tx) => {
-          const payout = await tx.teacherPayoutRecord.create({
-            data: {
-              reference: generateReference("PAY-PROF"),
-              teacherId: booking.teacherId,
-              amount: remaining,
-              method: payoutMethod,
-              paymentPhone,
-              note: `Paiement complet de la réservation ${booking.reference}`,
-              paidAt: now,
-              createdById: admin?.id,
-              allocations: {
-                create: [{ bookingId: booking.id, amount: remaining }],
-              },
-            },
-          });
-          await tx.booking.update({
-            where: { id },
-            data: {
-              status: "TEACHER_PAID",
-              paymentStatus: "TEACHER_PAID",
-              teacherPaidAmount: alreadyPaid + remaining,
-              teacherPaidAt: now,
-            },
-          });
-          await tx.transaction.create({
-            data: {
-              reference: generateReference("TX-PROF"),
-              bookingId: booking.id,
-              teacherId: booking.teacherId,
-              amount: remaining,
-              commission: 0,
-              teacherNet: remaining,
-              type: "TEACHER_PAYOUT",
-              status: "TEACHER_PAID",
-              method: payoutMethod,
-              paidAt: now,
-            },
-          });
-          await tx.transaction.updateMany({
-            where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-            data: { status: "TEACHER_PAID", paidAt: now },
-          });
-          await tx.adminActionLog.create({
-            data: {
-              adminId: admin?.id,
-              action: "Paiement réservation professeur",
-              entityType: "Booking",
-              entityId: booking.id,
-              detail: `Paiement professeur enregistré pour ${booking.reference} : ${remaining} FCFA (${payout.reference})${retained > 0 ? `, retenue appliquée ${retained} FCFA` : ""}.`,
-              oldStatus: "TO_PAY_TEACHER",
-              newStatus: "TEACHER_PAID",
-            },
-          });
-          await tx.notification.create({
-            data: {
-              userId: null,
-              title: "Professeur payé",
-              message: `Le professeur de la réservation ${booking.reference} a été payé (${remaining} FCFA net versé${retained > 0 ? `, ${retained} FCFA retenus` : ""}).`,
-              type: "TEACHER_PAID",
-              link: `/admin/reservations/${id}`,
-            },
-          });
-        });
-        return NextResponse.json({ ok: true });
+        return NextResponse.json({
+          error: "Ce raccourci de paiement manuel est désactivé. Utilisez le versement Jèko depuis la comptabilité professeur afin que le solde ne soit débité qu'après confirmation du fournisseur.",
+          payoutUrl: `/admin/professeurs/${booking.teacherId}?tab=paiements&bookingId=${booking.id}`,
+        }, { status: 409 });
       }
       case "cancel": {
         const admin = await getAdmin();
@@ -912,151 +900,238 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ ok: true });
       }
       case "refund": {
-        if (!hasRefundableClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
-          return NextResponse.json({
-            error: "Impossible de rembourser: aucun paiement PayDunya vérifié n'est rattaché à cette réservation.",
-          }, { status: 409 });
-        }
-        const fallbackRefundableAmount = Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
-        const refundAmount = booking.cancellationRefundAmount > 0
-          ? booking.cancellationRefundAmount
-          : fallbackRefundableAmount;
-        if (refundAmount <= 0) {
-          return NextResponse.json({ error: "Aucun montant remboursable n'est disponible pour cette réservation." }, { status: 400 });
-        }
-        const refundRequest = booking.clientRefundRequests.find((request) => ["PENDING", "APPROVED"].includes(request.status))
-          ?? booking.clientRefundRequests[0]
-          ?? null;
-        if (!refundRequest) {
-          return NextResponse.json({
-            error: "Le client doit d'abord renseigner son moyen et son numéro de remboursement.",
-          }, { status: 400 });
-        }
         const externalReference = typeof body.externalReference === "string" ? body.externalReference.trim() : "";
-        if (externalReference.length < 3) {
+        if (externalReference.length < 3 || externalReference.length > 160) {
           return NextResponse.json({
-            error: "Saisissez la référence du dépôt ou du reçu Mobile Money.",
+            error: "Saisissez une référence de dépôt valide (3 à 160 caractères).",
           }, { status: 400 });
         }
-        const finalPaymentStatus = refundAmount < fallbackRefundableAmount ? "PARTIALLY_REFUNDED" : "REFUNDED";
-        await db.booking.update({
-          where: { id },
-          data: { status: "REFUNDED", paymentStatus: finalPaymentStatus },
-        });
-        await db.transaction.updateMany({
-          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-          data: { status: finalPaymentStatus },
-        });
-        await db.transaction.create({
-          data: {
-            reference: generateReference("TX"),
-            bookingId: booking.id,
-            teacherId: booking.teacherId,
-            amount: refundAmount,
-            commission: 0,
-            teacherNet: 0,
-            type: "REFUND",
-            status: finalPaymentStatus,
-            method: refundRequest.method ?? booking.paymentMethod,
-            paidAt: now,
-          },
-        });
-        await db.clientRefundRequest.updateMany({
-          where: {
-            bookingId: booking.id,
-            status: { in: ["PENDING", "APPROVED"] },
-          },
-          data: {
-            status: "PAID",
-            processedAt: now,
-            externalReference,
-          },
-        });
-        await db.notification.create({
-          data: {
-            userId: null,
-            title: "Remboursement effectué",
-            message: `Le client de la réservation ${booking.reference} a été remboursé (${refundAmount} FCFA) via ${refundRequest.method}. Référence dépôt: ${externalReference}. Les frais service paiement non remboursés sont de ${booking.paymentServiceFeeAmount || 0} FCFA.`,
-            type: "REFUND",
-            link: `/admin/reservations/${id}`,
-          },
-        });
-        if ((booking.cancellationPenaltyTeacherAmount || 0) > 0) {
-          await db.notification.create({
+        const result = await db.$transaction(async (tx) => {
+          const snapshot = await tx.booking.findUnique({
+            where: { id },
+            include: {
+              client: { select: { id: true, name: true } },
+              transactions: {
+                include: { refundedRescheduleRequest: { select: { id: true } } },
+              },
+              clientRefundRequests: {
+                where: { status: { in: ["PENDING", "APPROVED"] } },
+                orderBy: { createdAt: "asc" },
+                take: 1,
+              },
+            },
+          });
+          if (!snapshot) {
+            throw new BookingRefundWorkflowError("Réservation introuvable", 404, "BOOKING_NOT_FOUND");
+          }
+          const refundRequest = snapshot.clientRefundRequests[0] ?? null;
+          if (!refundRequest) {
+            const paidRequest = await tx.clientRefundRequest.findFirst({
+              where: { bookingId: snapshot.id, status: "PAID" },
+              orderBy: { processedAt: "desc" },
+              select: { reference: true, externalReference: true },
+            });
+            throw new BookingRefundWorkflowError(
+              paidRequest
+                ? `La demande ${paidRequest.reference} est déjà payée et ne peut pas être réutilisée.`
+                : "Le client doit d'abord renseigner son moyen et son numéro de remboursement.",
+              paidRequest ? 409 : 400,
+              paidRequest ? "REFUND_REQUEST_ALREADY_PAID" : "REFUND_REQUEST_REQUIRED",
+            );
+          }
+          if (!hasRefundableClientFunds(snapshot.paymentStatus) || !hasVerifiedPayDunyaClientPayment(snapshot)) {
+            throw new BookingRefundWorkflowError(
+              "Impossible de rembourser : aucun paiement confirmé côté serveur n'est rattaché à cette réservation.",
+              409,
+              "CLIENT_PAYMENT_NOT_REFUNDABLE",
+            );
+          }
+
+          const duplicateReceipt = await tx.clientRefundRequest.findFirst({
+            where: {
+              id: { not: refundRequest.id },
+              status: "PAID",
+              externalReference,
+            },
+            select: { id: true },
+          });
+          if (duplicateReceipt) {
+            throw new BookingRefundWorkflowError(
+              "Cette référence de dépôt est déjà utilisée pour un autre remboursement.",
+              409,
+              "REFUND_REFERENCE_ALREADY_USED",
+            );
+          }
+
+          const confirmedClientPaymentAmount = snapshot.transactions
+            .filter((transaction) => transaction.type === "CLIENT_PAYMENT"
+              && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
+            .reduce((sum, transaction) => sum + Math.max(0, transaction.amount), 0);
+          const finalizedRefundAmount = snapshot.transactions
+            .filter((transaction) => transaction.type === "REFUND"
+              && FINALIZED_BOOKING_REFUND_STATUSES.includes(transaction.status as (typeof FINALIZED_BOOKING_REFUND_STATUSES)[number])
+              && !transaction.refundedRescheduleRequest)
+            .reduce((sum, transaction) => sum + Math.max(0, transaction.amount), 0);
+          const calculation = calculateRemainingBookingRefund({
+            confirmedClientPaymentAmount,
+            finalizedRefundAmount,
+            cancellationRefundAmount: snapshot.cancellationRefundAmount,
+            totalClientPays: snapshot.totalClientPays,
+            totalPrice: snapshot.totalPrice,
+            paymentServiceFeeAmount: snapshot.paymentServiceFeeAmount,
+            requestAmount: refundRequest.amount,
+          });
+          if (calculation.refundAmount <= 0) {
+            throw new BookingRefundWorkflowError(
+              "Aucun montant ne reste remboursable pour cette réservation.",
+              409,
+              "NO_REMAINING_REFUND_AMOUNT",
+            );
+          }
+
+          const claimed = await tx.clientRefundRequest.updateMany({
+            where: {
+              id: refundRequest.id,
+              bookingId: snapshot.id,
+              status: { in: ["PENDING", "APPROVED"] },
+              processedAt: null,
+            },
+            data: {
+              status: "PAID",
+              processedAt: now,
+              processedById: authorizedAdmin.id,
+              externalReference,
+              amount: calculation.refundAmount,
+            },
+          });
+          if (claimed.count !== 1) {
+            throw new BookingRefundWorkflowError(
+              "Cette demande vient d'être traitée depuis une autre fenêtre.",
+              409,
+              "REFUND_CONCURRENT_UPDATE",
+            );
+          }
+
+          await tx.booking.update({
+            where: { id: snapshot.id },
+            data: { status: "REFUNDED", paymentStatus: calculation.finalPaymentStatus },
+          });
+          await tx.transaction.updateMany({
+            where: {
+              bookingId: snapshot.id,
+              type: "CLIENT_PAYMENT",
+              status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
+            },
+            data: { status: calculation.finalPaymentStatus },
+          });
+          const refundTransaction = await tx.transaction.create({
+            data: {
+              reference: buildBookingRefundLedgerReference(refundRequest.id),
+              bookingId: snapshot.id,
+              teacherId: snapshot.teacherId,
+              amount: calculation.refundAmount,
+              commission: 0,
+              teacherNet: 0,
+              type: "REFUND",
+              status: calculation.finalPaymentStatus,
+              method: refundRequest.method ?? snapshot.paymentMethod,
+              paidAt: now,
+            },
+          });
+          await tx.notification.create({
             data: {
               userId: null,
-              title: "Indemnité professeur à traiter",
-              message: `Après remboursement client de ${booking.reference}, une indemnité professeur de ${booking.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est disponible. Part plateforme sur pénalité: ${booking.cancellationPenaltyPlatformAmount.toLocaleString("fr-FR")} FCFA.`,
-              type: "TEACHER_PAYOUT",
-              recipientType: "ADMIN",
-              channel: "INTERNAL",
-              status: "CREATED",
-              priority: "IMPORTANT",
-              teacherId: booking.teacherId,
-              bookingId: booking.id,
-              link: `/admin/professeurs/${booking.teacherId}?tab=paiements&bookingId=${booking.id}`,
-              actionLabel: "Ouvrir comptabilité",
+              title: "Remboursement effectué",
+              message: `Le client de la réservation ${snapshot.reference} a été remboursé (${calculation.refundAmount} FCFA) via ${refundRequest.method}. Référence dépôt: ${externalReference}. Les frais service paiement non remboursés sont de ${snapshot.paymentServiceFeeAmount || 0} FCFA.`,
+              type: "REFUND",
+              link: `/admin/reservations/${id}`,
             },
           });
-          await db.teacherNotification.create({
+          if ((snapshot.cancellationPenaltyTeacherAmount || 0) > 0) {
+            await tx.notification.create({
+              data: {
+                userId: null,
+                title: "Indemnité professeur à traiter",
+                message: `Après remboursement client de ${snapshot.reference}, une indemnité professeur de ${snapshot.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est disponible. Part plateforme sur pénalité: ${snapshot.cancellationPenaltyPlatformAmount.toLocaleString("fr-FR")} FCFA.`,
+                type: "TEACHER_PAYOUT",
+                recipientType: "ADMIN",
+                channel: "INTERNAL",
+                status: "CREATED",
+                priority: "IMPORTANT",
+                teacherId: snapshot.teacherId,
+                bookingId: snapshot.id,
+                link: `/admin/professeurs/${snapshot.teacherId}?tab=paiements&bookingId=${snapshot.id}`,
+                actionLabel: "Ouvrir comptabilité",
+              },
+            });
+            await tx.teacherNotification.create({
+              data: {
+                teacherId: snapshot.teacherId,
+                bookingId: snapshot.id,
+                title: `Indemnité annulation - ${snapshot.reference}`,
+                message: `Le service client a traité le remboursement de la réservation ${snapshot.reference}. Une indemnité professeur de ${snapshot.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est visible dans votre comptabilité et pourra être demandée selon le solde disponible.`,
+                channel: "INTERNAL",
+                sent: false,
+                status: "PENDING",
+              },
+            });
+          }
+          await tx.notification.create({
             data: {
-              teacherId: booking.teacherId,
-              bookingId: booking.id,
-              title: `Indemnité annulation - ${booking.reference}`,
-              message: `Le service client a traité le remboursement de la réservation ${booking.reference}. Une indemnité professeur de ${booking.cancellationPenaltyTeacherAmount.toLocaleString("fr-FR")} FCFA est visible dans votre comptabilité et pourra être demandée selon le solde disponible.`,
+              userId: snapshot.clientId,
+              title: "Remboursement effectué",
+              message: `Votre remboursement de ${calculation.refundAmount.toLocaleString("fr-FR")} FCFA pour ${snapshot.reference} a été marqué effectué. Référence dépôt: ${externalReference}. Les frais de service paiement non remboursés sont de ${(snapshot.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA.`,
+              type: "REFUND",
+              recipientType: "CLIENT",
               channel: "INTERNAL",
-              sent: false,
-              status: "PENDING",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: snapshot.id,
+              teacherId: snapshot.teacherId,
+              clientId: snapshot.clientId,
+              sentAt: now,
+              link: `/client/reservations/${snapshot.id}`,
+              actionLabel: "Voir remboursement",
             },
           });
-        }
-        await db.notification.create({
-          data: {
-            userId: booking.clientId,
-            title: "Remboursement effectué",
-            message: `Votre remboursement de ${refundAmount.toLocaleString("fr-FR")} FCFA pour ${booking.reference} a été marqué effectué. Référence dépôt: ${externalReference}. Les frais de service paiement non remboursés sont de ${(booking.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA.`,
-            type: "REFUND",
-            recipientType: "CLIENT",
-            channel: "INTERNAL",
-            status: "SENT",
-            priority: "IMPORTANT",
-            bookingId: booking.id,
-            teacherId: booking.teacherId,
-            clientId: booking.clientId,
-            sentAt: now,
-            link: `/client/reservations/${booking.id}`,
-            actionLabel: "Voir remboursement",
-          },
-        });
-        await db.clientCommunication.create({
-          data: {
-            clientId: booking.clientId,
-            bookingId: booking.id,
-            type: "PAYMENT",
-            channel: "INTERNAL",
-            subject: `Remboursement effectué ${booking.reference}`,
-            content: `Votre remboursement est marqué effectué.\nMontant déposé : ${refundAmount.toLocaleString("fr-FR")} FCFA\nMoyen : ${refundRequest.method}\nNuméro : ${refundRequest.paymentPhone}\nTitulaire : ${refundRequest.accountName ?? "Non renseigné"}\nRéférence dépôt : ${externalReference}\nFrais de service paiement non remboursés : ${(booking.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA`,
-            priority: "IMPORTANT",
-            status: "SENT",
-          },
-        });
-        await db.adminActionLog.create({
-          data: {
-            adminId: (await getAdmin())?.id,
-            action: "Remboursement client effectué",
-            entityType: "ClientRefundRequest",
-            entityId: refundRequest.id,
-            detail: `Remboursement ${refundRequest.reference} pour ${booking.reference}: ${refundAmount} FCFA via ${refundRequest.method} au ${refundRequest.paymentPhone}. Référence dépôt: ${externalReference}.`,
-            oldStatus: refundRequest.status,
-            newStatus: "PAID",
-          },
-        });
-        return NextResponse.json({ ok: true });
+          await tx.clientCommunication.create({
+            data: {
+              clientId: snapshot.clientId,
+              bookingId: snapshot.id,
+              type: "PAYMENT",
+              channel: "INTERNAL",
+              subject: `Remboursement effectué ${snapshot.reference}`,
+              content: `Votre remboursement est marqué effectué.\nMontant déposé : ${calculation.refundAmount.toLocaleString("fr-FR")} FCFA\nMoyen : ${refundRequest.method}\nNuméro : ${refundRequest.paymentPhone}\nTitulaire : ${refundRequest.accountName ?? "Non renseigné"}\nRéférence dépôt : ${externalReference}\nFrais de service paiement non remboursés : ${(snapshot.paymentServiceFeeAmount || 0).toLocaleString("fr-FR")} FCFA`,
+              priority: "IMPORTANT",
+              status: "SENT",
+              sentById: authorizedAdmin.id,
+            },
+          });
+          await tx.adminActionLog.create({
+            data: {
+              adminId: authorizedAdmin.id,
+              action: "Remboursement client effectué",
+              entityType: "ClientRefundRequest",
+              entityId: refundRequest.id,
+              detail: `Remboursement ${refundRequest.reference} pour ${snapshot.reference}: ${calculation.refundAmount} FCFA via ${refundRequest.method} au ${refundRequest.paymentPhone}. Référence dépôt: ${externalReference}. Transaction: ${refundTransaction.reference}.`,
+              oldStatus: refundRequest.status,
+              newStatus: "PAID",
+            },
+          });
+
+          return {
+            ok: true,
+            amount: calculation.refundAmount,
+            remainingRefundableAmount: Math.max(0, calculation.remainingPolicyRefundAmount - calculation.refundAmount),
+            refundTransactionReference: refundTransaction.reference,
+          };
+        }, { isolationLevel: "Serializable" });
+        return NextResponse.json(result);
       }
       case "dispute": {
         if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
           return NextResponse.json({
-            error: "Impossible d'ouvrir un litige financier: aucun paiement PayDunya vérifié n'est rattaché à cette réservation.",
+            error: "Impossible d'ouvrir un litige financier : aucun paiement confirmé côté serveur n'est rattaché à cette réservation.",
           }, { status: 409 });
         }
         const reason = body.reason || "Litige ouvert par le service client";
@@ -1110,6 +1185,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
     }
   } catch (e: any) {
+    if (e instanceof BookingRefundWorkflowError) {
+      return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
+    }
+    if (action === "refund" && (e?.code === "P2002" || e?.code === "P2034")) {
+      return NextResponse.json({
+        error: "Ce remboursement est déjà enregistré ou vient d'être traité depuis une autre fenêtre.",
+        code: "REFUND_ALREADY_RECORDED",
+      }, { status: 409 });
+    }
+    if (e?.message === "BOOKING_REPLACEMENT_CONFLICT") {
+      return NextResponse.json({
+        error: "Le professeur ou le solde de cette réservation a changé pendant le remplacement. Rechargez la page avant de réessayer.",
+      }, { status: 409 });
+    }
+    if (typeof e?.message === "string" && e.message.startsWith("SESSION_COUNT_MISMATCH:")) {
+      return NextResponse.json({
+        error: "Le découpage des séances de ce pack est incomplet. Corrigez les séances avant de remplacer le professeur afin de préserver la comptabilité.",
+      }, { status: 409 });
+    }
+    if (typeof e?.message === "string" && e.message.startsWith("SESSION_REPLACEMENT_BLOCKED:")) {
+      const reason = e.message.split(":").slice(2).join(":");
+      return NextResponse.json({
+        error: `Remplacement refusé : ${reason}. Traitez d'abord la séance et sa comptabilité.`,
+      }, { status: 409 });
+    }
     console.error("admin/booking PATCH error", e);
     return NextResponse.json({ error: e.message || "Erreur serveur" }, { status: 500 });
   }

@@ -6,6 +6,7 @@ import { Money } from "@/components/shared/money";
 import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { RevenueAreaChart } from "@/components/admin/charts";
+import { FinancialOverview } from "@/components/admin/financial-overview";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,9 @@ import Link from "next/link";
 import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
 import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { disputeStatusLabel } from "@/lib/platform-labels";
-import { verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { hasVerifiedClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { buildPlatformFinancialSummary, providerFeeFinancialFields } from "@/lib/financial-summary";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +42,7 @@ type NotificationBookingLite = {
 
 export default async function AdminDashboard() {
   const user = await requireAdmin();
+  const canViewFinance = hasAdminPermission(user.adminPermissions, "FINANCE_VIEW");
 
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -56,14 +60,12 @@ export default async function AdminDashboard() {
     blockedFundsAgg,
     toReleaseAgg,
     openDisputes,
-    allTimeCommissionAgg,
-    monthCommissionAgg,
-    totalPaidToTeachersAgg,
+    monthCommissionBookings,
     recentPaidBookings,
     pendingReleaseBookings,
     openDisputeList,
     adminNotifications,
-    draftPayDunyaBookings,
+    draftPaymentBookings,
     paidBookingsAwaitingAdmin,
     pendingTeacherConfirmations,
     pendingScheduleProposals,
@@ -71,6 +73,9 @@ export default async function AdminDashboard() {
     pendingPayoutRequests,
     pendingRefundRequests,
     commissionBookings,
+    financialBookings,
+    financialPayouts,
+    appliedTeacherAdjustments,
   ] = await db.$transaction([
     db.user.count({ where: { role: "CLIENT" } }),
     db.teacher.count(),
@@ -107,15 +112,20 @@ export default async function AdminDashboard() {
       },
     }),
     db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
-    db.booking.aggregate({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
-      _sum: { commissionAmount: true },
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere({ createdAt: { gte: startOfMonth } }),
+      select: {
+        status: true,
+        paymentStatus: true,
+        paydunyaStatus: true,
+        paydunyaVerifiedAt: true,
+        paymentProvider: true,
+        providerPaymentStatus: true,
+        paymentVerifiedAt: true,
+        commissionAmount: true,
+        cancellationPenaltyPlatformAmount: true,
+      },
     }),
-    db.booking.aggregate({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] }, createdAt: { gte: startOfMonth } }),
-      _sum: { commissionAmount: true },
-    }),
-    db.teacherPayoutRecord.aggregate({ where: { status: "PAID" }, _sum: { amount: true } }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
       include: { client: { select: { name: true } }, teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } } },
@@ -145,15 +155,7 @@ export default async function AdminDashboard() {
       orderBy: { createdAt: "desc" }, take: 5,
     }),
     db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
-    db.booking.count({
-      where: {
-        status: "PENDING_PAYMENT",
-        OR: [
-          { paydunyaVerifiedAt: null },
-          { paydunyaStatus: { notIn: ["COMPLETED", "CONFIRMED", "SUCCESS"] } },
-        ],
-      },
-    }),
+    db.booking.count({ where: { status: "PENDING_PAYMENT" } }),
     db.booking.count({
       where: verifiedPayDunyaBookingWhere({
         status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] },
@@ -181,8 +183,70 @@ export default async function AdminDashboard() {
     db.teacherPayoutRequest.count({ where: { status: "PENDING" } }),
     db.clientRefundRequest.count({ where: { status: { in: ["PENDING", "APPROVED"] } } }),
     db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ createdAt: { gte: start30d }, paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
-      select: { commissionAmount: true, createdAt: true },
+      where: verifiedPayDunyaBookingWhere({ createdAt: { gte: start30d } }),
+      select: {
+        status: true,
+        commissionAmount: true,
+        cancellationPenaltyPlatformAmount: true,
+        createdAt: true,
+      },
+    }),
+    db.booking.findMany({
+      where: verifiedPayDunyaBookingWhere(),
+      select: {
+        status: true,
+        totalClientPays: true,
+        courseAmount: true,
+        transportFee: true,
+        paymentServiceFeeAmount: true,
+        commissionAmount: true,
+        teacherNetAmount: true,
+        teacherPaidAmount: true,
+        cancellationPenaltyTeacherAmount: true,
+        cancellationPenaltyPlatformAmount: true,
+        teacherPayoutAllocations: {
+          where: { payout: { status: "PAID" } },
+          select: { amount: true },
+        },
+        paymentAttempts: {
+          where: { provider: "JEKO", purpose: "BOOKING", status: "SUCCEEDED" },
+          select: { providerFeeAmountXof: true, providerFeeAmountMinor: true },
+        },
+        rescheduleRequests: {
+          where: { paidAt: { not: null } },
+          select: {
+            status: true,
+            paidAt: true,
+            totalToPay: true,
+            feeAmount: true,
+            paymentServiceFeeAmount: true,
+            feePlatformAmount: true,
+            feeTeacherAmount: true,
+            transaction: { select: { status: true } },
+            paymentAttempts: {
+              where: { provider: "JEKO", purpose: "RESCHEDULE_FEE", status: "SUCCEEDED" },
+              select: { providerFeeAmountXof: true, providerFeeAmountMinor: true },
+            },
+          },
+        },
+        transactions: {
+          where: { type: { in: ["CLIENT_PAYMENT", "REFUND"] } },
+          select: { type: true, amount: true, status: true },
+        },
+      },
+    }),
+    db.teacherPayoutRecord.findMany({
+      where: { status: { in: ["PAID", "CANCELLED"] } },
+      select: {
+        amount: true,
+        transferFeeCoveredByPlatform: true,
+        transferFeeCoveredByPlatformMinor: true,
+        status: true,
+      },
+    }),
+    db.teacherPaymentAdjustment.findMany({
+      where: { status: "APPLIED" },
+      select: { amount: true, status: true },
     }),
   ]);
 
@@ -222,7 +286,7 @@ export default async function AdminDashboard() {
   }
   for (const b of commissionBookings) {
     const k = b.createdAt.toISOString().slice(0,10);
-    if (dailyMap[k] !== undefined) dailyMap[k] += b.commissionAmount;
+    if (dailyMap[k] !== undefined) dailyMap[k] += dashboardBookingCommission(b);
   }
   const series = Object.entries(dailyMap).map(([date, value]) => ({ date, value }));
 
@@ -237,12 +301,34 @@ export default async function AdminDashboard() {
           .map((session) => session.teacherId)
         : [booking.teacherId])
   ).size;
-  const totalCommission = allTimeCommissionAgg._sum.commissionAmount ?? 0;
-  const monthCommission = monthCommissionAgg._sum.commissionAmount ?? 0;
-  const totalPaidToTeachers = totalPaidToTeachersAgg._sum.amount ?? 0;
+  const monthCommission = monthCommissionBookings.reduce(
+    (sum, booking) => sum + dashboardBookingCommission(booking),
+    0,
+  );
   const pendingReleaseRows = pendingReleaseBookings
     .map((booking) => ({ booking, remaining: getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) }))
     .filter((row) => isTeacherPayableStatus(row.booking) && row.remaining > 0);
+  const financialSummary = buildPlatformFinancialSummary(
+    financialBookings.filter(hasVerifiedClientPayment).map((booking) => ({
+      ...booking,
+      paidPayoutAllocationAmount: booking.teacherPayoutAllocations.reduce(
+        (sum, allocation) => sum + Math.max(0, allocation.amount),
+        0,
+      ),
+      ...providerFeeFinancialFields(booking.paymentAttempts),
+      refunds: booking.transactions.filter((transaction) => (
+        transaction.type === "REFUND"
+        && ["REFUNDED", "PARTIALLY_REFUNDED"].includes(transaction.status)
+      )),
+      reschedules: booking.rescheduleRequests.map((request) => ({
+        ...request,
+        transactionStatus: request.transaction?.status ?? null,
+        ...providerFeeFinancialFields(request.paymentAttempts),
+      })),
+    })),
+    financialPayouts,
+    appliedTeacherAdjustments,
+  );
 
   return (
     <div className="space-y-6">
@@ -258,6 +344,8 @@ export default async function AdminDashboard() {
         </Button>
       </PageHeader>
 
+      {canViewFinance && <FinancialOverview summary={financialSummary} />}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         <StatCard label="Clients" value={totalClients} icon={Users} tone="default" />
         <StatCard label="Professeurs" value={totalTeachers} icon={GraduationCap} tone="default" />
@@ -265,20 +353,24 @@ export default async function AdminDashboard() {
         <StatCard label="Nouv. résa. (7j)" value={newBookings7d} icon={CalendarRange} tone="default" />
         <StatCard label="Résa. payées" value={paidBookings} icon={CheckCircle2} tone="primary" />
         <StatCard label="Cours du jour" value={todayBookings} icon={CalendarDays} tone="default" />
-        <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
-        <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
-        <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
         <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
-        <StatCard label="CA commission (total)" value={formatFCFA(totalCommission)} icon={TrendingUp} tone="success" />
-        <StatCard label="Commission (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
-        <StatCard label="Versé aux professeurs" value={formatFCFA(totalPaidToTeachers)} icon={Wallet} tone="success" />
+        {canViewFinance && (
+          <>
+            <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
+            <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
+            <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
+            <StatCard label="Commission réelle (total)" value={formatFCFA(financialSummary.commissionRevenue)} icon={TrendingUp} tone="success" />
+            <StatCard label="Commission réelle (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
+            <StatCard label="Versé aux professeurs" value={formatFCFA(financialSummary.teacherPaid)} icon={Wallet} tone="success" />
+          </>
+        )}
       </div>
 
       <Card className="border-[#E3E8F2] bg-white">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-base">À traiter</CardTitle>
           <p className="hidden text-sm text-muted-foreground sm:block">
-            Suivi client, professeur et administration. Seuls les paiements PayDunya vérifiés déclenchent les opérations.
+            Suivi client, professeur et administration. Seuls les paiements confirmés par le prestataire déclenchent les opérations.
           </p>
         </CardHeader>
         <CardContent>
@@ -290,7 +382,7 @@ export default async function AdminDashboard() {
               href="/admin/clients"
               actionLabel="Voir clients"
               items={[
-                { label: "Brouillons PayDunya", value: draftPayDunyaBookings, href: "/admin/reservations?status=PENDING_PAYMENT", attention: draftPayDunyaBookings > 0 },
+                { label: "Paiements à finaliser", value: draftPaymentBookings, href: "/admin/reservations?status=PENDING_PAYMENT", attention: draftPaymentBookings > 0 },
                 { label: "Créneaux à répondre", value: pendingScheduleProposals, href: "/admin/reservations", attention: pendingScheduleProposals > 0 },
                 { label: "Remboursements", value: pendingRefundRequests, href: "/admin/reservations?refunds=pending", attention: pendingRefundRequests > 0 },
               ]}
@@ -323,19 +415,19 @@ export default async function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Chart */}
-      <Card>
+      {/* Chart financier, réservé aux comptes autorisés. */}
+      {canViewFinance && <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-base">Commissions perçues — 30 derniers jours</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Somme des commissions des paiements clients (fonds bloqués, validés, libérés et payés).</p>
+            <p className="mt-1 text-xs text-muted-foreground">Les annulations et remboursements utilisent leur pénalité plateforme réelle, jamais la commission initiale.</p>
           </div>
           <Badge variant="secondary" className="hidden sm:inline-flex">{formatFCFA(monthCommission)} ce mois</Badge>
         </CardHeader>
         <CardContent>
           <RevenueAreaChart data={series} />
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Recent lists */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -376,7 +468,7 @@ export default async function AdminDashboard() {
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Money amount={b.totalPrice} className="text-sm font-semibold" />
+                    {canViewFinance && <Money amount={b.totalPrice} className="text-sm font-semibold" />}
                     <BookingStatusBadge status={b.status} />
                     <div className="flex gap-1.5">
                       <Button asChild size="sm" variant="outline" className="h-8 px-2">
@@ -398,7 +490,7 @@ export default async function AdminDashboard() {
         </Card>
 
         {/* Pending release */}
-        <Card>
+        {canViewFinance && <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Paiements à libérer</CardTitle>
             <Button asChild size="sm" variant="ghost">
@@ -446,7 +538,7 @@ export default async function AdminDashboard() {
               ))}
             </ul>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Disputes */}
         <Card>
@@ -621,6 +713,16 @@ function getNotificationHref(link: string | null, bookingId: string | null, teac
   if (bookingId) return `/admin/reservations/${bookingId}`;
   if (teacherId) return `/admin/professeurs/${teacherId}?tab=operationnel`;
   return "/admin/notifications";
+}
+
+function dashboardBookingCommission(booking: {
+  status?: string | null;
+  commissionAmount?: number | null;
+  cancellationPenaltyPlatformAmount?: number | null;
+}) {
+  return ["CANCELLED", "REFUNDED"].includes(booking.status?.trim().toUpperCase() ?? "")
+    ? Math.max(0, booking.cancellationPenaltyPlatformAmount ?? 0)
+    : Math.max(0, booking.commissionAmount ?? 0);
 }
 
 function getNotificationTeacher(

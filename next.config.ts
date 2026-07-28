@@ -2,11 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  env: {
-    APP_URL: "https://competence.ci",
-    NEXTAUTH_URL: "https://competence.ci",
-    NEXT_PUBLIC_APP_URL: "https://competence.ci",
-  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   devIndicators: false,
   reactStrictMode: false,

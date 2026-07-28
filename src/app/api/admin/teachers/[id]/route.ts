@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
@@ -10,6 +10,13 @@ import { normalizeTeacherProfileText } from "@/lib/teacher-profile";
 import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import { isActivePaymentMethod } from "@/lib/payment-methods";
 import { countAvailabilitySlots, normalizeAvailability, parseAvailability } from "@/lib/scheduling";
+import { isPasswordCompliant, PASSWORD_MIN_LENGTH, passwordHashRounds } from "@/lib/password-policy";
+import {
+  enqueuePasswordChangedEmailInTransaction,
+  flushPasswordEmailOutbox,
+} from "@/lib/password-email-outbox";
+import { absoluteAppUrl } from "@/lib/public-url";
+import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -143,10 +150,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         id: true,
         fullName: true,
         professionalName: true,
+        email: true,
         photoUrl: true,
         phone: true,
         portalAccessEnabled: true,
         portalPhone: true,
+        commune: true,
+        offersHome: true,
         availability: true,
         status: true,
         qualityScore: true,
@@ -175,6 +185,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ];
     for (const k of allowed) {
       if (k in rest) data[k] = rest[k];
+    }
+    if ("commune" in data) {
+      data.commune = typeof data.commune === "string" && data.commune.trim()
+        ? data.commune.trim()
+        : null;
     }
     if ("experienceYears" in data) data.experienceYears = Number(data.experienceYears) || 0;
     if ("learnersCoached" in data) data.learnersCoached = Math.max(0, Number(data.learnersCoached) || 0);
@@ -210,7 +225,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         : null;
     }
     for (const k of ["pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate"]) {
-      if (k in data) data[k] = Number(data[k]) || 0;
+      if (k in data) data[k] = Math.max(0, Math.round(Number(data[k]) || 0));
     }
     if ("commissionRate" in data) data.commissionRate = Math.max(0, Math.min(60, Math.round(data.commissionRate)));
     if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
@@ -222,15 +237,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (data.portalAccessEnabled && !data.portalPhone) {
         return NextResponse.json({ error: "Téléphone de connexion professeur requis." }, { status: 400 });
       }
-      if (data.portalAccessEnabled && !existingTeacher.portalPasswordHash && (typeof portalPassword !== "string" || portalPassword.trim().length < 6)) {
-        return NextResponse.json({ error: "Définissez un mot de passe professeur de 6 caractères minimum avant d'activer l'accès." }, { status: 400 });
+      if (data.portalAccessEnabled && !existingTeacher.portalPasswordHash && (typeof portalPassword !== "string" || !isPasswordCompliant(portalPassword.trim()))) {
+        return NextResponse.json({ error: `Définissez un mot de passe professeur de ${PASSWORD_MIN_LENGTH} caractères minimum, avec une lettre et un chiffre, avant d'activer l'accès.` }, { status: 400 });
       }
     }
-    if (typeof portalPassword === "string" && portalPassword.trim()) {
-      if (portalPassword.trim().length < 6) {
-        return NextResponse.json({ error: "Le mot de passe professeur doit contenir au moins 6 caractères." }, { status: 400 });
+    const passwordWasChanged = typeof portalPassword === "string" && Boolean(portalPassword.trim());
+    if (passwordWasChanged) {
+      if (!isPasswordCompliant(portalPassword.trim())) {
+        return NextResponse.json({ error: `Le mot de passe professeur doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.` }, { status: 400 });
       }
-      data.portalPasswordHash = await bcrypt.hash(portalPassword.trim(), 10);
+      data.portalPasswordHash = await bcrypt.hash(portalPassword.trim(), passwordHashRounds({ role: "TEACHER" }));
+      data.portalPasswordMustChange = true;
+      data.sessionVersion = { increment: 1 };
       if (!("portalAccessEnabled" in data)) data.portalAccessEnabled = true;
       if (!data.portalPhone) data.portalPhone = normalizeTeacherPhone(data.phone || existingTeacher.phone);
     }
@@ -255,6 +273,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
     const nextStatus = String(data.status ?? existingTeacher.status);
+    const nextOffersHome = "offersHome" in data ? Boolean(data.offersHome) : existingTeacher.offersHome;
+    const nextCommune = "commune" in data ? data.commune : existingTeacher.commune;
+    if (requiresTeacherHomeCommune({
+      status: nextStatus,
+      offersHome: nextOffersHome,
+      commune: nextCommune,
+    })) {
+      return NextResponse.json({
+        error: "Une commune principale est obligatoire pour activer un professeur qui propose les cours à domicile.",
+      }, { status: 400 });
+    }
     const normalizedAvailability = availability !== undefined
       ? normalizeAvailability(availability)
       : parseAvailability(existingTeacher.availability);
@@ -268,6 +297,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const statusChanged = "status" in data && nextStatus !== existingTeacher.status;
+    const portalAccessChanged = "portalAccessEnabled" in data
+      && Boolean(data.portalAccessEnabled) !== existingTeacher.portalAccessEnabled;
+    const portalPhoneChanged = "portalPhone" in data
+      && (data.portalPhone || null) !== existingTeacher.portalPhone;
+    if (!passwordWasChanged && (statusChanged || portalAccessChanged || portalPhoneChanged)) {
+      data.sessionVersion = { increment: 1 };
+    }
     const effectivePhotoUrl = "photoUrl" in data ? data.photoUrl : existingTeacher.photoUrl;
     if (isPublicVisibleTeacherStatus(nextStatus)) {
       const effectivePhotoValidation = await validateTeacherPhotoUrlForStorage(effectivePhotoUrl);
@@ -291,7 +327,56 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (statusChanged) data.lastActivityAt = new Date();
 
-    await db.teacher.update({ where: { id }, data });
+    const passwordChangedAt = passwordWasChanged ? new Date() : null;
+    const passwordTeacherName = typeof data.professionalName === "string" && data.professionalName.trim()
+      ? data.professionalName.trim()
+      : existingTeacher.professionalName || existingTeacher.fullName;
+    const passwordTeacherEmail = "email" in data
+      ? typeof data.email === "string" ? data.email.trim() : ""
+      : existingTeacher.email?.trim() || "";
+    let passwordEmailJobId: string | null = null;
+    await db.$transaction(async (tx) => {
+      await tx.teacher.update({ where: { id }, data });
+      if (passwordWasChanged && passwordChangedAt) {
+        await tx.teacherPasswordResetToken.updateMany({
+          where: { teacherId: id, usedAt: null },
+          data: { usedAt: passwordChangedAt },
+        });
+        await tx.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Mot de passe professeur réinitialisé",
+            entityType: "Teacher",
+            entityId: id,
+            detail: `${admin.name} a attribué un mot de passe temporaire à ${passwordTeacherName}.`,
+            newStatus: "TEACHER_TEMPORARY_PASSWORD_ASSIGNED",
+          },
+        });
+        await tx.teacherNotification.create({
+          data: {
+            teacherId: id,
+            title: "Mot de passe temporaire attribué",
+            message: "L'administration a remplacé votre mot de passe. Utilisez le mot de passe temporaire transmis par le service client, puis créez votre mot de passe personnel à la connexion.",
+            channel: "INTERNAL",
+            sent: true,
+            status: "SENT",
+            sentById: admin.id,
+          },
+        });
+        if (passwordTeacherEmail) {
+          passwordEmailJobId = await enqueuePasswordChangedEmailInTransaction(tx, {
+            accountType: "PROFESSOR",
+            email: passwordTeacherEmail,
+            name: passwordTeacherName,
+            changedAt: passwordChangedAt,
+            securityUrl: absoluteAppUrl("/contact", req),
+            accountLabel: "espace professeur Compétence",
+            sourceTokenId: `teacher-admin-reset:${id}:${passwordChangedAt.toISOString()}`,
+            teacherId: id,
+          });
+        }
+      }
+    });
 
     const qualityTouched = [
       "qualityScore",
@@ -426,13 +511,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ]);
     }
 
+    if (passwordEmailJobId) {
+      after(async () => {
+        try {
+          await flushPasswordEmailOutbox({ jobIds: [passwordEmailJobId!], limit: 1 });
+        } catch (error) {
+          console.error("[password-change] Immediate teacher-admin confirmation flush failed; the cron will retry.", error);
+        }
+      });
+    }
+    const passwordEmail = passwordWasChanged
+      ? {
+          sent: false,
+          queued: Boolean(passwordEmailJobId),
+          message: passwordEmailJobId
+            ? "Confirmation email prise en charge automatiquement."
+            : "Mot de passe temporaire enregistré. Ajoutez une adresse email pour la confirmation de sécurité.",
+        }
+      : null;
+
     revalidatePath("/admin/professeurs");
     revalidatePath(`/admin/professeurs/${id}`);
     revalidatePath(`/admin/professeurs/${id}/modifier`);
     revalidatePath("/professeurs");
     revalidatePath(`/professeurs/${id}`);
 
-    return NextResponse.json({ ok: true, id });
+    return NextResponse.json({ ok: true, id, passwordEmail });
   } catch (e: any) {
     console.error("admin/teachers PATCH error", e);
     if (e?.code === "P2002") {
@@ -466,7 +570,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const teacherName = teacher.professionalName || teacher.fullName;
   const nextStatus = "SUSPENDED";
   await db.$transaction([
-    db.teacher.update({ where: { id }, data: { status: nextStatus, lastActivityAt: new Date() } }),
+    db.teacher.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        sessionVersion: { increment: 1 },
+        lastActivityAt: new Date(),
+      },
+    }),
     db.adminActionLog.create({
       data: {
         adminId: admin.id,
