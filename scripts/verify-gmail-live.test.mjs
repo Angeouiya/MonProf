@@ -6,10 +6,12 @@ import {
   maskMessageId,
   parseArguments,
   readGmailConfiguration,
-  validateTokenInfo,
+  validateAccessGrant,
 } from "./verify-gmail-live.mjs";
 
 const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+const GOOGLE_EMAIL_SCOPE = "https://www.googleapis.com/auth/userinfo.email";
+const EXACT_SCOPES = `openid email ${GMAIL_SEND_SCOPE}`;
 
 test("l'envoi reste désactivé par défaut et exige l'option explicite", () => {
   assert.deepEqual(parseArguments([]), { help: false, sendSelf: false });
@@ -46,33 +48,76 @@ test("la vérification live est interdite sur un Vercel non-production", () => {
     () => readGmailConfiguration({ ...completeConfiguration, VERCEL_ENV: "development" }),
     /interdite hors Vercel Production/,
   );
+  assert.throws(
+    () => readGmailConfiguration({
+      ...completeConfiguration,
+      GMAIL_SENDER_EMAIL: "autre@gmail.com",
+    }),
+    /doit être exactement diplomateimmobilier99@gmail\.com/,
+  );
 });
 
-test("tokeninfo doit confirmer exactement l'email et le scope gmail.send", () => {
+test("UserInfo et le refresh doivent confirmer le compte et les trois scopes exacts", () => {
   assert.doesNotThrow(() =>
-    validateTokenInfo(
+    validateAccessGrant(
       {
-        email: "diplomateimmobilier99@gmail.com",
-        scope: `openid ${GMAIL_SEND_SCOPE}`,
+        scope: EXACT_SCOPES,
+        token_type: "Bearer",
       },
+      { email: "diplomateimmobilier99@gmail.com", email_verified: true },
+      "diplomateimmobilier99@gmail.com",
+    ),
+  );
+  assert.doesNotThrow(() =>
+    validateAccessGrant(
+      {
+        scope: `openid ${GOOGLE_EMAIL_SCOPE} ${GMAIL_SEND_SCOPE}`,
+        token_type: "Bearer",
+      },
+      { email: "diplomateimmobilier99@gmail.com", email_verified: true },
       "diplomateimmobilier99@gmail.com",
     ),
   );
   assert.throws(
     () =>
-      validateTokenInfo(
-        { email: "autre@gmail.com", scope: GMAIL_SEND_SCOPE },
+      validateAccessGrant(
+        { scope: EXACT_SCOPES, token_type: "Bearer" },
+        { email: "autre@gmail.com", email_verified: true },
         "diplomateimmobilier99@gmail.com",
       ),
     /ne correspond pas exactement/,
   );
+  for (const invalidScopes of [
+    `email ${GMAIL_SEND_SCOPE}`,
+    `openid ${GMAIL_SEND_SCOPE}`,
+    "openid email",
+    `${EXACT_SCOPES} https://www.googleapis.com/auth/gmail.readonly`,
+  ]) {
+    assert.throws(
+      () =>
+        validateAccessGrant(
+          { scope: invalidScopes, token_type: "Bearer" },
+          { email: "diplomateimmobilier99@gmail.com", email_verified: true },
+          "diplomateimmobilier99@gmail.com",
+        ),
+      /exactement openid, email et gmail\.send/,
+    );
+  }
   assert.throws(
-    () =>
-      validateTokenInfo(
-        { email: "diplomateimmobilier99@gmail.com", scope: "openid" },
-        "diplomateimmobilier99@gmail.com",
-      ),
-    /gmail\.send/,
+    () => validateAccessGrant(
+      { scope: EXACT_SCOPES, token_type: "Bearer" },
+      { email: "diplomateimmobilier99@gmail.com", email_verified: false },
+      "diplomateimmobilier99@gmail.com",
+    ),
+    /identité Gmail vérifiée/,
+  );
+  assert.throws(
+    () => validateAccessGrant(
+      { scope: EXACT_SCOPES, token_type: "MAC" },
+      { email: "diplomateimmobilier99@gmail.com", email_verified: true },
+      "diplomateimmobilier99@gmail.com",
+    ),
+    /Bearer/,
   );
 });
 
@@ -83,6 +128,8 @@ test("l'identifiant Gmail n'est jamais affiché en entier", () => {
 
 test("aucun journal ne référence directement les valeurs OAuth sensibles", () => {
   const source = fs.readFileSync(new URL("./verify-gmail-live.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /tokeninfo|searchParams\.set\("access_token"/);
+  assert.match(source, /Authorization:\s*`Bearer \$\{accessToken\}`/);
   const loggerCalls = [...source.matchAll(/console\.(?:log|error)\(([\s\S]*?)\);/g)].map(
     (match) => match[1],
   );
