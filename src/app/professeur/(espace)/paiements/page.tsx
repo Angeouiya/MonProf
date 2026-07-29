@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function ProfesseurPaiementsPage() {
   const { teacher } = await requireTeacher();
   const platformSettings = await getPlatformRuntimeSettings();
-  const [bookings, adjustments, payouts, payoutRequests] = await db.$transaction([
+  const [bookings, adjustments, payouts, payoutRequests, payoutFeeSummary, pendingRequestSummary] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         AND: [
@@ -77,7 +77,6 @@ export default async function ProfesseurPaiementsPage() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
     }),
     db.teacherPaymentAdjustment.findMany({
       where: { teacherId: teacher.id },
@@ -115,6 +114,14 @@ export default async function ProfesseurPaiementsPage() {
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
+    db.teacherPayoutRecord.aggregate({
+      where: { teacherId: teacher.id, status: "PAID" },
+      _sum: { transferFeeCoveredByPlatform: true },
+    }),
+    db.teacherPayoutRequest.aggregate({
+      where: { teacherId: teacher.id, status: "PENDING" },
+      _sum: { amount: true },
+    }),
   ]);
 
   const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
@@ -122,6 +129,7 @@ export default async function ProfesseurPaiementsPage() {
     booking,
     settlement: getTeacherFinancialSettlement(booking, adjustments),
   }));
+  const visibleSettlementRows = settlementRows.slice(0, 100);
   const totalNet = settlementRows.reduce((sum, row) => sum + row.settlement.expectedAmount, 0);
   const totalReleased = settlementRows.reduce((sum, row) => sum + row.settlement.released, 0);
   const totalPaid = settlementRows.reduce((sum, row) => sum + row.settlement.paid, 0);
@@ -132,15 +140,9 @@ export default async function ProfesseurPaiementsPage() {
     .reduce((sum, row) => sum + row.settlement.remaining, 0);
   const blockedAmount = settlementRows.reduce((sum, row) => sum + row.settlement.blocked, 0);
   const underControlAmount = Math.max(0, remaining - readyToReceive - blockedAmount);
-  const pendingRequested = payoutRequests
-    .filter((request) => request.status === "PENDING")
-    .reduce((sum, request) => sum + request.amount, 0);
+  const pendingRequested = Math.max(0, pendingRequestSummary._sum.amount ?? 0);
   const requestableAmount = Math.max(0, readyToReceive - pendingRequested);
-  const paidPayouts = payouts.filter((payout) => payout.status === "PAID");
-  const transferFeesCovered = paidPayouts.reduce(
-    (sum, payout) => sum + Math.max(0, payout.transferFeeCoveredByPlatform),
-    0,
-  );
+  const transferFeesCovered = Math.max(0, payoutFeeSummary._sum.transferFeeCoveredByPlatform ?? 0);
 
   return (
     <div className="space-y-6">
@@ -297,13 +299,16 @@ export default async function ProfesseurPaiementsPage() {
       <div className="grid gap-5 xl:grid-cols-[1.25fr_0.9fr]">
         <PortalCard>
           <h2 className="text-base font-semibold text-[#111827]">Grand livre professeur</h2>
-          {settlementRows.length === 0 ? (
+          <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+            100 dernières lignes affichées. Les totaux ci-dessus couvrent toutes les périodes.
+          </p>
+          {visibleSettlementRows.length === 0 ? (
             <div className="mt-4">
               <EmptyProfessorState title="Aucune ligne de paiement" description="Les réservations payables apparaîtront ici après validation du service client." />
             </div>
           ) : (
             <div className="mt-4 grid gap-3">
-              {settlementRows.map(({ booking, settlement }) => {
+              {visibleSettlementRows.map(({ booking, settlement }) => {
                 const cancellationPenalty = isCancellationPenaltyPayout(booking);
                 const rescheduleSupplement = booking.rescheduleRequests.reduce((sum, request) => sum + Math.max(0, request.feeTeacherAmount), 0);
                 return (

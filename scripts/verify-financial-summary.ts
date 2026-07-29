@@ -404,4 +404,38 @@ assert.match(
   "la limite d'affichage doit être expliquée à l'administrateur",
 );
 
+const professorPaymentsPageSource = readFileSync(
+  new URL("../src/app/professeur/(espace)/paiements/page.tsx", import.meta.url),
+  "utf8",
+);
+const exhaustiveBookingsQuery = professorPaymentsPageSource.match(
+  /db\.booking\.findMany\(\{[\s\S]*?\n\s*\}\),\n\s*db\.teacherPaymentAdjustment\.findMany/,
+)?.[0] ?? "";
+assert.ok(exhaustiveBookingsQuery, "la requête comptable professeur doit rester identifiable");
+assert.doesNotMatch(
+  exhaustiveBookingsQuery,
+  /\btake\s*:/,
+  "les soldes professeur doivent couvrir toutes les réservations vérifiées",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /db\.teacherPayoutRecord\.aggregate\(\{[\s\S]*status:\s*"PAID"[\s\S]*_sum:\s*\{\s*transferFeeCoveredByPlatform:\s*true\s*\}/,
+  "les frais Jèko couverts doivent être agrégés sur tous les versements payés",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /db\.teacherPayoutRequest\.aggregate\(\{[\s\S]*status:\s*"PENDING"[\s\S]*_sum:\s*\{\s*amount:\s*true\s*\}/,
+  "le montant déjà demandé doit couvrir toutes les demandes en attente",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /const visibleSettlementRows = settlementRows\.slice\(0, 100\)/,
+  "seul l'historique visuel peut être limité à 100 lignes",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /Les totaux ci-dessus couvrent toutes les périodes/,
+  "la différence entre totaux exhaustifs et historique visible doit être expliquée",
+);
+
 console.log("OK financial summary: gross/net cash, refunds, penalties, retentions, mixed payouts and provider fees verified.");
