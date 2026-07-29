@@ -267,6 +267,7 @@ function checkProductionScripts() {
   record("Production build runs explicit ESLint gate", productionQualityPipeline.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
   record("Production build verifies installable client app shell", productionQualityPipeline.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
   record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
+  record("Production build verifies Jèko credentials with a balance-only GET", productionBuild.includes("npm run verify:jeko-live"));
   record("Production build verifies session accounting", productionBuild.includes("npm run verify:session-accounting"));
   record("Production build audits payment integrity", productionBuild.includes("npm run payment:audit"));
   record("Production build verifies client mobile UX gates", productionQualityPipeline.includes("npm run verify:client-mobile") && clientMobileVerify.includes("verify-client-mobile-navigation.mjs"));

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const liveVerifier = readFileSync(new URL("./verify-jeko-live.mjs", import.meta.url), "utf8");
 const payoutLibrary = readFileSync(new URL("../src/lib/jeko-payout.ts", import.meta.url), "utf8");
+const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 const balanceFunction = payoutLibrary.match(
   /export async function getJekoStoreBalance\([\s\S]*?\n}\r?\n\r?\nexport async function getJekoTeacherPayoutTransfer/,
 )?.[0] ?? "";
@@ -14,5 +15,6 @@ assert.doesNotMatch(liveVerifier, /availableAmount(?:Cents|Xof).*console|console
 assert.match(liveVerifier, /Aucun mouvement d'argent effectué; solde non affiché/);
 assert.match(balanceFunction, /method:\s*"GET"/);
 assert.doesNotMatch(balanceFunction, /method:\s*"POST"/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:jeko-live/);
 
 console.log("Jèko live verification safety passed: balance-only GET, no contact, checkout, transfer or amount disclosure.");

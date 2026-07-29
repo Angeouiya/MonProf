@@ -123,6 +123,9 @@ record(
 const baselineScript = fs.existsSync("scripts/ensure-prisma-migration-baseline.mjs")
   ? fs.readFileSync("scripts/ensure-prisma-migration-baseline.mjs", "utf8")
   : "";
+const webPushInstaller = fs.existsSync("scripts/install-web-push-outbox.mjs")
+  ? fs.readFileSync("scripts/install-web-push-outbox.mjs", "utf8")
+  : "";
 record(
   "Baseline adoption fingerprints all tables, columns, enums, indexes, and constraints",
   baselineScript.includes("parseBaselineFingerprint")
@@ -131,6 +134,13 @@ record(
     && baselineScript.includes("information_schema.table_constraints")
     && baselineScript.includes("pg_enum")
     && baselineScript.includes("Refusing to mark the Prisma baseline"),
+);
+record(
+  "Privileged deployment steps prefer the DIRECT_URL migration role",
+  baselineScript.includes("process.env.DIRECT_URL")
+    && baselineScript.includes("datasourceUrl: migrationDatabaseUrl")
+    && webPushInstaller.includes("process.env.DIRECT_URL")
+    && webPushInstaller.includes("datasourceUrl: ddlDatabaseUrl"),
 );
 
 for (const check of checks) {

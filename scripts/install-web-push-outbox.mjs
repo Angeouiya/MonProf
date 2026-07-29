@@ -1,6 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
-const db = new PrismaClient();
+const ddlDatabaseUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
+if (!ddlDatabaseUrl) {
+  throw new Error("DIRECT_URL or DATABASE_URL is required to install the Web Push outbox.");
+}
+
+// Creating functions and triggers requires the migration role. Production keeps
+// DATABASE_URL on the least-privilege runtime role, so prefer DIRECT_URL here.
+const db = new PrismaClient({ datasourceUrl: ddlDatabaseUrl });
 
 const statements = [
   `

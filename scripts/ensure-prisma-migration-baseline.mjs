@@ -9,12 +9,15 @@ const baselineSqlPath = path.resolve("prisma", "migrations", BASELINE_MIGRATION,
 const baselineSql = fs.readFileSync(baselineSqlPath, "utf8");
 const baselineFingerprint = parseBaselineFingerprint(baselineSql);
 
-if (!process.env.DATABASE_URL?.trim()) {
-  console.error("FAIL DATABASE_URL is required before deploying Prisma migrations.");
+const migrationDatabaseUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
+if (!migrationDatabaseUrl) {
+  console.error("FAIL DIRECT_URL or DATABASE_URL is required before deploying Prisma migrations.");
   process.exit(1);
 }
 
-const db = new PrismaClient();
+// Baseline adoption can write to _prisma_migrations. Prefer the migration role
+// instead of widening the privileges of the application runtime connection.
+const db = new PrismaClient({ datasourceUrl: migrationDatabaseUrl });
 
 try {
   const rows = await db.$queryRaw`

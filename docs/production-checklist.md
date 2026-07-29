@@ -17,6 +17,9 @@ Variables obligatoires dans la portée **Production** de Vercel :
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_PAYMENT_SERVICE_FEE_RATE_BPS` avec la valeur `300` (3 %)
 - `CRON_SECRET`
+- `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `WEB_PUSH_SUBJECT` avec la valeur `mailto:contact@competence.ci`
 - `JEKO_API_KEY`
 - `JEKO_API_KEY_ID`
 - `JEKO_STORE_ID`
@@ -44,6 +47,8 @@ npm run payment:reschedule-provider:audit
 
 `db:deploy` doit être exécuté avant de publier le nouveau code : il ajoute notamment les versions de session requises par l'authentification, l'outbox chiffrée des emails de sécurité et les index partiels qui sérialisent les envois et interdisent deux reports actifs sur une même réservation. Son préflight s'arrête avant la migration si des données historiques contiennent plusieurs reports actifs pour une même réservation. `prisma db push` ne remplace pas cette étape, car il ne sait pas reproduire ces index SQL partiels.
 
+Les étapes privilégiées de `db:deploy` (baseline et déclencheurs Web Push) utilisent automatiquement `DIRECT_URL`. Ne jamais accorder de DDL au rôle `competence_runtime` pour faire passer ce déploiement.
+
 La base Compétence historique a été créée avant l'introduction de Prisma Migrate. Le script `ensure-prisma-migration-baseline.mjs`, exécuté automatiquement par `db:deploy`, distingue donc trois situations :
 
 - base vide : la migration baseline est réellement exécutée ;
@@ -58,13 +63,13 @@ L'audit des reports doit ensuite lister les anciennes demandes. Si les candidats
 
 Configurer ensuite le webhook Jèko vers `/api/webhooks/jeko` sur le domaine public HTTPS. Les retours navigateur ne valident jamais un paiement seuls : la plateforme confirme toujours le paiement auprès de Jèko.
 
-Après installation des quatre secrets Jèko dans Vercel Production, charger ces variables uniquement dans le processus local de vérification puis lancer la lecture non débitrice :
+Après installation des quatre secrets Jèko dans Vercel Production, le pipeline `build:production` lance automatiquement la lecture non débitrice suivante dans l'environnement Vercel, où les variables `Sensitive` restent accessibles sans être révélées :
 
 ```bash
 npm run verify:jeko-live
 ```
 
-Cette commande appelle uniquement en `GET` le solde du magasin afin de confirmer la clé API, l'identifiant de clé et le magasin. Elle ne crée ni paiement, ni contact, ni retrait et n'affiche pas le solde. Le secret webhook ne peut être prouvé de bout en bout que par un événement Jèko signé reçu sur `/api/webhooks/jeko`; effectuer ce test sur un déploiement Production staged avant de promouvoir le domaine public.
+Cette commande appelle uniquement en `GET` le solde du magasin afin de confirmer la clé API, l'identifiant de clé et le magasin. Elle ne crée ni paiement, ni contact, ni retrait et n'affiche pas le solde. Une variable Vercel marquée `Sensitive` n'est pas relisible par `vercel env pull` ou `vercel env run`; ne jamais la rendre moins sûre pour un test local. Le secret webhook ne peut être prouvé de bout en bout que par un événement Jèko signé reçu sur `/api/webhooks/jeko`; effectuer ce test sur un déploiement Production staged avant de promouvoir le domaine public.
 
 Le compte Gmail `diplomateimmobilier99@gmail.com` doit avoir l'API Gmail activée et un refresh token OAuth2 valide autorisé avec exactement les scopes `openid email https://www.googleapis.com/auth/gmail.send`. Les scopes d'identité `openid` et `email` permettent à Google UserInfo de confirmer que le refresh token appartient exactement à l'expéditeur configuré; ils ne donnent aucun accès supplémentaire à la boîte Gmail. `GMAIL_REFRESH_TOKEN` doit être créé **uniquement dans la portée Production** de Vercel, jamais dans Preview. Les identifiants OAuth restent exclusivement côté serveur. Les emails de réinitialisation et de confirmation de changement de mot de passe utilisent exclusivement ce compte et n'emploient pas le fournisseur de secours Resend. Leur payload sensible est chiffré en AES-256-GCM avec une clé dérivée de `NEXTAUTH_SECRET`; ne jamais modifier ce secret tant que l'outbox contient des jobs actifs.
 
