@@ -120,14 +120,15 @@ assert.equal(recoveredFromHistory?.confirmation.id, historyRequestId);
 assert.equal(recoveredFromHistory?.redirectUrl, `https://pay.jeko.africa/payment/${historyRequestId}`);
 assert.ok(historyCalls.every((call) => call.method === "GET"), "la récupération ne doit jamais réémettre de POST");
 
-process.env.NEXT_PUBLIC_APP_URL = "https://www.competence.ci";
+const callbackOrigin = getVerificationAppOrigin();
+process.env.NEXT_PUBLIC_APP_URL = callbackOrigin;
 await assert.rejects(
   createJekoPaymentRequest({
     reference,
     amountXof: 20_000,
     paymentMethod: "wave",
-    successUrl: "https://www.competence.ci/client/reservations/test?jeko=return",
-    errorUrl: "https://www.competence.ci/client/reservations/test?jeko=cancelled",
+    successUrl: `${callbackOrigin}/client/reservations/test?jeko=return`,
+    errorUrl: `${callbackOrigin}/client/reservations/test?jeko=cancelled`,
   }, {
     config,
     fetchImpl: async () => jsonResponse({
@@ -149,6 +150,14 @@ function jsonResponse(body, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function getVerificationAppOrigin() {
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (process.env.VERCEL_ENV === "preview" && vercelUrl) {
+    return new URL(vercelUrl.includes("://") ? vercelUrl : `https://${vercelUrl}`).origin;
+  }
+  return "https://www.competence.ci";
 }
 
 console.log("Jèko ambiguous-create recovery verification passed: 409 payload, <=90-day history, strict GET and no duplicate POST.");
