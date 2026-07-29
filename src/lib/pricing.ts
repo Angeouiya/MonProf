@@ -909,7 +909,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const pack = getPackConfig(input.packType);
   const participantsCount = Math.max(1, Math.round(Number(input.participantsCount) || 1));
   const groupMultiplier = 1 + Math.max(0, participantsCount - 1) * 0.5;
-  const materialFee = 0;
+  const materialFee = Math.max(0, Math.round(Number(input.materialFee) || 0));
 
   if (pack.key === "custom_pack") tierCode = mostExpensiveTier(tierCode, "PREMIUM_20000");
   if (transport.key === TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key) {
@@ -953,8 +953,11 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     && transportFeeOverride >= 0;
   const transportFeePerSession = canOverrideTransport ? Math.round(transportFeeOverride) : (transport.amount ?? 0);
   const transportFee = input.deliveryMode === "en_ligne" ? 0 : transportFeePerSession * sessions;
-  const totalBeforePaymentServiceFee = courseAmount + transportFee + materialFee;
-  const paymentServiceFeeAmount = calculatePaymentServiceFee(totalBeforePaymentServiceFee);
+  // Les frais de service couvrent uniquement le cours et le déplacement.
+  // Le matériel reste dû par le client, mais ne doit pas être commissionné.
+  const paymentServiceFeeBaseAmount = courseAmount + transportFee;
+  const totalBeforePaymentServiceFee = paymentServiceFeeBaseAmount + materialFee;
+  const paymentServiceFeeAmount = calculatePaymentServiceFee(paymentServiceFeeBaseAmount);
   const totalClientPays = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
   const totalTeacherReceives = teacherPayoutAmount + transportFee;
 

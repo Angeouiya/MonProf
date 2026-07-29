@@ -1,13 +1,15 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { PAID_CLIENT_TRANSACTION_STATUSES, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import {
-  buildBookingRefundLedgerReference,
-  calculateRemainingBookingRefund,
-  FINALIZED_BOOKING_REFUND_STATUSES,
-} from "@/lib/booking-refund";
+  assertBookingRefundPayoutSafetyInTransaction,
+  BookingRefundWorkflowError,
+  finalizeBookingRefundInTransaction,
+  prepareBookingSessionsForRefundInTransaction,
+} from "@/lib/booking-refund-finalization";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   TRANSPORT_FEES,
@@ -29,22 +31,14 @@ import {
   requiresVerifiedPayDunyaForOperationalAction,
 } from "@/lib/payment-security";
 import { absoluteAppUrl } from "@/lib/public-url";
+import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
+import { normalizeBookingRefundExternalReference } from "@/lib/booking-refund";
+import { lockTeacherPayoutBalances } from "@/lib/teacher-payout-reservations";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
 const REPLACEABLE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "DISPUTED"] as const;
 const REPLACEABLE_PAYMENT_STATUSES = ["RECEIVED", "BLOCKED", "VALIDATED", "DISPUTED"] as const;
-
-class BookingRefundWorkflowError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code: string,
-  ) {
-    super(message);
-    this.name = "BookingRefundWorkflowError";
-  }
-}
 
 async function getAdmin() {
   return requireAdminApi("BOOKINGS_MANAGE");
@@ -430,11 +424,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           "Merci de confirmer rapidement votre disponibilité.",
         ].join("\n");
         await db.$transaction(async (tx) => {
+          const lockedTeacherIds = await lockTeacherPayoutBalances(tx, [
+            booking.teacherId,
+            newTeacherId,
+            ...booking.sessions.map((session) => session.teacherId),
+          ]);
           const currentBooking = await tx.booking.findUnique({
             where: { id: booking.id },
-            select: { teacherId: true, teacherPaidAmount: true },
+            select: {
+              teacherId: true,
+              teacherPaidAmount: true,
+              status: true,
+              paymentStatus: true,
+              updatedAt: true,
+            },
           });
-          if (!currentBooking || currentBooking.teacherId !== booking.teacherId || currentBooking.teacherPaidAmount > 0) {
+          if (
+            !currentBooking
+            || currentBooking.teacherId !== booking.teacherId
+            || currentBooking.teacherPaidAmount > 0
+            || currentBooking.status !== booking.status
+            || currentBooking.paymentStatus !== booking.paymentStatus
+            || currentBooking.updatedAt.getTime() !== booking.updatedAt.getTime()
+            || currentBooking.status === "DISPUTED"
+            || currentBooking.paymentStatus === "DISPUTED"
+            || isBookingFinanciallyTerminal(currentBooking)
+            || isBookingRefundInProgressOrFinal(currentBooking)
+          ) {
+            throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+          }
+          const activeDispute = await tx.dispute.findFirst({
+            where: { bookingId: booking.id, status: { in: ["OPEN", "INVESTIGATING"] } },
+            select: { id: true },
+          });
+          if (activeDispute) {
             throw new Error("BOOKING_REPLACEMENT_CONFLICT");
           }
 
@@ -447,6 +470,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               },
             },
           });
+          if (currentSessions.some((session) => !lockedTeacherIds.includes(session.teacherId))) {
+            throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+          }
           const sessionSnapshots = buildTeacherReplacementSessionSnapshots({
             sessions: currentSessions.map((session) => ({
               id: session.id,
@@ -468,8 +494,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             transportFee: nextTransportFee,
           });
 
-          await tx.booking.update({
-            where: { id },
+          const bookingReassigned = await tx.booking.updateMany({
+            where: {
+              id,
+              teacherId: currentBooking.teacherId,
+              status: currentBooking.status,
+              paymentStatus: currentBooking.paymentStatus,
+              updatedAt: currentBooking.updatedAt,
+            },
             data: {
               teacherId: newTeacherId,
               // Le remplacement conserve la grille officielle de la réservation et le paiement client vérifié.
@@ -484,6 +516,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               pricingSnapshot: nextPricingSnapshot,
             },
           });
+          if (bookingReassigned.count !== 1) {
+            throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+          }
           await tx.transaction.updateMany({
             where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
             data: {
@@ -493,8 +528,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             },
           });
           for (const session of sessionSnapshots) {
-            await tx.bookingSession.update({
-              where: { id: session.id },
+            const sourceSession = currentSessions.find((item) => item.id === session.id);
+            if (!sourceSession) throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+            const sessionReassigned = await tx.bookingSession.updateMany({
+              where: {
+                id: session.id,
+                bookingId: booking.id,
+                teacherId: sourceSession.teacherId,
+                status: sourceSession.status,
+                paidAmount: sourceSession.paidAmount,
+                releasedAmount: sourceSession.releasedAmount,
+                retainedAmount: sourceSession.retainedAmount,
+              },
               data: {
                 teacherId: session.teacherId,
                 proposedTeacherId: null,
@@ -509,6 +554,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 unavailableReason: null,
               },
             });
+            if (sessionReassigned.count !== 1) {
+              throw new Error("BOOKING_REPLACEMENT_CONFLICT");
+            }
           }
           await tx.bookingSessionHistory.createMany({
             data: sessionSnapshots.map((session) => ({
@@ -768,31 +816,95 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             : policy.refundAmount >= policy.baseAmount
               ? "REFUND_PENDING"
               : "PARTIAL_REFUND_PENDING";
-        await db.booking.update({
-          where: { id },
-          data: {
-            status: "CANCELLED",
-            paymentStatus: nextPaymentStatus,
-            cancelledAt: now,
-            cancelledBy: cancellationActor,
-            cancellationReason: body.reason || "Annulation par le service client",
-            cancellationDetail: body.description || "Annulation décidée par le service client.",
-            cancellationWindow: policy.code,
-            cancellationFeeRate: policy.feeRate,
-            cancellationFeeAmount: policy.feeAmount,
-            cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
-            cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
-            cancellationPenaltyPlatformRate: penaltySplit.platformRate,
-            cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
-            cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
-          },
-        });
-        if (wasPaid) {
-          await db.transaction.updateMany({
-            where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-            data: { status: nextPaymentStatus },
+        await db.$transaction(async (tx) => {
+          await assertBookingRefundPayoutSafetyInTransaction(tx, booking.id);
+          await tx.$queryRaw(Prisma.sql`
+            SELECT "id"
+            FROM "Booking"
+            WHERE "id" = ${booking.id}
+            FOR UPDATE
+          `);
+          const currentBooking = await tx.booking.findUnique({
+            where: { id: booking.id },
+            select: { id: true, status: true, paymentStatus: true, updatedAt: true },
           });
-        }
+          if (!currentBooking) {
+            throw new BookingRefundWorkflowError("Réservation introuvable", 404, "BOOKING_NOT_FOUND");
+          }
+          if (
+            currentBooking.status !== booking.status
+            || currentBooking.paymentStatus !== booking.paymentStatus
+            || currentBooking.updatedAt.getTime() !== booking.updatedAt.getTime()
+            || currentBooking.status === "DISPUTED"
+            || currentBooking.paymentStatus === "DISPUTED"
+            || isBookingFinanciallyTerminal(currentBooking)
+            || isBookingRefundInProgressOrFinal(currentBooking)
+          ) {
+            throw new BookingRefundWorkflowError(
+              "La réservation vient de changer ou possède déjà un état financier final.",
+              409,
+              "BOOKING_CANCELLATION_STATE_CONFLICT",
+            );
+          }
+          await prepareBookingSessionsForRefundInTransaction(tx, {
+            bookingId: booking.id,
+            actorId: authorizedAdmin.id,
+            actorType: "ADMIN",
+            now,
+          });
+          const cancelled = await tx.booking.updateMany({
+            where: {
+              id,
+              status: currentBooking.status,
+              paymentStatus: currentBooking.paymentStatus,
+              updatedAt: currentBooking.updatedAt,
+            },
+            data: {
+              status: "CANCELLED",
+              paymentStatus: nextPaymentStatus,
+              cancelledAt: now,
+              cancelledBy: cancellationActor,
+              cancellationReason: body.reason || "Annulation par le service client",
+              cancellationDetail: body.description || "Annulation décidée par le service client.",
+              cancellationWindow: policy.code,
+              cancellationFeeRate: policy.feeRate,
+              cancellationFeeAmount: policy.feeAmount,
+              cancellationPenaltyTeacherRate: penaltySplit.teacherRate,
+              cancellationPenaltyTeacherAmount: penaltySplit.teacherAmount,
+              cancellationPenaltyPlatformRate: penaltySplit.platformRate,
+              cancellationPenaltyPlatformAmount: penaltySplit.platformAmount,
+              cancellationRefundAmount: wasPaid ? policy.refundAmount : 0,
+            },
+          });
+          if (cancelled.count !== 1) {
+            throw new BookingRefundWorkflowError(
+              "La réservation vient de changer pendant l'annulation.",
+              409,
+              "BOOKING_CANCELLATION_CONCURRENT_UPDATE",
+            );
+          }
+          const activeDispute = await tx.dispute.findFirst({
+            where: { bookingId: booking.id, status: { in: ["OPEN", "INVESTIGATING"] } },
+            select: { id: true },
+          });
+          if (activeDispute) {
+            throw new BookingRefundWorkflowError(
+              "Clôturez d'abord le litige ouvert avant d'annuler cette réservation.",
+              409,
+              "BOOKING_ACTIVE_DISPUTE",
+            );
+          }
+          if (wasPaid) {
+            await tx.transaction.updateMany({
+              where: {
+                bookingId: booking.id,
+                type: "CLIENT_PAYMENT",
+                status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
+              },
+              data: { status: nextPaymentStatus },
+            });
+          }
+        }, { isolationLevel: "Serializable" });
         await db.notification.create({
           data: {
             userId: null,
@@ -900,143 +1012,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ ok: true });
       }
       case "refund": {
-        const externalReference = typeof body.externalReference === "string" ? body.externalReference.trim() : "";
+        const externalReference = typeof body.externalReference === "string"
+          ? normalizeBookingRefundExternalReference(body.externalReference)
+          : "";
         if (externalReference.length < 3 || externalReference.length > 160) {
           return NextResponse.json({
             error: "Saisissez une référence de dépôt valide (3 à 160 caractères).",
           }, { status: 400 });
         }
         const result = await db.$transaction(async (tx) => {
-          const snapshot = await tx.booking.findUnique({
-            where: { id },
-            include: {
-              client: { select: { id: true, name: true } },
-              transactions: {
-                include: { refundedRescheduleRequest: { select: { id: true } } },
-              },
-              clientRefundRequests: {
-                where: { status: { in: ["PENDING", "APPROVED"] } },
-                orderBy: { createdAt: "asc" },
-                take: 1,
-              },
-            },
-          });
-          if (!snapshot) {
-            throw new BookingRefundWorkflowError("Réservation introuvable", 404, "BOOKING_NOT_FOUND");
-          }
-          const refundRequest = snapshot.clientRefundRequests[0] ?? null;
-          if (!refundRequest) {
-            const paidRequest = await tx.clientRefundRequest.findFirst({
-              where: { bookingId: snapshot.id, status: "PAID" },
-              orderBy: { processedAt: "desc" },
-              select: { reference: true, externalReference: true },
-            });
-            throw new BookingRefundWorkflowError(
-              paidRequest
-                ? `La demande ${paidRequest.reference} est déjà payée et ne peut pas être réutilisée.`
-                : "Le client doit d'abord renseigner son moyen et son numéro de remboursement.",
-              paidRequest ? 409 : 400,
-              paidRequest ? "REFUND_REQUEST_ALREADY_PAID" : "REFUND_REQUEST_REQUIRED",
-            );
-          }
-          if (!hasRefundableClientFunds(snapshot.paymentStatus) || !hasVerifiedPayDunyaClientPayment(snapshot)) {
-            throw new BookingRefundWorkflowError(
-              "Impossible de rembourser : aucun paiement confirmé côté serveur n'est rattaché à cette réservation.",
-              409,
-              "CLIENT_PAYMENT_NOT_REFUNDABLE",
-            );
-          }
-
-          const duplicateReceipt = await tx.clientRefundRequest.findFirst({
-            where: {
-              id: { not: refundRequest.id },
-              status: "PAID",
-              externalReference,
-            },
-            select: { id: true },
-          });
-          if (duplicateReceipt) {
-            throw new BookingRefundWorkflowError(
-              "Cette référence de dépôt est déjà utilisée pour un autre remboursement.",
-              409,
-              "REFUND_REFERENCE_ALREADY_USED",
-            );
-          }
-
-          const confirmedClientPaymentAmount = snapshot.transactions
-            .filter((transaction) => transaction.type === "CLIENT_PAYMENT"
-              && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
-            .reduce((sum, transaction) => sum + Math.max(0, transaction.amount), 0);
-          const finalizedRefundAmount = snapshot.transactions
-            .filter((transaction) => transaction.type === "REFUND"
-              && FINALIZED_BOOKING_REFUND_STATUSES.includes(transaction.status as (typeof FINALIZED_BOOKING_REFUND_STATUSES)[number])
-              && !transaction.refundedRescheduleRequest)
-            .reduce((sum, transaction) => sum + Math.max(0, transaction.amount), 0);
-          const calculation = calculateRemainingBookingRefund({
-            confirmedClientPaymentAmount,
-            finalizedRefundAmount,
-            cancellationRefundAmount: snapshot.cancellationRefundAmount,
-            totalClientPays: snapshot.totalClientPays,
-            totalPrice: snapshot.totalPrice,
-            paymentServiceFeeAmount: snapshot.paymentServiceFeeAmount,
-            requestAmount: refundRequest.amount,
-          });
-          if (calculation.refundAmount <= 0) {
-            throw new BookingRefundWorkflowError(
-              "Aucun montant ne reste remboursable pour cette réservation.",
-              409,
-              "NO_REMAINING_REFUND_AMOUNT",
-            );
-          }
-
-          const claimed = await tx.clientRefundRequest.updateMany({
-            where: {
-              id: refundRequest.id,
-              bookingId: snapshot.id,
-              status: { in: ["PENDING", "APPROVED"] },
-              processedAt: null,
-            },
-            data: {
-              status: "PAID",
-              processedAt: now,
-              processedById: authorizedAdmin.id,
-              externalReference,
-              amount: calculation.refundAmount,
-            },
-          });
-          if (claimed.count !== 1) {
-            throw new BookingRefundWorkflowError(
-              "Cette demande vient d'être traitée depuis une autre fenêtre.",
-              409,
-              "REFUND_CONCURRENT_UPDATE",
-            );
-          }
-
-          await tx.booking.update({
-            where: { id: snapshot.id },
-            data: { status: "REFUNDED", paymentStatus: calculation.finalPaymentStatus },
-          });
-          await tx.transaction.updateMany({
-            where: {
-              bookingId: snapshot.id,
-              type: "CLIENT_PAYMENT",
-              status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
-            },
-            data: { status: calculation.finalPaymentStatus },
-          });
-          const refundTransaction = await tx.transaction.create({
-            data: {
-              reference: buildBookingRefundLedgerReference(refundRequest.id),
-              bookingId: snapshot.id,
-              teacherId: snapshot.teacherId,
-              amount: calculation.refundAmount,
-              commission: 0,
-              teacherNet: 0,
-              type: "REFUND",
-              status: calculation.finalPaymentStatus,
-              method: refundRequest.method ?? snapshot.paymentMethod,
-              paidAt: now,
-            },
+          const { snapshot, refundRequest, calculation, refundTransaction } = await finalizeBookingRefundInTransaction(tx, {
+            bookingId: id,
+            externalReference,
+            processedById: authorizedAdmin.id,
+            now,
           });
           await tx.notification.create({
             data: {
@@ -1129,6 +1118,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json(result);
       }
       case "dispute": {
+        if (isBookingFinanciallyTerminal(booking) || isBookingRefundInProgressOrFinal(booking)) {
+          return NextResponse.json({ error: "Cette réservation est financièrement clôturée et ne peut plus être remise en litige." }, { status: 409 });
+        }
         if (!hasVerifiedClientFunds(booking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(booking)) {
           return NextResponse.json({
             error: "Impossible d'ouvrir un litige financier : aucun paiement confirmé côté serveur n'est rattaché à cette réservation.",
@@ -1136,34 +1128,69 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
         const reason = body.reason || "Litige ouvert par le service client";
         const description = body.description || "";
-        await db.booking.update({
-          where: { id },
-          data: { status: "DISPUTED", paymentStatus: "DISPUTED" },
-        });
-        await db.transaction.updateMany({
-          where: { bookingId: booking.id, type: "CLIENT_PAYMENT" },
-          data: { status: "DISPUTED" },
-        });
-        const admin = await db.user.findFirst({ where: { role: "ADMIN" } });
-        const createdDispute = await db.dispute.create({
-          data: {
-            bookingId: booking.id,
-            openedById: admin?.id ?? booking.clientId,
-            reason,
-            description,
-            status: "OPEN",
-          },
-        });
-        await db.notification.create({
-          data: {
-            userId: null,
-            title: "Litige ouvert",
-            message: `Un litige a été ouvert sur la réservation ${booking.reference}: ${reason}`,
-            type: "DISPUTE_OPENED",
-            link: `/admin/litiges/${createdDispute.id}`,
-            actionLabel: "Traiter litige",
-          },
-        });
+        await db.$transaction(async (tx) => {
+          await assertBookingRefundPayoutSafetyInTransaction(tx, booking.id);
+          const currentBooking = await tx.booking.findUnique({
+            where: { id: booking.id },
+            include: { transactions: { where: { type: "CLIENT_PAYMENT" } } },
+          });
+          if (!currentBooking) {
+            throw new BookingRefundWorkflowError("Réservation introuvable", 404, "BOOKING_NOT_FOUND");
+          }
+          if (isBookingFinanciallyTerminal(currentBooking) || isBookingRefundInProgressOrFinal(currentBooking)) {
+            throw new BookingRefundWorkflowError(
+              "Cette réservation est financièrement clôturée et ne peut plus être remise en litige.",
+              409,
+              "BOOKING_FINANCIALLY_TERMINAL",
+            );
+          }
+          if (!hasVerifiedClientFunds(currentBooking.paymentStatus) || !hasVerifiedPayDunyaClientPayment(currentBooking)) {
+            throw new BookingRefundWorkflowError(
+              "Impossible d'ouvrir un litige financier : aucun paiement confirmé côté serveur n'est rattaché à cette réservation.",
+              409,
+              "CLIENT_PAYMENT_NOT_VERIFIED",
+            );
+          }
+          const openDispute = await tx.dispute.findFirst({
+            where: { bookingId: booking.id, status: { in: ["OPEN", "INVESTIGATING"] } },
+            select: { id: true },
+          });
+          if (currentBooking.status === "DISPUTED" || openDispute) {
+            throw new BookingRefundWorkflowError(
+              "Un litige est déjà ouvert sur cette réservation.",
+              409,
+              "DISPUTE_ALREADY_OPEN",
+            );
+          }
+          const transitioned = await tx.booking.updateMany({
+            where: { id, status: currentBooking.status, paymentStatus: currentBooking.paymentStatus },
+            data: { status: "DISPUTED", paymentStatus: "DISPUTED" },
+          });
+          if (transitioned.count !== 1) {
+            throw new BookingRefundWorkflowError("La réservation a changé et ne peut pas être remise en litige.", 409, "BOOKING_TERMINAL_STATE_CONFLICT");
+          }
+          await tx.transaction.updateMany({
+            where: {
+              bookingId: booking.id,
+              type: "CLIENT_PAYMENT",
+              status: { in: [...PAID_CLIENT_TRANSACTION_STATUSES] },
+            },
+            data: { status: "DISPUTED" },
+          });
+          const createdDispute = await tx.dispute.create({
+            data: { bookingId: booking.id, openedById: authorizedAdmin.id, reason, description, status: "OPEN" },
+          });
+          await tx.notification.create({
+            data: {
+              userId: null,
+              title: "Litige ouvert",
+              message: `Un litige a été ouvert sur la réservation ${booking.reference}: ${reason}`,
+              type: "DISPUTE_OPENED",
+              link: `/admin/litiges/${createdDispute.id}`,
+              actionLabel: "Traiter litige",
+            },
+          });
+        }, { isolationLevel: "Serializable" });
         return NextResponse.json({ ok: true });
       }
       case "send_teacher_info": {
@@ -1192,6 +1219,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({
         error: "Ce remboursement est déjà enregistré ou vient d'être traité depuis une autre fenêtre.",
         code: "REFUND_ALREADY_RECORDED",
+      }, { status: 409 });
+    }
+    if (e?.code === "P2034") {
+      return NextResponse.json({
+        error: "La réservation vient de changer depuis une autre fenêtre. Rechargez-la avant de recommencer.",
+        code: "BOOKING_SERIALIZATION_CONFLICT",
       }, { status: 409 });
     }
     if (e?.message === "BOOKING_REPLACEMENT_CONFLICT") {

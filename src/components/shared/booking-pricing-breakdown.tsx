@@ -63,6 +63,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const transportFeePending = props.transportFeePending === true;
   const transportRouteLabel = props.transportRouteLabel;
   const transportRuleLabel = props.transportRuleLabel;
+  const materialFee = Math.max(0, Math.round(Number(props.materialFee) || 0));
   const discountAmount = props.discountAmount ?? 0;
   const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
   const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service Compétence";
@@ -76,8 +77,10 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
     : Math.max(0, totalPrice - transportFee);
   const isQuoteOnly = props.isQuoteOnly === true;
   const baseFormulaAmount = indicativeSessionAmount * safeSessionsCount;
-  const groupSurchargeAmount = Math.max(0, Math.round(baseFormulaAmount * Math.max(0, safeParticipantsCount - 1) * 0.5));
-  const rawFormulaAmount = baseFormulaAmount + groupSurchargeAmount;
+  // courseAmount est le brut moins la remise. Le reconstituer ainsi garantit
+  // que l'équation affichée reste exacte, y compris pour un pack de groupe.
+  const rawFormulaAmount = Math.max(baseFormulaAmount, courseAmount + discountAmount);
+  const groupSurchargeAmount = Math.max(0, rawFormulaAmount - baseFormulaAmount);
   const effectiveDiscountPercent = rawFormulaAmount > 0
     ? Number(((discountAmount / rawFormulaAmount) * 100).toFixed(1))
     : 0;
@@ -193,26 +196,36 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <>
               {isGroup ? (
                 <>
-                  <PricingLine label="Base séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
-                  <PricingLine label="Majoration groupe" detail={`${extraParticipants} participant${extraParticipants > 1 ? "s" : ""} en plus`} value={<Money amount={groupSurchargeAmount} />} />
+                  <PricingLine label="Base brute des séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
+                  <PricingLine label="Majoration groupe brute" detail={`${extraParticipants} participant${extraParticipants > 1 ? "s" : ""} en plus`} value={<Money amount={groupSurchargeAmount} />} />
                   {discountAmount > 0 && (
                     <PricingLine
                       label="Remise pack"
                       detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
-                      value={<Money amount={discountAmount} />}
+                      value={<>- <Money amount={discountAmount} /></>}
                     />
                   )}
-                  <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} strong />
+                  <PricingLine
+                    label={discountAmount > 0 ? "Cours après remise" : "Sous-total cours"}
+                    detail={formatCourseEquation(baseFormulaAmount, groupSurchargeAmount, discountAmount, courseAmount)}
+                    value={<Money amount={courseAmount} />}
+                    strong
+                  />
                 </>
               ) : discountAmount > 0 ? (
                 <>
-                  <PricingLine label="Base séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
+                  <PricingLine label="Base brute des séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
                   <PricingLine
                     label="Remise pack"
                     detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
-                    value={<Money amount={discountAmount} />}
+                    value={<>- <Money amount={discountAmount} /></>}
                   />
-                  <PricingLine label="Sous-total cours" value={<Money amount={courseAmount} />} strong />
+                  <PricingLine
+                    label="Cours après remise"
+                    detail={formatCourseEquation(baseFormulaAmount, 0, discountAmount, courseAmount)}
+                    value={<Money amount={courseAmount} />}
+                    strong
+                  />
                 </>
               ) : (
                 <PricingLine label="Cours" detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""}`} value={<Money amount={courseAmount} />} strong />
@@ -228,6 +241,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                   label="Déplacement"
                   detail={`${transportRouteLabel ?? "Frais selon zone"}${safeSessionsCount > 1 ? ` · ${Math.round(transportFee / safeSessionsCount).toLocaleString("fr-FR")} FCFA x ${safeSessionsCount} séances` : ""}`}
                   value={<Money amount={transportFee} />}
+                />
+              )}
+              {materialFee > 0 && (
+                <PricingLine
+                  label="Matériel"
+                  detail="Inclus dans le total, hors assiette des frais de service"
+                  value={<Money amount={materialFee} />}
                 />
               )}
               {paymentServiceFeeAmount > 0 && (
@@ -338,4 +358,21 @@ function PricingMini({ label, value, detail }: { label: string; value: ReactNode
 
 function formatSentencePart(value: string) {
   return value.trim().replace(/[.!?]+$/, "");
+}
+
+function formatCourseEquation(
+  baseAmount: number,
+  groupSurchargeAmount: number,
+  discountAmount: number,
+  courseAmount: number,
+) {
+  const baseAndGroup = groupSurchargeAmount > 0
+    ? `${formatXof(baseAmount)} + ${formatXof(groupSurchargeAmount)}`
+    : formatXof(baseAmount);
+  const discount = discountAmount > 0 ? ` - ${formatXof(discountAmount)}` : "";
+  return `${baseAndGroup}${discount} = ${formatXof(courseAmount)}`;
+}
+
+function formatXof(amount: number) {
+  return `${Math.max(0, Math.round(Number(amount) || 0)).toLocaleString("fr-FR")} FCFA`;
 }

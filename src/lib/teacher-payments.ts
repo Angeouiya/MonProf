@@ -15,7 +15,9 @@ export type TeacherPaymentBooking = {
 };
 
 function usesSessionLedger(booking: TeacherPaymentBooking) {
-  return !isCancellationPenaltyPayout(booking) && Boolean(booking.sessions?.length);
+  return !["CANCELLED", "REFUNDED"].includes(booking.status ?? "")
+    && !isCancellationPenaltyPayout(booking)
+    && Boolean(booking.sessions?.length);
 }
 
 export type TeacherPaymentAdjustment = {
@@ -138,7 +140,7 @@ export function getMaterializedTeacherGlobalRetention(
 
 export function getTeacherPayableAmount(booking: TeacherPaymentBooking) {
   const cancellationPenalty = Math.max(0, booking.cancellationPenaltyTeacherAmount ?? 0);
-  if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "") && cancellationPenalty > 0) {
+  if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "")) {
     return cancellationPenalty;
   }
   if (usesSessionLedger(booking)) {
@@ -148,7 +150,7 @@ export function getTeacherPayableAmount(booking: TeacherPaymentBooking) {
 }
 
 export function getTeacherExpectedAmount(booking: TeacherPaymentBooking) {
-  if (isCancellationPenaltyPayout(booking)) return getTeacherPayableAmount(booking);
+  if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "")) return getTeacherPayableAmount(booking);
   if (booking.sessions?.length) {
     return booking.sessions.reduce((sum, session) => sum + Math.max(0, session.teacherNetAmount ?? 0), 0);
   }
@@ -171,6 +173,10 @@ export function isCancellationPenaltyPayout(booking: TeacherPaymentBooking) {
 }
 
 export function isTeacherPayableStatus(booking: TeacherPaymentBooking) {
+  if (["CANCELLED", "REFUNDED"].includes(booking.status ?? "")) {
+    return isCancellationPenaltyPayout(booking)
+      && ["PARTIALLY_REFUNDED", "RETAINED"].includes(booking.paymentStatus);
+  }
   if (usesSessionLedger(booking)) {
     return booking.sessions!.some((session) => (
       ["RELEASED", "PARTIALLY_PAID"].includes(session.status)
@@ -178,8 +184,7 @@ export function isTeacherPayableStatus(booking: TeacherPaymentBooking) {
     ));
   }
   if (booking.paymentStatus === "TO_PAY_TEACHER") return true;
-  return isCancellationPenaltyPayout(booking)
-    && ["PARTIALLY_REFUNDED", "RETAINED"].includes(booking.paymentStatus);
+  return false;
 }
 
 export function getTeacherPaidAmount(booking: TeacherPaymentBooking) {

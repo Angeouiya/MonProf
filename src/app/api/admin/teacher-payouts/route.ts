@@ -10,6 +10,8 @@ import {
   isCancellationPenaltyPayout,
 } from "@/lib/teacher-payments";
 import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
+import { buildTeacherPayoutSessionRetentionSnapshot } from "@/lib/teacher-payout-retention";
+import { isBookingLevelPayoutEligible, isBookingSessionPayoutEligible } from "@/lib/booking-financial-state";
 import {
   buildJekoPayoutRecordId,
   getStableJekoPayoutReference,
@@ -124,6 +126,10 @@ export async function POST(req: NextRequest) {
               retainedAmount: true,
               releasedAt: true,
               paidAt: true,
+              disputes: {
+                where: { status: { in: ["OPEN", "INVESTIGATING"] } },
+                select: { id: true },
+              },
             },
           },
           _count: { select: { sessions: true } },
@@ -186,6 +192,10 @@ export async function POST(req: NextRequest) {
           retainedAmount: true,
           releasedAt: true,
           paidAt: true,
+          disputes: {
+            where: { status: { in: ["OPEN", "INVESTIGATING"] } },
+            select: { id: true },
+          },
         },
       },
       _count: { select: { sessions: true } },
@@ -352,7 +362,8 @@ export async function POST(req: NextRequest) {
     session: PayoutSession | null;
     payableAmount: number;
     paid: number;
-    retainedAmount: number;
+    retainedAmountBefore: number;
+    retainedAmountAfter: number;
     remaining: number;
   };
   const dueItems: DueItem[] = [];
@@ -374,6 +385,7 @@ export async function POST(req: NextRequest) {
         .reduce((sum, adjustment) => sum + Math.max(0, adjustment.amount), 0) - persistedBookingRetention);
 
       for (const session of booking.sessions) {
+        if (session.disputes.length > 0) continue;
         const payableAmount = Math.max(0, session.releasedAmount);
         const paid = Math.min(payableAmount, Math.max(0, session.paidAmount));
         const grossRemaining = Math.max(0, payableAmount - paid);
@@ -381,22 +393,24 @@ export async function POST(req: NextRequest) {
         bookingRetentionLeft -= bookingRetention;
         const globalRetention = Math.min(Math.max(0, grossRemaining - bookingRetention), globalRetentionLeft);
         globalRetentionLeft -= globalRetention;
-        const retainedAmount = Math.min(
+        const retentionSnapshot = buildTeacherPayoutSessionRetentionSnapshot({
           grossRemaining,
-          Math.max(0, session.retainedAmount) + bookingRetention + globalRetention,
-        );
-        if (grossRemaining > 0 || retainedAmount > 0) {
+          persistedRetainedAmount: session.retainedAmount,
+          additionalRetainedAmount: bookingRetention + globalRetention,
+        });
+        if (grossRemaining > 0 || retentionSnapshot.retainedAmountAfter > 0) {
           const reservedAmount = reservedByItem.get(session.id) ?? 0;
           dueItems.push({
             booking,
             session,
             payableAmount,
             paid,
-            retainedAmount,
+            retainedAmountBefore: retentionSnapshot.retainedAmountBefore,
+            retainedAmountAfter: retentionSnapshot.retainedAmountAfter,
             // Un DRAFT fige le snapshot de toute la ligne. Une seconde
             // tentative doit passer à la ligne suivante plutôt que partager
             // un même snapshot paid/released avec un transfert asynchrone.
-            remaining: reservedAmount > 0 ? 0 : Math.max(0, grossRemaining - retainedAmount),
+            remaining: reservedAmount > 0 ? 0 : retentionSnapshot.remainingAfterRetention,
           });
         }
       }
@@ -429,7 +443,8 @@ export async function POST(req: NextRequest) {
         session: null,
         payableAmount,
         paid,
-        retainedAmount,
+        retainedAmountBefore: retainedAmount,
+        retainedAmountAfter: retainedAmount,
         remaining: reservedAmount > 0 ? 0 : Math.max(0, grossRemaining - retainedAmount),
       });
     }
@@ -541,27 +556,43 @@ export async function POST(req: NextRequest) {
           throw new Error("PAYOUT_BALANCE_CHANGED");
         }
         if (item.session) {
-          const current = await tx.bookingSession.findUnique({ where: { id: item.session.id } });
+          const current = await tx.bookingSession.findUnique({
+            where: { id: item.session.id },
+            include: {
+              booking: { select: { status: true, paymentStatus: true } },
+              disputes: {
+                where: { status: { in: ["OPEN", "INVESTIGATING"] } },
+                select: { id: true },
+              },
+            },
+          });
           if (
             !current
             || current.teacherId !== teacher.id
+            || current.disputes.length > 0
+            || !isBookingSessionPayoutEligible({
+              status: current.booking.status,
+              paymentStatus: current.booking.paymentStatus,
+              sessionStatus: current.status,
+            })
             || current.paidAmount !== item.session.paidAmount
             || current.releasedAmount !== item.session.releasedAmount
-            || current.retainedAmount !== item.session.retainedAmount
+            || current.retainedAmount !== item.retainedAmountBefore
           ) {
             throw new Error("PAYOUT_BALANCE_CHANGED");
           }
           // Une retenue APPLIED est indépendante du transfert. La matérialiser
           // ici ne débite pas teacherPaid et fige le snapshot du futur succès.
-          if (item.retainedAmount !== current.retainedAmount) {
+          if (item.retainedAmountAfter !== item.retainedAmountBefore) {
             const retained = await tx.bookingSession.updateMany({
               where: {
                 id: current.id,
+                teacherId: teacher.id,
                 paidAmount: current.paidAmount,
                 releasedAmount: current.releasedAmount,
-                retainedAmount: current.retainedAmount,
+                retainedAmount: item.retainedAmountBefore,
               },
-              data: { retainedAmount: item.retainedAmount },
+              data: { retainedAmount: item.retainedAmountAfter },
             });
             if (retained.count !== 1) throw new Error("PAYOUT_BALANCE_CHANGED");
           }
@@ -581,6 +612,7 @@ export async function POST(req: NextRequest) {
           if (
             !current
             || current.teacherId !== teacher.id
+            || !isBookingLevelPayoutEligible(current)
             || current.teacherPaidAmount !== item.paid
             || getTeacherPayableAmount(current) !== item.payableAmount
           ) {
@@ -611,7 +643,7 @@ export async function POST(req: NextRequest) {
               amount: allocation.amount,
               paidAmountBefore: allocation.item.paid,
               releasedAmountSnapshot: allocation.item.payableAmount,
-              retainedAmountSnapshot: allocation.item.retainedAmount,
+              retainedAmountSnapshot: allocation.item.retainedAmountAfter,
             })),
           },
         },

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { PaymentMethod, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
+import { isBookingLevelPayoutEligible, isBookingSessionPayoutEligible } from "@/lib/booking-financial-state";
 import { generateReference } from "@/lib/format";
 import { requireJekoServerConfig, type JekoServerConfig } from "@/lib/jeko-config";
 import {
@@ -595,6 +596,11 @@ export async function finalizeJekoTeacherPayout(input: {
         if (
           session.bookingId !== booking.id
           || session.teacherId !== record.teacherId
+          || !isBookingSessionPayoutEligible({
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            sessionStatus: session.status,
+          })
           || session.paidAmount !== allocation.paidAmountBefore
           || session.releasedAmount !== allocation.releasedAmountSnapshot
           || session.retainedAmount !== allocation.retainedAmountSnapshot
@@ -648,6 +654,7 @@ export async function finalizeJekoTeacherPayout(input: {
       const payableNow = getTeacherPayableAmount(booking);
       if (
         booking.teacherId !== record.teacherId
+        || !isBookingLevelPayoutEligible(booking)
         || booking.teacherPaidAmount !== allocation.paidAmountBefore
         || payableNow !== allocation.releasedAmountSnapshot
       ) {

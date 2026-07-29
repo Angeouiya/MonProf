@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,8 +8,108 @@ import { requireTeacherApi } from "@/lib/teacher-auth";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
+import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
+import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
 
 type PortalRole = "CLIENT" | "ADMIN" | "TEACHER";
+
+class SessionWorkflowError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string,
+  ) {
+    super(message);
+    this.name = "SessionWorkflowError";
+  }
+}
+
+async function lockAndRevalidateSession(
+  tx: Prisma.TransactionClient,
+  input: {
+    bookingId: string;
+    sessionId: string;
+    expectedTeacherId: string;
+    expectedStatus: string;
+    clientId?: string;
+    allowTeacherPaidDispute?: boolean;
+  },
+) {
+  await lockTeacherPayoutBalance(tx, input.expectedTeacherId);
+  const current = await tx.bookingSession.findFirst({
+    where: { id: input.sessionId, bookingId: input.bookingId },
+    include: {
+      booking: {
+        include: { transactions: { where: { type: "CLIENT_PAYMENT" } } },
+      },
+    },
+  });
+  if (!current || current.teacherId !== input.expectedTeacherId || current.status !== input.expectedStatus) {
+    throw new SessionWorkflowError(
+      "La séance vient de changer. Rechargez la réservation avant de recommencer.",
+      409,
+      "SESSION_STATE_CONFLICT",
+    );
+  }
+  if (input.clientId && current.booking.clientId !== input.clientId) {
+    throw new SessionWorkflowError("Accès refusé", 403, "SESSION_ACCESS_DENIED");
+  }
+  const refundState = isBookingRefundInProgressOrFinal(current.booking);
+  const teacherPaidDisputeAllowed = Boolean(input.allowTeacherPaidDispute)
+    && !refundState
+    && [current.booking.status, current.booking.paymentStatus].includes("TEACHER_PAID");
+  if (
+    (isBookingFinanciallyTerminal(current.booking) || refundState)
+    && !teacherPaidDisputeAllowed
+  ) {
+    throw new SessionWorkflowError(
+      "Cette réservation est financièrement clôturée. Ses séances ne peuvent plus être modifiées.",
+      409,
+      "BOOKING_FINANCIALLY_TERMINAL",
+    );
+  }
+  if (current.booking.status === "DISPUTED" || current.booking.paymentStatus === "DISPUTED") {
+    throw new SessionWorkflowError(
+      "Un litige global gèle cette réservation. Clôturez-le avant de modifier ses séances.",
+      409,
+      "BOOKING_DISPUTE_ACTIVE",
+    );
+  }
+  if (!hasVerifiedPayDunyaClientPayment(current.booking)) {
+    throw new SessionWorkflowError(
+      "Le paiement du pack n'est plus confirmé côté serveur.",
+      409,
+      "CLIENT_PAYMENT_NOT_VERIFIED",
+    );
+  }
+  return current;
+}
+
+async function updateSessionWithCas(
+  tx: Prisma.TransactionClient,
+  current: Awaited<ReturnType<typeof lockAndRevalidateSession>>,
+  data: Prisma.BookingSessionUncheckedUpdateManyInput,
+) {
+  const updated = await tx.bookingSession.updateMany({
+    where: {
+      id: current.id,
+      bookingId: current.bookingId,
+      teacherId: current.teacherId,
+      status: current.status,
+      paidAmount: current.paidAmount,
+      releasedAmount: current.releasedAmount,
+      retainedAmount: current.retainedAmount,
+    },
+    data,
+  });
+  if (updated.count !== 1) {
+    throw new SessionWorkflowError(
+      "La comptabilité de la séance vient de changer. Rechargez avant de recommencer.",
+      409,
+      "SESSION_FINANCIAL_STATE_CONFLICT",
+    );
+  }
+}
 
 function cleanReason(value: unknown) {
   return typeof value === "string" ? value.trim().slice(0, 700) : "";
@@ -108,6 +209,16 @@ export async function PATCH(
   if (role === "TEACHER" && courseSession.teacherId !== authenticatedTeacherId) {
     return NextResponse.json({ error: "Cette séance ne vous est pas attribuée" }, { status: 403 });
   }
+  const teacherPaidSessionDisputeAllowed = action === "open_dispute"
+    && role === "CLIENT"
+    && !isBookingRefundInProgressOrFinal(courseSession.booking)
+    && [courseSession.booking.status, courseSession.booking.paymentStatus].includes("TEACHER_PAID");
+  if (
+    (isBookingFinanciallyTerminal(courseSession.booking) || isBookingRefundInProgressOrFinal(courseSession.booking))
+    && !teacherPaidSessionDisputeAllowed
+  ) {
+    return NextResponse.json({ error: "Cette réservation est financièrement clôturée. Ses séances ne peuvent plus être modifiées." }, { status: 409 });
+  }
   if (!hasVerifiedPayDunyaClientPayment(courseSession.booking)) {
     return NextResponse.json({ error: "Le paiement du pack n'est pas confirmé côté serveur." }, { status: 409 });
   }
@@ -116,14 +227,24 @@ export async function PATCH(
   const teacherName = courseSession.teacher.professionalName || courseSession.teacher.fullName;
   const sessionLabel = "séance " + courseSession.sequence + "/" + courseSession.booking.sessionsCount;
 
+  try {
   if (action === "mark_done") {
     if (!["ADMIN", "TEACHER"].includes(role)) return NextResponse.json({ error: "Action non autorisée" }, { status: 403 });
     if (!["PLANNED", "TEACHER_CONFIRMED", "IN_PROGRESS"].includes(courseSession.status)) {
       return NextResponse.json({ error: "Cette séance ne peut pas être marquée terminée." }, { status: 409 });
     }
     await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({ where: { id: sessionId }, data: { status: "AWAITING_CLIENT_CONFIRMATION", completedAt: now } });
-      await addHistory(tx, { sessionId, actorType: role, actorId, action: "SESSION_DONE", fromStatus: courseSession.status, toStatus: "AWAITING_CLIENT_CONFIRMATION" });
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+      });
+      if (!["PLANNED", "TEACHER_CONFIRMED", "IN_PROGRESS"].includes(current.status)) {
+        throw new SessionWorkflowError("Cette séance ne peut pas être marquée terminée.", 409, "SESSION_STATUS_INVALID");
+      }
+      await updateSessionWithCas(tx, current, { status: "AWAITING_CLIENT_CONFIRMATION", completedAt: now });
+      await addHistory(tx, { sessionId, actorType: role, actorId, action: "SESSION_DONE", fromStatus: current.status, toStatus: "AWAITING_CLIENT_CONFIRMATION" });
       await tx.notification.create({
         data: {
           userId: courseSession.booking.clientId,
@@ -144,7 +265,7 @@ export async function PATCH(
         },
       });
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true });
   }
 
@@ -154,18 +275,30 @@ export async function PATCH(
       return NextResponse.json({ error: "Cette séance n'attend pas de confirmation." }, { status: 409 });
     }
     await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({
-        where: { id: sessionId },
-        data: { status: "RELEASED", clientValidatedAt: now, releasedAt: now, releasedAmount: courseSession.teacherNetAmount },
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+        clientId: actorId,
+      });
+      if (current.status !== "AWAITING_CLIENT_CONFIRMATION") {
+        throw new SessionWorkflowError("Cette séance n'attend pas de confirmation.", 409, "SESSION_STATUS_INVALID");
+      }
+      await updateSessionWithCas(tx, current, {
+        status: "RELEASED",
+        clientValidatedAt: now,
+        releasedAt: now,
+        releasedAmount: current.teacherNetAmount,
       });
       await addHistory(tx, {
         sessionId,
         actorType: role,
         actorId,
         action: "CLIENT_CONFIRMED",
-        fromStatus: courseSession.status,
+        fromStatus: current.status,
         toStatus: "RELEASED",
-        detail: courseSession.teacherNetAmount + " FCFA libérés.",
+        detail: current.teacherNetAmount + " FCFA libérés.",
       });
       await tx.notification.create({
         data: {
@@ -186,7 +319,7 @@ export async function PATCH(
         },
       });
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true, releasedAmount: courseSession.teacherNetAmount });
   }
 
@@ -199,16 +332,24 @@ export async function PATCH(
     }
     if (proposedDate.getTime() < Date.now()) return NextResponse.json({ error: "Le nouveau créneau doit être ultérieur." }, { status: 400 });
     await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({
-        where: { id: sessionId },
-        data: { status: "RESCHEDULE_PROPOSED", proposedDate, proposedTime, unavailableReason: reason },
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+      });
+      await updateSessionWithCas(tx, current, {
+        status: "RESCHEDULE_PROPOSED",
+        proposedDate,
+        proposedTime,
+        unavailableReason: reason,
       });
       await addHistory(tx, {
         sessionId,
         actorType: role,
         actorId,
         action: "RESCHEDULE_PROPOSED",
-        fromStatus: courseSession.status,
+        fromStatus: current.status,
         toStatus: "RESCHEDULE_PROPOSED",
         detail: proposedDate.toLocaleDateString("fr-FR") + " " + proposedTime + ". " + reason,
       });
@@ -232,7 +373,7 @@ export async function PATCH(
         },
       });
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true });
   }
 
@@ -246,9 +387,20 @@ export async function PATCH(
       scheduledTime: courseSession.scheduledTime,
     })).items[0] ?? null;
     await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({
-        where: { id: sessionId },
-        data: accepted
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+        clientId: actorId,
+      });
+      if (current.status !== "RESCHEDULE_PROPOSED") {
+        throw new SessionWorkflowError("Aucun nouveau créneau en attente.", 409, "SESSION_STATUS_INVALID");
+      }
+      await updateSessionWithCas(
+        tx,
+        current,
+        accepted
           ? { status: "TEACHER_CONFIRMED", scheduledDate: courseSession.proposedDate, scheduledTime: courseSession.proposedTime, proposedDate: null, proposedTime: null }
           : {
               status: replacement ? "REPLACEMENT_PROPOSED" : "NEEDS_REPLACEMENT",
@@ -256,13 +408,13 @@ export async function PATCH(
               proposedDate: null,
               proposedTime: null,
             },
-      });
+      );
       await addHistory(tx, {
         sessionId,
         actorType: role,
         actorId,
         action: accepted ? "RESCHEDULE_ACCEPTED" : "RESCHEDULE_REJECTED",
-        fromStatus: courseSession.status,
+        fromStatus: current.status,
         toStatus: accepted ? "TEACHER_CONFIRMED" : replacement ? "REPLACEMENT_PROPOSED" : "NEEDS_REPLACEMENT",
         oldTeacherId: courseSession.teacherId,
         newTeacherId: replacement?.teacher.id,
@@ -291,7 +443,7 @@ export async function PATCH(
         });
       }
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true, accepted });
   }
 
@@ -305,17 +457,24 @@ export async function PATCH(
     });
     const replacement = candidates.items[0] ?? null;
     await db.$transaction(async (tx) => {
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+      });
       const nextStatus = replacement ? "REPLACEMENT_PROPOSED" : "NEEDS_REPLACEMENT";
-      await tx.bookingSession.update({
-        where: { id: sessionId },
-        data: { status: nextStatus, proposedTeacherId: replacement?.teacher.id ?? null, unavailableReason: reason },
+      await updateSessionWithCas(tx, current, {
+        status: nextStatus,
+        proposedTeacherId: replacement?.teacher.id ?? null,
+        unavailableReason: reason,
       });
       await addHistory(tx, {
         sessionId,
         actorType: role,
         actorId,
         action: "TEACHER_UNAVAILABLE",
-        fromStatus: courseSession.status,
+        fromStatus: current.status,
         toStatus: nextStatus,
         oldTeacherId: courseSession.teacherId,
         newTeacherId: replacement?.teacher.id,
@@ -361,7 +520,7 @@ export async function PATCH(
         },
       });
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true, replacementProposed: Boolean(replacement) });
   }
 
@@ -378,21 +537,32 @@ export async function PATCH(
       scheduledTime: courseSession.scheduledTime,
     })).items[0] ?? null;
     await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({
-        where: { id: sessionId },
-        data: accepted
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+        clientId: actorId,
+      });
+      if (current.status !== "REPLACEMENT_PROPOSED" || current.proposedTeacherId !== proposedTeacherId) {
+        throw new SessionWorkflowError("Aucun remplaçant en attente.", 409, "SESSION_REPLACEMENT_CONFLICT");
+      }
+      await updateSessionWithCas(
+        tx,
+        current,
+        accepted
           ? { status: "PLANNED", teacherId: proposedTeacherId, proposedTeacherId: null }
           : {
               status: nextReplacement ? "REPLACEMENT_PROPOSED" : "NEEDS_REPLACEMENT",
               proposedTeacherId: nextReplacement?.teacher.id ?? null,
             },
-      });
+      );
       await addHistory(tx, {
         sessionId,
         actorType: role,
         actorId,
         action: accepted ? "REPLACEMENT_ACCEPTED" : "REPLACEMENT_REJECTED",
-        fromStatus: courseSession.status,
+        fromStatus: current.status,
         toStatus: accepted ? "PLANNED" : nextReplacement ? "REPLACEMENT_PROPOSED" : "NEEDS_REPLACEMENT",
         oldTeacherId: courseSession.teacherId,
         newTeacherId: accepted ? proposedTeacherId : nextReplacement?.teacher.id,
@@ -452,23 +622,102 @@ export async function PATCH(
         });
       }
       await syncBookingSessionAggregates(tx as any, bookingId);
-    });
+    }, { isolationLevel: "Serializable" });
     return NextResponse.json({ ok: true, accepted });
   }
 
   if (action === "open_dispute") {
     if (role !== "CLIENT") return NextResponse.json({ error: "Action réservée au client" }, { status: 403 });
     if (reason.length < 10) return NextResponse.json({ error: "Décrivez précisément le problème." }, { status: 400 });
-    await db.$transaction(async (tx) => {
-      await tx.bookingSession.update({ where: { id: sessionId }, data: { status: "DISPUTED" } });
-      await tx.dispute.create({
+    const result = await db.$transaction(async (tx) => {
+      const current = await lockAndRevalidateSession(tx, {
+        bookingId,
+        sessionId,
+        expectedTeacherId: courseSession.teacherId,
+        expectedStatus: courseSession.status,
+        clientId: actorId,
+        allowTeacherPaidDispute: true,
+      });
+      const openDispute = await tx.dispute.findFirst({
+        where: { bookingId, status: { in: ["OPEN", "INVESTIGATING"] } },
+        select: { id: true },
+      });
+      if (current.status === "DISPUTED" || openDispute) {
+        throw new SessionWorkflowError(
+          "Un litige est déjà ouvert sur cette réservation.",
+          409,
+          "DISPUTE_ALREADY_OPEN",
+        );
+      }
+      const [draftAllocation, paidAllocation] = await Promise.all([
+        tx.teacherPayoutAllocation.findFirst({
+          where: { bookingSessionId: sessionId, payout: { status: "DRAFT" } },
+          select: { id: true },
+        }),
+        tx.teacherPayoutAllocation.findFirst({
+          where: { bookingSessionId: sessionId, amount: { gt: 0 }, payout: { status: "PAID" } },
+          select: { id: true },
+        }),
+      ]);
+      const requiresManualFinancialReview = Boolean(draftAllocation || paidAllocation)
+        || current.paidAmount > 0
+        || ["PAID", "PARTIALLY_PAID"].includes(current.status);
+
+      if (!requiresManualFinancialReview) {
+        await updateSessionWithCas(tx, current, { status: "DISPUTED" });
+      }
+      const dispute = await tx.dispute.create({
         data: { bookingId, bookingSessionId: sessionId, openedById: actorId, reason: "Problème sur une séance", description: reason },
       });
-      await addHistory(tx, { sessionId, actorType: role, actorId, action: "DISPUTE_OPENED", fromStatus: courseSession.status, toStatus: "DISPUTED", detail: reason });
-      await syncBookingSessionAggregates(tx as any, bookingId);
-    });
-    return NextResponse.json({ ok: true });
+      await addHistory(tx, {
+        sessionId,
+        actorType: role,
+        actorId,
+        action: requiresManualFinancialReview ? "DISPUTE_OPENED_AFTER_PAYOUT" : "DISPUTE_OPENED",
+        fromStatus: current.status,
+        toStatus: requiresManualFinancialReview ? current.status : "DISPUTED",
+        detail: requiresManualFinancialReview
+          ? `${reason} Statut financier conservé : versement soumis ou exécuté, arbitrage manuel requis.`
+          : reason,
+      });
+      await tx.notification.create({
+        data: {
+          userId: null,
+          title: requiresManualFinancialReview ? "Litige séance après versement" : "Litige ouvert sur une séance",
+          message: `${courseSession.booking.reference} · ${sessionLabel}. ${requiresManualFinancialReview ? "Le ledger reste inchangé et exige un arbitrage manuel." : "La séance est gelée avant versement."}`,
+          type: "DISPUTE_OPENED",
+          recipientType: "ADMIN",
+          channel: "INTERNAL",
+          status: "SENT",
+          priority: "CRITICAL",
+          bookingId,
+          teacherId: current.teacherId,
+          clientId: current.booking.clientId,
+          sentAt: now,
+          link: `/admin/litiges/${dispute.id}`,
+          actionLabel: "Arbitrer la séance",
+        },
+      });
+      if (!requiresManualFinancialReview) {
+        await syncBookingSessionAggregates(tx as any, bookingId);
+      }
+      return { requiresManualFinancialReview };
+    }, { isolationLevel: "Serializable" });
+    return NextResponse.json({ ok: true, manualReview: result.requiresManualFinancialReview });
   }
 
   return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+  } catch (error) {
+    if (error instanceof SessionWorkflowError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return NextResponse.json({
+        error: "La séance vient de changer. Rechargez avant de recommencer.",
+        code: "SESSION_SERIALIZATION_CONFLICT",
+      }, { status: 409 });
+    }
+    console.error("booking session PATCH error", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }

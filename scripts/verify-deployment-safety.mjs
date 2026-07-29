@@ -37,11 +37,27 @@ try {
   process.env.GMAIL_CLIENT_ID = "deployment-safety-client";
   process.env.GMAIL_CLIENT_SECRET = "deployment-safety-secret";
   process.env.GMAIL_REFRESH_TOKEN = "deployment-safety-refresh";
-  process.env.GMAIL_SENDER_EMAIL = "diplomateimmobilier99@gmail.com";
 
   delete process.env.VERCEL_ENV;
+  delete process.env.GMAIL_SENDER_EMAIL;
+  assert.equal(
+    hasGmailEnvironmentConfiguration(),
+    false,
+    "Gmail runtime configuration must require its exact sender explicitly",
+  );
+
+  process.env.GMAIL_SENDER_EMAIL = "diplomateimmobilier99@gmail.com";
   assert.equal(hasGmailEnvironmentConfiguration(), true);
   assert.equal(isGmailConfigured(), true, "local explicit verification remains available");
+
+  process.env.GMAIL_SENDER_EMAIL = "another.sender@gmail.com";
+  assert.equal(
+    hasGmailEnvironmentConfiguration(),
+    false,
+    "Gmail runtime configuration must reject any sender other than diplomateimmobilier99@gmail.com",
+  );
+  assert.equal(isGmailConfigured(), false);
+  process.env.GMAIL_SENDER_EMAIL = "diplomateimmobilier99@gmail.com";
 
   process.env.VERCEL_ENV = "production";
   assert.equal(isGmailConfigured(), true);

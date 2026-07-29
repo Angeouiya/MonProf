@@ -539,9 +539,14 @@ export async function POST(req: NextRequest) {
   const averageSessionPrice = normalizedSessionsCount > 0 ? Math.round(pricing.courseAmount / normalizedSessionsCount) : 0;
   const extraParticipantCount = Math.max(0, normalizedParticipants - 1);
   const groupSurchargeAmount = Math.max(0, pricing.rawCourseAmount - basePrice);
+  const packDiscountLine = pricing.discountAmount > 0
+    ? ` - remise pack ${pricing.discountAmount.toLocaleString("fr-FR")} FCFA`
+    : "";
   const groupPricingLine = normalizedGroupType === "SMALL_GROUP"
-    ? `Petit groupe: ${normalizedParticipants} participants, base ${basePrice.toLocaleString("fr-FR")} FCFA + ${extraParticipantCount} x 50% = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
-    : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
+    ? `Petit groupe: ${normalizedParticipants} participants, base brute ${basePrice.toLocaleString("fr-FR")} FCFA + majoration groupe brute ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA (${extraParticipantCount} x 50 % de la base)${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
+    : pricing.discountAmount > 0
+      ? `Cours individuel: base brute ${basePrice.toLocaleString("fr-FR")} FCFA${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
+      : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
   const paymentServiceLine = `Frais de service Compétence: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
   const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
   const commissionRate = Math.round(pricing.platformCommissionRate * 100);
@@ -663,7 +668,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         title: "Brouillon de réservation - paiement requis",
-        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que Jèko n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${normalizedGroupType === "SMALL_GROUP" ? `Petit groupe: ${normalizedParticipants} participants, majoration ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA.` : "Cours individuel."} Prix cours: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA. Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. Le paiement est finalisé sur la page sécurisée Jèko et validé uniquement après confirmation serveur.`,
+        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que Jèko n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${groupPricingLine} Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. Le paiement est finalisé sur la page sécurisée Jèko et validé uniquement après confirmation serveur.`,
         type: "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,

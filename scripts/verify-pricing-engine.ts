@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   calculateBookingPricing,
   calculateGrandAbidjanTransportFee,
@@ -561,6 +562,45 @@ function verifyPacksAndGroups() {
   assert.equal(groupedPack.paymentServiceFeeRate, 300);
   assert.equal(groupedPack.paymentServiceFeeAmount, 3_660);
   assert.equal(groupedPack.totalClientPays, 125_660);
+
+  const baseCourseAmount = groupedPack.unitSessionAmount * groupedPack.numberOfSessions;
+  const groupSurchargeAmount = groupedPack.rawCourseAmount - baseCourseAmount;
+  assert.equal(
+    baseCourseAmount + groupSurchargeAmount - groupedPack.discountAmount,
+    groupedPack.courseAmount,
+    "base brute + majoration groupe brute - remise doit égaler le montant cours",
+  );
+}
+
+function verifyMaterialFeeIsExcludedFromServiceFeeBase() {
+  const pricing = calculateBookingPricing(baseBooking({
+    teacherPricePerSession: 10_000,
+    materialFee: 5_000,
+  }));
+
+  assert.equal(pricing.courseAmount, 10_000);
+  assert.equal(pricing.transportFee, 0);
+  assert.equal(pricing.materialFee, 5_000);
+  assert.equal(pricing.totalBeforePaymentServiceFee, 15_000);
+  assert.equal(pricing.paymentServiceFeeAmount, 300);
+  assert.equal(pricing.totalClientPays, 15_300);
+}
+
+function verifyDiscountedGroupBreakdownCopy() {
+  const bookingRoute = readFileSync(new URL("../src/app/api/bookings/route.ts", import.meta.url), "utf8");
+  const pricingBreakdown = readFileSync(
+    new URL("../src/components/shared/booking-pricing-breakdown.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    bookingRoute,
+    /base brute .*? \+ majoration groupe brute .*?\$\{packDiscountLine\} = \$\{pricing\.courseAmount/,
+  );
+  assert.match(pricingBreakdown, /label="Base brute des séances"/);
+  assert.match(pricingBreakdown, /label="Majoration groupe brute"/);
+  assert.match(pricingBreakdown, /formatCourseEquation\(baseFormulaAmount, groupSurchargeAmount, discountAmount, courseAmount\)/);
+  assert.match(pricingBreakdown, /hors assiette des frais de service/);
 }
 
 function verifyPackDiscountCommissionCaps() {
@@ -602,6 +642,8 @@ verifyDraftIdempotence();
 verifyTeacherHomeActivation();
 verifyServerPriceConfirmation();
 verifyPacksAndGroups();
+verifyMaterialFeeIsExcludedFromServiceFeeBase();
+verifyDiscountedGroupBreakdownCopy();
 verifyPackDiscountCommissionCaps();
 
-console.log("OK pricing engine: professional levels, indicative floors, transport, school catalog, home activation, draft idempotence, service fee, confirmation, packs, groups and effective discounts verified.");
+console.log("OK pricing engine: professional levels, indicative floors, transport, school catalog, home activation, draft idempotence, service fee excluding material, confirmation, packs, groups and effective discounts verified.");

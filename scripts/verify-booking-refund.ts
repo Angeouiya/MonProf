@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import {
   buildBookingRefundLedgerReference,
   calculateRemainingBookingRefund,
+  evaluateBookingRefundPayoutSafety,
+  normalizeBookingRefundExternalReference,
 } from "../src/lib/booking-refund";
 
 const fullRefund = calculateRemainingBookingRefund({
@@ -57,15 +59,70 @@ assert.equal(
   "TX-REFUND-BOOKING-cm-refund-123",
   "la référence idempotente doit être stable par demande",
 );
+assert.equal(
+  normalizeBookingRefundExternalReference("  abc - 123 / ci  "),
+  "ABC-123/CI",
+  "une même preuve opérateur doit produire une référence canonique",
+);
+
+assert.deepEqual(
+  evaluateBookingRefundPayoutSafety({
+    activePayoutReferences: ["TP-JEKO-IN-FLIGHT"],
+    sessions: [{ status: "RELEASED", paidAmount: 0 }],
+  }),
+  {
+    safe: false,
+    code: "TEACHER_PAYOUT_IN_PROGRESS",
+    message: "Un versement professeur est encore en cours (TP-JEKO-IN-FLIGHT). Rapprochez ou annulez ce transfert avant le remboursement client.",
+  },
+  "un DRAFT Jèko doit bloquer le remboursement",
+);
+assert.equal(
+  evaluateBookingRefundPayoutSafety({
+    sessions: [{ status: "PARTIALLY_PAID", paidAmount: 2_000 }],
+  }).safe,
+  false,
+  "une séance déjà versée ne doit jamais être effacée par un remboursement",
+);
+assert.deepEqual(
+  evaluateBookingRefundPayoutSafety({
+    sessions: [{ status: "RELEASED", paidAmount: 0 }],
+  }),
+  { safe: true, allowedCancellationPenaltyPaid: 0 },
+);
 
 const route = readFileSync("src/app/api/admin/bookings/[id]/route.ts", "utf8");
+const finalization = readFileSync("src/lib/booking-refund-finalization.ts", "utf8");
+const disputeRoute = readFileSync("src/app/api/admin/disputes/[id]/route.ts", "utf8");
+const sessionRoute = readFileSync("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts", "utf8");
+const payoutRoute = readFileSync("src/app/api/admin/teacher-payouts/route.ts", "utf8");
+const bookingSessions = readFileSync("src/lib/booking-sessions.ts", "utf8");
 assert.match(route, /action === "refund" \? "FINANCE_MANAGE" : "BOOKINGS_MANAGE"/);
-assert.match(route, /clientRefundRequests:\s*\{[\s\S]*?status:\s*\{ in: \["PENDING", "APPROVED"\] \}[\s\S]*?take: 1/);
-assert.doesNotMatch(route, /clientRefundRequests\.find[\s\S]*?\?\? booking\.clientRefundRequests\[0\]/);
-assert.match(route, /processedAt: null[\s\S]*?claimed\.count !== 1/);
-assert.match(route, /buildBookingRefundLedgerReference\(refundRequest\.id\)/);
-assert.match(route, /!transaction\.refundedRescheduleRequest/);
+assert.match(route, /finalizeBookingRefundInTransaction\(tx/);
 assert.match(route, /\{ isolationLevel: "Serializable" \}/);
 assert.match(route, /e\?\.code === "P2002" \|\| e\?\.code === "P2034"/);
+assert.match(finalization, /clientRefundRequests:\s*\{[\s\S]*?status:\s*\{ in: \["PENDING", "APPROVED"\] \}[\s\S]*?take: 1/);
+assert.match(finalization, /processedAt: null[\s\S]*?claimed\.count !== 1/);
+assert.match(finalization, /buildBookingRefundLedgerReference\(refundRequest\.id\)/);
+assert.match(finalization, /!transaction\.refundedRescheduleRequest/);
+assert.match(finalization, /lockTeacherPayoutBalance/);
+assert.match(finalization, /BOOKING_TEACHER_LOCK_SET_CHANGED/);
+assert.match(finalization, /BOOKING_REFUND_NOT_AUTHORIZED/);
+assert.match(finalization, /snapshot\.cancellationRefundAmount <= 0/);
+assert.match(finalization, /pg_advisory_xact_lock/);
+assert.match(finalization, /data: \{ status: "REFUNDED" \}/);
+assert.match(finalization, /status: \{ in: \["OPEN", "INVESTIGATING", "RESOLVED"\] \}/);
+assert.match(disputeRoute, /paymentStatus: "REFUND_PENDING"/);
+assert.match(disputeRoute, /status: "RESOLVED"/);
+assert.match(disputeRoute, /SESSION_DISPUTE_FULL_REFUND_BLOCKED/);
+assert.match(disputeRoute, /DISPUTE_OPENED[\s\S]*?fromStatus/);
+assert.match(disputeRoute, /settleSessionDispute/);
+assert.doesNotMatch(disputeRoute, /type: "REFUND"/);
+assert.match(sessionRoute, /DISPUTE_OPENED_AFTER_PAYOUT/);
+assert.match(sessionRoute, /DISPUTE_ALREADY_OPEN/);
+assert.match(sessionRoute, /requiresManualFinancialReview/);
+assert.match(sessionRoute, /lockAndRevalidateSession/);
+assert.match(payoutRoute, /current\.disputes\.length > 0/);
+assert.match(bookingSessions, /booking\.status === "DISPUTED"/);
 
-console.log("✓ remboursement général: plafond restant, idempotence, concurrence et permission vérifiés");
+console.log("✓ remboursement général: calculs purs et gardes statiques d'idempotence, concurrence et permission vérifiés");

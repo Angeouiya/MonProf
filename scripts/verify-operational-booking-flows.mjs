@@ -319,14 +319,15 @@ record(
   "Client confirmation releases only the completed session",
   /action === "confirm"/.test(bookingSessionRoute)
     && /status: "RELEASED"/.test(bookingSessionRoute)
-    && /releasedAmount: courseSession\.teacherNetAmount/.test(bookingSessionRoute)
+    && /releasedAmount: current\.teacherNetAmount/.test(bookingSessionRoute)
+    && /updateSessionWithCas\(tx, current/.test(bookingSessionRoute)
     && /Chaque séance possède son planning, son professeur et son propre décompte financier/.test(sessionLedger),
 );
 
 record(
   "Partial teacher unavailability proposes and applies a session-only replacement",
   /findReplacementCandidatesForBooking\(bookingId, 3/.test(bookingSessionRoute)
-    && /status: nextStatus, proposedTeacherId/.test(bookingSessionRoute)
+    && /updateSessionWithCas\(tx, current, \{\s*status: nextStatus,\s*proposedTeacherId/.test(bookingSessionRoute)
     && /teacherId: proposedTeacherId, proposedTeacherId: null/.test(bookingSessionRoute)
     && /Les autres séances restent inchangées/.test(bookingSessionRoute),
 );
@@ -337,7 +338,7 @@ record(
     && /bookingSessionId:\s*allocation\.item\.session\?\.id\s*\?\?\s*null/.test(payoutRoute)
     && /paidAmountBefore: allocation\.item\.paid/.test(payoutRoute)
     && /releasedAmountSnapshot: allocation\.item\.payableAmount/.test(payoutRoute)
-    && /retainedAmountSnapshot: allocation\.item\.retainedAmount/.test(payoutRoute)
+    && /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/.test(payoutRoute)
     && /ledger professeur ne sera débité qu'après confirmation finale/i.test(payoutRoute)
     && /if\s*\(transition\s*===\s*"finalize"\)/.test(payoutReconciliation)
     && /where:\s*\{ id: record\.id, status: "DRAFT" \}/.test(payoutReconciliation)

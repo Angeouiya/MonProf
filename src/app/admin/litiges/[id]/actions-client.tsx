@@ -13,7 +13,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Search, CheckCircle2, RefreshCw, XCircle, Loader2 } from "lucide-react";
 
-export function DisputeActionsClient({ disputeId, status }: { disputeId: string; status: string }) {
+export function DisputeActionsClient({
+  disputeId,
+  status,
+  isSessionDispute = false,
+}: {
+  disputeId: string;
+  status: string;
+  isSessionDispute?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [resolution, setResolution] = useState("");
@@ -42,8 +50,8 @@ export function DisputeActionsClient({ disputeId, status }: { disputeId: string;
 
   const actions = [
     { key: "investigate", label: "Investiguer", icon: Search, tone: "amber", needResolution: false, show: ["OPEN"].includes(status) },
-    { key: "resolve", label: "Résoudre (libérer)", icon: CheckCircle2, tone: "primary", needResolution: true, show: ["OPEN","INVESTIGATING"].includes(status) },
-    { key: "refund", label: "Rembourser client", icon: RefreshCw, tone: "red", needResolution: true, show: ["OPEN","INVESTIGATING"].includes(status) },
+    { key: "resolve", label: isSessionDispute ? "Résoudre la séance" : "Résoudre (libérer)", icon: CheckCircle2, tone: "primary", needResolution: true, show: ["OPEN","INVESTIGATING"].includes(status) },
+    { key: "refund", label: "Autoriser remboursement", icon: RefreshCw, tone: "red", needResolution: true, show: !isSessionDispute && ["OPEN","INVESTIGATING"].includes(status) },
     { key: "reject", label: "Rejeter le litige", icon: XCircle, tone: "gray", needResolution: true, show: ["OPEN","INVESTIGATING"].includes(status) },
   ].filter((a) => a.show);
 
@@ -86,8 +94,8 @@ export function DisputeActionsClient({ disputeId, status }: { disputeId: string;
                   <AlertDialogHeader>
                     <AlertDialogTitle>{a.label} ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {a.key === "resolve" && "Le litige sera résolu, le paiement sera libéré au professeur."}
-                      {a.key === "refund" && "Le client sera remboursé. La réservation passera au statut Remboursée."}
+                      {a.key === "resolve" && (isSessionDispute ? "Le litige sera clôturé et seule cette séance sera libérée si son versement n'a pas déjà commencé." : "Le litige sera résolu, le paiement sera libéré au professeur.")}
+                      {a.key === "refund" && "Le remboursement passera en attente. Le client renseigne ses coordonnées, puis la finance saisit la preuve de dépôt avant le statut Remboursé."}
                       {a.key === "reject" && "Le litige sera rejeté. Le paiement retourne en attente de libération au professeur."}
                       {a.key === "investigate" && "Le litige passe en cours d'investigation."}
                     </AlertDialogDescription>

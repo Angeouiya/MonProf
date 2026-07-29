@@ -1,5 +1,6 @@
 import type { Booking, BookingSession, BookingSessionStatus, Prisma } from "@prisma/client";
 import { TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
+import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
 
 type SessionBookingInput = Pick<
   Booking,
@@ -25,6 +26,7 @@ type SessionWriteClient = {
     createMany(args: Prisma.BookingSessionCreateManyArgs): Promise<unknown>;
   };
   booking: {
+    findUnique(args: Prisma.BookingFindUniqueArgs): Promise<Booking | null>;
     update(args: Prisma.BookingUpdateArgs): Promise<Booking>;
   };
 };
@@ -169,6 +171,18 @@ export function bookingSessionFinancials(sessions: BookingSession[]) {
 }
 
 export async function syncBookingSessionAggregates(client: SessionWriteClient, bookingId: string) {
+  const booking = await client.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) return null;
+  // A session callback can arrive late. It must never resurrect a booking
+  // whose client refund or teacher payout has already reached a terminal state.
+  if (
+    isBookingFinanciallyTerminal(booking)
+    || isBookingRefundInProgressOrFinal(booking)
+    || booking.status === "DISPUTED"
+    || booking.paymentStatus === "DISPUTED"
+  ) {
+    return booking;
+  }
   const sessions = await client.bookingSession.findMany({
     where: { bookingId },
     orderBy: { sequence: "asc" },

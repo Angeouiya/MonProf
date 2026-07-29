@@ -5,6 +5,7 @@ import { createJiti } from "jiti";
 const jiti = createJiti(import.meta.url);
 const state = jiti("../src/lib/jeko-payout-state.ts") as typeof import("../src/lib/jeko-payout-state");
 const utils = jiti("../src/lib/jeko-utils.ts") as typeof import("../src/lib/jeko-utils");
+const retention = jiti("../src/lib/teacher-payout-retention.ts") as typeof import("../src/lib/teacher-payout-retention");
 
 type SimulatedPayout = {
   localStatus: "DRAFT" | "PAID" | "CANCELLED";
@@ -59,6 +60,44 @@ function verifyExactNetAndPlatformCoveredFee() {
   assert.equal(exactNetXof, 20_000, "les frais plateforme ne diminuent jamais le net professeur");
 }
 
+function verifyAppliedRetentionCanBeMaterialized() {
+  const snapshot = retention.buildTeacherPayoutSessionRetentionSnapshot({
+    grossRemaining: 5_000,
+    persistedRetainedAmount: 500,
+    additionalRetainedAmount: 1_000,
+  });
+
+  assert.deepEqual(snapshot, {
+    retainedAmountBefore: 500,
+    retainedAmountAfter: 1_500,
+    remainingAfterRetention: 3_500,
+  });
+  assert.equal(
+    snapshot.retainedAmountBefore,
+    500,
+    "la condition atomique doit comparer la valeur actuellement persistée",
+  );
+  assert.notEqual(
+    snapshot.retainedAmountAfter,
+    snapshot.retainedAmountBefore,
+    "une nouvelle retenue APPLIED doit produire une valeur à matérialiser",
+  );
+
+  assert.deepEqual(
+    retention.buildTeacherPayoutSessionRetentionSnapshot({
+      grossRemaining: 1_000,
+      persistedRetainedAmount: 750,
+      additionalRetainedAmount: 800,
+    }),
+    {
+      retainedAmountBefore: 750,
+      retainedAmountAfter: 1_000,
+      remainingAfterRetention: 0,
+    },
+    "la retenue matérialisée ne doit jamais dépasser le reste brut",
+  );
+}
+
 function verifyDatabaseGuardsAreWired() {
   const route = readFileSync(new URL("../src/app/api/admin/teacher-payouts/route.ts", import.meta.url), "utf8");
   const reconciliation = readFileSync(new URL("../src/lib/jeko-payout-reconciliation.ts", import.meta.url), "utf8");
@@ -73,6 +112,11 @@ function verifyDatabaseGuardsAreWired() {
   assert.match(route, /paidAmountBefore:/);
   assert.match(route, /releasedAmountSnapshot:/);
   assert.match(route, /retainedAmountSnapshot:/);
+  assert.match(route, /current\.retainedAmount !== item\.retainedAmountBefore/);
+  assert.match(route, /retainedAmount: item\.retainedAmountBefore/);
+  assert.match(route, /data: \{ retainedAmount: item\.retainedAmountAfter \}/);
+  assert.match(route, /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/);
+  assert.doesNotMatch(route, /current\.retainedAmount !== item\.session\.retainedAmount/);
   assert.match(route, /processJekoTeacherPayoutRecord\(payoutRecordId\)/);
   assert.match(route, /resolvePayoutRequestAttemptId\(payoutRequest\.id\)/);
   assert.match(route, /`\$\{prefix\}:attempt:\$\{attemptNumber\}`/);
@@ -102,6 +146,7 @@ function verifyDatabaseGuardsAreWired() {
 verifyPendingThenSuccessAndDuplicate();
 verifyFailureDoesNotDebitLedger();
 verifyExactNetAndPlatformCoveredFee();
+verifyAppliedRetentionCanBeMaterialized();
 verifyDatabaseGuardsAreWired();
 
 console.log("Jèko payout flow verification passed (pending, success, duplicate, failure, exact net and fees).");

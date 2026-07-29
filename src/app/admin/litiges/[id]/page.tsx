@@ -175,7 +175,16 @@ export default async function LitigeDetailPage({ params }: { params: Promise<{ i
         }}
       />
 
-      <DisputeActionsClient disputeId={dispute.id} status={dispute.status} />
+      {dispute.bookingSessionId && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Ce dossier concerne une seule séance. Le remboursement intégral du pack est volontairement désactivé ici ; la décision conserve tout versement Jèko déjà soumis et exige un arbitrage financier explicite.
+        </div>
+      )}
+      <DisputeActionsClient
+        disputeId={dispute.id}
+        status={dispute.status}
+        isSessionDispute={Boolean(dispute.bookingSessionId)}
+      />
     </div>
   );
 }

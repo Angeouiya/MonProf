@@ -35,6 +35,17 @@ export async function lockTeacherPayoutBalance(
   }
 }
 
+export async function lockTeacherPayoutBalances(
+  tx: Prisma.TransactionClient,
+  teacherIds: Iterable<string>,
+) {
+  const orderedTeacherIds = [...new Set([...teacherIds].filter(Boolean))].sort();
+  for (const teacherId of orderedTeacherIds) {
+    await lockTeacherPayoutBalance(tx, teacherId);
+  }
+  return orderedTeacherIds;
+}
+
 /** Variante autoritative à appeler après lockTeacherPayoutBalance. */
 export async function hasActiveJekoPayoutReservationInTransaction(
   tx: Prisma.TransactionClient,

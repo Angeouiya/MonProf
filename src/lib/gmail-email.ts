@@ -8,6 +8,7 @@ const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 const GMAIL_REQUEST_TIMEOUT_MS = 10_000;
+const EXPECTED_GMAIL_SENDER_EMAIL = "diplomateimmobilier99@gmail.com";
 
 type GmailConfig = {
   clientId: string;
@@ -233,11 +234,15 @@ function readGmailEnvironmentConfig(
   const clientId = environment.GMAIL_CLIENT_ID?.trim();
   const clientSecret = environment.GMAIL_CLIENT_SECRET?.trim();
   const refreshToken = environment.GMAIL_REFRESH_TOKEN?.trim();
-  const senderEmail = (environment.GMAIL_SENDER_EMAIL || "diplomateimmobilier99@gmail.com")
-    .trim()
-    .toLowerCase();
+  const senderEmail = environment.GMAIL_SENDER_EMAIL?.trim().toLowerCase();
 
-  if (!clientId || !clientSecret || !refreshToken || !senderEmail || !isSafeEmailAddress(senderEmail)) {
+  if (
+    !clientId
+    || !clientSecret
+    || !refreshToken
+    || senderEmail !== EXPECTED_GMAIL_SENDER_EMAIL
+    || !isSafeEmailAddress(senderEmail)
+  ) {
     return null;
   }
 
