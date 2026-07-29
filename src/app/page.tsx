@@ -89,7 +89,15 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const catalog = await getCachedTeacherSearchCatalog();
+  // Preview deployments intentionally have no production database credentials.
+  // Keep the public landing page available there while production continues to
+  // use the live catalog whenever the database is reachable.
+  const catalog = await getCachedTeacherSearchCatalog().catch(() => ({
+    teacherCount: 0,
+    subjects: [],
+    levels: [],
+    communes: [],
+  }));
   const featured = catalog.teacherCount > 0
     ? await db.teacher.findMany({
         where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },

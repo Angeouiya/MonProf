@@ -153,6 +153,7 @@ for (const relativePath of [
 }
 
 const health = read("../src/app/api/health/route.ts");
+const publicHome = read("../src/app/page.tsx");
 assert.match(health, /scope: "configuration-readiness"/);
 assert.match(health, /configured: hasGmailEnvironmentConfiguration\(\)/);
 assert.match(health, /runtimeEnabled: isGmailConfigured\(\)/);
@@ -200,6 +201,11 @@ assert.match(productionCheck, /expectedRole:\s*"competence_migrator"/);
 assert.match(envExample, /DATABASE_URL="postgresql:\/\/competence_runtime\.PROJECT_REF:/);
 assert.match(envExample, /DIRECT_URL="postgresql:\/\/competence_migrator\.PROJECT_REF:/);
 assert.doesNotMatch(envExample, /DATABASE_URL="postgresql:\/\/competence_app\./);
+assert.match(
+  publicHome,
+  /getCachedTeacherSearchCatalog\(\)\.catch\(\(\) => \(\{[\s\S]*teacherCount:\s*0,[\s\S]*subjects:\s*\[\],[\s\S]*levels:\s*\[\],[\s\S]*communes:\s*\[\]/,
+  "The public home page must remain available in isolated Preview deployments without production database credentials.",
+);
 
 console.log("Deployment safety verification passed: Vercel isolation, Bearer-only crons and explicit health semantics.");
 
