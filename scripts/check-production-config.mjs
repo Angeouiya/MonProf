@@ -237,6 +237,11 @@ function checkProductionScripts() {
   }
 
   const productionBuild = pkg.scripts?.["build:production"] ?? "";
+  const qualityBuild = pkg.scripts?.["build:quality"] ?? "";
+  const previewBuild = pkg.scripts?.["build:preview"] ?? "";
+  const vercelBuild = pkg.scripts?.["build:vercel"] ?? "";
+  const productionQualityPipeline = `${productionBuild} ${qualityBuild}`;
+  const previewQualityPipeline = `${previewBuild} ${qualityBuild}`;
   const postinstall = pkg.scripts?.postinstall ?? "";
   const typecheck = pkg.scripts?.["typecheck"] ?? "";
   const clientAppShellVerify = pkg.scripts?.["verify:client-app-shell"] ?? "";
@@ -247,7 +252,7 @@ function checkProductionScripts() {
   const teacherPhotoStorageVerify = pkg.scripts?.["verify:teacher-photo-storage"] ?? "";
   const deploymentSafetyVerify = pkg.scripts?.["verify:deployment-safety"] ?? "";
   const databaseDeploy = pkg.scripts?.["db:deploy"] ?? "";
-  record("Production build runs explicit TypeScript gate", productionBuild.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
+  record("Production build runs explicit TypeScript gate", productionQualityPipeline.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production install regenerates Prisma Client", /prisma\s+generate/.test(postinstall));
   record("Production database deploy applies versioned migrations", /prisma\s+migrate\s+deploy/.test(databaseDeploy));
   record(
@@ -256,22 +261,41 @@ function checkProductionScripts() {
   );
   record(
     "Production build verifies Prisma migration completeness",
-    productionBuild.includes("npm run verify:migrations")
+    productionQualityPipeline.includes("npm run verify:migrations")
       && (pkg.scripts?.["verify:migrations"] ?? "").includes("verify-prisma-migrations.mjs"),
   );
-  record("Production build runs explicit ESLint gate", productionBuild.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
-  record("Production build verifies installable client app shell", productionBuild.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
+  record("Production build runs explicit ESLint gate", productionQualityPipeline.includes("npm run lint") && (pkg.scripts?.lint ?? "").includes("eslint ."));
+  record("Production build verifies installable client app shell", productionQualityPipeline.includes("npm run verify:client-app-shell") && clientAppShellVerify.includes("verify-client-app-shell.mjs"));
   record("Production build verifies database readiness", productionBuild.includes("npm run db:verify"));
+  record("Production build verifies session accounting", productionBuild.includes("npm run verify:session-accounting"));
   record("Production build audits payment integrity", productionBuild.includes("npm run payment:audit"));
-  record("Production build verifies client mobile UX gates", productionBuild.includes("npm run verify:client-mobile") && clientMobileVerify.includes("verify-client-mobile-navigation.mjs"));
-  record("Production build verifies booking operational flows", productionBuild.includes("npm run verify:operational-flows") && operationalFlowVerify.includes("verify-operational-booking-flows.mjs"));
-  record("Production build verifies teacher onboarding flows", productionBuild.includes("npm run verify:teacher-onboarding") && teacherOnboardingVerify.includes("verify-teacher-onboarding-flows.mjs"));
-  record("Production build verifies navigation performance gates", productionBuild.includes("npm run verify:navigation-performance") && navigationPerformanceVerify.includes("verify-navigation-performance.mjs"));
-  record("Production build verifies persistent teacher photo storage", productionBuild.includes("npm run verify:teacher-photo-storage") && teacherPhotoStorageVerify.includes("verify-teacher-photo-storage.mjs"));
+  record("Production build verifies client mobile UX gates", productionQualityPipeline.includes("npm run verify:client-mobile") && clientMobileVerify.includes("verify-client-mobile-navigation.mjs"));
+  record("Production build verifies booking operational flows", productionQualityPipeline.includes("npm run verify:operational-flows") && operationalFlowVerify.includes("verify-operational-booking-flows.mjs"));
+  record("Production build verifies teacher onboarding flows", productionQualityPipeline.includes("npm run verify:teacher-onboarding") && teacherOnboardingVerify.includes("verify-teacher-onboarding-flows.mjs"));
+  record("Production build verifies navigation performance gates", productionQualityPipeline.includes("npm run verify:navigation-performance") && navigationPerformanceVerify.includes("verify-navigation-performance.mjs"));
+  record("Production build verifies persistent teacher photo storage", productionQualityPipeline.includes("npm run verify:teacher-photo-storage") && teacherPhotoStorageVerify.includes("verify-teacher-photo-storage.mjs"));
   record(
     "Production build verifies Vercel integration isolation and cron authorization",
-    productionBuild.includes("npm run verify:deployment-safety")
+    productionQualityPipeline.includes("npm run verify:deployment-safety")
       && deploymentSafetyVerify.includes("verify-deployment-safety.mjs"),
+  );
+  record(
+    "Preview build runs the same static quality pipeline",
+    previewBuild.includes("npm run build:quality") && previewBuild.includes("npm run build"),
+  );
+  record(
+    "Preview build never runs production database or payment audits",
+    !previewQualityPipeline.includes("production:check")
+      && !previewQualityPipeline.includes("verify:admin-governance")
+      && !previewQualityPipeline.includes("verify:web-push")
+      && !previewQualityPipeline.includes("verify:platform-settings")
+      && !previewQualityPipeline.includes("db:verify")
+      && !previewQualityPipeline.includes("verify:session-accounting")
+      && !previewQualityPipeline.includes("payment:audit"),
+  );
+  record(
+    "Vercel build uses the environment-aware dispatcher",
+    vercelBuild === "node scripts/run-vercel-build.mjs",
   );
 }
 
@@ -290,7 +314,17 @@ function checkVercelDeploymentConfig() {
     return;
   }
 
-  record("Vercel uses the full production build pipeline", config.buildCommand === "npm run build:production");
+  const dispatcherPath = "scripts/run-vercel-build.mjs";
+  const dispatcher = fs.existsSync(dispatcherPath)
+    ? fs.readFileSync(dispatcherPath, "utf8")
+    : "";
+  record(
+    "Vercel uses the guarded production-or-preview build pipeline",
+    config.buildCommand === "npm run build:vercel"
+      && /vercelEnvironment\s*===\s*"production"/.test(dispatcher)
+      && /vercelEnvironment\s*===\s*"preview"/.test(dispatcher)
+      && /Unsupported VERCEL_ENV/.test(dispatcher),
+  );
   record(
     "Vercel functions run next to Supabase in London",
     Array.isArray(config.regions) && config.regions.length === 1 && config.regions[0] === "lhr1",

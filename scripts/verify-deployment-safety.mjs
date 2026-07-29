@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createJiti } from "jiti";
+
+if (process.env.VERCEL_BUILD_DISPATCH_TEST === "fake-npm") {
+  console.log(`FAKE_NPM_TARGET=${process.argv.slice(2).join(":")}`);
+  process.exit(0);
+}
 
 const jiti = createJiti(import.meta.url, { alias: { "@": path.resolve("src") } });
 const {
@@ -154,12 +161,40 @@ assert.match(health, /getProductionIntegrationPolicy\(\)/);
 assert.doesNotMatch(health, /sendGmailEmail|oauth2\.googleapis\.com|gmail\.googleapis\.com/);
 
 const productionCheck = read("./check-production-config.mjs");
+const vercelBuildDispatcher = read("./run-vercel-build.mjs");
+const packageJson = JSON.parse(read("../package.json"));
+const vercelConfig = JSON.parse(read("../vercel.json"));
 const envExample = read("../.env.example");
 assert.ok(
   (productionCheck.match(/if \(isVercelNonProductionDeployment\(\)\)/g) ?? []).length >= 2,
   "Preview configuration checks must not require live Jèko or Gmail credentials.",
 );
 assert.match(productionCheck, /Production build verifies Vercel integration isolation/);
+assert.equal(packageJson.scripts?.["build:vercel"], "node scripts/run-vercel-build.mjs");
+assert.match(packageJson.scripts?.["build:preview"] ?? "", /npm run build:quality/);
+assert.match(packageJson.scripts?.["build:preview"] ?? "", /npm run build/);
+assert.doesNotMatch(
+  `${packageJson.scripts?.["build:preview"] ?? ""} ${packageJson.scripts?.["build:quality"] ?? ""}`,
+  /production:check|verify:admin-governance|verify:web-push|verify:platform-settings|db:verify|verify:session-accounting|payment:audit/,
+);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run production:check/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:admin-governance/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:web-push/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:platform-settings/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run db:verify/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:session-accounting/);
+assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run payment:audit/);
+assert.equal(vercelConfig.buildCommand, "npm run build:vercel");
+assert.match(vercelBuildDispatcher, /vercelEnvironment\s*===\s*"production"/);
+assert.match(vercelBuildDispatcher, /vercelEnvironment\s*===\s*"preview"/);
+assert.match(vercelBuildDispatcher, /Unsupported VERCEL_ENV/);
+assert.match(vercelBuildDispatcher, /process\.env\.npm_execpath/);
+assert.doesNotMatch(vercelBuildDispatcher, /shell:\s*true/);
+assertVercelBuildTarget("preview", "build:preview");
+assertVercelBuildTarget("production", "build:production");
+assertVercelBuildRejected(null);
+assertVercelBuildRejected("development");
+assertVercelBuildRejected("custom-preview");
 assert.match(productionCheck, /expectedRole:\s*"competence_runtime"/);
 assert.match(productionCheck, /expectedRole:\s*"competence_migrator"/);
 assert.match(envExample, /DATABASE_URL="postgresql:\/\/competence_runtime\.PROJECT_REF:/);
@@ -190,4 +225,32 @@ function assertPreviewReconciliationGuard(source, functionName, firstDatabaseRea
 
   const functionPreamble = source.slice(functionStart, guard);
   assert.doesNotMatch(functionPreamble, /\b(?:await|db\.|confirmPayDunyaInvoice\()/);
+}
+
+function runVercelBuildDispatcher(vercelEnvironment) {
+  const environment = {
+    ...process.env,
+    VERCEL_BUILD_DISPATCH_TEST: "fake-npm",
+    npm_execpath: fileURLToPath(import.meta.url),
+  };
+  if (vercelEnvironment) environment.VERCEL_ENV = vercelEnvironment;
+  else delete environment.VERCEL_ENV;
+
+  return spawnSync(process.execPath, [fileURLToPath(new URL("./run-vercel-build.mjs", import.meta.url))], {
+    encoding: "utf8",
+    env: environment,
+  });
+}
+
+function assertVercelBuildTarget(vercelEnvironment, expectedTarget) {
+  const result = runVercelBuildDispatcher(vercelEnvironment);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, new RegExp(`FAKE_NPM_TARGET=run:${expectedTarget}`));
+}
+
+function assertVercelBuildRejected(vercelEnvironment) {
+  const result = runVercelBuildDispatcher(vercelEnvironment);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Unsupported VERCEL_ENV/);
+  assert.doesNotMatch(result.stdout, /FAKE_NPM_TARGET=/);
 }
