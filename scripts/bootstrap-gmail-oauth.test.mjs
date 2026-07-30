@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { EventEmitter, once } from "node:events";
 import fs from "node:fs";
 import { createServer } from "node:net";
+import { PassThrough } from "node:stream";
 import test from "node:test";
 
 import {
   buildAuthorizationUrl,
+  buildVercelCliInvocation,
   buildVercelEnvironmentRequest,
   createPkcePair,
   installRefreshTokenInVercel,
@@ -13,6 +15,7 @@ import {
   parseLoopbackRedirectUri,
   openSystemBrowser,
   readBootstrapConfiguration,
+  runVercelCliRequest,
   startAuthorizationCallback,
   validateAuthorizationResult,
   validateRefreshedAuthorizationResult,
@@ -232,10 +235,10 @@ test("le projet Vercel et la portée Production Sensitive sont verrouillés", ()
   });
 
   const source = fs.readFileSync(new URL("./bootstrap-gmail-oauth.mjs", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /npx\.cmd|runVercelCommand|buildVercelInstallCommandArgs/);
   assert.doesNotMatch(source, /writeFile|appendFile/);
-  assert.match(source, /Authorization:\s*`Bearer \$\{accessToken\}`/);
-  assert.match(source, /JSON\.stringify\(body\)/);
+  assert.doesNotMatch(source, /auth\.json|readVercelAccessToken|VERCEL_API_BASE_URL/);
+  assert.match(source, /const VERCEL_CLI_COMMAND = "vercel"/);
+  assert.match(source, /child\.stdin\?\.end\(serializedBody, "utf8"\)/);
   const loggerCalls = [...source.matchAll(/console\.(?:log|error)\(([\s\S]*?)\);/g)].map(
     (match) => match[1],
   );
@@ -244,27 +247,101 @@ test("le projet Vercel et la portée Production Sensitive sont verrouillés", ()
   }
 });
 
-test("l'installation Vercel est un upsert HTTPS retryable avec le même jeton en mémoire", async () => {
+test("la CLI Vercel est lancée sans shell, secret dans les arguments ni environnement sensible", async () => {
+  const root = process.platform === "win32" ? "C:\\Program Files\\nodejs" : "/opt/node";
+  const nodeExecutable = process.platform === "win32"
+    ? `${root}\\node.exe`
+    : `${root}/bin/node`;
+  const npmExecPath = process.platform === "win32"
+    ? `${root}\\node_modules\\npm\\bin\\npm-cli.js`
+    : `${root}/lib/node_modules/npm/bin/npm-cli.js`;
+  const invocation = buildVercelCliInvocation("/v2/user", {
+    nodeExecutable,
+    npmExecPath,
+  });
+  assert.equal(invocation.executable, nodeExecutable);
+  assert.match(invocation.args[0], /npx-cli\.js$/);
+  assert.ok(invocation.args.includes("--no-install"));
+  assert.ok(invocation.args.includes("vercel"));
+  assert.ok(invocation.args.includes("--raw"));
+  assert.throws(
+    () => buildVercelCliInvocation("https://api.vercel.com/v2/user", {
+      nodeExecutable,
+      npmExecPath,
+    }),
+    /requête Vercel CLI est invalide/,
+  );
+
   const calls = [];
-  const fetchImpl = async (url, init) => {
-    calls.push({ url, init });
+  const child = new EventEmitter();
+  child.stdin = new PassThrough();
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.kill = () => {};
+  let stdinBody = "";
+  child.stdin.on("data", (chunk) => {
+    stdinBody += chunk.toString("utf8");
+  });
+
+  const resultPromise = runVercelCliRequest("/v10/projects/test/env", {
+    method: "POST",
+    body: { key: "GMAIL_REFRESH_TOKEN", value: "gmail-refresh-secret-sentinel" },
+    silent: true,
+    nodeExecutable,
+    npmExecPath,
+    environment: {
+      PATH: process.env.PATH ?? "",
+      APPDATA: "C:\\Users\\test\\AppData\\Roaming",
+      USERPROFILE: "C:\\Users\\test",
+      GMAIL_CLIENT_SECRET: "gmail-client-secret-sentinel",
+      VERCEL_TOKEN: "vercel-token-secret-sentinel",
+      NODE_OPTIONS: "--require secret-sentinel",
+    },
+    spawnImpl(executable, args, options) {
+      calls.push({ executable, args, options });
+      queueMicrotask(() => {
+        child.stdout.end();
+        child.stderr.end();
+        child.emit("close", 0);
+      });
+      return child;
+    },
+    timeoutMs: 2_000,
+  });
+  assert.equal(await resultPromise, null);
+  assert.equal(calls.length, 1);
+  const [call] = calls;
+  assert.equal(call.options.shell, false);
+  assert.deepEqual(call.options.stdio, ["pipe", "pipe", "pipe"]);
+  assert.ok(call.args.includes("--input"));
+  assert.ok(call.args.includes("--silent"));
+  assert.doesNotMatch(JSON.stringify(call.args), /secret-sentinel/);
+  assert.equal(call.options.env.GMAIL_CLIENT_SECRET, undefined);
+  assert.equal(call.options.env.VERCEL_TOKEN, undefined);
+  assert.equal(call.options.env.NODE_OPTIONS, undefined);
+  assert.deepEqual(JSON.parse(stdinBody), {
+    key: "GMAIL_REFRESH_TOKEN",
+    value: "gmail-refresh-secret-sentinel",
+  });
+});
+
+test("l'installation Vercel est un upsert CLI retryable avec le même jeton Gmail en mémoire", async () => {
+  const calls = [];
+  const requestImpl = async (path, options) => {
+    calls.push({ path, options });
     if (calls.length < 3) {
       throw new Error("réseau simulé");
     }
-    return new Response(JSON.stringify({ created: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return null;
   };
 
-  await installRefreshTokenInVercel("refresh-token-value", "vercel-access-token", fetchImpl);
+  await installRefreshTokenInVercel("refresh-token-value", requestImpl);
   assert.equal(calls.length, 3);
   for (const call of calls) {
-    assert.match(call.url, /^https:\/\/api\.vercel\.com\/v10\/projects\/prj_/);
-    assert.equal(call.init.method, "POST");
-    assert.equal(call.init.headers.Authorization, "Bearer vercel-access-token");
-    const body = JSON.parse(call.init.body);
-    assert.deepEqual(body, {
+    assert.match(call.path, /^\/v10\/projects\/prj_/);
+    assert.equal(call.options.method, "POST");
+    assert.equal(call.options.silent, true);
+    assert.deepEqual(call.options.body, {
       key: "GMAIL_REFRESH_TOKEN",
       value: "refresh-token-value",
       type: "sensitive",

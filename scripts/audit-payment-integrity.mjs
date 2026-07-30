@@ -5,10 +5,10 @@ import { PrismaClient } from "@prisma/client";
 const jiti = createJiti(import.meta.url);
 const {
   getExpectedClientPaymentAmount,
-  getVerifiedPayDunyaClientPaymentTransaction,
-  hasCompletedPayDunyaProof,
+  getVerifiedClientPaymentTransaction,
+  hasCompletedClientPaymentProviderProof,
   hasVerifiedClientFunds,
-  hasVerifiedPayDunyaClientPayment,
+  hasVerifiedClientPayment,
   isOperationalBookingStatus,
 } = jiti("../src/lib/payment-security.ts");
 
@@ -40,13 +40,13 @@ const report = {
   paidWithoutVerifiedTransaction: [],
   amountMismatch: [],
   completedWithoutVerifiedAt: [],
-  verifiedStatusWithoutPayDunyaProof: [],
+  verifiedStatusWithoutProviderProof: [],
   operationalStatusWithoutVerifiedFunds: [],
 };
 
 for (const booking of bookings) {
   const expected = getExpectedClientPaymentAmount(booking);
-  const verifiedTx = getVerifiedPayDunyaClientPaymentTransaction(booking);
+  const verifiedTx = getVerifiedClientPaymentTransaction(booking);
 
   if (hasVerifiedClientFunds(booking.paymentStatus) && !verifiedTx) {
     report.paidWithoutVerifiedTransaction.push({
@@ -72,29 +72,45 @@ for (const booking of bookings) {
     });
   }
 
-  if (String(booking.paydunyaStatus || "").toUpperCase() === "COMPLETED" && !booking.paydunyaVerifiedAt) {
+  const paydunyaCompletedWithoutVerifiedAt = String(booking.paydunyaStatus || "").toUpperCase() === "COMPLETED"
+    && !booking.paydunyaVerifiedAt;
+  const providerSuccessWithoutVerifiedAt = ["PAYDUNYA", "JEKO"].includes(booking.paymentProvider ?? "")
+    && String(booking.providerPaymentStatus || "").toUpperCase() === "SUCCESS"
+    && !booking.paymentVerifiedAt;
+  if (paydunyaCompletedWithoutVerifiedAt || providerSuccessWithoutVerifiedAt) {
     report.completedWithoutVerifiedAt.push({
       reference: booking.reference,
       id: booking.id,
-    });
-  }
-
-  if (hasVerifiedClientFunds(booking.paymentStatus) && !hasCompletedPayDunyaProof(booking)) {
-    report.verifiedStatusWithoutPayDunyaProof.push({
-      reference: booking.reference,
-      id: booking.id,
-      paymentStatus: booking.paymentStatus,
+      paymentProvider: booking.paymentProvider,
+      providerPaymentStatus: booking.providerPaymentStatus,
+      paymentVerifiedAt: booking.paymentVerifiedAt,
       paydunyaStatus: booking.paydunyaStatus,
       paydunyaVerifiedAt: booking.paydunyaVerifiedAt,
     });
   }
 
-  if (isOperationalBookingStatus(booking.status) && !booking.isQuoteOnly && !hasVerifiedPayDunyaClientPayment(booking)) {
+  if (hasVerifiedClientFunds(booking.paymentStatus) && !hasCompletedClientPaymentProviderProof(booking)) {
+    report.verifiedStatusWithoutProviderProof.push({
+      reference: booking.reference,
+      id: booking.id,
+      paymentStatus: booking.paymentStatus,
+      paymentProvider: booking.paymentProvider,
+      providerPaymentStatus: booking.providerPaymentStatus,
+      paymentVerifiedAt: booking.paymentVerifiedAt,
+      paydunyaStatus: booking.paydunyaStatus,
+      paydunyaVerifiedAt: booking.paydunyaVerifiedAt,
+    });
+  }
+
+  if (isOperationalBookingStatus(booking.status) && !booking.isQuoteOnly && !hasVerifiedClientPayment(booking)) {
     report.operationalStatusWithoutVerifiedFunds.push({
       reference: booking.reference,
       id: booking.id,
       status: booking.status,
       paymentStatus: booking.paymentStatus,
+      paymentProvider: booking.paymentProvider,
+      providerPaymentStatus: booking.providerPaymentStatus,
+      paymentVerifiedAt: booking.paymentVerifiedAt,
       paydunyaStatus: booking.paydunyaStatus,
       paydunyaVerifiedAt: booking.paydunyaVerifiedAt,
     });

@@ -140,11 +140,23 @@ export async function sendGmailEmail(input: {
 
     const data = await safeJson(response);
     if (response.ok) {
+      const messageId = typeof data?.id === "string" ? data.id.trim() : "";
+      if (!messageId) {
+        return {
+          ok: false,
+          configured: true,
+          message: "Gmail a répondu sans identifiant de message; l'envoi sera réessayé.",
+          externalId: null,
+          retryable: true,
+          ambiguous: true,
+          statusCode: response.status,
+        };
+      }
       return {
         ok: true,
         configured: true,
         message: "Email envoyé par Gmail.",
-        externalId: typeof data?.id === "string" ? data.id : null,
+        externalId: messageId,
         retryable: false,
         ambiguous: false,
         statusCode: response.status,

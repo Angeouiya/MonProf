@@ -14,6 +14,11 @@ const {
   verifyJekoWebhookSignature,
   xofToJekoAmountCents,
 } = jiti("../src/lib/jeko-utils.ts");
+const {
+  getVerifiedClientPaymentTransaction,
+  hasCompletedClientPaymentProviderProof,
+  hasVerifiedClientPayment,
+} = jiti("../src/lib/payment-security.ts");
 
 assert.equal(xofToJekoAmountCents(1), 100);
 assert.equal(xofToJekoAmountCents(10_000), 1_000_000);
@@ -82,6 +87,40 @@ assert.equal(parsedEnvelope.dedupeKey, parsedDirect.dedupeKey);
 assert.equal(isJekoIncomingPaymentType("transfer"), false);
 assert.throws(() => parseJekoWebhookPayload("not-json"), /non JSON/);
 
+const verifiedAt = new Date("2026-07-27T10:00:00.000Z");
+assert.equal(hasCompletedClientPaymentProviderProof({
+  paymentProvider: "JEKO",
+  providerPaymentStatus: "SUCCESS",
+  paymentVerifiedAt: verifiedAt,
+}), true);
+assert.equal(hasCompletedClientPaymentProviderProof({
+  paydunyaStatus: "COMPLETED",
+  paydunyaVerifiedAt: verifiedAt,
+}), true);
+assert.equal(hasCompletedClientPaymentProviderProof({
+  paymentProvider: "JEKO",
+  providerPaymentStatus: "SUCCESS",
+  paymentVerifiedAt: null,
+}), false);
+assert.equal(getVerifiedClientPaymentTransaction({
+  totalClientPays: 10_000,
+  totalPrice: 10_000,
+  transactions: [
+    { type: "CLIENT_PAYMENT", status: "BLOCKED", amount: 9_999 },
+    { type: "CLIENT_PAYMENT", status: "BLOCKED", amount: 10_000 },
+  ],
+})?.amount, 10_000);
+assert.equal(hasVerifiedClientPayment({
+  status: "PENDING_PAYMENT",
+  paymentStatus: "FAILED",
+  totalClientPays: 10_000,
+  totalPrice: 10_000,
+  paymentProvider: "JEKO",
+  providerPaymentStatus: "PENDING",
+  paymentVerifiedAt: null,
+  transactions: [],
+}), false, "an abandoned checkout must never become a verified client payment");
+
 const webhookRoute = readFileSync(
   new URL("../src/app/api/webhooks/jeko/route.ts", import.meta.url),
   "utf8",
@@ -119,6 +158,25 @@ assert.match(recovery, /recoverJekoPaymentRequestByReference/);
 assert.match(recovery, /JEKO_REFERENCE_RECOVERY_PENDING/);
 assert.match(recovery, /recipientType:\s*"ADMIN"/);
 assert.match(recovery, /Aucun nouveau POST/);
+
+const paymentAudit = readFileSync(
+  new URL("./audit-payment-integrity.mjs", import.meta.url),
+  "utf8",
+);
+const paymentQuarantine = readFileSync(
+  new URL("./quarantine-unverified-payments.mjs", import.meta.url),
+  "utf8",
+);
+for (const source of [paymentAudit, paymentQuarantine]) {
+  assert.match(source, /hasCompletedClientPaymentProviderProof/);
+  assert.match(source, /getVerifiedClientPaymentTransaction/);
+  assert.doesNotMatch(source, /hasCompletedPayDunyaProof/);
+  assert.doesNotMatch(source, /getVerifiedPayDunyaClientPaymentTransaction/);
+}
+assert.match(paymentAudit, /verifiedStatusWithoutProviderProof/);
+assert.match(paymentAudit, /hasVerifiedClientPayment\(booking\)/);
+assert.match(paymentQuarantine, /providerPaymentStatus:\s*"REJECTED"/);
+assert.match(paymentQuarantine, /paymentVerifiedAt:\s*null/);
 
 const vercelConfig = JSON.parse(readFileSync(
   new URL("../vercel.json", import.meta.url),

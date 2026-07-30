@@ -5,8 +5,8 @@ import { PrismaClient } from "@prisma/client";
 const jiti = createJiti(import.meta.url);
 const {
   getExpectedClientPaymentAmount,
-  getVerifiedPayDunyaClientPaymentTransaction,
-  hasCompletedPayDunyaProof,
+  getVerifiedClientPaymentTransaction,
+  hasCompletedClientPaymentProviderProof,
   hasVerifiedClientFunds,
   isOperationalBookingStatus,
 } = jiti("../src/lib/payment-security.ts");
@@ -31,21 +31,48 @@ const apply = process.argv.includes("--apply");
 
 function quarantineReason(booking) {
   const expected = getExpectedClientPaymentAmount(booking);
-  const tx = getVerifiedPayDunyaClientPaymentTransaction(booking);
+  const tx = getVerifiedClientPaymentTransaction(booking);
   const anyClientPayment = booking.transactions.find((transaction) => (
     transaction.type === "CLIENT_PAYMENT"
     && hasVerifiedClientFunds(transaction.status)
     && transaction.amount > 0
   ));
   const reasons = [];
-  if (!tx) reasons.push(`aucune transaction client vérifiée >= ${expected} FCFA`);
+  if (!tx) reasons.push(`aucune transaction client vérifiée au montant exact de ${expected} FCFA`);
   if (anyClientPayment && anyClientPayment.amount !== expected) {
     reasons.push(`montant transaction ${anyClientPayment.amount} FCFA différent du total attendu ${expected} FCFA`);
   }
-  if (!hasCompletedPayDunyaProof(booking)) {
-    reasons.push("preuve PayDunya serveur absente ou incomplète");
+  if (!hasCompletedClientPaymentProviderProof(booking)) {
+    reasons.push("preuve serveur PayDunya/Jèko absente ou incomplète");
   }
   return reasons.join("; ");
+}
+
+function providerProofQuarantineData(booking, detail, reason, now) {
+  const genericProviderProof = {
+    providerPaymentStatus: "REJECTED",
+    paymentVerifiedAt: null,
+  };
+  const hasPayDunyaTrace = booking.paymentProvider === "PAYDUNYA"
+    || Boolean(booking.paydunyaToken)
+    || Boolean(booking.paydunyaStatus)
+    || Boolean(booking.paydunyaVerifiedAt);
+
+  if (!hasPayDunyaTrace) return genericProviderProof;
+  return {
+    ...genericProviderProof,
+    paydunyaStatus: "REJECTED",
+    paydunyaVerifiedAt: null,
+    paydunyaReceiptUrl: null,
+    paydunyaFailureReason: detail,
+    paydunyaLastCheckedAt: now,
+    paydunyaLastPayload: JSON.stringify({
+      source: "quarantine-unverified-payments",
+      previousStatus: booking.status,
+      previousPaymentStatus: booking.paymentStatus,
+      reason,
+    }),
+  };
 }
 
 const bookings = await prisma.booking.findMany({
@@ -91,7 +118,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
   const now = new Date();
   for (const { booking, reason } of suspects) {
     const nextStatus = isOperationalBookingStatus(booking.status) ? "PENDING_PAYMENT" : booking.status;
-    const detail = `Quarantaine anti-faux paiement sur ${booking.reference}: ${reason}. Aucun flux financier ne doit être déclenché sans confirmation PayDunya serveur.`;
+    const detail = `Quarantaine anti-faux paiement sur ${booking.reference}: ${reason}. Aucun flux financier ne doit être déclenché sans confirmation serveur du prestataire de paiement.`;
 
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({
@@ -99,17 +126,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
         data: {
           status: nextStatus,
           paymentStatus: "FAILED",
-          paydunyaStatus: "REJECTED",
-          paydunyaVerifiedAt: null,
-          paydunyaReceiptUrl: null,
-          paydunyaFailureReason: detail,
-          paydunyaLastCheckedAt: now,
-          paydunyaLastPayload: JSON.stringify({
-            source: "quarantine-unverified-payments",
-            previousStatus: booking.status,
-            previousPaymentStatus: booking.paymentStatus,
-            reason,
-          }),
+          ...providerProofQuarantineData(booking, detail, reason, now),
           teacherPaidAmount: 0,
           teacherPaidAt: null,
         },
@@ -148,7 +165,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
       await tx.adminActionLog.create({
         data: {
           adminId: null,
-          action: "Quarantaine paiement sans preuve PayDunya",
+          action: "Quarantaine paiement sans preuve fournisseur",
           entityType: "Booking",
           entityId: booking.id,
           detail,
@@ -160,7 +177,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
   }
 
   for (const { booking, reason } of operationalArtifactsWithoutProof) {
-    const detail = `Désactivation opérationnelle anti-faux paiement sur ${booking.reference}: ${reason}. Aucune tâche ou mission professeur ne doit rester active sans confirmation PayDunya serveur.`;
+    const detail = `Désactivation opérationnelle anti-faux paiement sur ${booking.reference}: ${reason}. Aucune tâche ou mission professeur ne doit rester active sans confirmation serveur du prestataire de paiement.`;
 
     await prisma.$transaction(async (tx) => {
       await tx.teacherTask.updateMany({
@@ -199,7 +216,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
       await tx.notification.create({
         data: {
           userId: null,
-          title: "Mission professeur désactivée sans PayDunya",
+          title: "Mission professeur désactivée sans preuve fournisseur",
           message: detail,
           type: "PAYMENT_VERIFICATION_FAILED",
           recipientType: "ADMIN",
@@ -218,7 +235,7 @@ if (apply && (suspects.length > 0 || operationalArtifactsWithoutProof.length > 0
       await tx.adminActionLog.create({
         data: {
           adminId: null,
-          action: "Désactivation mission sans preuve PayDunya",
+          action: "Désactivation mission sans preuve fournisseur",
           entityType: "Booking",
           entityId: booking.id,
           detail,

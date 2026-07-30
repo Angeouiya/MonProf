@@ -24,7 +24,7 @@ export default async function AdminAccountPage() {
       <Card className="border-[#E2E8F0] bg-white">
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <Info label="Nom" value={account.name} />
-          <Info label="Email" value={account.email} />
+          <Info label="Email" value={account.email ?? "Non renseigné"} />
           <Info label="Téléphone" value={account.phone || "Non renseigné"} />
           <div><p className="text-xs font-semibold uppercase text-[#64748B]">Rôle</p><Badge variant="outline" className="mt-2 border-[#CBD5E1] bg-white text-[#111B4D]">{ADMIN_ROLE_LABELS[role]}</Badge></div>
           <Info label="Dernière connexion" value={account.adminLastLoginAt ? formatDateTime(account.adminLastLoginAt) : "Non renseignée"} />

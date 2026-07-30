@@ -97,11 +97,17 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       setError("Le nom doit comporter au moins 2 caractères.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    const normalizedEmail = form.email.toLowerCase().trim();
+    const normalizedPhone = form.phone.trim();
+    if (!normalizedEmail && !normalizedPhone) {
+      setError("Renseignez au moins une adresse email ou un numéro de téléphone.");
+      return;
+    }
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("Adresse email invalide.");
       return;
     }
-    if (form.phone && form.phone.replace(/\s/g, "").length < 8) {
+    if (normalizedPhone && normalizedPhone.replace(/\D/g, "").length < 8) {
       setError("Numéro de téléphone invalide.");
       return;
     }
@@ -125,8 +131,8 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
-          email: form.email.toLowerCase().trim(),
-          phone: form.phone.trim() || undefined,
+          email: normalizedEmail || undefined,
+          phone: normalizedPhone || undefined,
           password: form.password,
           commune: commune || undefined,
           quartier: form.quartier.trim() || undefined,
@@ -139,7 +145,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       }
 
       const signed = await signIn("credentials", {
-        email: form.email.toLowerCase().trim(),
+        email: normalizedEmail || normalizedPhone,
         password: form.password,
         redirect: false,
       });
@@ -250,7 +256,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="email" className="font-semibold text-[#111827]">
-                    Email <span className="text-destructive">*</span>
+                    Email <span className="text-xs font-medium text-[#64748B]">(recommandé)</span>
                   </Label>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
@@ -258,7 +264,6 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                       id="email"
                       type="email"
                       autoComplete="email"
-                      required
                       value={form.email}
                       onChange={(e) => update("email", e.target.value)}
                       placeholder="vous@exemple.ci"
@@ -281,6 +286,9 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                   </div>
                 </div>
               </div>
+              <p className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
+                Renseignez au moins l'un des deux. Avec un email, la réinitialisation est automatique par lien. Sans email, le service client vous aidera après vérification de votre numéro.
+              </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">

@@ -1,8 +1,10 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import {
   flushPasswordEmailOutbox,
+  requestPasswordResetAssistanceByPhone,
   requestPasswordResetEmail,
 } from "@/lib/password-email-outbox";
+import { normalizeAccountPhone } from "@/lib/account-phone";
 import { getPublicAppOrigin } from "@/lib/public-url";
 
 export const maxDuration = 30;
@@ -11,12 +13,29 @@ const GENERIC_RESPONSE = {
   ok: true,
   message: "Si un compte Compétence existe avec cet email, un lien de réinitialisation sera envoyé.",
 };
+const GENERIC_PHONE_RESPONSE = {
+  ok: true,
+  message: "Si un compte client sans email correspond à ce numéro, le service client recevra la demande d'assistance.",
+};
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const email = typeof body.email === "string" ? body.email.toLowerCase().trim() : "";
+  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+
+  if (!email && phone) {
+    if (!normalizeAccountPhone(phone)) {
+      return NextResponse.json({ error: "Numéro de téléphone invalide." }, { status: 400 });
+    }
+    await requestPasswordResetAssistanceByPhone({
+      phone,
+      clientIdentifier: getClientIdentifier(req),
+    });
+    return NextResponse.json(GENERIC_PHONE_RESPONSE);
+  }
+
   if (!email || !email.includes("@")) {
-    return NextResponse.json({ error: "Adresse email invalide." }, { status: 400 });
+    return NextResponse.json({ error: "Adresse email ou téléphone invalide." }, { status: 400 });
   }
 
   const request = await requestPasswordResetEmail({

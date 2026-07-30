@@ -19,7 +19,12 @@ import Link from "next/link";
 import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
 import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { disputeStatusLabel } from "@/lib/platform-labels";
-import { hasVerifiedClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import {
+  hasVerifiedClientPayment,
+  OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT,
+  verifiedClientPaymentBookingWhere,
+  verifiedPayDunyaBookingWhere,
+} from "@/lib/payment-security";
 import { buildPlatformFinancialSummary, providerFeeFinancialFields } from "@/lib/financial-summary";
 import { hasAdminPermission } from "@/lib/admin-permissions";
 
@@ -56,7 +61,7 @@ export default async function AdminDashboard() {
     activeTeachers,
     newBookings7d,
     paidBookings,
-    todayBookings,
+    todayBookingRows,
     blockedFundsAgg,
     toReleaseAgg,
     openDisputes,
@@ -84,7 +89,27 @@ export default async function AdminDashboard() {
     db.booking.count({
       where: verifiedPayDunyaBookingWhere({ status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } }),
     }),
-    db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24*60*60*1000) } } }),
+    db.booking.findMany({
+      where: verifiedClientPaymentBookingWhere({
+        status: { in: [...OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT] },
+        scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) },
+      }),
+      select: {
+        status: true,
+        paymentStatus: true,
+        totalClientPays: true,
+        totalPrice: true,
+        paydunyaStatus: true,
+        paydunyaVerifiedAt: true,
+        paymentProvider: true,
+        providerPaymentStatus: true,
+        paymentVerifiedAt: true,
+        transactions: {
+          where: { type: "CLIENT_PAYMENT" },
+          select: { type: true, status: true, amount: true },
+        },
+      },
+    }),
     db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
@@ -250,6 +275,7 @@ export default async function AdminDashboard() {
     }),
   ]);
 
+  const todayBookings = todayBookingRows.filter(hasVerifiedClientPayment).length;
   const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
   const notificationBookingIds = Array.from(new Set(adminNotifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
   const notificationTeachers = notificationTeacherIds.length

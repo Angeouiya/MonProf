@@ -38,6 +38,7 @@ export default async function AdminTeamPage() {
         currentAdminId={current.id}
         admins={admins.map((admin) => ({
           ...admin,
+          email: admin.email ?? "Non renseigné",
           adminTeamRole: admin.adminTeamRole || "SUPER_ADMIN",
           adminAccountStatus: admin.adminAccountStatus || "ACTIVE",
           adminPermissions: resolveAdminPermissions(admin),

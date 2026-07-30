@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
-import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import {
+  hasVerifiedClientPayment,
+  hasVerifiedPayDunyaClientPayment,
+  OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT,
+  verifiedClientPaymentBookingWhere,
+  verifiedPayDunyaBookingWhere,
+} from "@/lib/payment-security";
 import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 
 export async function GET() {
@@ -36,7 +42,7 @@ export async function GET() {
     totalTeachers,
     activeTeachers,
     newBookings7d,
-    todayBookings,
+    todayBookingRows,
     paidBookingRows,
     blockedFundRows,
     toReleaseRows,
@@ -52,7 +58,13 @@ export async function GET() {
     db.teacher.count(),
     db.teacher.count({ where: { status: "ACTIVE" } }),
     db.booking.count({ where: { createdAt: { gte: start7d } } }),
-    db.booking.count({ where: { scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) } } }),
+    db.booking.findMany({
+      where: verifiedClientPaymentBookingWhere({
+        status: { in: [...OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT] },
+        scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) },
+      }),
+      include: paymentProofInclude,
+    }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({ status: { in: [...paidOperationalStatuses] as any } }),
       include: paymentProofInclude,
@@ -94,6 +106,7 @@ export async function GET() {
     }),
     db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
+  const todayBookings = todayBookingRows.filter(hasVerifiedClientPayment).length;
   const paidBookings = paidBookingRows.filter(hasVerifiedPayDunyaClientPayment).length;
   const blockedFunds = blockedFundRows.filter(hasVerifiedPayDunyaClientPayment).reduce((sum, booking) => sum + booking.totalClientPays, 0);
   const strictToReleaseRows = toReleaseRows.filter((booking) => hasVerifiedPayDunyaClientPayment(booking) && isTeacherPayableStatus(booking));

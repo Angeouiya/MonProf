@@ -1,9 +1,14 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
+import { getNextAuthSecret } from "@/lib/auth-secret";
 import { canTeacherUsePortal, normalizeTeacherPhone } from "@/lib/teacher-portal";
+import {
+  isEmailAccountIdentifier,
+  normalizeAccountEmail,
+  normalizeAccountPhone,
+} from "@/lib/account-phone";
 import {
   isActiveAdminAccount,
   normalizeAdminRole,
@@ -11,26 +16,9 @@ import {
 } from "@/lib/admin-permissions";
 import { isCurrentSessionVersion } from "@/lib/session-revocation";
 
-const DEV_NEXTAUTH_SECRET = "monprof-ci-dev-secret-change-me";
-const UNSAFE_NEXTAUTH_SECRETS = new Set(["", "change-me", DEV_NEXTAUTH_SECRET]);
-let ephemeralProductionSecret: string | null = null;
-
-function getNextAuthSecret() {
-  const configuredSecret = process.env.NEXTAUTH_SECRET?.trim() ?? "";
-  if (!UNSAFE_NEXTAUTH_SECRETS.has(configuredSecret)) return configuredSecret;
-
-  if (process.env.NODE_ENV === "production") {
-    if (!ephemeralProductionSecret) {
-      ephemeralProductionSecret = randomBytes(32).toString("hex");
-      console.error(
-        "[security] NEXTAUTH_SECRET is missing or unsafe. Set a strong stable NEXTAUTH_SECRET in production environment variables.",
-      );
-    }
-    return ephemeralProductionSecret;
-  }
-
-  return DEV_NEXTAUTH_SECRET;
-}
+// Même coût bcrypt pour un identifiant absent ou non autorisé afin de ne pas
+// révéler par le temps de réponse si un email ou un téléphone est enregistré.
+const DUMMY_PASSWORD_HASH = "$2b$12$Zit1ny6PYbY/3pK30skDi.b3iiR3ko3dVwMH7jhP6xAh0MfeabUkG";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -38,18 +26,58 @@ export const authOptions: NextAuthOptions = {
       id: "credentials",
       name: "credentials",
       credentials: {
+        identifier: { label: "Email ou téléphone", type: "text" },
         email: { label: "Email", type: "email" },
+        phone: { label: "Téléphone", type: "tel" },
         password: { label: "Mot de passe", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        const user = await db.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
-        });
-        if (!user) return null;
-        if (user.role === "ADMIN" && !isActiveAdminAccount(user)) return null;
-        const ok = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!ok) return null;
+        const identifier = credentials?.identifier || credentials?.email || credentials?.phone || "";
+        if (!identifier || !credentials?.password) return null;
+        const emailLogin = isEmailAccountIdentifier(identifier);
+        const email = emailLogin ? normalizeAccountEmail(identifier) : null;
+        const phoneNormalized = emailLogin ? null : normalizeAccountPhone(identifier);
+        if (!email && !phoneNormalized) {
+          await bcrypt.compare(credentials.password, DUMMY_PASSWORD_HASH);
+          return null;
+        }
+
+        const user = email
+          ? await db.user.findUnique({ where: { email } })
+          : await db.user.findUnique({ where: { phoneNormalized: phoneNormalized! } });
+        const accountAllowed = Boolean(
+          user
+          // Un compte administrateur ne peut jamais contourner l'identifiant email.
+          && !(user.role === "ADMIN" && !emailLogin)
+          && !(user.role === "ADMIN" && !isActiveAdminAccount(user)),
+        );
+        const ok = await bcrypt.compare(
+          credentials.password,
+          accountAllowed && user ? user.passwordHash : DUMMY_PASSWORD_HASH,
+        );
+        if (!user || !accountAllowed || !ok) return null;
+
+        let sessionVersion = user.sessionVersion;
+        if (user.role === "CLIENT" && user.passwordMustChange) {
+          // Le mot de passe temporaire est consommé atomiquement à la première
+          // connexion. La session gagnante reste limitée au changement forcé;
+          // toute autre tentative avec le même secret est refusée.
+          if (!user.temporaryPasswordIssuedAt) return null;
+          const claimed = await db.user.updateMany({
+            where: {
+              id: user.id,
+              role: "CLIENT",
+              passwordMustChange: true,
+              temporaryPasswordIssuedAt: user.temporaryPasswordIssuedAt,
+            },
+            data: {
+              temporaryPasswordIssuedAt: null,
+              sessionVersion: { increment: 1 },
+            },
+          });
+          if (claimed.count !== 1) return null;
+          sessionVersion += 1;
+        }
         if (user.role === "ADMIN") {
           await db.user.update({
             where: { id: user.id },
@@ -58,13 +86,15 @@ export const authOptions: NextAuthOptions = {
         }
         return {
           id: user.id,
-          email: user.email,
+          email: user.email ?? undefined,
           name: user.name,
+          phone: user.phone,
           role: user.role,
+          passwordMustChange: user.role === "CLIENT" && user.passwordMustChange,
           adminTeamRole: user.role === "ADMIN" ? normalizeAdminRole(user.adminTeamRole) : null,
           adminPermissions: user.role === "ADMIN" ? resolveAdminPermissions(user) : [],
           adminAccountStatus: user.adminAccountStatus,
-          sessionVersion: user.sessionVersion,
+          sessionVersion,
         } as any;
       },
     }),
@@ -77,17 +107,25 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         const normalizedPhone = normalizeTeacherPhone(credentials?.phone);
-        if (!normalizedPhone || !credentials?.password) return null;
+        if (!credentials?.password) return null;
+        if (!normalizedPhone) {
+          await bcrypt.compare(credentials.password, DUMMY_PASSWORD_HASH);
+          return null;
+        }
 
         const teacher = await db.teacher.findFirst({
           where: {
             portalPhone: normalizedPhone,
           },
         });
-        if (!teacher || !canTeacherUsePortal(teacher)) return null;
-
-        const ok = await bcrypt.compare(credentials.password, teacher.portalPasswordHash!);
-        if (!ok) return null;
+        const portalAllowed = Boolean(teacher && canTeacherUsePortal(teacher));
+        const ok = await bcrypt.compare(
+          credentials.password,
+          portalAllowed && teacher?.portalPasswordHash
+            ? teacher.portalPasswordHash
+            : DUMMY_PASSWORD_HASH,
+        );
+        if (!teacher || !portalAllowed || !ok) return null;
 
         await db.teacher.update({
           where: { id: teacher.id },
@@ -118,6 +156,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.teacherId = (user as any).teacherId;
         token.phone = (user as any).phone;
+        token.passwordMustChange = (user as any).passwordMustChange;
         token.portalPasswordMustChange = (user as any).portalPasswordMustChange;
         token.adminTeamRole = (user as any).adminTeamRole;
         token.adminPermissions = (user as any).adminPermissions;
@@ -140,6 +179,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role = token.role;
         (session.user as any).teacherId = token.teacherId;
         (session.user as any).phone = token.phone;
+        (session.user as any).passwordMustChange = token.passwordMustChange;
         (session.user as any).portalPasswordMustChange = token.portalPasswordMustChange;
         (session.user as any).adminTeamRole = token.adminTeamRole;
         (session.user as any).adminPermissions = token.adminPermissions;

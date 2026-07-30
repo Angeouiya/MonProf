@@ -8,6 +8,18 @@ export function getPublicAppOrigin(req?: NextRequest) {
     if (previewOrigin) return previewOrigin;
   }
 
+  // Un candidat construit avec `vercel deploy --prod --skip-domain` est bien
+  // en VERCEL_ENV=production, mais doit produire ses liens vers son URL de
+  // déploiement pendant la QA. On ne fait confiance à l'origine de la requête
+  // que si elle correspond exactement à VERCEL_URL, fournie par Vercel.
+  if (process.env.VERCEL_ENV === "production" && req) {
+    const requestOrigin = normalizePublicOrigin(req.nextUrl.origin);
+    const deploymentOrigin = normalizeVercelOrigin(process.env.VERCEL_URL);
+    if (requestOrigin && deploymentOrigin && requestOrigin === deploymentOrigin) {
+      return deploymentOrigin;
+    }
+  }
+
   if (process.env.NODE_ENV !== "production" && req) {
     const requestOrigin = normalizePublicOrigin(req.nextUrl.origin, true);
     if (requestOrigin) return requestOrigin;

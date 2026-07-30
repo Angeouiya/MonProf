@@ -6,6 +6,7 @@ import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-p
 import {
   enqueuePasswordChangedEmailInTransaction,
   flushPasswordEmailOutbox,
+  supersedeActivePasswordResetEmailsInTransaction,
 } from "@/lib/password-email-outbox";
 import { absoluteAppUrl } from "@/lib/public-url";
 
@@ -66,6 +67,8 @@ export async function POST(req: NextRequest) {
         where: { id: resetToken.userId, role: "CLIENT" },
         data: {
           passwordHash,
+          passwordMustChange: false,
+          temporaryPasswordIssuedAt: null,
           sessionVersion: { increment: 1 },
         },
       });
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
         },
         data: { usedAt: now },
       });
+      await supersedeActivePasswordResetEmailsInTransaction(tx, resetToken.user.email);
       await tx.notification.create({
         data: {
           userId: resetToken.userId,
@@ -131,7 +135,9 @@ export async function POST(req: NextRequest) {
       queued: Boolean(confirmationJobId),
       message: confirmationJobId
         ? "Confirmation email planifiée et prise en charge automatiquement."
-        : "Confirmation email non planifiée; le mot de passe a bien été modifié.",
+        : resetToken.user.email
+          ? "Confirmation email non planifiée; le mot de passe a bien été modifié."
+          : "Mot de passe modifié. Aucun email de confirmation n'est associé à ce compte.",
     },
     redirectTo: "/connexion",
   });

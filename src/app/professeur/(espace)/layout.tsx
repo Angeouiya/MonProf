@@ -29,8 +29,17 @@ export default async function ProfesseurProtectedLayout({ children }: { children
           'DISPUTED', 'REFUND_PENDING', 'PARTIAL_REFUND_PENDING',
           'PARTIALLY_REFUNDED', 'REFUNDED', 'RETAINED'
         )
-        AND b."paydunyaStatus" = 'COMPLETED'
-        AND b."paydunyaVerifiedAt" IS NOT NULL
+        AND (
+          (
+            b."paydunyaStatus" = 'COMPLETED'
+            AND b."paydunyaVerifiedAt" IS NOT NULL
+          )
+          OR (
+            b."paymentProvider" = 'JEKO'
+            AND b."providerPaymentStatus" = 'SUCCESS'
+            AND b."paymentVerifiedAt" IS NOT NULL
+          )
+        )
         AND EXISTS (
           SELECT 1
           FROM competence."Transaction" tr
@@ -41,6 +50,10 @@ export default async function ProfesseurProtectedLayout({ children }: { children
               'DISPUTED', 'REFUND_PENDING', 'PARTIAL_REFUND_PENDING',
               'PARTIALLY_REFUNDED', 'REFUNDED', 'RETAINED'
             )
+            AND tr."amount" = CASE
+              WHEN b."totalClientPays" > 0 THEN b."totalClientPays"
+              ELSE b."totalPrice"
+            END
             AND tr."amount" > 0
         )
     )

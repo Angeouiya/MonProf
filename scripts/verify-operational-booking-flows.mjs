@@ -3,6 +3,10 @@ import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url);
 const {
+  hasVerifiedClientPayment,
+  isOperationalBookingStatus,
+} = jiti("../src/lib/payment-security.ts");
+const {
   isReschedulableBookingSessionStatus,
   resolveBookingScheduleSummary,
   resolveRescheduleSessionTarget,
@@ -11,6 +15,8 @@ const {
 const checks = [];
 
 const missionRoute = read("src/app/api/mission/[token]/route.ts");
+const adminDashboard = read("src/app/admin/page.tsx");
+const adminStatsRoute = read("src/app/api/admin/stats/route.ts");
 const bookingApi = read("src/app/api/bookings/[id]/route.ts");
 const reschedulePolicy = read("src/lib/reschedule-policy.ts");
 const rescheduleSessionTarget = read("src/lib/reschedule-session-target.ts");
@@ -22,6 +28,7 @@ const professorRescheduleRoute = read("src/app/api/professor/reschedule-requests
 const adminTeacherPage = read("src/app/admin/professeurs/[id]/page.tsx");
 const adminTeacherPayoutClient = read("src/app/admin/professeurs/[id]/teacher-payout-client.tsx");
 const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.tsx");
+const professorProtectedLayout = read("src/app/professeur/(espace)/layout.tsx");
 const bookingCreateApi = read("src/app/api/bookings/route.ts");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const pricingEngine = read("src/lib/pricing.ts");
@@ -256,6 +263,22 @@ record(
     && /createRescheduleAwaitingTeacherNotifications/.test(jekoRescheduleReconciliation)
     && /status:\s*"AWAITING_TEACHER"/.test(jekoRescheduleReconciliation)
     && /if\s*\(!alreadyPaid\)\s*\{[\s\S]*?createRescheduleAwaitingTeacherNotifications/.test(rescheduleReconciliation),
+);
+
+record(
+  "Admin daily bookings KPI excludes unpaid drafts and requires exact verified funds",
+  verifyAdminTodayBookingsScenarios()
+    && /todayBookingRows[\s\S]*?where:\s*verifiedClientPaymentBookingWhere\(\{[\s\S]*?status:\s*\{\s*in:\s*\[\.\.\.OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT\]/.test(adminDashboard)
+    && /const todayBookings\s*=\s*todayBookingRows\.filter\(hasVerifiedClientPayment\)\.length/.test(adminDashboard)
+    && /todayBookingRows[\s\S]*?where:\s*verifiedClientPaymentBookingWhere\(\{[\s\S]*?status:\s*\{\s*in:\s*\[\.\.\.OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT\]/.test(adminStatsRoute)
+    && /const todayBookings\s*=\s*todayBookingRows\.filter\(hasVerifiedClientPayment\)\.length/.test(adminStatsRoute),
+);
+
+record(
+  "Professor mission badges require the shared strong PayDunya or Jeko payment proof",
+  /b\."paydunyaStatus"\s*=\s*'COMPLETED'[\s\S]*?b\."paydunyaVerifiedAt"\s+IS NOT NULL[\s\S]*?OR\s*\([\s\S]*?b\."paymentProvider"\s*=\s*'JEKO'[\s\S]*?b\."providerPaymentStatus"\s*=\s*'SUCCESS'[\s\S]*?b\."paymentVerifiedAt"\s+IS NOT NULL/.test(professorProtectedLayout)
+    && /tr\."type"\s*=\s*'CLIENT_PAYMENT'[\s\S]*?tr\."amount"\s*=\s*CASE[\s\S]*?b\."totalClientPays"\s*>\s*0[\s\S]*?THEN b\."totalClientPays"[\s\S]*?ELSE b\."totalPrice"[\s\S]*?END[\s\S]*?tr\."amount"\s*>\s*0/.test(professorProtectedLayout)
+    && /ml\."bookingId"\s+IN\s*\(SELECT "id" FROM verified_bookings\)/.test(professorProtectedLayout),
 );
 
 record(
@@ -498,6 +521,47 @@ function read(filePath) {
 
 function record(label, ok) {
   checks.push({ label, ok });
+}
+
+function verifyAdminTodayBookingsScenarios() {
+  const verifiedOperationalBooking = {
+    status: "CONFIRMED",
+    paymentStatus: "BLOCKED",
+    totalClientPays: 20_000,
+    totalPrice: 20_000,
+    paymentProvider: "JEKO",
+    providerPaymentStatus: "SUCCESS",
+    paymentVerifiedAt: new Date("2026-07-29T10:00:00.000Z"),
+    transactions: [{ type: "CLIENT_PAYMENT", status: "BLOCKED", amount: 20_000 }],
+  };
+  const candidates = [
+    verifiedOperationalBooking,
+    {
+      ...verifiedOperationalBooking,
+      status: "PENDING_PAYMENT",
+      paymentStatus: "FAILED",
+      providerPaymentStatus: "PENDING",
+      paymentVerifiedAt: null,
+      transactions: [],
+    },
+    {
+      ...verifiedOperationalBooking,
+      transactions: [{ type: "CLIENT_PAYMENT", status: "BLOCKED", amount: 19_999 }],
+    },
+    {
+      ...verifiedOperationalBooking,
+      status: "CANCELLED",
+    },
+    {
+      ...verifiedOperationalBooking,
+      transactions: [],
+    },
+  ];
+
+  return candidates.filter((booking) => (
+    isOperationalBookingStatus(booking.status)
+    && hasVerifiedClientPayment(booking)
+  )).length === 1;
 }
 
 function verifyRescheduleSessionTargetScenarios() {

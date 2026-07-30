@@ -98,6 +98,16 @@ checkDirectoryContainsSql("20260728110000_reschedule_refund_active_guard", [
   'HAVING COUNT(*) > 1',
   'RAISE EXCEPTION',
 ]);
+checkDirectoryContainsSql("20260730000000_client_assisted_password_recovery", [
+  'ALTER COLUMN "email" DROP NOT NULL',
+  'ADD COLUMN "phoneNormalized" TEXT',
+  'ADD COLUMN "passwordMustChange" BOOLEAN NOT NULL DEFAULT false',
+  'ADD COLUMN "temporaryPasswordIssuedAt" TIMESTAMP(3)',
+  'count(*) OVER (PARTITION BY normalized)',
+  'ranked.duplicate_count = 1',
+  'CREATE UNIQUE INDEX "User_phoneNormalized_key"',
+  'User_recovery_identifier_check',
+]);
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const deployScript = packageJson.scripts?.["db:deploy"] ?? "";

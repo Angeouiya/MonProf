@@ -4,8 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { homedir } from "node:os";
-import { join, resolve, win32 } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve, win32 } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { normalizeGoogleScopes } from "./verify-gmail-live.mjs";
@@ -13,7 +12,6 @@ import { normalizeGoogleScopes } from "./verify-gmail-live.mjs";
 const GOOGLE_AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
-const VERCEL_API_BASE_URL = "https://api.vercel.com";
 const EXPECTED_SENDER_EMAIL = "diplomateimmobilier99@gmail.com";
 const EXPECTED_VERCEL_PROJECT = Object.freeze({
   id: "prj_nlK5X4JHHxBUz9KO5p7cLJoOli7n",
@@ -23,14 +21,16 @@ const EXPECTED_VERCEL_PROJECT = Object.freeze({
 const DEFAULT_REDIRECT_URI = "http://127.0.0.1:53682/oauth2/callback";
 const AUTHORIZATION_TIMEOUT_MS = 5 * 60_000;
 const GOOGLE_REQUEST_TIMEOUT_MS = 10_000;
-const VERCEL_REQUEST_TIMEOUT_MS = 15_000;
+const VERCEL_CLI_TIMEOUT_MS = 2 * 60_000;
+const VERCEL_CLI_COMMAND = "vercel";
+const VERCEL_CLI_OUTPUT_LIMIT_BYTES = 128 * 1024;
 const REQUIRED_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/gmail.send",
 ];
 const REQUIRED_NORMALIZED_SCOPES = new Set(REQUIRED_SCOPES);
-const SAFE_BROWSER_ENVIRONMENT_KEYS = new Set([
+const SAFE_CHILD_ENVIRONMENT_KEYS = new Set([
   "APPDATA",
   "COMSPEC",
   "DBUS_SESSION_BUS_ADDRESS",
@@ -261,7 +261,7 @@ async function main() {
   }
 
   const configuration = readBootstrapConfiguration();
-  const vercelAuthorization = await prepareVercelAuthorization();
+  await prepareVercelAuthorization();
 
   const state = randomBytes(32).toString("base64url");
   const pkce = createPkcePair();
@@ -306,10 +306,7 @@ async function main() {
     configuration.senderEmail,
   );
 
-  await installRefreshTokenInVercel(
-    authorization.refreshToken,
-    vercelAuthorization.accessToken,
-  );
+  await installRefreshTokenInVercel(authorization.refreshToken);
   console.log(
     "Autorisation Gmail validée et GMAIL_REFRESH_TOKEN remplacé dans Vercel Production sans affichage du jeton.",
   );
@@ -513,10 +510,9 @@ async function prepareVercelAuthorization() {
   }
   validateVercelProjectLink(projectLink);
 
-  const accessToken = await readVercelAccessToken();
-  const project = await vercelApiRequest(
+  const project = await runVercelCliRequest(
     `/v9/projects/${EXPECTED_VERCEL_PROJECT.id}?teamId=${EXPECTED_VERCEL_PROJECT.orgId}`,
-    { accessToken, method: "GET" },
+    { method: "GET" },
   );
   if (
     project?.id !== EXPECTED_VERCEL_PROJECT.id
@@ -527,56 +523,20 @@ async function prepareVercelAuthorization() {
       "La session Vercel ne confirme pas exactement le projet ouiya-tech/competence attendu.",
     );
   }
-  return { accessToken };
-}
-
-async function readVercelAccessToken(environment = process.env) {
-  const explicitToken = environment.VERCEL_TOKEN?.trim() ?? "";
-  if (explicitToken) return validateVercelAccessToken(explicitToken);
-
-  const userProfile = environment.USERPROFILE || homedir();
-  const candidates = [
-    ...(environment.APPDATA
-      ? [join(environment.APPDATA, "com.vercel.cli", "Data", "auth.json")]
-      : []),
-    join(userProfile, ".vercel", "auth.json"),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const data = JSON.parse(await readFile(candidate, "utf8"));
-      if (typeof data?.token === "string" && data.token.trim()) {
-        return validateVercelAccessToken(data.token.trim());
-      }
-    } catch {
-      // Continue vers l'emplacement Vercel suivant sans afficher son contenu.
-    }
-  }
-  throw new SafeBootstrapError(
-    "La session Vercel n'est pas disponible. Exécutez d'abord npx vercel login, puis relancez cette commande.",
-  );
-}
-
-function validateVercelAccessToken(value) {
-  if (value.length < 20 || value.length > 4096 || /[\r\n\0]/.test(value)) {
-    throw new SafeBootstrapError("Le jeton de session Vercel local est invalide.");
-  }
-  return value;
 }
 
 export async function installRefreshTokenInVercel(
   refreshToken,
-  accessToken,
-  fetchImpl = fetch,
+  requestImpl = runVercelCliRequest,
 ) {
   const request = buildVercelEnvironmentRequest(refreshToken);
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      await vercelApiRequest(request.path, {
-        accessToken,
+      await requestImpl(request.path, {
         method: "POST",
         body: request.body,
-        fetchImpl,
+        silent: true,
       });
       return;
     } catch (error) {
@@ -590,33 +550,153 @@ export async function installRefreshTokenInVercel(
     );
 }
 
-async function vercelApiRequest(path, { accessToken, method, body, fetchImpl = fetch }) {
-  let response;
-  try {
-    response = await fetchImpl(`${VERCEL_API_BASE_URL}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(VERCEL_REQUEST_TIMEOUT_MS),
+export function buildVercelCliInvocation(
+  path,
+  {
+    method = "GET",
+    hasBody = false,
+    silent = false,
+    nodeExecutable = process.execPath,
+    npmExecPath = process.env.npm_execpath,
+  } = {},
+) {
+  const normalizedMethod = typeof method === "string" ? method.trim().toUpperCase() : "";
+  if (
+    typeof path !== "string"
+    || !path.startsWith("/")
+    || /[\r\n\0]/.test(path)
+    || !["GET", "POST"].includes(normalizedMethod)
+  ) {
+    throw new SafeBootstrapError("La requête Vercel CLI est invalide.");
+  }
+
+  const normalizedNodeExecutable = typeof nodeExecutable === "string"
+    ? nodeExecutable.trim()
+    : "";
+  const normalizedNpmExecPath = typeof npmExecPath === "string" ? npmExecPath.trim() : "";
+  if (
+    !normalizedNodeExecutable
+    || !isAbsolute(normalizedNodeExecutable)
+    || /[\r\n\0]/.test(normalizedNodeExecutable)
+    || !normalizedNpmExecPath
+    || !isAbsolute(normalizedNpmExecPath)
+    || basename(normalizedNpmExecPath).toLowerCase() !== "npm-cli.js"
+    || /[\r\n\0]/.test(normalizedNpmExecPath)
+  ) {
+    throw new SafeBootstrapError(
+      "La CLI npm locale est indisponible. Lancez cette autorisation avec npm run gmail:authorize.",
+    );
+  }
+
+  const args = [
+    join(dirname(normalizedNpmExecPath), "npx-cli.js"),
+    "--no-install",
+    VERCEL_CLI_COMMAND,
+    "api",
+    path,
+    "-X",
+    normalizedMethod,
+    "--non-interactive",
+    silent ? "--silent" : "--raw",
+  ];
+  if (hasBody) args.push("--input", "-");
+  return { executable: normalizedNodeExecutable, args };
+}
+
+export async function runVercelCliRequest(
+  path,
+  {
+    method = "GET",
+    body,
+    silent = false,
+    environment = process.env,
+    spawnImpl = spawn,
+    nodeExecutable = process.execPath,
+    npmExecPath = process.env.npm_execpath,
+    timeoutMs = VERCEL_CLI_TIMEOUT_MS,
+  } = {},
+) {
+  const hasBody = body !== undefined;
+  const command = buildVercelCliInvocation(path, {
+    method,
+    hasBody,
+    silent,
+    nodeExecutable,
+    npmExecPath,
+  });
+  const safeEnvironment = buildSafeChildEnvironment(environment);
+  const serializedBody = hasBody ? JSON.stringify(body) : "";
+
+  return new Promise((resolvePromise, rejectPromise) => {
+    let child;
+    try {
+      child = spawnImpl(command.executable, command.args, {
+        cwd: process.cwd(),
+        env: safeEnvironment,
+        shell: false,
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+      });
+    } catch {
+      rejectPromise(new SafeBootstrapError("Impossible de lancer la CLI Vercel authentifiée."));
+      return;
+    }
+
+    let settled = false;
+    let stdout = "";
+    let outputBytes = 0;
+    const timeout = setTimeout(() => {
+      child.kill?.();
+      finish(new SafeBootstrapError("La CLI Vercel n'a pas répondu dans le délai imparti."));
+    }, timeoutMs);
+
+    const consumeOutput = (chunk, capture) => {
+      outputBytes += Buffer.byteLength(chunk);
+      if (outputBytes > VERCEL_CLI_OUTPUT_LIMIT_BYTES) {
+        child.kill?.();
+        finish(new SafeBootstrapError("La réponse de la CLI Vercel est anormalement volumineuse."));
+        return;
+      }
+      if (capture) stdout += chunk.toString("utf8");
+    };
+
+    child.stdout?.on("data", (chunk) => consumeOutput(chunk, !silent));
+    child.stderr?.on("data", (chunk) => consumeOutput(chunk, false));
+    child.once("error", () => {
+      finish(new SafeBootstrapError("Impossible de lancer la CLI Vercel authentifiée."));
     });
-  } catch {
-    throw new SafeBootstrapError(
-      "Vercel n'a pas répondu. Le refresh token reste uniquement en mémoire pour une nouvelle tentative immédiate.",
-    );
-  }
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw new SafeBootstrapError(
-      response.status === 401 || response.status === 403
-        ? "La session Vercel n'est plus autorisée pour ouiya-tech/competence. Exécutez npx vercel login."
-        : `Vercel a refusé l'opération (statut ${safeStatus(response.status)}).`,
-    );
-  }
-  return data;
+    child.once("close", (code) => {
+      if (code !== 0) {
+        finish(
+          new SafeBootstrapError(
+            "La session Vercel n'est plus autorisée pour ouiya-tech/competence. Exécutez npx vercel login.",
+          ),
+        );
+        return;
+      }
+      if (silent) {
+        finish(null, null);
+        return;
+      }
+      try {
+        finish(null, JSON.parse(stdout));
+      } catch {
+        finish(new SafeBootstrapError("La CLI Vercel n'a pas fourni de réponse JSON valide."));
+      }
+    });
+    child.stdin?.once("error", () => {
+      finish(new SafeBootstrapError("La CLI Vercel n'a pas accepté la requête sécurisée."));
+    });
+    child.stdin?.end(serializedBody, "utf8");
+
+    function finish(error, value) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (error) rejectPromise(error);
+      else resolvePromise(value);
+    }
+  });
 }
 
 export function openSystemBrowser(
@@ -628,7 +708,7 @@ export function openSystemBrowser(
   } = {},
 ) {
   const command = buildSystemBrowserCommand(url, platform, environment);
-  const safeEnvironment = buildSafeBrowserEnvironment(environment);
+  const safeEnvironment = buildSafeChildEnvironment(environment);
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawnImpl(command.executable, command.args, {
       detached: true,
@@ -675,11 +755,11 @@ function buildSystemBrowserCommand(url, platform, environment) {
   );
 }
 
-function buildSafeBrowserEnvironment(environment) {
+function buildSafeChildEnvironment(environment) {
   const safeEnvironment = {};
   for (const [key, value] of Object.entries(environment)) {
     if (
-      SAFE_BROWSER_ENVIRONMENT_KEYS.has(key.toUpperCase())
+      SAFE_CHILD_ENVIRONMENT_KEYS.has(key.toUpperCase())
       && typeof value === "string"
       && !/[\r\n\0]/u.test(value)
     ) {

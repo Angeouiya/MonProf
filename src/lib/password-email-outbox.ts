@@ -14,6 +14,8 @@ import {
   passwordEmailIdentifier,
 } from "@/lib/password-email-outbox-crypto";
 import { selectPasswordEmailCandidateBatch } from "@/lib/password-email-candidate-selection";
+import { normalizeAccountPhone } from "@/lib/account-phone";
+import { CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/client-password-assistance";
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 const CONFIRMATION_JOB_TTL_MS = 24 * 60 * 60 * 1000;
@@ -52,6 +54,19 @@ type PasswordChangedEmailPayload = {
 };
 
 type PasswordEmailPayload = ResetEmailPayload | PasswordChangedEmailPayload;
+
+export function isAcceptedPasswordEmailDelivery(input: {
+  ok?: boolean;
+  externalId?: string | null;
+  statusCode?: number | null;
+}): input is { ok: true; externalId: string; statusCode: number } {
+  return input.ok === true
+    && typeof input.externalId === "string"
+    && Boolean(input.externalId.trim())
+    && typeof input.statusCode === "number"
+    && input.statusCode >= 200
+    && input.statusCode < 300;
+}
 
 export async function requestPasswordResetEmail(input: {
   email: string;
@@ -192,9 +207,113 @@ export async function requestPasswordResetEmail(input: {
   return { accepted: false, jobId: null, reused: false };
 }
 
+export async function requestPasswordResetAssistanceByPhone(input: {
+  phone: string;
+  clientIdentifier: string;
+}) {
+  const secret = getOutboxSecret();
+  const phoneNormalized = normalizeAccountPhone(input.phone);
+  if (!secret || !phoneNormalized) {
+    if (!secret) {
+      console.error("[password-reset] NEXTAUTH_SECRET is unavailable for assisted recovery.");
+    }
+    return { accepted: false, notificationId: null as string | null, reused: false };
+  }
+
+  const now = new Date();
+  const accountHash = passwordEmailIdentifier(`account-phone:${phoneNormalized}`, secret);
+  const ipHash = passwordEmailIdentifier(`ip:${input.clientIdentifier}`, secret);
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await db.$transaction(async (tx) => {
+        await tx.passwordResetRequestAudit.deleteMany({
+          where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
+        });
+
+        const windowStart = new Date(now.getTime() - PASSWORD_RESET_REQUEST_WINDOW_MS);
+        const [recentIpRequests, recentAccountRequests] = await Promise.all([
+          tx.passwordResetRequestAudit.count({ where: { ipHash, createdAt: { gte: windowStart } } }),
+          tx.passwordResetRequestAudit.count({ where: { accountHash, createdAt: { gte: windowStart } } }),
+        ]);
+        if (
+          !isPasswordResetIpAllowed(recentIpRequests)
+          || !isPasswordResetRequestAllowed(recentAccountRequests)
+        ) {
+          return { accepted: false, notificationId: null, reused: false };
+        }
+
+        await tx.passwordResetRequestAudit.create({
+          data: {
+            ipHash,
+            accountHash,
+            accountType: "CLIENT_PHONE_ASSISTED",
+          },
+        });
+
+        const target = await tx.user.findUnique({
+          where: { phoneNormalized },
+          select: { id: true, name: true, email: true, phone: true, role: true },
+        });
+        // Le circuit assisté est strictement réservé aux clients qui ne
+        // disposent pas d'email; toute autre situation suit la même réponse
+        // publique mais ne crée aucune notification administrateur.
+        if (!target || target.role !== "CLIENT" || target.email) {
+          return { accepted: true, notificationId: null, reused: false };
+        }
+
+        const existing = await tx.notification.findFirst({
+          where: {
+            type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE,
+            recipientType: "ADMIN",
+            clientId: target.id,
+            read: false,
+            createdAt: { gte: windowStart },
+          },
+          orderBy: { createdAt: "desc" },
+          select: { id: true },
+        });
+        if (existing) {
+          return { accepted: true, notificationId: existing.id, reused: true };
+        }
+
+        const notification = await tx.notification.create({
+          data: {
+            userId: null,
+            title: "Assistance mot de passe client demandée",
+            message: `${target.name} demande une récupération assistée de son compte sans email. Vérifiez son identité par téléphone avant d'attribuer un mot de passe temporaire.`,
+            type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE,
+            recipientType: "ADMIN",
+            channel: "INTERNAL",
+            status: "CREATED",
+            priority: "URGENT",
+            clientId: target.id,
+            sentAt: now,
+            link: `/admin/clients/${target.id}?assistanceMotDePasse=1`,
+            actionLabel: "Vérifier et assister",
+            actionType: "ASSIGN_CLIENT_TEMPORARY_PASSWORD",
+          },
+          select: { id: true },
+        });
+
+        return { accepted: true, notificationId: notification.id, reused: false };
+      }, { isolationLevel: "Serializable" });
+    } catch (error) {
+      if (isRetryableTransactionConflict(error) && attempt < 3) continue;
+      console.error(
+        "[password-reset] Unable to reserve assisted recovery request.",
+        error instanceof Error ? error.message : error,
+      );
+      return { accepted: false, notificationId: null, reused: false };
+    }
+  }
+
+  return { accepted: false, notificationId: null, reused: false };
+}
+
 export type PasswordChangedEmailInput = {
   accountType: PasswordAccountType;
-  email: string;
+  email?: string | null;
   name: string;
   changedAt: Date;
   securityUrl: string;
@@ -215,17 +334,46 @@ export async function enqueuePasswordChangedEmailInTransaction(
   return enqueuePasswordChangedEmailWithClient(tx, input);
 }
 
+export async function supersedeActivePasswordResetEmailsInTransaction(
+  tx: Prisma.TransactionClient,
+  email?: string | null,
+) {
+  const normalizedEmail = email?.toLowerCase().trim() ?? "";
+  const secret = getOutboxSecret();
+  if (!normalizedEmail || !secret) return 0;
+
+  const accountHash = passwordEmailIdentifier(`account:${normalizedEmail}`, secret);
+  const result = await tx.passwordEmailOutbox.updateMany({
+    where: {
+      kind: "PASSWORD_RESET",
+      accountHash,
+      status: { in: ACTIVE_STATUSES },
+    },
+    data: {
+      status: "SUPERSEDED",
+      lockedAt: null,
+      payloadCiphertext: null,
+      payloadIv: null,
+      payloadAuthTag: null,
+      lastError: "Invalidé après la modification réussie du mot de passe du compte.",
+    },
+  });
+  return result.count;
+}
+
 async function enqueuePasswordChangedEmailWithClient(
   client: Prisma.TransactionClient | typeof db,
   input: PasswordChangedEmailInput,
 ) {
+  const normalizedEmail = input.email?.toLowerCase().trim() ?? "";
+  if (!normalizedEmail) return null;
+
   const secret = getOutboxSecret();
   if (!secret) {
     console.error("[password-reset] Confirmation email not queued because NEXTAUTH_SECRET is unavailable.");
     return null;
   }
 
-  const normalizedEmail = input.email.toLowerCase().trim();
   const accountHash = passwordEmailIdentifier(`account:${normalizedEmail}`, secret);
   const routingHash = passwordEmailIdentifier(`password-changed:${input.accountType}:${normalizedEmail}`, secret);
   const dedupeKey = passwordEmailIdentifier(`password-changed:${input.sourceTokenId}`, secret);
@@ -367,25 +515,26 @@ async function expireActivePasswordEmailJobs(now: Date) {
     const total = groups.reduce((sum, group) => sum + Number(group.count), 0);
     if (total === 0) return 0;
 
-    const resetCount = groups
-      .filter((group) => group.kind === "PASSWORD_RESET")
-      .reduce((sum, group) => sum + Number(group.count), 0);
     const changedCount = groups
       .filter((group) => group.kind === "PASSWORD_CHANGED")
       .reduce((sum, group) => sum + Number(group.count), 0);
+    const otherCount = groups
+      .filter((group) => group.kind !== "PASSWORD_RESET" && group.kind !== "PASSWORD_CHANGED")
+      .reduce((sum, group) => sum + Number(group.count), 0);
+    const notifiableCount = changedCount + otherCount;
+    // Les resets client avec email restent entièrement autonomes : même un
+    // échec d'infrastructure ne crée pas de demande de traitement admin.
+    if (notifiableCount === 0) return total;
     const details = [
-      resetCount > 0 ? `${resetCount} réinitialisation(s)` : null,
       changedCount > 0 ? `${changedCount} confirmation(s)` : null,
-      total - resetCount - changedCount > 0
-        ? `${total - resetCount - changedCount} autre(s)`
-        : null,
+      otherCount > 0 ? `${otherCount} autre(s)` : null,
     ].filter(Boolean).join(", ");
 
     await tx.notification.create({
       data: {
         userId: null,
         title: "Emails de sécurité expirés",
-        message: `${total} job(s) d'email de sécurité ont expiré sans confirmation d'envoi (${details}). Les payloads chiffrés ont été supprimés.`,
+        message: `${notifiableCount} job(s) de confirmation de sécurité ont expiré sans confirmation d'envoi (${details}). Les payloads chiffrés ont été supprimés.`,
         type: "PASSWORD_EMAIL_OUTBOX_EXPIRED",
         recipientType: "ADMIN",
         channel: "INTERNAL",
@@ -434,7 +583,7 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
   try {
     if (job.acceptedAt) {
       if (payload.kind === "PASSWORD_RESET") {
-        const finalized = await finalizeResetTokenDelivery(payload);
+        const finalized = await finalizeResetTokenDelivery(job.id, payload);
         if (!finalized) {
           await failPasswordEmailJob(job.id, "Le token accepté n'est plus utilisable.");
           return "failed";
@@ -445,7 +594,7 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
     }
 
     if (payload.kind === "PASSWORD_RESET") {
-      const ready = await prepareResetTokenForDelivery(payload);
+      const ready = await isResetTokenEligibleForDelivery(payload);
       if (!ready) {
         await failPasswordEmailJob(job.id, "Le token de réinitialisation n'est plus utilisable.");
         return "failed";
@@ -468,24 +617,31 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
           accountLabel: payload.accountLabel,
         });
 
-    if (delivery.ok) {
-      await rememberAcceptedDelivery(job.id, delivery.externalId ?? null);
+    if (isAcceptedPasswordEmailDelivery(delivery)) {
+      await rememberAcceptedDelivery(job.id, delivery.externalId);
       if (payload.kind === "PASSWORD_RESET") {
-        const finalized = await finalizeResetTokenDelivery(payload);
+        const finalized = await finalizeResetTokenDelivery(job.id, payload);
         if (!finalized) {
           await failPasswordEmailJob(job.id, "Le token envoyé n'est plus utilisable.");
           return "failed";
         }
       }
-      await completePasswordEmailJob(job.id, delivery.externalId ?? null);
+      await completePasswordEmailJob(job.id, delivery.externalId);
       return "sent";
+    }
+
+    if (delivery.ok) {
+      await rememberAmbiguousDelivery(job.id);
+      await retryPasswordEmailJob(
+        job.id,
+        job.attempts,
+        "Gmail n'a pas fourni une preuve 2xx avec identifiant de message.",
+      );
+      return "retried";
     }
 
     if (delivery.ambiguous) {
       await rememberAmbiguousDelivery(job.id);
-      if (payload.kind === "PASSWORD_RESET") {
-        await finalizeResetTokenDelivery(payload);
-      }
       await retryPasswordEmailJob(job.id, job.attempts, delivery.message);
       return "retried";
     }
@@ -586,38 +742,57 @@ async function claimPasswordEmailJob(jobId: string) {
   }
 }
 
-async function prepareResetTokenForDelivery(payload: ResetEmailPayload) {
+async function isResetTokenEligibleForDelivery(payload: ResetEmailPayload) {
   const now = new Date();
   if (new Date(payload.tokenExpiresAt) <= new Date(now.getTime() + OUTBOX_MIN_DELIVERY_WINDOW_MS)) return false;
-  await db.passwordResetToken.updateMany({
-    where: {
-      id: payload.tokenRecordId,
-      userId: payload.userId,
-      usedAt: null,
-      deliveredAt: null,
-      expiresAt: { gt: now },
-    },
-    data: { deliveredAt: now },
-  });
   const token = await db.passwordResetToken.findUnique({
     where: { id: payload.tokenRecordId },
     select: { userId: true, usedAt: true, deliveredAt: true, expiresAt: true },
   });
-  return Boolean(token && token.userId === payload.userId && !token.usedAt && token.deliveredAt && token.expiresAt > now);
+  return Boolean(
+    token
+    && token.userId === payload.userId
+    && !token.usedAt
+    && !token.deliveredAt
+    && token.expiresAt > now,
+  );
 }
 
-async function finalizeResetTokenDelivery(payload: ResetEmailPayload) {
+async function finalizeResetTokenDelivery(jobId: string, payload: ResetEmailPayload) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       return await db.$transaction(async (tx) => {
         const now = new Date();
+        const acceptedJob = await tx.passwordEmailOutbox.findUnique({
+          where: { id: jobId },
+          select: { kind: true, acceptedAt: true, externalId: true },
+        });
+        if (
+          acceptedJob?.kind !== "PASSWORD_RESET"
+          || !acceptedJob.acceptedAt
+          || !acceptedJob.externalId
+        ) {
+          return false;
+        }
         const current = await tx.passwordResetToken.findUnique({
           where: { id: payload.tokenRecordId },
           select: { userId: true, deliveredAt: true, usedAt: true, expiresAt: true },
         });
         if (!current || current.userId !== payload.userId || current.expiresAt <= now) return false;
-        if (current.usedAt) return true;
-        if (!current.deliveredAt) return false;
+        if (current.usedAt) return Boolean(current.deliveredAt);
+        if (!current.deliveredAt) {
+          const marked = await tx.passwordResetToken.updateMany({
+            where: {
+              id: payload.tokenRecordId,
+              userId: payload.userId,
+              usedAt: null,
+              deliveredAt: null,
+              expiresAt: { gt: now },
+            },
+            data: { deliveredAt: now },
+          });
+          if (marked.count !== 1) return false;
+        }
         await tx.passwordResetToken.updateMany({
           where: {
             userId: payload.userId,
@@ -643,7 +818,7 @@ async function deleteResetToken(payload: ResetEmailPayload) {
   });
 }
 
-async function rememberAcceptedDelivery(jobId: string, externalId: string | null) {
+async function rememberAcceptedDelivery(jobId: string, externalId: string) {
   await db.passwordEmailOutbox.update({
     where: { id: jobId },
     data: { acceptedAt: new Date(), externalId },
@@ -702,6 +877,14 @@ async function failPasswordEmailJob(jobId: string, message: string) {
 }
 
 async function recordTerminalFailure(payload: PasswordEmailPayload, jobId: string, message: string) {
+  if (payload.kind === "PASSWORD_RESET") {
+    console.error(
+      "[password-email-outbox] Client reset email failed without admin escalation.",
+      jobId,
+      sanitizeProviderMessage(message),
+    );
+    return;
+  }
   try {
     await db.notification.create({
       data: {
@@ -732,8 +915,12 @@ async function recordTerminalFailure(payload: PasswordEmailPayload, jobId: strin
 }
 
 async function resolveClientResetTarget(tx: Prisma.TransactionClient, email: string) {
-  const user = await tx.user.findUnique({ where: { email } });
-  return user?.role === "CLIENT" ? user : null;
+  const user = await tx.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, email: true, role: true },
+  });
+  if (!user || user.role !== "CLIENT" || !user.email) return null;
+  return { id: user.id, name: user.name, email: user.email };
 }
 
 function buildClientResetUrl(appOrigin: string, token: string) {

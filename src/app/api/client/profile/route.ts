@@ -8,8 +8,10 @@ import { passwordHashRounds, validatePasswordForAccount } from "@/lib/password-p
 import {
   enqueuePasswordChangedEmailInTransaction,
   flushPasswordEmailOutbox,
+  supersedeActivePasswordResetEmailsInTransaction,
 } from "@/lib/password-email-outbox";
 import { absoluteAppUrl } from "@/lib/public-url";
+import { normalizeAccountPhone } from "@/lib/account-phone";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -18,6 +20,9 @@ export async function GET() {
   const ownerAdmin = isOwnerAdminAccount({ role, adminTeamRole: (session.user as any).adminTeamRole });
   if (role !== "CLIENT" && !ownerAdmin) {
     return NextResponse.json({ error: "Accès réservé aux clients." }, { status: 403 });
+  }
+  if (role === "CLIENT" && Boolean((session.user as any).passwordMustChange)) {
+    return passwordChangeRequiredResponse();
   }
   const userId = (session.user as any).id;
 
@@ -44,6 +49,13 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json();
   const { action, name, phone, commune, quartier, avatarUrl, oldPassword, newPassword, confirmPassword } = body;
+  if (
+    role === "CLIENT"
+    && Boolean((session.user as any).passwordMustChange)
+    && action !== "changePassword"
+  ) {
+    return passwordChangeRequiredResponse();
+  }
 
   if (action === "changePassword") {
     if (!canUseAccountPasswordFlow({ role })) {
@@ -76,13 +88,16 @@ export async function PATCH(req: NextRequest) {
         data: {
           passwordHash: newHash,
           sessionVersion: { increment: 1 },
-          ...(ownerAdmin ? { adminPasswordChangedAt: now } : {}),
+          ...(ownerAdmin
+            ? { adminPasswordChangedAt: now }
+            : { passwordMustChange: false, temporaryPasswordIssuedAt: null }),
         },
       });
       await tx.passwordResetToken.updateMany({
         where: { userId, usedAt: null },
         data: { usedAt: now },
       });
+      await supersedeActivePasswordResetEmailsInTransaction(tx, user.email);
       await tx.notification.create({
         data: {
           userId: ownerAdmin ? null : userId,
@@ -142,7 +157,9 @@ export async function PATCH(req: NextRequest) {
         queued: Boolean(confirmationJobId),
         message: confirmationJobId
           ? "Confirmation email prise en charge automatiquement."
-          : "Confirmation email en attente de configuration.",
+          : user.email
+            ? "Confirmation email en attente de configuration."
+            : "Mot de passe modifié. Aucun email de confirmation n'est associé à ce compte.",
       },
     });
   }
@@ -153,7 +170,27 @@ export async function PATCH(req: NextRequest) {
 
   const data: any = {};
   if (typeof name === "string" && name.trim()) data.name = name.trim();
-  if (typeof phone === "string") data.phone = phone.trim() || null;
+  if (typeof phone === "string") {
+    const rawPhone = phone.trim();
+    const phoneNormalized = rawPhone ? normalizeAccountPhone(rawPhone) : null;
+    if (rawPhone && !phoneNormalized) {
+      return NextResponse.json({ error: "Numéro de téléphone invalide." }, { status: 400 });
+    }
+    if (!rawPhone) {
+      const stored = await db.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (!stored?.email) {
+        return NextResponse.json(
+          { error: "Un compte sans email doit conserver un numéro de téléphone." },
+          { status: 400 },
+        );
+      }
+    }
+    data.phone = rawPhone || null;
+    data.phoneNormalized = phoneNormalized;
+  }
   if (typeof commune === "string") data.commune = commune.trim() || null;
   if (typeof quartier === "string") data.quartier = quartier.trim() || null;
   if (typeof avatarUrl === "string") data.avatarUrl = avatarUrl.trim() || null;
@@ -162,14 +199,35 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Aucune donnée à mettre à jour" }, { status: 400 });
   }
 
-  const updated = await db.user.update({
-    where: { id: userId },
-    data,
-    select: {
-      id: true, email: true, name: true, phone: true,
-      commune: true, quartier: true, avatarUrl: true, role: true,
-    },
-  });
+  let updated;
+  try {
+    updated = await db.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true, email: true, name: true, phone: true,
+        commune: true, quartier: true, avatarUrl: true, role: true,
+      },
+    });
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json({ error: "Ce numéro de téléphone est déjà utilisé." }, { status: 409 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({ user: updated });
+}
+
+function passwordChangeRequiredResponse() {
+  return NextResponse.json(
+    {
+      error: "Vous devez remplacer votre mot de passe temporaire avant d'utiliser votre espace.",
+      code: "PASSWORD_CHANGE_REQUIRED",
+    },
+    {
+      status: 403,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    },
+  );
 }

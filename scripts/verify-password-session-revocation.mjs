@@ -31,6 +31,8 @@ const schema = read("../prisma/schema.prisma");
 const userModel = modelBlock(schema, "User");
 const teacherModel = modelBlock(schema, "Teacher");
 assert.match(userModel, /sessionVersion\s+Int\s+@default\(0\)/);
+assert.match(userModel, /passwordMustChange\s+Boolean\s+@default\(false\)/);
+assert.match(userModel, /temporaryPasswordIssuedAt\s+DateTime\?/);
 assert.match(teacherModel, /sessionVersion\s+Int\s+@default\(0\)/);
 
 const migration = read("../prisma/migrations/20260728030000_password_session_version/migration.sql");
@@ -38,7 +40,12 @@ assert.match(migration, /ALTER TABLE "User"[\s\S]*"sessionVersion" INTEGER NOT N
 assert.match(migration, /ALTER TABLE "Teacher"[\s\S]*"sessionVersion" INTEGER NOT NULL DEFAULT 0/);
 
 const auth = read("../src/lib/auth.ts");
-assert.match(auth, /sessionVersion: user\.sessionVersion/);
+assert.match(auth, /let sessionVersion = user\.sessionVersion/);
+assert.match(auth, /temporaryPasswordIssuedAt: user\.temporaryPasswordIssuedAt/);
+assert.match(auth, /temporaryPasswordIssuedAt: null,[\s\S]*sessionVersion: \{ increment: 1 \}/);
+assert.match(auth, /if \(claimed\.count !== 1\) return null/);
+assert.match(auth, /sessionVersion \+= 1/);
+assert.match(auth, /passwordMustChange: user\.role === "CLIENT" && user\.passwordMustChange/);
 assert.match(auth, /sessionVersion: teacher\.sessionVersion/);
 assert.match(auth, /if \(!await isPersistedSessionCurrent\(token\)\)/);
 assert.match(auth, /return \{ sessionInvalidated: true \}/);
@@ -48,6 +55,7 @@ assert.match(auth, /db\.teacher\.findUnique\([\s\S]*sessionVersion: true/);
 
 assertIncrementCount("../src/app/api/auth/reset-password/route.ts", 1);
 assertIncrementCount("../src/app/api/client/profile/route.ts", 1);
+assertIncrementCount("../src/app/api/admin/clients/[id]/temporary-password/route.ts", 1);
 assertIncrementCount("../src/app/api/admin/profile/route.ts", 1);
 assertIncrementCount("../src/app/api/professor/profile/route.ts", 1);
 assertIncrementCount("../src/app/api/admin/team/[id]/route.ts", 3);
@@ -57,6 +65,13 @@ assert.match(
   professorProfile,
   /db\.\$transaction\(async \(tx\) => \{[\s\S]*tx\.teacher\.update\([\s\S]*sessionVersion: \{ increment: 1 \}[\s\S]*tx\.teacherPasswordResetToken\.updateMany\(/,
 );
+
+const clientTemporaryPassword = read("../src/app/api/admin/clients/[id]/temporary-password/route.ts");
+assert.match(clientTemporaryPassword, /requireAdminApi\("CLIENTS_MANAGE"\)/);
+assert.match(clientTemporaryPassword, /passwordMustChange: true/);
+assert.match(clientTemporaryPassword, /temporaryPasswordIssuedAt: now/);
+assert.match(clientTemporaryPassword, /tx\.passwordResetToken\.updateMany/);
+assert.match(clientTemporaryPassword, /Cache-Control": "no-store, max-age=0"/);
 
 const adminTeacher = read("../src/app/api/admin/teachers/[id]/route.ts");
 assert.match(adminTeacher, /data\.sessionVersion = \{ increment: 1 \}/);

@@ -64,7 +64,7 @@ export default async function ClientParametresPage() {
   const hasArea = Boolean(profile?.commune && profile?.quartier);
   const completedFields = [accountName, profile?.email ?? sessionUser.email, profile?.phone, profile?.commune, profile?.quartier].filter(Boolean).length;
   const profileCompletion = Math.round((completedFields / 5) * 100);
-  const recoveryReady = hasEmail;
+  const recoveryReady = hasEmail || hasPhone;
   const accountReady = ownerAdmin ? recoveryReady : recoveryReady && hasPhone && hasArea;
 
   return (
@@ -82,7 +82,7 @@ export default async function ClientParametresPage() {
       <ClientMetricStrip
         metrics={[
           { icon: ShieldCheck, label: "Compte", value: ownerAdmin ? "Admin propriétaire" : accountReady ? "Prêt" : "À compléter", attention: !accountReady },
-          { icon: Mail, label: "Récupération", value: recoveryReady ? "Email sécurisé" : "Email requis", attention: !recoveryReady },
+          { icon: Mail, label: "Récupération", value: hasEmail ? "Lien email" : hasPhone ? "Assistance téléphone" : "Contact requis", attention: !recoveryReady },
           { icon: Bell, label: "Alertes", value: unreadNotifications, attention: unreadNotifications > 0 },
           { icon: Lock, label: "OTP", value: "Non utilisé" },
         ]}
@@ -125,14 +125,14 @@ export default async function ClientParametresPage() {
               <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
                 {ownerAdmin
                   ? "Seul le compte propriétaire autorisé peut changer ici le mot de passe administrateur. En cas d'oubli, le lien sécurisé arrive par email, sans OTP."
-                  : "Le client peut changer son mot de passe ici. En cas d'oubli, il reçoit un lien sécurisé par email, sans code OTP."
+                  : "Le client peut changer son mot de passe ici. En cas d'oubli, le lien email est automatique ; sans email accessible, le service client fournit un accès temporaire après vérification."
                 }
               </p>
             </div>
           </div>
           <div className="mt-4 grid gap-2">
             <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-              <Link href="/mot-de-passe-oublie">Demander un lien email</Link>
+              <Link href="/mot-de-passe-oublie">Récupérer mon accès</Link>
             </Button>
             <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
               <Link href="/client/notifications">Voir mes notifications</Link>
@@ -210,9 +210,13 @@ function SettingsCommandCenter({
                 hint: phone ? "Téléphone disponible pour les confirmations." : "Ajoutez un téléphone dans le profil.",
               },
               {
-                label: "Sécurité email",
+                label: "Récupération",
                 state: recoveryReady ? "done" : "current",
-                hint: recoveryReady ? "Mot de passe oublié par lien email." : "Un email est nécessaire pour récupérer l'accès.",
+                hint: email
+                  ? "Mot de passe oublié par lien email."
+                  : phone
+                    ? "Assistance disponible après vérification du téléphone."
+                    : "Ajoutez un email ou un téléphone pour récupérer l'accès.",
               },
             ]}
           />
@@ -258,7 +262,7 @@ function SettingsCommandCenter({
             <div className="mt-auto rounded-lg border border-[#E3E8F2] bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Règle de sécurité</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#111827]">
-                Aucun OTP : la récupération client passe uniquement par un lien email sécurisé.
+                Aucun OTP : lien email automatique, ou accès temporaire créé manuellement par le service client après vérification.
               </p>
             </div>
           </div>

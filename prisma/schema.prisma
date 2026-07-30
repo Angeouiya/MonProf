@@ -16,10 +16,13 @@ datasource db {
 // ============================================================
 model User {
   id                     String              @id @default(cuid())
-  email                  String              @unique
+  email                  String?             @unique
   name                   String
   phone                  String?
+  phoneNormalized        String?             @unique
   passwordHash           String
+  passwordMustChange     Boolean             @default(false)
+  temporaryPasswordIssuedAt DateTime?
   sessionVersion         Int                 @default(0)
   role                   UserRole            @default(CLIENT)
   commune                String?

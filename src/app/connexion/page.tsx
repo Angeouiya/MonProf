@@ -74,7 +74,9 @@ function ConnexionContent() {
     setError(null);
 
     if (!email || !password) {
-      setError("Veuillez saisir votre email et votre mot de passe.");
+      setError(isAdminAuth
+        ? "Veuillez saisir votre email administrateur et votre mot de passe."
+        : "Veuillez saisir votre email ou votre téléphone et votre mot de passe.");
       return;
     }
 
@@ -86,7 +88,9 @@ function ConnexionContent() {
         redirect: false,
       });
       if (!res || res.error) {
-        setError("Email ou mot de passe incorrect.");
+        setError(isAdminAuth
+          ? "Email administrateur ou mot de passe incorrect."
+          : "Email, téléphone ou mot de passe incorrect.");
         setLoading(false);
         return;
       }
@@ -190,17 +194,17 @@ function ConnexionContent() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{isAdminAuth ? "Email administrateur" : "Email ou téléphone"}</Label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="email"
-                    type="email"
-                    autoComplete="email"
+                    type={isAdminAuth ? "email" : "text"}
+                    autoComplete="username"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="vous@exemple.ci"
+                    placeholder={isAdminAuth ? "admin@exemple.ci" : "vous@exemple.ci ou +225..."}
                     className={FIELD_CLASS}
                   />
                 </div>

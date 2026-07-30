@@ -16,6 +16,7 @@ export async function GET() {
       role: user.role,
       teacherId: user.teacherId ?? null,
       phone: user.phone ?? null,
+      passwordMustChange: Boolean(user.passwordMustChange),
       portalPasswordMustChange: Boolean(user.portalPasswordMustChange),
     },
   });

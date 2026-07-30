@@ -16,11 +16,14 @@ import { AlertTriangle, ArrowLeft, Bell, ExternalLink, Mail, MapPin, MessageSqua
 import { formatFCFA, formatDate, formatDateTime, initials } from "@/lib/format";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { hasAdminPermission } from "@/lib/admin-permissions";
+import { ClientTemporaryPasswordForm } from "@/components/admin/client-temporary-password-form";
+import { CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/client-password-assistance";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin("CLIENTS_VIEW");
+  const admin = await requireAdmin("CLIENTS_VIEW");
   const { id } = await params;
 
   const client = await db.user.findUnique({
@@ -37,6 +40,17 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     },
   });
   if (!client) notFound();
+
+  const pendingPasswordAssistance = await db.notification.count({
+    where: {
+      clientId: client.id,
+      recipientType: "ADMIN",
+      type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE,
+      read: false,
+    },
+  });
+  const canManageClients = hasAdminPermission(admin.adminPermissions, "CLIENTS_MANAGE");
+  const canIssueTemporaryPassword = !client.email && Boolean(client.phoneNormalized);
 
   const valid = client.bookings.filter(hasVerifiedPayDunyaClientPayment);
   const draftBookings = client.bookings.filter((b) => b.status === "PENDING_PAYMENT" && !hasVerifiedPayDunyaClientPayment(b));
@@ -119,7 +133,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-5">
-      <PageHeader title={client.name} description={client.email}>
+      <PageHeader title={client.name} description={client.email || client.phone || "Client sans coordonnée de connexion"}>
         <Button asChild variant="outline">
           <Link href="/admin/clients"><ArrowLeft className="mr-2 h-4 w-4" /> Retour</Link>
         </Button>
@@ -139,7 +153,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               </div>
             </div>
             <div className="space-y-1.5 border-t border-border pt-3">
-              <p className="flex items-center gap-2 text-sm"><Mail className="h-4 w-4 text-muted-foreground" /> {client.email}</p>
+              <p className="flex items-center gap-2 text-sm"><Mail className="h-4 w-4 text-muted-foreground" /> {client.email || "Aucun email enregistré"}</p>
               <p className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-muted-foreground" /> {client.phone ?? "—"}</p>
               <p className="flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-muted-foreground" /> {client.commune ?? "—"} {client.quartier ? `• ${client.quartier}` : ""}</p>
             </div>
@@ -209,6 +223,34 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </Card>
         </div>
       </div>
+
+      {canManageClients && (
+        <Card className={pendingPasswordAssistance > 0 ? "border-amber-300 bg-white" : "border-[#E3E8F2] bg-white"}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserCog className="h-4 w-4 text-[#111B4D]" />
+              Assistance mot de passe
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {canIssueTemporaryPassword ? (
+              <ClientTemporaryPasswordForm
+                clientId={client.id}
+                clientName={client.name}
+                hasPendingRequest={pendingPasswordAssistance > 0}
+              />
+            ) : client.email ? (
+              <p className="text-sm font-medium leading-6 text-[#64748B]">
+                Ce client possède un email. Il doit utiliser « Mot de passe oublié » et le lien personnel reçu dans sa boîte ; aucune intervention administrateur n'est nécessaire.
+              </p>
+            ) : (
+              <p className="text-sm font-semibold leading-6 text-amber-800">
+                Aucun email ni numéro de téléphone exploitable n'est associé à ce compte. Vérifiez d'abord son identité et complétez un identifiant de récupération avant toute remise d'accès.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {actionRequired.length > 0 && (
         <Card className="border-[#E6EAF3] bg-white">

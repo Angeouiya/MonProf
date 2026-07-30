@@ -32,7 +32,7 @@ import {
 
 export type ClientProfile = {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   phone: string | null;
   commune: string | null;
@@ -175,7 +175,7 @@ export function ProfileClient({
       <ClientPageHeader
         eyebrow="Compte client"
         title={name || "Client Compétence"}
-        description={profile?.email}
+        description={profile?.email ?? profile?.phone ?? "Compte client"}
         showBack={false}
       >
         <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">

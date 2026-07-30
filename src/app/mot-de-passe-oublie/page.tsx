@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Sécurité du compte</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[#111827]">Mot de passe oublié</h1>
           <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-            Saisissez l'email de votre compte client. Vous recevrez un lien personnel de réinitialisation envoyé par Compétence. Aucun code SMS n'est demandé.
+            Avec l'email du compte client, vous recevrez automatiquement un lien personnel. Si aucun email n'est enregistré ou accessible, utilisez le téléphone pour demander l'assistance du service client.
           </p>
           <ForgotPasswordForm />
         </section>
