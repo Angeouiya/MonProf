@@ -273,6 +273,9 @@ async function main() {
   });
 
   try {
+    console.log(
+      `Si la fenêtre Google ne reste pas visible, ouvrez ce lien sécurisé : ${authorizationUrl.toString()}`,
+    );
     await openSystemBrowser(authorizationUrl.toString());
     console.log(
       `Autorisation Google ouverte pour ${EXPECTED_SENDER_EMAIL}. Validez uniquement les trois permissions Compétence demandées.`,
