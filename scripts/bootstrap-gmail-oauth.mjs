@@ -19,7 +19,7 @@ const EXPECTED_VERCEL_PROJECT = Object.freeze({
   orgId: "team_w3j30Z9r0zVQ5iTP0Vbdg3As",
 });
 const DEFAULT_REDIRECT_URI = "http://127.0.0.1:53682/oauth2/callback";
-const AUTHORIZATION_TIMEOUT_MS = 5 * 60_000;
+const AUTHORIZATION_TIMEOUT_MS = 15 * 60_000;
 const GOOGLE_REQUEST_TIMEOUT_MS = 10_000;
 const VERCEL_CLI_TIMEOUT_MS = 2 * 60_000;
 const VERCEL_CLI_COMMAND = "vercel";
