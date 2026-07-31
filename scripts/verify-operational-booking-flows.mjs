@@ -396,12 +396,13 @@ record(
 
 record(
   "Professor payout request balance and reservation share one serializable transaction",
-  /db\.\$transaction\(async\s*\(tx\)\s*=>\s*\{[\s\S]*?tx\.teacherPayoutRequest\.aggregate\(\{[\s\S]*?tx\.teacherPayoutAllocation\.findMany\(\{[\s\S]*?tx\.teacherPayoutRequest\.create\(\{/.test(payoutRequestRoute)
+  /db\.\$transaction\(async\s*\(tx\)\s*=>\s*\{[\s\S]*?lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?tx\.teacherPayoutRequest\.aggregate\(\{[\s\S]*?tx\.teacherPayoutAllocation\.findMany\(\{[\s\S]*?tx\.teacherPayoutRequest\.create\(\{/.test(payoutRequestRoute)
     && /payout:\s*\{\s*teacherId:\s*teacher\.id,\s*status:\s*"DRAFT"\s*\}/.test(payoutRequestRoute)
-    && /allocation\.payout\.payoutRequest\?\.status\s*===\s*"PENDING"/.test(payoutRequestRoute)
-    && /readyToReceive\s*-\s*pendingAmount\s*-\s*draftReservedAmount/.test(payoutRequestRoute)
+    && /payoutRequestStatus:\s*allocation\.payout\.payoutRequest\?\.status\s*\?\?\s*null/.test(payoutRequestRoute)
+    && /calculateTeacherPayoutAvailability\(\{/.test(payoutRequestRoute)
     && /isolationLevel:\s*"Serializable"/.test(payoutRequestRoute)
-    && /errorCode\(error\)\s*===\s*"P2034"[\s\S]*?PAYOUT_REQUEST_BALANCE_CONFLICT/.test(payoutRequestRoute),
+    && /const code\s*=\s*errorCode\(error\)/.test(payoutRequestRoute)
+    && /\["P2034",\s*"TEACHER_PAYOUT_LOCK_NOT_FOUND"\]\.includes\(code\)[\s\S]*?PAYOUT_REQUEST_BALANCE_CONFLICT/.test(payoutRequestRoute),
 );
 
 record(
@@ -435,7 +436,8 @@ record(
     && /bookingSession\.findMany\(\{[\s\S]*?retainedAmount:\s*\{\s*gt:\s*0/.test(payoutRequestRoute)
     && /status:\s*\{\s*in:\s*\["DRAFT",\s*"PAID"\]\s*\}/.test(payoutRequestRoute)
     && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutRoute)
-    && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutRequestRoute),
+    && /calculateTeacherPayoutAvailability\(\{[\s\S]*?globalRetentionLedger/.test(payoutRequestRoute)
+    && /globalRetentionLedger\.legacyByBooking\.get\(settlement\.bookingId\)/.test(teacherPayments),
 );
 
 record(

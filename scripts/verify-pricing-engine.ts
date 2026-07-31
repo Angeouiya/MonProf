@@ -220,6 +220,50 @@ function verifyTransportMatrix() {
     "Cocody (Riviera Palmeraie) -> Cocody (Riviera Palmeraie)",
   );
 
+  const cocodyCatalog = buildNeighborhoodAliasMap([
+    { id: "quarter-cocody-mermoz", communeId: "commune-cocody", communeName: "Cocody", name: "Mermoz" },
+    { id: "quarter-cocody-bonoumin", communeId: "commune-cocody", communeName: "Cocody", name: "Bonoumin" },
+  ]);
+  const sameCanonicalMermoz = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Cocody Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    neighborhoodAliases: cocodyCatalog,
+  });
+  assert.equal(sameCanonicalMermoz.key, "same_neighborhood");
+  assert.equal(sameCanonicalMermoz.amount, 0);
+  assert.equal(sameCanonicalMermoz.routeLabel, "Cocody (Mermoz) -> Cocody (Mermoz)");
+
+  const sameCanonicalMermozWithParentheses = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Cocody (Mermoz)",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    neighborhoodAliases: cocodyCatalog,
+  });
+  assert.equal(sameCanonicalMermozWithParentheses.key, "same_neighborhood");
+  assert.equal(sameCanonicalMermozWithParentheses.amount, 0);
+
+  const sameLegacyMermozWithoutCatalog = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Cocody Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+  });
+  assert.equal(sameLegacyMermozWithoutCatalog.key, "same_neighborhood");
+  assert.equal(sameLegacyMermozWithoutCatalog.amount, 0);
+
+  const differentCanonicalCocodyNeighborhoods = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Cocody Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Bonoumin",
+    neighborhoodAliases: cocodyCatalog,
+  });
+  assert.equal(differentCanonicalCocodyNeighborhoods.key, "same_area");
+  assert.equal(differentCanonicalCocodyNeighborhoods.amount, 1_000);
+
   const scopedAliases = buildNeighborhoodAliasMap([
     { communeName: "Cocody", name: "Riviera Palmeraie", aliases: "Centre" },
     { communeName: "Riviera", name: "Riviera Golf", aliases: "Centre" },
@@ -234,6 +278,43 @@ function verifyTransportMatrix() {
   assert.equal(sameAliasInDifferentAreas.key, "same_area");
   assert.equal(sameAliasInDifferentAreas.amount, 1_000);
 
+  const identicalLabelsWithDifferentCanonicalIds = buildNeighborhoodAliasMap([
+    { id: "quarter-cocody-centre", communeId: "commune-cocody", communeName: "Cocody", name: "Centre" },
+    { id: "quarter-riviera-centre", communeId: "commune-riviera", communeName: "Riviera", name: "Centre" },
+  ]);
+  const differentCanonicalCenters = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Centre",
+    clientCommune: "Riviera",
+    clientQuartier: "Centre",
+    neighborhoodAliases: identicalLabelsWithDifferentCanonicalIds,
+  });
+  assert.equal(differentCanonicalCenters.key, "same_area");
+  assert.equal(differentCanonicalCenters.amount, 1_000);
+
+  const partiallyResolvedCenters = buildNeighborhoodAliasMap([
+    { id: "quarter-riviera-centre", communeId: "commune-riviera", communeName: "Riviera", name: "Centre" },
+  ]);
+  const unresolvedOriginCannotMatchCanonicalDestination = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Centre",
+    clientCommune: "Riviera",
+    clientQuartier: "Centre",
+    neighborhoodAliases: partiallyResolvedCenters,
+  });
+  assert.equal(unresolvedOriginCannotMatchCanonicalDestination.key, "same_area");
+  assert.equal(unresolvedOriginCannotMatchCanonicalDestination.amount, 1_000);
+
+  const canonicalOriginCannotMatchUnresolvedDestination = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Riviera",
+    teacherQuartier: "Centre",
+    clientCommune: "Cocody",
+    clientQuartier: "Centre",
+    neighborhoodAliases: partiallyResolvedCenters,
+  });
+  assert.equal(canonicalOriginCannotMatchUnresolvedDestination.key, "same_area");
+  assert.equal(canonicalOriginCannotMatchUnresolvedDestination.amount, 1_000);
+
   const duplicateAliasEntries = [
     { communeName: "Cocody", name: "Quartier Alpha", aliases: "Centre" },
     { communeName: "Cocody", name: "Quartier Bêta", aliases: "Centre" },
@@ -242,7 +323,7 @@ function verifyTransportMatrix() {
   const reversedAmbiguousAliases = buildNeighborhoodAliasMap([...duplicateAliasEntries].reverse());
   assert.deepEqual(ambiguousAliases, reversedAmbiguousAliases);
   assert.equal(ambiguousAliases.resolved["cocody::centre"], undefined);
-  assert.deepEqual(ambiguousAliases.ambiguous, ["cocody::centre"]);
+  assert.deepEqual(ambiguousAliases.ambiguous, ["cocody::centre", "cocody::cocody centre"]);
   const ambiguousSameText = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",
     teacherQuartier: "Centre",

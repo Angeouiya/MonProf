@@ -4,8 +4,12 @@ import { z } from "zod";
 import { requireJekoServerConfig, type JekoServerConfig } from "./jeko-config";
 import { getPublicAppOrigin } from "./public-url";
 import {
-  assertJekoCallbackUrl,
+  buildCanonicalJekoCheckoutUrl,
   isAllowedJekoRedirectUrl,
+  isJekoPaymentRequestId,
+} from "./jeko-checkout-url";
+import {
+  assertJekoCallbackUrl,
   JEKO_CURRENCY,
   JEKO_PAYMENT_METHODS,
   normalizeJekoPaymentStatus,
@@ -174,7 +178,6 @@ export async function createJekoPaymentRequest(
     options.fetchImpl,
   );
   const response = jekoPaymentRequestSchema.parse(raw);
-  const redirectUrl = response.redirectUrl ?? "";
   if (
     response.storeId !== config.storeId
     || response.reference !== reference
@@ -183,9 +186,14 @@ export async function createJekoPaymentRequest(
   ) {
     throw new JekoApiError("Jèko a renvoyé un magasin ou une référence incohérente.", 502, "RESPONSE_MISMATCH");
   }
-  if (!isAllowedJekoRedirectUrl(redirectUrl)) {
-    throw new JekoApiError("L'URL de redirection renvoyée par Jèko n'est pas autorisée.", 502, "UNSAFE_REDIRECT");
+  if (!isJekoPaymentRequestId(response.id)) {
+    throw new JekoApiError("Jèko a renvoyé un identifiant de demande invalide.", 502, "INVALID_PAYMENT_REQUEST_ID");
   }
+  // L'URL officielle est déterministe (`/payment/{id}`). On la reconstruit à
+  // partir de l'identité validée au lieu de relayer une URL distante. Cela
+  // tolère les variations non contractuelles du champ redirectUrl observées
+  // en Production tout en conservant une allowlist plus stricte.
+  const redirectUrl = buildCanonicalJekoCheckoutUrl(response.id);
 
   return {
     id: response.id,
@@ -318,11 +326,13 @@ export async function recoverJekoPaymentRequestByReference(
 /** URL Jèko officielle persistable après une confirmation GET par ID. */
 export function getJekoPaymentRedirectUrl(confirmation: JekoPaymentConfirmation) {
   const rawRedirectUrl = firstString(confirmation.raw.redirectUrl);
-  if (rawRedirectUrl && isAllowedJekoRedirectUrl(rawRedirectUrl)) return rawRedirectUrl;
-  const canonical = `https://pay.jeko.africa/payment/${encodeURIComponent(confirmation.id)}`;
-  if (!isAllowedJekoRedirectUrl(canonical)) {
+  if (!isJekoPaymentRequestId(confirmation.id)) {
     throw new JekoApiError("Identifiant de redirection Jèko invalide.", 502, "UNSAFE_REDIRECT");
   }
+  const canonical = buildCanonicalJekoCheckoutUrl(confirmation.id);
+  // Une URL distante conforme doit aussi pointer vers le même ID. Dans tous
+  // les cas, seule la forme canonique locale est renvoyée au navigateur.
+  if (rawRedirectUrl && isAllowedJekoRedirectUrl(rawRedirectUrl, confirmation.id)) return canonical;
   return canonical;
 }
 
@@ -511,9 +521,7 @@ function extractPaymentRequestIds(value: unknown) {
 }
 
 function isPaymentRequestId(value: string) {
-  const normalized = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized)
-    || /^pr[_-][A-Za-z0-9_-]{4,150}$/.test(normalized);
+  return isJekoPaymentRequestId(value.trim());
 }
 
 function buildJekoTransactionSearchWindows(referenceCreatedAt?: Date | string | null) {

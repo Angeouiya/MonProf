@@ -27,6 +27,7 @@ import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-bre
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { formatFCFA } from "@/lib/format";
+import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
 import { PackType } from "@prisma/client";
 import {
@@ -552,6 +553,7 @@ export function ReserverForm({
         .filter((commune) => relevantCommunes.has(normalizeLocation(commune.name)))
         .flatMap((commune) => commune.quarters.map((quarter) => ({
           ...quarter,
+          communeId: commune.id,
           communeName: commune.name,
         }))),
     );
@@ -894,14 +896,14 @@ export function ReserverForm({
         return;
       }
       setPriceChangeNotice(null);
-      if (data.payment?.checkoutUrl) {
+      if (isAllowedJekoRedirectUrl(data.payment?.checkoutUrl)) {
         toast.success("Redirection vers Jèko...");
         window.location.assign(data.payment.checkoutUrl);
       } else if (data.payment?.status === "succeeded") {
         toast.success("Paiement Jèko déjà confirmé.");
         router.push(`/client/reservations/${data.booking.id}?jeko=confirmed`);
       } else {
-        toast.error(data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement. Le dossier reste en brouillon et aucun professeur n'est notifié.");
+        toast.error(data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.");
         router.push(`/client/reservations/${data.booking.id}?payment=pending`);
       }
     } catch (e: any) {

@@ -122,6 +122,33 @@ assert.ok(historyCalls.every((call) => call.method === "GET"), "la récupératio
 
 const callbackOrigin = getVerificationAppOrigin();
 process.env.NEXT_PUBLIC_APP_URL = callbackOrigin;
+const createdWithNonCanonicalProviderUrl = await createJekoPaymentRequest({
+  reference: `${reference}-CREATE`,
+  amountXof: 20_000,
+  paymentMethod: "wave",
+  successUrl: `${callbackOrigin}/client/reservations/test?jeko=return`,
+  errorUrl: `${callbackOrigin}/client/reservations/test?jeko=cancelled`,
+}, {
+  config,
+  fetchImpl: async () => jsonResponse({
+    id: requestId,
+    storeId,
+    reference: `${reference}-CREATE`,
+    type: "redirect",
+    paymentMethod: "wave",
+    status: "pending",
+    // Cette valeur distante n'est jamais relayée. Le serveur reconstruit la
+    // destination officielle depuis l'ID Jèko validé.
+    redirectUrl: `https://unexpected-provider.example/checkout/${requestId}?opaque=secret`,
+    transaction: null,
+  }),
+});
+assert.equal(
+  createdWithNonCanonicalProviderUrl.redirectUrl,
+  `https://pay.jeko.africa/payment/${requestId}`,
+  "une variation de redirectUrl doit être remplacée par l'URL Jèko canonique",
+);
+
 await assert.rejects(
   createJekoPaymentRequest({
     reference,

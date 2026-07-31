@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+export { isAllowedJekoRedirectUrl } from "./jeko-checkout-url";
 
 export const JEKO_CURRENCY = "XOF" as const;
 export const JEKO_MINOR_UNITS_PER_XOF = 100;
@@ -103,21 +104,6 @@ export function verifyJekoWebhookSignature(
   const expected = Buffer.from(expectedHex, "hex");
   const received = Buffer.from(receivedHex, "hex");
   return expected.length === received.length && timingSafeEqual(expected, received);
-}
-
-export function isAllowedJekoRedirectUrl(value: string | null | undefined) {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:"
-      && url.hostname.toLowerCase() === "pay.jeko.africa"
-      && !url.port
-      && !url.username
-      && !url.password
-      && /^\/payment\/[A-Za-z0-9_-]+\/?$/.test(url.pathname);
-  } catch {
-    return false;
-  }
 }
 
 export function assertJekoCallbackUrl(

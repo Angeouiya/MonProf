@@ -9,6 +9,10 @@ import { countAvailabilitySlots, normalizeAvailability } from "@/lib/scheduling"
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH, passwordHashRounds } from "@/lib/password-policy";
 import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
+import {
+  TEMPORARY_PASSWORD_TTL_HOURS,
+  temporaryPasswordExpiresAt,
+} from "@/lib/temporary-password-policy";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
     const normalizedPricePerSession = Number.isFinite(Number(pricePerSession))
       ? Math.max(0, Math.round(Number(pricePerSession)))
       : 10_000;
+    const portalTemporaryPasswordIssuedAt = enablePortal ? new Date() : null;
     const teacher = await db.teacher.create({
       data: {
         fullName,
@@ -133,6 +138,7 @@ export async function POST(req: NextRequest) {
         portalPhone: enablePortal ? normalizedPortalPhone : null,
         portalPasswordHash: enablePortal ? await bcrypt.hash(portalPassword.trim(), passwordHashRounds({ role: "TEACHER" })) : null,
         portalPasswordMustChange: enablePortal,
+        portalTemporaryPasswordIssuedAt,
         jobTitle,
         bio,
         experienceYears: Number(experienceYears) || 0,
@@ -204,7 +210,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ id: teacher.id, ok: true });
+    return NextResponse.json({
+      id: teacher.id,
+      ok: true,
+      temporaryPassword: portalTemporaryPasswordIssuedAt
+        ? {
+            expiresAt: temporaryPasswordExpiresAt(portalTemporaryPasswordIssuedAt).toISOString(),
+            expiresInHours: TEMPORARY_PASSWORD_TTL_HOURS,
+          }
+        : null,
+    });
   } catch (e: any) {
     console.error("admin/teachers POST error", e);
     if (e?.code === "P2002") {

@@ -476,9 +476,10 @@ export async function POST(req: NextRequest) {
             },
           },
           select: {
+            id: true,
             name: true,
             aliases: true,
-            commune: { select: { name: true } },
+            commune: { select: { id: true, name: true } },
           },
         })
       : Promise.resolve([]),
@@ -510,6 +511,8 @@ export async function POST(req: NextRequest) {
     clientCommuneTransportFeeOverride: clientLocation?.transportFeeOverride,
     neighborhoodAliases: buildNeighborhoodAliasMap(
       neighborhoodAliasRows.map((quarter) => ({
+        id: quarter.id,
+        communeId: quarter.commune.id,
         name: quarter.name,
         aliases: quarter.aliases,
         communeName: quarter.commune.name,

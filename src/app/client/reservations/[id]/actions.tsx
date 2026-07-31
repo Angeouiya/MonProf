@@ -17,6 +17,7 @@ import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { RESCHEDULE_POLICY_WINDOWS, getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
 import { formatFCFA } from "@/lib/format";
+import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { activePaymentMethodOptions, paymentMethodLabel } from "@/lib/payment-methods";
@@ -130,12 +131,13 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           : { action: "paydunya_checkout" }),
       });
       const data = await res.json();
-      if (!res.ok || !data.payment?.checkoutUrl) {
+      const checkoutUrl = data.payment?.checkoutUrl;
+      if (!res.ok || !checkoutUrl || (providerIsJeko && !isAllowedJekoRedirectUrl(checkoutUrl))) {
         toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
       toast.success(`Ouverture de ${providerLabel}...`);
-      window.location.assign(data.payment.checkoutUrl);
+      window.location.assign(checkoutUrl);
     } catch {
       toast.error("Erreur réseau");
     } finally {
@@ -397,6 +399,10 @@ export function BookingActions({ booking }: BookingActionsProps) {
     if (data) {
       if (typeof data === "object" && data.payment?.checkoutUrl) {
         const paymentProvider = data.payment.provider === "PAYDUNYA" ? "PayDunya" : "Jèko";
+        if (paymentProvider === "Jèko" && !isAllowedJekoRedirectUrl(data.payment.checkoutUrl)) {
+          toast.error("Jèko n'a pas renvoyé de lien de paiement sécurisé.");
+          return;
+        }
         toast.success(`Ouverture de ${paymentProvider} pour le supplément...`);
         window.location.assign(data.payment.checkoutUrl);
         return;
@@ -428,6 +434,10 @@ export function BookingActions({ booking }: BookingActionsProps) {
       return;
     }
     const paymentProvider = data.payment.provider === "PAYDUNYA" ? "PayDunya" : "Jèko";
+    if (paymentProvider === "Jèko" && !isAllowedJekoRedirectUrl(checkoutUrl)) {
+      toast.error("Jèko n'a pas renvoyé de lien de paiement sécurisé.");
+      return;
+    }
     toast.success(`Ouverture de ${paymentProvider}...`);
     window.location.assign(checkoutUrl);
   }
@@ -586,12 +596,13 @@ export function BookingActions({ booking }: BookingActionsProps) {
           : { action: "paydunya_checkout" }),
       });
       const data = await res.json();
-      if (!res.ok || !data.payment?.checkoutUrl) {
+      const checkoutUrl = data.payment?.checkoutUrl;
+      if (!res.ok || !checkoutUrl || (providerIsJeko && !isAllowedJekoRedirectUrl(checkoutUrl))) {
         toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
       toast.success(`Ouverture de ${providerLabel}...`);
-      window.location.assign(data.payment.checkoutUrl);
+      window.location.assign(checkoutUrl);
     } catch {
       toast.error("Erreur réseau");
     } finally {

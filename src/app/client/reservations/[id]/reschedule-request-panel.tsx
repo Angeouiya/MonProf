@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, Clock, ExternalLink, Hourglass, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
+import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { rescheduleWindowLabel } from "@/lib/reschedule-policy";
 
 type RescheduleRequest = {
@@ -66,6 +67,10 @@ export function ClientRescheduleRequestPanel({
         return;
       }
       const responseProvider = data.payment?.provider === "PAYDUNYA" ? "PayDunya (historique)" : providerLabel;
+      if (responseProvider === "Jèko" && !isAllowedJekoRedirectUrl(checkoutUrl)) {
+        toast.error("Jèko n'a pas renvoyé de lien de paiement sécurisé.");
+        return;
+      }
       toast.success(`Ouverture de ${responseProvider}...`);
       window.location.assign(checkoutUrl);
     } catch {

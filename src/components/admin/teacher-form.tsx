@@ -27,6 +27,14 @@ import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
 import { normalizeTeacherFormInitial } from "@/lib/teacher-form-data";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
+import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
+import {
+  CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS,
+  IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH,
+  IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH,
+  isSafeIdentityVerificationReference,
+  normalizeIdentityVerificationReference,
+} from "@/lib/client-identity-verification";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
 
@@ -262,6 +270,9 @@ export function TeacherForm({
   const [analyzingCv, setAnalyzingCv] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [cvAnalysis, setCvAnalysis] = useState<CvAnalysisResult | null>(null);
+  const [passwordIdentityVerified, setPasswordIdentityVerified] = useState(false);
+  const [passwordVerificationMethod, setPasswordVerificationMethod] = useState("");
+  const [passwordVerificationReference, setPasswordVerificationReference] = useState("");
   const [activeTab, setActiveTab] = useState<TeacherFormTab>("infos");
 
   // Selections
@@ -356,6 +367,7 @@ export function TeacherForm({
     status,
     portalAccessEnabled,
     selectedCommuneName,
+    portalPasswordValue,
   ] = useWatch({
     control,
     name: [
@@ -367,8 +379,12 @@ export function TeacherForm({
       "status",
       "portalAccessEnabled",
       "commune",
+      "portalPassword",
     ],
   });
+  const teacherPasswordResetRequested = mode === "edit"
+    && typeof portalPasswordValue === "string"
+    && Boolean(portalPasswordValue.trim());
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
   const activeWithoutPhoto = isPublicVisibleTeacherStatus(status) && !photoUrl;
   const communeSelectionGroups = useMemo(() => [{
@@ -625,10 +641,31 @@ export function TeacherForm({
         return;
       }
     }
+    const passwordResetRequested = mode === "edit" && Boolean(values.portalPassword?.trim());
+    const normalizedPasswordVerificationReference = normalizeIdentityVerificationReference(
+      passwordVerificationReference,
+    );
+    if (
+      passwordResetRequested
+      && (
+        !passwordIdentityVerified
+        || !passwordVerificationMethod
+        || !isSafeIdentityVerificationReference(normalizedPasswordVerificationReference)
+      )
+    ) {
+      setActiveTab("acces");
+      toast.error("Confirmez l'identité du professeur, la méthode et une référence interne non sensible.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         ...values,
+        ...(passwordResetRequested ? {
+          identityVerified: passwordIdentityVerified,
+          verificationMethod: passwordVerificationMethod,
+          verificationReference: normalizedPasswordVerificationReference,
+        } : {}),
         subjects: Object.entries(selectedSubjects)
           .filter(([, v]) => v)
           .map(([id]) => ({ subjectId: id, isPrimary: id === primarySubject })),
@@ -929,9 +966,72 @@ export function TeacherForm({
                   disabled={!portalAccessEnabled}
                 />
                 <p className="text-xs font-medium leading-5 text-muted-foreground">
-                  Transmettez-le directement au professeur. Il sera obligé de créer son mot de passe personnel à la prochaine connexion.
+                  Transmettez-le directement au professeur. Il reste valable {TEMPORARY_PASSWORD_TTL_HOURS} heures et pour une seule première connexion, puis le professeur doit créer son mot de passe personnel.
                 </p>
               </Field>
+
+              {teacherPasswordResetRequested && (
+                <div className="space-y-4 rounded-xl border border-[#DCE5F2] bg-[#F8FAFC] p-4">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-bold text-[#111827]">Vérification d'identité obligatoire</p>
+                      <p id="teacher-password-verification-help" className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                        Avant la remise du nouveau mot de passe, consignez la méthode utilisée et uniquement la référence interne du dossier d'assistance.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="teacher-password-verification-method">Méthode de vérification</Label>
+                    <select
+                      id="teacher-password-verification-method"
+                      value={passwordVerificationMethod}
+                      onChange={(event) => setPasswordVerificationMethod(event.target.value)}
+                      disabled={saving}
+                      required
+                      aria-describedby="teacher-password-verification-help"
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-[#111827] shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Sélectionner une méthode</option>
+                      {CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS.map((method) => (
+                        <option key={method.value} value={method.value}>{method.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="teacher-password-verification-reference">Référence interne</Label>
+                    <Input
+                      id="teacher-password-verification-reference"
+                      value={passwordVerificationReference}
+                      onChange={(event) => setPasswordVerificationReference(event.target.value)}
+                      minLength={IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH}
+                      maxLength={IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH}
+                      required
+                      disabled={saving}
+                      autoComplete="off"
+                      aria-describedby="teacher-password-verification-reference-help"
+                      placeholder="Ex. SUP-1842 ou PROF/2026/2481"
+                    />
+                    <p id="teacher-password-verification-reference-help" className="text-xs font-medium leading-5 text-[#64748B]">
+                      {IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH} à {IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH} caractères. Aucun email, téléphone, numéro de pièce ni code secret.
+                    </p>
+                  </div>
+
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#CBD7E8] bg-white p-3 text-sm font-semibold leading-5 text-[#111827]">
+                    <input
+                      type="checkbox"
+                      checked={passwordIdentityVerified}
+                      onChange={(event) => setPasswordIdentityVerified(event.target.checked)}
+                      disabled={saving}
+                      required
+                      className="mt-0.5 h-4 w-4 rounded border-[#94A3B8] text-[#111B4D] focus:ring-[#111B4D]"
+                    />
+                    <span>Je confirme avoir vérifié l'identité du professeur avant de créer cet accès temporaire.</span>
+                  </label>
+                </div>
+              )}
 
               <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/45 p-4">
                 <div className="flex items-start gap-3">

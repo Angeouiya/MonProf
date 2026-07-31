@@ -4,6 +4,7 @@ import { createJiti } from "jiti";
 
 const jiti = createJiti(import.meta.url);
 const { normalizeAccountPhone, normalizeAccountEmail } = jiti("../src/lib/account-phone.ts");
+const { isSafeIdentityVerificationReference } = jiti("../src/lib/client-identity-verification.ts");
 
 assert.equal(normalizeAccountPhone("07 01 23 45 67"), "+2250701234567");
 assert.equal(normalizeAccountPhone("+225 07 01 23 45 67"), "+2250701234567");
@@ -15,6 +16,12 @@ assert.equal(normalizeAccountPhone("01 23 45 67"), null);
 assert.equal(normalizeAccountPhone("0000000000"), null);
 assert.equal(normalizeAccountEmail(" Client@Example.CI "), "client@example.ci");
 assert.equal(normalizeAccountEmail(""), null);
+assert.equal(isSafeIdentityVerificationReference("SUP-1842"), true);
+assert.equal(isSafeIdentityVerificationReference("RES/2026/2481"), true);
+assert.equal(isSafeIdentityVerificationReference("07-01-23-45-67"), false);
+assert.equal(isSafeIdentityVerificationReference("2250701234567"), false);
+assert.equal(isSafeIdentityVerificationReference("password-1842"), false);
+assert.equal(isSafeIdentityVerificationReference("client@example.ci"), false);
 
 const schema = read("../prisma/schema.prisma");
 const userModel = modelBlock(schema, "User");
@@ -60,6 +67,7 @@ const forgotRoute = read("../src/app/api/auth/forgot-password/route.ts");
 assert.match(forgotRoute, /requestPasswordResetAssistanceByPhone/);
 assert.match(forgotRoute, /if \(!email && phone\)/);
 assert.match(forgotRoute, /GENERIC_PHONE_RESPONSE/);
+assert.doesNotMatch(forgotRoute, /console\.(?:warn|error)\([^\n]*(?:phone|clientIdentifier)/);
 
 const outbox = read("../src/lib/password-email-outbox.ts");
 const assistanceContract = read("../src/lib/client-password-assistance.ts");
@@ -72,7 +80,21 @@ assert.match(assistance, /accountType: "CLIENT_PHONE_ASSISTED"/);
 assert.match(assistance, /target\.role !== "CLIENT" \|\| target\.email/);
 assert.match(assistance, /type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE/);
 assert.match(assistance, /recipientType: "ADMIN"/);
+assert.match(assistance, /status: "RELAUNCHED"/);
+assert.match(assistance, /createdAt: now/);
+assert.match(assistance, /NEXTAUTH_SECRET is unavailable for assisted recovery/);
+assert.match(assistance, /Unable to reserve assisted recovery request/);
 assert.doesNotMatch(assistance, /recipientType: "CLIENT"|sendClientResetPasswordEmail|passwordResetToken\.create/);
+
+const identityVerification = read("../src/lib/client-identity-verification.ts");
+assert.match(identityVerification, /REGISTERED_PHONE_CALLBACK/);
+assert.match(identityVerification, /RECENT_BOOKING_DETAILS/);
+assert.match(identityVerification, /IDENTITY_DOCUMENT/);
+assert.match(identityVerification, /IN_PERSON/);
+assert.match(identityVerification, /isSafeIdentityVerificationReference/);
+assert.match(identityVerification, /SENSITIVE_DIGIT_SEQUENCE_PATTERN/);
+assert.match(identityVerification, /SENSITIVE_KEYWORD_PATTERN/);
+assert.doesNotMatch(identityVerification, /NEXTAUTH_SECRET|passwordHash|recipientEmail|phoneNormalized/);
 
 const adminTemporaryPassword = read("../src/app/api/admin/clients/[id]/temporary-password/route.ts");
 assert.match(adminTemporaryPassword, /requireAdminApi\("CLIENTS_MANAGE"\)/);
@@ -86,6 +108,13 @@ assert.match(adminTemporaryPassword, /status: 409/);
 assert.match(adminTemporaryPassword, /tx\.passwordResetToken\.updateMany/);
 assert.match(adminTemporaryPassword, /type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE/);
 assert.match(adminTemporaryPassword, /Cache-Control": "no-store, max-age=0"/);
+assert.match(adminTemporaryPassword, /body\?\.identityVerified === true/);
+assert.match(adminTemporaryPassword, /isClientIdentityVerificationMethod\(verificationMethod\)/);
+assert.match(adminTemporaryPassword, /isSafeIdentityVerificationReference\(verificationReference\)/);
+assert.match(adminTemporaryPassword, /IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH/);
+assert.match(adminTemporaryPassword, /IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH/);
+assert.match(adminTemporaryPassword, /CLIENT_IDENTITY_VERIFICATION_METHOD_LABELS\[verificationMethod\]/);
+assert.match(adminTemporaryPassword, /référence : \$\{verificationReference\}/);
 assert.doesNotMatch(adminTemporaryPassword, /console\.log\([^)]*temporaryPassword/);
 
 const adminClientPage = read("../src/app/admin/clients/[id]/page.tsx");
@@ -94,6 +123,12 @@ assert.match(adminClientPage, /canIssueTemporaryPassword = !client\.email && Boo
 
 const adminTemporaryPasswordForm = read("../src/components/admin/client-temporary-password-form.tsx");
 assert.match(adminTemporaryPasswordForm, /setPassword\(data\.temporaryPassword\)/);
+assert.match(adminTemporaryPasswordForm, /identityVerified/);
+assert.match(adminTemporaryPasswordForm, /verificationMethod/);
+assert.match(adminTemporaryPasswordForm, /verificationReference/);
+assert.match(adminTemporaryPasswordForm, /body: JSON\.stringify\(\{/);
+assert.match(adminTemporaryPasswordForm, /CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS\.map/);
+assert.match(adminTemporaryPasswordForm, /isSafeIdentityVerificationReference/);
 assert.doesNotMatch(adminTemporaryPasswordForm, /createTemporaryPassword|JSON\.stringify\(\{ password/);
 
 const proxy = read("../src/proxy.ts");

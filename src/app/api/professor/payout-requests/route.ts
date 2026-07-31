@@ -5,9 +5,17 @@ import { generateReference } from "@/lib/format";
 import { ACTIVE_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/payment-methods";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import {
+  calculateTeacherPayoutAvailability,
   getTeacherGlobalRetentionLedger,
   getTeacherFinancialSettlement,
 } from "@/lib/teacher-payments";
+import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
+import {
+  normalizeTeacherPayoutRequestIdempotencyKey,
+  resolveTeacherPayoutRequestIdempotency,
+  TEACHER_PAYOUT_REQUEST_IDEMPOTENCY_ERROR,
+  type TeacherPayoutRequestIntent,
+} from "@/lib/teacher-payout-request-idempotency";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
@@ -54,6 +62,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Note trop longue (${MAX_NOTE_LENGTH} caractères maximum).` }, { status: 400 });
   }
 
+  const idempotencyKey = normalizeTeacherPayoutRequestIdempotencyKey(body.idempotencyKey);
+  if (!idempotencyKey) {
+    return NextResponse.json({
+      error: "Clé de sécurité de la demande invalide. Rechargez la page avant de réessayer.",
+      code: "PAYOUT_REQUEST_IDEMPOTENCY_KEY_INVALID",
+    }, { status: 400 });
+  }
+
+  const requestIntent: TeacherPayoutRequestIntent = {
+    teacherId: teacher.id,
+    amount,
+    method,
+    paymentPhone,
+    note,
+  };
+  const existingBeforeReservation = await db.teacherPayoutRequest.findUnique({
+    where: { idempotencyKey },
+  });
+  const initialResolution = resolveTeacherPayoutRequestIdempotency(
+    existingBeforeReservation,
+    requestIntent,
+  );
+  if (initialResolution === "REPLAY") {
+    return NextResponse.json({
+      ok: true,
+      request: existingBeforeReservation,
+      idempotentReplay: true,
+    });
+  }
+  if (initialResolution === "CONFLICT") {
+    return idempotencyConflictResponse();
+  }
+
   const now = new Date();
   const teacherName = teacher.professionalName || teacher.fullName;
   const reference = generateReference("REQ-PROF");
@@ -61,7 +102,26 @@ export async function POST(req: NextRequest) {
     const result = await db.$transaction(async (tx) => {
       // Le calcul du disponible et la création de sa réservation PENDING
       // doivent partager le même snapshot. Deux POST concurrents ne peuvent
-      // ainsi plus consommer deux fois le même solde professeur.
+      // ainsi plus consommer deux fois le même solde professeur. Le mutex est
+      // aussi partagé avec les DRAFT Jèko et les retenues administratives.
+      await lockTeacherPayoutBalance(tx, teacher.id);
+      const existingRequest = await tx.teacherPayoutRequest.findUnique({
+        where: { idempotencyKey },
+      });
+      const lockedResolution = resolveTeacherPayoutRequestIdempotency(
+        existingRequest,
+        requestIntent,
+      );
+      if (lockedResolution === "REPLAY") {
+        return {
+          ok: true as const,
+          request: existingRequest!,
+          idempotentReplay: true as const,
+        };
+      }
+      if (lockedResolution === "CONFLICT") {
+        throw new Error(TEACHER_PAYOUT_REQUEST_IDEMPOTENCY_ERROR);
+      }
       const [
         bookings,
         adjustments,
@@ -189,25 +249,19 @@ export async function POST(req: NextRequest) {
         historicalSessionRetentions,
         historicalLegacyRetentions,
       );
-      const readyAfterAssignedLegacyRetentions = verifiedBookings.reduce((sum, booking) => {
-        const remaining = getTeacherFinancialSettlement(booking, adjustments).remaining;
-        const assignedLegacyRetention = globalRetentionLedger.legacyByBooking.get(booking.id) ?? 0;
-        return sum + Math.max(0, remaining - assignedLegacyRetention);
-      }, 0);
-      const readyToReceive = Math.max(
-        0,
-        readyAfterAssignedLegacyRetentions - globalRetentionLedger.remaining,
-      );
       const pendingAmount = pendingRequests._sum.amount ?? 0;
-      // Une demande PENDING reliée à un DRAFT réserve déjà son montant.
-      // Les autres allocations DRAFT (versement admin direct) sont ajoutées
-      // sans compter deux fois celles issues d'une demande professeur.
-      const draftReservedAmount = draftAllocations.reduce((sum, allocation) => (
-        allocation.payout.payoutRequest?.status === "PENDING"
-          ? sum
-          : sum + Math.max(0, allocation.amount)
-      ), 0);
-      const requestableAmount = Math.max(0, readyToReceive - pendingAmount - draftReservedAmount);
+      const { requestableAmount } = calculateTeacherPayoutAvailability({
+        settlements: verifiedBookings.map((booking) => ({
+          bookingId: booking.id,
+          remaining: getTeacherFinancialSettlement(booking, adjustments).remaining,
+        })),
+        globalRetentionLedger,
+        pendingRequestedAmount: pendingAmount,
+        draftReservations: draftAllocations.map((allocation) => ({
+          amount: allocation.amount,
+          payoutRequestStatus: allocation.payout.payoutRequest?.status ?? null,
+        })),
+      });
 
       if (requestableAmount <= 0) {
         return { ok: false as const, error: "Aucun montant payable n'est disponible pour une nouvelle demande." };
@@ -222,6 +276,7 @@ export async function POST(req: NextRequest) {
       const created = await tx.teacherPayoutRequest.create({
         data: {
           reference,
+          idempotencyKey,
           teacherId: teacher.id,
           amount,
           method,
@@ -266,13 +321,40 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return { ok: true as const, request: created };
+      return { ok: true as const, request: created, idempotentReplay: false as const };
     }, { isolationLevel: "Serializable" });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-    return NextResponse.json({ ok: true, request: result.request });
+    return NextResponse.json({
+      ok: true,
+      request: result.request,
+      idempotentReplay: result.idempotentReplay,
+    });
   } catch (error) {
-    if (errorCode(error) === "P2034") {
+    const code = errorCode(error);
+    if (code === TEACHER_PAYOUT_REQUEST_IDEMPOTENCY_ERROR) {
+      return idempotencyConflictResponse();
+    }
+    if (["P2002", "P2034"].includes(code)) {
+      const existingAfterRace = await db.teacherPayoutRequest.findUnique({
+        where: { idempotencyKey },
+      });
+      const racedResolution = resolveTeacherPayoutRequestIdempotency(
+        existingAfterRace,
+        requestIntent,
+      );
+      if (racedResolution === "REPLAY") {
+        return NextResponse.json({
+          ok: true,
+          request: existingAfterRace,
+          idempotentReplay: true,
+        });
+      }
+      if (racedResolution === "CONFLICT") {
+        return idempotencyConflictResponse();
+      }
+    }
+    if (["P2034", "TEACHER_PAYOUT_LOCK_NOT_FOUND"].includes(code)) {
       return NextResponse.json({
         error: "Le solde professeur vient d'être réservé depuis une autre demande. Actualisez avant de réessayer.",
         code: "PAYOUT_REQUEST_BALANCE_CONFLICT",
@@ -288,4 +370,11 @@ function errorCode(error: unknown) {
     if ("message" in error && typeof error.message === "string") return error.message;
   }
   return "UNKNOWN";
+}
+
+function idempotencyConflictResponse() {
+  return NextResponse.json({
+    error: "Cette clé de demande a déjà été utilisée avec un autre montant ou un autre compte de paiement.",
+    code: TEACHER_PAYOUT_REQUEST_IDEMPOTENCY_ERROR,
+  }, { status: 409 });
 }

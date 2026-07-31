@@ -108,6 +108,8 @@ export type ResolvedTransportFeeKey = TransportFeeKey | typeof PENDING_TRANSPORT
 
 export type NeighborhoodAliasMap = {
   resolved: Record<string, string>;
+  /** Stable CommuneQuarter identity for every resolved catalogue label/alias. */
+  canonicalKeys: Record<string, string>;
   ambiguous: string[];
 };
 
@@ -323,9 +325,11 @@ function normalize(value?: string | null) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[’']/g, "")
+    .replace(/[()[\]{}]+/g, " ")
     .replace(/[-_/.,]+/g, " ")
     .replace(/\s+/g, " ")
-    .toLowerCase();
+    .toLowerCase()
+    .trim();
 }
 
 const NEIGHBORHOOD_ALIASES: Record<string, string> = {
@@ -347,13 +351,26 @@ function neighborhoodAliasLookupKey(commune?: string | null, neighborhood?: stri
     : "";
 }
 
-function configuredNeighborhoodName(
+type CanonicalNeighborhood = {
+  key: string;
+  name: string;
+};
+
+function configuredNeighborhood(
   value?: string | null,
   commune?: string | null,
   aliases?: NeighborhoodAliasMap,
 ) {
   const scopedKey = neighborhoodAliasLookupKey(commune, value);
-  return (scopedKey ? aliases?.resolved[scopedKey] : undefined) ?? aliases?.resolved[normalize(value)];
+  const lookupKey = scopedKey && aliases?.resolved[scopedKey]
+    ? scopedKey
+    : normalize(value);
+  const canonicalName = aliases?.resolved[lookupKey];
+  if (!canonicalName) return undefined;
+  return {
+    key: aliases?.canonicalKeys?.[lookupKey] ?? `name:${normalize(canonicalName)}`,
+    name: canonicalName,
+  } satisfies CanonicalNeighborhood;
 }
 
 function isAmbiguousNeighborhoodName(
@@ -374,9 +391,16 @@ function normalizeNeighborhood(
   aliases?: NeighborhoodAliasMap,
 ) {
   const normalized = normalize(value);
-  const configuredCanonicalName = configuredNeighborhoodName(value, commune, aliases);
-  if (configuredCanonicalName) return normalize(configuredCanonicalName);
-  return NEIGHBORHOOD_ALIASES[normalized] ?? normalized;
+  const configuredCanonical = configuredNeighborhood(value, commune, aliases);
+  if (configuredCanonical) return normalize(configuredCanonical.name);
+  const normalizedCommune = normalize(commune);
+  // Some legacy teacher profiles stored "Commune Quartier" in the quartier
+  // field. Strip only the exact commune prefix; never use a loose substring
+  // comparison that could merge two genuinely different neighborhoods.
+  const withoutCommunePrefix = normalizedCommune && normalized.startsWith(`${normalizedCommune} `)
+    ? normalized.slice(normalizedCommune.length + 1).trim()
+    : normalized;
+  return NEIGHBORHOOD_ALIASES[withoutCommunePrefix] ?? withoutCommunePrefix;
 }
 
 function displayNeighborhoodName(
@@ -384,48 +408,73 @@ function displayNeighborhoodName(
   commune?: string | null,
   aliases?: NeighborhoodAliasMap,
 ) {
-  const configuredCanonicalName = configuredNeighborhoodName(value, commune, aliases);
-  if (configuredCanonicalName) return configuredCanonicalName;
+  const configuredCanonical = configuredNeighborhood(value, commune, aliases);
+  if (configuredCanonical) return configuredCanonical.name;
   const normalized = normalizeNeighborhood(value, commune, aliases);
   return NEIGHBORHOOD_DISPLAY_NAMES[normalized] ?? (value?.trim() || null);
 }
 
 export function buildNeighborhoodAliasMap(
-  entries: Array<{ name: string; aliases?: string | null; communeName?: string | null }>,
+  entries: Array<{
+    id?: string | null;
+    communeId?: string | null;
+    name: string;
+    aliases?: string | null;
+    communeName?: string | null;
+  }>,
 ): NeighborhoodAliasMap {
-  const candidates = new Map<string, Set<string>>();
-  const register = (key: string, canonicalName: string) => {
+  const candidates = new Map<string, Map<string, string>>();
+  const register = (key: string, canonicalKey: string, canonicalName: string) => {
     if (!key) return;
     const existing = candidates.get(key);
-    if (existing) existing.add(canonicalName);
-    else candidates.set(key, new Set([canonicalName]));
+    if (existing) existing.set(canonicalKey, canonicalName);
+    else candidates.set(key, new Map([[canonicalKey, canonicalName]]));
   };
 
   for (const entry of entries) {
     const canonicalName = entry.name.trim();
     if (!canonicalName) continue;
+    const normalizedCommune = normalize(entry.communeName);
+    const canonicalIdentity = entry.id
+      ? `quarter:${entry.id}`
+      : `quarter:${entry.communeId ?? (normalizedCommune || "global")}:${normalize(canonicalName)}`;
     const canonicalKey = entry.communeName
       ? neighborhoodAliasLookupKey(entry.communeName, canonicalName)
       : normalize(canonicalName);
-    register(canonicalKey, canonicalName);
-    for (const alias of (entry.aliases ?? "").split(/[,;|\n]+/)) {
-      const normalizedAlias = normalize(alias);
-      if (!normalizedAlias) continue;
+    const labels = [canonicalName, ...(entry.aliases ?? "").split(/[,;|\n]+/)]
+      .map((label) => label.trim())
+      .filter(Boolean);
+    register(canonicalKey, canonicalIdentity, canonicalName);
+    for (const label of labels) {
+      const normalizedLabel = normalize(label);
       const aliasKey = entry.communeName
-        ? neighborhoodAliasLookupKey(entry.communeName, alias)
-        : normalizedAlias;
-      register(aliasKey, canonicalName);
+        ? neighborhoodAliasLookupKey(entry.communeName, label)
+        : normalizedLabel;
+      register(aliasKey, canonicalIdentity, canonicalName);
+      // Accept the exact compound form emitted by legacy/imported profiles,
+      // e.g. "Cocody Mermoz", while remaining scoped to Cocody's catalogue.
+      if (entry.communeName && normalizedCommune && !normalizedLabel.startsWith(`${normalizedCommune} `)) {
+        register(
+          neighborhoodAliasLookupKey(entry.communeName, `${entry.communeName} ${label}`),
+          canonicalIdentity,
+          canonicalName,
+        );
+      }
     }
   }
 
   const resolved: Record<string, string> = {};
+  const canonicalKeys: Record<string, string> = {};
   const ambiguous: string[] = [];
-  for (const [key, names] of Array.from(candidates.entries()).sort(([left], [right]) => left.localeCompare(right, "fr"))) {
-    const canonicalNames = Array.from(names).sort((left, right) => left.localeCompare(right, "fr"));
-    if (canonicalNames.length === 1) resolved[key] = canonicalNames[0];
+  for (const [key, identities] of Array.from(candidates.entries()).sort(([left], [right]) => left.localeCompare(right, "fr"))) {
+    const canonicalEntries = Array.from(identities.entries()).sort(([left], [right]) => left.localeCompare(right, "fr"));
+    if (canonicalEntries.length === 1) {
+      canonicalKeys[key] = canonicalEntries[0][0];
+      resolved[key] = canonicalEntries[0][1];
+    }
     else ambiguous.push(key);
   }
-  return { resolved, ambiguous };
+  return { resolved, canonicalKeys, ambiguous };
 }
 
 function includesAny(value: string, needles: string[]) {
@@ -605,12 +654,34 @@ export function calculateGrandAbidjanTransportFee({
       clientCommune,
       neighborhoodAliases,
     );
-    const sameKnownQuartier = Boolean(
-      !hasAmbiguousQuartier
+    const canonicalOriginQuartier = configuredNeighborhood(
+      teacherQuartier,
+      teacherCommune,
+      neighborhoodAliases,
+    );
+    const canonicalDestinationQuartier = configuredNeighborhood(
+      clientQuartier,
+      clientCommune,
+      neighborhoodAliases,
+    );
+    const sameCanonicalQuartier = Boolean(
+      canonicalOriginQuartier
+      && canonicalDestinationQuartier
+      && canonicalOriginQuartier.key === canonicalDestinationQuartier.key
+    );
+    const sameNormalizedFallbackQuartier = Boolean(
+      !canonicalOriginQuartier
+      && !canonicalDestinationQuartier
       && originQuartier
       && destinationQuartier
       && normalizeNeighborhood(originQuartier, teacherCommune, neighborhoodAliases)
         === normalizeNeighborhood(destinationQuartier, clientCommune, neighborhoodAliases)
+    );
+    const sameKnownQuartier = Boolean(
+      !hasAmbiguousQuartier
+      && originQuartier
+      && destinationQuartier
+      && (sameCanonicalQuartier || sameNormalizedFallbackQuartier)
     );
     if (sameKnownQuartier) {
       return {

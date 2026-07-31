@@ -108,6 +108,30 @@ checkDirectoryContainsSql("20260730000000_client_assisted_password_recovery", [
   'CREATE UNIQUE INDEX "User_phoneNormalized_key"',
   'User_recovery_identifier_check',
 ]);
+checkDirectoryContainsSql("20260731000000_teacher_temporary_password_security", [
+  'ALTER TABLE "Teacher"',
+  'ADD COLUMN "portalTemporaryPasswordIssuedAt" TIMESTAMP(3)',
+  '"portalPasswordMustChange" = true',
+  '"portalPasswordHash" IS NOT NULL',
+]);
+checkDirectoryContainsSql("20260731010000_teacher_payout_request_idempotency", [
+  'ALTER TABLE "TeacherPayoutRequest"',
+  'ADD COLUMN "idempotencyKey" TEXT',
+  'CREATE UNIQUE INDEX "TeacherPayoutRequest_idempotencyKey_key"',
+]);
+
+const readinessScript = fs.readFileSync("scripts/check-database-readiness.mjs", "utf8");
+record(
+  "Database readiness reads the teacher temporary-password column",
+  readinessScript.includes("portalTemporaryPasswordIssuedAt: true")
+    && readinessScript.includes("Teacher temporary-password security migration is applied"),
+);
+record(
+  "Database readiness verifies payout-request idempotency column and unique index",
+  readinessScript.includes("idempotencyKey: true")
+    && readinessScript.includes("TeacherPayoutRequest_idempotencyKey_key")
+    && readinessScript.includes("Teacher payout-request idempotency migration is applied"),
+);
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const deployScript = packageJson.scripts?.["db:deploy"] ?? "";

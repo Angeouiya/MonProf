@@ -214,4 +214,22 @@ assert.match(bookingRoute, /case "cancel":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDA
 assert.match(bookingRoute, /!cancellableStatuses\.includes\(currentBooking\.status\)/);
 assert.match(bookingRoute, /status: "FAILED", providerOrderId: \{ not: null \}/);
 
+const bookingForm = readFileSync(
+  new URL("../src/app/client/reserver/reserver-form.tsx", import.meta.url),
+  "utf8",
+);
+const bookingActions = readFileSync(
+  new URL("../src/app/client/reservations/[id]/actions.tsx", import.meta.url),
+  "utf8",
+);
+const reschedulePanel = readFileSync(
+  new URL("../src/app/client/reservations/[id]/reschedule-request-panel.tsx", import.meta.url),
+  "utf8",
+);
+for (const clientSource of [bookingForm, bookingActions, reschedulePanel]) {
+  assert.match(clientSource, /isAllowedJekoRedirectUrl/);
+}
+assert.match(bookingForm, /isAllowedJekoRedirectUrl\(data\.payment\?\.checkoutUrl\)/);
+assert.match(bookingForm, /Le dossier reste en brouillon et aucun professeur n'est notifié/);
+
 console.log("Jèko client payment route verification passed: strict body, provider lock, ambiguous retries and idempotence.");

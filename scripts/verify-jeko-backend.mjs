@@ -15,6 +15,10 @@ const {
   xofToJekoAmountCents,
 } = jiti("../src/lib/jeko-utils.ts");
 const {
+  buildCanonicalJekoCheckoutUrl,
+  isAllowedJekoRedirectUrl: isAllowedJekoCheckoutUrl,
+} = jiti("../src/lib/jeko-checkout-url.ts");
+const {
   getVerifiedClientPaymentTransaction,
   hasCompletedClientPaymentProviderProof,
   hasVerifiedClientPayment,
@@ -34,6 +38,18 @@ assert.equal(
   isAllowedJekoRedirectUrl("https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc"),
   true,
 );
+assert.equal(
+  buildCanonicalJekoCheckoutUrl("d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc"),
+  "https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc",
+);
+assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/abc"), false);
+assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/018f1f6e-7b2d-7c10-8a52-93bd728b39ac"), true);
+assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc?next=x"), false);
+assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc#fragment"), false);
+assert.equal(isAllowedJekoCheckoutUrl(
+  "https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc",
+  "287830f1-9179-4eba-a7e8-e8e11c8621fa",
+), false);
 assert.equal(isAllowedJekoRedirectUrl("http://pay.jeko.africa/payment/abc"), false);
 assert.equal(isAllowedJekoRedirectUrl("https://pay.jeko.africa.evil.example/payment/abc"), false);
 assert.equal(isAllowedJekoRedirectUrl("https://evil.example/?next=https://pay.jeko.africa/payment/abc"), false);

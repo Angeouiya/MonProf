@@ -17,6 +17,19 @@ import {
 } from "@/lib/password-email-outbox";
 import { absoluteAppUrl } from "@/lib/public-url";
 import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
+import {
+  TEMPORARY_PASSWORD_TTL_HOURS,
+  temporaryPasswordExpiresAt,
+} from "@/lib/temporary-password-policy";
+import {
+  CLIENT_IDENTITY_VERIFICATION_METHOD_LABELS,
+  IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH,
+  IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH,
+  isClientIdentityVerificationMethod,
+  isSafeIdentityVerificationReference,
+  normalizeIdentityVerificationReference,
+} from "@/lib/client-identity-verification";
+import { TEACHER_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/teacher-password-assistance";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -135,6 +148,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     statusChangeReason,
     notifyTeacherOnStatusChange,
     portalPassword,
+    identityVerified,
+    verificationMethod,
+    verificationReference,
     ...rest
   } = body;
 
@@ -242,12 +258,42 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
     const passwordWasChanged = typeof portalPassword === "string" && Boolean(portalPassword.trim());
+    const temporaryPasswordIssuedAt = passwordWasChanged ? new Date() : null;
+    const normalizedVerificationMethod = typeof verificationMethod === "string"
+      ? verificationMethod.trim()
+      : "";
+    const normalizedVerificationReference = normalizeIdentityVerificationReference(
+      typeof verificationReference === "string" ? verificationReference : "",
+    );
+    let identityVerificationMethodLabel: string | null = null;
     if (passwordWasChanged) {
       if (!isPasswordCompliant(portalPassword.trim())) {
         return NextResponse.json({ error: `Le mot de passe professeur doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.` }, { status: 400 });
       }
+      if (identityVerified !== true) {
+        return NextResponse.json(
+          { error: "Confirmez la vérification de l'identité du professeur avant de créer un accès temporaire." },
+          { status: 400 },
+        );
+      }
+      if (!isClientIdentityVerificationMethod(normalizedVerificationMethod)) {
+        return NextResponse.json(
+          { error: "Sélectionnez la méthode utilisée pour vérifier l'identité du professeur." },
+          { status: 400 },
+        );
+      }
+      identityVerificationMethodLabel = CLIENT_IDENTITY_VERIFICATION_METHOD_LABELS[normalizedVerificationMethod];
+      if (!isSafeIdentityVerificationReference(normalizedVerificationReference)) {
+        return NextResponse.json(
+          {
+            error: `Ajoutez une référence interne de ${IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH} à ${IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH} caractères, sans donnée personnelle.`,
+          },
+          { status: 400 },
+        );
+      }
       data.portalPasswordHash = await bcrypt.hash(portalPassword.trim(), passwordHashRounds({ role: "TEACHER" }));
       data.portalPasswordMustChange = true;
+      data.portalTemporaryPasswordIssuedAt = temporaryPasswordIssuedAt;
       data.sessionVersion = { increment: 1 };
       if (!("portalAccessEnabled" in data)) data.portalAccessEnabled = true;
       if (!data.portalPhone) data.portalPhone = normalizeTeacherPhone(data.phone || existingTeacher.phone);
@@ -327,7 +373,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (statusChanged) data.lastActivityAt = new Date();
 
-    const passwordChangedAt = passwordWasChanged ? new Date() : null;
+    const passwordChangedAt = temporaryPasswordIssuedAt;
     const passwordTeacherName = typeof data.professionalName === "string" && data.professionalName.trim()
       ? data.professionalName.trim()
       : existingTeacher.professionalName || existingTeacher.fullName;
@@ -342,13 +388,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { teacherId: id, usedAt: null },
           data: { usedAt: passwordChangedAt },
         });
+        await tx.notification.updateMany({
+          where: {
+            teacherId: id,
+            type: TEACHER_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE,
+            read: false,
+          },
+          data: {
+            read: true,
+            readAt: passwordChangedAt,
+            confirmedAt: passwordChangedAt,
+            status: "CONFIRMED",
+            response: "Identité vérifiée et accès temporaire attribué.",
+          },
+        });
         await tx.adminActionLog.create({
           data: {
             adminId: admin.id,
             action: "Mot de passe professeur réinitialisé",
             entityType: "Teacher",
             entityId: id,
-            detail: `${admin.name} a attribué un mot de passe temporaire à ${passwordTeacherName}.`,
+            detail: `${admin.name} a attribué un mot de passe temporaire valable ${TEMPORARY_PASSWORD_TTL_HOURS} h à ${passwordTeacherName} après vérification d'identité (${identityVerificationMethodLabel} ; référence : ${normalizedVerificationReference}).`,
             newStatus: "TEACHER_TEMPORARY_PASSWORD_ASSIGNED",
           },
         });
@@ -356,7 +416,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: {
             teacherId: id,
             title: "Mot de passe temporaire attribué",
-            message: "L'administration a remplacé votre mot de passe. Utilisez le mot de passe temporaire transmis par le service client, puis créez votre mot de passe personnel à la connexion.",
+            message: `L'administration a remplacé votre mot de passe. Le mot de passe temporaire transmis par le service client est valable ${TEMPORARY_PASSWORD_TTL_HOURS} h et une seule connexion, puis vous devrez créer votre mot de passe personnel.`,
             channel: "INTERNAL",
             sent: true,
             status: "SENT",
@@ -536,7 +596,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     revalidatePath("/professeurs");
     revalidatePath(`/professeurs/${id}`);
 
-    return NextResponse.json({ ok: true, id, passwordEmail });
+    return NextResponse.json({
+      ok: true,
+      id,
+      passwordEmail,
+      temporaryPassword: temporaryPasswordIssuedAt
+        ? {
+            expiresAt: temporaryPasswordExpiresAt(temporaryPasswordIssuedAt).toISOString(),
+            expiresInHours: TEMPORARY_PASSWORD_TTL_HOURS,
+          }
+        : null,
+    });
   } catch (e: any) {
     console.error("admin/teachers PATCH error", e);
     if (e?.code === "P2002") {

@@ -38,6 +38,8 @@ try {
     await checkTable(label, getCount);
   }
 
+  await checkPasswordRecoverySchema();
+  await checkTeacherPayoutRequestIdempotencySchema();
   await checkAdminAccount();
   checkRequiredCatalogs();
   await checkOperationalSettings();
@@ -58,6 +60,50 @@ const failed = checks.filter((check) => !check.ok);
 if (failed.length > 0) {
   console.log(`FAIL Database readiness check failed: ${failed.length} blocking issue(s).`);
   process.exitCode = 1;
+}
+
+async function checkPasswordRecoverySchema() {
+  try {
+    // Un simple count(*) ne lit aucune colonne et laisserait passer un serveur
+    // déployé avant sa migration. Cette projection échoue explicitement si le
+    // verrou de mot de passe temporaire professeur n'existe pas encore.
+    await db.teacher.findFirst({
+      select: {
+        id: true,
+        portalTemporaryPasswordIssuedAt: true,
+      },
+    });
+    record("Teacher temporary-password security migration is applied", true);
+  } catch (error) {
+    warnings.push(`Teacher temporary-password schema check failed: ${error instanceof Error ? error.message : "unknown error"}.`);
+    record("Teacher temporary-password security migration is applied", false);
+  }
+}
+
+async function checkTeacherPayoutRequestIdempotencySchema() {
+  try {
+    await db.teacherPayoutRequest.findFirst({
+      select: {
+        id: true,
+        idempotencyKey: true,
+      },
+    });
+    const [index] = await db.$queryRaw`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = current_schema()
+          AND indexname = 'TeacherPayoutRequest_idempotencyKey_key'
+      ) AS "present"
+    `;
+    record(
+      "Teacher payout-request idempotency migration is applied",
+      index?.present === true,
+    );
+  } catch (error) {
+    warnings.push(`Teacher payout-request idempotency schema check failed: ${error instanceof Error ? error.message : "unknown error"}.`);
+    record("Teacher payout-request idempotency migration is applied", false);
+  }
 }
 
 async function checkDatabaseUrl() {

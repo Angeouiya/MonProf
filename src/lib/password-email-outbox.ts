@@ -313,12 +313,22 @@ export async function requestPasswordResetAssistanceByPhone(input: {
             recipientType: "ADMIN",
             clientId: target.id,
             read: false,
-            createdAt: { gte: windowStart },
           },
           orderBy: { createdAt: "desc" },
-          select: { id: true },
+          select: { id: true, createdAt: true },
         });
         if (existing) {
+          if (existing.createdAt < windowStart) {
+            await tx.notification.update({
+              where: { id: existing.id },
+              data: {
+                status: "RELAUNCHED",
+                priority: "URGENT",
+                sentAt: now,
+                createdAt: now,
+              },
+            });
+          }
           return { accepted: true, notificationId: existing.id, reused: true };
         }
 

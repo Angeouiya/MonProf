@@ -15,6 +15,7 @@ import {
   resolveAdminPermissions,
 } from "@/lib/admin-permissions";
 import { isCurrentSessionVersion } from "@/lib/session-revocation";
+import { isTemporaryPasswordUsable } from "@/lib/temporary-password-policy";
 
 // Même coût bcrypt pour un identifiant absent ou non autorisé afin de ne pas
 // révéler par le temps de réponse si un email ou un téléphone est enregistré.
@@ -62,7 +63,7 @@ export const authOptions: NextAuthOptions = {
           // Le mot de passe temporaire est consommé atomiquement à la première
           // connexion. La session gagnante reste limitée au changement forcé;
           // toute autre tentative avec le même secret est refusée.
-          if (!user.temporaryPasswordIssuedAt) return null;
+          if (!isTemporaryPasswordUsable(user.temporaryPasswordIssuedAt)) return null;
           const claimed = await db.user.updateMany({
             where: {
               id: user.id,
@@ -127,10 +128,37 @@ export const authOptions: NextAuthOptions = {
         );
         if (!teacher || !portalAllowed || !ok) return null;
 
-        await db.teacher.update({
-          where: { id: teacher.id },
-          data: { portalLastLoginAt: new Date(), lastActivityAt: new Date() },
-        });
+        const now = new Date();
+        let sessionVersion = teacher.sessionVersion;
+        if (teacher.portalPasswordMustChange) {
+          // Le secret temporaire n'est valide que pendant sa fenêtre de 24 h.
+          // Le couple horodatage/version rend la première connexion atomique :
+          // une seule requête gagne, toutes les concurrentes sont refusées.
+          if (!isTemporaryPasswordUsable(teacher.portalTemporaryPasswordIssuedAt, now)) {
+            return null;
+          }
+          const claimed = await db.teacher.updateMany({
+            where: {
+              id: teacher.id,
+              portalPasswordMustChange: true,
+              portalTemporaryPasswordIssuedAt: teacher.portalTemporaryPasswordIssuedAt,
+              sessionVersion: teacher.sessionVersion,
+            },
+            data: {
+              portalTemporaryPasswordIssuedAt: null,
+              sessionVersion: { increment: 1 },
+              portalLastLoginAt: now,
+              lastActivityAt: now,
+            },
+          });
+          if (claimed.count !== 1) return null;
+          sessionVersion += 1;
+        } else {
+          await db.teacher.update({
+            where: { id: teacher.id },
+            data: { portalLastLoginAt: now, lastActivityAt: now },
+          });
+        }
 
         return {
           id: teacher.id,
@@ -140,7 +168,7 @@ export const authOptions: NextAuthOptions = {
           phone: teacher.phone,
           role: "TEACHER",
           portalPasswordMustChange: teacher.portalPasswordMustChange,
-          sessionVersion: teacher.sessionVersion,
+          sessionVersion,
         } as any;
       },
     }),

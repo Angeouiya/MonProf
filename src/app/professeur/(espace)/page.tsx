@@ -3,7 +3,11 @@ import { ArrowRight, Bell, BookOpenCheck, CalendarClock, ClipboardList, CreditCa
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { getTeacherBlockedAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
+import {
+  calculateTeacherPayoutAvailability,
+  getTeacherFinancialSettlement,
+  getTeacherGlobalRetentionLedger,
+} from "@/lib/teacher-payments";
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
@@ -40,8 +44,11 @@ export default async function ProfesseurDashboardPage() {
     adjustments,
     unreadServiceClientMessageCount,
     pendingScheduleProposalCount,
-    pendingPayoutRequestCount,
+    pendingPayoutRequestSummary,
     payoutFeesCoveredAgg,
+    historicalSessionRetentions,
+    historicalLegacyRetentions,
+    draftPayoutAllocations,
   ] = await db.$transaction([
     db.teacher.findUnique({
       where: { id: teacher.id },
@@ -140,10 +147,33 @@ export default async function ProfesseurDashboardPage() {
     db.bookingScheduleProposal.count({
       where: { teacherId: teacher.id, status: "PENDING", booking: { is: verifiedPayDunyaBookingWhere({ teacherId: teacher.id }) } },
     }),
-    db.teacherPayoutRequest.count({ where: { teacherId: teacher.id, status: "PENDING" } }),
+    db.teacherPayoutRequest.aggregate({
+      where: { teacherId: teacher.id, status: "PENDING" },
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
     db.teacherPayoutRecord.aggregate({
       where: { teacherId: teacher.id, status: "PAID" },
       _sum: { transferFeeCoveredByPlatform: true },
+    }),
+    db.bookingSession.findMany({
+      where: { teacherId: teacher.id, retainedAmount: { gt: 0 } },
+      select: { bookingId: true, retainedAmount: true },
+    }),
+    db.teacherPayoutAllocation.findMany({
+      where: {
+        bookingSessionId: null,
+        retainedAmountSnapshot: { gt: 0 },
+        payout: { teacherId: teacher.id, status: { in: ["DRAFT", "PAID"] } },
+      },
+      select: { bookingId: true, retainedAmountSnapshot: true },
+    }),
+    db.teacherPayoutAllocation.findMany({
+      where: { payout: { teacherId: teacher.id, provider: "JEKO", status: "DRAFT" } },
+      select: {
+        amount: true,
+        payout: { select: { payoutRequest: { select: { status: true } } } },
+      },
     }),
   ]);
 
@@ -152,14 +182,33 @@ export default async function ProfesseurDashboardPage() {
   const verifiedPendingMissions = pendingMissions.filter((mission) => hasVerifiedPayDunyaClientPayment(mission.booking));
   const verifiedOpenTasks = openTasks.filter((task) => task.booking && hasVerifiedPayDunyaClientPayment(task.booking));
   const verifiedPaymentBookings = paymentBookings.filter(hasVerifiedPayDunyaClientPayment);
-  const amountToReceive = verifiedPaymentBookings.reduce((sum, booking) => (
-    sum + getTeacherRemainingAmount(booking, adjustments)
-  ), 0);
-  const readyToRequestAmount = verifiedPaymentBookings
-    .filter(isTeacherPayableStatus)
-    .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, adjustments), 0);
-  const blockedTeacherAmount = verifiedPaymentBookings
-    .reduce((sum, booking) => sum + getTeacherBlockedAmount(booking), 0);
+  const paymentSettlementRows = verifiedPaymentBookings.map((booking) => ({
+    booking,
+    settlement: getTeacherFinancialSettlement(booking, adjustments),
+  }));
+  const globalRetentionLedger = getTeacherGlobalRetentionLedger(
+    adjustments,
+    historicalSessionRetentions,
+    historicalLegacyRetentions,
+  );
+  const payoutAvailability = calculateTeacherPayoutAvailability({
+    settlements: paymentSettlementRows.map(({ booking, settlement }) => ({
+      bookingId: booking.id,
+      remaining: settlement.remaining,
+      totalOutstanding: settlement.totalOutstanding,
+    })),
+    globalRetentionLedger,
+    pendingRequestedAmount: pendingPayoutRequestSummary._sum.amount,
+    draftReservations: draftPayoutAllocations.map((allocation) => ({
+      amount: allocation.amount,
+      payoutRequestStatus: allocation.payout.payoutRequest?.status ?? null,
+    })),
+  });
+  const amountToReceive = payoutAvailability.totalOutstanding;
+  const readyToRequestAmount = payoutAvailability.requestableAmount;
+  const blockedTeacherAmount = paymentSettlementRows
+    .reduce((sum, row) => sum + row.settlement.blocked, 0);
+  const pendingPayoutRequestCount = pendingPayoutRequestSummary._count._all;
   const realizedCount = verifiedPaymentBookings.filter((booking) => booking.paymentStatus === "TEACHER_PAID").length;
   const primarySubject = fullTeacher?.subjects.find((item) => item.isPrimary)?.subject.name
     ?? fullTeacher?.subjects[0]?.subject.name

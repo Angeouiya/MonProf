@@ -4,10 +4,18 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/client-password-assistance";
+import {
+  CLIENT_IDENTITY_VERIFICATION_METHOD_LABELS,
+  IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH,
+  IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH,
+  isClientIdentityVerificationMethod,
+  isSafeIdentityVerificationReference,
+  normalizeIdentityVerificationReference,
+} from "@/lib/client-identity-verification";
 import { passwordHashRounds } from "@/lib/password-policy";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const admin = await requireAdminApi("CLIENTS_MANAGE");
@@ -41,6 +49,36 @@ export async function POST(
     return NextResponse.json(
       { error: "Aucun numéro canonique ne permet de remettre l'accès à ce client." },
       { status: 409 },
+    );
+  }
+
+  const body = await req.json().catch(() => null);
+  const identityVerified = body?.identityVerified === true;
+  const verificationMethod = typeof body?.verificationMethod === "string"
+    ? body.verificationMethod.trim()
+    : "";
+  const verificationReference = normalizeIdentityVerificationReference(
+    typeof body?.verificationReference === "string" ? body.verificationReference : "",
+  );
+
+  if (!identityVerified) {
+    return NextResponse.json(
+      { error: "Confirmez la vérification de l'identité du client avant de créer un accès temporaire." },
+      { status: 400 },
+    );
+  }
+  if (!isClientIdentityVerificationMethod(verificationMethod)) {
+    return NextResponse.json(
+      { error: "Sélectionnez la méthode utilisée pour vérifier l'identité du client." },
+      { status: 400 },
+    );
+  }
+  if (!isSafeIdentityVerificationReference(verificationReference)) {
+    return NextResponse.json(
+      {
+        error: `Ajoutez une référence interne de ${IDENTITY_VERIFICATION_REFERENCE_MIN_LENGTH} à ${IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH} caractères (lettres, chiffres, tiret, barre, point, # ou _), sans donnée personnelle.`,
+      },
+      { status: 400 },
     );
   }
 
@@ -92,7 +130,7 @@ export async function POST(
           action: "Mot de passe temporaire client attribué",
           entityType: "User",
           entityId: target.id,
-          detail: `${admin.name} a attribué un mot de passe temporaire à ${target.name} après assistance téléphonique. Le secret n'est ni journalisé ni conservé en clair.`,
+          detail: `${admin.name} a attribué un mot de passe temporaire à ${target.name} après vérification d'identité (${CLIENT_IDENTITY_VERIFICATION_METHOD_LABELS[verificationMethod]} ; référence : ${verificationReference}). Le secret n'est ni journalisé ni conservé en clair.`,
           oldStatus: "CLIENT_PASSWORD_UNKNOWN",
           newStatus: "CLIENT_TEMPORARY_PASSWORD_ASSIGNED",
         },

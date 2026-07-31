@@ -36,6 +36,19 @@ export type TeacherLegacyRetentionEvidence = {
   retainedAmountSnapshot: number;
 };
 
+export type TeacherPayoutSettlementBalance = {
+  bookingId: string;
+  remaining: number;
+  totalOutstanding?: number;
+};
+
+export type TeacherPayoutDraftReservation = {
+  amount: number;
+  payoutRequestStatus?: string | null;
+};
+
+export type TeacherGlobalRetentionLedger = ReturnType<typeof getTeacherGlobalRetentionLedger>;
+
 /**
  * Calcule la part déjà consommée des retenues globales sur tout
  * l'historique du professeur, y compris les séances déjà payées.
@@ -136,6 +149,64 @@ export function getMaterializedTeacherGlobalRetention(
     sessionEvidence,
     legacyEvidence,
   ).materialized;
+}
+
+/**
+ * Source de vérité commune entre l'API de demande et les dashboards.
+ *
+ * Une demande PENDING réserve déjà son montant. Lorsqu'elle est reliée à un
+ * transfert DRAFT, l'allocation correspondante ne doit donc pas être comptée
+ * une seconde fois. Les DRAFT créés directement par un administrateur restent
+ * en revanche des réservations à part entière jusqu'au succès ou à l'annulation
+ * du transfert Jèko.
+ */
+export function calculateTeacherPayoutAvailability(input: {
+  settlements: TeacherPayoutSettlementBalance[];
+  globalRetentionLedger: TeacherGlobalRetentionLedger;
+  pendingRequestedAmount?: number | null;
+  draftReservations?: TeacherPayoutDraftReservation[];
+}) {
+  const legacyRetentionAmount = [...input.globalRetentionLedger.legacyByBooking.values()]
+    .reduce((sum, amount) => sum + Math.max(0, amount), 0);
+  const retentionNotRepresentedInSettlements = legacyRetentionAmount
+    + Math.max(0, input.globalRetentionLedger.remaining);
+  const readyAfterAssignedLegacyRetentions = input.settlements.reduce((sum, settlement) => (
+    sum + Math.max(
+      0,
+      Math.max(0, settlement.remaining)
+        - (input.globalRetentionLedger.legacyByBooking.get(settlement.bookingId) ?? 0),
+    )
+  ), 0);
+  const readyToReceive = Math.max(
+    0,
+    readyAfterAssignedLegacyRetentions - Math.max(0, input.globalRetentionLedger.remaining),
+  );
+  const totalOutstanding = Math.max(
+    0,
+    input.settlements.reduce(
+      (sum, settlement) => sum + Math.max(0, settlement.totalOutstanding ?? settlement.remaining),
+      0,
+    ) - retentionNotRepresentedInSettlements,
+  );
+  const pendingRequestedAmount = Math.max(0, input.pendingRequestedAmount ?? 0);
+  const draftReservedAmount = (input.draftReservations ?? []).reduce((sum, reservation) => (
+    reservation.payoutRequestStatus === "PENDING"
+      ? sum
+      : sum + Math.max(0, reservation.amount)
+  ), 0);
+  const requestableAmount = Math.max(
+    0,
+    readyToReceive - pendingRequestedAmount - draftReservedAmount,
+  );
+
+  return {
+    readyToReceive,
+    totalOutstanding,
+    pendingRequestedAmount,
+    draftReservedAmount,
+    requestableAmount,
+    retentionNotRepresentedInSettlements,
+  };
 }
 
 export function getTeacherPayableAmount(booking: TeacherPaymentBooking) {

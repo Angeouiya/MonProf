@@ -5,7 +5,12 @@ import { formatDate, formatDateTime, formatFCFA } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
-import { getTeacherFinancialSettlement, isCancellationPenaltyPayout, isTeacherPayableStatus } from "@/lib/teacher-payments";
+import {
+  calculateTeacherPayoutAvailability,
+  getTeacherFinancialSettlement,
+  getTeacherGlobalRetentionLedger,
+  isCancellationPenaltyPayout,
+} from "@/lib/teacher-payments";
 import { TeacherPayoutReceiptActions } from "@/components/admin/teacher-payout-receipt-actions";
 import {
   EmptyProfessorState,
@@ -24,7 +29,17 @@ export const dynamic = "force-dynamic";
 export default async function ProfesseurPaiementsPage() {
   const { teacher } = await requireTeacher();
   const platformSettings = await getPlatformRuntimeSettings();
-  const [bookings, adjustments, payouts, payoutRequests, payoutFeeSummary, pendingRequestSummary] = await db.$transaction([
+  const [
+    bookings,
+    adjustments,
+    payouts,
+    payoutRequests,
+    payoutFeeSummary,
+    pendingRequestSummary,
+    historicalSessionRetentions,
+    historicalLegacyRetentions,
+    draftAllocations,
+  ] = await db.$transaction([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({
         AND: [
@@ -122,6 +137,25 @@ export default async function ProfesseurPaiementsPage() {
       where: { teacherId: teacher.id, status: "PENDING" },
       _sum: { amount: true },
     }),
+    db.bookingSession.findMany({
+      where: { teacherId: teacher.id, retainedAmount: { gt: 0 } },
+      select: { bookingId: true, retainedAmount: true },
+    }),
+    db.teacherPayoutAllocation.findMany({
+      where: {
+        bookingSessionId: null,
+        retainedAmountSnapshot: { gt: 0 },
+        payout: { teacherId: teacher.id, status: { in: ["DRAFT", "PAID"] } },
+      },
+      select: { bookingId: true, retainedAmountSnapshot: true },
+    }),
+    db.teacherPayoutAllocation.findMany({
+      where: { payout: { teacherId: teacher.id, provider: "JEKO", status: "DRAFT" } },
+      select: {
+        amount: true,
+        payout: { select: { payoutRequest: { select: { status: true } } } },
+      },
+    }),
   ]);
 
   const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
@@ -130,18 +164,36 @@ export default async function ProfesseurPaiementsPage() {
     settlement: getTeacherFinancialSettlement(booking, adjustments),
   }));
   const visibleSettlementRows = settlementRows.slice(0, 100);
+  const globalRetentionLedger = getTeacherGlobalRetentionLedger(
+    adjustments,
+    historicalSessionRetentions,
+    historicalLegacyRetentions,
+  );
+  const availability = calculateTeacherPayoutAvailability({
+    settlements: settlementRows.map(({ booking, settlement }) => ({
+      bookingId: booking.id,
+      remaining: settlement.remaining,
+      totalOutstanding: settlement.totalOutstanding,
+    })),
+    globalRetentionLedger,
+    pendingRequestedAmount: pendingRequestSummary._sum.amount,
+    draftReservations: draftAllocations.map((allocation) => ({
+      amount: allocation.amount,
+      payoutRequestStatus: allocation.payout.payoutRequest?.status ?? null,
+    })),
+  });
   const totalNet = settlementRows.reduce((sum, row) => sum + row.settlement.expectedAmount, 0);
   const totalReleased = settlementRows.reduce((sum, row) => sum + row.settlement.released, 0);
   const totalPaid = settlementRows.reduce((sum, row) => sum + row.settlement.paid, 0);
-  const totalRetained = settlementRows.reduce((sum, row) => sum + row.settlement.retained, 0);
-  const remaining = settlementRows.reduce((sum, row) => sum + row.settlement.totalOutstanding, 0);
-  const readyToReceive = settlementRows
-    .filter((row) => isTeacherPayableStatus(row.booking))
-    .reduce((sum, row) => sum + row.settlement.remaining, 0);
+  const totalRetained = settlementRows.reduce((sum, row) => sum + row.settlement.retained, 0)
+    + availability.retentionNotRepresentedInSettlements;
+  const remaining = availability.totalOutstanding;
+  const readyToReceive = availability.readyToReceive;
   const blockedAmount = settlementRows.reduce((sum, row) => sum + row.settlement.blocked, 0);
   const underControlAmount = Math.max(0, remaining - readyToReceive - blockedAmount);
-  const pendingRequested = Math.max(0, pendingRequestSummary._sum.amount ?? 0);
-  const requestableAmount = Math.max(0, readyToReceive - pendingRequested);
+  const pendingRequested = availability.pendingRequestedAmount;
+  const draftReservedAmount = availability.draftReservedAmount;
+  const requestableAmount = availability.requestableAmount;
   const transferFeesCovered = Math.max(0, payoutFeeSummary._sum.transferFeeCoveredByPlatform ?? 0);
 
   return (
@@ -166,7 +218,7 @@ export default async function ProfesseurPaiementsPage() {
           </div>
           <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 lg:min-w-64 lg:text-right">
             <p className="text-xs font-bold uppercase tracking-wide text-[#C7D2FE]">Disponible maintenant</p>
-            <p className="mt-1 text-2xl font-black tabular-nums">{formatFCFA(readyToReceive)}</p>
+            <p className="mt-1 text-2xl font-black tabular-nums">{formatFCFA(requestableAmount)}</p>
           </div>
         </div>
         <div className="grid gap-2 border-t border-white/15 bg-white/5 p-4 min-[520px]:grid-cols-4 sm:px-6">
@@ -181,7 +233,7 @@ export default async function ProfesseurPaiementsPage() {
         <ProfessorStatCard label="Net prévu" value={formatFCFA(totalNet)} detail="Toutes les séances attribuées, libérées ou encore bloquées" icon="wallet" />
         <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
         <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
-        <ProfessorStatCard label="Prêt à recevoir" value={formatFCFA(readyToReceive)} detail="Montant validé et payable par le service client" icon="wallet" />
+        <ProfessorStatCard label="Demandable" value={formatFCFA(requestableAmount)} detail="Après demandes et transferts déjà réservés" icon="wallet" />
         <ProfessorStatCard label="Encore bloqué" value={formatFCFA(blockedAmount)} detail="En attente de confirmation ou contrôle" icon="clock" />
         <ProfessorStatCard label="Retenues" value={formatFCFA(totalRetained)} detail="Retenues validées par le service client" icon="alert" />
       </ProfessorStatGrid>
@@ -199,7 +251,10 @@ export default async function ProfesseurPaiementsPage() {
             <AccountingMini label="Déjà payé" value={formatFCFA(totalPaid)} />
             <AccountingMini label="Reste dû" value={formatFCFA(remaining)} strong />
             <AccountingMini label="Déjà libéré" value={formatFCFA(totalReleased)} />
-            <AccountingMini label="Prêt à recevoir" value={formatFCFA(readyToReceive)} />
+            <AccountingMini label="Payable brut" value={formatFCFA(readyToReceive)} />
+            <AccountingMini label="Demandes en attente" value={formatFCFA(pendingRequested)} />
+            <AccountingMini label="Transferts en cours" value={formatFCFA(draftReservedAmount)} />
+            <AccountingMini label="Demandable" value={formatFCFA(requestableAmount)} strong />
             <AccountingMini label="Encore bloqué" value={formatFCFA(blockedAmount)} />
             <AccountingMini label="En contrôle" value={formatFCFA(underControlAmount)} />
           </div>
@@ -210,6 +265,7 @@ export default async function ProfesseurPaiementsPage() {
         <TeacherPayoutRequestForm
           readyToReceive={readyToReceive}
           pendingRequested={pendingRequested}
+          draftReservedAmount={draftReservedAmount}
           defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
           defaultMethod={teacher.defaultPayoutMethod}
           payoutInstructions={teacher.payoutInstructions}

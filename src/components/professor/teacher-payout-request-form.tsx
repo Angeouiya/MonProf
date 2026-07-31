@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -17,9 +17,14 @@ function normalizePhone(value: string) {
   return value.replace(/[^\d+]/g, "");
 }
 
+function createPayoutRequestIdempotencyKey() {
+  return crypto.randomUUID();
+}
+
 export function TeacherPayoutRequestForm({
   readyToReceive,
   pendingRequested,
+  draftReservedAmount,
   defaultPhone,
   defaultMethod,
   payoutInstructions,
@@ -28,6 +33,7 @@ export function TeacherPayoutRequestForm({
 }: {
   readyToReceive: number;
   pendingRequested: number;
+  draftReservedAmount: number;
   defaultPhone?: string | null;
   defaultMethod?: string | null;
   payoutInstructions?: string | null;
@@ -35,13 +41,14 @@ export function TeacherPayoutRequestForm({
   maximumProcessingHours: number;
 }) {
   const router = useRouter();
-  const requestableAmount = Math.max(0, readyToReceive - pendingRequested);
+  const requestableAmount = Math.max(0, readyToReceive - pendingRequested - draftReservedAmount);
   const [amount, setAmount] = useState(requestableAmount > 0 ? String(requestableAmount) : "");
   const [method, setMethod] = useState(defaultMethod || "WAVE");
   const [paymentPhone, setPaymentPhone] = useState(defaultPhone ?? "");
   const [paymentPhoneConfirm, setPaymentPhoneConfirm] = useState(defaultPhone ?? "");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const pendingSubmissionRef = useRef<{ key: string; fingerprint: string } | null>(null);
 
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
   const normalizedPhone = normalizePhone(paymentPhone);
@@ -60,28 +67,48 @@ export function TeacherPayoutRequestForm({
 
   const submit = async () => {
     if (!canSubmit) return;
+    const requestPayload = {
+      amount: cleanAmount,
+      method,
+      paymentPhone: normalizedPhone,
+      paymentPhoneConfirm: normalizedConfirm,
+      note: note.trim(),
+    };
+    const fingerprint = JSON.stringify(requestPayload);
+    if (!pendingSubmissionRef.current || pendingSubmissionRef.current.fingerprint !== fingerprint) {
+      pendingSubmissionRef.current = {
+        key: createPayoutRequestIdempotencyKey(),
+        fingerprint,
+      };
+    }
+    const idempotencyKey = pendingSubmissionRef.current.key;
     setLoading(true);
     try {
       const res = await fetch("/api/professor/payout-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: cleanAmount,
-          method,
-          paymentPhone: normalizedPhone,
-          paymentPhoneConfirm: normalizedConfirm,
-          note,
+          ...requestPayload,
+          idempotencyKey,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (data.code === "PAYOUT_REQUEST_IDEMPOTENCY_MISMATCH") {
+          pendingSubmissionRef.current = null;
+        }
         toast.error(data.error || "Impossible d'envoyer la demande.");
         return;
       }
-      toast.success(`Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h après contrôle du service client.`);
+      pendingSubmissionRef.current = null;
+      toast.success(data.idempotentReplay
+        ? "Cette demande avait déjà été reçue : aucune seconde réservation n'a été créée."
+        : `Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h après contrôle du service client.`);
       setAmount("");
       setNote("");
       router.refresh();
+    } catch {
+      toast.error("La réponse du serveur n'a pas été reçue. Vous pouvez réessayer : la même demande ne sera pas créée deux fois.");
     } finally {
       setLoading(false);
     }
@@ -194,7 +221,11 @@ export function TeacherPayoutRequestForm({
       <div className="mt-4 flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
           <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
-          <span>{pendingRequested > 0 ? `${formatFCFA(pendingRequested)} déjà demandé et en attente.` : "Aucune demande en attente."}</span>
+          <span>
+            {pendingRequested > 0 || draftReservedAmount > 0
+              ? `${formatFCFA(pendingRequested + draftReservedAmount)} déjà réservé (demandes et transferts en cours).`
+              : "Aucune demande ou transfert en attente."}
+          </span>
         </div>
         <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}

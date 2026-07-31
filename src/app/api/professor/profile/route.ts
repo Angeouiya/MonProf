@@ -309,6 +309,7 @@ export async function PATCH(req: NextRequest) {
       professionalName: true,
       email: true,
       portalPasswordHash: true,
+      sessionVersion: true,
     },
   });
 
@@ -328,55 +329,73 @@ export async function PATCH(req: NextRequest) {
   const teacherName = stored.professionalName || stored.fullName;
   const newHash = await bcrypt.hash(newPassword, passwordHashRounds({ role: "TEACHER" }));
 
-  const confirmationJobId = await db.$transaction(async (tx) => {
-    await tx.teacher.update({
-      where: { id: stored.id },
-      data: {
-        portalPasswordHash: newHash,
-        portalPasswordMustChange: false,
-        sessionVersion: { increment: 1 },
-        lastActivityAt: now,
-      },
-    });
+  let confirmationJobId: string | null;
+  try {
+    confirmationJobId = await db.$transaction(async (tx) => {
+      const updated = await tx.teacher.updateMany({
+        where: {
+          id: stored.id,
+          portalPasswordHash: stored.portalPasswordHash,
+          sessionVersion: stored.sessionVersion,
+        },
+        data: {
+          portalPasswordHash: newHash,
+          portalPasswordMustChange: false,
+          portalTemporaryPasswordIssuedAt: null,
+          sessionVersion: { increment: 1 },
+          lastActivityAt: now,
+        },
+      });
+      if (updated.count !== 1) {
+        throw new Error("TEACHER_PASSWORD_UPDATE_CONFLICT");
+      }
 
-    await tx.teacherPasswordResetToken.updateMany({
-      where: { teacherId: stored.id, usedAt: null },
-      data: { usedAt: now },
-    });
+      await tx.teacherPasswordResetToken.updateMany({
+        where: { teacherId: stored.id, usedAt: null },
+        data: { usedAt: now },
+      });
 
-    await tx.teacherNotification.create({
-      data: {
+      await tx.teacherNotification.create({
+        data: {
+          teacherId: stored.id,
+          title: "Mot de passe modifié",
+          message: "Votre mot de passe professeur a été modifié depuis votre espace sécurisé.",
+          channel: "INTERNAL",
+          sent: true,
+          status: "SENT",
+        },
+      });
+
+      await tx.adminActionLog.create({
+        data: {
+          action: "Mot de passe professeur modifié",
+          entityType: "Teacher",
+          entityId: stored.id,
+          detail: `${teacherName} a modifié son mot de passe depuis l'espace professeur.`,
+          newStatus: "TEACHER_PASSWORD_UPDATED",
+        },
+      });
+
+      if (!stored.email) return null;
+      return enqueuePasswordChangedEmailInTransaction(tx, {
+        accountType: "PROFESSOR",
+        email: stored.email,
+        name: teacherName,
+        changedAt: now,
+        securityUrl: absoluteAppUrl("/contact", req),
+        accountLabel: "espace professeur Compétence",
+        sourceTokenId: `teacher-self-service:${stored.id}:${now.toISOString()}`,
         teacherId: stored.id,
-        title: "Mot de passe modifié",
-        message: "Votre mot de passe professeur a été modifié depuis votre espace sécurisé.",
-        channel: "INTERNAL",
-        sent: true,
-        status: "SENT",
-      },
+      });
     });
-
-    await tx.adminActionLog.create({
-      data: {
-        action: "Mot de passe professeur modifié",
-        entityType: "Teacher",
-        entityId: stored.id,
-        detail: `${teacherName} a modifié son mot de passe depuis l'espace professeur.`,
-        newStatus: "TEACHER_PASSWORD_UPDATED",
-      },
-    });
-
-    if (!stored.email) return null;
-    return enqueuePasswordChangedEmailInTransaction(tx, {
-      accountType: "PROFESSOR",
-      email: stored.email,
-      name: teacherName,
-      changedAt: now,
-      securityUrl: absoluteAppUrl("/contact", req),
-      accountLabel: "espace professeur Compétence",
-      sourceTokenId: `teacher-self-service:${stored.id}:${now.toISOString()}`,
-      teacherId: stored.id,
-    });
-  });
+  } catch (error) {
+    if (error instanceof Error && error.message === "TEACHER_PASSWORD_UPDATE_CONFLICT") {
+      return NextResponse.json({
+        error: "Ce mot de passe a déjà été remplacé. Reconnectez-vous avec le nouveau mot de passe.",
+      }, { status: 409 });
+    }
+    throw error;
+  }
 
   if (confirmationJobId) {
     after(async () => {

@@ -6,6 +6,8 @@ const jiti = createJiti(import.meta.url);
 const state = jiti("../src/lib/jeko-payout-state.ts") as typeof import("../src/lib/jeko-payout-state");
 const utils = jiti("../src/lib/jeko-utils.ts") as typeof import("../src/lib/jeko-utils");
 const retention = jiti("../src/lib/teacher-payout-retention.ts") as typeof import("../src/lib/teacher-payout-retention");
+const teacherPayments = jiti("../src/lib/teacher-payments.ts") as typeof import("../src/lib/teacher-payments");
+const payoutRequestIdempotency = jiti("../src/lib/teacher-payout-request-idempotency.ts") as typeof import("../src/lib/teacher-payout-request-idempotency");
 
 type SimulatedPayout = {
   localStatus: "DRAFT" | "PAID" | "CANCELLED";
@@ -98,6 +100,87 @@ function verifyAppliedRetentionCanBeMaterialized() {
   );
 }
 
+function verifyExactRequestableBalanceAfterReservations() {
+  const globalRetentionLedger = teacherPayments.getTeacherGlobalRetentionLedger(
+    [{ bookingId: null, amount: 1_000, status: "APPLIED" }],
+    [{ bookingId: "booking-session", retainedAmount: 200 }],
+    [{ bookingId: "booking-legacy", retainedAmountSnapshot: 300 }],
+  );
+  const availability = teacherPayments.calculateTeacherPayoutAvailability({
+    settlements: [
+      { bookingId: "booking-session", remaining: 5_000, totalOutstanding: 5_000 },
+      { bookingId: "booking-legacy", remaining: 4_000, totalOutstanding: 4_000 },
+      { bookingId: "booking-free", remaining: 3_000, totalOutstanding: 3_000 },
+    ],
+    globalRetentionLedger,
+    pendingRequestedAmount: 2_000,
+    draftReservations: [
+      // Ce DRAFT est déjà couvert par les 2 000 FCFA PENDING : pas de double réservation.
+      { amount: 2_000, payoutRequestStatus: "PENDING" },
+      // Un transfert admin direct réserve en revanche son propre montant.
+      { amount: 1_500, payoutRequestStatus: null },
+    ],
+  });
+
+  assert.deepEqual(availability, {
+    readyToReceive: 11_200,
+    totalOutstanding: 11_200,
+    pendingRequestedAmount: 2_000,
+    draftReservedAmount: 1_500,
+    requestableAmount: 7_700,
+    retentionNotRepresentedInSettlements: 800,
+  });
+}
+
+function verifyProfessorPayoutRequestRetryIsIdempotent() {
+  const idempotencyKey = "d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc";
+  assert.equal(
+    payoutRequestIdempotency.normalizeTeacherPayoutRequestIdempotencyKey(idempotencyKey.toUpperCase()),
+    idempotencyKey,
+  );
+  assert.equal(
+    payoutRequestIdempotency.normalizeTeacherPayoutRequestIdempotencyKey("not-a-uuid"),
+    null,
+  );
+
+  const intent = {
+    teacherId: "teacher-1",
+    amount: 5_000,
+    method: "WAVE",
+    paymentPhone: "+2250700000000",
+    note: "",
+  };
+  let stored: (typeof intent & { id: string }) | null = null;
+  let reservationCount = 0;
+  const post = (candidate: typeof intent) => {
+    const resolution = payoutRequestIdempotency.resolveTeacherPayoutRequestIdempotency(
+      stored,
+      candidate,
+    );
+    if (resolution === "CONFLICT") throw new Error("IDEMPOTENCY_CONFLICT");
+    if (resolution === "REPLAY") {
+      return { request: stored!, idempotentReplay: true };
+    }
+    reservationCount += 1;
+    stored = { id: "request-1", ...candidate };
+    return { request: stored, idempotentReplay: false };
+  };
+
+  const created = post(intent);
+  const retried = post(intent);
+  assert.equal(reservationCount, 1, "un double POST ne doit réserver le solde qu'une fois");
+  assert.equal(retried.request.id, created.request.id, "le retry doit renvoyer la demande existante");
+  assert.equal(retried.idempotentReplay, true);
+  assert.equal(
+    payoutRequestIdempotency.resolveTeacherPayoutRequestIdempotency(
+      stored,
+      { ...intent, amount: intent.amount + 1 },
+    ),
+    "CONFLICT",
+    "une clé réutilisée avec un autre montant doit être refusée",
+  );
+}
+
 function verifyDatabaseGuardsAreWired() {
   const route = readFileSync(new URL("../src/app/api/admin/teacher-payouts/route.ts", import.meta.url), "utf8");
   const reconciliation = readFileSync(new URL("../src/lib/jeko-payout-reconciliation.ts", import.meta.url), "utf8");
@@ -105,8 +188,16 @@ function verifyDatabaseGuardsAreWired() {
   const legacyBookingRoute = readFileSync(new URL("../src/app/api/admin/bookings/[id]/route.ts", import.meta.url), "utf8");
   const legacyTransactionRoute = readFileSync(new URL("../src/app/api/admin/transactions/[id]/route.ts", import.meta.url), "utf8");
   const payoutRequestReviewRoute = readFileSync(new URL("../src/app/api/admin/teacher-payout-requests/[id]/route.ts", import.meta.url), "utf8");
+  const professorPayoutRequestRoute = readFileSync(new URL("../src/app/api/professor/payout-requests/route.ts", import.meta.url), "utf8");
+  const professorPaymentsPage = readFileSync(new URL("../src/app/professeur/(espace)/paiements/page.tsx", import.meta.url), "utf8");
+  const professorDashboard = readFileSync(new URL("../src/app/professeur/(espace)/page.tsx", import.meta.url), "utf8");
+  const professorPayoutRequestForm = readFileSync(new URL("../src/components/professor/teacher-payout-request-form.tsx", import.meta.url), "utf8");
   const payoutReservationGuard = readFileSync(new URL("../src/lib/teacher-payout-reservations.ts", import.meta.url), "utf8");
   const schema = readFileSync(new URL("../prisma/schema.prisma", import.meta.url), "utf8");
+  const payoutRequestIdempotencyMigration = readFileSync(
+    new URL("../prisma/migrations/20260731010000_teacher_payout_request_idempotency/migration.sql", import.meta.url),
+    "utf8",
+  );
 
   assert.match(route, /status:\s*"DRAFT"/);
   assert.match(route, /paidAmountBefore:/);
@@ -141,12 +232,33 @@ function verifyDatabaseGuardsAreWired() {
   assert.match(payoutRequestReviewRoute, /request\.payoutRecord\?\.status === "DRAFT"/);
   assert.match(payoutReservationGuard, /provider:\s*"JEKO"/);
   assert.match(payoutReservationGuard, /status:\s*"DRAFT"/);
+  assert.match(professorPayoutRequestRoute, /lockTeacherPayoutBalance\(tx, teacher\.id\)/);
+  assert.ok(
+    professorPayoutRequestRoute.indexOf("lockTeacherPayoutBalance(tx, teacher.id)")
+      < professorPayoutRequestRoute.indexOf("tx.teacherPayoutRequest.aggregate"),
+    "la demande professeur verrouille le solde avant de le relire",
+  );
+  assert.match(professorPayoutRequestRoute, /calculateTeacherPayoutAvailability/);
+  assert.match(professorPayoutRequestRoute, /normalizeTeacherPayoutRequestIdempotencyKey/);
+  assert.match(professorPayoutRequestRoute, /where:\s*\{\s*idempotencyKey\s*\}/);
+  assert.match(professorPayoutRequestRoute, /idempotencyKey,/);
+  assert.match(professorPayoutRequestRoute, /idempotentReplay:\s*true/);
+  assert.match(professorPayoutRequestForm, /pendingSubmissionRef/);
+  assert.match(professorPayoutRequestForm, /crypto\.randomUUID\(\)/);
+  assert.match(professorPayoutRequestForm, /idempotencyKey,/);
+  assert.match(schema, /idempotencyKey\s+String\?\s+@unique/);
+  assert.match(payoutRequestIdempotencyMigration, /CREATE UNIQUE INDEX "TeacherPayoutRequest_idempotencyKey_key"/);
+  assert.match(professorPaymentsPage, /calculateTeacherPayoutAvailability/);
+  assert.match(professorPaymentsPage, /draftReservedAmount=\{draftReservedAmount\}/);
+  assert.match(professorDashboard, /calculateTeacherPayoutAvailability/);
 }
 
 verifyPendingThenSuccessAndDuplicate();
 verifyFailureDoesNotDebitLedger();
 verifyExactNetAndPlatformCoveredFee();
 verifyAppliedRetentionCanBeMaterialized();
+verifyExactRequestableBalanceAfterReservations();
+verifyProfessorPayoutRequestRetryIsIdempotent();
 verifyDatabaseGuardsAreWired();
 
 console.log("Jèko payout flow verification passed (pending, success, duplicate, failure, exact net and fees).");
