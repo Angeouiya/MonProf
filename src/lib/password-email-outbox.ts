@@ -1,7 +1,14 @@
 import { createHash, randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { sendClientPasswordChangedEmail, sendClientResetPasswordEmail } from "@/lib/notification-delivery";
+import {
+  createClientPasswordChangedEmailSnapshot,
+  createClientResetPasswordEmailSnapshot,
+  getPasswordEmailSenderIdentity,
+  sendClientPasswordChangedEmail,
+  sendClientResetPasswordEmail,
+  sendPasswordEmailSnapshot,
+} from "@/lib/notification-delivery";
 import {
   isPasswordResetIpAllowed,
   isPasswordResetRequestAllowed,
@@ -13,6 +20,13 @@ import {
   encryptPasswordEmailPayload,
   passwordEmailIdentifier,
 } from "@/lib/password-email-outbox-crypto";
+import {
+  getPasswordEmailProviderForNewJob,
+  getPasswordEmailProviderForPayload,
+  readPasswordEmailDispatchSnapshot,
+  type PasswordEmailDispatchSnapshot,
+  type PasswordEmailProvider,
+} from "@/lib/password-email-provider";
 import { selectPasswordEmailCandidateBatch } from "@/lib/password-email-candidate-selection";
 import { normalizeAccountPhone } from "@/lib/account-phone";
 import { CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/client-password-assistance";
@@ -27,8 +41,21 @@ const ACTIVE_STATUSES = ["PENDING", "RETRY", "PROCESSING"];
 
 export type PasswordAccountType = "CLIENT" | "PROFESSOR" | "ADMIN";
 
-type ResetEmailPayload = {
-  version: 1;
+type PasswordEmailProviderAffinity =
+  | {
+      // Legacy encrypted jobs: Gmail was the only permitted security sender.
+      version: 1;
+    }
+  | {
+      version: 2;
+      provider: PasswordEmailProvider;
+    }
+  | {
+      version: 3;
+      emailSnapshot: PasswordEmailDispatchSnapshot;
+    };
+
+type ResetEmailPayload = PasswordEmailProviderAffinity & {
   kind: "PASSWORD_RESET";
   accountType: "CLIENT";
   recipientEmail: string;
@@ -40,8 +67,7 @@ type ResetEmailPayload = {
   tokenExpiresAt: string;
 };
 
-type PasswordChangedEmailPayload = {
-  version: 1;
+type PasswordChangedEmailPayload = PasswordEmailProviderAffinity & {
   kind: "PASSWORD_CHANGED";
   accountType: PasswordAccountType;
   recipientEmail: string;
@@ -74,8 +100,19 @@ export async function requestPasswordResetEmail(input: {
   appOrigin: string;
 }) {
   const secret = getOutboxSecret();
-  if (!secret) {
-    console.error("[password-reset] NEXTAUTH_SECRET is unavailable for the encrypted outbox.");
+  const provider = getPasswordEmailProviderForNewJob();
+  const senderIdentity = provider
+    ? getPasswordEmailSenderIdentity(provider)
+    : null;
+  if (!secret || !provider || !senderIdentity) {
+    console.error(
+      "[password-reset] Encrypted email outbox configuration is incomplete.",
+      {
+        secretConfigured: Boolean(secret),
+        providerConfigured: Boolean(provider),
+        senderConfigured: Boolean(senderIdentity),
+      },
+    );
     return { accepted: false, jobId: null as string | null, reused: false };
   }
 
@@ -161,13 +198,21 @@ export async function requestPasswordResetEmail(input: {
         const tokenHash = createHash("sha256").update(token).digest("hex");
         const expiresAt = new Date(now.getTime() + RESET_TOKEN_TTL_MS);
         const resetUrl = buildClientResetUrl(input.appOrigin, token);
+        const emailSnapshot = createClientResetPasswordEmailSnapshot({
+          provider,
+          senderIdentity,
+          name: target.name,
+          resetUrl,
+        });
+        if (!emailSnapshot) throw new Error("PASSWORD_EMAIL_SNAPSHOT_INVALID");
         const tokenRecord = await tx.passwordResetToken.create({
           data: { userId: target.id, tokenHash, expiresAt },
           select: { id: true },
         });
         const dedupeKey = passwordEmailIdentifier(`password-reset:${tokenHash}`, secret);
         const payload: ResetEmailPayload = {
-          version: 1,
+          version: 3,
+          emailSnapshot,
           kind: "PASSWORD_RESET",
           accountType: "CLIENT",
           recipientEmail: target.email,
@@ -369,16 +414,37 @@ async function enqueuePasswordChangedEmailWithClient(
   if (!normalizedEmail) return null;
 
   const secret = getOutboxSecret();
-  if (!secret) {
-    console.error("[password-reset] Confirmation email not queued because NEXTAUTH_SECRET is unavailable.");
+  const provider = getPasswordEmailProviderForNewJob();
+  const senderIdentity = provider
+    ? getPasswordEmailSenderIdentity(provider)
+    : null;
+  if (!secret || !provider || !senderIdentity) {
+    console.error(
+      "[password-reset] Confirmation email not queued because the encrypted outbox is not configured.",
+      {
+        secretConfigured: Boolean(secret),
+        providerConfigured: Boolean(provider),
+        senderConfigured: Boolean(senderIdentity),
+      },
+    );
     return null;
   }
 
   const accountHash = passwordEmailIdentifier(`account:${normalizedEmail}`, secret);
   const routingHash = passwordEmailIdentifier(`password-changed:${input.accountType}:${normalizedEmail}`, secret);
   const dedupeKey = passwordEmailIdentifier(`password-changed:${input.sourceTokenId}`, secret);
+  const emailSnapshot = createClientPasswordChangedEmailSnapshot({
+    provider,
+    senderIdentity,
+    name: input.name,
+    changedAt: input.changedAt,
+    securityUrl: input.securityUrl,
+    accountLabel: input.accountLabel,
+  });
+  if (!emailSnapshot) return null;
   const payload: PasswordChangedEmailPayload = {
-    version: 1,
+    version: 3,
+    emailSnapshot,
     kind: "PASSWORD_CHANGED",
     accountType: input.accountType,
     recipientEmail: normalizedEmail,
@@ -565,14 +631,24 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
   }
 
   let payload: PasswordEmailPayload;
+  let provider: PasswordEmailProvider;
+  let emailSnapshot: PasswordEmailDispatchSnapshot | null;
   try {
     payload = decryptPasswordEmailPayload<PasswordEmailPayload>({
       payloadCiphertext: job.payloadCiphertext,
       payloadIv: job.payloadIv,
       payloadAuthTag: job.payloadAuthTag,
     }, secret, job.dedupeKey);
-    if (!isPasswordEmailPayload(payload) || payload.kind !== job.kind) {
+    const payloadProvider = getPasswordEmailProviderForPayload(payload);
+    if (!isPasswordEmailPayload(payload) || payload.kind !== job.kind || !payloadProvider) {
       throw new Error("PASSWORD_EMAIL_PAYLOAD_INVALID");
+    }
+    provider = payloadProvider;
+    emailSnapshot = payload.version === 3
+      ? readPasswordEmailDispatchSnapshot(payload.emailSnapshot)
+      : null;
+    if (payload.version === 3 && !emailSnapshot) {
+      throw new Error("PASSWORD_EMAIL_SNAPSHOT_INVALID");
     }
   } catch (error) {
     console.error("[password-email-outbox] Unable to decrypt job.", job.id, error instanceof Error ? error.message : error);
@@ -601,21 +677,29 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
       }
     }
 
-    const delivery = payload.kind === "PASSWORD_RESET"
-      ? await sendClientResetPasswordEmail({
+    const delivery = emailSnapshot
+      ? await sendPasswordEmailSnapshot({
+          snapshot: emailSnapshot,
           to: payload.recipientEmail,
-          name: payload.recipientName,
-          resetUrl: payload.resetUrl,
           idempotencyKey: job.dedupeKey,
         })
-      : await sendClientPasswordChangedEmail({
-          to: payload.recipientEmail,
-          name: payload.recipientName,
-          changedAt: new Date(payload.changedAt),
-          securityUrl: payload.securityUrl,
-          idempotencyKey: job.dedupeKey,
-          accountLabel: payload.accountLabel,
-        });
+      : payload.kind === "PASSWORD_RESET"
+        ? await sendClientResetPasswordEmail({
+            provider,
+            to: payload.recipientEmail,
+            name: payload.recipientName,
+            resetUrl: payload.resetUrl,
+            idempotencyKey: job.dedupeKey,
+          })
+        : await sendClientPasswordChangedEmail({
+            provider,
+            to: payload.recipientEmail,
+            name: payload.recipientName,
+            changedAt: new Date(payload.changedAt),
+            securityUrl: payload.securityUrl,
+            idempotencyKey: job.dedupeKey,
+            accountLabel: payload.accountLabel,
+          });
 
     if (isAcceptedPasswordEmailDelivery(delivery)) {
       await rememberAcceptedDelivery(job.id, delivery.externalId);
@@ -635,7 +719,7 @@ async function processPasswordEmailJob(jobId: string): Promise<"sent" | "retried
       await retryPasswordEmailJob(
         job.id,
         job.attempts,
-        "Gmail n'a pas fourni une preuve 2xx avec identifiant de message.",
+        `${delivery.provider} n'a pas fourni une preuve 2xx avec identifiant de message.`,
       );
       return "retried";
     }
@@ -938,7 +1022,7 @@ function isPasswordEmailPayload(value: unknown): value is PasswordEmailPayload {
   if (!value || typeof value !== "object") return false;
   const payload = value as Partial<PasswordEmailPayload>;
   if (
-    payload.version !== 1
+    !getPasswordEmailProviderForPayload(payload)
     || (payload.kind !== "PASSWORD_RESET" && payload.kind !== "PASSWORD_CHANGED")
     || typeof payload.recipientEmail !== "string"
     || typeof payload.recipientName !== "string"

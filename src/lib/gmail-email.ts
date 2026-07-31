@@ -54,8 +54,21 @@ export function isGmailConfigured() {
   return productionIntegrationsAreEnabled() && hasGmailEnvironmentConfiguration();
 }
 
-export function hasGmailEnvironmentConfiguration() {
-  return Boolean(readGmailEnvironmentConfig());
+export function hasGmailEnvironmentConfiguration(
+  environment: RuntimeEnvironment = process.env,
+) {
+  return Boolean(readGmailEnvironmentConfig(environment));
+}
+
+export function getGmailSenderIdentity(
+  environment: RuntimeEnvironment = process.env,
+) {
+  if (!productionIntegrationsAreEnabled(environment)) return null;
+  return readGmailEnvironmentConfig(environment)?.senderEmail ?? null;
+}
+
+export function isValidGmailSenderIdentity(value: string) {
+  return value.trim().toLowerCase() === EXPECTED_GMAIL_SENDER_EMAIL;
 }
 
 export async function sendGmailEmail(input: {
@@ -64,6 +77,7 @@ export async function sendGmailEmail(input: {
   text: string;
   html?: string;
   idempotencyKey?: string;
+  senderIdentity?: string;
 }): Promise<GmailDeliveryResult> {
   const config = readGmailConfig();
   if (!config) {
@@ -90,9 +104,25 @@ export async function sendGmailEmail(input: {
     };
   }
 
+  const senderIdentity = input.senderIdentity?.trim().toLowerCase() ?? config.senderEmail;
+  if (
+    !isValidGmailSenderIdentity(senderIdentity)
+    || senderIdentity !== config.senderEmail
+  ) {
+    return {
+      ok: false,
+      configured: true,
+      message: "L'identité d'expédition Gmail du job est invalide.",
+      externalId: null,
+      retryable: false,
+      ambiguous: false,
+      statusCode: null,
+    };
+  }
+
   const raw = buildMimeMessage({
     ...input,
-    senderEmail: config.senderEmail,
+    senderEmail: senderIdentity,
     senderName: "Compétence",
   });
 
@@ -316,9 +346,14 @@ function buildMimeMessage(input: {
   senderName: string;
   idempotencyKey?: string;
 }) {
-  const boundary = `competence-${randomUUID()}`;
-  const messageId = input.idempotencyKey
-    ? `<${createHash("sha256").update(input.idempotencyKey).digest("hex")}@competence.ci>`
+  const idempotencyDigest = input.idempotencyKey
+    ? createHash("sha256").update(input.idempotencyKey).digest("hex")
+    : null;
+  const boundary = idempotencyDigest
+    ? `competence-${idempotencyDigest.slice(0, 48)}`
+    : `competence-${randomUUID()}`;
+  const messageId = idempotencyDigest
+    ? `<${idempotencyDigest}@competence.ci>`
     : `<${randomUUID()}@competence.ci>`;
   const headers = [
     `From: ${encodeHeader(input.senderName)} <${input.senderEmail}>`,

@@ -50,7 +50,7 @@ checkSupabaseDeploymentConfig();
 checkHealthEndpoint();
 checkNoPublicPayDunyaSecrets();
 checkJekoConfiguration();
-checkGmailConfiguration();
+checkPasswordEmailConfiguration();
 await checkLegacyPayDunyaConfiguration();
 
 for (const warning of warnings) {
@@ -205,8 +205,10 @@ function checkNoPublicPayDunyaSecrets() {
     key.startsWith("NEXT_PUBLIC_PAYDUNYA")
     || key.startsWith("NEXT_PUBLIC_JEKO")
     || key.startsWith("NEXT_PUBLIC_GMAIL")
+    || key.startsWith("NEXT_PUBLIC_RESEND")
+    || key === "NEXT_PUBLIC_PASSWORD_EMAIL_PROVIDER"
   ));
-  record("No payment or Gmail secret is exposed through NEXT_PUBLIC_*", leakedPublicKeys.length === 0);
+  record("No payment or email integration setting is exposed through NEXT_PUBLIC_*", leakedPublicKeys.length === 0);
 }
 
 function checkBuildDoesNotIgnoreCodeQualityErrors() {
@@ -429,13 +431,17 @@ function checkHealthEndpoint() {
   record(
     "Production health endpoint separates configuration from live verification",
     /getJekoServerConfig/.test(healthRoute)
+      && /readPasswordEmailProvider/.test(healthRoute)
       && /isGmailConfigured/.test(healthRoute)
       && /hasGmailEnvironmentConfiguration/.test(healthRoute)
+      && /isResendConfigured/.test(healthRoute)
+      && /hasResendEnvironmentConfiguration/.test(healthRoute)
+      && /integrations\.passwordEmail\.runtimeEnabled/.test(healthRoute)
       && /liveVerification:\s*"not_checked_by_health"/.test(healthRoute)
       && /scope:\s*"configuration-readiness"/.test(healthRoute)
       && !/apiKey|clientSecret|refreshToken|webhookSecret/.test(
         healthRoute.replace(
-          /getJekoServerConfig|isGmailConfigured|hasGmailEnvironmentConfiguration/g,
+          /getJekoServerConfig|readPasswordEmailProvider|isGmailConfigured|hasGmailEnvironmentConfiguration|isResendConfigured|hasResendEnvironmentConfiguration/g,
           "",
         ),
       ),
@@ -470,23 +476,55 @@ function checkJekoConfiguration() {
   record("Jèko webhook secret is strong and server-side", getEnv("JEKO_WEBHOOK_SECRET").length >= 24);
 }
 
-function checkGmailConfiguration() {
+function checkPasswordEmailConfiguration() {
   if (isVercelNonProductionDeployment()) {
-    const source = fs.readFileSync("src/lib/gmail-email.ts", "utf8");
+    const gmailSource = fs.readFileSync("src/lib/gmail-email.ts", "utf8");
+    const resendSource = fs.readFileSync("src/lib/resend-email.ts", "utf8");
     record(
       "Gmail is disabled by code outside Vercel Production",
-      /if \(!productionIntegrationsAreEnabled\(\)\) return null/.test(source),
+      /if \(!productionIntegrationsAreEnabled\(\)\) return null/.test(gmailSource),
+    );
+    record(
+      "Resend is disabled by code outside Vercel Production",
+      /if \(!productionIntegrationsAreEnabled\(\)\) return null/.test(resendSource),
     );
     return;
   }
 
-  record("Gmail OAuth client id is configured server-side", Boolean(getEnv("GMAIL_CLIENT_ID")));
-  record("Gmail OAuth client secret is configured server-side", Boolean(getEnv("GMAIL_CLIENT_SECRET")));
-  record("Gmail OAuth refresh token is configured server-side", Boolean(getEnv("GMAIL_REFRESH_TOKEN")));
+  const provider = getEnv("PASSWORD_EMAIL_PROVIDER").toLowerCase();
+  const providerSupported = provider === "gmail" || provider === "resend";
+  record("Password email provider is explicitly gmail or resend", providerSupported);
+  if (!providerSupported) return;
+
+  if (provider === "gmail") {
+    record("Gmail OAuth client id is configured server-side", Boolean(getEnv("GMAIL_CLIENT_ID")));
+    record("Gmail OAuth client secret is configured server-side", Boolean(getEnv("GMAIL_CLIENT_SECRET")));
+    record("Gmail OAuth refresh token is configured server-side", Boolean(getEnv("GMAIL_REFRESH_TOKEN")));
+    record(
+      "Gmail sender is diplomateimmobilier99@gmail.com",
+      getEnv("GMAIL_SENDER_EMAIL").toLowerCase() === "diplomateimmobilier99@gmail.com",
+    );
+    return;
+  }
+
   record(
-    "Gmail sender is diplomateimmobilier99@gmail.com",
-    getEnv("GMAIL_SENDER_EMAIL").toLowerCase() === "diplomateimmobilier99@gmail.com",
+    "Resend API key is configured server-side",
+    /^re_[A-Za-z0-9_-]{8,}$/.test(getEnv("RESEND_API_KEY")),
   );
+  record(
+    "Resend sender uses the verified competence.ci domain",
+    isValidCompetenceResendSender(getEnv("RESEND_FROM_EMAIL")),
+  );
+}
+
+function isValidCompetenceResendSender(value) {
+  if (!value || /[\r\n]/.test(value)) return false;
+  const normalized = value.trim();
+  const bracketed = normalized.match(/^[^<>]{1,100}<([^<>\s]+)>$/)?.[1];
+  const direct = /^[^<>\s]+$/.test(normalized) ? normalized : "";
+  const email = (bracketed || direct).toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    && email.endsWith("@competence.ci");
 }
 
 function isVercelNonProductionDeployment() {

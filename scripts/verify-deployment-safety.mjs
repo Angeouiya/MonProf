@@ -82,12 +82,15 @@ try {
 
 const jekoConfig = read("../src/lib/jeko-config.ts");
 const gmail = read("../src/lib/gmail-email.ts");
+const resend = read("../src/lib/resend-email.ts");
 const paydunya = read("../src/lib/paydunya.ts");
 const paydunyaBookingReconciliation = read("../src/lib/paydunya-reconciliation.ts");
 const paydunyaRescheduleReconciliation = read("../src/lib/paydunya-reschedule-reconciliation.ts");
 assert.match(jekoConfig, /if \(!productionIntegrationsAreEnabled\(\)\) return null/);
 assert.match(gmail, /if \(!productionIntegrationsAreEnabled\(\)\) return null/);
 assert.match(gmail, /productionIntegrationsAreEnabled\(\) && hasGmailEnvironmentConfiguration\(\)/);
+assert.match(resend, /if \(!productionIntegrationsAreEnabled\(\)\) return null/);
+assert.match(resend, /productionIntegrationsAreEnabled\(environment\)/);
 assert.match(paydunya, /import \{ productionIntegrationsAreEnabled \} from "@\/lib\/production-integration-policy"/);
 assert.match(paydunya, /if \(!productionIntegrationsAreEnabled\(\)\) return null/);
 
@@ -155,8 +158,12 @@ for (const relativePath of [
 const health = read("../src/app/api/health/route.ts");
 const publicHome = read("../src/app/page.tsx");
 assert.match(health, /scope: "configuration-readiness"/);
-assert.match(health, /configured: hasGmailEnvironmentConfiguration\(\)/);
-assert.match(health, /runtimeEnabled: isGmailConfigured\(\)/);
+assert.match(health, /const gmailConfigured = hasGmailEnvironmentConfiguration\(\)/);
+assert.match(health, /const gmailRuntimeEnabled = isGmailConfigured\(\)/);
+assert.match(health, /readPasswordEmailProvider\(\)/);
+assert.match(health, /hasResendEnvironmentConfiguration\(\)/);
+assert.match(health, /isResendConfigured\(\)/);
+assert.match(health, /integrations\.passwordEmail\.runtimeEnabled/);
 assert.match(health, /liveVerification: "not_checked_by_health"/);
 assert.match(health, /getProductionIntegrationPolicy\(\)/);
 assert.doesNotMatch(health, /sendGmailEmail|oauth2\.googleapis\.com|gmail\.googleapis\.com/);
@@ -198,8 +205,13 @@ assertVercelBuildRejected("development");
 assertVercelBuildRejected("custom-preview");
 assert.match(productionCheck, /expectedRole:\s*"competence_runtime"/);
 assert.match(productionCheck, /expectedRole:\s*"competence_migrator"/);
+assert.match(productionCheck, /Password email provider is explicitly gmail or resend/);
+assert.match(productionCheck, /provider === "gmail" \|\| provider === "resend"/);
+assert.match(productionCheck, /Resend sender uses the verified competence\.ci domain/);
 assert.match(envExample, /DATABASE_URL="postgresql:\/\/competence_runtime\.PROJECT_REF:/);
 assert.match(envExample, /DIRECT_URL="postgresql:\/\/competence_migrator\.PROJECT_REF:/);
+assert.match(envExample, /PASSWORD_EMAIL_PROVIDER="gmail"/);
+assert.match(envExample, /RESEND_FROM_EMAIL="Compétence <notifications@competence\.ci>"/);
 assert.doesNotMatch(envExample, /DATABASE_URL="postgresql:\/\/competence_app\./);
 assert.match(
   publicHome,

@@ -7,9 +7,10 @@ export type ProductionIntegrationPolicy = {
 };
 
 /**
- * Live financial and Gmail integrations are never available from a Vercel
- * Preview or Development deployment. When VERCEL_ENV is absent, an explicit
- * local verification remains possible with locally supplied credentials.
+ * Live financial and email-provider integrations are never available from a
+ * Vercel Preview or Development deployment. When VERCEL_ENV is absent, an
+ * explicit local verification remains possible with locally supplied
+ * credentials.
  */
 export function getProductionIntegrationPolicy(
   environment: RuntimeEnvironment = process.env,

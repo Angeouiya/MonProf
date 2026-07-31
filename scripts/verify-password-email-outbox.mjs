@@ -48,13 +48,24 @@ else process.env.NEXTAUTH_SECRET = previousNextAuthSecret;
 const secret = "test-secret-that-is-long-enough-for-outbox-verification";
 const aad = "job-dedupe-key";
 const payload = {
+  version: 3,
   kind: "PASSWORD_RESET",
-  email: "private@example.com",
-  token: "raw-secret-token",
+  recipientEmail: "private@example.com",
+  resetUrl: "https://www.competence.ci/reinitialiser-mot-de-passe?token=raw-secret-token",
+  emailSnapshot: {
+    provider: "resend",
+    senderIdentity: "Compétence <notifications@competence.ci>",
+    subject: "Réinitialisation privée",
+    text: "Lien contenant raw-secret-token",
+    html: "<p>Lien contenant raw-secret-token</p>",
+  },
 };
 const encrypted = encryptPasswordEmailPayload(payload, secret, aad);
 assert.deepEqual(decryptPasswordEmailPayload(encrypted, secret, aad), payload);
-assert.doesNotMatch(encrypted.payloadCiphertext, /private@example|raw-secret-token/);
+assert.doesNotMatch(
+  encrypted.payloadCiphertext,
+  /private@example|raw-secret-token|notifications@competence|Réinitialisation privée/,
+);
 const corruptionIndex = Math.floor(encrypted.payloadCiphertext.length / 2);
 const corruptedCiphertext = `${encrypted.payloadCiphertext.slice(0, corruptionIndex)}${
   encrypted.payloadCiphertext[corruptionIndex] === "A" ? "B" : "A"
@@ -126,6 +137,9 @@ assert.match(outbox, /`account:\$\{normalizedEmail\}`/);
 assert.doesNotMatch(outbox, /`account:\$\{input\.requestedAccountType/);
 assert.match(outbox, /kind: "PASSWORD_RESET"[\s\S]*status: \{ in: ACTIVE_STATUSES \}/);
 assert.match(outbox, /isResetTokenEligibleForDelivery[\s\S]*sendClientResetPasswordEmail/);
+assert.match(outbox, /version: 3,[\s\S]*emailSnapshot,/);
+assert.match(outbox, /payload\.version === 3[\s\S]*readPasswordEmailDispatchSnapshot/);
+assert.match(outbox, /const delivery = emailSnapshot[\s\S]*sendPasswordEmailSnapshot/);
 assert.match(outbox, /rememberAmbiguousDelivery[\s\S]*retryPasswordEmailJob/);
 assert.match(outbox, /async function expireActivePasswordEmailJobs/);
 assert.match(outbox, /UPDATE "PasswordEmailOutbox"[\s\S]*RETURNING "kind"/);

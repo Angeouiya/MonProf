@@ -63,7 +63,7 @@
     "verify:jeko": "npm run verify:jeko-backend && npm run verify:jeko-sweeper && npm run verify:jeko-client-payment && npm run verify:jeko-payment-recovery && npm run verify:jeko-reschedule && npm run verify:jeko-payout && npm run verify:jeko-live:static",
     "verify:jeko-live": "node scripts/verify-jeko-live.mjs",
     "verify:jeko-live:static": "node scripts/verify-jeko-live-static.mjs",
-    "verify:password-email": "node scripts/verify-password-email.mjs && node scripts/verify-password-email-outbox.mjs && node scripts/verify-password-reset-rate-limit.mjs && node scripts/verify-password-session-revocation.mjs && node scripts/verify-client-assisted-password-recovery.mjs && npm run verify:public-url && npm run verify:gmail-bootstrap && npm run verify:gmail-live:static",
+    "verify:password-email": "node --test scripts/password-email-provider.test.mjs && node scripts/verify-password-email.mjs && node scripts/verify-password-email-outbox.mjs && node scripts/verify-password-reset-rate-limit.mjs && node scripts/verify-password-session-revocation.mjs && node scripts/verify-client-assisted-password-recovery.mjs && npm run verify:public-url && npm run verify:gmail-bootstrap && npm run verify:gmail-live:static",
     "gmail:authorize": "node scripts/bootstrap-gmail-oauth.mjs",
     "verify:gmail-bootstrap": "node --test scripts/bootstrap-gmail-oauth.test.mjs",
     "verify:gmail-live": "node scripts/verify-gmail-live.mjs",

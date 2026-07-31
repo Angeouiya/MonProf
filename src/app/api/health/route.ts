@@ -9,7 +9,12 @@ import {
   hasGmailEnvironmentConfiguration,
   isGmailConfigured,
 } from "@/lib/gmail-email";
+import { readPasswordEmailProvider } from "@/lib/password-email-provider";
 import { getProductionIntegrationPolicy } from "@/lib/production-integration-policy";
+import {
+  hasResendEnvironmentConfiguration,
+  isResendConfigured,
+} from "@/lib/resend-email";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +23,21 @@ type HealthStatus = "ok" | "degraded";
 export async function GET() {
   const startedAt = Date.now();
   const integrationPolicy = getProductionIntegrationPolicy();
+  const passwordEmailProvider = readPasswordEmailProvider();
+  const gmailConfigured = hasGmailEnvironmentConfiguration();
+  const gmailRuntimeEnabled = isGmailConfigured();
+  const resendConfigured = hasResendEnvironmentConfiguration();
+  const resendRuntimeEnabled = isResendConfigured();
+  const selectedEmailConfigured = passwordEmailProvider === "gmail"
+    ? gmailConfigured
+    : passwordEmailProvider === "resend"
+      ? resendConfigured
+      : false;
+  const selectedEmailRuntimeEnabled = passwordEmailProvider === "gmail"
+    ? gmailRuntimeEnabled
+    : passwordEmailProvider === "resend"
+      ? resendRuntimeEnabled
+      : false;
   const integrations = {
     jeko: {
       configured: hasJekoEnvironmentConfiguration(),
@@ -25,8 +45,21 @@ export async function GET() {
       liveVerification: "not_checked_by_health" as const,
     },
     gmail: {
-      configured: hasGmailEnvironmentConfiguration(),
-      runtimeEnabled: isGmailConfigured(),
+      configured: gmailConfigured,
+      runtimeEnabled: gmailRuntimeEnabled,
+      selectedForPasswordEmail: passwordEmailProvider === "gmail",
+      liveVerification: "not_checked_by_health" as const,
+    },
+    resend: {
+      configured: resendConfigured,
+      runtimeEnabled: resendRuntimeEnabled,
+      selectedForPasswordEmail: passwordEmailProvider === "resend",
+      liveVerification: "not_checked_by_health" as const,
+    },
+    passwordEmail: {
+      provider: passwordEmailProvider,
+      configured: selectedEmailConfigured,
+      runtimeEnabled: selectedEmailRuntimeEnabled,
       liveVerification: "not_checked_by_health" as const,
     },
   };
@@ -35,7 +68,7 @@ export async function GET() {
     catalog: false,
     adminAccount: false,
     integrationsConfigured: !integrationPolicy.enabled
-      || (integrations.jeko.runtimeEnabled && integrations.gmail.runtimeEnabled),
+      || (integrations.jeko.runtimeEnabled && integrations.passwordEmail.runtimeEnabled),
   };
   let legacyPaydunya = false;
 

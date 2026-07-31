@@ -1,7 +1,23 @@
 import { db } from "@/lib/db";
-import { isGmailConfigured, sendGmailEmail } from "@/lib/gmail-email";
+import {
+  getGmailSenderIdentity,
+  isGmailConfigured,
+  isValidGmailSenderIdentity,
+  sendGmailEmail,
+} from "@/lib/gmail-email";
+import {
+  readPasswordEmailDispatchSnapshot,
+  type PasswordEmailDispatchSnapshot,
+  type PasswordEmailProvider,
+} from "@/lib/password-email-provider";
 import { passwordChangedEmailTemplate, passwordResetEmailTemplate } from "@/lib/password-email-templates";
 import { normalizeIvorianPhoneForWhatsApp } from "@/lib/phone";
+import {
+  getResendSenderIdentity,
+  isResendConfigured,
+  isValidResendSenderIdentity,
+  sendResendEmail,
+} from "@/lib/resend-email";
 
 export type DeliveryResult = {
   ok: boolean;
@@ -10,6 +26,17 @@ export type DeliveryResult = {
   skipped?: boolean;
   message: string;
   externalId?: string | null;
+  retryable?: boolean;
+  ambiguous?: boolean;
+  statusCode?: number | null;
+};
+
+export type EmailDeliveryResult = DeliveryResult & {
+  provider: "gmail" | "resend";
+  externalId: string | null;
+  retryable: boolean;
+  ambiguous: boolean;
+  statusCode: number | null;
 };
 
 export function getNotificationProviderStatus(options: { webPushConfigured?: boolean } = {}) {
@@ -31,14 +58,15 @@ export async function sendEmail(input: {
   text: string;
   html?: string;
   idempotencyKey?: string;
-}) {
+}): Promise<EmailDeliveryResult> {
   const gmail = await sendGmailEmail(input);
   if (gmail.ok) {
-    return {
-      ...gmail,
-      provider: "gmail",
-    } satisfies DeliveryResult;
+    return asGmailDeliveryResult(gmail);
   }
+
+  // A timeout, network interruption or ambiguous 5xx may mean Gmail accepted
+  // the message without returning its id. Never cross-send such a request.
+  if (gmail.ambiguous) return asGmailDeliveryResult(gmail);
 
   const resendConfigured = isResendConfigured();
   if (resendConfigured) {
@@ -49,77 +77,22 @@ export async function sendEmail(input: {
         message: gmail.configured
           ? "Email envoyé par le fournisseur de secours Resend. Gmail est temporairement indisponible."
           : resend.message,
-      } satisfies DeliveryResult;
+      } satisfies EmailDeliveryResult;
     }
     return {
       ...resend,
       message: gmail.configured
         ? "L'envoi a échoué avec Gmail et avec le fournisseur de secours."
         : resend.message,
-    } satisfies DeliveryResult;
+    } satisfies EmailDeliveryResult;
   }
 
   return {
-    ...gmail,
-    provider: "gmail",
-    configured: gmail.configured,
+    ...asGmailDeliveryResult(gmail),
     message: gmail.configured
       ? gmail.message
       : "Aucun fournisseur email n'est configuré. Configurez Gmail OAuth ou Resend.",
-  } satisfies DeliveryResult;
-}
-
-async function sendResendEmail(input: {
-  to: string;
-  subject: string;
-  text: string;
-  html?: string;
-  idempotencyKey?: string;
-}) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !from) {
-    return {
-      ok: false,
-      provider: "resend",
-      configured: false,
-      message: "Resend non configuré : RESEND_API_KEY et RESEND_FROM_EMAIL requis.",
-    } satisfies DeliveryResult;
-  }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
-      },
-      body: JSON.stringify({
-        from,
-        to: input.to,
-        subject: input.subject,
-        text: input.text,
-        ...(input.html ? { html: input.html } : {}),
-      }),
-    });
-    const data = await safeJson(res);
-    return {
-      ok: res.ok,
-      provider: "resend",
-      configured: true,
-      message: res.ok ? "Email envoyé." : errorMessage(data, "Échec envoi email Resend."),
-      externalId: typeof data?.id === "string" ? data.id : null,
-    } satisfies DeliveryResult;
-  } catch (error) {
-    return {
-      ok: false,
-      provider: "resend",
-      configured: true,
-      message: error instanceof Error ? `Échec réseau Resend : ${error.message}` : "Échec réseau Resend.",
-      externalId: null,
-    } satisfies DeliveryResult;
-  }
+  } satisfies EmailDeliveryResult;
 }
 
 export async function sendSms(input: { to: string; text: string }) {
@@ -264,34 +237,52 @@ export async function dispatchPendingTeacherNotifications(limit = 50) {
   return summarizeResults(results);
 }
 
-export async function sendClientResetPasswordEmail(input: {
-  to: string;
+export function getPasswordEmailSenderIdentity(
+  provider: PasswordEmailProvider,
+) {
+  return provider === "resend"
+    ? getResendSenderIdentity()
+    : getGmailSenderIdentity();
+}
+
+export function createClientResetPasswordEmailSnapshot(input: {
   name: string;
   resetUrl: string;
-  idempotencyKey: string;
-}) {
+  provider: PasswordEmailProvider;
+  senderIdentity?: string;
+}): PasswordEmailDispatchSnapshot | null {
+  const senderIdentity = resolvePasswordEmailSenderIdentity(
+    input.provider,
+    input.senderIdentity,
+  );
+  if (!senderIdentity) return null;
   const content = passwordResetEmailTemplate({
     name: input.name,
     resetUrl: input.resetUrl,
     expiresInMinutes: 60,
   });
-  return sendGmailSecurityEmail({
-    to: input.to,
+  return freezePasswordEmailSnapshot({
+    provider: input.provider,
+    senderIdentity,
     subject: "Réinitialisation de votre mot de passe Compétence",
     text: content.text,
     html: content.html,
-    idempotencyKey: input.idempotencyKey,
   });
 }
 
-export async function sendClientPasswordChangedEmail(input: {
-  to: string;
+export function createClientPasswordChangedEmailSnapshot(input: {
   name: string;
   changedAt: Date;
   securityUrl: string;
-  idempotencyKey: string;
   accountLabel?: string;
-}) {
+  provider: PasswordEmailProvider;
+  senderIdentity?: string;
+}): PasswordEmailDispatchSnapshot | null {
+  const senderIdentity = resolvePasswordEmailSenderIdentity(
+    input.provider,
+    input.senderIdentity,
+  );
+  if (!senderIdentity) return null;
   const changedAtLabel = new Intl.DateTimeFormat("fr-CI", {
     dateStyle: "full",
     timeStyle: "short",
@@ -304,30 +295,132 @@ export async function sendClientPasswordChangedEmail(input: {
     accountLabel: input.accountLabel,
   });
 
-  return sendGmailSecurityEmail({
-    to: input.to,
+  return freezePasswordEmailSnapshot({
+    provider: input.provider,
+    senderIdentity,
     subject: "Votre mot de passe Compétence a été modifié",
-    idempotencyKey: input.idempotencyKey,
     text: content.text,
     html: content.html,
   });
 }
 
-async function sendGmailSecurityEmail(input: {
+export async function sendClientResetPasswordEmail(input: {
   to: string;
-  subject: string;
-  text: string;
-  html?: string;
-  idempotencyKey?: string;
-}) {
-  const gmail = await sendGmailEmail(input);
+  name: string;
+  resetUrl: string;
+  idempotencyKey: string;
+  provider: PasswordEmailProvider;
+}): Promise<EmailDeliveryResult> {
+  const snapshot = createClientResetPasswordEmailSnapshot(input);
+  if (!snapshot) return unavailableSecurityEmailProvider(input.provider);
+  return sendPasswordEmailSnapshot({
+    snapshot,
+    to: input.to,
+    idempotencyKey: input.idempotencyKey,
+  });
+}
+
+export async function sendClientPasswordChangedEmail(input: {
+  to: string;
+  name: string;
+  changedAt: Date;
+  securityUrl: string;
+  idempotencyKey: string;
+  accountLabel?: string;
+  provider: PasswordEmailProvider;
+}): Promise<EmailDeliveryResult> {
+  const snapshot = createClientPasswordChangedEmailSnapshot(input);
+  if (!snapshot) return unavailableSecurityEmailProvider(input.provider);
+  return sendPasswordEmailSnapshot({
+    snapshot,
+    to: input.to,
+    idempotencyKey: input.idempotencyKey,
+  });
+}
+
+export async function sendPasswordEmailSnapshot(input: {
+  snapshot: PasswordEmailDispatchSnapshot;
+  to: string;
+  idempotencyKey: string;
+}): Promise<EmailDeliveryResult> {
+  const snapshot = readPasswordEmailDispatchSnapshot(input.snapshot);
+  if (!snapshot) {
+    return unavailableSecurityEmailProvider(
+      input.snapshot.provider === "resend" ? "resend" : "gmail",
+    );
+  }
+  if (snapshot.provider === "resend") {
+    return sendResendEmail({
+      to: input.to,
+      senderIdentity: snapshot.senderIdentity,
+      subject: snapshot.subject,
+      text: snapshot.text,
+      html: snapshot.html ?? undefined,
+      idempotencyKey: input.idempotencyKey,
+    });
+  }
+
+  const gmail = await sendGmailEmail({
+    to: input.to,
+    senderIdentity: snapshot.senderIdentity,
+    subject: snapshot.subject,
+    text: snapshot.text,
+    html: snapshot.html ?? undefined,
+    idempotencyKey: input.idempotencyKey,
+  });
+  return {
+    ...asGmailDeliveryResult(gmail),
+    message: gmail.configured
+      ? gmail.message
+      : "Gmail Compétence n'est pas configuré pour le fournisseur de sécurité sélectionné.",
+  } satisfies EmailDeliveryResult;
+}
+
+function resolvePasswordEmailSenderIdentity(
+  provider: PasswordEmailProvider,
+  requestedIdentity?: string,
+) {
+  const senderIdentity = requestedIdentity === undefined
+    ? getPasswordEmailSenderIdentity(provider)
+    : requestedIdentity.trim();
+  if (!senderIdentity) return null;
+  if (provider === "gmail") {
+    const normalized = senderIdentity.toLowerCase();
+    return isValidGmailSenderIdentity(normalized) ? normalized : null;
+  }
+  return isValidResendSenderIdentity(senderIdentity) ? senderIdentity : null;
+}
+
+function freezePasswordEmailSnapshot(
+  snapshot: PasswordEmailDispatchSnapshot,
+) {
+  return Object.freeze({ ...snapshot });
+}
+
+function unavailableSecurityEmailProvider(
+  provider: PasswordEmailProvider,
+): EmailDeliveryResult {
+  return {
+    ok: false,
+    provider,
+    configured: false,
+    message: "Le fournisseur sélectionné n'est pas configuré pour cet email de sécurité.",
+    externalId: null,
+    retryable: true,
+    ambiguous: false,
+    statusCode: null,
+  };
+}
+
+function asGmailDeliveryResult(
+  gmail: Awaited<ReturnType<typeof sendGmailEmail>>,
+): EmailDeliveryResult {
   return {
     ...gmail,
     provider: "gmail",
-    message: gmail.configured
-      ? gmail.message
-      : "Gmail Compétence n'est pas configuré. Aucun autre expéditeur n'est autorisé pour les emails de sécurité.",
-  } satisfies DeliveryResult;
+    externalId: gmail.externalId ?? null,
+    statusCode: gmail.statusCode ?? null,
+  };
 }
 
 function summarizeResults(results: DeliveryResult[]) {
@@ -362,10 +455,6 @@ function errorMessage(data: any, fallback: string) {
   if (typeof data?.error === "string") return data.error;
   if (typeof data?.error?.message === "string") return data.error.message;
   return fallback;
-}
-
-function isResendConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
 }
 
 async function getBooleanSetting(key: string, fallback: boolean) {
