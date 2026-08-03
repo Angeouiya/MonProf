@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
@@ -9,10 +9,13 @@ export const dynamic = "force-dynamic";
 export default async function ReserverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ teacherId?: string }>;
+  searchParams: Promise<{ teacherId?: string; journey?: string }>;
 }) {
-  const { teacherId } = await searchParams;
-  if (!teacherId) notFound();
+  const { teacherId, journey: requestedJourney } = await searchParams;
+  if (!teacherId) redirect("/client/rechercher");
+  const initialJourney = requestedJourney === "ivoirien" || requestedJourney === "francais" || requestedJourney === "professionnel"
+    ? requestedJourney
+    : undefined;
 
   const teacher = await db.teacher.findFirst({
     where: { id: teacherId, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
@@ -41,6 +44,7 @@ export default async function ReserverPage({
   return (
     <div>
       <ReserverForm
+        initialJourney={initialJourney}
         teacher={{
           id: teacher.id,
           fullName: teacher.fullName,

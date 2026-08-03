@@ -14,21 +14,21 @@ const JOURNEYS = [
     detail: "CP1 à Terminale",
     price: "Dès 15 000 F",
     icon: GraduationCap,
-    href: "/professeurs",
+    href: "/professeurs?journey=ivoirien",
   },
   {
     title: "Système français",
     detail: "CP à Terminale",
     price: "Dès 37 500 F",
     icon: GraduationCap,
-    href: "/professeurs",
+    href: "/professeurs?journey=francais",
   },
   {
     title: "Professionnel",
     detail: "Une compétence précise",
     price: "40 000 F / séance",
     icon: BriefcaseBusiness,
-    href: "/professeurs",
+    href: "/professeurs?journey=professionnel",
   },
 ] as const;
 
@@ -78,7 +78,7 @@ export default async function HomePage() {
             Choisissez votre parcours, votre classe et votre créneau. Compétence calcule le reste.
           </p>
           <Link
-            href="/professeurs"
+            href="#parcours"
             className="mx-auto mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-7 text-base font-semibold text-white transition hover:bg-[#1E2A78]"
           >
             Réserver une séance <ArrowRight className="h-5 w-5" />
@@ -91,7 +91,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#F8FAFD]">
+      <section id="parcours" className="scroll-mt-20 bg-[#F8FAFD]">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
           <div className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Une seule question pour commencer</p>
@@ -165,7 +165,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold">Prêt à commencer ?</h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#DDE6F7]">Trois choix suffisent pour lancer votre recherche.</p>
-          <Link href="/professeurs" className="mt-7 inline-flex min-h-14 items-center gap-2 rounded-2xl bg-white px-7 text-base font-semibold text-[#111B4D]">
+          <Link href="#parcours" className="mt-7 inline-flex min-h-14 items-center gap-2 rounded-2xl bg-white px-7 text-base font-semibold text-[#111B4D]">
             Trouver un professeur <ArrowRight className="h-5 w-5" />
           </Link>
         </div>

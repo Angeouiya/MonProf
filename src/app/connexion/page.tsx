@@ -10,6 +10,7 @@ import { PublicLayout } from "@/components/layouts/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getSafeInternalReturnPath } from "@/lib/safe-return-path";
 
 const ACCOUNT_BENEFITS = [
   { icon: CalendarCheck, title: "Réservations suivies", text: "Dates, créneaux, professeur choisi et statut restent centralisés." },
@@ -29,7 +30,7 @@ const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr
 function ConnexionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from");
+  const from = getSafeInternalReturnPath(searchParams.get("from"));
   const isAdminAuth = from?.startsWith("/admin") ?? false;
   const isClientAuth = from?.startsWith("/client") ?? false;
 
@@ -52,12 +53,12 @@ function ConnexionContent() {
         if (!role) return;
 
         if (isAdminAuth) {
-          if (role === "ADMIN") router.replace("/admin");
+          if (role === "ADMIN") router.replace(from ?? "/admin");
           return;
         }
 
         if (isClientAuth) {
-          if (role === "CLIENT") router.replace("/client");
+          if (role === "CLIENT") router.replace(from ?? "/client");
           return;
         }
 
@@ -66,7 +67,7 @@ function ConnexionContent() {
         else if (role === "CLIENT") router.replace("/client");
       })
       .catch(() => {});
-  }, [isAdminAuth, isClientAuth, router]);
+  }, [from, isAdminAuth, isClientAuth, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -266,7 +267,7 @@ function ConnexionContent() {
               <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm font-medium text-[#64748B] min-[420px]:flex-row">
                 <span>Pas encore de compte ?</span>
                 <Link
-                  href="/inscription"
+                  href={from ? `/inscription?from=${encodeURIComponent(from)}` : "/inscription"}
                   className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 font-semibold text-[#111B4D] transition hover:bg-white"
                 >
                   Créer un compte

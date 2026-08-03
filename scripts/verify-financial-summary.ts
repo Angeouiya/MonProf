@@ -409,7 +409,7 @@ const professorPaymentsPageSource = readFileSync(
   "utf8",
 );
 const exhaustiveBookingsQuery = professorPaymentsPageSource.match(
-  /db\.booking\.findMany\(\{[\s\S]*?\n\s*\}\),\n\s*db\.teacherPaymentAdjustment\.findMany/,
+  /db\.booking\.findMany\(\{[\s\S]*?\r?\n\s*\}\),\r?\n\s*db\.teacherPaymentAdjustment\.findMany/,
 )?.[0] ?? "";
 assert.ok(exhaustiveBookingsQuery, "la requête comptable professeur doit rester identifiable");
 assert.doesNotMatch(

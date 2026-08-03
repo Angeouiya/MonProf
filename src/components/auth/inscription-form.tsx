@@ -58,7 +58,7 @@ const TRUST_POINTS = [
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-export function InscriptionForm({ communes }: { communes: Commune[] }) {
+export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; returnTo?: string | null }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,12 +151,12 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
       });
       if (!signed || signed.error) {
         toast.success("Compte créé ! Connectez-vous pour continuer.");
-        router.push("/connexion");
+        router.push(returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion");
         return;
       }
 
       toast.success("Bienvenue sur Compétence ! Votre compte a été créé.");
-      router.push("/client");
+      router.push(returnTo ?? "/client");
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Une erreur est survenue. Réessayez.");
@@ -221,7 +221,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
                     Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
                   </p>
                 </div>
-                <Link href="/connexion" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
+                <Link href={returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion"} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
                   Déjà inscrit
                 </Link>
               </div>
@@ -461,7 +461,7 @@ export function InscriptionForm({ communes }: { communes: Commune[] }) {
             <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm font-medium text-[#64748B] min-[420px]:flex-row">
               <span>Vous avez déjà un compte ?</span>
               <Link
-                href="/connexion"
+                href={returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion"}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
               >
                 Connectez-vous

@@ -108,6 +108,8 @@ type PricingConfig = {
   transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
 };
 
+type BookingJourney = "ivoirien" | "francais" | "professionnel";
+
 type PriceChangeNotice = {
   fingerprint: string;
   previous: {
@@ -389,13 +391,14 @@ function toJekoPaymentMethod(method: string) {
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig,
+  teacher, subjects, levels, communes, pricingConfig, initialJourney,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
   levels: { id: string; name: string; slug: string }[];
   communes: CommuneOption[];
   pricingConfig: PricingConfig;
+  initialJourney?: BookingJourney;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -406,15 +409,21 @@ export function ReserverForm({
   const displayName = teacher.professionalName || teacher.fullName;
   const teacherAvailability = parseAvailability(teacher.availability);
   const todayIso = useMemo(() => toDateInputValue(new Date()), []);
+  const initialCourseCategory = initialJourney === "professionnel" ? "formation_professionnelle" : "soutien_scolaire";
+  const initialLevelName = suggestLevelForCategory(
+    teacher.levels,
+    initialCourseCategory,
+    teacher.levels[0] ?? "",
+  );
 
   // Form state
   const [form, setForm] = useState({
-    clientType: "Parent",
-    courseCategory: "soutien_scolaire",
-    schoolSystem: "",
+    clientType: initialJourney === "professionnel" ? "Professionnel" : "Parent",
+    courseCategory: initialCourseCategory,
+    schoolSystem: initialJourney && initialJourney !== "professionnel" ? initialJourney : "",
     preciseLevel: "",
     courseCatalogId: "",
-    levelName: teacher.levels[0] ?? "",
+    levelName: initialLevelName,
     subjectName: teacher.subjects[0]?.name ?? "",
     customSubjectDetail: "",
     objective: OBJECTIVES[0].value,
@@ -617,6 +626,7 @@ export function ReserverForm({
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
   const courseFormulaAmount = pricing.courseAmount;
   const totalPrice = pricing.totalClientPays;
+  const hasResolvedPricing = bookingJourney !== "";
   const averageSessionPrice = selectedPackSessions > 0 ? Math.round(pricing.courseAmount / selectedPackSessions) : 0;
   const totalHours = selectedPackSessions * 2;
   const extraParticipantCount = Math.max(0, participantsCount - 1);
@@ -937,12 +947,16 @@ export function ReserverForm({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Total actuel</p>
-                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{formatFCFA(totalPrice)}</p>
+                <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                  {hasResolvedPricing ? formatFCFA(totalPrice) : "À calculer"}
+                </p>
               </div>
               <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
             <p className="mt-2 text-xs font-medium leading-5 text-white">
-              {pricing.transportFeePending
+              {!hasResolvedPricing
+                ? "Choisissez votre parcours pour calculer le tarif officiel."
+                : pricing.transportFeePending
                 ? "Déplacement en attente du choix de la commune."
                 : pricing.transportFee > 0
                   ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
@@ -2069,7 +2083,7 @@ export function ReserverForm({
               Étape {step + 1}/{STEPS.length} · {currentStepDetail.title}
             </span>
             <span className="shrink-0 text-xs font-semibold text-[#111B4D]">
-              {formatFCFA(totalPrice)}
+              {hasResolvedPricing ? formatFCFA(totalPrice) : "À calculer"}
             </span>
           </div>
         </div>

@@ -16,9 +16,17 @@ type TeacherCardData = Pick<Teacher,
   "certifications" | "teachingAchievements" | "learnersCoached"
 > & { _count?: { reviews: number }; primarySubject?: string | null };
 
-export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?: string }) {
-  const profileHref = `/professeurs/${teacher.id}`;
-  const bookingHref = href ?? `/client/reserver?teacherId=${teacher.id}`;
+export function TeacherCard({
+  teacher,
+  href,
+  profileHref = `/professeurs/${teacher.id}`,
+}: {
+  teacher: TeacherCardData;
+  href?: string;
+  profileHref?: string;
+}) {
+  const directBookingHref = `/client/reserver?teacherId=${teacher.id}`;
+  const bookingHref = href ?? `/connexion?from=${encodeURIComponent(directBookingHref)}`;
   const displayName = teacher.professionalName || teacher.fullName;
   const publicRating = teacher.ratingCount > 0 && teacher.rating > 0
     ? teacher.rating

@@ -32,10 +32,16 @@ export const dynamic = "force-dynamic";
 
 export default async function TeacherDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ journey?: string }>;
 }) {
   const { id } = await params;
+  const { journey: requestedJourney } = await searchParams;
+  const journey = requestedJourney === "ivoirien" || requestedJourney === "francais" || requestedJourney === "professionnel"
+    ? requestedJourney
+    : "";
   const session = await getServerSession(authOptions);
 
   const teacher = await db.teacher.findFirst({
@@ -93,9 +99,11 @@ export default async function TeacherDetailPage({
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
   const sessionPriceLabel = "Calculé selon le parcours";
 
+  const teachersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
+  const bookingDestination = `/client/reserver?teacherId=${teacher.id}${journey ? `&journey=${journey}` : ""}`;
   const reserveHref = session?.user
-    ? `/client/reserver?teacherId=${teacher.id}`
-    : `/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${teacher.id}`)}`;
+    ? bookingDestination
+    : `/connexion?from=${encodeURIComponent(bookingDestination)}`;
 
   return (
     <PublicLayout>
@@ -105,7 +113,7 @@ export default async function TeacherDetailPage({
           <nav className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B]">
             <Link href="/" className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
-            <Link href="/professeurs" className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Professeurs</Link>
+            <Link href={teachersHref} className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Professeurs</Link>
             <span>/</span>
             <span className="text-[#111827]">{displayName}</span>
           </nav>
@@ -116,7 +124,7 @@ export default async function TeacherDetailPage({
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
         <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
           <Link
-            href="/professeurs"
+            href={teachersHref}
             className="mb-6 hidden min-h-11 items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
           >
             <ArrowLeft className="h-4 w-4" />

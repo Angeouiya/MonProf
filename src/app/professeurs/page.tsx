@@ -22,6 +22,7 @@ import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
+  journey?: string;
   subject?: string;
   level?: string;
   commune?: string;
@@ -30,6 +31,18 @@ type SearchParams = {
   q?: string;
   page?: string;
 };
+
+const JOURNEY_LABELS = {
+  ivoirien: "Système ivoirien",
+  francais: "Système français",
+  professionnel: "Professionnel",
+} as const;
+
+type BookingJourney = keyof typeof JOURNEY_LABELS;
+
+function parseBookingJourney(value?: string): BookingJourney | "" {
+  return value && value in JOURNEY_LABELS ? value as BookingJourney : "";
+}
 
 const PAGE_SIZE = 12;
 
@@ -52,6 +65,7 @@ export default async function TeachersPage({
 }) {
   const sp = await searchParams;
 
+  const journey = parseBookingJourney(sp.journey?.trim());
   const subject = sp.subject?.trim() || "";
   const level = sp.level?.trim() || "";
   const commune = sp.commune?.trim() || "";
@@ -159,6 +173,7 @@ export default async function TeachersPage({
   // Build a query string without `page` for pagination links
   function buildPaginationUrl(p: number): string {
     const params = new URLSearchParams();
+    if (journey) params.set("journey", journey);
     if (q) params.set("q", q);
     if (subject) params.set("subject", subject);
     if (level) params.set("level", level);
@@ -177,6 +192,7 @@ export default async function TeachersPage({
     format,
     q,
   ].filter(Boolean).length;
+  const resetFiltersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
   const hasPublishedTeachers = totalVisibleTeachers > 0;
   const showTeacherFilters = hasPublishedTeachers;
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
@@ -234,6 +250,7 @@ export default async function TeachersPage({
               style={{ minHeight: 48 }}
             />
             {/* Préserve les autres filtres */}
+            {journey && <input type="hidden" name="journey" value={journey} />}
             {subject && <input type="hidden" name="subject" value={subject} />}
             {level && <input type="hidden" name="level" value={level} />}
             {commune && <input type="hidden" name="commune" value={commune} />}
@@ -261,6 +278,17 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+          {journey && (
+            <div className="mb-4 flex min-h-14 items-center justify-between gap-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Parcours choisi</p>
+                <p className="truncate text-sm font-semibold text-[#111B4D]">{JOURNEY_LABELS[journey]}</p>
+              </div>
+              <Link href="/#parcours" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                Changer
+              </Link>
+            </div>
+          )}
           {showTeacherFilters && (
             <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
               <p className="min-w-0 text-sm font-medium text-[#64748B]">
@@ -268,7 +296,7 @@ export default async function TeachersPage({
                 professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
               </p>
               {activeFiltersCount > 0 && (
-                <Link href="/professeurs" className="shrink-0 text-xs font-semibold text-[#111B4D]">
+                <Link href={resetFiltersHref} className="shrink-0 text-xs font-semibold text-[#111B4D]">
                   Effacer ({activeFiltersCount})
                 </Link>
               )}
@@ -290,6 +318,7 @@ export default async function TeachersPage({
               <div className="pt-3">
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
+                  journey={journey}
                   q={q}
                   subject={subject}
                   level={level}
@@ -324,6 +353,7 @@ export default async function TeachersPage({
               <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
+                  journey={journey}
                   q={q}
                   subject={subject}
                   level={level}
@@ -388,7 +418,7 @@ export default async function TeachersPage({
                   action={
                     <>
                       <Link
-                        href={hasPublishedTeachers ? "/professeurs" : "/contact"}
+                        href={hasPublishedTeachers ? resetFiltersHref : "/contact"}
                         className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto"
                       >
                         {hasPublishedTeachers ? "Réinitialiser les filtres" : "Transmettre mon besoin"}
@@ -400,7 +430,12 @@ export default async function TeachersPage({
                 <>
                   <div className="grid min-w-0 gap-4 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3">
                     {items.map((t, index) => (
-                      <TeacherCard key={`${t.id}-${index}`} teacher={t as any} />
+                      <TeacherCard
+                        key={`${t.id}-${index}`}
+                        teacher={t as any}
+                        profileHref={journey ? `/professeurs/${t.id}?journey=${journey}` : `/professeurs/${t.id}`}
+                        href={`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}${journey ? `&journey=${journey}` : ""}`)}`}
+                      />
                     ))}
                   </div>
 
@@ -469,6 +504,7 @@ type CommuneFilterOption = {
 
 function FiltersForm({
   activeFiltersCount,
+  journey,
   q,
   subject,
   level,
@@ -481,6 +517,7 @@ function FiltersForm({
   compact = false,
 }: {
   activeFiltersCount: number;
+  journey: BookingJourney | "";
   q: string;
   subject: string;
   level: string;
@@ -515,7 +552,7 @@ function FiltersForm({
           </h2>
           {activeFiltersCount > 0 && (
             <Link
-              href="/professeurs"
+              href={journey ? `/professeurs?journey=${journey}` : "/professeurs"}
               className="text-xs font-medium text-[#111B4D] hover:underline"
             >
               Réinitialiser ({activeFiltersCount})
@@ -525,6 +562,7 @@ function FiltersForm({
       )}
 
       <div className={compact ? "grid gap-3 min-[560px]:grid-cols-2" : "space-y-4"}>
+        {journey && <input type="hidden" name="journey" value={journey} />}
         <Field label="Matière">
           <SearchableCatalogSelect
             name="subject"
