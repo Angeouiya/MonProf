@@ -23,7 +23,9 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/pricing";
+import { PLATFORM_COMMISSION_PERCENT, PRICE_TIERS } from "@/lib/pricing";
+import { formatFCFA } from "@/lib/format";
+import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
 import { normalizeTeacherFormInitial } from "@/lib/teacher-form-data";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
@@ -37,6 +39,35 @@ import {
 } from "@/lib/client-identity-verification";
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
+type OfficialPriceGroup = {
+  title: string;
+  rows: ReadonlyArray<readonly [string, number]>;
+};
+
+const OFFICIAL_PRICE_GROUPS: readonly OfficialPriceGroup[] = [
+  {
+    title: "Système ivoirien",
+    rows: [
+      ["CP1 à CM1", PRICE_TIERS.IVOIRIEN_CP1_CM1_15000.amount],
+      ["CM2 à 4e", PRICE_TIERS.IVOIRIEN_CM2_4E_20000.amount],
+      ["3e à 1ère", PRICE_TIERS.IVOIRIEN_3E_1ERE_25000.amount],
+      ["Terminale", PRICE_TIERS.IVOIRIEN_TERMINALE_30000.amount],
+    ],
+  },
+  {
+    title: "Système français",
+    rows: [
+      ["CP1 à CM1", PRICE_TIERS.FRANCAIS_CP_CM1_37500.amount],
+      ["CM2 à 4e", PRICE_TIERS.FRANCAIS_CM2_4E_50000.amount],
+      ["3e à 1ère", PRICE_TIERS.FRANCAIS_3E_1ERE_62500.amount],
+      ["Terminale", PRICE_TIERS.FRANCAIS_TERMINALE_75000.amount],
+    ],
+  },
+  {
+    title: "Professionnel",
+    rows: [["Toute compétence", PRICE_TIERS.PROFESSIONNEL_40000.amount]],
+  },
+];
 
 function normalizeSearch(value: string) {
   return value
@@ -778,7 +809,7 @@ export function TeacherForm({
           <TabsTrigger value="matieres">Matières & Niveaux</TabsTrigger>
           <TabsTrigger value="dispo">Disponibilités</TabsTrigger>
           <TabsTrigger value="zones">Zones</TabsTrigger>
-          <TabsTrigger value="tarifs">Tarifs</TabsTrigger>
+          <TabsTrigger value="tarifs">Finance</TabsTrigger>
           <TabsTrigger value="eval">Évaluation</TabsTrigger>
         </TabsList>
 
@@ -1633,46 +1664,42 @@ export function TeacherForm({
         {/* TARIFS */}
         <TabsContent value="tarifs">
           <Card>
-            <CardHeader><CardTitle className="text-base">Tarification (FCFA)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Grille officielle et commission</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Field label="Tarif horaire interne (informatif)">
-                <Input type="number" min={0} step={500} {...register("pricePerHour")} />
-              </Field>
-              <Field label="Ancien prix du profil (historique interne)">
-                <Input type="number" min={0} step={500} {...register("pricePerSession")} />
-              </Field>
-              <p className="text-xs font-medium leading-5 text-muted-foreground sm:col-span-2">
-                Ce montant est conservé pour l'historique. Il n'est ni affiché au client ni utilisé : la grille officielle détermine le prix.
-              </p>
-              <Field label="Pack 4 séances">
-                <Input type="number" min={0} step={500} {...register("pricePack4")} />
-              </Field>
-              <Field label="Pack 8 séances">
-                <Input type="number" min={0} step={500} {...register("pricePack8")} />
-              </Field>
+              <input type="hidden" {...register("pricePerHour")} />
+              <input type="hidden" {...register("pricePerSession")} />
+              <input type="hidden" {...register("pricePack4")} />
+              <input type="hidden" {...register("pricePack8")} />
+              <input type="hidden" {...register("pricingTier")} />
               <Field label="Commission officielle (%)">
                 <Input type="number" min={0} max={60} {...register("commissionRate")} />
               </Field>
-              <Field label="Tier tarifaire">
-                <Controller control={control} name="pricingTier" render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="STANDARD">Standard</SelectItem>
-                      <SelectItem value="RECOMMENDED">Recommandé</SelectItem>
-                      <SelectItem value="PREMIUM">Premium</SelectItem>
-                      <SelectItem value="PROMOTIONAL">Promotionnel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
-              </Field>
+              <div className="rounded-lg border border-violet-100 bg-white px-3 py-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Frais client</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{paymentServiceFeeDescription()}</p>
+              </div>
 
-              <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
+              <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
                 <div>
                   <p className="text-sm font-black text-foreground">Référence grille officielle</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Les prix saisis ici sont des indications internes du profil. Au moment de la réservation, le prix est calculé par catégorie, niveau, système scolaire, format, pack, groupe et déplacement.
+                    Le professeur ne fixe aucun prix. Le parcours et la classe déterminent le cours ; le format, le pack, le groupe et le déplacement complètent le calcul.
                   </p>
+                </div>
+                <div className="grid gap-2 lg:grid-cols-3">
+                  {OFFICIAL_PRICE_GROUPS.map((group) => (
+                    <div key={group.title} className="rounded-lg border border-violet-100 bg-white p-3">
+                      <p className="text-sm font-semibold text-foreground">{group.title}</p>
+                      <div className="mt-2 space-y-1.5">
+                        {group.rows.map(([label, amount]) => (
+                          <p key={label} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                            <span>{label}</span>
+                            <span className="shrink-0 font-semibold text-foreground">{formatFCFA(amount)}</span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="grid gap-2 text-center sm:grid-cols-3">
                   <div className="rounded-lg border border-violet-100 bg-white p-3">

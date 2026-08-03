@@ -1022,7 +1022,7 @@ export function ReserverForm({
                 <div className="mt-2 grid gap-3 sm:grid-cols-3">
                   {([
                     { value: "ivoirien", label: "Système ivoirien", detail: "CP1 à Terminale", Icon: GraduationCap },
-                    { value: "francais", label: "Système français", detail: "CP à Terminale", Icon: GraduationCap },
+                    { value: "francais", label: "Système français", detail: "CP1 à Terminale", Icon: GraduationCap },
                     { value: "professionnel", label: "Professionnel", detail: "40 000 F / séance", Icon: BriefcaseBusiness },
                   ] as const).map(({ value, label, detail, Icon }) => (
                     <button
@@ -1869,7 +1869,6 @@ export function ReserverForm({
                   packType={form.packType}
                   priceTierKey={pricing.priceTierKey}
                   priceTierLabel={pricing.priceTierLabel}
-                  teacherIndicativePrice={teacher.pricePerSession}
                   paymentProviderLabel="Jèko"
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}
@@ -1963,7 +1962,6 @@ export function ReserverForm({
                   packType={form.packType}
                   priceTierKey={pricing.priceTierKey}
                   priceTierLabel={pricing.priceTierLabel}
-                  teacherIndicativePrice={teacher.pricePerSession}
                   paymentProviderLabel="Jèko"
                   courseAmount={pricing.courseAmount}
                   transportFee={pricing.transportFee}

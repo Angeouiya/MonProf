@@ -24,7 +24,7 @@ const PRICE_GRIDS: Array<{
     title: "Système français",
     subtitle: "Tarif par séance de 2h",
     rates: [
-      ["CP à CM1", 37_500],
+      ["CP1 à CM1", 37_500],
       ["CM2 à 4e", 50_000],
       ["3e à 1ère", 62_500],
       ["Terminale", 75_000],

@@ -77,7 +77,6 @@ type ReplacementSuggestion = {
   quartier: string | null;
   rating: number;
   qualityScore: number;
-  pricePerSession: number;
   teacherCourseShare: number;
   transportFee: number;
   transportRouteLabel?: string | null;
@@ -95,7 +94,6 @@ type ReplacementSuggestion = {
     sameLevel: boolean;
     sameCommune: boolean;
     availabilityCompatible: boolean;
-    priceCompatible: boolean;
     noRecentIssue: boolean;
     activeConflict: boolean;
     recentDisputeCount: number;

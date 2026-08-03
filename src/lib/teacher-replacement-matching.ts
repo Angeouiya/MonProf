@@ -229,8 +229,6 @@ export async function findReplacementCandidatesForBooking(
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, matchingBooking);
       const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking);
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
-      const priceDiff = teacher.pricePerSession - booking.unitPrice;
-      const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const destinationOverride = destination?.transportFeeOverride;
       const transportFee = transport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key
@@ -244,7 +242,6 @@ export async function findReplacementCandidatesForBooking(
         sameCommune ? 15 : 0,
         formatCompatible ? 10 : 0,
         availabilityCompatible ? 10 : -20,
-        priceCompatible ? 10 : 0,
         Math.min(10, Math.round((teacher.qualityScore || 0) / 10)),
         teacher.rating >= 4.5 ? 5 : teacher.rating >= 4 ? 3 : 0,
         noRecentIssue ? 5 : 0,
@@ -268,7 +265,6 @@ export async function findReplacementCandidatesForBooking(
           sameLevel ? "Même niveau" : "",
           sameCommune ? "Même commune/zone" : "",
           availabilityCompatible ? "Disponibilité compatible" : "",
-          priceCompatible ? "Tarif compatible" : "",
           (teacher.qualityScore || 0) >= 75 ? "Bon score qualité" : "",
         ].filter(Boolean),
         compatibility: {
@@ -278,7 +274,6 @@ export async function findReplacementCandidatesForBooking(
           sameCommune,
           formatCompatible,
           availabilityCompatible,
-          priceCompatible,
           noRecentIssue,
           activeConflict,
           recentDisputeCount,

@@ -12,7 +12,6 @@ type BookingPricingBreakdownBaseProps = {
   packType: string;
   priceTierKey?: string | null;
   priceTierLabel?: string | null;
-  teacherIndicativePrice?: number | null;
   paymentProviderLabel?: string | null;
   courseAmount?: number | null;
   transportFee?: number | null;
@@ -68,7 +67,6 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
   const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service Compétence";
   const paymentProviderLabel = props.paymentProviderLabel?.trim() || "le prestataire de paiement sécurisé";
-  const teacherIndicativePrice = Math.max(0, Math.round(Number(props.teacherIndicativePrice) || 0));
   const totalBeforePaymentServiceFee = props.totalBeforePaymentServiceFee ?? Math.max(0, totalPrice - paymentServiceFeeAmount);
   const indicativeSessionAmount = Math.max(0, Math.round(Number(unitPrice) || 0));
   const persistedCourseAmount = props.courseAmount ?? indicativeSessionAmount;
@@ -152,16 +150,11 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
 
       {audience === "client" && !isQuoteOnly && (
         <div className="mt-3 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-3 text-xs font-medium leading-5 text-[#312E81]">
-          <p className="font-bold">Pourquoi ce prix peut différer du profil</p>
+          <p className="font-bold">Grille officielle appliquée</p>
           <p className="mt-1">
             Le tarif du cours vient uniquement de la grille officielle du parcours et de la classe. Le professeur ne peut pas le modifier.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {teacherIndicativePrice > 0 && (
-              <span className="rounded-md border border-[#C7D2FE] bg-white px-2 py-1 font-semibold">
-                Minimum professeur : <Money amount={teacherIndicativePrice} />
-              </span>
-            )}
             <span className="rounded-md border border-[#C7D2FE] bg-white px-2 py-1 font-semibold">
               Palier appliqué : {props.priceTierLabel || props.priceTierKey || "calcul automatique"}
             </span>

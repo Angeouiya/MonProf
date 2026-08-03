@@ -1,6 +1,6 @@
 import { Mail, MapPin, Phone } from "lucide-react";
 import { db } from "@/lib/db";
-import { formatDateTime, formatFCFA } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { ProfessorImage } from "@/components/shared/professor-image";
@@ -107,7 +107,6 @@ export default async function ProfesseurProfilPage() {
             <InfoLine label="Format en ligne" value={profile.offersOnline ? "Oui" : "Non"} />
             <InfoLine label="Cours groupe" value={profile.offersGroup ? "Oui" : "Non"} />
             <InfoLine label="Créneaux ouverts" value={`${availabilitySlots} créneau(x) de 2h`} />
-            <InfoLine label="Ancien tarif (historique)" value={formatFCFA(profile.pricePerSession)} />
             <InfoLine label="Dernière connexion" value={formatDateTime(profile.portalLastLoginAt)} />
           </div>
           <p className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">

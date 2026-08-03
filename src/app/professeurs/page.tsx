@@ -157,7 +157,6 @@ export default async function TeachersPage({
     certifications: t.certifications,
     teachingAchievements: t.teachingAchievements,
     learnersCoached: t.learnersCoached,
-    pricePerSession: t.pricePerSession,
     offersHome: t.offersHome,
     offersOnline: t.offersOnline,
     commune: t.commune,

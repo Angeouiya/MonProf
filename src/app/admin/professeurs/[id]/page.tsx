@@ -991,37 +991,47 @@ export default async function ProfesseurDetailPage({
         {/* TARIFS */}
         <TabsContent value="tarifs">
           <Card>
-            <CardHeader><CardTitle className="text-base">Tarification</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Grille officielle et répartition</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <PriceCard label="Tarif horaire informatif" amount={teacher.pricePerHour} />
-                <PriceCard label="Ancien tarif du profil" amount={teacher.pricePerSession} />
-                <PriceCard label="Pack 4 séances" amount={teacher.pricePack4} />
-                <PriceCard label="Pack 8 séances" amount={teacher.pricePack8} />
+              <div className="grid gap-3 lg:grid-cols-3">
+                <OfficialPriceCard
+                  title="Système ivoirien"
+                  rows={[
+                    ["CP1 à CM1", PRICE_TIERS.IVOIRIEN_CP1_CM1_15000.amount],
+                    ["CM2 à 4e", PRICE_TIERS.IVOIRIEN_CM2_4E_20000.amount],
+                    ["3e à 1ère", PRICE_TIERS.IVOIRIEN_3E_1ERE_25000.amount],
+                    ["Terminale", PRICE_TIERS.IVOIRIEN_TERMINALE_30000.amount],
+                  ]}
+                />
+                <OfficialPriceCard
+                  title="Système français"
+                  rows={[
+                    ["CP1 à CM1", PRICE_TIERS.FRANCAIS_CP_CM1_37500.amount],
+                    ["CM2 à 4e", PRICE_TIERS.FRANCAIS_CM2_4E_50000.amount],
+                    ["3e à 1ère", PRICE_TIERS.FRANCAIS_3E_1ERE_62500.amount],
+                    ["Terminale", PRICE_TIERS.FRANCAIS_TERMINALE_75000.amount],
+                  ]}
+                />
+                <OfficialPriceCard
+                  title="Professionnel"
+                  rows={[["Toute compétence", PRICE_TIERS.PROFESSIONNEL_40000.amount]]}
+                />
               </div>
               <Separator className="my-4" />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <InfoBox label="Grille officielle" value="Active" />
                 <InfoBox label="Commission plateforme" value={`${teacher.commissionRate}% du cours`} />
                 <InfoBox label="Part professeur" value={`${100 - teacher.commissionRate}% du cours + déplacement`} />
-                <InfoBox
-                  label="Paliers"
-                  value={[
-                    PRICE_TIERS.IVOIRIEN_CP1_CM1_15000.amount,
-                    PRICE_TIERS.IVOIRIEN_CM2_4E_20000.amount,
-                    PRICE_TIERS.IVOIRIEN_3E_1ERE_25000.amount,
-                    PRICE_TIERS.IVOIRIEN_TERMINALE_30000.amount,
-                    PRICE_TIERS.FRANCAIS_CP_CM1_37500.amount,
-                    PRICE_TIERS.PROFESSIONNEL_40000.amount,
-                    PRICE_TIERS.FRANCAIS_CM2_4E_50000.amount,
-                    PRICE_TIERS.FRANCAIS_3E_1ERE_62500.amount,
-                    PRICE_TIERS.FRANCAIS_TERMINALE_75000.amount,
-                  ].map((amount) => formatFCFA(amount)).join(" / ")}
-                />
               </div>
               <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm font-medium text-blue-950/75">
-                Les montants historiques du profil sont ignorés. À la réservation, la grille officielle fixe le cours selon le parcours et la classe ; le transport et le service sont ajoutés séparément.
+                À la réservation, cette grille fixe le cours selon le parcours et la classe ; le transport et les frais de service sont ajoutés séparément. Aucun prix propre au professeur n'intervient.
               </p>
+              <details className="mt-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-3 text-xs text-muted-foreground">
+                <summary className="cursor-pointer font-semibold text-foreground">Données historiques du profil</summary>
+                <p className="mt-2 leading-5">
+                  Horaire {formatFCFA(teacher.pricePerHour)} · Séance {formatFCFA(teacher.pricePerSession)} · Ancien pack 4 {formatFCFA(teacher.pricePack4)} · Ancien pack 8 {formatFCFA(teacher.pricePack8)}. Ces valeurs sont conservées pour l'audit et ignorées par le moteur.
+                </p>
+              </details>
               <Separator className="my-4" />
               <div className="flex flex-wrap gap-3">
                 <Badge variant={teacher.offersHome ? "default" : "outline"}>À domicile</Badge>
@@ -1905,11 +1915,18 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PriceCard({ label, amount }: { label: string; amount: number }) {
+function OfficialPriceCard({ title, rows }: { title: string; rows: ReadonlyArray<readonly [string, number]> }) {
   return (
     <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-foreground"><Money amount={amount} /></p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <div className="mt-3 space-y-2">
+        {rows.map(([label, amount]) => (
+          <p key={label} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>{label}</span>
+            <span className="shrink-0 font-semibold text-foreground">{formatFCFA(amount)}</span>
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

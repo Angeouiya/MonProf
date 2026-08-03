@@ -414,7 +414,7 @@ record(
   !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(clientPricingCopySources)
     && /Montant à recalculer/.test(clientPricingCopySources)
     && /Calcul à reprendre/.test(clientPricingCopySources)
-    && /Calculé à la réservation/.test(clientPricingCopySources),
+    && /Tarif officiel calculé selon le parcours/.test(clientPricingCopySources),
 );
 
 record(

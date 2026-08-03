@@ -49,11 +49,11 @@ export const PRICE_TIERS = {
   },
   FRANCAIS_CP_CM1_37500: {
     key: "francais_cp_cm1_37500",
-    label: "Système français · CP à CM1",
+    label: "Système français · CP1 à CM1",
     amount: 37500,
     platformCommission: 11250,
     teacherPayout: 26250,
-    description: "Tarif officiel par séance pour les classes de CP à CM1.",
+    description: "Tarif officiel par séance pour les classes de CP1 à CM1.",
   },
   FRANCAIS_CM2_4E_50000: {
     key: "francais_cm2_4e_50000",

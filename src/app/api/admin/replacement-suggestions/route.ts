@@ -162,8 +162,6 @@ export async function GET(req: NextRequest) {
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, booking);
       const activeConflict = hasActiveConflict(teacher.bookings, booking);
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
-      const priceDiff = teacher.pricePerSession - booking.unitPrice;
-      const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const matchReasons = [
         sameSubject ? "Même matière" : "",
@@ -171,7 +169,6 @@ export async function GET(req: NextRequest) {
         sameCommune ? "Même commune/zone" : "",
         formatCompatible ? "Format compatible" : "",
         availabilityCompatible ? "Disponibilité compatible" : "",
-        priceCompatible ? "Tarif compatible" : "",
         teacher.qualityScore >= 75 ? "Bon score qualité" : "",
         noRecentIssue ? "Aucun incident récent" : "",
         !activeConflict ? "Aucun conflit actif évident" : "",
@@ -182,7 +179,6 @@ export async function GET(req: NextRequest) {
         !sameCommune ? "Commune différente" : "",
         !availabilityCompatible ? "Disponibilité à vérifier" : "",
         activeConflict ? "Conflit de planning possible" : "",
-        !priceCompatible ? "Écart tarifaire à valider" : "",
         recentDisputeCount > 0 ? "Litige récent" : "",
         teacher.warnings.length > 0 || teacher.sanctions.length > 0 ? "Historique récent à vérifier" : "",
         transport?.isQuoteOnly ? "Déplacement à contrôler" : "",
@@ -193,7 +189,6 @@ export async function GET(req: NextRequest) {
         sameCommune ? 15 : 0,
         formatCompatible ? 10 : 0,
         availabilityCompatible ? 10 : -20,
-        priceCompatible ? 10 : 0,
         Math.min(10, Math.round((teacher.qualityScore || 0) / 10)),
         teacher.rating >= 4.5 ? 5 : teacher.rating >= 4 ? 3 : 0,
         noRecentIssue ? 5 : 0,
@@ -216,7 +211,6 @@ export async function GET(req: NextRequest) {
         rating: teacher.rating,
         ratingCount: teacher.ratingCount,
         qualityScore: teacher.qualityScore,
-        pricePerSession: teacher.pricePerSession,
         commissionRate: booking.commissionRate,
         teacherCourseShare,
         transportFee,
@@ -241,7 +235,6 @@ export async function GET(req: NextRequest) {
           sameCommune,
           formatCompatible,
           availabilityCompatible,
-          priceCompatible,
           noRecentIssue,
           activeConflict,
           recentDisputeCount,
