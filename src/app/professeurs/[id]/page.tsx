@@ -91,10 +91,7 @@ export default async function TeacherDetailPage({
   const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
   const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
-  const indicativeSessionPrice = Math.max(0, teacher.pricePerSession);
-  const sessionPriceLabel = indicativeSessionPrice > 0
-    ? formatFCFA(indicativeSessionPrice)
-    : "Calculé à la réservation";
+  const sessionPriceLabel = "Calculé selon le parcours";
 
   const reserveHref = session?.user
     ? `/client/reserver?teacherId=${teacher.id}`
@@ -179,7 +176,7 @@ export default async function TeacherDetailPage({
                 </span>
                 <span className="hidden text-[#CBD5E1] sm:inline">·</span>
                 <span className="font-semibold text-[#111827]">
-                  {indicativeSessionPrice > 0 ? `${sessionPriceLabel} / séance` : sessionPriceLabel}
+                  {sessionPriceLabel}
                 </span>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#111B4D]">
@@ -214,7 +211,7 @@ export default async function TeacherDetailPage({
           <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 min-[760px]:grid-cols-3">
             <MiniStat label="Cours attribués" value={teacher._count.bookings} />
             <MiniStat label="Avis vérifiés" value={totalReviews} />
-            <MiniStat label="Prix indicatif" value={sessionPriceLabel} />
+            <MiniStat label="Tarif officiel" value={sessionPriceLabel} />
           </div>
           </div>
 
@@ -521,7 +518,7 @@ export default async function TeacherDetailPage({
                 </CardTitle>
                 <div className="mt-4 grid gap-3 min-[760px]:grid-cols-3">
                   <PriceTile
-                    label="Prix indicatif"
+                    label="Tarif officiel"
                     value={sessionPriceLabel}
                     sub="Séance de 2h"
                     highlight
@@ -632,7 +629,7 @@ export default async function TeacherDetailPage({
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
             <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
               <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Tarif officiel</p>
                 <div className="mt-1">
                   <span className="text-2xl font-semibold text-[#111827]">
                     {sessionPriceLabel}
@@ -717,7 +714,7 @@ export default async function TeacherDetailPage({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="min-w-0 px-2">
             <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
-            <p className="truncate text-xs font-semibold text-[#64748B]">{sessionPriceLabel} / séance 2h</p>
+            <p className="truncate text-xs font-semibold text-[#64748B]">{sessionPriceLabel}</p>
           </div>
           <Link
             href={reserveHref}

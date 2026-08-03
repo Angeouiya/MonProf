@@ -5,11 +5,38 @@ import { createJiti } from "jiti";
 const jiti = createJiti(import.meta.url);
 const {
   isJekoBookingPayable,
+  isStaleUnidentifiedJekoRequest,
   parseJekoCheckoutBody,
   planJekoBookingAttempt,
   planJekoRescheduleAttempt,
   platformMethodToJeko,
 } = jiti("../src/lib/jeko-client-payment.ts");
+
+const recoveryNow = new Date("2026-07-31T20:00:00.000Z");
+assert.equal(isStaleUnidentifiedJekoRequest({
+  status: "REQUESTING",
+  providerOrderId: null,
+  checkoutUrl: null,
+  requestedAt: "2026-07-31T19:29:59.999Z",
+  createdAt: "2026-07-31T19:20:00.000Z",
+  now: recoveryNow,
+}), true);
+assert.equal(isStaleUnidentifiedJekoRequest({
+  status: "REQUESTING",
+  providerOrderId: null,
+  checkoutUrl: null,
+  requestedAt: "2026-07-31T19:45:00.000Z",
+  createdAt: "2026-07-31T19:20:00.000Z",
+  now: recoveryNow,
+}), false);
+assert.equal(isStaleUnidentifiedJekoRequest({
+  status: "REQUESTING",
+  providerOrderId: "jeko_request_known",
+  checkoutUrl: null,
+  requestedAt: "2026-07-31T18:00:00.000Z",
+  createdAt: "2026-07-31T18:00:00.000Z",
+  now: recoveryNow,
+}), false);
 
 assert.deepEqual(parseJekoCheckoutBody({ paymentMethod: "WAVE" }), {
   ok: true,
@@ -155,6 +182,19 @@ assert.equal(platformMethodToJeko("DJAMO"), "djamo");
 assert.equal(platformMethodToJeko("CARD"), null);
 
 const provider = readFileSync(new URL("../src/lib/payment-provider.ts", import.meta.url), "utf8");
+const recoverySource = readFileSync(
+  new URL("../src/lib/jeko-payment-request-recovery.ts", import.meta.url),
+  "utf8",
+);
+const jekoCheckoutRoute = readFileSync(
+  new URL("../src/app/api/bookings/[id]/jeko-payment/route.ts", import.meta.url),
+  "utf8",
+);
+assert.match(recoverySource, /status: "EXPIRED"[\s\S]*?failureCode: RECOVERY_EXPIRED_CODE/);
+assert.match(recoverySource, /\{ failureCode: null \}[\s\S]*?failureCode: \{ not: RECOVERY_PENDING_CODE \}/);
+assert.match(recoverySource, /isStaleUnidentifiedJekoRequest\(attempt\)/);
+assert.match(jekoCheckoutRoute, /JEKO_STALE_ATTEMPT_EXPIRED/);
+assert.match(jekoCheckoutRoute, /status: "processing"[\s\S]*?checkoutUrl: null[\s\S]*?message: recovery\.message/);
 assert.match(provider, /error\.httpStatus === 409/);
 assert.match(provider, /recoverJekoPaymentAttemptIdentity\(attempt\.id/g);
 assert.match(provider, /if \(attempt\.status === "REQUESTING"\)/g);

@@ -56,11 +56,10 @@ const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
-  /SUR_DEVIS:[\s\S]*?amount:\s*25000/.test(pricingEngine)
-    && /const teacherPricePerSession\s*=\s*Math\.max\(0,\s*Math\.round\(Number\(input\.teacherPricePerSession\)\s*\|\|\s*0\)\)/.test(pricingEngine)
-    && /const unitSessionAmount\s*=\s*Math\.max\(tier\.amount,\s*teacherPricePerSession\)/.test(pricingEngine)
-    && /const isTeacherPriceFloorApplied\s*=\s*teacherPricePerSession\s*>\s*tier\.amount/.test(pricingEngine)
-    && /priceTierLabel:\s*isTeacherPriceFloorApplied\s*\?\s*"Minimum indicatif du professeur"\s*:\s*tier\.label/.test(pricingEngine)
+  /PROFESSIONNEL_40000:[\s\S]*?amount:\s*40000/.test(pricingEngine)
+    && /const unitSessionAmount\s*=\s*tier\.amount/.test(pricingEngine)
+    && /priceTierLabel:\s*tier\.label/.test(pricingEngine)
+    && !/Math\.max\(tier\.amount,\s*teacherPricePerSession\)/.test(pricingEngine)
     && /isQuoteOnly:\s*false/.test(pricingEngine)
     && !/if\s*\(isQuoteOnly\)/.test(pricingEngine),
 );
@@ -98,7 +97,8 @@ record(
     && /const canonicalCourseCategory\s*=\s*resolveBookingCourseCategory/.test(bookingCreateApi)
     && /category:\s*canonicalCourseCategory/.test(bookingCreateApi)
     && /courseCategory:\s*canonicalCourseCategory/.test(bookingCreateApi)
-    && /disabled=\{courseCategoryResolution\.locked\}/.test(bookingForm)
+    && /function handleJourneyChange\(journey:[\s\S]*?courseCategory:\s*canonicalCategory/.test(bookingForm)
+    && /bookingJourney\s*&&/.test(bookingForm)
     && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacherSubjects:\s*teacherSubjectNames/.test(bookingForm)
     && /isCourseCatalogItemCompatible\(\{[\s\S]*?teacher\.subjects\.map/.test(bookingCreateApi),
 );

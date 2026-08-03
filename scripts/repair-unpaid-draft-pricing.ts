@@ -1,9 +1,18 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { buildBookingSessionRows, distributeAmount } from "../src/lib/booking-sessions";
-import { calculateBookingPricing, pricingSnapshotToJson } from "../src/lib/pricing";
+import {
+  buildNeighborhoodAliasMap,
+  calculateBookingPricing,
+  pricingSnapshotToJson,
+} from "../src/lib/pricing";
 
 const db = new PrismaClient();
 const apply = process.argv.includes("--apply");
+const referenceArgument = process.argv.find((argument) => argument.startsWith("--reference="));
+const targetReference = referenceArgument?.slice("--reference=".length).trim() || null;
+if (process.argv.includes("--reference") || (referenceArgument && !targetReference)) {
+  throw new Error("Utilisez --reference=MP-XXXXXXX avec une référence exacte non vide.");
+}
 const terminalPayDunyaStatuses = new Set([
   "FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CREATE_FAILED",
 ]);
@@ -22,6 +31,7 @@ const reconcilableJekoAttemptWhere = {
   ],
 } satisfies Prisma.PaymentAttemptWhereInput;
 const repriceableDraftWhere = {
+  ...(targetReference ? { reference: targetReference } : {}),
   status: "PENDING_PAYMENT",
   paymentStatus: "FAILED",
   paydunyaVerifiedAt: null,
@@ -35,10 +45,19 @@ const repriceableDraftWhere = {
 } satisfies Prisma.BookingWhereInput;
 
 async function main() {
-  const [settingRows, grandAbidjanCommunes, destinationCommunes, drafts] = await Promise.all([
+  const [settingRows, grandAbidjanCommunes, destinationCommunes, neighborhoodAliasRows, drafts] = await Promise.all([
     db.setting.findMany({ select: { key: true, value: true } }),
     db.commune.findMany({ where: { transportClass: "GRAND_ABIDJAN", isActive: true }, select: { name: true } }),
     db.commune.findMany({ where: { isActive: true }, select: { name: true, transportFeeOverride: true } }),
+    db.communeQuarter.findMany({
+      where: { isActive: true, commune: { isActive: true } },
+      select: {
+        id: true,
+        name: true,
+        aliases: true,
+        commune: { select: { id: true, name: true } },
+      },
+    }),
     db.booking.findMany({
       where: repriceableDraftWhere,
       include: {
@@ -52,6 +71,15 @@ async function main() {
 
   const settings = new Map(settingRows.map((row) => [row.key, row.value]));
   const destinations = new Map(destinationCommunes.map((commune) => [normalize(commune.name), commune]));
+  const neighborhoodAliases = buildNeighborhoodAliasMap(
+    neighborhoodAliasRows.map((quarter) => ({
+      id: quarter.id,
+      communeId: quarter.commune.id,
+      name: quarter.name,
+      aliases: quarter.aliases,
+      communeName: quarter.commune.name,
+    })),
+  );
   let updated = 0;
   let skippedActiveInvoice = 0;
   let skippedConcurrentChange = 0;
@@ -95,6 +123,7 @@ async function main() {
       },
       grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
       clientCommuneTransportFeeOverride: destination?.transportFeeOverride,
+      neighborhoodAliases,
     });
     const serializedPricing = pricingSnapshotToJson(pricing);
 
@@ -256,7 +285,14 @@ async function main() {
     console.log(JSON.stringify({ canonicalizedTeachers: teachers.count, canonicalizedUsers: users.count }));
   }
 
-  console.log(JSON.stringify({ scanned: drafts.length, updated, skippedActiveInvoice, skippedConcurrentChange, apply }));
+  console.log(JSON.stringify({
+    targetReference,
+    scanned: drafts.length,
+    updated,
+    skippedActiveInvoice,
+    skippedConcurrentChange,
+    apply,
+  }));
 }
 
 function integer(value: string | undefined, fallback: number) {

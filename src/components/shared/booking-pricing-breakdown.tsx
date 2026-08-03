@@ -154,7 +154,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         <div className="mt-3 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-3 text-xs font-medium leading-5 text-[#312E81]">
           <p className="font-bold">Pourquoi ce prix peut différer du profil</p>
           <p className="mt-1">
-            Le prix du professeur est indicatif et sert de minimum. La plateforme applique ensuite le palier du métier, du cours et du niveau choisis, puis conserve le montant le plus élevé.
+            Le tarif du cours vient uniquement de la grille officielle du parcours et de la classe. Le professeur ne peut pas le modifier.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {teacherIndicativePrice > 0 && (

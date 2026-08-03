@@ -594,12 +594,22 @@ export async function reconcileJekoPaymentAttempt(
     if (recovery.recovered) {
       return reconcileJekoPaymentAttempt(attempt.id, options);
     }
+    const recoveryAction = recovery.action === "rejected"
+      ? "rejected"
+      : recovery.action === "expired"
+        ? "failed"
+        : "pending";
+    const recoveryStatus = recovery.action === "rejected"
+      ? "rejected"
+      : recovery.action === "expired"
+        ? "error"
+        : "pending";
     return {
       attemptId: attempt.id,
       bookingId: attempt.bookingId,
       verified: false,
-      action: recovery.action === "rejected" ? "rejected" : "pending",
-      status: recovery.action === "rejected" ? "rejected" : "pending",
+      action: recoveryAction,
+      status: recoveryStatus,
       message: recovery.message,
     };
   }

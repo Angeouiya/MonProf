@@ -107,7 +107,7 @@ export default async function ProfesseurProfilPage() {
             <InfoLine label="Format en ligne" value={profile.offersOnline ? "Oui" : "Non"} />
             <InfoLine label="Cours groupe" value={profile.offersGroup ? "Oui" : "Non"} />
             <InfoLine label="Créneaux ouverts" value={`${availabilitySlots} créneau(x) de 2h`} />
-            <InfoLine label="Prix indicatif séance" value={formatFCFA(profile.pricePerSession)} />
+            <InfoLine label="Ancien tarif (historique)" value={formatFCFA(profile.pricePerSession)} />
             <InfoLine label="Dernière connexion" value={formatDateTime(profile.portalLastLoginAt)} />
           </div>
           <p className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">

@@ -133,7 +133,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
       const data = await res.json();
       const checkoutUrl = data.payment?.checkoutUrl;
       if (!res.ok || !checkoutUrl || (providerIsJeko && !isAllowedJekoRedirectUrl(checkoutUrl))) {
-        toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
+        toast.error(data.payment?.message || data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
       toast.success(`Ouverture de ${providerLabel}...`);
@@ -598,7 +598,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
       const data = await res.json();
       const checkoutUrl = data.payment?.checkoutUrl;
       if (!res.ok || !checkoutUrl || (providerIsJeko && !isAllowedJekoRedirectUrl(checkoutUrl))) {
-        toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
+        toast.error(data.payment?.message || data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
         return;
       }
       toast.success(`Ouverture de ${providerLabel}...`);

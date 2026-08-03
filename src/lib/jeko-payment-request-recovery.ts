@@ -7,10 +7,14 @@ import {
   JekoApiError,
   recoverJekoPaymentRequestByReference,
 } from "@/lib/jeko";
-import { platformMethodToJeko } from "@/lib/jeko-client-payment";
+import {
+  isStaleUnidentifiedJekoRequest,
+  platformMethodToJeko,
+} from "@/lib/jeko-client-payment";
 
 const RECOVERY_PENDING_CODE = "JEKO_REFERENCE_RECOVERY_PENDING";
 const RECOVERY_REJECTED_CODE = "JEKO_REFERENCE_RECOVERY_REJECTED";
+const RECOVERY_EXPIRED_CODE = "JEKO_REQUEST_ID_UNRECOVERABLE";
 
 export type JekoAttemptIdentityRecovery =
   | {
@@ -21,7 +25,7 @@ export type JekoAttemptIdentityRecovery =
     }
   | {
       recovered: false;
-      action: "pending" | "rejected";
+      action: "pending" | "rejected" | "expired";
       message: string;
     };
 
@@ -52,6 +56,7 @@ export async function recoverJekoPaymentAttemptIdentity(
       method: true,
       providerOrderId: true,
       checkoutUrl: true,
+      requestedAt: true,
       createdAt: true,
       booking: {
         select: {
@@ -94,6 +99,11 @@ export async function recoverJekoPaymentAttemptIdentity(
         : null,
     }, { config });
     if (!recovered) {
+      if (isStaleUnidentifiedJekoRequest(attempt)) {
+        const message = "L'ancienne création Jèko n'a ni identifiant ni lien récupérable et aucune transaction correspondante n'a été trouvée après le délai de sécurité. Elle est clôturée sans valider de paiement.";
+        const expired = await expireUnrecoverableRequest(attempt, message);
+        if (expired) return { recovered: false, action: "expired", message };
+      }
       const message = "La référence existe peut-être chez Jèko, mais aucun identifiant confirmable n'est encore disponible. Aucun nouveau POST ne sera envoyé.";
       await markRecoveryPending(attempt, message);
       return { recovered: false, action: "pending", message };
@@ -183,7 +193,10 @@ async function markRecoveryPending(
       where: {
         id: attempt.id,
         status: { in: ["CREATED", "REQUESTING", "PENDING"] },
-        NOT: { failureCode: RECOVERY_PENDING_CODE },
+        OR: [
+          { failureCode: null },
+          { failureCode: { not: RECOVERY_PENDING_CODE } },
+        ],
       },
       data: {
         status: "REQUESTING",
@@ -205,6 +218,60 @@ async function markRecoveryPending(
       priority: "URGENT",
       newStatus: RECOVERY_PENDING_CODE,
     });
+  });
+}
+
+async function expireUnrecoverableRequest(
+  attempt: RecoveryAttempt,
+  message: string,
+) {
+  const now = new Date();
+  return db.$transaction(async (tx) => {
+    const expired = await tx.paymentAttempt.updateMany({
+      where: {
+        id: attempt.id,
+        provider: "JEKO",
+        status: "REQUESTING",
+        providerOrderId: null,
+        checkoutUrl: null,
+      },
+      data: {
+        status: "EXPIRED",
+        failureCode: RECOVERY_EXPIRED_CODE,
+        failureReason: message.slice(0, 500),
+        failedAt: now,
+        lastCheckedAt: now,
+      },
+    });
+    if (expired.count === 0) return false;
+
+    if (attempt.purpose === "BOOKING" && attempt.bookingId) {
+      await tx.booking.updateMany({
+        where: {
+          id: attempt.bookingId,
+          status: "PENDING_PAYMENT",
+          paymentStatus: "FAILED",
+          paymentProvider: "JEKO",
+        },
+        data: {
+          providerPaymentStatus: "ERROR",
+          paymentVerifiedAt: null,
+        },
+      });
+    }
+    if (attempt.purpose === "RESCHEDULE_FEE" && attempt.rescheduleRequestId) {
+      await tx.bookingRescheduleRequest.updateMany({
+        where: { id: attempt.rescheduleRequestId, paidAt: null },
+        data: { status: "PAYMENT_FAILED" },
+      });
+    }
+    await createRecoveryAlert(tx, attempt, {
+      title: "Ancienne création Jèko clôturée sans paiement",
+      message: `${message} Référence: ${attempt.reference}. Tentative: ${attempt.id}.`,
+      priority: "URGENT",
+      newStatus: RECOVERY_EXPIRED_CODE,
+    });
+    return true;
   });
 }
 
@@ -241,6 +308,10 @@ type RecoveryAttempt = {
   purpose: string;
   status: string;
   reference: string;
+  providerOrderId: string | null;
+  checkoutUrl: string | null;
+  requestedAt: Date | null;
+  createdAt: Date;
   booking: {
     id: string;
     reference: string;

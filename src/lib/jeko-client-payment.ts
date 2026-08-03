@@ -6,6 +6,7 @@ import {
 
 const ACTIVE_ATTEMPT_STATUSES = new Set(["CREATED", "REQUESTING", "PENDING"]);
 const TERMINAL_ATTEMPT_STATUSES = new Set(["FAILED", "REJECTED", "CANCELLED", "EXPIRED"]);
+export const JEKO_UNIDENTIFIED_REQUEST_GRACE_MS = 30 * 60 * 1_000;
 
 export type JekoAttemptSummary = {
   id: string;
@@ -38,6 +39,33 @@ export type JekoAttemptPlan =
       attemptId: string;
       reason: string;
     };
+
+/**
+ * Une création REQUESTING sans ID ni URL fournisseur est inaccessible au
+ * client. Après la fenêtre de cohérence Jèko, et seulement après qu'une
+ * recherche serveur n'a trouvé aucune transaction, elle peut être
+ * terminalisée afin d'autoriser une nouvelle référence.
+ */
+export function isStaleUnidentifiedJekoRequest(input: {
+  status: string;
+  providerOrderId?: string | null;
+  checkoutUrl?: string | null;
+  requestedAt?: Date | string | null;
+  createdAt: Date | string;
+  now?: Date | string;
+}) {
+  if (
+    input.status !== "REQUESTING"
+    || input.providerOrderId
+    || input.checkoutUrl
+  ) return false;
+
+  const startedAt = new Date(input.requestedAt ?? input.createdAt).getTime();
+  const now = new Date(input.now ?? new Date()).getTime();
+  return Number.isFinite(startedAt)
+    && Number.isFinite(now)
+    && now - startedAt >= JEKO_UNIDENTIFIED_REQUEST_GRACE_MS;
+}
 
 export type JekoRescheduleFinancialSnapshot = {
   feeAmount: number;

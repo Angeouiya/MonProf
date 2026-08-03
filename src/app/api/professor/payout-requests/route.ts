@@ -325,6 +325,12 @@ export async function POST(req: NextRequest) {
     }, { isolationLevel: "Serializable" });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+    console.info("[jeko:payout_request_recorded]", {
+      teacherId: teacher.id,
+      payoutRequestId: result.request.id,
+      amountXof: result.request.amount,
+      idempotentReplay: result.idempotentReplay,
+    });
     return NextResponse.json({
       ok: true,
       request: result.request,

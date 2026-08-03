@@ -32,37 +32,66 @@ function baseBooking(overrides: Partial<Parameters<typeof calculateBookingPricin
   };
 }
 
+function verifyOfficialPriceGrid() {
+  const scenarios = [
+    { schoolSystem: "ivoirien", preciseLevel: "CP1", amount: 15_000, key: "ivoirien_cp1_cm1_15000" },
+    { schoolSystem: "ivoirien", preciseLevel: "CM2", amount: 20_000, key: "ivoirien_cm2_4e_20000" },
+    { schoolSystem: "ivoirien", preciseLevel: "3e", amount: 25_000, key: "ivoirien_3e_1ere_25000" },
+    { schoolSystem: "ivoirien", preciseLevel: "Terminale D", amount: 30_000, key: "ivoirien_terminale_30000" },
+    { schoolSystem: "francais", preciseLevel: "CP", amount: 37_500, key: "francais_cp_cm1_37500" },
+    { schoolSystem: "francais", preciseLevel: "CM2", amount: 50_000, key: "francais_cm2_4e_50000" },
+    { schoolSystem: "francais", preciseLevel: "3e", amount: 62_500, key: "francais_3e_1ere_62500" },
+    { schoolSystem: "francais", preciseLevel: "Terminale générale", amount: 75_000, key: "francais_terminale_75000" },
+  ] as const;
+
+  for (const scenario of scenarios) {
+    const pricing = calculateBookingPricing(baseBooking({
+      schoolSystem: scenario.schoolSystem,
+      levelName: scenario.preciseLevel,
+      preciseLevel: scenario.preciseLevel,
+      teacherPricePerSession: 100_000,
+    }));
+    assert.equal(pricing.priceTierKey, scenario.key);
+    assert.equal(pricing.unitSessionAmount, scenario.amount);
+  }
+
+  const coarseCollege = calculateBookingPricing(baseBooking({
+    schoolSystem: "ivoirien",
+    levelName: "Collège",
+    deliveryMode: "domicile",
+    teacherCommune: "Cocody",
+    teacherQuartier: "Cocody Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+  }));
+  assert.equal(coarseCollege.unitSessionAmount, 20_000);
+  assert.equal(coarseCollege.transportFee, 0);
+  assert.equal(coarseCollege.paymentServiceFeeAmount, 600);
+  assert.equal(coarseCollege.totalClientPays, 20_600);
+}
+
 function verifyProfessionalPricing() {
-  const advancedProfession = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    courseCatalogName: "Power BI",
-    subjectName: "Analyse de données",
-    teacherPricePerSession: 10_000,
-  }));
-
-  assert.equal(advancedProfession.priceTierKey, "premium_20000");
-  assert.equal(advancedProfession.unitSessionAmount, 20_000);
-  assert.equal(advancedProfession.priceTierLabel, "Premium");
-
-  const explicitProfessionalLevel = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    levelName: "Professionnel",
-    courseCatalogName: "Formation pratique",
-    teacherPricePerSession: 10_000,
-  }));
-
-  assert.equal(explicitProfessionalLevel.priceTierKey, "premium_20000");
-  assert.equal(explicitProfessionalLevel.unitSessionAmount, 20_000);
+  for (const teacherPricePerSession of [2_000, 10_000, 80_000]) {
+    const professional = calculateBookingPricing(baseBooking({
+      category: "formation_professionnelle",
+      levelName: "Professionnel",
+      courseCatalogName: "Power BI",
+      teacherPricePerSession,
+    }));
+    assert.equal(professional.priceTierKey, "professionnel_40000");
+    assert.equal(professional.unitSessionAmount, 40_000);
+    assert.equal(professional.priceTierLabel, "Parcours professionnel");
+  }
 
   const categoryBypassAttempt = calculateBookingPricing(baseBooking({
     category: "soutien_scolaire",
-    schoolSystem: "ivoirien",
+    schoolSystem: "francais",
     levelName: "Formation professionnelle",
     subjectName: "Couture",
     teacherPricePerSession: 2_000,
   }));
-  assert.equal(categoryBypassAttempt.priceTierKey, "premium_20000");
-  assert.equal(categoryBypassAttempt.unitSessionAmount, 20_000);
+  assert.equal(categoryBypassAttempt.priceTierKey, "professionnel_40000");
+  assert.equal(categoryBypassAttempt.unitSessionAmount, 40_000);
 
   const canonicalProfessionalCategory = resolveBookingCourseCategory({
     requestedCategory: "soutien_scolaire",
@@ -73,16 +102,6 @@ function verifyProfessionalPricing() {
     category: "formation_professionnelle",
     locked: true,
   });
-
-  const staleFrenchSystem = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    schoolSystem: "francais",
-    levelName: "Formation professionnelle",
-    subjectName: "Couture",
-    teacherPricePerSession: 2_000,
-  }));
-  assert.equal(staleFrenchSystem.priceTierKey, "premium_20000");
-  assert.equal(staleFrenchSystem.unitSessionAmount, 20_000);
 
   const higherEducationPython = COURSE_CATALOG.find((item) => (
     item.actif
@@ -108,66 +127,6 @@ function verifyProfessionalPricing() {
     locked: false,
   });
 
-  for (const actualLevelName of ["Formation professionnelle", "Adultes"]) {
-    for (const indicativeTeacherPrice of [2_000, 10_000]) {
-      const actualProfessionalLevel = calculateBookingPricing(baseBooking({
-        category: "formation_professionnelle",
-        levelName: actualLevelName,
-        courseCatalogName: "Formation pratique personnalisée",
-        teacherPricePerSession: indicativeTeacherPrice,
-      }));
-
-      assert.equal(
-        actualProfessionalLevel.priceTierKey,
-        "premium_20000",
-        `${actualLevelName} doit appliquer le palier professionnel avancé`,
-      );
-      assert.equal(actualProfessionalLevel.unitSessionAmount, 20_000);
-    }
-  }
-
-  const genericProfession = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    courseCatalogName: "Formation professionnelle personnalisée",
-    teacherPricePerSession: 10_000,
-  }));
-
-  assert.equal(genericProfession.priceTierKey, "avance_15000");
-  assert.equal(genericProfession.unitSessionAmount, 15_000);
-
-  const genericTrade = calculateBookingPricing(baseBooking({
-    category: "apprentissage_metier",
-    courseCatalogName: "Apprentissage pratique",
-    teacherPricePerSession: 10_000,
-  }));
-
-  assert.equal(genericTrade.priceTierKey, "avance_15000");
-  assert.equal(genericTrade.unitSessionAmount, 15_000);
-
-  const teacherFloor = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    subjectName: "Comptabilité",
-    teacherPricePerSession: 18_000,
-  }));
-
-  assert.equal(teacherFloor.priceTierKey, "avance_15000");
-  assert.equal(teacherFloor.unitSessionAmount, 18_000);
-  assert.equal(teacherFloor.priceTierLabel, "Minimum indicatif du professeur");
-
-  const microsoftWord = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    levelName: "Débutant",
-    courseCatalogName: "Microsoft Word",
-    teacherPricePerSession: 2_000,
-  }));
-  const wordpress = calculateBookingPricing(baseBooking({
-    category: "formation_professionnelle",
-    levelName: "Débutant",
-    courseCatalogName: "WordPress",
-    teacherPricePerSession: 2_000,
-  }));
-  assert.equal(microsoftWord.priceTierKey, "renforcement_12500");
-  assert.equal(wordpress.priceTierKey, "avance_15000");
 }
 
 function verifyTransportMatrix() {
@@ -191,8 +150,8 @@ function verifyTransportMatrix() {
   }));
   assert.equal(sameNeighborhood.transportFeeKey, "same_neighborhood");
   assert.equal(sameNeighborhood.transportFee, 0);
-  assert.equal(sameNeighborhood.priceTierKey, "basic_7500");
-  assert.equal(sameNeighborhood.unitSessionAmount, 7_500);
+  assert.equal(sameNeighborhood.priceTierKey, "ivoirien_cp1_cm1_15000");
+  assert.equal(sameNeighborhood.unitSessionAmount, 15_000);
 
   const same = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",
@@ -277,6 +236,15 @@ function verifyTransportMatrix() {
   });
   assert.equal(sameAliasInDifferentAreas.key, "same_area");
   assert.equal(sameAliasInDifferentAreas.amount, 1_000);
+
+  const sameTextWithoutCatalogInDifferentAreas = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Centre",
+    clientCommune: "Riviera",
+    clientQuartier: "Centre",
+  });
+  assert.equal(sameTextWithoutCatalogInDifferentAreas.key, "same_area");
+  assert.equal(sameTextWithoutCatalogInDifferentAreas.amount, 1_000);
 
   const identicalLabelsWithDifferentCanonicalIds = buildNeighborhoodAliasMap([
     { id: "quarter-cocody-centre", communeId: "commune-cocody", communeName: "Cocody", name: "Centre" },
@@ -489,17 +457,19 @@ function verifyCatalogCompatibility() {
     category: "soutien_scolaire",
     levelName: "CP - CE1",
     schoolSystem: canonicalFrenchSystem.schoolSystem,
+    preciseLevel: "CP",
   }).ok, true);
 
   const frenchCpPrice = calculateBookingPricing(baseBooking({
     levelName: "CP - CE1",
+    preciseLevel: "CP",
     schoolSystem: canonicalFrenchSystem.schoolSystem,
     subjectName: "Mathématiques",
     courseCatalogName: frenchCpMath.nom,
     teacherPricePerSession: 2_000,
   }));
-  assert.equal(frenchCpPrice.priceTierKey, "renforcement_12500");
-  assert.equal(frenchCpPrice.unitSessionAmount, 12_500);
+  assert.equal(frenchCpPrice.priceTierKey, "francais_cp_cm1_37500");
+  assert.equal(frenchCpPrice.unitSessionAmount, 37_500);
 
   const canonicalIvorianSystem = resolveCourseCatalogSchoolSystem({
     item: cp1Math,
@@ -508,13 +478,14 @@ function verifyCatalogCompatibility() {
   if (!canonicalIvorianSystem.ok) throw new Error("Le catalogue ivoirien doit canoniser son système scolaire.");
   const ivorianCpPrice = calculateBookingPricing(baseBooking({
     levelName: "CP - CE1",
+    preciseLevel: "CP1",
     schoolSystem: canonicalIvorianSystem.schoolSystem,
     subjectName: "Mathématiques",
     courseCatalogName: cp1Math.nom,
     teacherPricePerSession: 2_000,
   }));
-  assert.equal(ivorianCpPrice.priceTierKey, "basic_7500");
-  assert.equal(ivorianCpPrice.unitSessionAmount, 7_500);
+  assert.equal(ivorianCpPrice.priceTierKey, "ivoirien_cp1_cm1_15000");
+  assert.equal(ivorianCpPrice.unitSessionAmount, 15_000);
 }
 
 function verifyDraftIdempotence() {
@@ -630,19 +601,19 @@ function verifyPacksAndGroups() {
   assert.equal(groupedPack.numberOfSessions, 8);
   assert.equal(groupedPack.groupMultiplier, 1.5);
   assert.equal(groupedPack.transportFeeKey, "same_area");
-  assert.equal(groupedPack.priceTierKey, "standard_10000");
-  assert.equal(groupedPack.unitSessionAmount, 10_000);
-  assert.equal(groupedPack.rawCourseAmount, 120_000);
+  assert.equal(groupedPack.priceTierKey, "ivoirien_cm2_4e_20000");
+  assert.equal(groupedPack.unitSessionAmount, 20_000);
+  assert.equal(groupedPack.rawCourseAmount, 240_000);
   assert.equal(groupedPack.discountRate, 0.05);
-  assert.equal(groupedPack.discountAmount, 6_000);
-  assert.equal(groupedPack.courseAmount, 114_000);
+  assert.equal(groupedPack.discountAmount, 12_000);
+  assert.equal(groupedPack.courseAmount, 228_000);
   assert.equal(groupedPack.transportFeePerSession, 1_000);
   assert.equal(groupedPack.transportFee, 8_000);
-  assert.equal(groupedPack.teacherPayoutAmount, 84_000);
-  assert.equal(groupedPack.totalTeacherReceives, 92_000);
+  assert.equal(groupedPack.teacherPayoutAmount, 168_000);
+  assert.equal(groupedPack.totalTeacherReceives, 176_000);
   assert.equal(groupedPack.paymentServiceFeeRate, 300);
-  assert.equal(groupedPack.paymentServiceFeeAmount, 3_660);
-  assert.equal(groupedPack.totalClientPays, 125_660);
+  assert.equal(groupedPack.paymentServiceFeeAmount, 7_080);
+  assert.equal(groupedPack.totalClientPays, 243_080);
 
   const baseCourseAmount = groupedPack.unitSessionAmount * groupedPack.numberOfSessions;
   const groupSurchargeAmount = groupedPack.rawCourseAmount - baseCourseAmount;
@@ -659,12 +630,12 @@ function verifyMaterialFeeIsExcludedFromServiceFeeBase() {
     materialFee: 5_000,
   }));
 
-  assert.equal(pricing.courseAmount, 10_000);
+  assert.equal(pricing.courseAmount, 15_000);
   assert.equal(pricing.transportFee, 0);
   assert.equal(pricing.materialFee, 5_000);
-  assert.equal(pricing.totalBeforePaymentServiceFee, 15_000);
-  assert.equal(pricing.paymentServiceFeeAmount, 300);
-  assert.equal(pricing.totalClientPays, 15_300);
+  assert.equal(pricing.totalBeforePaymentServiceFee, 20_000);
+  assert.equal(pricing.paymentServiceFeeAmount, 450);
+  assert.equal(pricing.totalClientPays, 20_450);
 }
 
 function verifyDiscountedGroupBreakdownCopy() {
@@ -699,7 +670,7 @@ function verifyPackDiscountCommissionCaps() {
         packType: pack.packType,
         platformCommissionPercent: commissionPercent,
       }));
-      const expectedRawAmount = pack.sessions * 10_000;
+      const expectedRawAmount = pack.sessions * 20_000;
       const expectedEffectiveRate = Math.min(pack.maximumRate, commissionPercent / 100);
       const expectedDiscountAmount = Math.round(expectedRawAmount * expectedEffectiveRate);
 
@@ -716,6 +687,7 @@ function verifyPackDiscountCommissionCaps() {
   }
 }
 
+verifyOfficialPriceGrid();
 verifyProfessionalPricing();
 verifyTransportMatrix();
 verifyCatalogCompatibility();
@@ -727,4 +699,4 @@ verifyMaterialFeeIsExcludedFromServiceFeeBase();
 verifyDiscountedGroupBreakdownCopy();
 verifyPackDiscountCommissionCaps();
 
-console.log("OK pricing engine: professional levels, indicative floors, transport, school catalog, home activation, draft idempotence, service fee excluding material, confirmation, packs, groups and effective discounts verified.");
+console.log("OK pricing engine: official school/professional grids, ignored legacy teacher prices, transport, catalog, confirmation, packs, groups and service fees verified.");

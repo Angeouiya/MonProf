@@ -995,7 +995,7 @@ export default async function ProfesseurDetailPage({
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <PriceCard label="Tarif horaire informatif" amount={teacher.pricePerHour} />
-                <PriceCard label="Minimum indicatif / séance 2h" amount={teacher.pricePerSession} />
+                <PriceCard label="Ancien tarif du profil" amount={teacher.pricePerSession} />
                 <PriceCard label="Pack 4 séances" amount={teacher.pricePack4} />
                 <PriceCard label="Pack 8 séances" amount={teacher.pricePack8} />
               </div>
@@ -1007,16 +1007,20 @@ export default async function ProfesseurDetailPage({
                 <InfoBox
                   label="Paliers"
                   value={[
-                    PRICE_TIERS.BASIC_7500.amount,
-                    PRICE_TIERS.STANDARD_10000.amount,
-                    PRICE_TIERS.RENFORCEMENT_12500.amount,
-                    PRICE_TIERS.AVANCE_15000.amount,
-                    PRICE_TIERS.PREMIUM_20000.amount,
+                    PRICE_TIERS.IVOIRIEN_CP1_CM1_15000.amount,
+                    PRICE_TIERS.IVOIRIEN_CM2_4E_20000.amount,
+                    PRICE_TIERS.IVOIRIEN_3E_1ERE_25000.amount,
+                    PRICE_TIERS.IVOIRIEN_TERMINALE_30000.amount,
+                    PRICE_TIERS.FRANCAIS_CP_CM1_37500.amount,
+                    PRICE_TIERS.PROFESSIONNEL_40000.amount,
+                    PRICE_TIERS.FRANCAIS_CM2_4E_50000.amount,
+                    PRICE_TIERS.FRANCAIS_3E_1ERE_62500.amount,
+                    PRICE_TIERS.FRANCAIS_TERMINALE_75000.amount,
                   ].map((amount) => formatFCFA(amount)).join(" / ")}
                 />
               </div>
               <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm font-medium text-blue-950/75">
-                Les montants ci-dessus du profil restent indicatifs. À la réservation, le prix client est calculé par la grille officielle selon catégorie, niveau, système scolaire, format, pack, groupe et déplacement.
+                Les montants historiques du profil sont ignorés. À la réservation, la grille officielle fixe le cours selon le parcours et la classe ; le transport et le service sont ajoutés séparément.
               </p>
               <Separator className="my-4" />
               <div className="flex flex-wrap gap-3">

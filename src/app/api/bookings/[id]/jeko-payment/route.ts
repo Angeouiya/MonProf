@@ -8,6 +8,7 @@ import {
   planJekoBookingAttempt,
   platformMethodToJeko,
 } from "@/lib/jeko-client-payment";
+import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-recovery";
 import { reconcileJekoPaymentAttempt } from "@/lib/jeko-reconciliation";
 import { isAllowedJekoRedirectUrl } from "@/lib/jeko-utils";
 import { createJekoBookingCheckout } from "@/lib/payment-provider";
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }, 503);
   }
 
-  const attempts = await db.paymentAttempt.findMany({
+  let attempts = await db.paymentAttempt.findMany({
     where: {
       bookingId: booking.id,
       provider: "JEKO",
@@ -78,6 +79,53 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     },
     orderBy: { createdAt: "desc" },
   });
+  const unidentifiedRequest = attempts.find((attempt) => (
+    attempt.status === "REQUESTING" && !attempt.providerOrderId
+  ));
+  if (unidentifiedRequest) {
+    const recovery = await recoverJekoPaymentAttemptIdentity(unidentifiedRequest.id, { config });
+    if (!recovery.recovered) {
+      console.info("[jeko:client_checkout_recovery]", {
+        bookingId: booking.id,
+        attemptId: unidentifiedRequest.id,
+        action: recovery.action,
+      });
+      if (recovery.action === "pending") {
+        return apiJson({
+          payment: {
+            provider: "JEKO",
+            attemptId: unidentifiedRequest.id,
+            status: "processing",
+            checkoutUrl: null,
+            message: recovery.message,
+          },
+        }, 202);
+      }
+      return apiJson({
+        error: recovery.message,
+        code: recovery.action === "expired"
+          ? "JEKO_STALE_ATTEMPT_EXPIRED"
+          : "JEKO_ATTEMPT_REJECTED",
+        attemptId: unidentifiedRequest.id,
+      }, 409);
+    }
+    attempts = await db.paymentAttempt.findMany({
+      where: {
+        bookingId: booking.id,
+        provider: "JEKO",
+        purpose: "BOOKING",
+      },
+      select: {
+        id: true,
+        idempotencyKey: true,
+        status: true,
+        method: true,
+        providerOrderId: true,
+        failureCode: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
   const plan = planJekoBookingAttempt({
     bookingId: booking.id,
     requestedMethod: parsedBody.paymentMethod,
@@ -128,6 +176,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       ? checkout.checkoutUrl
       : null;
 
+    console.info("[jeko:client_checkout_result]", {
+      bookingId: booking.id,
+      attemptId: checkout.attemptId,
+      plan: plan.kind,
+      status: checkout.status,
+      hasCheckoutUrl: Boolean(checkoutUrl),
+    });
+
     return apiJson({
       payment: {
         provider: "JEKO",
@@ -139,6 +195,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         paymentMethod: plan.paymentMethod,
         checkoutUrl,
         reused: plan.kind === "reuse",
+        message: checkout.status === "processing"
+          ? "La création Jèko précédente est encore en cours de vérification. Aucun second paiement n'a été ouvert."
+          : null,
       },
     }, plan.kind === "create" ? 201 : 200);
   } catch (error) {

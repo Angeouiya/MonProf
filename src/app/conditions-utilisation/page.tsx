@@ -58,9 +58,9 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    title: "Tarifs, prix indicatifs et participants",
+    title: "Tarifs officiels et participants",
     body: [
-      "Les prix affichés peuvent être indicatifs lorsqu'ils dépendent du professeur, du niveau, de la matière, du format, du lieu, du nombre de séances, du nombre de participants, du déplacement ou d'une validation du service client.",
+      "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Le total peut ensuite varier selon le nombre de séances, les participants, le déplacement et les frais de service affichés avant paiement.",
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
     ],

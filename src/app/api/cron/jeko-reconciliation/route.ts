@@ -16,6 +16,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runJekoReconciliationSweep();
+    console.info("[jeko:reconciliation_sweep_completed]", {
+      ok: result.ok,
+      scanned: result.scanned,
+      processed: result.processed,
+      succeeded: result.succeeded,
+      failed: result.failed,
+      actions: result.actions,
+    });
     return NextResponse.json(result, {
       status: 200,
       headers: { "Cache-Control": "no-store" },

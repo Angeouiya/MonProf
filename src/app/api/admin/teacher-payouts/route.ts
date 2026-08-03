@@ -723,6 +723,13 @@ export async function POST(req: NextRequest) {
 }
 
 function payoutResultResponse(result: JekoPayoutReconciliationResult) {
+  console.info("[jeko:payout_result]", {
+    payoutRecordId: result.payoutRecordId ?? null,
+    reference: result.reference ?? null,
+    action: result.action,
+    status: result.status,
+    verified: result.verified,
+  });
   if (result.action === "paid" || result.action === "already_paid") {
     return NextResponse.json({ ok: true, pending: false, payout: result });
   }

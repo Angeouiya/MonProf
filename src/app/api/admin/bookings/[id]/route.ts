@@ -13,6 +13,7 @@ import {
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   TRANSPORT_FEES,
+  buildNeighborhoodAliasMap,
   calculateGrandAbidjanTransportFee,
   parsePricingSnapshot,
   pricingSnapshotToJson,
@@ -318,13 +319,46 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const courseAmount = booking.courseAmount || Math.max(0, booking.totalPrice - (booking.transportFee || 0) - (booking.materialFee || 0));
         const nextCommission = booking.commissionAmount;
         const nextTeacherCoursePayout = booking.teacherPayoutAmount || Math.max(0, courseAmount - nextCommission);
-        const [platformSettings, grandAbidjanCommunes, destination] = await Promise.all([
+        const replacementPricingCommuneNames = Array.from(new Set(
+          [newTeacher.commune, booking.commune]
+            .map((value) => value?.trim())
+            .filter((value): value is string => Boolean(value)),
+        ));
+        const [platformSettings, grandAbidjanCommunes, destination, neighborhoodAliasRows] = await Promise.all([
           getPlatformRuntimeSettings(),
           db.commune.findMany({ where: { transportClass: "GRAND_ABIDJAN", isActive: true }, select: { name: true } }),
           booking.commune
             ? db.commune.findFirst({ where: { name: { equals: booking.commune, mode: "insensitive" }, isActive: true }, select: { transportFeeOverride: true } })
             : null,
+          replacementPricingCommuneNames.length > 0
+            ? db.communeQuarter.findMany({
+                where: {
+                  isActive: true,
+                  commune: {
+                    isActive: true,
+                    OR: replacementPricingCommuneNames.map((name) => ({
+                      name: { equals: name, mode: "insensitive" as const },
+                    })),
+                  },
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  aliases: true,
+                  commune: { select: { id: true, name: true } },
+                },
+              })
+            : Promise.resolve([]),
         ]);
+        const neighborhoodAliases = buildNeighborhoodAliasMap(
+          neighborhoodAliasRows.map((quarter) => ({
+            id: quarter.id,
+            communeId: quarter.commune.id,
+            name: quarter.name,
+            aliases: quarter.aliases,
+            communeName: quarter.commune.name,
+          })),
+        );
         const replacementTransport = booking.courseFormat === "HOME"
           ? calculateGrandAbidjanTransportFee({
               teacherCommune: newTeacher.commune,
@@ -334,6 +368,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               clientQuartier: booking.quartier,
               transportFeeAmounts: platformSettings.transportFees,
               grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
+              neighborhoodAliases,
             })
           : null;
         const nextTransportFeePerSession = booking.courseFormat !== "HOME"

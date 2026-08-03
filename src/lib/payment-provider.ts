@@ -302,7 +302,7 @@ export async function createJekoBookingCheckout(
       await db.booking.updateMany({
         where: { id: bookingId, paymentStatus: "FAILED", paymentProvider: "JEKO" },
         data: {
-          providerPaymentStatus: recovery.action === "rejected" ? "ERROR" : "PENDING",
+          providerPaymentStatus: recovery.action === "pending" ? "PENDING" : "ERROR",
           paymentVerifiedAt: null,
         },
       });
@@ -596,7 +596,7 @@ export async function createJekoRescheduleCheckout(
       }
       await db.bookingRescheduleRequest.updateMany({
         where: { id: request.id, paidAt: null, paymentProvider: "JEKO" },
-        data: { status: recovery.action === "rejected" ? "PAYMENT_FAILED" : "PAYMENT_PENDING" },
+        data: { status: recovery.action === "pending" ? "PAYMENT_PENDING" : "PAYMENT_FAILED" },
       });
       throw error;
     }

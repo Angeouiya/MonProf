@@ -109,6 +109,9 @@ assert.match(activeAttemptFilter, /status:\s*"FAILED",[\s\S]*?providerOrderId:\s
 assert.match(activeAttemptFilter, /failureCode:\s*\{\s*not:\s*"JEKO_PAYMENT_FAILED"\s*\}/);
 assert.doesNotMatch(activeAttemptFilter, /SUCCEEDED|CANCELLED|EXPIRED|REJECTED/);
 assert.match(repricing, /paymentAttempts:\s*\{\s*none:\s*reconcilableJekoAttemptWhere\s*\}/);
+assert.match(repricing, /argument\.startsWith\("--reference="\)/);
+assert.match(repricing, /\.\.\.\(targetReference \? \{ reference: targetReference \} : \{\}\)/);
+assert.match(repricing, /buildNeighborhoodAliasMap\([\s\S]*?neighborhoodAliasRows\.map/);
 assert.match(repricing, /where:\s*repriceableDraftWhere/);
 assert.match(repricing, /db\.\$transaction\(async \(tx\)/);
 assert.match(repricing, /tx\.booking\.updateMany\(\{[\s\S]*?where:\s*\{\s*id:\s*booking\.id,\s*updatedAt:\s*booking\.updatedAt,\s*\.\.\.repriceableDraftWhere\s*\}/);

@@ -5,15 +5,11 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   ArrowRight,
-  BookOpenCheck,
   CalendarCheck,
   GraduationCap,
   Home,
   LayoutDashboard,
-  Mail,
-  MapPin,
   Menu,
-  Phone,
   Search,
   ShieldCheck,
   WalletCards,
@@ -26,27 +22,8 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/professeurs", label: "Trouver un professeur" },
-  { href: "/comment-ca-marche", label: "Comment ça marche" },
   { href: "/tarifs", label: "Tarifs" },
   { href: "/contact", label: "Contact" },
-];
-
-const footerPlatformLinks = [
-  { href: "/professeurs", label: "Trouver un professeur" },
-  { href: "/comment-ca-marche", label: "Comment ça marche" },
-  { href: "/tarifs", label: "Tarifs" },
-  { href: "/contact", label: "Contact" },
-];
-
-const footerAccountLinks = [
-  { href: "/connexion", label: "Connexion" },
-  { href: "/inscription", label: "Créer un compte" },
-  { href: "/client", label: "Espace client" },
-];
-
-const footerLegalLinks = [
-  { href: "/conditions-utilisation", label: "Conditions d'utilisation" },
-  { href: "/politique-confidentialite", label: "Confidentialité" },
 ];
 
 const trustSignals = [
@@ -126,8 +103,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
             {!isAuthenticated && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/inscription" prefetch={true}>
-                  Créer un compte
+                <Link href="/professeurs" prefetch={true}>
+                  Réserver
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -211,8 +188,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
                   </Button>
                   <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href="/inscription" prefetch={true} onClick={() => setMobileOpen(false)}>
-                      Créer un compte
+                    <Link href="/professeurs" prefetch={true} onClick={() => setMobileOpen(false)}>
+                      Réserver une séance
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>
@@ -236,111 +213,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       {!hideFooter && (
       <footer className={cn("mt-auto border-t border-[#E3E8F2] bg-white lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <div className="mb-8 rounded-lg border border-[#DDE6F7] bg-white p-4 sm:p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-                  <BookOpenCheck className="h-3.5 w-3.5" />
-                  Compétence
-                </p>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#475569]">
-                  Une plateforme ivoirienne pensée pour réserver un professeur, payer proprement et suivre chaque cours depuis un espace client clair.
-                </p>
-              </div>
-              <Button asChild className="min-h-12 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/professeurs" prefetch={true}>
-                  Trouver un professeur
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-7 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div>
+            <BrandLogo />
+            <p className="mt-2 text-xs font-medium text-[#64748B]">© {new Date().getFullYear()} Compétence · Cocody, Abidjan</p>
           </div>
-
-          <div className="grid min-w-0 gap-7 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.75fr)_minmax(0,0.75fr)_minmax(0,0.8fr)_minmax(0,1fr)]">
-            <div className="min-w-0">
-              <BrandLogo />
-              <p className="mt-3 max-w-sm text-sm font-medium leading-6 text-[#64748B]">
-                Plateforme ivoirienne de réservation de cours à domicile et en ligne, avec des professeurs vérifiés et un paiement sécurisé.
-              </p>
-              <div className="mt-4 grid gap-2 text-xs font-semibold text-[#111B4D] sm:grid-cols-3">
-                {trustSignals.map((signal) => {
-                  const Icon = signal.icon;
-                  return (
-                    <span key={signal.label} className="inline-flex min-h-9 items-center gap-1.5">
-                      <Icon className="h-3.5 w-3.5" />
-                      {signal.label}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-[#111827]">Plateforme</h4>
-              <ul className="mt-3 space-y-1 text-sm">
-                {footerPlatformLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-[#111827]">Compte</h4>
-              <ul className="mt-3 space-y-1 text-sm">
-                {footerAccountLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-[#111827]">Cadre légal</h4>
-              <ul className="mt-3 space-y-1 text-sm">
-                {footerLegalLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} prefetch={true} className="inline-flex min-h-10 items-center rounded-lg bg-white px-3 font-semibold text-[#64748B] transition hover:text-[#111B4D]">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-[#111827]">Contact</h4>
-              <ul className="mt-3 space-y-2 text-sm font-semibold text-[#64748B]">
-                <li className="flex min-h-10 items-center gap-2"><Phone className="h-4 w-4 text-[#111B4D]" /> +225 01 61 39 39 39</li>
-                <li className="flex min-h-10 items-center gap-2"><Mail className="h-4 w-4 text-[#111B4D]" /> contact@competence.ci</li>
-                <li className="flex min-h-10 items-center gap-2"><MapPin className="h-4 w-4 text-[#111B4D]" /> Cocody, Abidjan</li>
-              </ul>
-            </div>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#64748B]">
+            <Link href="/tarifs" className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
+            <Link href="/contact" className="min-h-10 content-center hover:text-[#111B4D]">Aide</Link>
+            <Link href="/conditions-utilisation" className="min-h-10 content-center hover:text-[#111B4D]">Conditions</Link>
+            <Link href="/politique-confidentialite" className="min-h-10 content-center hover:text-[#111B4D]">Confidentialité</Link>
+          </nav>
           </div>
-          <div className="mt-8 flex flex-col items-start justify-between gap-3 border-t border-[#E3E8F2] pt-6 text-xs font-semibold text-[#64748B] sm:flex-row sm:items-center">
-            <p>© {new Date().getFullYear()} Compétence - Tous droits réservés.</p>
-            <p className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5 text-[#111B4D]" /> Professeurs vérifiés · Paiement sécurisé</span>
-              <Link
-                href="/conditions-utilisation"
-                prefetch={true}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
-              >
-                CGU
-              </Link>
-              <Link
-                href="/politique-confidentialite"
-                prefetch={true}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-[#111B4D] transition hover:border-[#111B4D]"
-              >
-                Confidentialité
-              </Link>
-            </p>
-          </div>
-        </div>
       </footer>
       )}
       {!hideMobileNav && !mobileOpen && <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />}

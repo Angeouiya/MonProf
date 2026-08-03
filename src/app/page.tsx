@@ -1,97 +1,45 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BadgeCheck,
-  Calculator,
-  BookOpen,
-  Languages,
-  Atom,
-  Leaf,
-  Brain,
-  Laptop,
-  Coins,
-  TrendingUp,
-  BriefcaseBusiness,
-  CalendarCheck,
-  CheckCircle2,
-  ClipboardList,
-  Code2,
-  Camera,
-  Megaphone,
-  Music,
-  Palette,
-  ShieldCheck,
-  Wallet,
-  WalletCards,
-  Wrench,
-} from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Check, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
-import { HomeSearchBar } from "@/components/home/home-search-bar";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
-import { getLevelCategory, getSubjectCategory } from "@/lib/catalog-taxonomy";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 
-const PRICING = [
-  { level: "Primaire", price: 7500 },
-  { level: "Collège", price: 10000 },
-  { level: "Lycée", price: 12500 },
-  { level: "Terminale", price: 15000 },
-  { level: "Université", price: 20000 },
-];
+const JOURNEYS = [
+  {
+    title: "Système ivoirien",
+    detail: "CP1 à Terminale",
+    price: "Dès 15 000 F",
+    icon: GraduationCap,
+    href: "/professeurs",
+  },
+  {
+    title: "Système français",
+    detail: "CP à Terminale",
+    price: "Dès 37 500 F",
+    icon: GraduationCap,
+    href: "/professeurs",
+  },
+  {
+    title: "Professionnel",
+    detail: "Une compétence précise",
+    price: "40 000 F / séance",
+    icon: BriefcaseBusiness,
+    href: "/professeurs",
+  },
+] as const;
 
-const POPULAR_SUBJECTS = [
-  { name: "Mathématiques", slug: "mathematiques", desc: "Primaire à université", icon: Calculator },
-  { name: "Français", slug: "francais", desc: "BEPC, BAC, expression", icon: BookOpen },
-  { name: "Anglais", slug: "anglais", desc: "Scolaire et professionnel", icon: Languages },
-  { name: "Physique-Chimie", slug: "physique-chimie", desc: "BAC C, D, E", icon: Atom },
-  { name: "SVT", slug: "svt", desc: "BEPC, BAC D", icon: Leaf },
-  { name: "Philosophie", slug: "philosophie", desc: "Terminale, BAC", icon: Brain },
-  { name: "Programmation", slug: "programmation", desc: "Web, bases, data", icon: Code2 },
-  { name: "Bureautique", slug: "bureautique", desc: "Adultes, pro", icon: Laptop },
-  { name: "Comptabilité", slug: "comptabilite", desc: "BAC D2, BTS", icon: Coins },
-  { name: "Économie", slug: "economie", desc: "Lycée, université", icon: TrendingUp },
-  { name: "Préparation concours", slug: "preparation-concours", desc: "ENA, INFAS, écoles", icon: BadgeCheck },
-  { name: "Culture générale", slug: "culture-generale", desc: "Concours, oral", icon: Brain },
-  { name: "Marketing digital", slug: "marketing-digital", desc: "Entrepreneurs, adultes", icon: Megaphone },
-  { name: "Gestion de projet", slug: "gestion-de-projet", desc: "Pro, BTS, licence", icon: ClipboardList },
-  { name: "Arts plastiques", slug: "arts-plastiques", desc: "Dessin, créativité", icon: Palette },
-  { name: "Musique", slug: "piano", desc: "Piano, guitare, chant", icon: Music },
-  { name: "Photographie", slug: "photographie", desc: "Image, montage", icon: Camera },
-  { name: "Technique", slug: "mecanique", desc: "Mécanique, dessin", icon: Wrench },
-  { name: "Professionnel", slug: "entrepreneuriat", desc: "Business, gestion", icon: BriefcaseBusiness },
-];
-
-const STEPS = [
-  {
-    icon: BadgeCheck,
-    title: "Choisir",
-    text: "Profils vérifiés, matière, niveau, commune et format.",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Planifier",
-    text: "Date, créneau de 2h, objectif et formule.",
-  },
-  {
-    icon: WalletCards,
-    title: "Payer",
-    text: "Jèko sécurise le paiement jusqu'au cours.",
-  },
-  {
-    icon: Wallet,
-    title: "Confirmer",
-    text: "Vous validez le cours avant la clôture.",
-  },
-];
+const IVORIAN_RATES = [
+  ["CP1 à CM1", 15_000],
+  ["CM2 à 4e", 20_000],
+  ["3e à 1ère", 25_000],
+  ["Terminale", 30_000],
+] as const;
 
 export default async function HomePage() {
-  // Preview deployments intentionally have no production database credentials.
-  // Keep the public landing page available there while production continues to
-  // use the live catalog whenever the database is reachable.
   const catalog = await getCachedTeacherSearchCatalog().catch(() => ({
     teacherCount: 0,
     subjects: [],
@@ -101,7 +49,7 @@ export default async function HomePage() {
   const featured = catalog.teacherCount > 0
     ? await db.teacher.findMany({
         where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-        take: 6,
+        take: 3,
         include: {
           subjects: { include: { subject: true } },
           _count: { select: { reviews: true } },
@@ -109,246 +57,119 @@ export default async function HomePage() {
         orderBy: [{ rating: "desc" }],
       })
     : [];
-  const activeTeacherCount = catalog.teacherCount;
-  const { subjects, levels, communes } = catalog;
 
-  const featuredCards = featured.map((t) => ({
-    id: t.id,
-    fullName: t.fullName,
-    professionalName: t.professionalName,
-    photoUrl: t.photoUrl,
-    jobTitle: t.jobTitle,
-    rating: t.rating,
-    ratingCount: t.ratingCount,
-    experienceYears: t.experienceYears,
-    careerSummary: t.careerSummary,
-    skills: t.skills,
-    workHistory: t.workHistory,
-    certifications: t.certifications,
-    teachingAchievements: t.teachingAchievements,
-    learnersCoached: t.learnersCoached,
-    pricePerSession: t.pricePerSession,
-    pricePack4: t.pricePack4,
-    pricePack8: t.pricePack8,
-    offersHome: t.offersHome,
-    offersOnline: t.offersOnline,
-    commune: t.commune,
-    badgeVerified: t.badgeVerified,
-    badgeRecommended: t.badgeRecommended,
-    badgeNew: t.badgeNew,
-    badgePopular: t.badgePopular,
-    badgePremium: t.badgePremium,
-    primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
-    _count: { reviews: t._count.reviews },
+  const featuredCards = featured.map((teacher) => ({
+    ...teacher,
+    primarySubject: teacher.subjects.find((subject) => subject.isPrimary)?.subject.name
+      ?? teacher.subjects[0]?.subject.name,
   }));
 
   return (
     <PublicLayout>
-      {/* HERO */}
       <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-          <div className="mx-auto max-w-5xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Côte d'Ivoire · professeurs vérifiés · paiement Jèko
-            </div>
-            <h1 className="mx-auto max-w-4xl text-3xl font-semibold text-[#111827] text-balance sm:text-4xl lg:text-4xl">
-              Réservez un professeur vérifié, avec un suivi clair jusqu'au cours.
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#475569] sm:text-lg">
-              Un professeur, un créneau, un paiement Jèko et un espace client pour suivre le dossier.
-            </p>
-            <div className="mx-auto mt-5 hidden max-w-2xl grid-cols-3 gap-2 text-center text-xs font-semibold text-[#111B4D] min-[430px]:grid">
-              <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
-                <p className="text-lg text-[#111827]">{activeTeacherCount > 0 ? `${activeTeacherCount}+` : "Bientôt"}</p>
-                <p>{activeTeacherCount > 0 ? "profils actifs" : "profils vérifiés"}</p>
-              </div>
-              <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
-                <p className="text-lg text-[#111827]">2h</p>
-                <p>par séance</p>
-              </div>
-              <div className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-3">
-                <p className="text-lg text-[#111827]">24h</p>
-                <p>minimum</p>
-              </div>
-            </div>
-            <div className="mx-auto mt-6 max-w-5xl text-left">
-              <HomeSearchBar
-                subjects={subjects.map((subject) => ({
-                  slug: subject.slug,
-                  name: subject.name,
-                  category: getSubjectCategory(subject.name, subject.icon),
-                }))}
-                levels={levels.map((level) => ({
-                  slug: level.slug,
-                  name: level.name,
-                  category: getLevelCategory(level.name, level.order),
-                }))}
-                communes={communes.map((c) => ({ slug: c.name, name: c.name }))}
-              />
-            </div>
+        <div className="mx-auto max-w-6xl px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <p className="mx-auto inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D]">
+            <ShieldCheck className="h-4 w-4" /> Professeurs vérifiés en Côte d'Ivoire
+          </p>
+          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-[#111827] sm:text-5xl lg:text-6xl">
+            Trouvez le bon professeur. Simplement.
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-[#64748B] sm:text-lg">
+            Choisissez votre parcours, votre classe et votre créneau. Compétence calcule le reste.
+          </p>
+          <Link
+            href="/professeurs"
+            className="mx-auto mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#111B4D] px-7 text-base font-semibold text-white transition hover:bg-[#1E2A78]"
+          >
+            Réserver une séance <ArrowRight className="h-5 w-5" />
+          </Link>
+          <div className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-semibold text-[#64748B]">
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-[#111B4D]" /> Prix affiché avant paiement</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#111B4D]" /> Transport calculé automatiquement</span>
+            <span className="inline-flex items-center gap-1.5"><WalletCards className="h-4 w-4 text-[#111B4D]" /> Paiement Jèko sécurisé</span>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <SectionHeader title="Réserver sans stress" text="Un parcours court, lisible et suivi dans votre espace client." />
-          <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s) => (
-              <div
-                key={s.title}
-                className="rounded-lg border border-[#E3E8F2] bg-white p-4"
+      <section className="bg-[#F8FAFD]">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Une seule question pour commencer</p>
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">Quel parcours cherchez-vous ?</h2>
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {JOURNEYS.map(({ title, detail, price, icon: Icon, href }) => (
+              <Link
+                key={title}
+                href={href}
+                className="group rounded-3xl border border-[#DDE3EE] bg-white p-6 transition hover:-translate-y-0.5 hover:border-[#111B4D] hover:shadow-sm"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-                  <s.icon className="h-5 w-5" />
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F1F4FF] text-[#111B4D]">
+                  <Icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-5 text-lg font-semibold text-[#111827]">{title}</h3>
+                <p className="mt-1 text-sm text-[#64748B]">{detail}</p>
+                <div className="mt-6 flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-[#111B4D]">{price}</span>
+                  <ArrowRight className="h-5 w-5 text-[#111B4D] transition group-hover:translate-x-1" />
                 </div>
-                <h3 className="mt-3 text-sm font-semibold text-[#111827]">
-                  {s.title}
-                </h3>
-                <p className="mt-1.5 text-sm leading-6 text-[#64748B]">
-                  {s.text}
-                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-[#E3E8F2] bg-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8 lg:py-16">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Tarifs officiels</p>
+            <h2 className="mt-3 text-3xl font-semibold text-[#111827]">Le niveau fixe le cours. Le trajet fixe le transport.</h2>
+            <p className="mt-4 max-w-lg text-sm leading-6 text-[#64748B]">
+              Le professeur ne change pas le prix. Le moteur ajoute uniquement le déplacement éventuel et les frais de service de 3 %, puis affiche le total avant Jèko.
+            </p>
+            <Link href="/tarifs" className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D]">
+              Voir toute la grille <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="overflow-hidden rounded-3xl border border-[#DDE3EE] bg-white">
+            {IVORIAN_RATES.map(([level, rate]) => (
+              <div key={level} className="flex items-center justify-between gap-4 border-b border-[#E8ECF3] px-5 py-4 last:border-0 sm:px-6">
+                <span className="text-sm font-semibold text-[#111827]">{level}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-[#111B4D]">{formatFCFA(rate)}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* PROFESSEURS EN VEDETTE */}
       {featuredCards.length > 0 && (
-        <section className="border-b border-[#E3E8F2] bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <section className="bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+            <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
-                  Professeurs en vedette
-                </h2>
-                <p className="mt-2 text-sm text-[#64748B]">
-                  Une sélection de professeurs vérifiés, recommandés par notre
-                  équipe.
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Professeurs vérifiés</p>
+                <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">Choisissez en confiance</h2>
               </div>
-              <Link
-                href="/professeurs"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#CAD7F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] sm:justify-start"
-              >
-                Voir tous les professeurs
-                <ArrowRight className="h-4 w-4" />
+              <Link href="/professeurs" className="hidden min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D] sm:inline-flex">
+                Tout voir <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-8 grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {featuredCards.map((t, index) => (
-                <TeacherCard key={`${t.id}-${index}`} teacher={t as any} />
-              ))}
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {featuredCards.map((teacher) => <TeacherCard key={teacher.id} teacher={teacher} />)}
             </div>
           </div>
         </section>
       )}
 
-      {/* MATIÈRES POPULAIRES */}
-      <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <SectionHeader title="Un catalogue ouvert" text="Scolaire, université, concours, adultes, métiers, technique et arts." />
-          <div className="mt-5 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {POPULAR_SUBJECTS.slice(0, 12).map((s) => (
-              <Link
-                key={s.slug}
-                href={`/professeurs?subject=${s.slug}`}
-                className="group flex min-h-16 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition hover:border-[#111B4D]"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-[#111B4D]">
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{s.name}</p>
-                  <p className="line-clamp-1 text-xs text-[#64748B]">{s.desc}</p>
-                </div>
-                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
-              </Link>
-            ))}
-          </div>
-          <div className="mt-5 text-center">
-            <Link href="/professeurs" className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] hover:border-[#111B4D]">
-              Explorer toutes les matières
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* GRILLE TARIFAIRE RAPIDE */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">
-                Des tarifs clairs par niveau
-              </h2>
-              <p className="mt-3 text-sm text-[#64748B] sm:text-base">
-                Pas de frais cachés. Choisissez un cours à la séance ou un pack
-                de 4, 8 ou 12 séances. Le prix affiché reste le prix payé.
-              </p>
-              <ul className="mt-6 space-y-3">
-                {[
-                  "Total exact confirmé avant paiement",
-                  "Fonds bloqués jusqu'à la fin du cours",
-                  "Remboursement possible en cas de litige",
-                  "Packs avantageux pour un suivi régulier",
-                ].map((t) => (
-                  <li key={t} className="flex items-start gap-2 text-sm text-[#111827]">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-7">
-                <Link
-                  href="/tarifs"
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[#CAD7F2] bg-white px-5 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
-                >
-                  Voir les tarifs détaillés
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-            <div className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">
-              <table className="w-full text-sm">
-                <thead className="bg-white text-left text-xs uppercase tracking-wide text-[#64748B]">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Niveau</th>
-                    <th className="px-4 py-3 text-right font-medium">Prix / séance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E3E8F2]">
-                  {PRICING.map((p) => (
-                    <tr key={p.level} className="border-t border-[#E3E8F2]">
-                      <td className="px-4 py-3 font-semibold text-[#111827]">
-                        {p.level}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#111827] tabular-nums">
-                        {formatFCFA(p.price)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="border-t border-[#E3E8F2] bg-white px-4 py-3 text-xs text-[#64748B]">
-                Tarifs de base indicatifs. La réservation recalcule le total
-                exact selon le métier, le niveau, le format, le pack et le trajet.
-              </div>
-            </div>
-          </div>
+      <section className="bg-[#111B4D] text-white">
+        <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-semibold">Prêt à commencer ?</h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#DDE6F7]">Trois choix suffisent pour lancer votre recherche.</p>
+          <Link href="/professeurs" className="mt-7 inline-flex min-h-14 items-center gap-2 rounded-2xl bg-white px-7 text-base font-semibold text-[#111B4D]">
+            Trouver un professeur <ArrowRight className="h-5 w-5" />
+          </Link>
         </div>
       </section>
     </PublicLayout>
-  );
-}
-
-function SectionHeader({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-2xl font-semibold text-[#111827] sm:text-3xl">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-[#64748B] sm:text-base">{text}</p>
-    </div>
   );
 }

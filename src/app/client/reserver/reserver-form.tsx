@@ -31,14 +31,12 @@ import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
 import { PackType } from "@prisma/client";
 import {
-  CLIENT_TYPES,
   COURSE_CATALOG,
   COURSE_CATEGORIES,
   SCHOOL_SYSTEMS,
   buildSchoolProgramSummary,
   getPreciseLevelOptions,
   isCourseCatalogItemCompatible,
-  isLyceeLevel,
   resolveBookingCourseCategory,
   validateEducationSelection,
 } from "@/lib/course-catalog";
@@ -66,7 +64,7 @@ import {
   isAbidjanCity,
 } from "@/lib/ivory-coast-locations";
 import {
-  ArrowLeft, ArrowRight, Home, Video, User, Users,
+  ArrowLeft, ArrowRight, Home, Video, User, Users, GraduationCap, BriefcaseBusiness,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink, AlertTriangle,
 } from "lucide-react";
 
@@ -180,14 +178,6 @@ function normalizeLocation(value?: string | null) {
     .toLowerCase();
 }
 const PAYMENT_METHODS = activePaymentMethodOptions;
-
-const CLIENT_TYPE_DEFAULT_CATEGORY: Record<string, string> = {
-  Parent: "soutien_scolaire",
-  Élève: "soutien_scolaire",
-  Étudiant: "enseignement_superieur",
-  Professionnel: "formation_professionnelle",
-  Entreprise: "formation_entreprise",
-};
 
 const CATEGORY_COPY: Record<string, {
   intro: string;
@@ -495,9 +485,17 @@ export function ReserverForm({
   const hasTeacherLevels = teacher.levels.length > 0;
   const hasTeacherSubjects = teacher.subjects.length > 0;
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
-  const isLyceeSelection = schoolContext && isLyceeLevel(form.levelName);
-  const requiresSchoolSystem = effectiveCourseCategory === "soutien_scolaire" || isLyceeSelection;
-  const preciseLevelOptions = isLyceeSelection ? getPreciseLevelOptions(form.schoolSystem) : [];
+  const preciseLevelOptions = schoolContext && form.schoolSystem
+    ? getPreciseLevelOptions(form.schoolSystem, form.levelName)
+    : [];
+  const requiresPreciseLevel = preciseLevelOptions.length > 0;
+  const bookingJourney = ["formation_professionnelle", "apprentissage_metier", "enseignement_superieur", "langues_communication"].includes(effectiveCourseCategory)
+    ? "professionnel"
+    : form.schoolSystem === "francais"
+      ? "francais"
+      : form.schoolSystem === "ivoirien"
+        ? "ivoirien"
+        : "";
   const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
   const selectedCategoryCourses = COURSE_CATALOG.filter((item) => isCourseCatalogItemCompatible({
     item,
@@ -680,34 +678,12 @@ export function ReserverForm({
           : !hasMinimumBookingNotice
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
-  function handleClientTypeChange(clientType: string) {
-    const nextCategory = CLIENT_TYPE_DEFAULT_CATEGORY[clientType] ?? form.courseCategory;
+  function handleJourneyChange(journey: "ivoirien" | "francais" | "professionnel") {
     setForm((current) => {
+      const nextCategory = journey === "professionnel" ? "formation_professionnelle" : "soutien_scolaire";
       const nextLevel = suggestLevelForCategory(teacher.levels, nextCategory, current.levelName);
       const canonicalCategory = resolveBookingCourseCategory({
         requestedCategory: nextCategory,
-        levelName: nextLevel,
-        preciseLevel: isSchoolContext(nextCategory) ? current.preciseLevel : "",
-        subjectName: current.subjectName,
-        catalogItem: COURSE_CATALOG.find((item) => item.id === current.courseCatalogId),
-      }).category;
-      return {
-        ...current,
-        clientType,
-        courseCategory: canonicalCategory,
-        levelName: nextLevel,
-        schoolSystem: isSchoolContext(canonicalCategory) ? current.schoolSystem : "",
-        preciseLevel: isSchoolContext(canonicalCategory) ? current.preciseLevel : "",
-        courseCatalogId: current.courseCategory === canonicalCategory ? current.courseCatalogId : "",
-      };
-    });
-  }
-
-  function handleCourseCategoryChange(courseCategory: string) {
-    setForm((current) => {
-      const nextLevel = suggestLevelForCategory(teacher.levels, courseCategory, current.levelName);
-      const canonicalCategory = resolveBookingCourseCategory({
-        requestedCategory: courseCategory,
         levelName: nextLevel,
         preciseLevel: "",
         subjectName: current.subjectName,
@@ -715,9 +691,10 @@ export function ReserverForm({
       }).category;
       return {
         ...current,
+        clientType: journey === "professionnel" ? "Professionnel" : "Parent",
         courseCategory: canonicalCategory,
         levelName: nextLevel,
-        schoolSystem: isSchoolContext(canonicalCategory) ? current.schoolSystem : "",
+        schoolSystem: journey === "professionnel" ? "" : journey,
         preciseLevel: "",
         courseCatalogId: "",
       };
@@ -742,6 +719,7 @@ export function ReserverForm({
 
   function validateStep(s: number): string | null {
     if (s === 0) {
+      if (!bookingJourney) return "Choisissez d'abord le parcours : ivoirien, français ou professionnel.";
       if (!form.clientType) return "Veuillez sélectionner le type de client.";
       if (!form.courseCategory) return "Veuillez sélectionner la catégorie du besoin.";
       if (!hasTeacherLevels) return "Ce professeur n'a pas encore de niveau/profil configuré par le service client.";
@@ -903,7 +881,7 @@ export function ReserverForm({
         toast.success("Paiement Jèko déjà confirmé.");
         router.push(`/client/reservations/${data.booking.id}?jeko=confirmed`);
       } else {
-        toast.error(data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.");
+        toast.error(data.payment?.message || data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.");
         router.push(`/client/reservations/${data.booking.id}?payment=pending`);
       }
     } catch (e: any) {
@@ -1025,39 +1003,34 @@ export function ReserverForm({
             {step === 0 && (
             <div className="space-y-5">
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
+              <div>
+                <Label>Quel parcours ? *</Label>
+                <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                  {([
+                    { value: "ivoirien", label: "Système ivoirien", detail: "CP1 à Terminale", Icon: GraduationCap },
+                    { value: "francais", label: "Système français", detail: "CP à Terminale", Icon: GraduationCap },
+                    { value: "professionnel", label: "Professionnel", detail: "40 000 F / séance", Icon: BriefcaseBusiness },
+                  ] as const).map(({ value, label, detail, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleJourneyChange(value)}
+                      className={`min-h-24 rounded-2xl border p-4 text-left transition ${
+                        bookingJourney === value
+                          ? "border-[#111B4D] bg-[#F3F6FF] text-[#111B4D] shadow-sm"
+                          : "border-[#DDE3EE] bg-white text-[#111827] hover:border-[#111B4D]"
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="mt-3 block text-sm font-semibold">{label}</span>
+                      <span className="mt-1 block text-xs font-medium text-[#64748B]">{detail}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {bookingJourney && (
+              <>
               <div className="grid gap-4 min-[720px]:grid-cols-2">
-                <div>
-                  <Label htmlFor="clientType">Type de client *</Label>
-                  <select
-                    id="clientType"
-                    value={form.clientType}
-                    onChange={(e) => handleClientTypeChange(e.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    {CLIENT_TYPES.map((clientType) => (
-                      <option key={clientType} value={clientType}>{clientType}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="courseCategory">Catégorie du besoin *</Label>
-                  <select
-                    id="courseCategory"
-                    value={effectiveCourseCategory}
-                    onChange={(e) => handleCourseCategoryChange(e.target.value)}
-                    disabled={courseCategoryResolution.locked}
-                    className={FIELD_CLASS}
-                  >
-                    {COURSE_CATEGORIES.map((category) => (
-                      <option key={category.code} value={category.code}>{category.label}</option>
-                    ))}
-                  </select>
-                  {courseCategoryResolution.locked && (
-                    <p className="mt-1 text-xs font-semibold text-[#111B4D]">
-                      Catégorie professionnelle verrouillée selon le métier ou le niveau choisi.
-                    </p>
-                  )}
-                </div>
                 <div>
                   <Label htmlFor="levelName">{categoryCopy.levelLabel} *</Label>
                   <SearchableCatalogSelect
@@ -1065,9 +1038,7 @@ export function ReserverForm({
                     name="levelName"
                     value={form.levelName}
                     onValueChange={(value) => setForm((current) => {
-                      const nextPreciseLevel = isSchoolContext(current.courseCategory) && isLyceeLevel(value)
-                        ? current.preciseLevel
-                        : "";
+                      const nextPreciseLevel = "";
                       return {
                         ...current,
                         levelName: value,
@@ -1134,42 +1105,22 @@ export function ReserverForm({
                     </p>
                   )}
                 </div>
-                {requiresSchoolSystem && (
+                {requiresPreciseLevel && (
                   <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className={`grid gap-4 ${isLyceeSelection ? "min-[720px]:grid-cols-2" : ""}`}>
-                      <div>
-                        <Label htmlFor="schoolSystem">Système scolaire *</Label>
-                        <select
-                          id="schoolSystem"
-                          value={form.schoolSystem}
-                          onChange={(e) => setForm((current) => ({ ...current, schoolSystem: e.target.value, preciseLevel: "", courseCatalogId: "" }))}
-                          className={FIELD_CLASS}
-                        >
-                          <option value="">Sélectionner le système...</option>
-                          {SCHOOL_SYSTEMS.map((system) => (
-                            <option key={system.value} value={system.value}>{system.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {isLyceeSelection && (
-                        <div>
-                          <Label htmlFor="preciseLevel">Classe, série ou voie *</Label>
-                          <select
-                            id="preciseLevel"
-                            value={form.preciseLevel}
-                            onChange={(e) => setForm((current) => ({ ...current, preciseLevel: e.target.value, courseCatalogId: "" }))}
-                            className={FIELD_CLASS}
-                          >
-                            <option value="">Sélectionner...</option>
-                            {preciseLevelOptions.map((level) => (
-                              <option key={level} value={level}>{level}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
+                    <Label htmlFor="preciseLevel">Classe exacte *</Label>
+                    <select
+                      id="preciseLevel"
+                      value={form.preciseLevel}
+                      onChange={(e) => setForm((current) => ({ ...current, preciseLevel: e.target.value, courseCatalogId: "" }))}
+                      className={FIELD_CLASS}
+                    >
+                      <option value="">Choisir la classe...</option>
+                      {preciseLevelOptions.map((level) => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
+                    </select>
                     <p className="mt-3 text-xs font-medium text-[#6B7280]">
-                      Le système scolaire détermine la grille et empêche de mélanger programmes ivoirien, français et internationaux.
+                      La classe applique automatiquement le bon tarif officiel. Aucun prix propre au professeur n'intervient.
                     </p>
                   </div>
                 )}
@@ -1260,6 +1211,8 @@ export function ReserverForm({
                   className="mt-1.5"
                 />
               </div>
+              </>
+              )}
             </div>
           )}
           {step === 1 && (

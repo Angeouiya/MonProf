@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get("jeko-signature");
+  console.info("[jeko:webhook_received]", {
+    requestId: request.headers.get("x-vercel-id") ?? null,
+    payloadBytes: rawBody.byteLength,
+    hasSignature: Boolean(signature),
+  });
   if (!verifyJekoWebhookSignature(rawBody, signature, config.webhookSecret)) {
     console.warn("[jeko:webhook_invalid_signature]", {
       hasSignature: Boolean(signature),
@@ -58,6 +63,11 @@ export async function POST(request: NextRequest) {
   try {
     webhook = parseJekoWebhookPayload(rawBody);
   } catch (error) {
+    console.warn("[jeko:webhook_payload_rejected]", {
+      requestId: request.headers.get("x-vercel-id") ?? null,
+      payloadBytes: rawBody.byteLength,
+      message: error instanceof Error ? error.message : "Payload invalide",
+    });
     return NextResponse.json({
       error: error instanceof Error ? error.message : "Payload webhook Jèko invalide.",
     }, { status: 400 });

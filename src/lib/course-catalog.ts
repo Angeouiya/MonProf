@@ -52,6 +52,20 @@ export const LYCEE_LEVEL_OPTIONS: Record<SchoolSystem, string[]> = {
   autre: ["Niveau lycée autre", "Programme spécialisé", "À préciser avec le service client"],
 };
 
+export const OFFICIAL_SCHOOL_LEVEL_OPTIONS: Record<"ivoirien" | "francais", string[]> = {
+  ivoirien: [
+    "CP1", "CP2", "CE1", "CE2", "CM1", "CM2",
+    "6e", "5e", "4e", "3e", "2nde A", "2nde C",
+    "1ère A", "1ère C", "1ère D", "1ère E",
+    "Terminale A1", "Terminale A2", "Terminale C", "Terminale D", "Terminale E",
+  ],
+  francais: [
+    "CP", "CE1", "CE2", "CM1", "CM2", "6e", "5e", "4e", "3e",
+    "Seconde", "Première générale", "Première technologique",
+    "Terminale générale", "Terminale technologique",
+  ],
+};
+
 export const FRENCH_LYCEE_SPECIALTIES = [
   "Mathématiques",
   "Physique-Chimie",
@@ -805,9 +819,23 @@ export function isLyceeLevel(levelName?: string | null) {
   return /(lycee|seconde|premiere|terminale|bac)/.test(normalized);
 }
 
-export function getPreciseLevelOptions(system?: string | null) {
+export function getPreciseLevelOptions(system?: string | null, levelName?: string | null) {
   const schoolSystem = isSchoolSystem(system) ? system : "autre";
-  return LYCEE_LEVEL_OPTIONS[schoolSystem];
+  if (schoolSystem !== "ivoirien" && schoolSystem !== "francais") {
+    return isLyceeLevel(levelName) ? LYCEE_LEVEL_OPTIONS[schoolSystem] : [];
+  }
+
+  const allOptions = OFFICIAL_SCHOOL_LEVEL_OPTIONS[schoolSystem];
+  const selected = slugify(levelName ?? "");
+  if (!selected) return allOptions;
+  if (/primaire|cycle-2|cycle-3/.test(selected)) return allOptions.filter((option) => /^(cp|ce|cm)/i.test(option));
+  if (/college/.test(selected)) return allOptions.filter((option) => /^(6e|5e|4e|3e)$/i.test(option));
+  if (/lycee|seconde|premiere|terminale|bac/.test(selected)) {
+    return allOptions.filter((option) => /^(2nde|seconde|1ère|première|terminale)/i.test(option));
+  }
+
+  const exact = allOptions.filter((option) => slugify(option) === selected);
+  return exact.length > 0 ? exact : allOptions;
 }
 
 export function isSchoolSystem(value: unknown): value is SchoolSystem {
@@ -838,10 +866,17 @@ export function validateEducationSelection({
         : "Choisissez le système scolaire pour appliquer la grille correspondant au programme de l'apprenant.",
     };
   }
-  if (!isLycee) return { ok: true as const };
-  const options = getPreciseLevelOptions(schoolSystem);
+  const usesOfficialGrid = (schoolSystem === "ivoirien" || schoolSystem === "francais")
+    && (category === "soutien_scolaire" || category === "preparation_examens");
+  if (!isLycee && !usesOfficialGrid) return { ok: true as const };
+  const options = getPreciseLevelOptions(schoolSystem, levelName);
   if (!preciseLevel || !options.includes(preciseLevel)) {
-    return { ok: false as const, error: "Pour le lycée, choisissez la classe ou série correspondant au système scolaire." };
+    return {
+      ok: false as const,
+      error: usesOfficialGrid
+        ? "Choisissez la classe exacte pour appliquer automatiquement le bon tarif officiel."
+        : "Pour le lycée, choisissez la classe ou série correspondant au système scolaire.",
+    };
   }
   return { ok: true as const };
 }

@@ -15,6 +15,80 @@ export const PLATFORM_COMMISSION_PERCENT = 30;
 export const TEACHER_PERCENT = 70;
 
 export const PRICE_TIERS = {
+  IVOIRIEN_CP1_CM1_15000: {
+    key: "ivoirien_cp1_cm1_15000",
+    label: "Système ivoirien · CP1 à CM1",
+    amount: 15000,
+    platformCommission: 4500,
+    teacherPayout: 10500,
+    description: "Tarif officiel par séance pour les classes de CP1 à CM1.",
+  },
+  IVOIRIEN_CM2_4E_20000: {
+    key: "ivoirien_cm2_4e_20000",
+    label: "Système ivoirien · CM2 à 4e",
+    amount: 20000,
+    platformCommission: 6000,
+    teacherPayout: 14000,
+    description: "Tarif officiel par séance pour les classes de CM2 à 4e.",
+  },
+  IVOIRIEN_3E_1ERE_25000: {
+    key: "ivoirien_3e_1ere_25000",
+    label: "Système ivoirien · 3e à 1ère",
+    amount: 25000,
+    platformCommission: 7500,
+    teacherPayout: 17500,
+    description: "Tarif officiel par séance pour les classes de 3e à 1ère.",
+  },
+  IVOIRIEN_TERMINALE_30000: {
+    key: "ivoirien_terminale_30000",
+    label: "Système ivoirien · Terminale",
+    amount: 30000,
+    platformCommission: 9000,
+    teacherPayout: 21000,
+    description: "Tarif officiel par séance pour la Terminale.",
+  },
+  FRANCAIS_CP_CM1_37500: {
+    key: "francais_cp_cm1_37500",
+    label: "Système français · CP à CM1",
+    amount: 37500,
+    platformCommission: 11250,
+    teacherPayout: 26250,
+    description: "Tarif officiel par séance pour les classes de CP à CM1.",
+  },
+  FRANCAIS_CM2_4E_50000: {
+    key: "francais_cm2_4e_50000",
+    label: "Système français · CM2 à 4e",
+    amount: 50000,
+    platformCommission: 15000,
+    teacherPayout: 35000,
+    description: "Tarif officiel par séance pour les classes de CM2 à 4e.",
+  },
+  FRANCAIS_3E_1ERE_62500: {
+    key: "francais_3e_1ere_62500",
+    label: "Système français · 3e à 1ère",
+    amount: 62500,
+    platformCommission: 18750,
+    teacherPayout: 43750,
+    description: "Tarif officiel par séance pour les classes de 3e à 1ère.",
+  },
+  FRANCAIS_TERMINALE_75000: {
+    key: "francais_terminale_75000",
+    label: "Système français · Terminale",
+    amount: 75000,
+    platformCommission: 22500,
+    teacherPayout: 52500,
+    description: "Tarif officiel par séance pour la Terminale.",
+  },
+  PROFESSIONNEL_40000: {
+    key: "professionnel_40000",
+    label: "Parcours professionnel",
+    amount: 40000,
+    platformCommission: 12000,
+    teacherPayout: 28000,
+    description: "Tarif officiel d'une séance de formation professionnelle.",
+  },
+  // Paliers historiques conservés pour relire correctement les anciens
+  // snapshots. Ils ne sont plus utilisés pour une nouvelle réservation.
   BASIC_7500: {
     key: "basic_7500",
     label: "Basique",
@@ -311,6 +385,15 @@ export type BookingPricingSnapshot = {
 };
 
 const PRICE_TIER_RANK: Record<PriceTierCode, number> = {
+  IVOIRIEN_CP1_CM1_15000: 10,
+  IVOIRIEN_CM2_4E_20000: 20,
+  IVOIRIEN_3E_1ERE_25000: 30,
+  IVOIRIEN_TERMINALE_30000: 40,
+  FRANCAIS_CP_CM1_37500: 50,
+  PROFESSIONNEL_40000: 60,
+  FRANCAIS_CM2_4E_50000: 70,
+  FRANCAIS_3E_1ERE_62500: 80,
+  FRANCAIS_TERMINALE_75000: 90,
   BASIC_7500: 1,
   STANDARD_10000: 2,
   RENFORCEMENT_12500: 3,
@@ -672,6 +755,12 @@ export function calculateGrandAbidjanTransportFee({
     const sameNormalizedFallbackQuartier = Boolean(
       !canonicalOriginQuartier
       && !canonicalDestinationQuartier
+      // `sameArea` regroupe aussi certains secteurs du grand Cocody pour leur
+      // tarification (Cocody, Riviera, Angré, Deux Plateaux). Sans catalogue,
+      // deux libellés génériques identiques comme "Centre" ne prouvent donc
+      // pas qu'il s'agit du même quartier. Le fallback textuel n'est sûr que
+      // lorsque la commune elle-même est identique.
+      && normalize(fallbackOrigin) === normalize(destination)
       && originQuartier
       && destinationQuartier
       && normalizeNeighborhood(originQuartier, teacherCommune, neighborhoodAliases)
@@ -828,29 +917,25 @@ export function derivePricingContext(input: PricingDerivationInput): PricingInpu
   let exam: string | undefined;
   let domain: string | undefined;
 
-  if (includesAny(text, ["maternelle", "prescolaire"])) levelGroup = "prescolaire";
-  if (includesAny(text, ["cp1", "cp2", "ce1", "ce2"])) levelGroup = "primaire_cp_ce";
-  if (includesAny(text, ["cm1", "cm2"])) levelGroup = "primaire_cm";
+  if (includesAny(text, ["maternelle", "prescolaire", "primaire"])) levelGroup = "official_primary_lower";
+  if (includesAnyToken(text, ["cp", "cp1", "cp2", "ce1", "ce2", "cm1"])) levelGroup = "official_primary_lower";
+  if (includesAnyToken(text, ["cm2", "6e", "5e", "4e"]) || includesAny(text, ["sixieme", "cinquieme", "quatrieme", "college"])) levelGroup = "official_middle_lower";
   if (includesAny(text, ["cepe"])) exam = "cepe";
-  if (includesAny(text, ["6e", "sixieme", "5e", "cinquieme", "4e", "quatrieme"])) levelGroup = "college_6_5_4";
-  if (includesAny(text, ["3e", "troisieme", "bepc"])) {
-    levelGroup = "troisieme_bepc";
+  if (includesAnyToken(text, ["3e", "bepc"]) || includesAny(text, ["troisieme"])) {
+    levelGroup = "official_secondary_upper";
     if (includesAny(text, ["bepc"])) exam = "bepc";
   }
 
-  if (includesAny(text, ["2nde", "seconde", "1ere a", "premiere a"])) levelGroup = "lycee_2nde_1ere";
-  if (includesAny(text, ["1ere c", "1ere d", "1ere e", "premiere c", "premiere d", "premiere e"])) levelGroup = "premiere_c_d_e";
-  if (includesAny(text, ["terminale a", "tle a"])) levelGroup = "terminale_a";
-  if (includesAny(text, ["terminale c", "terminale d", "terminale e", "tle c", "tle d", "tle e"])) levelGroup = "terminale_c_d_e";
+  if (includesAnyToken(text, ["2nde", "1ere"]) || includesAny(text, ["seconde", "premiere", "lycee"])) levelGroup = "official_secondary_upper";
+  if (includesAny(text, ["terminale", "tle "])) levelGroup = "official_terminale";
   if (includesAny(text, ["bac ivoirien", "preparation bac", "bac a", "bac c", "bac d", "bac e"])) exam = "bac_ivoirien";
 
   if (schoolSystem === "francais") {
-    if (includesAny(text, ["primaire", "cp", "ce1", "ce2", "cm1", "cm2"])) levelGroup = "primaire";
-    if (includesAny(text, ["6e", "sixieme", "5e", "cinquieme", "4e", "quatrieme", "3e", "troisieme"])) levelGroup = "college";
+    if (includesAnyToken(text, ["cp", "ce1", "ce2", "cm1"]) || includesAny(text, ["primaire"])) levelGroup = "official_primary_lower";
+    if (includesAnyToken(text, ["cm2", "6e", "5e", "4e"]) || includesAny(text, ["sixieme", "cinquieme", "quatrieme", "college"])) levelGroup = "official_middle_lower";
+    if (includesAnyToken(text, ["3e", "1ere"]) || includesAny(text, ["troisieme", "seconde", "premiere", "lycee"])) levelGroup = "official_secondary_upper";
     if (includesAny(text, ["brevet", "dnb"])) exam = "brevet_dnb";
-    if (includesAny(text, ["seconde"])) levelGroup = "seconde";
-    if (includesAny(text, ["premiere", "1ere"])) levelGroup = "premiere";
-    if (includesAny(text, ["terminale"])) levelGroup = "terminale";
+    if (includesAny(text, ["terminale"])) levelGroup = "official_terminale";
     if (includesAny(text, ["bac francais", "grand oral", "specialite", "specialites", "hggsp", "hlp", "nsi", "ses", "llce"])) {
       exam = "bac_francais_grand_oral_specialites";
     }
@@ -902,66 +987,24 @@ export function derivePricingContext(input: PricingDerivationInput): PricingInpu
 
 export function calculatePriceTier(input: PricingInput): PriceTierCode {
   if (input.deliveryMode === "entreprise" || input.isCompanyTraining) return "SUR_DEVIS";
-  // Un niveau explicitement professionnel reste prioritaire, même si un
-  // ancien choix de système scolaire français subsiste dans le formulaire.
-  if (input.levelGroup === "professional_advanced") return "PREMIUM_20000";
+  // Le parcours professionnel a un prix officiel unique. Cette règle reste
+  // prioritaire si un ancien système scolaire subsiste dans un brouillon.
+  if (
+    input.levelGroup === "professional_advanced"
+    || ["enseignement_superieur", "formation_professionnelle", "apprentissage_metier", "langues_communication"].includes(input.category)
+  ) return "PROFESSIONNEL_40000";
 
   if (input.schoolSystem === "francais") {
-    if (input.levelGroup === "terminale" || input.exam === "bac_francais_grand_oral_specialites") return "PREMIUM_20000";
-    if (["college", "seconde", "premiere"].includes(input.levelGroup || "") || input.exam === "brevet_dnb") return "AVANCE_15000";
-    if (input.levelGroup === "primaire") return "RENFORCEMENT_12500";
-    return "RENFORCEMENT_12500";
+    if (input.levelGroup === "official_terminale" || input.exam === "bac_francais_grand_oral_specialites") return "FRANCAIS_TERMINALE_75000";
+    if (input.levelGroup === "official_secondary_upper" || input.exam === "brevet_dnb") return "FRANCAIS_3E_1ERE_62500";
+    if (input.levelGroup === "official_middle_lower") return "FRANCAIS_CM2_4E_50000";
+    return "FRANCAIS_CP_CM1_37500";
   }
 
-  if (
-    input.deliveryMode === "en_ligne"
-    && input.category === "soutien_scolaire"
-    && ["prescolaire", "primaire_cp_ce"].includes(input.levelGroup || "")
-  ) {
-    return "BASIC_7500";
-  }
-
-  if (
-    input.deliveryMode === "domicile"
-    && input.isTeacherNearby === true
-    && input.category === "soutien_scolaire"
-    && ["prescolaire", "primaire_cp_ce"].includes(input.levelGroup || "")
-  ) {
-    return "BASIC_7500";
-  }
-
-  if (
-    input.deliveryMode === "domicile"
-    && ["prescolaire", "primaire_cp_ce", "primaire_cm", "college_6_5_4"].includes(input.levelGroup || "")
-  ) {
-    return "STANDARD_10000";
-  }
-
-  if (input.exam === "cepe") return "STANDARD_10000";
-  if (input.exam === "bepc") return "RENFORCEMENT_12500";
-  if (input.exam === "bac_ivoirien") return "AVANCE_15000";
-
-  if (input.levelGroup === "lycee_2nde_1ere") return "RENFORCEMENT_12500";
-  if (input.levelGroup === "premiere_c_d_e") return "AVANCE_15000";
-  if (input.levelGroup === "terminale_a") return "AVANCE_15000";
-  if (input.levelGroup === "terminale_c_d_e") return "PREMIUM_20000";
-
-  if (input.levelGroup === "bts") return "AVANCE_15000";
-  if (input.levelGroup === "licence") return "AVANCE_15000";
-  if (input.levelGroup === "master") return "PREMIUM_20000";
-  if (input.levelGroup === "memoire_soutenance") return "SUR_DEVIS";
-
-  if (input.domain === "bureautique_base") return "STANDARD_10000";
-  if (input.domain === "excel_powerpoint_canva") return "RENFORCEMENT_12500";
-  if (input.domain === "comptabilite_marketing_anglais_pro") return "AVANCE_15000";
-  if (input.domain === "data_dev_btp_cyber_cloud") return "PREMIUM_20000";
-
-  if (["enseignement_superieur", "formation_professionnelle", "apprentissage_metier"].includes(input.category)) {
-    return "AVANCE_15000";
-  }
-  if (input.category === "langues_communication") return "RENFORCEMENT_12500";
-
-  return "STANDARD_10000";
+  if (input.levelGroup === "official_terminale" || input.exam === "bac_ivoirien") return "IVOIRIEN_TERMINALE_30000";
+  if (input.levelGroup === "official_secondary_upper" || input.exam === "bepc") return "IVOIRIEN_3E_1ERE_25000";
+  if (input.levelGroup === "official_middle_lower" || input.exam === "cepe") return "IVOIRIEN_CM2_4E_20000";
+  return "IVOIRIEN_CP1_CM1_15000";
 }
 
 export function calculateBookingPricing(input: BookingPricingInput): BookingPricingSnapshot {
@@ -976,23 +1019,16 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
       )
     ),
   });
-  let tierCode = calculatePriceTier(context);
+  const tierCode = calculatePriceTier(context);
   const pack = getPackConfig(input.packType);
   const participantsCount = Math.max(1, Math.round(Number(input.participantsCount) || 1));
   const groupMultiplier = 1 + Math.max(0, participantsCount - 1) * 0.5;
   const materialFee = Math.max(0, Math.round(Number(input.materialFee) || 0));
 
-  if (pack.key === "custom_pack") tierCode = mostExpensiveTier(tierCode, "PREMIUM_20000");
-  if (transport.key === TRANSPORT_FEES.OUTSIDE_GRAND_ABIDJAN.key) {
-    tierCode = mostExpensiveTier(tierCode, "PREMIUM_20000");
-  }
-
   const tier = PRICE_TIERS[tierCode];
-  const teacherPricePerSession = Math.max(0, Math.round(Number(input.teacherPricePerSession) || 0));
-  // Le prix affiché par le professeur est un minimum indicatif. Il ne doit pas
-  // annuler un palier plus élevé calculé à partir du métier et du niveau.
-  const isTeacherPriceFloorApplied = teacherPricePerSession > tier.amount;
-  const unitSessionAmount = Math.max(tier.amount, teacherPricePerSession);
+  // Les anciens prix propres aux professeurs restent lisibles dans l'historique,
+  // mais ne participent jamais au calcul d'une nouvelle réservation.
+  const unitSessionAmount = tier.amount;
 
   const sessions = Math.max(1, pack.sessions ?? 1);
   const rawCourseAmount = Math.round(unitSessionAmount * sessions * groupMultiplier);
@@ -1035,7 +1071,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   return {
     currency: CURRENCY,
     priceTierKey: tier.key,
-    priceTierLabel: isTeacherPriceFloorApplied ? "Minimum indicatif du professeur" : tier.label,
+    priceTierLabel: tier.label,
     courseAmount,
     unitSessionAmount,
     rawCourseAmount,

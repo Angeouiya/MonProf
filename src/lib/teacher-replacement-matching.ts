@@ -1,5 +1,9 @@
 import { db } from "@/lib/db";
-import { calculateGrandAbidjanTransportFee, TRANSPORT_FEES } from "@/lib/pricing";
+import {
+  buildNeighborhoodAliasMap,
+  calculateGrandAbidjanTransportFee,
+  TRANSPORT_FEES,
+} from "@/lib/pricing";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
@@ -164,6 +168,39 @@ export async function findReplacementCandidatesForBooking(
     },
     take: 100,
   });
+  const pricingCommuneNames = Array.from(new Set(
+    [booking.commune, ...teachers.map((teacher) => teacher.commune)]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value)),
+  ));
+  const neighborhoodAliasRows = pricingCommuneNames.length > 0
+    ? await db.communeQuarter.findMany({
+        where: {
+          isActive: true,
+          commune: {
+            isActive: true,
+            OR: pricingCommuneNames.map((name) => ({
+              name: { equals: name, mode: "insensitive" as const },
+            })),
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          aliases: true,
+          commune: { select: { id: true, name: true } },
+        },
+      })
+    : [];
+  const neighborhoodAliases = buildNeighborhoodAliasMap(
+    neighborhoodAliasRows.map((quarter) => ({
+      id: quarter.id,
+      communeId: quarter.commune.id,
+      name: quarter.name,
+      aliases: quarter.aliases,
+      communeName: quarter.commune.name,
+    })),
+  );
 
   const currentTeacherCourseShare = booking.teacherPayoutAmount || Math.max(0, booking.teacherNetAmount - booking.transportFee);
   const items = teachers
@@ -185,6 +222,7 @@ export async function findReplacementCandidatesForBooking(
             clientQuartier: booking.quartier,
             transportFeeAmounts: platformSettings.transportFees,
             grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
+            neighborhoodAliases,
           })
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;

@@ -1638,11 +1638,11 @@ export function TeacherForm({
               <Field label="Tarif horaire interne (informatif)">
                 <Input type="number" min={0} step={500} {...register("pricePerHour")} />
               </Field>
-              <Field label="Prix indicatif / séance de 2h (référence publique)">
+              <Field label="Ancien prix du profil (historique interne)">
                 <Input type="number" min={0} step={500} {...register("pricePerSession")} />
               </Field>
               <p className="text-xs font-medium leading-5 text-muted-foreground sm:col-span-2">
-                Le calcul de réservation utilise le prix par séance comme minimum indicatif. Le tarif horaire reste informatif et ne remplace jamais cette référence.
+                Ce montant est conservé pour l'historique. Il n'est ni affiché au client ni utilisé : la grille officielle détermine le prix.
               </p>
               <Field label="Pack 4 séances">
                 <Input type="number" min={0} step={500} {...register("pricePack4")} />
