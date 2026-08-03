@@ -3,7 +3,6 @@ import { Home, MapPin, Video } from "lucide-react";
 import { Teacher } from "@prisma/client";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
-import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
@@ -12,8 +11,7 @@ type TeacherCardData = Pick<Teacher,
   "jobTitle" | "rating" | "ratingCount" | "experienceYears" |
   "adminRating" | "adminRatingPublic" |
   "offersHome" | "offersOnline" | "commune" |
-  "badgeVerified" | "careerSummary" | "skills" | "workHistory" |
-  "certifications" | "teachingAchievements" | "learnersCoached"
+  "badgeVerified"
 > & { _count?: { reviews: number }; primarySubject?: string | null };
 
 export function TeacherCard({
@@ -33,11 +31,7 @@ export function TeacherCard({
     : teacher.adminRatingPublic && teacher.adminRating > 0
       ? teacher.adminRating
       : null;
-  const trustLabel = publicRating
-    ? `Note ${publicRating.toFixed(1)}/5`
-    : teacher.badgeVerified
-      ? "Certifié"
-      : "Profil suivi";
+  const ratingLabel = publicRating ? `Note ${publicRating.toFixed(1)}/5` : null;
   const primarySubject = teacher.primarySubject ?? "Matière à confirmer";
   const commune = teacher.commune ?? "Abidjan";
 
@@ -74,7 +68,7 @@ export function TeacherCard({
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
                 <span className="truncate">{commune}</span>
               </span>
-              <span className="font-semibold text-[#111827]">{trustLabel}</span>
+              {ratingLabel && <span className="font-semibold text-[#111827]">{ratingLabel}</span>}
               <span>{teacher.experienceYears} ans exp.</span>
             </p>
           </div>
@@ -82,16 +76,6 @@ export function TeacherCard({
       </div>
 
       <div className="mt-3 border-t border-[#E3E8F2] pt-3">
-        <TeacherMiniCv
-          compact
-          careerSummary={teacher.careerSummary}
-          skills={teacher.skills}
-          workHistory={teacher.workHistory}
-          certifications={teacher.certifications}
-          teachingAchievements={teacher.teachingAchievements}
-          learnersCoached={teacher.learnersCoached}
-          className="mb-2 hidden lg:block"
-        />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#475569]">
           {teacher.offersHome && (
             <span className="inline-flex items-center gap-1.5">
@@ -108,14 +92,9 @@ export function TeacherCard({
         </div>
       </div>
       <div className="mt-auto pt-3">
-        <div className="mb-3 flex items-end justify-between gap-3 border-y border-[#E3E8F2] bg-white py-2.5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Tarif officiel</p>
-            <p className="mt-0.5 text-sm font-semibold leading-tight text-[#111827]">Calculé selon le parcours</p>
-          </div>
-          <p className="hidden max-w-24 text-right text-[11px] font-semibold leading-4 text-[#64748B] min-[420px]:block">
-            visible avant paiement
-          </p>
+        <div className="mb-3 flex items-center justify-between gap-3 border-y border-[#E3E8F2] py-2.5 text-xs font-semibold">
+          <span className="text-[#111827]">Tarif officiel selon le parcours</span>
+          <span className="shrink-0 text-[#64748B]">avant paiement</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#C8D2E3] bg-white px-3 text-sm text-[#111B4D] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">

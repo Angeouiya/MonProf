@@ -419,11 +419,17 @@ record(
 record(
   "Client teacher cards avoid fake zero-rating trust signals",
   /const publicRating\s*=\s*teacher\.ratingCount\s*>\s*0\s*&&\s*teacher\.rating\s*>\s*0/.test(teacherCard)
-    && /const trustLabel\s*=\s*publicRating/.test(teacherCard)
-    && /Certifié/.test(teacherCard)
-    && /Profil suivi/.test(teacherCard)
-    && /trustLabel/.test(teacherCard)
+    && /const ratingLabel\s*=\s*publicRating/.test(teacherCard)
+    && /\{ratingLabel\s*&&/.test(teacherCard)
+    && !/Profil suivi|const trustLabel/.test(teacherCard)
     && !/displayRating\.toFixed\(1\)\/5/.test(teacherCard),
+);
+
+record(
+  "Public teacher cards stay focused on booking decisions",
+  !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(teacherCard)
+    && /Tarif officiel selon le parcours/.test(teacherCard)
+    && /avant paiement/.test(teacherCard),
 );
 
 record(

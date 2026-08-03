@@ -18,7 +18,7 @@ const JOURNEYS = [
   },
   {
     title: "Système français",
-    detail: "CP à Terminale",
+    detail: "CP1 à Terminale",
     price: "Dès 37 500 F",
     icon: GraduationCap,
     href: "/professeurs?journey=francais",
@@ -50,8 +50,22 @@ export default async function HomePage() {
     ? await db.teacher.findMany({
         where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
         take: 3,
-        include: {
-          subjects: { include: { subject: true } },
+        select: {
+          id: true,
+          fullName: true,
+          professionalName: true,
+          photoUrl: true,
+          jobTitle: true,
+          rating: true,
+          ratingCount: true,
+          experienceYears: true,
+          adminRating: true,
+          adminRatingPublic: true,
+          offersHome: true,
+          offersOnline: true,
+          commune: true,
+          badgeVerified: true,
+          subjects: { select: { isPrimary: true, subject: { select: { name: true } } } },
           _count: { select: { reviews: true } },
         },
         orderBy: [{ rating: "desc" }],
