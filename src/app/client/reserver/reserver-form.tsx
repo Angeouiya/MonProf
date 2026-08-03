@@ -649,7 +649,7 @@ export function ReserverForm({
   const selectedStartDateLabel = formatDateInputLabel(form.startDate);
   const selectedStartDayKey = dayKeyFromDateInput(form.startDate);
   const selectedStartDayLabel = selectedStartDayKey ? dayLabel(selectedStartDayKey) : "";
-  const mobileAvailabilityDays = selectedStartDayKey
+  const selectedAvailabilityDays = selectedStartDayKey
     ? WEEK_DAYS.filter((day) => day.key === selectedStartDayKey)
     : [];
   const progressPercent = Math.round(((step + 1) / STEPS.length) * 100);
@@ -1238,44 +1238,45 @@ export function ReserverForm({
                   </button>
                 </div>
               </div>
-              <div>
-                <Label>Type de cours *</Label>
-                <RadioGroup
-                  value={form.groupType}
-                  onValueChange={(v) => {
-                    if (v === "SMALL_GROUP" && !teacher.offersGroup) return;
-                    setForm((current) => ({
-                      ...current,
-                      groupType: v,
-                      participantsCount: v === "SMALL_GROUP" ? clampGroupParticipants(current.participantsCount) : 1,
-                    }));
-                  }}
-                  className="mt-2 grid gap-3 min-[720px]:grid-cols-2"
-                >
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
-                    form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
-                  }`}>
-                    <RadioGroupItem value="INDIVIDUAL" />
-                    <User className="h-5 w-5 text-[#64748B]" />
-                    <div>
-                      <p className="text-sm font-medium text-[#111827]">Cours individuel</p>
-                      <p className="text-xs text-[#64748B]">Un seul élève.</p>
-                    </div>
-                  </label>
-                  <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
-                    form.groupType === "SMALL_GROUP" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
-                  } ${!teacher.offersGroup ? "cursor-not-allowed border-[#E3E8F2] text-[#9CA3AF]" : ""}`}>
-                    <RadioGroupItem value="SMALL_GROUP" disabled={!teacher.offersGroup} />
-                    <Users className="h-5 w-5 text-[#64748B]" />
-                    <div>
-                      <p className="text-sm font-medium text-[#111827]">Petit groupe</p>
-                      <p className="text-xs text-[#64748B]">
-                        {teacher.offersGroup ? "Plusieurs élèves. +50% du montant de base par participant supplémentaire." : "Non proposé par ce professeur."}
-                      </p>
-                    </div>
-                  </label>
-                </RadioGroup>
-              </div>
+              {teacher.offersGroup && (
+                <div>
+                  <Label>Type de cours *</Label>
+                  <RadioGroup
+                    value={form.groupType}
+                    onValueChange={(v) => {
+                      setForm((current) => ({
+                        ...current,
+                        groupType: v,
+                        participantsCount: v === "SMALL_GROUP" ? clampGroupParticipants(current.participantsCount) : 1,
+                      }));
+                    }}
+                    className="mt-2 grid gap-3 min-[720px]:grid-cols-2"
+                  >
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                      form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
+                    }`}>
+                      <RadioGroupItem value="INDIVIDUAL" />
+                      <User className="h-5 w-5 text-[#64748B]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#111827]">Cours individuel</p>
+                        <p className="text-xs text-[#64748B]">Un seul élève.</p>
+                      </div>
+                    </label>
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                      form.groupType === "SMALL_GROUP" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
+                    }`}>
+                      <RadioGroupItem value="SMALL_GROUP" />
+                      <Users className="h-5 w-5 text-[#64748B]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#111827]">Petit groupe</p>
+                        <p className="text-xs text-[#64748B]">
+                          Plusieurs élèves. +50% du montant de base par participant supplémentaire.
+                        </p>
+                      </div>
+                    </label>
+                  </RadioGroup>
+                </div>
+              )}
 
               {form.groupType === "SMALL_GROUP" && (
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -1494,16 +1495,16 @@ export function ReserverForm({
                   Sélectionnez un ou plusieurs créneaux exacts. Chaque séance dure 2 heures.
                   {selectedStartDayLabel ? ` Pour la date choisie, seuls les créneaux du ${selectedStartDayLabel.toLowerCase()} sont activés.` : " Choisissez d'abord la date souhaitée."}
                 </p>
-                <div className="mt-3 space-y-3 md:hidden">
-                  {mobileAvailabilityDays.length === 0 && (
+                <div className="mt-3 space-y-3">
+                  {selectedAvailabilityDays.length === 0 && (
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
                       <p className="font-semibold text-[#111B4D]">Choisissez d'abord une date</p>
                       <p className="mt-1 text-sm leading-6 text-[#64748B]">
-                        Les créneaux mobiles s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
+                        Les créneaux s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
                       </p>
                     </div>
                   )}
-                  {mobileAvailabilityDays.map((day) => {
+                  {selectedAvailabilityDays.map((day) => {
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
                     return (
@@ -1551,53 +1552,6 @@ export function ReserverForm({
                     );
                   })}
                 </div>
-                <div className="mt-3 hidden rounded-lg border border-[#E3E8F2] bg-white p-3 md:block">
-                  <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] gap-1.5 text-xs lg:grid-cols-[112px_repeat(7,minmax(0,1fr))] lg:gap-2 lg:text-xs">
-                    <div className="font-semibold text-[#64748B]">Jour</div>
-                    {TWO_HOUR_SLOTS.map((slot) => (
-                      <div key={slot.key} className="text-center font-semibold text-[#64748B]">{slot.shortLabel}</div>
-                    ))}
-                    {WEEK_DAYS.map((day) => (
-                      <div key={day.key} className="contents">
-                        <div className="flex items-center rounded-lg bg-white px-2 py-2 font-semibold text-[#111B4D] lg:px-3">
-                          {day.label}
-                        </div>
-                        {TWO_HOUR_SLOTS.map((slot) => {
-                          const key = `${day.key}|${slot.key}`;
-                          const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
-                          const available = matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key];
-                          const checked = form.selectedTimeSlots.includes(key);
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              disabled={!available}
-                              onClick={() => {
-                                if (!available) return;
-                                update(
-                                  "selectedTimeSlots",
-                                  checked
-                                    ? form.selectedTimeSlots.filter((item) => item !== key)
-                                    : [...form.selectedTimeSlots, key],
-                                );
-                              }}
-                              className={`min-h-11 rounded-lg border px-1.5 py-2 text-center text-xs font-semibold transition lg:px-2 ${
-                                checked
-                                  ? "border-[#111B4D] bg-[#111B4D] text-white"
-                                  : available
-                                    ? "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
-                                    : "cursor-not-allowed border-[#E3E8F2] bg-white text-[#94A3B8]"
-                              }`}
-                              title={!matchesSelectedDate && selectedStartDayLabel ? `Indisponible pour la date choisie (${selectedStartDayLabel})` : undefined}
-                            >
-                              {available ? "Disponible" : "Indispo."}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
                 {form.selectedTimeSlots.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {selectedTimeLabels.map((label) => (
@@ -1632,13 +1586,15 @@ export function ReserverForm({
                 )}
               </div>
 
-              <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                <Label>Votre préférence horaire personnalisée</Label>
-                <p className="mt-1 text-sm text-[#64748B]">
-                  Si les créneaux proposés ne conviennent pas parfaitement, indiquez le jour et l'heure souhaités.
-                  Le service client vérifiera avec le professeur avant confirmation.
-                </p>
-                <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px]">
+              <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
+                  Un autre horaire ?
+                </summary>
+                <div className="mt-3 border-t border-[#E5E7EB] pt-4">
+                  <p className="text-sm text-[#64748B]">
+                    Indiquez votre préférence. Le service client la vérifiera avec le professeur avant confirmation.
+                  </p>
+                  <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px]">
                   <div>
                     <Label htmlFor="customDay" className="text-xs font-semibold text-[#64748B]">Jour souhaité</Label>
                     <select
@@ -1676,9 +1632,9 @@ export function ReserverForm({
                       className="mt-1.5"
                     />
                   </div>
-                </div>
-                {form.customDay && customTimeRange && (
-                  <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  </div>
+                  {form.customDay && customTimeRange && (
+                    <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-3 min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
@@ -1691,12 +1647,13 @@ export function ReserverForm({
                         <p className="mt-0.5 whitespace-nowrap text-sm font-semibold text-[#111827]">{formatFCFA(averageSessionPrice)} / séance</p>
                       </div>
                     </div>
-                  </div>
-                )}
-                <p className="mt-2 text-xs text-[#64748B]">
-                  Le prix affiché reste celui de la formule choisie pour des séances de 2h. Si une demande sort du cadre normal, le service client valide l'ajustement avant confirmation.
-                </p>
-              </div>
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-[#64748B]">
+                    Le prix affiché reste celui de la formule choisie pour des séances de 2h. Si une demande sort du cadre normal, le service client valide l'ajustement avant confirmation.
+                  </p>
+                </div>
+              </details>
 
               <div>
                 <Label>Formule *</Label>
@@ -1759,16 +1716,22 @@ export function ReserverForm({
                 </RadioGroup>
               </div>
 
-              <div>
-                <Label htmlFor="message">Message complémentaire (optionnel)</Label>
-                <Textarea
-                  id="message"
-                  value={form.message}
-                  onChange={(e) => update("message", e.target.value)}
-                  placeholder="Précisez vos attentes, le chapitre à traiter, etc."
-                  rows={3}
-                />
-              </div>
+              <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
+                  Ajouter un message (optionnel)
+                </summary>
+                <div className="mt-3 border-t border-[#E5E7EB] pt-4">
+                  <Label htmlFor="message">Message pour le service client</Label>
+                  <Textarea
+                    id="message"
+                    value={form.message}
+                    onChange={(e) => update("message", e.target.value)}
+                    placeholder="Précisez vos attentes, le chapitre à traiter, etc."
+                    rows={3}
+                    className="mt-1.5"
+                  />
+                </div>
+              </details>
             </div>
           )}
 

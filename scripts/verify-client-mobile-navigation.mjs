@@ -334,6 +334,15 @@ record(
 );
 
 record(
+  "Client booking shows only relevant format and selected-day availability",
+  /\{teacher\.offersGroup\s*&&\s*\(/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /selectedAvailabilityDays\.map/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && !/grid-cols-\[92px_repeat\(7/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Un autre horaire \?/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Ajouter un message \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx")),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
