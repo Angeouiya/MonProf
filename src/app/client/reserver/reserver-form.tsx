@@ -965,7 +965,7 @@ export function ReserverForm({
           </div>
         </div>
 
-        <div className="client-booking-progress border-t border-[#E6EAF3] px-3 py-3 sm:px-5 sm:py-4">
+        <div data-client-booking-progress className="client-booking-progress border-t border-[#E6EAF3] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#111827]">Étape {step + 1} sur {STEPS.length} · {currentStepDetail.title}</p>
@@ -978,34 +978,6 @@ export function ReserverForm({
               className="h-full rounded-full bg-[#111B4D] transition-[width] duration-150"
               style={{ width: `${progressPercent}%` }}
             />
-          </div>
-          <div data-client-booking-desktop-progress className="client-booking-progress-grid mt-3 hidden grid-cols-5 gap-2 lg:grid">
-            {STEPS.map((stepLabel, index) => {
-              const complete = index < step;
-              const active = index === step;
-              return (
-                <button
-                  key={stepLabel}
-                  type="button"
-                  disabled={index > step}
-                  aria-current={active ? "step" : undefined}
-                  aria-label={`Étape ${index + 1}: ${stepLabel}`}
-                  onClick={() => {
-                    if (index <= step) setStep(index);
-                  }}
-                  className={`min-h-10 rounded-lg border px-3 text-center text-xs font-semibold transition-colors ${
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : complete
-                        ? "border-[#111B4D] bg-white text-[#111B4D]"
-                        : "cursor-default border-[#E6EAF3] bg-white text-[#64748B] disabled:pointer-events-none"
-                  }`}
-                >
-                  {complete ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : null}
-                  {index + 1}. {stepLabel}
-                </button>
-              );
-            })}
           </div>
         </div>
       </section>
@@ -1086,38 +1058,44 @@ export function ReserverForm({
                 </div>
                 <div>
                   <Label htmlFor="subjectName">{categoryCopy.subjectLabel} *</Label>
-                  <SearchableCatalogSelect
-                    id="subjectName"
-                    name="subjectName"
-                    value={form.subjectName}
-                    onValueChange={(value) => setForm((current) => ({
-                      ...current,
-                      subjectName: value,
-                      courseCatalogId: "",
-                      courseCategory: resolveBookingCourseCategory({
-                        requestedCategory: current.courseCategory,
-                        levelName: current.levelName,
-                        preciseLevel: current.preciseLevel,
+                  {subjects.length === 1 ? (
+                    <div className="mt-1.5 flex min-h-12 items-center rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-3 text-sm font-semibold text-[#111827]">
+                      {form.subjectName}
+                    </div>
+                  ) : (
+                    <SearchableCatalogSelect
+                      id="subjectName"
+                      name="subjectName"
+                      value={form.subjectName}
+                      onValueChange={(value) => setForm((current) => ({
+                        ...current,
                         subjectName: value,
-                        catalogItem: null,
-                      }).category,
-                    }))}
-                    placeholder={`Rechercher ${categoryCopy.subjectLabel.toLowerCase()}`}
-                    searchPlaceholder="Tapez une matière, compétence ou module..."
-                    emptyLabel="Aucune matière configurée pour ce professeur."
-                    allLabel="Aucune matière choisie"
-                    groups={subjectSelectionGroups}
-                    triggerClassName="mt-1.5 min-h-12 rounded-lg"
-                  />
-                  {hasTeacherSubjects ? (
+                        courseCatalogId: "",
+                        courseCategory: resolveBookingCourseCategory({
+                          requestedCategory: current.courseCategory,
+                          levelName: current.levelName,
+                          preciseLevel: current.preciseLevel,
+                          subjectName: value,
+                          catalogItem: null,
+                        }).category,
+                      }))}
+                      placeholder={`Rechercher ${categoryCopy.subjectLabel.toLowerCase()}`}
+                      searchPlaceholder="Tapez une matière, compétence ou module..."
+                      emptyLabel="Aucune matière configurée pour ce professeur."
+                      allLabel="Aucune matière choisie"
+                      groups={subjectSelectionGroups}
+                      triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                    />
+                  )}
+                  {hasTeacherSubjects && subjects.length > 1 ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#64748B]">
                       Matières enseignées par {displayName}.
                     </p>
-                  ) : (
+                  ) : !hasTeacherSubjects ? (
                     <p className="mt-1 text-xs font-medium text-[#111B4D]">
                       Aucune matière n'est configurée pour ce professeur. Le service client doit compléter sa fiche.
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 {requiresPreciseLevel && (
                   <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -1138,40 +1116,6 @@ export function ReserverForm({
                     </p>
                   </div>
                 )}
-                <div className="min-[720px]:col-span-2">
-                  <Label htmlFor="courseCatalogId">Cours catalogue conseillé</Label>
-                  <SearchableCatalogSelect
-                    id="courseCatalogId"
-                    value={safeCourseCatalogId}
-                    onValueChange={handleCourseCatalogChange}
-                    name="courseCatalogId"
-                    placeholder="Rechercher un cours compatible"
-                    searchPlaceholder="Tapez une matière, un niveau ou un mot-clé..."
-                    emptyLabel="Aucun cours catalogue compatible avec ce professeur."
-                    allLabel="Aucun cours précis"
-                    groups={selectedCategoryCourseGroups}
-                    triggerClassName="mt-1.5 min-h-12 rounded-lg"
-                  />
-                  <p className="mt-1.5 text-xs leading-5 text-[#64748B]">
-                    Optionnel : seuls les cours cohérents avec {displayName} et ses matières sont proposés.
-                    {selectedCategoryCourses.length > 0 ? ` ${selectedCategoryCourses.length} option${selectedCategoryCourses.length > 1 ? "s" : ""} disponible${selectedCategoryCourses.length > 1 ? "s" : ""}.` : ""}
-                  </p>
-                </div>
-                {selectedCatalogCourse && (
-                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <p className="text-sm font-semibold text-[#111827]">{selectedCatalogCourse.nom}</p>
-                    <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
-                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        Palier calculé {formatFCFA(pricing.unitSessionAmount)} / séance
-                      </span>
-                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        Total actuel {formatFCFA(pricing.totalClientPays)}
-                      </span>
-                      <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">{selectedCatalogCourse.public_cible}</span>
-                    </div>
-                  </div>
-                )}
                 {needsCustomSubjectDetail && (
                   <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <Label htmlFor="customSubjectDetail">Précisez la matière ou le besoin *</Label>
@@ -1188,43 +1132,68 @@ export function ReserverForm({
                   </div>
                 )}
               </div>
-              <div>
-                <Label htmlFor="objective">Objectif *</Label>
-                <select
-                  id="objective"
-                  value={form.objective}
-                  onChange={(e) => update("objective", e.target.value)}
-                  className={FIELD_CLASS}
-                >
-                  {OBJECTIVES.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-4 min-[720px]:grid-cols-2">
-                <div className="min-[720px]:col-span-2">
-                  <Label htmlFor="schoolProgram">{categoryCopy.programLabel}</Label>
-                  <Input
-                    id="schoolProgram"
-                    value={form.schoolProgram}
-                    onChange={(e) => update("schoolProgram", e.target.value)}
-                    placeholder={categoryCopy.programPlaceholder}
-                    className="mt-1.5"
-                  />
-                  <p className="mt-1 text-xs text-[#64748B]">Le résumé transmis au service client inclura le profil, la catégorie, le niveau et cette précision.</p>
+              <details className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-[#111B4D]">
+                  Ajouter des précisions (optionnel)
+                </summary>
+                <div className="mt-4 space-y-4 border-t border-[#E6EAF3] pt-4">
+                  <div>
+                    <Label htmlFor="courseCatalogId">Cours précis</Label>
+                    <SearchableCatalogSelect
+                      id="courseCatalogId"
+                      value={safeCourseCatalogId}
+                      onValueChange={handleCourseCatalogChange}
+                      name="courseCatalogId"
+                      placeholder="Rechercher un cours compatible"
+                      searchPlaceholder="Tapez une matière, un niveau ou un mot-clé..."
+                      emptyLabel="Aucun cours catalogue compatible avec ce professeur."
+                      allLabel="Aucun cours précis"
+                      groups={selectedCategoryCourseGroups}
+                      triggerClassName="mt-1.5 min-h-12 rounded-lg"
+                    />
+                  </div>
+                  {selectedCatalogCourse && (
+                    <div className="rounded-lg border border-[#E5E7EB] bg-white p-3">
+                      <p className="text-sm font-semibold text-[#111827]">{selectedCatalogCourse.nom}</p>
+                      <p className="mt-1 text-xs leading-5 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
+                    </div>
+                  )}
+                  <div>
+                    <Label htmlFor="objective">Objectif</Label>
+                    <select
+                      id="objective"
+                      value={form.objective}
+                      onChange={(e) => update("objective", e.target.value)}
+                      className={FIELD_CLASS}
+                    >
+                      {OBJECTIVES.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="schoolProgram">{categoryCopy.programLabel}</Label>
+                    <Input
+                      id="schoolProgram"
+                      value={form.schoolProgram}
+                      onChange={(e) => update("schoolProgram", e.target.value)}
+                      placeholder={categoryCopy.programPlaceholder}
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="needDescription">{categoryCopy.descriptionLabel}</Label>
+                    <Textarea
+                      id="needDescription"
+                      value={form.needDescription}
+                      onChange={(e) => update("needDescription", e.target.value)}
+                      placeholder={categoryCopy.descriptionPlaceholder}
+                      rows={3}
+                      className="mt-1.5"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="needDescription">{categoryCopy.descriptionLabel} (optionnel)</Label>
-                <Textarea
-                  id="needDescription"
-                  value={form.needDescription}
-                  onChange={(e) => update("needDescription", e.target.value)}
-                  placeholder={categoryCopy.descriptionPlaceholder}
-                  rows={3}
-                  className="mt-1.5"
-                />
-              </div>
+              </details>
               </>
               )}
             </div>

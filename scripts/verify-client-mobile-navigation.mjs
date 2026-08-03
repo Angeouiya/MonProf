@@ -319,11 +319,18 @@ record(
 record(
   "Client booking keeps one progress control and a viewport-fixed mobile action",
   !/data-client-booking-mobile-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /data-client-booking-desktop-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /\[data-client-booking-desktop-progress\][\s\S]*?display:\s*none\s*!important/.test(css)
+    && countMatches(read("src/app/client/reserver/reserver-form.tsx"), /data-client-booking-progress/g) === 1
+    && !/data-client-booking-desktop-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && !/\.client-content\s*\{[^}]*contain\s*:/.test(css)
     && !/\[data-client-content\][^}]*container-type/.test(css)
     && /client-booking-mobile-action fixed/.test(read("src/app/client/reserver/reserver-form.tsx")),
+);
+
+record(
+  "Client booking reveals optional need details only on demand",
+  /<details className="rounded-lg[\s\S]*?Ajouter des précisions \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /subjects\.length\s*===\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && !/Cours catalogue conseillé/.test(read("src/app/client/reserver/reserver-form.tsx")),
 );
 
 record(
