@@ -38,7 +38,7 @@ async function main() {
     transportFeeAmounts: { sameCommune: 1_750, nearCommune: 2_750, farCommune: 4_750, interior: 8_750 },
   });
   assert(configured.platformCommissionRate === 0.24, "Dynamic commission is applied to new pricing snapshots");
-  assert(configured.platformCommissionAmount === 2_400, "Dynamic commission amount is computed from the course amount");
+  assert(configured.platformCommissionAmount === 4_800, "Dynamic commission amount is computed from the official course amount");
   assert(configured.transportFee === 1_750, "Dynamic same-commune transport fee is applied");
 
   const sameQuarter = calculateBookingPricing({
