@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
-  MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, Settings, WifiOff
+  LayoutDashboard, Search, BookOpen, WalletCards,
+  LifeBuoy, User, LogOut, Menu, X, Bell,
+  ArrowRight, WifiOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -20,27 +20,31 @@ type ClientNavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   exact?: boolean;
+  matchPrefixes?: string[];
+};
+
+const primaryNavItem: ClientNavItem = {
+  href: "/client/rechercher",
+  label: "Réserver un cours",
+  icon: Search,
 };
 
 const navItems: ClientNavItem[] = [
-  { href: "/client", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
-  { href: "/client/rechercher", label: "Rechercher", icon: Search },
-  { href: "/client/reservations", label: "Réservations", icon: CalendarCheck },
-  { href: "/client/cours", label: "Cours", icon: BookOpen },
+  { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
+  { href: "/client/cours", label: "Mes cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
-  { href: "/client/notifications", label: "Notifications", icon: Bell },
-  { href: "/client/avis", label: "Avis", icon: MessageSquare },
-  { href: "/client/service-client", label: "Service client", icon: LifeBuoy },
-  { href: "/client/profil", label: "Profil", icon: User },
-  { href: "/client/parametres", label: "Paramètres", icon: Settings },
+];
+
+const accountNavItems: ClientNavItem[] = [
+  { href: "/client/service-client", label: "Aide", icon: LifeBuoy, matchPrefixes: ["/client/service-client", "/client/support"] },
+  { href: "/client/profil", label: "Mon compte", icon: User, matchPrefixes: ["/client/profil", "/client/parametres", "/client/avis"] },
 ];
 
 const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
-  { href: "/client/rechercher", label: "Profs", icon: Search },
-  { href: "/client/reservations", label: "Réserv.", icon: CalendarCheck },
-  { href: "/client/paiements", label: "Paiement", icon: WalletCards },
-  { href: "/client/notifications", label: "Alertes", icon: Bell },
+  { href: "/client/rechercher", label: "Réserver", icon: Search },
+  { href: "/client/cours", label: "Cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
+  { href: "/client/paiements", label: "Paiements", icon: WalletCards },
 ];
 
 const quickSearchItems = [
@@ -84,8 +88,10 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     setMobileSearchOpen(false);
   }, []);
 
-  const isActive = (item: ClientNavItem) =>
-    item.exact ? pathname === item.href : pathname?.startsWith(item.href);
+  const isActive = (item: ClientNavItem) => {
+    if (item.exact) return pathname === item.href;
+    return (item.matchPrefixes ?? [item.href]).some((prefix) => pathname?.startsWith(prefix));
+  };
 
   const prefetchClientRoute = useCallback((href: string) => {
     if (!href.startsWith("/client")) return;
@@ -550,7 +556,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
         </main>
       </div>
       {shouldRenderMobileBottomNav && (
-        <MobileBottomNav pathname={pathname} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} />
+        <MobileBottomNav isActive={isActive} onNavigate={closeMobileSurfaces} />
       )}
     </div>
   );
@@ -569,7 +575,7 @@ function SidebarContent({
   notificationCount?: number;
   compactAccount?: boolean;
 }) {
-  const showPrimaryAction = !compactAccount;
+  const primaryActive = isActive(primaryNavItem);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -577,20 +583,21 @@ function SidebarContent({
         <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
-        {showPrimaryAction && (
-          <Link
-            href="/client/rechercher"
-            prefetch={CLIENT_NAV_PREFETCH}
-            onClick={onNavigate}
-            className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Trouver un professeur
-            </span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
+        <Link
+          href={primaryNavItem.href}
+          prefetch={CLIENT_NAV_PREFETCH}
+          onClick={onNavigate}
+          aria-current={primaryActive ? "page" : undefined}
+          data-active={primaryActive ? "true" : "false"}
+          data-client-sidebar-link
+          className="mb-2 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#111B4D] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#182260]"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            {primaryNavItem.label}
+          </span>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
         {navItems.map((item) => {
           const active = isActive(item);
           return (
@@ -609,14 +616,28 @@ function SidebarContent({
             >
               <item.icon className="h-4 w-4" />
               {item.label}
-              {item.href === "/client/notifications" && !!notificationCount && (
-                <span className={cn(
-                  "ml-auto rounded-md px-2 py-0.5 text-xs font-semibold",
-                  active ? "bg-white text-[#111B4D]" : "bg-white text-[#111B4D] ring-1 ring-[#E3E8F2]"
-                )}>
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </span>
+            </Link>
+          );
+        })}
+        <div className="my-2 border-t border-[#E6EAF3]" />
+        {accountNavItems.map((item) => {
+          const active = isActive(item);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={CLIENT_NAV_PREFETCH}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              data-active={active ? "true" : "false"}
+              data-client-sidebar-link
+              className={cn(
+                "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
               )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
             </Link>
           );
         })}
@@ -664,14 +685,10 @@ function SidebarContent({
 }
 
 function MobileBottomNav({
-  pathname,
   isActive,
-  notificationCount,
   onNavigate,
 }: {
-  pathname: string | null;
   isActive: (item: ClientNavItem) => boolean;
-  notificationCount: number;
   onNavigate: () => void;
 }) {
   return (
@@ -681,7 +698,7 @@ function MobileBottomNav({
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileNavItems.map((item) => {
           const active = isActive(item);
           return (
@@ -701,16 +718,6 @@ function MobileBottomNav({
               <span className="max-w-full truncate text-[0.66rem] leading-none min-[380px]:text-[0.72rem]">
                 {item.label}
               </span>
-              {item.href === "/client/notifications" && !!notificationCount && (
-                <span
-                  className={cn(
-                    "absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-semibold",
-                    active ? "bg-white text-[#111B4D]" : "bg-[#111B4D] text-white",
-                  )}
-                >
-                  {notificationCount > 9 ? "9+" : notificationCount}
-                </span>
-              )}
             </Link>
           );
         })}

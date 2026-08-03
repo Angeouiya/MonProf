@@ -47,6 +47,10 @@ const clientRootTabPaths = [
 
 const clientPrimitives = read(clientPrimitivesPath);
 const layout = read(layoutPath);
+const primaryNavSource = layout.match(/const primaryNavItem:[\s\S]*?=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
+const desktopNavSource = layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
 const clientReservationDetail = read(clientReservationDetailPath);
@@ -219,16 +223,29 @@ record(
 );
 
 record(
-  "Client mobile drawer does not repeat the primary search action",
-  /const showPrimaryAction\s*=\s*!compactAccount\s*;/.test(layout)
-    && /\{showPrimaryAction\s*&&\s*\(/.test(layout)
-    && /compactAccount\s*\/>/.test(layout),
+  "Client shell exposes one clear booking action in its sidebar",
+  /label:\s*"Réserver un cours"/.test(primaryNavSource)
+    && countMatches(primaryNavSource, /href:/g) === 1
+    && !/Trouver un professeur/.test(desktopNavSource),
 );
 
 record(
-  "Client sidebar keeps one clear profile/settings pair",
-  countOccurrences(layout, 'href: "/client/profil"') === 1
-    && countOccurrences(layout, 'href: "/client/parametres"') === 1,
+  "Client navigation keeps six or fewer visible sidebar destinations",
+  countMatches(primaryNavSource, /href:/g) === 1
+    && countMatches(desktopNavSource, /href:/g) === 3
+    && countMatches(accountNavSource, /href:/g) === 2
+    && /label:\s*"Mon compte"/.test(accountNavSource)
+    && !/label:\s*"Paramètres"/.test(accountNavSource),
+);
+
+record(
+  "Client mobile navigation contains exactly four essential actions",
+  countMatches(mobileNavSource, /href:/g) === 4
+    && /grid grid-cols-4 gap-1/.test(layout)
+    && /label:\s*"Accueil"/.test(mobileNavSource)
+    && /label:\s*"Réserver"/.test(mobileNavSource)
+    && /label:\s*"Cours"/.test(mobileNavSource)
+    && /label:\s*"Paiements"/.test(mobileNavSource),
 );
 
 record(
