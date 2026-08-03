@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -730,7 +730,7 @@ export function TeacherForm({
           <TabsTrigger value="matieres">Matières & Niveaux</TabsTrigger>
           <TabsTrigger value="dispo">Disponibilités</TabsTrigger>
           <TabsTrigger value="zones">Zones</TabsTrigger>
-          <TabsTrigger value="tarifs">Tarifs</TabsTrigger>
+          <TabsTrigger value="tarifs">Interventions</TabsTrigger>
           <TabsTrigger value="eval">Évaluation</TabsTrigger>
         </TabsList>
 
@@ -1516,45 +1516,25 @@ export function TeacherForm({
           </Card>
         </TabsContent>
 
-        {/* TARIFS */}
+        {/* INTERVENTIONS */}
         <TabsContent value="tarifs">
           <Card>
-            <CardHeader><CardTitle className="text-base">Tarification (FCFA)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Conditions d'intervention</CardTitle>
+              <CardDescription>
+                Les prix sont définis par la grille officielle de la plateforme, jamais par le professeur.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Field label="Tarif / heure">
-                <Input type="number" min={0} step={500} {...register("pricePerHour")} />
-              </Field>
-              <Field label="Tarif / séance">
-                <Input type="number" min={0} step={500} {...register("pricePerSession")} />
-              </Field>
-              <Field label="Pack 4 séances">
-                <Input type="number" min={0} step={500} {...register("pricePack4")} />
-              </Field>
-              <Field label="Pack 8 séances">
-                <Input type="number" min={0} step={500} {...register("pricePack8")} />
-              </Field>
               <Field label="Commission officielle (%)">
                 <Input type="number" min={0} max={60} {...register("commissionRate")} />
-              </Field>
-              <Field label="Tier tarifaire">
-                <Controller control={control} name="pricingTier" render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="STANDARD">Standard</SelectItem>
-                      <SelectItem value="RECOMMENDED">Recommandé</SelectItem>
-                      <SelectItem value="PREMIUM">Premium</SelectItem>
-                      <SelectItem value="PROMOTIONAL">Promotionnel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
               </Field>
 
               <div className="sm:col-span-2 grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4">
                 <div>
                   <p className="text-sm font-black text-foreground">Référence grille officielle</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Les prix saisis ici sont des indications internes du profil. Au moment de la réservation, le prix est calculé par catégorie, niveau, système scolaire, format, pack, groupe et déplacement.
+                    Le prix client est calculé à partir du parcours et de la classe, puis les frais de déplacement sont ajoutés selon le lieu choisi.
                   </p>
                 </div>
                 <div className="grid gap-2 text-center sm:grid-cols-3">
@@ -1567,8 +1547,8 @@ export function TeacherForm({
                     <p className="text-sm font-semibold">{100 - Number(commissionRate ?? defaultCommissionPercent)}% + déplacement</p>
                   </div>
                   <div className="rounded-lg border border-violet-100 bg-white p-3">
-                    <p className="text-xs text-muted-foreground">Remises packs</p>
-                    <p className="text-sm font-semibold">Prises sur commission</p>
+                    <p className="text-xs text-muted-foreground">Prix professeur</p>
+                    <p className="text-sm font-semibold">Aucun tarif individuel</p>
                   </div>
                 </div>
               </div>

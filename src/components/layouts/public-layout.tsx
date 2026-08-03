@@ -26,9 +26,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/professeurs", label: "Trouver un professeur" },
-  { href: "/comment-ca-marche", label: "Comment ça marche" },
   { href: "/tarifs", label: "Tarifs" },
-  { href: "/contact", label: "Contact" },
 ];
 
 const footerPlatformLinks = [
@@ -126,8 +124,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
             {!isAuthenticated && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/inscription" prefetch={true}>
-                  Créer un compte
+                <Link href="/professeurs" prefetch={true}>
+                  Réserver
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -211,8 +209,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
                   </Button>
                   <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href="/inscription" prefetch={true} onClick={() => setMobileOpen(false)}>
-                      Créer un compte
+                    <Link href="/professeurs" prefetch={true} onClick={() => setMobileOpen(false)}>
+                      Réserver
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>

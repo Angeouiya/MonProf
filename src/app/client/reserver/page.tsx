@@ -3,16 +3,18 @@ import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import type { ServiceTrack } from "@/lib/service-offers";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReserverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ teacherId?: string }>;
+  searchParams: Promise<{ teacherId?: string; parcours?: string }>;
 }) {
-  const { teacherId } = await searchParams;
+  const { teacherId, parcours } = await searchParams;
   if (!teacherId) notFound();
+  const initialTrack: ServiceTrack = parcours === "francais" || parcours === "professionnel" ? parcours : "ivoirien";
 
   const teacher = await db.teacher.findFirst({
     where: { id: teacherId, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
@@ -41,6 +43,7 @@ export default async function ReserverPage({
   return (
     <div>
       <ReserverForm
+        initialTrack={initialTrack}
         teacher={{
           id: teacher.id,
           fullName: teacher.fullName,
@@ -51,7 +54,6 @@ export default async function ReserverPage({
           quartier: teacher.quartier,
           rating: teacher.rating,
           ratingCount: teacher.ratingCount,
-          pricePerSession: teacher.pricePerSession,
           commissionRate: teacher.commissionRate,
           badgeVerified: teacher.badgeVerified,
           badgeRecommended: teacher.badgeRecommended,

@@ -227,8 +227,8 @@ record(
 
 record(
   "Client sidebar keeps one clear profile/settings pair",
-  countOccurrences(layout, 'href: "/client/profil"') === 1
-    && countOccurrences(layout, 'href: "/client/parametres"') === 1,
+  countOccurrences(layout, 'href="/client/profil"') === 1
+    && countOccurrences(layout, 'href="/client/parametres"') === 1,
 );
 
 record(
@@ -414,7 +414,7 @@ record(
   !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(clientPricingCopySources)
     && /Montant à recalculer/.test(clientPricingCopySources)
     && /Calcul à reprendre/.test(clientPricingCopySources)
-    && /Calculé à la réservation/.test(clientPricingCopySources),
+    && /Tarif officiel calculé à la réservation/i.test(clientPricingCopySources),
 );
 
 record(

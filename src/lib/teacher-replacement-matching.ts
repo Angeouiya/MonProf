@@ -191,8 +191,8 @@ export async function findReplacementCandidatesForBooking(
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, matchingBooking);
       const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking);
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
-      const priceDiff = teacher.pricePerSession - booking.unitPrice;
-      const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
+      const priceDiff = 0;
+      const priceCompatible = true;
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const destinationOverride = destination?.transportFeeOverride;
       const transportFee = transport?.key !== TRANSPORT_FEES.SAME_NEIGHBORHOOD.key

@@ -18,12 +18,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
-import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { db } from "@/lib/db";
-import { formatFCFA, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -91,8 +90,6 @@ export default async function TeacherDetailPage({
   const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
   const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
-  const sessionPriceLabel = formatFCFA(teacher.pricePerSession || teacher.pricePerHour || 0);
-
   const reserveHref = session?.user
     ? `/client/reserver?teacherId=${teacher.id}`
     : `/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${teacher.id}`)}`;
@@ -175,9 +172,7 @@ export default async function TeacherDetailPage({
                   {teacher._count.bookings} réservations effectuées
                 </span>
                 <span className="hidden text-[#CBD5E1] sm:inline">·</span>
-                <span className="font-semibold text-[#111827]">
-                  {sessionPriceLabel} / séance
-                </span>
+                <span className="font-semibold text-[#111827]">{availabilitySummary}</span>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#111B4D]">
                 {teacher.offersHome && (
@@ -211,7 +206,7 @@ export default async function TeacherDetailPage({
           <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 min-[760px]:grid-cols-3">
             <MiniStat label="Cours attribués" value={teacher._count.bookings} />
             <MiniStat label="Avis vérifiés" value={totalReviews} />
-            <MiniStat label="Prix indicatif" value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />} />
+            <MiniStat label="Créneaux ouverts" value={availableSlotCount > 0 ? availableSlotCount : "À confirmer"} />
           </div>
           </div>
 
@@ -511,16 +506,16 @@ export default async function TeacherDetailPage({
                 )}
               </Card>
 
-              {/* Tarifs */}
+              {/* Tarification */}
               <Card>
                 <CardTitle icon={<Wallet className="h-4 w-4" />}>
-                  Tarifs
+                  Tarification
                 </CardTitle>
                 <div className="mt-4 grid gap-3 min-[760px]:grid-cols-3">
                   <PriceTile
-                    label="Prix indicatif"
-                    value={<Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />}
-                    sub="Séance de 2h"
+                    label="Tarif officiel"
+                    value="Selon le parcours"
+                    sub="Ivoirien, français ou professionnel"
                     highlight
                   />
                   <PriceTile
@@ -535,7 +530,7 @@ export default async function TeacherDetailPage({
                   />
                 </div>
                 <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-                  Le prix final est confirmé pendant la réservation selon le niveau, le format, le nombre de participants et les frais de déplacement éventuels.
+                  Le prix du cours est calculé pendant la réservation selon le système scolaire et la classe, ou selon le tarif professionnel unique.
                   Le client voit toujours le total avant paiement.
                 </p>
               </Card>
@@ -629,12 +624,10 @@ export default async function TeacherDetailPage({
             {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
             <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
               <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Tarif officiel</p>
                 <div className="mt-1">
-                  <span className="text-2xl font-semibold text-[#111827]">
-                    <Money amount={teacher.pricePerSession || teacher.pricePerHour || 0} />
-                  </span>
-                  <p className="mt-1 text-sm font-medium text-[#64748B]">Séance de 2h, total confirmé avant paiement.</p>
+                  <p className="text-lg font-semibold text-[#111827]">Calculé selon votre parcours</p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">Choisissez le système et la classe. Le total, transport compris, est confirmé avant paiement.</p>
                 </div>
 
                 <div className="mt-4 space-y-2 border-t border-[#E3E8F2] pt-4 text-sm">
@@ -714,7 +707,7 @@ export default async function TeacherDetailPage({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
           <div className="min-w-0 px-2">
             <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
-            <p className="truncate text-xs font-semibold text-[#64748B]">{sessionPriceLabel} / séance 2h</p>
+            <p className="truncate text-xs font-semibold text-[#64748B]">Tarif officiel selon le parcours</p>
           </div>
           <Link
             href={reserveHref}

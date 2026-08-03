@@ -9,6 +9,7 @@ import {
   SearchX,
   ShieldCheck,
   BadgeCheck,
+  GraduationCap,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { TeacherCard } from "@/components/shared/teacher-card";
@@ -22,6 +23,7 @@ import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
+  parcours?: string;
   subject?: string;
   level?: string;
   commune?: string;
@@ -52,6 +54,7 @@ export default async function TeachersPage({
 }) {
   const sp = await searchParams;
 
+  const parcours = ["ivoirien", "francais", "professionnel"].includes(sp.parcours ?? "") ? sp.parcours! : "";
   const subject = sp.subject?.trim() || "";
   const level = sp.level?.trim() || "";
   const commune = sp.commune?.trim() || "";
@@ -143,7 +146,6 @@ export default async function TeachersPage({
     certifications: t.certifications,
     teachingAchievements: t.teachingAchievements,
     learnersCoached: t.learnersCoached,
-    pricePerSession: t.pricePerSession,
     offersHome: t.offersHome,
     offersOnline: t.offersOnline,
     commune: t.commune,
@@ -159,6 +161,7 @@ export default async function TeachersPage({
   // Build a query string without `page` for pagination links
   function buildPaginationUrl(p: number): string {
     const params = new URLSearchParams();
+    if (parcours) params.set("parcours", parcours);
     if (q) params.set("q", q);
     if (subject) params.set("subject", subject);
     if (level) params.set("level", level);
@@ -235,6 +238,7 @@ export default async function TeachersPage({
             />
             {/* Préserve les autres filtres */}
             {subject && <input type="hidden" name="subject" value={subject} />}
+            {parcours && <input type="hidden" name="parcours" value={parcours} />}
             {level && <input type="hidden" name="level" value={level} />}
             {commune && <input type="hidden" name="commune" value={commune} />}
             {format && <input type="hidden" name="format" value={format} />}
@@ -290,6 +294,7 @@ export default async function TeachersPage({
               <div className="pt-3">
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
+                  parcours={parcours}
                   q={q}
                   subject={subject}
                   level={level}
@@ -324,6 +329,7 @@ export default async function TeachersPage({
               <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
+                  parcours={parcours}
                   q={q}
                   subject={subject}
                   level={level}
@@ -365,6 +371,12 @@ export default async function TeachersPage({
                     ) : null}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
+                    {parcours && (
+                      <InlineFilter
+                        icon={<GraduationCap className="h-3 w-3" />}
+                        label={parcours === "ivoirien" ? "Système ivoirien" : parcours === "francais" ? "Système français" : "Professionnel"}
+                      />
+                    )}
                     {format === "HOME" && (
                       <InlineFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
                     )}
@@ -400,7 +412,11 @@ export default async function TeachersPage({
                 <>
                   <div className="grid min-w-0 gap-4 min-[680px]:grid-cols-2 min-[1180px]:grid-cols-3">
                     {items.map((t, index) => (
-                      <TeacherCard key={`${t.id}-${index}`} teacher={t as any} />
+                      <TeacherCard
+                        key={`${t.id}-${index}`}
+                        teacher={t as any}
+                        href={`/client/reserver?teacherId=${t.id}${parcours ? `&parcours=${parcours}` : ""}`}
+                      />
                     ))}
                   </div>
 
@@ -469,6 +485,7 @@ type CommuneFilterOption = {
 
 function FiltersForm({
   activeFiltersCount,
+  parcours,
   q,
   subject,
   level,
@@ -481,6 +498,7 @@ function FiltersForm({
   compact = false,
 }: {
   activeFiltersCount: number;
+  parcours: string;
   q: string;
   subject: string;
   level: string;
@@ -605,6 +623,7 @@ function FiltersForm({
         </Field>
 
         {q && <input type="hidden" name="q" value={q} />}
+        {parcours && <input type="hidden" name="parcours" value={parcours} />}
 
         <div className={compact ? "min-[560px]:self-end" : ""}>
           <button

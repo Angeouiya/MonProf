@@ -7,7 +7,6 @@ import {
   Bell,
   BookOpenCheck,
   CalendarClock,
-  ClipboardList,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -41,20 +40,18 @@ const navGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
     ],
   },
   {
-    label: "Opérations professeur",
+    label: "À faire",
     items: [
       { href: "/professeur/missions", label: "Missions", icon: BookOpenCheck },
       { href: "/professeur/disponibilites", label: "Disponibilités", icon: CalendarClock },
       { href: "/professeur/paiements", label: "Paiements", icon: CreditCard },
-      { href: "/professeur/messages", label: "Service client", icon: MessageSquareText },
-      { href: "/professeur/avis", label: "Avis & qualité", icon: MessageSquareText },
-      { href: "/professeur/profil", label: "Profil & mini-CV", icon: User },
+      { href: "/professeur/messages", label: "Aide", icon: MessageSquareText },
     ],
   },
   {
-    label: "Suivi",
+    label: "Mon compte",
     items: [
-      { href: "/professeur/notifications", label: "Notifications", icon: Bell },
+      { href: "/professeur/profil", label: "Mon profil", icon: User },
       { href: "/professeur/parametres", label: "Paramètres", icon: Settings },
     ],
   },
@@ -62,10 +59,9 @@ const navGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
 
 const mobileNavItems = [
   { href: "/professeur", label: "Accueil", icon: LayoutDashboard, exact: true },
-  { href: "/professeur/missions", label: "Miss.", icon: BookOpenCheck },
+  { href: "/professeur/missions", label: "Missions", icon: BookOpenCheck },
   { href: "/professeur/disponibilites", label: "Dispos", icon: CalendarClock },
-  { href: "/professeur/paiements", label: "Paie.", icon: CreditCard },
-  { href: "/professeur/messages", label: "Msgs", icon: MessageSquareText },
+  { href: "/professeur/messages", label: "Aide", icon: MessageSquareText },
 ];
 
 export function ProfessorLayout({
@@ -387,7 +383,7 @@ function MobileBottomNav({
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation professeur mobile"
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileNavItems.map((item) => {
           const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
           return (

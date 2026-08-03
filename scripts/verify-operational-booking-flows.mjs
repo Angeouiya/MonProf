@@ -29,8 +29,8 @@ const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
-  /SUR_DEVIS:[\s\S]*?amount:\s*25000/.test(pricingEngine)
-    && /const unitSessionAmount\s*=\s*teacherPricePerSession\s*>\s*0\s*\?\s*teacherPricePerSession\s*:\s*tier\.amount/.test(pricingEngine)
+  /PROFESSIONNEL_40000:[\s\S]*?amount:\s*40000/.test(pricingEngine)
+    && /const unitSessionAmount\s*=\s*tier\.amount/.test(pricingEngine)
     && /isQuoteOnly:\s*false/.test(pricingEngine)
     && !/if\s*\(isQuoteOnly\)/.test(pricingEngine),
 );

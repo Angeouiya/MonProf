@@ -25,11 +25,12 @@ async function main() {
 
   const configured = calculateBookingPricing({
     category: "soutien_scolaire",
-    levelName: "Collège",
+    schoolSystem: "ivoirien",
+    levelName: "Primaire",
+    preciseLevel: "CP1",
     subjectName: "Mathématiques",
     deliveryMode: "domicile",
     packType: "SINGLE",
-    teacherPricePerSession: 10_000,
     teacherCommune: "Cocody",
     teacherQuartier: "Riviera 2",
     clientCommune: "Cocody",
@@ -38,14 +39,15 @@ async function main() {
     transportFeeAmounts: { sameCommune: 1_750, nearCommune: 2_750, farCommune: 4_750, interior: 8_750 },
   });
   assert(configured.platformCommissionRate === 0.24, "Dynamic commission is applied to new pricing snapshots");
-  assert(configured.platformCommissionAmount === 2_400, "Dynamic commission amount is computed from the course amount");
+  assert(configured.platformCommissionAmount === 3_600, "Dynamic commission amount is computed from the official course amount");
   assert(configured.transportFee === 1_750, "Dynamic same-commune transport fee is applied");
 
   const sameQuarter = calculateBookingPricing({
     category: "soutien_scolaire",
+    schoolSystem: "ivoirien",
+    preciseLevel: "CP1",
     deliveryMode: "domicile",
     packType: "SINGLE",
-    teacherPricePerSession: 10_000,
     teacherCommune: "Cocody",
     teacherQuartier: "Riviera 2",
     clientCommune: "Cocody",
@@ -58,7 +60,6 @@ async function main() {
     category: "formation_professionnelle",
     deliveryMode: "domicile",
     packType: "SINGLE",
-    teacherPricePerSession: 20_000,
     teacherCommune: "Cocody",
     teacherQuartier: "Mermoze",
     clientCommune: "Cocody",

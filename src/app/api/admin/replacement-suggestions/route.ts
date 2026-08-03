@@ -162,8 +162,8 @@ export async function GET(req: NextRequest) {
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, booking);
       const activeConflict = hasActiveConflict(teacher.bookings, booking);
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
-      const priceDiff = teacher.pricePerSession - booking.unitPrice;
-      const priceCompatible = Math.abs(priceDiff) <= Math.max(2500, Math.round(booking.unitPrice * 0.25));
+      const priceDiff = 0;
+      const priceCompatible = true;
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const matchReasons = [
         sameSubject ? "Même matière" : "",

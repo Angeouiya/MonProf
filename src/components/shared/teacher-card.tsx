@@ -6,13 +6,12 @@ import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { formatFCFA } from "@/lib/format";
 
 type TeacherCardData = Pick<Teacher,
   "id" | "fullName" | "professionalName" | "photoUrl" |
   "jobTitle" | "rating" | "ratingCount" | "experienceYears" |
   "adminRating" | "adminRatingPublic" |
-  "pricePerSession" | "offersHome" | "offersOnline" | "commune" |
+  "offersHome" | "offersOnline" | "commune" |
   "badgeVerified" | "careerSummary" | "skills" | "workHistory" |
   "certifications" | "teachingAchievements" | "learnersCoached"
 > & { _count?: { reviews: number }; primarySubject?: string | null };
@@ -21,8 +20,6 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
   const profileHref = `/professeurs/${teacher.id}`;
   const bookingHref = href ?? `/client/reserver?teacherId=${teacher.id}`;
   const displayName = teacher.professionalName || teacher.fullName;
-  const hasValidIndicativePrice = teacher.pricePerSession > 0;
-  const priceLabel = hasValidIndicativePrice ? formatFCFA(teacher.pricePerSession) : "Calculé à la réservation";
   const publicRating = teacher.ratingCount > 0 && teacher.rating > 0
     ? teacher.rating
     : teacher.adminRatingPublic && teacher.adminRating > 0
@@ -103,19 +100,7 @@ export function TeacherCard({ teacher, href }: { teacher: TeacherCardData; href?
         </div>
       </div>
       <div className="mt-auto pt-3">
-        <div className="mb-3 flex items-end justify-between gap-3 border-y border-[#E3E8F2] bg-white py-2.5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Prix indicatif</p>
-            <p className="mt-0.5 text-[1.05rem] font-semibold leading-tight text-[#111827]">
-              {priceLabel}
-              <span className="ml-1 text-xs font-medium text-[#64748B]">/ 2h</span>
-            </p>
-          </div>
-          <p className="hidden max-w-24 text-right text-[11px] font-semibold leading-4 text-[#64748B] min-[420px]:block">
-            ajusté à la réservation
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 border-t border-[#E3E8F2] pt-3">
           <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#C8D2E3] bg-white px-3 text-sm text-[#111B4D] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
             <Link href={profileHref}>Voir profil</Link>
           </Button>

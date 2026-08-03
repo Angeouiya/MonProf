@@ -20,15 +20,18 @@ import { formatFCFA } from "@/lib/format";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
 import { PackType } from "@prisma/client";
 import {
-  CLIENT_TYPES,
   COURSE_CATALOG,
   COURSE_CATEGORIES,
   SCHOOL_SYSTEMS,
   buildSchoolProgramSummary,
   getPreciseLevelOptions,
-  isLyceeLevel,
   validateEducationSelection,
 } from "@/lib/course-catalog";
+import {
+  SERVICE_TRACKS,
+  getServiceTrack,
+  type ServiceTrack,
+} from "@/lib/service-offers";
 import {
   MIN_BOOKING_NOTICE_HOURS,
   availabilitySelectionLabel,
@@ -52,7 +55,7 @@ import {
   isAbidjanCity,
 } from "@/lib/ivory-coast-locations";
 import {
-  ArrowLeft, ArrowRight, Home, Video, User, Users,
+  ArrowLeft, ArrowRight, Home, Video, User, Users, GraduationCap, BriefcaseBusiness, BookOpenCheck,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink,
 } from "lucide-react";
 
@@ -66,7 +69,6 @@ type Teacher = {
   quartier?: string | null;
   rating: number;
   ratingCount: number;
-  pricePerSession: number;
   commissionRate: number;
   badgeVerified: boolean;
   badgeRecommended: boolean;
@@ -96,27 +98,23 @@ type PricingConfig = {
   transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
 };
 
-const STEPS = ["Besoin", "Format", "Disponibilité", "Récapitulatif", "Paiement"];
+const STEPS = ["Besoin", "Organisation", "Vérification", "Paiement"];
 const STEP_DETAILS = [
   {
-    title: "Besoin du cours",
-    description: "Choisissez le profil, la matière du professeur et le niveau concerné.",
+    title: "Votre besoin",
+    description: "Choisissez le parcours, la classe et la matière.",
   },
   {
-    title: "Format",
-    description: "Définissez le mode du cours et le nombre de participants.",
+    title: "Organisation",
+    description: "Choisissez le format, l'adresse et le créneau.",
   },
   {
-    title: "Date et horaires",
-    description: "Sélectionnez une date, un créneau de 2h ou une demande horaire précise.",
-  },
-  {
-    title: "Récapitulatif",
-    description: "Vérifiez le professeur, le planning, la formule et le montant client.",
+    title: "Vérification",
+    description: "Relisez les informations et le montant exact.",
   },
   {
     title: "Paiement",
-    description: "Contrôlez le dossier puis finalisez le paiement sur PayDunya.",
+    description: "Finalisez sur la page sécurisée PayDunya.",
   },
 ] as const;
 const FIELD_CLASS = "mt-1.5 w-full rounded-lg border border-[#DDE6F7] bg-white py-2.5 pl-3 pr-10 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
@@ -135,6 +133,11 @@ const PACK_OPTIONS = [
   { value: "PACK_12", label: COURSE_PACKS.PACK_12.label, count: COURSE_PACKS.PACK_12.sessions },
   { value: "CUSTOM", label: COURSE_PACKS.CUSTOM.label, count: COURSE_PACKS.CUSTOM.sessions },
 ];
+const TRACK_ICONS = {
+  ivoirien: GraduationCap,
+  francais: BookOpenCheck,
+  professionnel: BriefcaseBusiness,
+};
 
 function normalizeLocation(value?: string | null) {
   return (value ?? "")
@@ -144,14 +147,6 @@ function normalizeLocation(value?: string | null) {
     .toLowerCase();
 }
 const PAYMENT_METHODS = activePaymentMethodOptions;
-
-const CLIENT_TYPE_DEFAULT_CATEGORY: Record<string, string> = {
-  Parent: "soutien_scolaire",
-  Élève: "soutien_scolaire",
-  Étudiant: "enseignement_superieur",
-  Professionnel: "formation_professionnelle",
-  Entreprise: "formation_entreprise",
-};
 
 const CATEGORY_COPY: Record<string, {
   intro: string;
@@ -367,13 +362,14 @@ function buildSessionPreview(timeLabels: string[], customTimeRequest: string, se
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig,
+  teacher, subjects, levels, communes, pricingConfig, initialTrack = "ivoirien",
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
   levels: { id: string; name: string; slug: string }[];
   communes: CommuneOption[];
   pricingConfig: PricingConfig;
+  initialTrack?: ServiceTrack;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -384,9 +380,9 @@ export function ReserverForm({
 
   // Form state
   const [form, setForm] = useState({
-    clientType: "Parent",
-    courseCategory: "soutien_scolaire",
-    schoolSystem: "",
+    clientType: initialTrack === "professionnel" ? "Professionnel" : "Parent",
+    courseCategory: initialTrack === "professionnel" ? "formation_professionnelle" : "soutien_scolaire",
+    schoolSystem: initialTrack === "professionnel" ? "" : initialTrack,
     preciseLevel: "",
     courseCatalogId: "",
     levelName: teacher.levels[0] ?? "",
@@ -448,11 +444,11 @@ export function ReserverForm({
   const categoryCopy = getCategoryCopy(form.courseCategory);
   const categoryLabel = COURSE_CATEGORIES.find((category) => category.code === form.courseCategory)?.label ?? form.courseCategory;
   const schoolContext = isSchoolContext(form.courseCategory);
+  const serviceTrack = getServiceTrack(form.courseCategory, form.schoolSystem);
   const hasTeacherLevels = teacher.levels.length > 0;
   const hasTeacherSubjects = teacher.subjects.length > 0;
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
-  const isLyceeSelection = schoolContext && isLyceeLevel(form.levelName);
-  const preciseLevelOptions = isLyceeSelection ? getPreciseLevelOptions(form.schoolSystem) : [];
+  const preciseLevelOptions = schoolContext ? getPreciseLevelOptions(form.schoolSystem) : [];
   const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
   const selectedCategoryCourses = useMemo(() => (
     COURSE_CATALOG.filter((item) => (
@@ -544,7 +540,6 @@ export function ReserverForm({
     requiresMaterial: false,
     packType: form.packType,
     participantsCount,
-    teacherPricePerSession: teacher.pricePerSession,
     teacherCommune: canResolveTransport ? teacher.commune : undefined,
     teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
     teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
@@ -559,6 +554,7 @@ export function ReserverForm({
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
   const courseFormulaAmount = pricing.courseAmount;
   const totalPrice = pricing.totalClientPays;
+  const hasCompletePricingSelection = !schoolContext || Boolean(form.preciseLevel);
   const averageSessionPrice = selectedPackSessions > 0 ? Math.round(pricing.courseAmount / selectedPackSessions) : 0;
   const totalHours = selectedPackSessions * 2;
   const extraParticipantCount = Math.max(0, participantsCount - 1);
@@ -620,25 +616,14 @@ export function ReserverForm({
           : !hasMinimumBookingNotice
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
-  function handleClientTypeChange(clientType: string) {
-    const nextCategory = CLIENT_TYPE_DEFAULT_CATEGORY[clientType] ?? form.courseCategory;
+  function handleServiceTrackChange(track: ServiceTrack) {
+    const courseCategory = track === "professionnel" ? "formation_professionnelle" : "soutien_scolaire";
     setForm((current) => ({
       ...current,
-      clientType,
-      courseCategory: nextCategory,
-      levelName: suggestLevelForCategory(teacher.levels, nextCategory, current.levelName),
-      schoolSystem: isSchoolContext(nextCategory) ? current.schoolSystem : "",
-      preciseLevel: isSchoolContext(nextCategory) ? current.preciseLevel : "",
-      courseCatalogId: current.courseCategory === nextCategory ? current.courseCatalogId : "",
-    }));
-  }
-
-  function handleCourseCategoryChange(courseCategory: string) {
-    setForm((current) => ({
-      ...current,
+      clientType: track === "professionnel" ? "Professionnel" : "Parent",
       courseCategory,
       levelName: suggestLevelForCategory(teacher.levels, courseCategory, current.levelName),
-      schoolSystem: isSchoolContext(courseCategory) ? current.schoolSystem : "",
+      schoolSystem: track === "professionnel" ? "" : track,
       preciseLevel: "",
       courseCatalogId: "",
     }));
@@ -653,6 +638,7 @@ export function ReserverForm({
       if (!form.levelName) return `Veuillez sélectionner : ${categoryCopy.levelLabel.toLowerCase()}.`;
       if (schoolContext) {
         const educationValidation = validateEducationSelection({
+          courseCategory: form.courseCategory,
           levelName: form.levelName,
           schoolSystem: form.schoolSystem,
           preciseLevel: form.preciseLevel,
@@ -666,8 +652,6 @@ export function ReserverForm({
     }
     if (s === 1) {
       if (!form.courseFormat) return "Veuillez choisir un format de cours.";
-    }
-    if (s === 2) {
       if (form.courseFormat === "HOME") {
         if (!form.city) return "Veuillez sélectionner votre ville.";
         if (isAbidjanCity(form.city) && !form.commune) return "Veuillez sélectionner la commune d'Abidjan concernée.";
@@ -697,7 +681,7 @@ export function ReserverForm({
         return paymentScheduleWarning;
       }
     }
-    if (s === 4) {
+    if (s === 3) {
       if (!isScheduleReadyForPayment) return paymentScheduleWarning || "Veuillez compléter le planning avant paiement.";
     }
     return null;
@@ -719,7 +703,7 @@ export function ReserverForm({
   }
 
   async function submit() {
-    const err = [0, 1, 2, 3, 4].map(validateStep).find(Boolean);
+    const err = [0, 1, 2, 3].map(validateStep).find(Boolean);
     if (err) {
       toast.error(err);
       return;
@@ -827,12 +811,16 @@ export function ReserverForm({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#DDE6F7]">Total actuel</p>
-                <p className="mt-1 text-2xl font-semibold leading-tight text-white">{formatFCFA(totalPrice)}</p>
+                <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                  {hasCompletePricingSelection ? formatFCFA(totalPrice) : "Choisir la classe"}
+                </p>
               </div>
               <WalletCards className="mt-1 h-5 w-5 text-white" />
             </div>
             <p className="mt-2 text-xs font-medium leading-5 text-white">
-              {pricing.transportFee > 0
+              {!hasCompletePricingSelection
+                ? "Le tarif apparaîtra dès que la classe sera choisie."
+                : pricing.transportFee > 0
                 ? `Déplacement inclus : ${formatFCFA(pricing.transportFee)}`
                 : "Aucun frais de déplacement ajouté pour le moment."}
             </p>
@@ -853,7 +841,7 @@ export function ReserverForm({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <div data-client-booking-desktop-progress className="client-booking-progress-grid mt-3 hidden grid-cols-5 gap-2 lg:grid">
+          <div data-client-booking-desktop-progress className="client-booking-progress-grid mt-3 hidden grid-cols-4 gap-2 lg:grid">
             {STEPS.map((stepLabel, index) => {
               const complete = index < step;
               const active = index === step;
@@ -892,31 +880,35 @@ export function ReserverForm({
             <div className="space-y-5">
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
               <div className="grid gap-4 min-[720px]:grid-cols-2">
-                <div>
-                  <Label htmlFor="clientType">Type de client *</Label>
-                  <select
-                    id="clientType"
-                    value={form.clientType}
-                    onChange={(e) => handleClientTypeChange(e.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    {CLIENT_TYPES.map((clientType) => (
-                      <option key={clientType} value={clientType}>{clientType}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="courseCategory">Catégorie du besoin *</Label>
-                  <select
-                    id="courseCategory"
-                    value={form.courseCategory}
-                    onChange={(e) => handleCourseCategoryChange(e.target.value)}
-                    className={FIELD_CLASS}
-                  >
-                    {COURSE_CATEGORIES.map((category) => (
-                      <option key={category.code} value={category.code}>{category.label}</option>
-                    ))}
-                  </select>
+                <div className="min-[720px]:col-span-2">
+                  <Label>Quel parcours ? *</Label>
+                  <div className="mt-2 grid gap-2 lg:grid-cols-3">
+                    {SERVICE_TRACKS.map((track) => {
+                      const Icon = TRACK_ICONS[track.value];
+                      const active = serviceTrack === track.value;
+                      return (
+                        <button
+                          key={track.value}
+                          type="button"
+                          onClick={() => handleServiceTrackChange(track.value)}
+                          aria-pressed={active}
+                          className={`flex min-h-20 items-center gap-3 rounded-xl border p-3 text-left transition ${
+                            active
+                              ? "border-[#111B4D] bg-[#111B4D] text-white"
+                              : "border-[#DDE2EC] bg-white text-[#111827] hover:border-[#111B4D]"
+                          }`}
+                        >
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white text-[#111B4D]" : "bg-[#F7F8FC] text-[#111B4D]"}`}>
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold">{track.title}</span>
+                            <span className={`mt-0.5 block text-xs ${active ? "text-[#DDE3F2]" : "text-[#64748B]"}`}>{track.eyebrow}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="levelName">{categoryCopy.levelLabel} *</Label>
@@ -927,7 +919,7 @@ export function ReserverForm({
                     onValueChange={(value) => setForm((current) => ({
                       ...current,
                       levelName: value,
-                      preciseLevel: isSchoolContext(current.courseCategory) && isLyceeLevel(value) ? current.preciseLevel : "",
+                      preciseLevel: isSchoolContext(current.courseCategory) ? current.preciseLevel : "",
                     }))}
                     placeholder={`Rechercher ${categoryCopy.levelLabel.toLowerCase()}`}
                     searchPlaceholder="Tapez le niveau, profil, diplôme ou concours..."
@@ -970,40 +962,32 @@ export function ReserverForm({
                     </p>
                   )}
                 </div>
-                {isLyceeSelection && (
-                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="grid gap-4 min-[720px]:grid-cols-2">
-                      <div>
-                        <Label htmlFor="schoolSystem">Système scolaire lycée *</Label>
-                        <select
-                          id="schoolSystem"
-                          value={form.schoolSystem}
-                          onChange={(e) => setForm((current) => ({ ...current, schoolSystem: e.target.value, preciseLevel: "", courseCatalogId: "" }))}
-                          className={FIELD_CLASS}
-                        >
-                          <option value="">Sélectionner le système...</option>
-                          {SCHOOL_SYSTEMS.map((system) => (
-                            <option key={system.value} value={system.value}>{system.label}</option>
-                          ))}
-                        </select>
+                {schoolContext && (
+                  <div className="min-[720px]:col-span-2 rounded-xl border border-[#DDE2EC] bg-[#F7F8FC] p-4">
+                    <div className="flex flex-col gap-4 min-[720px]:flex-row min-[720px]:items-end">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Système choisi</p>
+                        <p className="mt-1 font-semibold text-[#111827]">
+                          {form.schoolSystem === "francais" ? "Système français" : "Système ivoirien"}
+                        </p>
                       </div>
-                      <div>
-                        <Label htmlFor="preciseLevel">Classe, série ou voie *</Label>
+                      <div className="min-w-0 flex-[1.4]">
+                        <Label htmlFor="preciseLevel">Classe exacte *</Label>
                         <select
                           id="preciseLevel"
                           value={form.preciseLevel}
                           onChange={(e) => setForm((current) => ({ ...current, preciseLevel: e.target.value, courseCatalogId: "" }))}
-                          className={FIELD_CLASS}
+                          className={FIELD_CLASS_TALL}
                         >
-                          <option value="">Sélectionner...</option>
+                          <option value="">Choisir la classe...</option>
                           {preciseLevelOptions.map((level) => (
                             <option key={level} value={level}>{level}</option>
                           ))}
                         </select>
                       </div>
                     </div>
-                    <p className="mt-3 text-xs font-medium text-[#6B7280]">
-                      Le système scolaire est obligatoire au lycée pour ne pas mélanger les séries ivoiriennes, le lycée français et les programmes internationaux.
+                    <p className="mt-3 text-xs font-medium text-[#64748B]">
+                      La classe détermine automatiquement le tarif officiel de la séance.
                     </p>
                   </div>
                 )}
@@ -1032,7 +1016,7 @@ export function ReserverForm({
                     <p className="mt-1 text-sm leading-6 text-[#6B7280]">{selectedCatalogCourse.objectif}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[#111827]">
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
-                        Palier calculé {formatFCFA(pricing.unitSessionAmount)} / séance
+                        Tarif officiel {formatFCFA(pricing.unitSessionAmount)} / séance
                       </span>
                       <span className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1">
                         Total actuel {formatFCFA(pricing.totalClientPays)}
@@ -1098,7 +1082,7 @@ export function ReserverForm({
           )}
           {step === 1 && (
             <div className="space-y-5">
-              <StepIntro step="Étape 2" title="Format du cours" description="Choisissez le mode, le type de cours et le nombre de participants." />
+              <StepIntro step="Étape 2" title="Votre séance" description="Choisissez le format et le nombre de participants." />
               <div>
                 <Label>Mode de cours *</Label>
                 <div className="mt-2 grid gap-3 min-[720px]:grid-cols-2">
@@ -1220,10 +1204,10 @@ export function ReserverForm({
             </div>
           )}
 
-          {/* Step 3 — Lieu & dispo */}
-          {step === 2 && (
-            <div className="space-y-5">
-              <StepIntro step="Étape 3" title="Lieu et disponibilité" description="Choisissez une date, un lieu et un créneau de 2h compatible avec le professeur." />
+          {/* Étape 2 — Lieu & disponibilité */}
+          {step === 1 && (
+            <div className="mt-8 space-y-5 border-t border-[#E5E8F0] pt-6">
+              <StepIntro step="Étape 2" title="Date et lieu" description="Indiquez où et quand le cours doit commencer." />
 
               {form.courseFormat === "HOME" ? (
                 <div className="grid gap-4 min-[720px]:grid-cols-2">
@@ -1616,7 +1600,6 @@ export function ReserverForm({
                       requiresMaterial: false,
                       packType: p.value,
                       participantsCount,
-                      teacherPricePerSession: teacher.pricePerSession,
                       teacherCommune: canResolveTransport ? teacher.commune : undefined,
                       teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
                       teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
@@ -1669,10 +1652,10 @@ export function ReserverForm({
             </div>
           )}
 
-          {/* Step 4 — Récapitulatif */}
-          {step === 3 && (
+          {/* Étape 3 — Récapitulatif */}
+          {step === 2 && (
             <div className="space-y-5">
-              <StepIntro step="Étape 4" title="Récapitulatif" description="Relisez les informations qui seront enregistrées et transmises au service client." />
+              <StepIntro step="Étape 3" title="Vérification" description="Relisez les informations avant le paiement." />
 
               {/* Carte prof */}
               <div className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -1779,11 +1762,11 @@ export function ReserverForm({
             </div>
           )}
 
-          {/* Step 5 — Paiement */}
-          {step === 4 && (
+          {/* Étape 4 — Paiement */}
+          {step === 3 && (
             <div className="space-y-5">
               <StepIntro
-                step="Étape 5"
+                step="Étape 4"
                 title="Paiement sécurisé"
                 description="Contrôlez le dossier. Le moyen de paiement et les informations de paiement seront gérés uniquement sur PayDunya."
               />

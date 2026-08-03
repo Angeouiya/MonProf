@@ -45,7 +45,8 @@ import { TeacherCourseQuickActionsClient } from "./teacher-course-quick-actions-
 import { TeacherWarningActionsClient } from "./teacher-warning-actions-client";
 import { TeacherControlPanelClient } from "./teacher-control-panel-client";
 import { TeacherAdminMessagesClient, type TeacherAdminMessageItem } from "@/components/admin/teacher-admin-messages-client";
-import { PRICE_TIERS, parsePricingSnapshot } from "@/lib/pricing";
+import { parsePricingSnapshot } from "@/lib/pricing";
+import { OFFICIAL_ACADEMIC_PRICING, PROFESSIONAL_SESSION_PRICE } from "@/lib/service-offers";
 import { AvisClient } from "@/app/admin/avis/client";
 import { formatFCFA, formatDate, formatDateTime, timeAgo } from "@/lib/format";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
@@ -990,33 +991,35 @@ export default async function ProfesseurDetailPage({
         {/* TARIFS */}
         <TabsContent value="tarifs">
           <Card>
-            <CardHeader><CardTitle className="text-base">Tarification</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Grille officielle</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <PriceCard label="Tarif / heure" amount={teacher.pricePerHour} />
-                <PriceCard label="Tarif / séance" amount={teacher.pricePerSession} />
-                <PriceCard label="Pack 4 séances" amount={teacher.pricePack4} />
-                <PriceCard label="Pack 8 séances" amount={teacher.pricePack8} />
+              <p className="mb-4 text-sm font-medium text-muted-foreground">
+                Aucun prix individuel n'est associé au professeur. Le parcours et la classe déterminent le tarif de la séance.
+              </p>
+              <div className="space-y-4">
+                {Object.entries(OFFICIAL_ACADEMIC_PRICING).map(([system, bands]) => (
+                  <div key={system} className="rounded-lg border p-4">
+                    <p className="mb-3 text-sm font-black text-foreground">
+                      {system === "francais" ? "Système français" : "Système ivoirien"}
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {bands.map((band) => (
+                        <PriceCard key={band.key} label={band.shortLabel} amount={band.amount} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-lg border p-4">
+                  <p className="mb-3 text-sm font-black text-foreground">Formation professionnelle</p>
+                  <PriceCard label="1 séance" amount={PROFESSIONAL_SESSION_PRICE} />
+                </div>
               </div>
               <Separator className="my-4" />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <InfoBox label="Grille officielle" value="Active" />
+              <div className="grid gap-3 sm:grid-cols-3">
                 <InfoBox label="Commission plateforme" value={`${teacher.commissionRate}% du cours`} />
                 <InfoBox label="Part professeur" value={`${100 - teacher.commissionRate}% du cours + déplacement`} />
-                <InfoBox
-                  label="Paliers"
-                  value={[
-                    PRICE_TIERS.BASIC_7500.amount,
-                    PRICE_TIERS.STANDARD_10000.amount,
-                    PRICE_TIERS.RENFORCEMENT_12500.amount,
-                    PRICE_TIERS.AVANCE_15000.amount,
-                    PRICE_TIERS.PREMIUM_20000.amount,
-                  ].map((amount) => formatFCFA(amount)).join(" / ")}
-                />
+                <InfoBox label="Déplacement" value="Calculé selon le lieu" />
               </div>
-              <p className="mt-3 rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm font-medium text-blue-950/75">
-                Les montants ci-dessus du profil restent indicatifs. À la réservation, le prix client est calculé par la grille officielle selon catégorie, niveau, système scolaire, format, pack, groupe et déplacement.
-              </p>
               <Separator className="my-4" />
               <div className="flex flex-wrap gap-3">
                 <Badge variant={teacher.offersHome ? "default" : "outline"}>À domicile</Badge>

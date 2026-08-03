@@ -1,3 +1,10 @@
+import {
+  ACADEMIC_LEVEL_OPTIONS,
+  getAcademicLevelOptions,
+  isAcademicCourseCategory,
+  resolveOfficialSessionPrice,
+} from "@/lib/service-offers";
+
 export type SchoolSystem = "ivoirien" | "francais" | "international" | "autre";
 
 export type CourseCatalogItem = {
@@ -41,13 +48,8 @@ export const SCHOOL_SYSTEMS: { value: SchoolSystem; label: string }[] = [
 ];
 
 export const LYCEE_LEVEL_OPTIONS: Record<SchoolSystem, string[]> = {
-  ivoirien: [
-    "2nde A", "2nde C", "1ère A", "1ère C", "1ère D", "1ère E",
-    "Terminale A1", "Terminale A2", "Terminale C", "Terminale D", "Terminale E", "Autre série",
-  ],
-  francais: [
-    "Seconde", "Première générale", "Terminale générale", "Première technologique", "Terminale technologique",
-  ],
+  ivoirien: ACADEMIC_LEVEL_OPTIONS.ivoirien,
+  francais: ACADEMIC_LEVEL_OPTIONS.francais,
   international: ["Seconde internationale", "Première internationale", "Terminale internationale", "Programme autre"],
   autre: ["Niveau lycée autre", "Programme spécialisé", "À préciser avec le service client"],
 };
@@ -100,6 +102,15 @@ function course({
 }): CourseCatalogItem {
   const nom = niveau ? `${matiere} - ${niveau}` : matiere;
   const idParts = [categorie, sous_categorie, systeme, niveau, matiere].filter(Boolean).join("-");
+  const officialPrice = resolveOfficialSessionPrice({
+    category: categorie,
+    schoolSystem: systeme,
+    preciseLevel: niveau,
+    levelName: niveau,
+  });
+  const appliedPrice: [number, number] = officialPrice.amount > 0
+    ? [officialPrice.amount, officialPrice.amount]
+    : prix;
   return {
     id: slugify(idParts),
     nom,
@@ -108,8 +119,8 @@ function course({
     systeme_scolaire: systeme,
     niveau,
     matiere_ou_competence: matiere,
-    prix_min: prix[0],
-    prix_max: prix[1],
+    prix_min: appliedPrice[0],
+    prix_max: appliedPrice[1],
     public_cible: publicCible,
     objectif,
     actif: true,
@@ -623,6 +634,8 @@ export function isLyceeLevel(levelName?: string | null) {
 }
 
 export function getPreciseLevelOptions(system?: string | null) {
+  const academicOptions = getAcademicLevelOptions(system);
+  if (academicOptions.length > 0) return academicOptions;
   const schoolSystem = isSchoolSystem(system) ? system : "autre";
   return LYCEE_LEVEL_OPTIONS[schoolSystem];
 }
@@ -632,21 +645,23 @@ export function isSchoolSystem(value: unknown): value is SchoolSystem {
 }
 
 export function validateEducationSelection({
+  courseCategory,
   levelName,
   schoolSystem,
   preciseLevel,
 }: {
+  courseCategory?: string | null;
   levelName: string;
   schoolSystem?: string | null;
   preciseLevel?: string | null;
 }) {
-  if (!isLyceeLevel(levelName)) return { ok: true as const };
-  if (!isSchoolSystem(schoolSystem)) {
-    return { ok: false as const, error: "Pour le lycée, choisissez le système scolaire : ivoirien, français, international ou autre." };
+  if (!isAcademicCourseCategory(courseCategory)) return { ok: true as const };
+  if (schoolSystem !== "ivoirien" && schoolSystem !== "francais") {
+    return { ok: false as const, error: "Choisissez le système scolaire : ivoirien ou français." };
   }
   const options = getPreciseLevelOptions(schoolSystem);
   if (!preciseLevel || !options.includes(preciseLevel)) {
-    return { ok: false as const, error: "Pour le lycée, choisissez la classe ou série correspondant au système scolaire." };
+    return { ok: false as const, error: "Choisissez la classe exacte de l'élève pour calculer le tarif officiel." };
   }
   return { ok: true as const };
 }

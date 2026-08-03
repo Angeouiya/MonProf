@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  LayoutDashboard, Search, CalendarCheck, BookOpen, WalletCards,
-  MessageSquare, LifeBuoy, User, LogOut, Menu, X, Bell,
+  LayoutDashboard, Search, CalendarCheck, WalletCards,
+  LifeBuoy, User, LogOut, Menu, X, Bell,
   ArrowRight, Settings, WifiOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,24 +23,18 @@ type ClientNavItem = {
 };
 
 const navItems: ClientNavItem[] = [
-  { href: "/client", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
-  { href: "/client/rechercher", label: "Rechercher", icon: Search },
-  { href: "/client/reservations", label: "Réservations", icon: CalendarCheck },
-  { href: "/client/cours", label: "Cours", icon: BookOpen },
+  { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
+  { href: "/client/rechercher", label: "Trouver un professeur", icon: Search },
+  { href: "/client/reservations", label: "Mes réservations", icon: CalendarCheck },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
-  { href: "/client/notifications", label: "Notifications", icon: Bell },
-  { href: "/client/avis", label: "Avis", icon: MessageSquare },
-  { href: "/client/service-client", label: "Service client", icon: LifeBuoy },
-  { href: "/client/profil", label: "Profil", icon: User },
-  { href: "/client/parametres", label: "Paramètres", icon: Settings },
+  { href: "/client/service-client", label: "Aide", icon: LifeBuoy },
 ];
 
 const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/client/rechercher", label: "Profs", icon: Search },
-  { href: "/client/reservations", label: "Réserv.", icon: CalendarCheck },
-  { href: "/client/paiements", label: "Paiement", icon: WalletCards },
-  { href: "/client/notifications", label: "Alertes", icon: Bell },
+  { href: "/client/reservations", label: "Réservations", icon: CalendarCheck },
+  { href: "/client/service-client", label: "Aide", icon: LifeBuoy },
 ];
 
 const quickSearchItems = [
@@ -632,6 +626,24 @@ function SidebarContent({
               <p className="truncate text-xs font-medium text-[#64748B]">Compte client</p>
             </div>
           </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link
+              href="/client/profil"
+              prefetch={CLIENT_NAV_PREFETCH}
+              onClick={onNavigate}
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#E3E8F2] text-xs font-semibold text-[#111B4D]"
+            >
+              <User className="h-3.5 w-3.5" /> Profil
+            </Link>
+            <Link
+              href="/client/parametres"
+              prefetch={CLIENT_NAV_PREFETCH}
+              onClick={onNavigate}
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[#E3E8F2] text-xs font-semibold text-[#111B4D]"
+            >
+              <Settings className="h-3.5 w-3.5" /> Réglages
+            </Link>
+          </div>
           <ImportantActionConfirm
             title="Quitter l'espace client ?"
             description="Avant de vous déconnecter, vérifiez que vos paiements, confirmations de cours, demandes de report, litiges ou remboursements sont bien terminés."
@@ -681,7 +693,7 @@ function MobileBottomNav({
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileNavItems.map((item) => {
           const active = isActive(item);
           return (
