@@ -1015,7 +1015,7 @@ export function ReserverForm({
                       key={value}
                       type="button"
                       onClick={() => handleJourneyChange(value)}
-                      className={`min-h-24 rounded-2xl border p-4 text-left transition ${
+                      className={`min-h-24 rounded-lg border p-4 text-left transition ${
                         bookingJourney === value
                           ? "border-[#111B4D] bg-[#F3F6FF] text-[#111B4D] shadow-sm"
                           : "border-[#DDE3EE] bg-white text-[#111827] hover:border-[#111B4D]"
