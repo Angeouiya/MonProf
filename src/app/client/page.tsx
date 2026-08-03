@@ -305,7 +305,6 @@ export default async function ClientDashboardPage() {
               {recommended.map((t, index) => {
                 const displayName = t.professionalName || t.fullName;
                 const primarySubject = t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name;
-                const indicativePrice = t.pricePerSession || t.pricePerHour || 0;
                 return (
                   <Link
                     key={`${t.id}-${index}`}
@@ -316,9 +315,7 @@ export default async function ClientDashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
                       <p className="truncate text-xs text-[#64748B]">{primarySubject} · {t.commune}</p>
-                      <p className="mt-0.5 text-xs font-semibold text-[#111B4D]">
-                        {indicativePrice > 0 ? <><Money amount={indicativePrice} /> / séance 2h</> : "Calculé à la réservation"}
-                      </p>
+                      <p className="mt-0.5 text-xs font-semibold text-[#111B4D]">Tarif officiel calculé à la réservation</p>
                     </div>
                     <ArrowRight className="h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
                   </Link>

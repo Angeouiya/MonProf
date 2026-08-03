@@ -57,7 +57,6 @@ async function main() {
       isCompanyTraining: booking.courseCategory === "formation_entreprise",
       packType: booking.packType,
       participantsCount: booking.participantsCount,
-      teacherPricePerSession: booking.teacher.pricePerSession,
       teacherCommune: booking.teacher.commune,
       teacherQuartier: booking.teacher.quartier,
       teacherZoneNames: booking.teacher.zones.map((zone) => zone.commune.name),

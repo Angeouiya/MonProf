@@ -272,6 +272,7 @@ export async function POST(req: NextRequest) {
   const canonicalSubjectName = teacherSubject.subject.name;
   const canonicalLevelName = teacherLevel.level.name;
   const educationValidation = validateEducationSelection({
+    courseCategory,
     levelName: canonicalLevelName,
     schoolSystem,
     preciseLevel,
@@ -398,7 +399,6 @@ export async function POST(req: NextRequest) {
     requiresMaterial: false,
     packType,
     participantsCount: normalizedParticipants,
-    teacherPricePerSession: teacher.pricePerSession,
     teacherCommune: courseFormat === "HOME" ? teacher.commune : undefined,
     teacherQuartier: courseFormat === "HOME" ? teacher.quartier : undefined,
     teacherZoneNames: courseFormat === "HOME" ? teacher.zones.map((zone) => zone.commune.name) : undefined,
