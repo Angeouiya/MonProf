@@ -39,6 +39,8 @@ const mobileNavBase = [
   { href: "/tarifs", label: "Tarifs", icon: WalletCards },
 ];
 
+const publicRootPaths = new Set(["/", "/professeurs", "/tarifs", "/contact"]);
+
 type PublicSessionRole = "CLIENT" | "ADMIN" | "TEACHER";
 
 const sessionDestinations: Record<PublicSessionRole, { href: string; label: string; navLabel: string }> = {
@@ -206,7 +208,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       )}
       <div className="app-topbar-spacer" aria-hidden="true" />
 
-      {pathname !== "/" && (
+      {shouldShowPublicBack(pathname) && (
         <div className="border-b border-[#E3E8F2] bg-white">
           <div className="mx-auto flex max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
             <BackButton fallbackHref="/" />
@@ -307,6 +309,10 @@ function PublicMobileNav({
       </div>
     </nav>
   );
+}
+
+function shouldShowPublicBack(pathname: string | null) {
+  return Boolean(pathname && !publicRootPaths.has(pathname));
 }
 
 async function readPublicSessionRole(): Promise<PublicSessionRole | null> {

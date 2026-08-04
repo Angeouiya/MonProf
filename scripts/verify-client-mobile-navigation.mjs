@@ -453,6 +453,30 @@ record(
 );
 
 record(
+  "Public root tabs suppress the redundant back strip",
+  /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/contact"\]\)/.test(publicLayout)
+    && /shouldShowPublicBack\(pathname\)/.test(publicLayout)
+    && /!publicRootPaths\.has\(pathname\)/.test(publicLayout),
+);
+
+record(
+  "Public teacher search puts profiles directly after one compact mobile command",
+  /data-public-teacher-search-controls/.test(publicTeachersPage)
+    && /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage)
+    && /placeholder="Matière, métier ou concours"/.test(publicTeachersPage)
+    && /aria-label="Rechercher"/.test(publicTeachersPage)
+    && !/mt-4 flex flex-col gap-2/.test(publicTeachersPage),
+);
+
+record(
+  "Public teacher search clear action removes the text query",
+  /function buildPaginationUrl\(p: number, includeQuery = true\)/.test(publicTeachersPage)
+    && /if \(includeQuery && q\) params\.set\("q", q\)/.test(publicTeachersPage)
+    && /href=\{buildPaginationUrl\(1, false\)\}/.test(publicTeachersPage)
+    && /aria-label="Effacer la recherche"/.test(publicTeachersPage),
+);
+
+record(
   "Public teacher empty state keeps one primary action",
   /Professeurs en cours de publication/.test(publicTeachersPage)
     && /Transmettre mon besoin/.test(publicTeachersPage)

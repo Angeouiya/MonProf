@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Filter,
   Home as HomeIcon,
+  Search,
   Video,
   X,
   SearchX,
@@ -174,10 +175,10 @@ export default async function TeachersPage({
   }));
 
   // Build a query string without `page` for pagination links
-  function buildPaginationUrl(p: number): string {
+  function buildPaginationUrl(p: number, includeQuery = true): string {
     const params = new URLSearchParams();
     if (journey) params.set("journey", journey);
-    if (q) params.set("q", q);
+    if (includeQuery && q) params.set("q", q);
     if (subject) params.set("subject", subject);
     if (level) params.set("level", level);
     if (commune) params.set("commune", commune);
@@ -205,26 +206,26 @@ export default async function TeachersPage({
     <PublicLayout>
       {/* HEADER */}
       <section className="relative overflow-hidden border-b border-[#E6EAF3] bg-white">
-        <div className="relative mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
+        <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
           <nav className="mb-4 hidden min-h-9 flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B] sm:flex">
             <Link href="/" className="inline-flex min-h-10 items-center px-1 hover:text-[#111B4D]">Accueil</Link>
             <span>/</span>
             <span className="inline-flex min-h-10 items-center text-[#111827]">Professeurs</span>
           </nav>
-          <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[1fr_360px] lg:items-end lg:gap-4">
             <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:text-xs">
+              <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:mb-2 sm:text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Profils vérifiés
               </div>
-              <h1 className="max-w-2xl text-[1.85rem] font-semibold leading-[1.06] text-[#111827] text-balance sm:text-4xl lg:text-[2.65rem]">
+              <h1 className="max-w-2xl text-2xl font-semibold leading-tight text-[#111827] text-balance sm:text-4xl lg:text-[2.65rem] lg:leading-[1.06]">
                 Choisissez le bon professeur.
               </h1>
-              <p className="mt-2 max-w-xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:text-base">
+              <p className="mt-2 hidden max-w-xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:block sm:text-base">
                 Scolaire, université, concours, métiers et formations adultes.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:rounded-lg lg:border lg:border-[#E3E8F2] lg:bg-white lg:p-4">
+            <div className="hidden grid-cols-2 gap-2 lg:grid lg:grid-cols-1 lg:rounded-lg lg:border lg:border-[#E3E8F2] lg:bg-white lg:p-4">
               <div className="inline-flex min-h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-2 lg:flex lg:border-0 lg:px-0 lg:py-0">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white lg:h-10 lg:w-10"><BadgeCheck className="h-4 w-4 lg:h-5 lg:w-5" /></span>
                 <div className="min-w-0">
@@ -243,13 +244,14 @@ export default async function TeachersPage({
           </div>
 
           {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-4 flex flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 sm:mt-6 min-[640px]:flex-row">
+          <form method="GET" action="/professeurs" className="mt-3 flex gap-2 rounded-lg border border-[#E3E8F2] bg-white p-1.5 sm:mt-6 sm:p-2">
             <input
               type="search"
               name="q"
               defaultValue={q}
-              placeholder="Matière, concours, adulte, art, technique, spécialité..."
-              className="min-h-12 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
+              aria-label="Rechercher une matière, un métier ou un concours"
+              placeholder="Matière, métier ou concours"
+              className="min-h-12 min-w-0 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-3 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7] sm:px-4"
               style={{ minHeight: 48 }}
             />
             {/* Préserve les autres filtres */}
@@ -261,15 +263,18 @@ export default async function TeachersPage({
             {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
             <button
               type="submit"
-              className="inline-flex h-12 items-center justify-center rounded-lg bg-[#111B4D] px-5 text-sm font-semibold text-white transition hover:bg-[#182260]"
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto sm:px-5"
+              aria-label="Rechercher"
             >
-              Rechercher
+              <Search className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Rechercher</span>
             </button>
             {q && (
               <Link
-                href={buildPaginationUrl(1)}
-                className="inline-flex h-12 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-3 text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
+                href={buildPaginationUrl(1, false)}
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#D6DEED] bg-white text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
                 title="Réinitialiser la recherche"
+                aria-label="Effacer la recherche"
               >
                 <X className="h-4 w-4" />
               </Link>
@@ -281,44 +286,32 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
-          {journey && (
-            <div className="mb-4 flex min-h-14 items-center justify-between gap-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Parcours choisi</p>
-                <p className="truncate text-sm font-semibold text-[#111B4D]">{JOURNEY_LABELS[journey]}</p>
-              </div>
-              <Link href="/#parcours" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
-                Changer
-              </Link>
-            </div>
-          )}
           {showTeacherFilters && (
-            <div className="mb-3 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 lg:hidden">
-              <p className="min-w-0 text-sm font-medium text-[#64748B]">
-                <span className="font-semibold text-[#111827]">{total}</span>{" "}
-                professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
-              </p>
-              {activeFiltersCount > 0 && (
-                <Link href={resetFiltersHref} className="shrink-0 text-xs font-semibold text-[#111B4D]">
-                  Effacer ({activeFiltersCount})
-                </Link>
-              )}
-            </div>
-          )}
-          {showTeacherFilters && (
-            <details className="mb-4 rounded-lg border border-[#E3E8F2] bg-white p-3 lg:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-sm font-semibold text-[#111827]">
-                <span className="inline-flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-[#111B4D]" />
-                  Filtres
-                </span>
-                {activeFiltersCount > 0 && (
-                  <span className="rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs text-[#111B4D]">
-                    {activeFiltersCount}
+            <details className="mb-3 rounded-lg border border-[#DDE6F7] bg-white lg:hidden" data-public-teacher-search-controls>
+              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm marker:hidden">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-[#111827]">
+                    {journey ? JOURNEY_LABELS[journey] : `${total} professeur${total > 1 ? "s" : ""}`}
                   </span>
-                )}
+                  {journey && (
+                    <span className="mt-0.5 block text-xs font-medium text-[#64748B]">
+                      {total} professeur{total > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </span>
+                <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-[#F1F4FF] px-3 font-semibold text-[#111B4D]">
+                  <Filter className="h-4 w-4" />
+                  Filtres
+                  {activeFiltersCount > 0 && <span className="tabular-nums">· {activeFiltersCount}</span>}
+                </span>
               </summary>
-              <div className="pt-3">
+              <div className="border-t border-[#E3E8F2] p-3">
+                {journey && (
+                  <div className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#F8FAFD] px-3 text-xs font-semibold text-[#64748B]">
+                    <span>Parcours actuel</span>
+                    <Link href="/#parcours" className="text-[#111B4D] underline-offset-4 hover:underline">Changer</Link>
+                  </div>
+                )}
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
                   journey={journey}
@@ -347,8 +340,19 @@ export default async function TeachersPage({
                   communes={communes}
                   compact
                 />
+                {activeFiltersCount > 0 && (
+                  <Link href={resetFiltersHref} className="mt-3 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[#111B4D]">
+                    Effacer les filtres ({activeFiltersCount})
+                  </Link>
+                )}
               </div>
             </details>
+          )}
+          {!showTeacherFilters && journey && (
+            <div className="mb-4 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-3">
+              <p className="truncate text-sm font-semibold text-[#111B4D]">{JOURNEY_LABELS[journey]}</p>
+              <Link href="/#parcours" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-[#111B4D]">Changer</Link>
+            </div>
           )}
           <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
             {/* SIDEBAR FILTRES */}
@@ -388,15 +392,22 @@ export default async function TeachersPage({
             <div>
               {showTeacherFilters && (
                 <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
-                  <p className="text-sm font-medium text-[#64748B]">
-                    <span className="font-semibold text-[#111827]">{total}</span>{" "}
-                    professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
-                    {subject || level || commune || format ? (
-                      <span className="ml-1 text-[#64748B]">
-                        · filtres actifs
-                      </span>
-                    ) : null}
-                  </p>
+                  <div>
+                    {journey && (
+                      <p className="mb-1 text-xs font-semibold text-[#111B4D]">
+                        {JOURNEY_LABELS[journey]}
+                        <span className="mx-2 text-[#CBD5E1]">·</span>
+                        <Link href="/#parcours" className="underline-offset-4 hover:underline">Changer</Link>
+                      </p>
+                    )}
+                    <p className="text-sm font-medium text-[#64748B]">
+                      <span className="font-semibold text-[#111827]">{total}</span>{" "}
+                      professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}
+                      {subject || level || commune || format ? (
+                        <span className="ml-1 text-[#64748B]">· filtres actifs</span>
+                      ) : null}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-[#111B4D]">
                     {format === "HOME" && (
                       <InlineFilter icon={<HomeIcon className="h-3 w-3" />} label="Domicile" />
@@ -415,7 +426,7 @@ export default async function TeachersPage({
                   className={hasPublishedTeachers ? undefined : "px-5 py-6 sm:min-h-[18rem] sm:px-8 sm:py-10"}
                   description={
                     hasPublishedTeachers
-                      ? "Essayez d'élargir vos filtres (niveau, commune, prix) ou réinitialisez la recherche."
+                      ? "Essayez d'élargir la matière, le niveau, la commune ou le format, puis relancez la recherche."
                       : "Les profils avec vraie photo et disponibilités seront publiés après vérification par le service client."
                   }
                   action={
