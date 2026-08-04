@@ -18,14 +18,19 @@ const checks = [
     home.includes('href: "/professeurs?journey=ivoirien"')
       && home.includes('href: "/professeurs?journey=francais"')
       && home.includes('href: "/professeurs?journey=professionnel"')
-      && home.includes('href="#parcours"'),
+      && home.includes('id="parcours"')
+      && !home.includes('Réserver une séance'),
   ],
   [
     "Homepage exposes compact mobile journey choices before secondary content",
-    home.includes('py-9 text-center sm:px-6 sm:py-16')
-      && home.includes('Prix et trajet connus · Paiement sécurisé')
+    home.includes('py-6 text-center sm:px-6 sm:py-16')
+      && home.includes('Choisissez un parcours. On calcule le reste.')
+      && home.includes('Prix clair · Paiement sécurisé')
       && home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
-      && home.includes('md:hidden">{price}</p>'),
+      && home.includes('md:hidden">{price}</p>')
+      && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')
+      && home.includes('hidden bg-white sm:block')
+      && home.includes('hidden bg-[#111B4D] text-white sm:block'),
   ],
   [
     "Public navigation resolves client, admin and teacher sessions without blocking first render",
