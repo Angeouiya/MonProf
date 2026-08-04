@@ -49,7 +49,7 @@ const checks = [
     "Teacher detail keeps the journey in back and booking destinations",
     teacherDetail.includes('const teachersHref = journey ?')
       && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}${journey ? `&journey=${journey}` : ""}`')
-      && teacherDetail.includes('href={teachersHref}')
+      && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref}>')
       && teacherDetail.includes('href={reserveHref}'),
   ],
   [

@@ -49,7 +49,13 @@ const sessionDestinations: Record<PublicSessionRole, { href: string; label: stri
   TEACHER: { href: "/professeur", label: "Mon espace", navLabel: "Espace" },
 };
 
-export function PublicLayout({ children }: { children: React.ReactNode }) {
+export function PublicLayout({
+  children,
+  backFallbackHref = "/",
+}: {
+  children: React.ReactNode;
+  backFallbackHref?: string;
+}) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
@@ -211,7 +217,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       {shouldShowPublicBack(pathname) && (
         <div className="border-b border-[#E3E8F2] bg-white">
           <div className="mx-auto flex max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-            <BackButton fallbackHref="/" />
+            <BackButton fallbackHref={backFallbackHref} />
           </div>
         </div>
       )}

@@ -1,29 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   Award,
   BadgeCheck,
   BookOpen,
   BriefcaseBusiness,
   Calendar,
   CheckCircle2,
-  Clock,
+  ChevronDown,
   GraduationCap,
   Home as HomeIcon,
-  Luggage,
   MapPin,
   ShieldCheck,
   Video,
   Wallet,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
-import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { db } from "@/lib/db";
-import { formatFCFA, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
@@ -42,9 +39,9 @@ export default async function TeacherDetailPage({
   const journey = requestedJourney === "ivoirien" || requestedJourney === "francais" || requestedJourney === "professionnel"
     ? requestedJourney
     : "";
-  const session = await getServerSession(authOptions);
-
-  const teacher = await db.teacher.findFirst({
+  const [session, teacher] = await Promise.all([
+    getServerSession(authOptions),
+    db.teacher.findFirst({
     where: { id, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
     include: {
       subjects: { include: { subject: true } },
@@ -58,7 +55,8 @@ export default async function TeacherDetailPage({
       },
       _count: { select: { reviews: true, bookings: true } },
     },
-  });
+    }),
+  ]);
 
   if (!teacher) {
     notFound();
@@ -71,12 +69,11 @@ export default async function TeacherDetailPage({
     "—";
 
   const availability = parseAvailability(teacher.availability);
-
-  // Compute numeric review distribution.
   const ratingBuckets = [5, 4, 3, 2, 1].map((rating) => ({
     rating,
-    count: teacher.reviews.filter((r) => r.rating === rating).length,
+    count: teacher.reviews.filter((review) => review.rating === rating).length,
   }));
+
   const totalReviews = teacher.reviews.length || teacher.ratingCount;
   const displayRating = totalReviews > 0
     ? teacher.rating
@@ -98,6 +95,11 @@ export default async function TeacherDetailPage({
   const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
   const sessionPriceLabel = "Calculé selon le parcours";
+  const formatLabel = teacher.offersHome && teacher.offersOnline
+    ? "Domicile ou en ligne"
+    : teacher.offersHome
+      ? "Cours à domicile"
+      : "Cours en ligne";
 
   const teachersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
   const bookingDestination = `/client/reserver?teacherId=${teacher.id}${journey ? `&journey=${journey}` : ""}`;
@@ -106,178 +108,93 @@ export default async function TeacherDetailPage({
     : `/connexion?from=${encodeURIComponent(bookingDestination)}`;
 
   return (
-    <PublicLayout>
-      {/* Breadcrumb */}
-      <div className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto hidden max-w-7xl px-4 py-3 sm:block sm:px-6 lg:px-8">
-          <nav className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#64748B]">
-            <Link href="/" className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Accueil</Link>
-            <span>/</span>
-            <Link href={teachersHref} className="inline-flex min-h-10 items-center rounded-lg px-1 hover:text-[#111B4D]">Professeurs</Link>
-            <span>/</span>
-            <span className="text-[#111827]">{displayName}</span>
-          </nav>
-        </div>
-      </div>
-
-      {/* HEADER */}
+    <PublicLayout backFallbackHref={teachersHref}>
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
-        <div className="relative mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-12">
-          <Link
-            href={teachersHref}
-            className="mb-6 hidden min-h-11 items-center gap-1 rounded-lg border border-[#E3E8F2] bg-white px-4 py-2 text-sm font-semibold text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:inline-flex"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Retour à la liste
-          </Link>
-
-          <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6">
-          <div className="flex flex-col gap-6 min-[640px]:flex-row min-[640px]:items-start">
-            <ProfessorImage
-              photoUrl={teacher.photoUrl}
-              name={displayName}
-              size={152}
-              shape="rounded"
-              priority
-              verified={teacher.badgeVerified}
-            />
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-col gap-3">
-                <h1 className="text-3xl font-semibold text-[#111827] sm:text-4xl">
-                  {displayName}
-                </h1>
-                <ProfessorTrustBadges
+        <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
+            <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-5" data-public-teacher-hero>
+              <div className="grid grid-cols-[120px_minmax(0,1fr)] items-start gap-3 sm:gap-5">
+                <ProfessorImage
+                  photoUrl={teacher.photoUrl}
+                  name={displayName}
+                  size={112}
+                  shape="rounded"
+                  priority
                   verified={teacher.badgeVerified}
-                  recommended={teacher.badgeRecommended}
-                  premium={teacher.badgePremium}
-                  popular={teacher.badgePopular}
-                  isNew={teacher.badgeNew}
-                  size="sm"
-                  maxSecondary={1}
                 />
-              </div>
-              <p className="mt-2 text-sm font-semibold text-[#111B4D] sm:text-base">
-                {teacher.jobTitle}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-[#64748B]">
-                <span className="flex items-center gap-1">
-                  <BookOpen className="h-4 w-4" />
-                  {primarySubject}
-                </span>
-                <span className="flex items-center gap-1">
-                  <GraduationCap className="h-4 w-4" />
-                  {teacher.experienceYears} ans d'expérience
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {teacher.commune ?? "Abidjan"}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                <span className="font-semibold text-[#111B4D]">
-                  {displayRatingLabel} {displayRating.toFixed(1)}/5
-                </span>
-                <span className="hidden text-[#CBD5E1] sm:inline">·</span>
-                <span className="text-sm font-medium text-[#64748B]">
-                  {teacher._count.bookings} réservations effectuées
-                </span>
-                <span className="hidden text-[#CBD5E1] sm:inline">·</span>
-                <span className="font-semibold text-[#111827]">
-                  {sessionPriceLabel}
-                </span>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#111B4D]">
-                {teacher.offersHome && (
-                  <span className="inline-flex items-center gap-1 font-semibold">
-                    <HomeIcon className="h-3 w-3" /> Cours à domicile
-                  </span>
-                )}
-                {teacher.offersOnline && (
-                  <span className="inline-flex items-center gap-1 font-semibold">
-                    <Video className="h-3 w-3" /> Cours en ligne
-                  </span>
-                )}
-              </div>
-              <div className="mt-5 grid gap-2 sm:hidden">
-                <Link
-                  href={reserveHref}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Réserver ce professeur
-                </Link>
-                <a
-                  href="#disponibilites"
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#C8D2E3] bg-white px-4 text-sm font-semibold text-[#111B4D]"
-                >
-                  Voir les créneaux disponibles
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 grid gap-3 border-t border-[#E3E8F2] pt-5 min-[760px]:grid-cols-3">
-            <MiniStat label="Cours attribués" value={teacher._count.bookings} />
-            <MiniStat label="Avis vérifiés" value={totalReviews} />
-            <MiniStat label="Tarif officiel" value={sessionPriceLabel} />
-          </div>
-          </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-            <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
-              <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-end min-[640px]:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Dossier de décision</p>
-                  <h2 className="mt-1 text-xl font-semibold text-[#111827]">
-                    Réserver {displayName} sans zone d'ombre.
-                  </h2>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-semibold leading-tight text-[#111827] sm:text-4xl">
+                    {displayName}
+                  </h1>
+                  <div className="mt-2">
+                    <ProfessorTrustBadges
+                      verified={teacher.badgeVerified}
+                      recommended={teacher.badgeRecommended}
+                      premium={teacher.badgePremium}
+                      popular={teacher.badgePopular}
+                      isNew={teacher.badgeNew}
+                      size="sm"
+                      maxSecondary={1}
+                    />
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[#111B4D] sm:text-base">
+                    {teacher.jobTitle}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#64748B] sm:text-sm">
+                    <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{primarySubject}</span>
+                    <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{teacher.commune ?? "Abidjan"}</span>
+                    {displayRating > 0 && <span className="font-semibold text-[#111B4D]">{displayRatingLabel} {displayRating.toFixed(1)}/5</span>}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-[#111B4D] sm:text-xs">
+                    {teacher.offersHome && <span className="inline-flex items-center gap-1"><HomeIcon className="h-3 w-3" />Domicile</span>}
+                    {teacher.offersOnline && <span className="inline-flex items-center gap-1"><Video className="h-3 w-3" />En ligne</span>}
+                  </div>
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-                  Professeur suivi par le service client
-                </span>
               </div>
-              <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
-                <DecisionPoint
-                  icon={<BookOpen className="h-4 w-4" />}
-                  label="Matières"
-                  value={subjectsPreview || primarySubject}
-                />
-                <DecisionPoint
-                  icon={<GraduationCap className="h-4 w-4" />}
-                  label="Niveaux"
-                  value={levelsPreview || "À confirmer"}
-                />
-                <DecisionPoint
-                  icon={<Calendar className="h-4 w-4" />}
-                  label="Disponibilités"
-                  value={availabilitySummary}
-                />
-                <DecisionPoint
-                  icon={<MapPin className="h-4 w-4" />}
-                  label="Zone"
-                  value={zonesPreview || teacher.commune || "Abidjan"}
-                />
+
+              <div className="mt-4 grid grid-cols-3 divide-x divide-[#E3E8F2] border-t border-[#E3E8F2] pt-3">
+                <HeroFact icon={<CheckCircle2 className="h-4 w-4" />} label="Contrôle" value="Vérifié" />
+                <HeroFact icon={<GraduationCap className="h-4 w-4" />} label="Expérience" value={`${teacher.experienceYears} ans`} />
+                <HeroFact icon={<Calendar className="h-4 w-4" />} label="Créneaux" value={availableDayCount > 0 ? `${availableDayCount} jours` : "À confirmer"} />
               </div>
-              <p className="mt-4 text-sm font-medium leading-6 text-[#64748B]">
-                Le client choisit une date, un créneau de 2h et son besoin. Le prix final est affiché avant paiement, puis la réservation est rattachée à ce professeur dans le suivi client et service client.
-              </p>
             </div>
 
-            <div className="hidden rounded-lg border border-[#111B4D] bg-white p-4 sm:p-5 lg:block">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Action recommandée</p>
-              <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Démarrer la réservation guidée</h2>
-              <div className="mt-3 space-y-2 text-sm text-[#111B4D]">
-                <TrustLine icon={<ShieldCheck className="h-4 w-4" />} text="Paiement sécurisé, fonds bloqués jusqu'à confirmation." />
-                <TrustLine icon={<Wallet className="h-4 w-4" />} text="Montant total affiché avant paiement, sans information interne." />
-                <TrustLine icon={<Clock className="h-4 w-4" />} text="Annulation encadrée par le service client." />
+            <aside className="hidden rounded-lg border border-[#111B4D] bg-white p-5 lg:flex lg:flex-col" data-public-teacher-primary-action>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Votre réservation</p>
+              <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Trois choix, puis le prix exact.</h2>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
+                Niveau, lieu et créneau. Le moteur applique ensuite le tarif officiel et le déplacement.
+              </p>
+              <div className="mt-4 space-y-3 text-sm font-semibold text-[#111827]">
+                <span className="flex items-center gap-2"><HomeIcon className="h-4 w-4 text-[#111B4D]" />{formatLabel}</span>
+                <span className="flex items-center gap-2"><Calendar className="h-4 w-4 text-[#111B4D]" />{availabilitySummary}</span>
+                <span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-[#111B4D]" />Total affiché avant paiement</span>
+                <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#111B4D]" />Fonds protégés jusqu'au cours</span>
               </div>
               <Link
                 href={reserveHref}
-                className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                className="mt-auto inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
                 <Calendar className="h-4 w-4" />
-                Réserver ce professeur
+                Réserver maintenant
               </Link>
+            </aside>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-[#DDE6F7] bg-white p-3 sm:p-4" data-public-teacher-decision-summary>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">L'essentiel pour décider</p>
+                <h2 className="mt-0.5 text-base font-semibold text-[#111827] sm:text-lg">Ce que vous pouvez réserver</h2>
+              </div>
+              <span className="hidden text-xs font-semibold text-[#111B4D] sm:inline">Suivi par le service client</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+              <DecisionPoint icon={<BookOpen className="h-4 w-4" />} label="Matières" value={subjectsPreview || primarySubject} />
+              <DecisionPoint icon={<GraduationCap className="h-4 w-4" />} label="Niveaux" value={levelsPreview || "À confirmer"} />
+              <DecisionPoint icon={<Calendar className="h-4 w-4" />} label="Disponibilités" value={availabilitySummary} />
+              <DecisionPoint icon={<MapPin className="h-4 w-4" />} label="Zone" value={zonesPreview || teacher.commune || "Abidjan"} />
             </div>
           </div>
         </div>
@@ -285,10 +202,10 @@ export default async function TeacherDetailPage({
 
       {/* CONTENU */}
       <section className="bg-white pb-24 sm:pb-0">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+          <div className="min-w-0">
             {/* COLONNE PRINCIPALE */}
-            <div className="min-w-0 space-y-6">
+            <div className="min-w-0 space-y-3 sm:space-y-4">
               {/* À propos */}
               <Card>
                 <CardTitle icon={<BookOpen className="h-4 w-4" />}>
@@ -300,11 +217,12 @@ export default async function TeacherDetailPage({
               </Card>
 
               {/* Expérience & diplômes */}
-              <Card>
-                <CardTitle icon={<Award className="h-4 w-4" />}>
-                  Expérience & diplômes
-                </CardTitle>
-                <div className="mt-3 grid gap-4 min-[680px]:grid-cols-2">
+              <DisclosureCard
+                icon={<Award className="h-4 w-4" />}
+                title="Expérience et diplômes"
+                summary={`${teacher.experienceYears} ans d'expérience · ${teacher.diploma || "Diplôme à confirmer"}`}
+              >
+                <div className="grid gap-4 min-[680px]:grid-cols-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                       Années d'expérience
@@ -338,14 +256,15 @@ export default async function TeacherDetailPage({
                     </p>
                   </div>
                 </div>
-              </Card>
+              </DisclosureCard>
 
               {/* Mini CV professionnel */}
-              <Card>
-                <CardTitle icon={<BriefcaseBusiness className="h-4 w-4" />}>
-                  Mini CV professionnel
-                </CardTitle>
-                <div className="mt-4">
+              <DisclosureCard
+                icon={<BriefcaseBusiness className="h-4 w-4" />}
+                title="Parcours professionnel"
+                summary={teacher.careerSummary || "Compétences et expériences vérifiées"}
+              >
+                <div>
                   <TeacherMiniCv
                     careerSummary={teacher.careerSummary}
                     skills={teacher.skills}
@@ -355,14 +274,15 @@ export default async function TeacherDetailPage({
                     learnersCoached={teacher.learnersCoached}
                   />
                 </div>
-              </Card>
+              </DisclosureCard>
 
               {/* Matières & Niveaux */}
-              <Card>
-                <CardTitle icon={<GraduationCap className="h-4 w-4" />}>
-                  Matières enseignées
-                </CardTitle>
-                <div className="mt-3 flex flex-wrap gap-2">
+              <DisclosureCard
+                icon={<GraduationCap className="h-4 w-4" />}
+                title="Matières et niveaux"
+                summary={`${teacher.subjects.length} matière${teacher.subjects.length > 1 ? "s" : ""} · ${teacher.levels.length} niveau${teacher.levels.length > 1 ? "x" : ""}`}
+              >
+                <div className="flex flex-wrap gap-2">
                   {teacher.subjects.map((s) => (
                     <span
                       key={s.subject.id}
@@ -392,14 +312,15 @@ export default async function TeacherDetailPage({
                     </span>
                   ))}
                 </div>
-              </Card>
+              </DisclosureCard>
 
               {/* Zones d'intervention */}
-              <Card>
-                <CardTitle icon={<MapPin className="h-4 w-4" />}>
-                  Zones d'intervention
-                </CardTitle>
-                <p className="mt-2 text-xs font-medium leading-5 text-[#64748B]">
+              <DisclosureCard
+                icon={<MapPin className="h-4 w-4" />}
+                title="Zones d'intervention"
+                summary={teacher.offersHome ? (zonesPreview || teacher.commune || "Abidjan") : "Cours en ligne uniquement"}
+              >
+                <p className="text-xs font-medium leading-5 text-[#64748B]">
                   {teacher.offersHome
                     ? "Le professeur se déplace dans les communes suivantes pour les cours à domicile."
                     : "Cours en ligne uniquement — pas de déplacement à domicile."}
@@ -426,7 +347,7 @@ export default async function TeacherDetailPage({
                     Aucune zone enregistrée.
                   </p>
                 )}
-              </Card>
+              </DisclosureCard>
 
               {/* Disponibilités */}
               <Card id="disponibilites">
@@ -434,7 +355,14 @@ export default async function TeacherDetailPage({
                   Disponibilités
                 </CardTitle>
                 {availability ? (
-                  <div className="mt-4">
+                  <>
+                    <p className="mt-2 text-sm font-semibold text-[#111B4D]">{availabilitySummary}</p>
+                    <details className="mt-3 rounded-lg border border-[#DDE6F7] bg-white" data-public-teacher-availability>
+                      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-[#111B4D] marker:hidden">
+                        Voir le planning détaillé
+                        <ChevronDown className="h-4 w-4 shrink-0" />
+                      </summary>
+                      <div className="border-t border-[#E3E8F2] p-3 sm:p-4">
                     <div className="space-y-3 xl:hidden">
                       {WEEK_DAYS.map((day) => {
                         const availableSlots = TWO_HOUR_SLOTS.filter((slot) => availability?.[day.key]?.[slot.key]);
@@ -511,7 +439,9 @@ export default async function TeacherDetailPage({
                     <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
                       Les créneaux affichés sont des séances de 2 heures. La réservation est rattachée directement à ce professeur.
                     </p>
-                  </div>
+                      </div>
+                    </details>
+                  </>
                 ) : (
                   <p className="mt-3 text-sm font-medium text-[#64748B]">
                     Disponibilités à confirmer lors de la réservation.
@@ -532,20 +462,22 @@ export default async function TeacherDetailPage({
                     highlight
                   />
                   <PriceTile
-                    label="Packs"
-                    value="4, 8 ou 12"
-                    sub="Séances de 2h"
+                    label="Déplacement"
+                    value="0 même quartier"
+                    sub="Sinon calculé selon le trajet"
                   />
                   <PriceTile
-                    label="Déplacement"
-                    value="Séparé"
-                    sub="À domicile uniquement"
+                    label="Paiement"
+                    value="Service 3 %"
+                    sub="Frais opérateur séparés"
                   />
                 </div>
                 <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-                  Le prix final est confirmé pendant la réservation selon le niveau, le format, le nombre de participants et les frais de déplacement éventuels.
-                  Le client voit toujours le total avant paiement.
+                  Choisissez 1, 4, 8 ou 12 séances de 2h. Le moteur calcule le cours officiel, le déplacement éventuel et chaque frais séparément avant le paiement.
                 </p>
+                <Link href="/tarifs" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                  Voir la grille officielle
+                </Link>
               </Card>
 
               {/* Avis clients */}
@@ -555,7 +487,7 @@ export default async function TeacherDetailPage({
                 </CardTitle>
 
                 {/* Répartition des notes */}
-                {displayRating > 0 && (
+                {teacher.reviews.length > 0 && displayRating > 0 && (
                   <div className="mt-4 grid gap-4 min-[760px]:grid-cols-[200px_1fr]">
                     <div className="flex flex-col items-center justify-center rounded-lg border border-[#E3E8F2] bg-white p-4 text-center">
                       <div className="text-4xl font-semibold text-[#111827]">
@@ -627,94 +559,12 @@ export default async function TeacherDetailPage({
                   </ul>
                 ) : (
                   <p className="mt-4 rounded-lg border border-[#E3E8F2] bg-white px-4 py-3 text-sm font-medium leading-6 text-[#64748B]">
-                    Ce professeur n'a pas encore d'avis publié. Soyez le
-                    premier à réserver et à laisser un avis après votre cours.
+                    Aucun avis client publié pour le moment. {displayRating > 0 ? `${displayRatingLabel} : ${displayRating.toFixed(1)}/5.` : ""}
                   </p>
                 )}
               </Card>
             </div>
 
-            {/* COLONNE LATERALE — RÉCAP + RÉSERVER */}
-            <aside className="min-w-0 lg:sticky lg:top-20 lg:h-fit">
-              <div className="rounded-lg border border-[#E3E8F2] bg-white p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Tarif officiel</p>
-                <div className="mt-1">
-                  <span className="text-2xl font-semibold text-[#111827]">
-                    {sessionPriceLabel}
-                  </span>
-                  <p className="mt-1 text-sm font-medium text-[#64748B]">Séance de 2h, total confirmé avant paiement.</p>
-                </div>
-
-                <div className="mt-4 space-y-2 border-t border-[#E3E8F2] pt-4 text-sm">
-                  <Row label="Packs" value="1, 4, 8 ou 12 séances" />
-                  <Row label="Devis" value="Cas spéciaux" />
-                  <Row
-                    label="Format"
-                    value={
-                      <span className="flex items-center justify-end gap-1.5">
-                        {teacher.offersHome && (
-                          <span className="inline-flex items-center gap-1 text-xs">
-                            <HomeIcon className="h-3 w-3" /> Domicile
-                          </span>
-                        )}
-                        {teacher.offersOnline && (
-                          <span className="inline-flex items-center gap-1 text-xs">
-                            <Video className="h-3 w-3" /> En ligne
-                          </span>
-                        )}
-                      </span>
-                    }
-                  />
-                  <Row label="Commune" value={teacher.commune ?? "Abidjan"} />
-                </div>
-
-                <Link
-                  href={reserveHref}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#1E2A78]"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Réserver ce professeur
-                </Link>
-
-                {!session?.user && (
-                  <p className="mt-2 text-center text-xs font-medium leading-5 text-[#64748B]">
-                    Vous devrez créer un compte ou vous connecter pour finaliser
-                    la réservation.
-                  </p>
-                )}
-
-                <div className="mt-5 space-y-2.5 border-t border-[#E3E8F2] pt-4">
-                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    <span>
-                      <strong className="text-[#111827]">Paiement sécurisé.</strong>{" "}
-                      Fonds bloqués jusqu'à confirmation du cours.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
-                    <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    <span>
-                      <strong className="text-[#111827]">Professeur vérifié</strong> par
-                      notre équipe (identité, diplômes).
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
-                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    <span>
-                      <strong className="text-[#111827]">Annulation</strong> possible
-                      jusqu'à 24h avant le cours.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2 text-xs font-medium leading-5 text-[#64748B]">
-                    <Luggage className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-                    <span>
-                      <strong className="text-[#111827]">Litige</strong> traité par notre
-                      service client sous 48h.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </aside>
           </div>
         </div>
       </section>
@@ -744,6 +594,34 @@ function Card({ children, id }: { children: React.ReactNode; id?: string }) {
   );
 }
 
+function DisclosureCard({
+  children,
+  icon,
+  title,
+  summary,
+}: {
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  title: string;
+  summary: string;
+}) {
+  return (
+    <details className="rounded-lg border border-[#E3E8F2] bg-white" data-public-teacher-disclosure>
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden sm:px-5">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F4FF] text-[#111B4D]">{icon}</span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-[#111827] sm:text-base">{title}</span>
+            <span className="mt-0.5 block truncate text-xs font-medium text-[#64748B] sm:text-sm">{summary}</span>
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-[#111B4D]" />
+      </summary>
+      <div className="border-t border-[#E3E8F2] p-4 sm:p-5">{children}</div>
+    </details>
+  );
+}
+
 function CardTitle({
   children,
   icon,
@@ -759,11 +637,20 @@ function CardTitle({
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
+function HeroFact({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-[#E3E8F2] bg-white px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
+    <div className="min-w-0 px-2 text-center sm:px-3">
+      <span className="mx-auto flex h-6 items-center justify-center text-[#111B4D]">{icon}</span>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-semibold text-[#111827] sm:text-sm">{value}</p>
     </div>
   );
 }
@@ -784,24 +671,6 @@ function DecisionPoint({
         {label}
       </div>
       <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{value}</p>
-    </div>
-  );
-}
-
-function TrustLine({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
-      <span className="mt-0.5 shrink-0 text-[#111B4D]">{icon}</span>
-      <span className="leading-5">{text}</span>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="font-medium text-[#64748B]">{label}</span>
-      <span className="font-semibold text-[#111827]">{value}</span>
     </div>
   );
 }

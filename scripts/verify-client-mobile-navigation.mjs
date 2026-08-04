@@ -8,6 +8,7 @@ const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layo
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
+const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
@@ -53,6 +54,7 @@ const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\
 const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
+const publicTeacherDetail = read(publicTeacherDetailPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
@@ -474,6 +476,39 @@ record(
     && /if \(includeQuery && q\) params\.set\("q", q\)/.test(publicTeachersPage)
     && /href=\{buildPaginationUrl\(1, false\)\}/.test(publicTeachersPage)
     && /aria-label="Effacer la recherche"/.test(publicTeachersPage),
+);
+
+record(
+  "Public teacher detail has one journey-aware back action",
+  /backFallbackHref = "\/"/.test(publicLayout)
+    && /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout)
+    && /<PublicLayout backFallbackHref=\{teachersHref\}>/.test(publicTeacherDetail)
+    && !/Retour à la liste/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher detail keeps one primary reservation action per viewport",
+  /data-public-teacher-hero/.test(publicTeacherDetail)
+    && /data-public-teacher-primary-action/.test(publicTeacherDetail)
+    && /hidden rounded-lg border border-\[#111B4D\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
+    && /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail)
+    && !/Réserver ce professeur/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher detail reveals long evidence progressively",
+  countOccurrences(publicTeacherDetail, "<DisclosureCard") >= 4
+    && /data-public-teacher-disclosure/.test(publicTeacherDetail)
+    && /data-public-teacher-availability/.test(publicTeacherDetail)
+    && /Voir le planning détaillé/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher detail explains transport and payment fees before booking",
+  /value="0 même quartier"/.test(publicTeacherDetail)
+    && /value="Service 3 %"/.test(publicTeacherDetail)
+    && /sub="Frais opérateur séparés"/.test(publicTeacherDetail)
+    && /Le moteur calcule le cours officiel, le déplacement éventuel et chaque frais séparément avant le paiement/.test(publicTeacherDetail),
 );
 
 record(
