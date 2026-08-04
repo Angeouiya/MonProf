@@ -374,7 +374,7 @@ assert.match(
 );
 assert.match(
   adminDashboardSource,
-  /\{canViewFinance\s*&&\s*<FinancialOverview/,
+  /\{canViewFinance\s*&&\s*\([\s\S]*?aria-labelledby="admin-finance-title"/,
   "la vue financière ne doit jamais être rendue sans FINANCE_VIEW",
 );
 assert.match(

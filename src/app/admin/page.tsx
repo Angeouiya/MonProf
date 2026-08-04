@@ -1,186 +1,51 @@
+import Link from "next/link";
+import {
+  ArrowRight,
+  Banknote,
+  CalendarClock,
+  CheckCircle2,
+  CircleDollarSign,
+  GraduationCap,
+  MessageSquareText,
+  RefreshCw,
+  ShieldAlert,
+  Wallet,
+} from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
 import { Money } from "@/components/shared/money";
-import { BookingStatusBadge, PaymentStatusBadge } from "@/components/shared/status-badge";
+import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { RevenueAreaChart } from "@/components/admin/charts";
-import { FinancialOverview } from "@/components/admin/financial-overview";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Users, GraduationCap, CalendarRange, CheckCircle2, Lock, Banknote,
-  ShieldAlert, TrendingUp, CalendarDays, Bell, ArrowRight, Wallet,
-  ExternalLink, UserCog,
-} from "lucide-react";
-import Link from "next/link";
-import { formatFCFA, formatDateTime, timeAgo } from "@/lib/format";
-import { getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
-import { disputeStatusLabel } from "@/lib/platform-labels";
-import {
-  hasVerifiedClientPayment,
-  OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT,
-  verifiedClientPaymentBookingWhere,
-  verifiedPayDunyaBookingWhere,
-} from "@/lib/payment-security";
+import { formatFCFA, timeAgo } from "@/lib/format";
+import { hasVerifiedClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { buildPlatformFinancialSummary, providerFeeFinancialFields } from "@/lib/financial-summary";
 import { hasAdminPermission } from "@/lib/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
-type NotificationTeacherLite = {
-  id: string;
-  fullName: string;
-  professionalName: string | null;
-  photoUrl: string | null;
-  badgeVerified: boolean;
-};
-
-type NotificationBookingLite = {
-  id: string;
-  reference: string;
-  subjectName: string;
-  teacher: NotificationTeacherLite;
-};
-
 export default async function AdminDashboard() {
   const user = await requireAdmin();
   const canViewFinance = hasAdminPermission(user.adminPermissions, "FINANCE_VIEW");
-
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const start7d = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
-  const start30d = new Date(startOfToday.getTime() - 29 * 24 * 60 * 60 * 1000);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [
-    totalClients,
-    totalTeachers,
-    activeTeachers,
-    newBookings7d,
-    paidBookings,
-    todayBookingRows,
-    blockedFundsAgg,
-    toReleaseAgg,
     openDisputes,
-    monthCommissionBookings,
-    recentPaidBookings,
-    pendingReleaseBookings,
-    openDisputeList,
-    adminNotifications,
-    draftPaymentBookings,
     paidBookingsAwaitingAdmin,
     pendingTeacherConfirmations,
     pendingScheduleProposals,
     teacherMessagesWaitingAdmin,
     pendingPayoutRequests,
     pendingRefundRequests,
-    commissionBookings,
+    blockedFundsAgg,
+    recentPaidBooking,
     financialBookings,
     financialPayouts,
     appliedTeacherAdjustments,
   ] = await db.$transaction([
-    db.user.count({ where: { role: "CLIENT" } }),
-    db.teacher.count(),
-    db.teacher.count({ where: { status: "ACTIVE" } }),
-    db.booking.count({ where: { createdAt: { gte: start7d } } }),
-    db.booking.count({
-      where: verifiedPayDunyaBookingWhere({ status: { in: ["PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS","COURSE_DONE","PENDING_CLIENT_VALIDATION","VALIDATED_BY_CLIENT","PAYMENT_TO_RELEASE","TEACHER_PAID","DISPUTED"] } }),
-    }),
-    db.booking.findMany({
-      where: verifiedClientPaymentBookingWhere({
-        status: { in: [...OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT] },
-        scheduledDate: { gte: startOfToday, lt: new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000) },
-      }),
-      select: {
-        status: true,
-        paymentStatus: true,
-        totalClientPays: true,
-        totalPrice: true,
-        paydunyaStatus: true,
-        paydunyaVerifiedAt: true,
-        paymentProvider: true,
-        providerPaymentStatus: true,
-        paymentVerifiedAt: true,
-        transactions: {
-          where: { type: "CLIENT_PAYMENT" },
-          select: { type: true, status: true, amount: true },
-        },
-      },
-    }),
-    db.booking.aggregate({ where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }), _sum: { totalClientPays: true } }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({
-        OR: [
-          { paymentStatus: "TO_PAY_TEACHER" },
-          {
-            status: { in: ["CANCELLED", "REFUNDED"] },
-            paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
-            cancellationPenaltyTeacherAmount: { gt: 0 },
-          },
-        ],
-      }),
-      select: {
-        id: true,
-        status: true,
-        teacherId: true,
-        teacherNetAmount: true,
-        teacherPaidAmount: true,
-        cancellationPenaltyTeacherAmount: true,
-        paymentStatus: true,
-        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
-        sessions: {
-          select: { teacherId: true, status: true, teacherNetAmount: true, releasedAmount: true, paidAmount: true, retainedAmount: true },
-        },
-      },
-    }),
-    db.dispute.count({ where: { status: { in: ["OPEN","INVESTIGATING"] } } }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ createdAt: { gte: startOfMonth } }),
-      select: {
-        status: true,
-        paymentStatus: true,
-        paydunyaStatus: true,
-        paydunyaVerifiedAt: true,
-        paymentProvider: true,
-        providerPaymentStatus: true,
-        paymentVerifiedAt: true,
-        commissionAmount: true,
-        cancellationPenaltyPlatformAmount: true,
-      },
-    }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ paymentStatus: { in: ["BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID"] } }),
-      include: { client: { select: { name: true } }, teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } } },
-      orderBy: { createdAt: "desc" }, take: 5,
-    }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({
-        OR: [
-          { paymentStatus: "TO_PAY_TEACHER" },
-          {
-            status: { in: ["CANCELLED", "REFUNDED"] },
-            paymentStatus: { in: ["PARTIALLY_REFUNDED", "RETAINED"] },
-            cancellationPenaltyTeacherAmount: { gt: 0 },
-          },
-        ],
-      }),
-      include: {
-        client: { select: { name: true } },
-        teacher: { select: { id: true, professionalName: true, fullName: true, photoUrl: true, badgeVerified: true } },
-        teacherPaymentAdjustments: { select: { amount: true, status: true, bookingId: true } },
-      },
-      orderBy: { clientValidatedAt: "desc" }, take: 5,
-    }),
-    db.dispute.findMany({
-      where: { status: { in: ["OPEN","INVESTIGATING"] } },
-      include: { booking: { select: { reference: true } }, openedBy: { select: { name: true } } },
-      orderBy: { createdAt: "desc" }, take: 5,
-    }),
-    db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
-    db.booking.count({ where: { status: "PENDING_PAYMENT" } }),
+    db.dispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
     db.booking.count({
       where: verifiedPayDunyaBookingWhere({
         status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] },
@@ -194,27 +59,34 @@ export default async function AdminDashboard() {
       },
     }),
     db.bookingScheduleProposal.count({
-      where: {
-        status: "PENDING",
-        booking: { is: verifiedPayDunyaBookingWhere() },
-      },
+      where: { status: "PENDING", booking: { is: verifiedPayDunyaBookingWhere() } },
     }),
     db.teacherAdminMessage.count({
-      where: {
-        sender: "TEACHER",
-        status: { in: ["OPEN", "WAITING_ADMIN"] },
-      },
+      where: { sender: "TEACHER", status: { in: ["OPEN", "WAITING_ADMIN"] } },
     }),
     db.teacherPayoutRequest.count({ where: { status: "PENDING" } }),
     db.clientRefundRequest.count({ where: { status: { in: ["PENDING", "APPROVED"] } } }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({ createdAt: { gte: start30d } }),
-      select: {
-        status: true,
-        commissionAmount: true,
-        cancellationPenaltyPlatformAmount: true,
-        createdAt: true,
+    db.booking.aggregate({
+      where: verifiedPayDunyaBookingWhere({ paymentStatus: "BLOCKED" }),
+      _sum: { totalClientPays: true },
+    }),
+    db.booking.findFirst({
+      where: verifiedPayDunyaBookingWhere({
+        paymentStatus: { in: ["BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"] },
+      }),
+      include: {
+        client: { select: { name: true } },
+        teacher: {
+          select: {
+            id: true,
+            professionalName: true,
+            fullName: true,
+            photoUrl: true,
+            badgeVerified: true,
+          },
+        },
       },
+      orderBy: { createdAt: "desc" },
     }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere(),
@@ -275,65 +147,6 @@ export default async function AdminDashboard() {
     }),
   ]);
 
-  const todayBookings = todayBookingRows.filter(hasVerifiedClientPayment).length;
-  const notificationTeacherIds = Array.from(new Set(adminNotifications.map((notification) => notification.teacherId).filter((id): id is string => Boolean(id))));
-  const notificationBookingIds = Array.from(new Set(adminNotifications.map((notification) => notification.bookingId).filter((id): id is string => Boolean(id))));
-  const notificationTeachers = notificationTeacherIds.length
-    ? await db.teacher.findMany({
-          where: { id: { in: notificationTeacherIds } },
-          select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true },
-        })
-    : [];
-  const notificationBookings = notificationBookingIds.length
-    ? await db.booking.findMany({
-          where: { id: { in: notificationBookingIds } },
-          select: {
-            id: true,
-            reference: true,
-            subjectName: true,
-            teacherId: true,
-            client: { select: { name: true } },
-            teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
-          },
-        })
-    : [];
-  const notificationTeachersById = new Map<string, NotificationTeacherLite>(
-    notificationTeachers.map((teacher) => [teacher.id, teacher] as const),
-  );
-  const notificationBookingsById = new Map<string, NotificationBookingLite>(
-    notificationBookings.map((booking) => [booking.id, booking] as const),
-  );
-
-  // Daily series (based on bookings)
-  const dailyMap: Record<string, number> = {};
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(startOfToday.getTime() - i * 24*60*60*1000);
-    dailyMap[d.toISOString().slice(0,10)] = 0;
-  }
-  for (const b of commissionBookings) {
-    const k = b.createdAt.toISOString().slice(0,10);
-    if (dailyMap[k] !== undefined) dailyMap[k] += dashboardBookingCommission(b);
-  }
-  const series = Object.entries(dailyMap).map(([date, value]) => ({ date, value }));
-
-  const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
-  const toRelease = toReleaseAgg.reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments), 0);
-  const teachersToPay = new Set(
-    toReleaseAgg
-      .filter((booking) => isTeacherPayableStatus(booking) && getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) > 0)
-      .flatMap((booking) => booking.sessions.length > 0
-        ? booking.sessions
-          .filter((session) => session.releasedAmount > session.paidAmount + session.retainedAmount)
-          .map((session) => session.teacherId)
-        : [booking.teacherId])
-  ).size;
-  const monthCommission = monthCommissionBookings.reduce(
-    (sum, booking) => sum + dashboardBookingCommission(booking),
-    0,
-  );
-  const pendingReleaseRows = pendingReleaseBookings
-    .map((booking) => ({ booking, remaining: getTeacherRemainingAmount(booking, booking.teacherPaymentAdjustments) }))
-    .filter((row) => isTeacherPayableStatus(row.booking) && row.remaining > 0);
   const financialSummary = buildPlatformFinancialSummary(
     financialBookings.filter(hasVerifiedClientPayment).map((booking) => ({
       ...booking,
@@ -355,419 +168,226 @@ export default async function AdminDashboard() {
     financialPayouts,
     appliedTeacherAdjustments,
   );
+  const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
+  const priority = openDisputes > 0
+    ? {
+        eyebrow: "Litige prioritaire",
+        title: `${openDisputes} litige${openDisputes > 1 ? "s" : ""} à traiter`,
+        detail: "Sécurisez la réservation avant toute libération de fonds.",
+        href: "/admin/litiges",
+        action: "Traiter",
+        icon: ShieldAlert,
+      }
+    : paidBookingsAwaitingAdmin > 0
+      ? {
+          eyebrow: "Paiement confirmé",
+          title: `${paidBookingsAwaitingAdmin} réservation${paidBookingsAwaitingAdmin > 1 ? "s" : ""} à valider`,
+          detail: "Le prestataire a confirmé les fonds. Vérifiez puis activez la mission.",
+          href: "/admin/reservations?status=paid",
+          action: "Valider",
+          icon: CheckCircle2,
+        }
+      : pendingRefundRequests > 0
+        ? {
+            eyebrow: "Remboursement",
+            title: `${pendingRefundRequests} demande${pendingRefundRequests > 1 ? "s" : ""} en attente`,
+            detail: "Contrôlez le dossier avant l'exécution Jèko.",
+            href: "/admin/remboursements",
+            action: "Contrôler",
+            icon: RefreshCw,
+          }
+        : pendingPayoutRequests > 0
+          ? {
+              eyebrow: "Retrait professeur",
+              title: `${pendingPayoutRequests} demande${pendingPayoutRequests > 1 ? "s" : ""} à contrôler`,
+              detail: "Le professeur recevra exactement le net affiché.",
+              href: "/admin/professeurs-a-payer",
+              action: "Contrôler",
+              icon: Banknote,
+            }
+          : pendingTeacherConfirmations > 0
+            ? {
+                eyebrow: "Mission professeur",
+                title: `${pendingTeacherConfirmations} réponse${pendingTeacherConfirmations > 1 ? "s" : ""} attendue${pendingTeacherConfirmations > 1 ? "s" : ""}`,
+                detail: "Relancez ou remplacez le professeur si nécessaire.",
+                href: "/admin/notifications",
+                action: "Suivre",
+                icon: GraduationCap,
+              }
+            : teacherMessagesWaitingAdmin > 0
+              ? {
+                  eyebrow: "Message professeur",
+                  title: `${teacherMessagesWaitingAdmin} message${teacherMessagesWaitingAdmin > 1 ? "s" : ""} à lire`,
+                  detail: "Le professeur attend une réponse du service client.",
+                  href: "/admin/messages",
+                  action: "Répondre",
+                  icon: MessageSquareText,
+                }
+              : pendingScheduleProposals > 0
+                ? {
+                    eyebrow: "Créneau proposé",
+                    title: `${pendingScheduleProposals} proposition${pendingScheduleProposals > 1 ? "s" : ""} à suivre`,
+                    detail: "Vérifiez la réponse du client et du professeur.",
+                    href: "/admin/reservations",
+                    action: "Vérifier",
+                    icon: CalendarClock,
+                  }
+                : {
+                    eyebrow: "Tout est à jour",
+                    title: "Aucune urgence opérationnelle",
+                    detail: "Paiements, missions, retraits et remboursements sont sous contrôle.",
+                    href: "/admin/centre-operationnel",
+                    action: "Tout vérifier",
+                    icon: CheckCircle2,
+                  };
+  const PriorityIcon = priority.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <PageHeader
-        title={`Bonjour, ${user.name.split(" ")[0]}`}
-        description="Pilotage en temps réel"
+        title={`Bonjour ${user.name.split(" ")[0]}`}
+        description="Une priorité. Tous les montants."
         rootPage
-      >
-        <Button asChild>
-          <Link href="/admin/professeurs/nouveau">
-            <GraduationCap className="mr-2 h-4 w-4" /> Ajouter professeur
-          </Link>
-        </Button>
-      </PageHeader>
+      />
 
-      {canViewFinance && <FinancialOverview summary={financialSummary} />}
-
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-        <StatCard label="Clients" value={totalClients} icon={Users} tone="default" />
-        <StatCard label="Professeurs" value={totalTeachers} icon={GraduationCap} tone="default" />
-        <StatCard label="Professeurs actifs" value={activeTeachers} icon={CheckCircle2} tone="success" />
-        <StatCard label="Nouv. résa. (7j)" value={newBookings7d} icon={CalendarRange} tone="default" />
-        <StatCard label="Résa. payées" value={paidBookings} icon={CheckCircle2} tone="primary" />
-        <StatCard label="Cours du jour" value={todayBookings} icon={CalendarDays} tone="default" />
-        <StatCard label="Litiges ouverts" value={openDisputes} icon={ShieldAlert} tone={openDisputes > 0 ? "danger" : "default"} />
-        {canViewFinance && (
-          <>
-            <StatCard label="Fonds bloqués" value={formatFCFA(blockedFunds)} icon={Lock} tone="warning" />
-            <StatCard label="À libérer (net prof)" value={formatFCFA(toRelease)} icon={Banknote} tone="primary" />
-            <StatCard label="Profs à payer" value={teachersToPay} icon={Banknote} tone="warning" />
-            <StatCard label="Commission réelle (total)" value={formatFCFA(financialSummary.commissionRevenue)} icon={TrendingUp} tone="success" />
-            <StatCard label="Commission réelle (mois)" value={formatFCFA(monthCommission)} icon={TrendingUp} tone="primary" />
-            <StatCard label="Versé aux professeurs" value={formatFCFA(financialSummary.teacherPaid)} icon={Wallet} tone="success" />
-          </>
-        )}
-      </div>
-
-      <Card className="border-[#E3E8F2] bg-white">
-        <CardHeader className="space-y-1 pb-3">
-          <CardTitle className="text-base">À traiter</CardTitle>
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            Suivi client, professeur et administration. Seuls les paiements confirmés par le prestataire déclenchent les opérations.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 lg:grid-cols-3">
-            <ControlSpaceCard
-              title="Espace client"
-              description="Paiements, remboursements et réponses client."
-              icon={Users}
-              href="/admin/clients"
-              actionLabel="Voir clients"
-              items={[
-                { label: "Paiements à finaliser", value: draftPaymentBookings, href: "/admin/reservations?status=PENDING_PAYMENT", attention: draftPaymentBookings > 0 },
-                { label: "Créneaux à répondre", value: pendingScheduleProposals, href: "/admin/reservations", attention: pendingScheduleProposals > 0 },
-                { label: "Remboursements", value: pendingRefundRequests, href: "/admin/reservations?refunds=pending", attention: pendingRefundRequests > 0 },
-              ]}
-            />
-            <ControlSpaceCard
-              title="Espace professeur"
-              description="Missions, messages et paiements professeur."
-              icon={GraduationCap}
-              href="/admin/suivi-professeurs"
-              actionLabel="Suivi professeurs"
-              items={[
-                { label: "Confirmations mission", value: pendingTeacherConfirmations, href: "/admin/notifications", attention: pendingTeacherConfirmations > 0 },
-                { label: "Messages à traiter", value: teacherMessagesWaitingAdmin, href: "/admin/messages", attention: teacherMessagesWaitingAdmin > 0 },
-                { label: "Demandes paiement", value: pendingPayoutRequests, href: "/admin/professeurs-a-payer", attention: pendingPayoutRequests > 0 },
-              ]}
-            />
-            <ControlSpaceCard
-              title="Espace admin"
-              description="Validation, libération de fonds et incidents."
-              icon={ShieldAlert}
-              href="/admin/centre-operationnel"
-              actionLabel="Centre opérationnel"
-              items={[
-                { label: "Résa. payées à valider", value: paidBookingsAwaitingAdmin, href: "/admin/reservations?status=paid", attention: paidBookingsAwaitingAdmin > 0 },
-                { label: "Paiements à libérer", value: teachersToPay, href: "/admin/paiements-a-liberer", attention: teachersToPay > 0 },
-                { label: "Litiges ouverts", value: openDisputes, href: "/admin/litiges", attention: openDisputes > 0 },
-              ]}
-            />
+      <Card className="overflow-hidden border-[#111B4D] bg-[#111B4D] text-white shadow-sm" data-admin-dashboard-priority>
+        <CardContent className="grid gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-6">
+          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-white">
+            <PriorityIcon className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#C7D2FE]">{priority.eyebrow}</p>
+            <h2 className="mt-1 text-xl font-black leading-7">{priority.title}</h2>
+            <p className="mt-1 text-sm font-semibold leading-6 text-[#E0E7FF]">{priority.detail}</p>
           </div>
+          <Button asChild className="min-h-11 w-full rounded-lg bg-white text-[#111B4D] hover:bg-[#EEF2FF] sm:w-auto">
+            <Link href={priority.href}>
+              {priority.action}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Chart financier, réservé aux comptes autorisés. */}
-      {canViewFinance && <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-base">Commissions perçues — 30 derniers jours</CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">Les annulations et remboursements utilisent leur pénalité plateforme réelle, jamais la commission initiale.</p>
+      {canViewFinance && (
+        <section className="overflow-hidden rounded-xl border border-[#C7D2FE] bg-white shadow-sm" aria-labelledby="admin-finance-title">
+          <div className="flex flex-col gap-3 border-b border-[#E0E7FF] bg-[#F8FAFF] p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#4F46E5]">Vue financière</p>
+              <h2 id="admin-finance-title" className="mt-1 text-xl font-black text-[#111827]">L'argent, clairement</h2>
+            </div>
+            <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D]">
+              <Link href="/admin/paiements">
+                Tableau complet
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
           </div>
-          <Badge variant="secondary" className="hidden sm:inline-flex">{formatFCFA(monthCommission)} ce mois</Badge>
-        </CardHeader>
-        <CardContent>
-          <RevenueAreaChart data={series} />
+
+          <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-5 lg:grid-cols-4">
+            <AdminAmount label="Net encaissé" value={financialSummary.clientNetCollected} icon={Wallet} tone="navy" />
+            <AdminAmount label="Commission" value={financialSummary.commissionRevenue} icon={CircleDollarSign} tone="green" />
+            <AdminAmount label="Service restant" value={financialSummary.serviceFeesRemaining} icon={Banknote} tone={financialSummary.serviceFeesRemaining < 0 ? "red" : "violet"} />
+            <AdminAmount label="Reste professeurs" value={financialSummary.teacherRemaining} icon={GraduationCap} tone="blue" />
+          </div>
+
+          <div className="border-t border-[#E0E7FF] px-4 py-2 sm:px-5" role="table" aria-label="Montants financiers essentiels">
+            <FinanceRow label="Brut encaissé" value={financialSummary.clientGross} />
+            <FinanceRow label="Remboursé" value={financialSummary.refundsPaid} />
+            <FinanceRow label="Frais de service collectés (3 %)" value={financialSummary.serviceFeesCollected} />
+            <FinanceRow label="Frais d'encaissement Jèko" value={financialSummary.providerCollectionFees} />
+            <FinanceRow label="Frais de retrait couverts" value={financialSummary.transferFeesCovered} />
+            <FinanceRow label="Fonds clients bloqués" value={blockedFunds} />
+            <FinanceRow label="Déjà versé aux professeurs" value={financialSummary.teacherPaid} />
+            <FinanceRow label="Retenues professeurs" value={financialSummary.teacherRetained} />
+          </div>
+        </section>
+      )}
+
+      <Card className="border-[#E3E8F2] bg-white shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-base font-black text-[#111827]">Dernier paiement confirmé</p>
+              <p className="text-sm font-semibold text-[#64748B]">Une seule réservation à la fois.</p>
+            </div>
+            <Button asChild variant="ghost" className="rounded-lg text-[#111B4D]">
+              <Link href="/admin/reservations">Tout voir</Link>
+            </Button>
+          </div>
+          {!recentPaidBooking ? (
+            <div className="rounded-lg border border-dashed border-[#D7DEE9] px-4 py-6 text-center text-sm font-semibold text-[#64748B]">
+              Aucun paiement confirmé.
+            </div>
+          ) : (
+            <Link
+              href={`/admin/reservations/${recentPaidBooking.id}`}
+              className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+            >
+              <ProfessorImage
+                photoUrl={recentPaidBooking.teacher.photoUrl}
+                name={recentPaidBooking.teacher.professionalName || recentPaidBooking.teacher.fullName}
+                size="sm"
+                shape="circle"
+                verified={recentPaidBooking.teacher.badgeVerified}
+              />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-black text-[#111827]">{recentPaidBooking.reference}</p>
+                  <PaymentStatusBadge status={recentPaidBooking.paymentStatus} />
+                </div>
+                <p className="mt-1 truncate text-sm font-semibold text-[#475569]">
+                  {recentPaidBooking.client.name} · {recentPaidBooking.teacher.professionalName || recentPaidBooking.teacher.fullName}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[#64748B]">Confirmé {timeAgo(recentPaidBooking.createdAt)}</p>
+              </div>
+              <span className="flex items-center justify-between gap-3 text-sm font-black text-[#111B4D]">
+                <Money amount={recentPaidBooking.totalPrice} />
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </span>
+            </Link>
+          )}
         </CardContent>
-      </Card>}
-
-      {/* Recent lists */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Recent paid bookings */}
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Dernières réservations payées</CardTitle>
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/admin/reservations">Tout voir <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {recentPaidBookings.length === 0 && (
-                <li className="px-4 py-6 text-sm text-muted-foreground">Aucune réservation payée.</li>
-              )}
-              {recentPaidBookings.map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <ProfessorImage
-                      photoUrl={b.teacher.photoUrl}
-                      name={b.teacher.professionalName || b.teacher.fullName}
-                      size="sm"
-                      shape="circle"
-                      verified={b.teacher.badgeVerified}
-                    />
-                    <div className="min-w-0">
-                      <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
-                        {b.reference}
-                      </Link>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {b.client.name} • {b.teacher.professionalName || b.teacher.fullName}
-                      </p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        <PaymentStatusBadge status={b.paymentStatus} />
-                        {b.teacher.badgeVerified && <Badge className="bg-[#1E2A78] text-white">Certifié</Badge>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    {canViewFinance && <Money amount={b.totalPrice} className="text-sm font-semibold" />}
-                    <BookingStatusBadge status={b.status} />
-                    <div className="flex gap-1.5">
-                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
-                        <Link href={`/admin/reservations/${b.id}`}>
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
-                        <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`}>
-                          <GraduationCap className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Pending release */}
-        {canViewFinance && <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Paiements à libérer</CardTitle>
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/admin/paiements-a-liberer">Tout voir <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {pendingReleaseRows.length === 0 && (
-                <li className="px-4 py-6 text-sm text-muted-foreground">Aucun paiement en attente de libération.</li>
-              )}
-              {pendingReleaseRows.map(({ booking: b, remaining }) => (
-                <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <ProfessorImage
-                      photoUrl={b.teacher.photoUrl}
-                      name={b.teacher.professionalName || b.teacher.fullName}
-                      size="sm"
-                      shape="circle"
-                      verified={b.teacher.badgeVerified}
-                    />
-                    <div className="min-w-0">
-                      <Link href={`/admin/reservations/${b.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
-                        {b.reference}
-                      </Link>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {b.teacher.professionalName || b.teacher.fullName} • validé {b.clientValidatedAt ? timeAgo(b.clientValidatedAt) : "—"}
-                      </p>
-                      <p className="mt-1 truncate text-xs font-medium text-foreground">{b.client.name} • {b.subjectName}</p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                    <Button asChild size="sm">
-                      <Link href={`/admin/reservations/${b.id}?action=pay`}>
-                        Payer <Money amount={remaining} className="ml-1" />
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/admin/professeurs/${b.teacher.id}?tab=paiements&bookingId=${b.id}`}>
-                        Comptabilité
-                      </Link>
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>}
-
-        {/* Disputes */}
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Litiges ouverts</CardTitle>
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/admin/litiges">Tout voir <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {openDisputeList.length === 0 && (
-                <li className="px-4 py-6 text-sm text-muted-foreground">Aucun litige en cours.</li>
-              )}
-              {openDisputeList.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link href={`/admin/litiges/${d.id}`} className="text-sm font-medium text-foreground hover:text-primary truncate block">
-                      {d.reason}
-                    </Link>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {d.booking.reference} • par {d.openedBy.name} • {timeAgo(d.createdAt)}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">{disputeStatusLabel(d.status)}</Badge>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Notifications non lues</CardTitle>
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/admin/notifications">Tout voir <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ul className="divide-y divide-border">
-              {adminNotifications.length === 0 && (
-                <li className="px-4 py-6 text-sm text-muted-foreground">Aucune notification non lue.</li>
-              )}
-              {adminNotifications.map((n) => (
-                <li key={n.id} className="px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-2">
-                      {getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById) ? (
-                        <ProfessorImage
-                          photoUrl={getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)?.photoUrl ?? null}
-                          name={getNotificationTeacherName(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)}
-                          size="sm"
-                          shape="circle"
-                          verified={!!getNotificationTeacher(n.teacherId, n.bookingId, notificationTeachersById, notificationBookingsById)?.badgeVerified}
-                        />
-                      ) : (
-                        <Bell className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <p className="text-sm font-medium text-foreground">{n.title}</p>
-                          <Badge variant="outline" className={getPriorityClass(n.priority)}>{n.priority.toLowerCase()}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
-                        {n.bookingId && notificationBookingsById.get(n.bookingId) && (
-                          <p className="mt-1 text-[11px] font-medium text-foreground">
-                            {notificationBookingsById.get(n.bookingId)?.reference} • {notificationBookingsById.get(n.bookingId)?.subjectName}
-                          </p>
-                        )}
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 gap-1.5">
-                      <Button asChild size="sm" variant="outline" className="h-8 px-2">
-                        <Link href={getNotificationHref(n.link, n.bookingId, n.teacherId)}>
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      {n.bookingId && (
-                        <Button asChild size="sm" variant="outline" className="h-8 px-2">
-                          <Link href={`/admin/reservations/${n.bookingId}?action=replace`}>
-                            <UserCog className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }
 
-function getPriorityClass(priority: string) {
-  if (priority === "CRITICAL") return "border-red-200 bg-red-50 text-red-700";
-  if (priority === "URGENT") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (priority === "IMPORTANT") return "border-violet-200 bg-violet-50 text-violet-700";
-  return "border-blue-200 bg-blue-50 text-blue-700";
-}
-
-function ControlSpaceCard({
-  title,
-  description,
+function AdminAmount({
+  label,
+  value,
   icon: Icon,
-  href,
-  actionLabel,
-  items,
+  tone,
 }: {
-  title: string;
-  description: string;
-  icon: typeof Users;
-  href: string;
-  actionLabel: string;
-  items: Array<{ label: string; value: number; href: string; attention?: boolean }>;
+  label: string;
+  value: number;
+  icon: typeof Wallet;
+  tone: "navy" | "green" | "violet" | "blue" | "red";
 }) {
-  const attentionCount = items.reduce((sum, item) => sum + (item.attention ? item.value : 0), 0);
+  const tones = {
+    navy: "border-[#C7D2FE] bg-[#EEF2FF] text-[#111B4D]",
+    green: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    violet: "border-violet-200 bg-violet-50 text-violet-800",
+    blue: "border-sky-200 bg-sky-50 text-sky-800",
+    red: "border-red-200 bg-red-50 text-red-800",
+  } as const;
 
   return (
-    <section className="rounded-lg border border-[#E3E8F2] bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold text-[#111827]">{title}</h2>
-              <p className="mt-0.5 hidden line-clamp-2 text-xs font-medium leading-5 text-[#64748B] sm:block">{description}</p>
-            </div>
-          </div>
-        </div>
-        <Badge
-          variant="outline"
-          className={attentionCount > 0 ? "shrink-0 border-red-200 bg-white text-red-700" : "shrink-0 border-[#DDE6F7] bg-white text-[#111B4D]"}
-        >
-          {attentionCount > 0 ? `${attentionCount} à traiter` : "À jour"}
-        </Badge>
+    <div className={`rounded-xl border p-3 sm:p-4 ${tones[tone]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black uppercase tracking-wide">{label}</p>
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
       </div>
-
-      <div className="mt-4 grid gap-2">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-sm transition hover:border-[#111B4D]"
-          >
-            <span className="min-w-0 truncate font-medium text-[#475569]">{item.label}</span>
-            <span className={item.attention ? "rounded-lg bg-[#111B4D] px-2 py-1 text-xs font-semibold text-white" : "rounded-lg border border-[#E3E8F2] bg-white px-2 py-1 text-xs font-semibold text-[#111B4D]"}>
-              {item.value}
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      <Button asChild variant="outline" className="mt-4 min-h-11 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D]">
-        <Link href={href}>
-          {actionLabel}
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </Button>
-    </section>
+      <p className="mt-3 text-base font-black tabular-nums text-[#111827] sm:text-xl">{formatFCFA(value)}</p>
+    </div>
   );
 }
 
-function getNotificationHref(link: string | null, bookingId: string | null, teacherId: string | null) {
-  if (link) return link;
-  if (bookingId) return `/admin/reservations/${bookingId}`;
-  if (teacherId) return `/admin/professeurs/${teacherId}?tab=operationnel`;
-  return "/admin/notifications";
-}
-
-function dashboardBookingCommission(booking: {
-  status?: string | null;
-  commissionAmount?: number | null;
-  cancellationPenaltyPlatformAmount?: number | null;
-}) {
-  return ["CANCELLED", "REFUNDED"].includes(booking.status?.trim().toUpperCase() ?? "")
-    ? Math.max(0, booking.cancellationPenaltyPlatformAmount ?? 0)
-    : Math.max(0, booking.commissionAmount ?? 0);
-}
-
-function getNotificationTeacher(
-  teacherId: string | null,
-  bookingId: string | null,
-  teachers: Map<string, NotificationTeacherLite>,
-  bookings: Map<string, NotificationBookingLite>,
-) {
-  if (teacherId && teachers.has(teacherId)) return teachers.get(teacherId);
-  if (bookingId && bookings.has(bookingId)) return bookings.get(bookingId)?.teacher;
-  return null;
-}
-
-function getNotificationTeacherName(
-  teacherId: string | null,
-  bookingId: string | null,
-  teachers: Map<string, NotificationTeacherLite>,
-  bookings: Map<string, NotificationBookingLite>,
-) {
-  const teacher = getNotificationTeacher(teacherId, bookingId, teachers, bookings);
-  return teacher?.professionalName || teacher?.fullName || "Notification admin";
+function FinanceRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-4 border-b border-[#EEF2F7] py-2 last:border-b-0" role="row">
+      <span className="text-sm font-semibold text-[#475569]" role="cell">{label}</span>
+      <span className="shrink-0 text-sm font-black tabular-nums text-[#111827]" role="cell">{formatFCFA(value)}</span>
+    </div>
+  );
 }

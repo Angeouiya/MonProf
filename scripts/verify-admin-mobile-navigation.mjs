@@ -7,6 +7,7 @@ const record = (label, passed) => checks.push({ label, passed });
 const header = read("src/components/shared/page-header.tsx");
 const statCard = read("src/components/shared/stat-card.tsx");
 const css = read("src/app/globals.css");
+const dashboard = read("src/app/admin/page.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -69,6 +70,22 @@ record(
   /data-admin-stat-label/.test(statCard)
     && /data-admin-stat-value/.test(statCard)
     && /@media \(max-width: 359px\)[\s\S]*?\[data-admin-stat-icon\],[\s\S]*?\[data-admin-stat-trend\][\s\S]*?display: none !important/.test(css),
+);
+
+record(
+  "Admin dashboard shows one operational priority without its former card wall",
+  /data-admin-dashboard-priority/.test(dashboard)
+    && !/RevenueAreaChart|StatCard|ControlSpaceCard|FinancialOverview/.test(dashboard)
+    && /db\.booking\.findFirst/.test(dashboard)
+    && !/Dernières réservations payées|Notifications non lues|Espace professeur opérationnel complet/.test(dashboard),
+);
+
+record(
+  "Admin dashboard keeps critical amounts visible behind the finance permission",
+  /\{canViewFinance\s*&&\s*\([\s\S]*?aria-labelledby="admin-finance-title"/.test(dashboard)
+    && (dashboard.match(/<AdminAmount /g) ?? []).length === 4
+    && (dashboard.match(/<FinanceRow /g) ?? []).length === 8
+    && /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
 );
 
 const failed = checks.filter((check) => !check.passed);
