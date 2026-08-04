@@ -455,6 +455,11 @@ record(
 );
 
 record(
+  "Public mobile shell avoids a footer that duplicates the bottom navigation",
+  /mt-auto hidden border-t border-\[#E3E8F2\] bg-white sm:block/.test(publicLayout),
+);
+
+record(
   "Public root tabs suppress the redundant back strip",
   /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/contact"\]\)/.test(publicLayout)
     && /shouldShowPublicBack\(pathname\)/.test(publicLayout)

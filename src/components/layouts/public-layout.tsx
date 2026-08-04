@@ -226,7 +226,7 @@ export function PublicLayout({
       <main className={cn("flex-1", !hideMobileNav && "public-main-with-mobile-nav")}>{children}</main>
 
       {!hideFooter && (
-      <footer className={cn("mt-auto border-t border-[#E3E8F2] bg-white lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
+      <footer className={cn("mt-auto hidden border-t border-[#E3E8F2] bg-white sm:block lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-7 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <BrandLogo />
