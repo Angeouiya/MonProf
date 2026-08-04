@@ -77,7 +77,7 @@ export function TeacherProfileMediaForm({
           <Image src={coverUrl} alt="Couverture pédagogique du profil" fill sizes="(max-width: 1280px) 100vw, 1100px" className="object-contain" priority />
         </div>
         <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-3 border-t border-[#E3E8F2] px-4 py-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:px-6" data-professor-photo-preview>
-          <div className="w-fit rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]">
+          <div className="relative z-10 w-fit -translate-y-1/2 rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]">
             <ProfessorImage photoUrl={photoUrl} name={teacherName} size={96} verified={verified} />
           </div>
           <div className="min-w-0 text-left">

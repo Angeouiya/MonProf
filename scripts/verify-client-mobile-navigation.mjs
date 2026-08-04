@@ -540,6 +540,7 @@ record(
     && /className="object-contain"/.test(publicTeacherDetail)
     && /grid-cols-\[112px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
     && /size=\{104\}/.test(publicTeacherDetail)
+    && /-translate-y-1\/2/.test(publicTeacherDetail)
     && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)
     && !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
 );
