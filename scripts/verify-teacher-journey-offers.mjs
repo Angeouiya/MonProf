@@ -8,6 +8,7 @@ const publicTeachers = read("src/app/professeurs/page.tsx");
 const publicTeacherDetail = read("src/app/professeurs/[id]/page.tsx");
 const publicTeacherApi = read("src/app/api/teachers/route.ts");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
+const clientDashboard = read("src/app/client/page.tsx");
 const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const bookingApi = read("src/app/api/bookings/route.ts");
@@ -54,7 +55,10 @@ check(
   "Authenticated client search keeps the mini-app through booking",
   /teacherJourneyWhere\(journey\)/.test(clientSearch)
     && /data-client-journey-tabs/.test(clientSearch)
-    && /teacherId=\$\{t\.id\}&journey=\$\{journey\}/.test(clientSearch),
+    && /teacherId=\$\{t\.id\}&journey=\$\{journey\}/.test(clientSearch)
+    && /data-client-dashboard-journeys/.test(clientDashboard)
+    && /href=\{`\/client\/rechercher\?journey=\$\{value\}`\}/.test(clientDashboard)
+    && !/Professeurs recommandés/.test(clientDashboard),
 );
 check(
   "Booking UI exposes only mini-apps enabled for the professor",

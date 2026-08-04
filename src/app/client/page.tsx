@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
-  ClientEmptyState,
   ClientInfoPill,
   ClientMetricStrip,
   ClientPageHeader,
@@ -17,7 +16,7 @@ import { formatDate } from "@/lib/format";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
-  ShieldCheck, BookOpen, Bell, WalletCards, LifeBuoy, LayoutDashboard,
+  ShieldCheck, BookOpen, Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -38,44 +37,39 @@ const CLIENT_BOOKING_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Annulé",
 };
 
+const CLIENT_JOURNEYS = [
+  { label: "Ivoirien", fullLabel: "Système ivoirien", value: "ivoirien" },
+  { label: "Français", fullLabel: "Système français", value: "francais" },
+  { label: "Pro", fullLabel: "Professionnel", value: "professionnel" },
+] as const;
+
 export default async function ClientDashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
   const now = new Date();
 
-  const [allClientBookings, recommended] = await db.$transaction([
-    db.booking.findMany({
-      where: { clientId: user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            fullName: true,
-            professionalName: true,
-            photoUrl: true,
-            jobTitle: true,
-            commune: true,
-            badgeVerified: true,
-          },
-        },
-        transactions: {
-          where: { type: "CLIENT_PAYMENT" },
-          select: { type: true, status: true, amount: true },
+  const allClientBookings = await db.booking.findMany({
+    where: { clientId: user.id },
+    orderBy: { createdAt: "desc" },
+    include: {
+      teacher: {
+        select: {
+          id: true,
+          fullName: true,
+          professionalName: true,
+          photoUrl: true,
+          jobTitle: true,
+          commune: true,
+          badgeVerified: true,
         },
       },
-    }),
-    db.teacher.findMany({
-      where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-      take: 3,
-      orderBy: { rating: "desc" },
-      include: {
-        subjects: { include: { subject: true } },
-        _count: { select: { reviews: true } },
+      transactions: {
+        where: { type: "CLIENT_PAYMENT" },
+        select: { type: true, status: true, amount: true },
       },
-    }),
-  ]);
+    },
+  });
   const totalBookings = allClientBookings.length;
   const upcomingBookings = allClientBookings.filter((booking) => ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
   const completedBookings = allClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;
@@ -118,17 +112,27 @@ export default async function ClientDashboardPage() {
             ? `${nextCourse.subjectName} avec ${nextCourseTeacherName} · ${nextCourseDate} · ${nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer"}`
             : "Réservez, payez via Jèko et suivez chaque cours depuis un espace clair."
         }
+      />
+
+      <nav
+        aria-label="Choisir une mini-application"
+        data-client-dashboard-journeys
+        className="grid grid-cols-3 gap-1.5 sm:gap-2"
       >
-        <Button asChild className="min-h-11 rounded-lg max-md:hidden">
-          <Link href={nextCourse ? `/client/reservations/${nextCourse.id}` : "/client/rechercher"}>
-            {nextCourse ? "Ouvrir le dossier" : "Trouver un professeur"}
-            <ArrowRight className="h-4 w-4" />
+        {CLIENT_JOURNEYS.map(({ label, fullLabel, value }) => (
+          <Link
+            key={value}
+            href={`/client/rechercher?journey=${value}`}
+            className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-2 py-2 text-center text-[11px] font-semibold leading-tight text-[#475569] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:px-4 sm:text-sm"
+          >
+            <span className="sm:hidden">{label}</span>
+            <span className="hidden sm:inline">{fullLabel}</span>
           </Link>
-        </Button>
-        <Button asChild variant="outline" className="min-h-11 rounded-lg max-md:hidden">
-          <Link href="/client/reservations">Réservations</Link>
-        </Button>
-      </ClientPageHeader>
+        ))}
+      </nav>
+      <p className="text-center text-xs font-medium text-[#64748B]">
+        Tarif officiel calculé selon le parcours.
+      </p>
 
       <ClientDashboardMobileSummary
         nextCourse={nextCourse}
@@ -281,52 +285,6 @@ export default async function ClientDashboardPage() {
         </ClientSurface>
       </div>
 
-      {/* Recommandés */}
-      <ClientSurface>
-        <ClientSectionTitle
-          title="Professeurs recommandés"
-          description="Profils vérifiés avec photo réelle."
-          action={(
-          <Button asChild variant="ghost" size="sm" className="min-h-11 w-full justify-center rounded-lg min-[520px]:w-auto">
-            <Link href="/client/rechercher">Plus de professeurs <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-          </Button>
-          )}
-        />
-        <div className="mt-4">
-          {recommended.length === 0 ? (
-            <ClientEmptyState
-              icon={Search}
-              title="Trouvez votre professeur"
-              description="Recherchez par matière, niveau, commune ou concours. Le paiement active la réservation seulement après confirmation serveur."
-              compact
-            />
-          ) : (
-            <div className="grid gap-3 min-[560px]:grid-cols-2 xl:grid-cols-3">
-              {recommended.map((t, index) => {
-                const displayName = t.professionalName || t.fullName;
-                const primarySubject = t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name;
-                return (
-                  <Link
-                    key={`${t.id}-${index}`}
-                    href={`/client/reserver?teacherId=${t.id}`}
-                    className="group flex min-w-0 items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 transition-colors hover:border-[#111B4D]"
-                  >
-                    <ProfessorImage photoUrl={t.photoUrl} name={displayName} size={54} shape="circle" verified={t.badgeVerified} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-[#111827]">{displayName}</p>
-                      <p className="truncate text-xs text-[#64748B]">{primarySubject} · {t.commune}</p>
-                      <p className="mt-0.5 text-xs font-semibold text-[#111B4D]">
-                        Tarif officiel calculé selon le parcours
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-[#64748B] transition group-hover:text-[#111B4D]" />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </ClientSurface>
     </div>
   );
 }
@@ -380,8 +338,8 @@ function ClientDashboardMobileSummary({
     ? `/client/reservations/${pendingValidation.id}?action=confirm`
     : nextCourse
       ? `/client/reservations/${nextCourse.id}`
-      : "/client/rechercher";
-  const actionLabel = pendingValidation ? "Confirmer" : nextCourse ? "Dossier" : "Réserver";
+      : null;
+  const actionLabel = pendingValidation ? "Confirmer" : "Dossier";
   const title = pendingValidation
     ? "Cours à confirmer"
     : nextCourse
@@ -391,7 +349,7 @@ function ClientDashboardMobileSummary({
     ? `${pendingValidation.subjectName} · ${pendingValidation.levelName} · ${focusTeacherName}`
     : nextCourse
       ? `${focusTeacherName} · ${formatDashboardCourseDate(nextCourse)} · ${nextCourse.scheduledTime || nextCourse.preferredTime || "Créneau à confirmer"}`
-      : "Choisissez un professeur, une date et un créneau. Le paiement reste sécurisé.";
+      : "Choisissez l'un des trois parcours ci-dessus. Le moteur calcule le reste.";
 
   return (
     <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-dashboard-mobile-summary>
@@ -416,9 +374,11 @@ function ClientDashboardMobileSummary({
           <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{title}</h2>
           <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
         </div>
-        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
-          <Link href={actionHref}>{actionLabel}</Link>
-        </Button>
+        {actionHref && (
+          <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+            <Link href={actionHref}>{actionLabel}</Link>
+          </Button>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -427,19 +387,6 @@ function ClientDashboardMobileSummary({
         <ClientInfoPill label="Terminés" value={completedBookings} strong={completedBookings > 0} />
       </div>
 
-      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-dashboard-action-rail aria-label="Actions rapides client">
-        {(pendingValidation || nextCourse) && (
-          <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-            <Link href="/client/rechercher">Nouveau cours</Link>
-          </Button>
-        )}
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="/client/paiements">Paiements</Link>
-        </Button>
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="/client/service-client">Aide</Link>
-        </Button>
-      </div>
     </ClientSurface>
   );
 }

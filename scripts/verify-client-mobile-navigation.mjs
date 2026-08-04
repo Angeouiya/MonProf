@@ -311,11 +311,14 @@ record(
 );
 
 record(
-  "Client dashboard exposes one primary booking action per mobile context",
-  /className="min-h-11 rounded-lg max-md:hidden"/.test(read("src/app/client/page.tsx"))
-    && /\{\(pendingValidation \|\| nextCourse\) && \(/.test(read("src/app/client/page.tsx"))
-    && /Nouveau cours/.test(read("src/app/client/page.tsx"))
-    && !/<Link href="\/client\/rechercher">Réserver<\/Link>/.test(read("src/app/client/page.tsx")),
+  "Client dashboard launches exactly three journey-aware mini-apps without duplicate quick actions",
+  /data-client-dashboard-journeys/.test(read("src/app/client/page.tsx"))
+    && /grid grid-cols-3 gap-1\.5/.test(read("src/app/client/page.tsx"))
+    && /CLIENT_JOURNEYS\.map/.test(read("src/app/client/page.tsx"))
+    && /href=\{`\/client\/rechercher\?journey=\$\{value\}`\}/.test(read("src/app/client/page.tsx"))
+    && !/Professeurs recommandés/.test(read("src/app/client/page.tsx"))
+    && !/data-client-dashboard-action-rail/.test(read("src/app/client/page.tsx"))
+    && /\{actionHref && \(/.test(read("src/app/client/page.tsx")),
 );
 
 record(
@@ -372,9 +375,9 @@ record(
 );
 
 record(
-  "Client app rails are swipeable on mobile without visible scrollbar noise",
+  "Client app filter rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
-    && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
+    && /\[data-client-reservation-filter-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
     && /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(css),
 );
 
