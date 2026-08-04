@@ -479,6 +479,19 @@ record(
 );
 
 record(
+  "Public teacher search exposes three real journey tabs in one mobile row",
+  /parseBookingJourney\(sp\.journey\?\.trim\(\)\) \|\| "ivoirien"/.test(publicTeachersPage)
+    && /data-public-journey-tabs/.test(publicTeachersPage)
+    && /grid grid-cols-3 gap-1\.5/.test(publicTeachersPage)
+    && /Object\.entries\(JOURNEY_LABELS\)/.test(publicTeachersPage)
+    && /data-public-journey-tab=\{value\}/.test(publicTeachersPage)
+    && /aria-current=\{active \? "page" : undefined\}/.test(publicTeachersPage)
+    && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
+    && /params\.set\("subject", subject\)/.test(publicTeachersPage)
+    && /params\.set\("commune", commune\)/.test(publicTeachersPage),
+);
+
+record(
   "Public teacher detail has one journey-aware back action",
   /backFallbackHref = "\/"/.test(publicLayout)
     && /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout)
@@ -490,6 +503,8 @@ record(
   "Public teacher detail keeps one primary reservation action per viewport",
   /data-public-teacher-hero/.test(publicTeacherDetail)
     && /data-public-teacher-primary-action/.test(publicTeacherDetail)
+    && /const hideGlobalBookingAction = isPublicTeacherDetail\(pathname\)/.test(publicLayout)
+    && /!isAuthenticated && !hideGlobalBookingAction/.test(publicLayout)
     && /hidden rounded-lg border border-\[#111B4D\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
     && /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail)
     && !/Réserver ce professeur/.test(publicTeacherDetail),

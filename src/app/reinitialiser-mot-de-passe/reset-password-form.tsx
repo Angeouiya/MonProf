@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
@@ -63,25 +63,25 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
       )}
       <div>
         <Label htmlFor="new-password">Nouveau mot de passe</Label>
-        <Input
+        <PasswordInput
           id="new-password"
-          type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="new-password"
-          className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
+          wrapperClassName="mt-1.5"
+          className="h-11 rounded-lg border-[#DDE6F7]"
           required
         />
       </div>
       <div>
         <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
-        <Input
+        <PasswordInput
           id="confirm-password"
-          type="password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           autoComplete="new-password"
-          className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
+          wrapperClassName="mt-1.5"
+          className="h-11 rounded-lg border-[#DDE6F7]"
           required
         />
       </div>

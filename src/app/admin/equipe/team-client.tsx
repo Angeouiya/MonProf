@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
+import { PasswordInput } from "@/components/shared/password-input";
 import {
   ADMIN_PERMISSIONS,
   ADMIN_PERMISSION_LABELS,
@@ -79,7 +80,7 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
           <Field label="Nom"><Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></Field>
           <Field label="Email"><Input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></Field>
           <Field label="Téléphone"><Input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></Field>
-          <Field label="Mot de passe temporaire"><Input type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={`${PASSWORD_MIN_LENGTH} caractères, lettre + chiffre`} /></Field>
+          <Field label="Mot de passe temporaire"><PasswordInput autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={`${PASSWORD_MIN_LENGTH} caractères, lettre + chiffre`} /></Field>
           <Field label="Rôle">
             <Select value={form.role} onValueChange={(role) => setForm({ ...form, role })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -223,7 +224,7 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
         </div>
 
         <div className="grid gap-3 border-t border-[#E2E8F0] pt-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
-          <Field label="Nouveau mot de passe temporaire"><Input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="10 caractères minimum" /></Field>
+          <Field label="Nouveau mot de passe temporaire"><PasswordInput autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="10 caractères minimum" /></Field>
           <Button variant="outline" onClick={resetPassword} disabled={loading || !password}><KeyRound className="mr-2 h-4 w-4" /> Réinitialiser</Button>
           <Button onClick={save} disabled={loading || owner} className="bg-[#111B4D] text-white hover:bg-[#1E2A78]"><Save className="mr-2 h-4 w-4" /> Enregistrer les accès</Button>
         </div>

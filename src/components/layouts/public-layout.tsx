@@ -58,6 +58,7 @@ export function PublicLayout({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hideGlobalBookingAction = isPublicTeacherDetail(pathname);
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
   const hideFooter = shouldHidePublicFooter(pathname);
   const { data: sessionRole = null } = useQuery({
@@ -119,7 +120,7 @@ export function PublicLayout({
                 <Link href="/connexion" prefetch={true}>Connexion</Link>
               </Button>
             )}
-            {!isAuthenticated && (
+            {!isAuthenticated && !hideGlobalBookingAction && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
                 <Link href="/professeurs" prefetch={true}>
                   Réserver
@@ -247,7 +248,7 @@ export function PublicLayout({
 
 function shouldHidePublicMobileNav(pathname: string | null) {
   if (!pathname) return false;
-  if (/^\/professeurs\/[^/]+/.test(pathname)) return true;
+  if (isPublicTeacherDetail(pathname)) return true;
   if (pathname.startsWith("/connexion")) return true;
   if (pathname.startsWith("/inscription")) return true;
   if (pathname.startsWith("/mot-de-passe-oublie")) return true;
@@ -315,6 +316,10 @@ function PublicMobileNav({
       </div>
     </nav>
   );
+}
+
+function isPublicTeacherDetail(pathname: string | null) {
+  return Boolean(pathname && /^\/professeurs\/[^/]+/.test(pathname));
 }
 
 function shouldShowPublicBack(pathname: string | null) {

@@ -343,7 +343,8 @@ export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; r
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
                     className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                    aria-label="Afficher/masquer"
+                    aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    aria-pressed={showPwd}
                   >
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -370,7 +371,8 @@ export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; r
                     type="button"
                     onClick={() => setShowPwdConfirm((v) => !v)}
                     className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                    aria-label="Afficher/masquer"
+                    aria-label={showPwdConfirm ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                    aria-pressed={showPwdConfirm}
                   >
                     {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>

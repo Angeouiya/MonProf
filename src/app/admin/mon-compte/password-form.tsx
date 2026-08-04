@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ADMIN_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
@@ -78,10 +78,10 @@ export function AdminPasswordForm() {
       </CardHeader>
       <CardContent className="p-4 sm:p-5">
         <form onSubmit={submit} className="space-y-4">
-        <Field label="Mot de passe actuel"><Input name="currentPassword" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /></Field>
+        <Field label="Mot de passe actuel"><PasswordInput name="currentPassword" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nouveau mot de passe"><Input name="newPassword" type="password" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></Field>
-          <Field label="Confirmer le nouveau mot de passe"><Input name="confirmPassword" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></Field>
+          <Field label="Nouveau mot de passe"><PasswordInput name="newPassword" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></Field>
+          <Field label="Confirmer le nouveau mot de passe"><PasswordInput name="confirmPassword" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></Field>
         </div>
         <div className="grid gap-2 text-xs font-semibold text-[#64748B] sm:grid-cols-2">
           {rules.map((rule) => <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>{rule.label}</p>)}

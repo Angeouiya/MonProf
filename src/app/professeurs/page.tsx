@@ -66,7 +66,7 @@ export default async function TeachersPage({
 }) {
   const sp = await searchParams;
 
-  const journey = parseBookingJourney(sp.journey?.trim());
+  const journey = parseBookingJourney(sp.journey?.trim()) || "ivoirien";
   const subject = sp.subject?.trim() || "";
   const level = sp.level?.trim() || "";
   const commune = sp.commune?.trim() || "";
@@ -189,6 +189,17 @@ export default async function TeachersPage({
     return qs ? `/professeurs?${qs}` : "/professeurs";
   }
 
+  function buildJourneyUrl(nextJourney: BookingJourney): string {
+    const params = new URLSearchParams({ journey: nextJourney });
+    if (q) params.set("q", q);
+    if (subject) params.set("subject", subject);
+    if (level) params.set("level", level);
+    if (commune) params.set("commune", commune);
+    if (format) params.set("format", format);
+    if (sort && sort !== "recommended") params.set("sort", sort);
+    return `/professeurs?${params.toString()}`;
+  }
+
   const activeFiltersCount = [
     subject,
     level,
@@ -242,6 +253,32 @@ export default async function TeachersPage({
               </div>
             </div>
           </div>
+
+          <nav
+            className="mt-3 grid grid-cols-3 gap-1.5 sm:mt-5 sm:max-w-2xl sm:gap-2"
+            aria-label="Choisir un parcours"
+            data-public-journey-tabs
+          >
+            {(Object.entries(JOURNEY_LABELS) as [BookingJourney, string][]).map(([value, label]) => {
+              const active = journey === value;
+              return (
+                <Link
+                  key={value}
+                  href={buildJourneyUrl(value)}
+                  prefetch={true}
+                  aria-current={active ? "page" : undefined}
+                  data-public-journey-tab={value}
+                  className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-semibold leading-tight transition sm:px-4 sm:text-sm ${
+                    active
+                      ? "border-[#111B4D] bg-[#111B4D] text-white"
+                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
 
           {/* Barre de recherche texte */}
           <form method="GET" action="/professeurs" className="mt-3 flex gap-2 rounded-lg border border-[#E3E8F2] bg-white p-1.5 sm:mt-6 sm:p-2">
