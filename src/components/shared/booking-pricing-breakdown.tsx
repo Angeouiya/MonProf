@@ -25,6 +25,7 @@ type BookingPricingBreakdownBaseProps = {
   paymentServiceFeeLabel?: string | null;
   totalBeforePaymentServiceFee?: number | null;
   isQuoteOnly?: boolean | null;
+  presentation?: "full" | "checkout";
 };
 
 type BookingPricingBreakdownClientProps = BookingPricingBreakdownBaseProps & {
@@ -55,6 +56,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
     packType,
   } = props;
   const audience = props.audience ?? "client";
+  const isCheckout = audience === "client" && props.presentation === "checkout";
   const safeSessionsCount = Math.max(1, Math.round(Number(sessionsCount) || 1));
   const safeParticipantsCount = Math.max(1, Math.round(Number(participantsCount) || 1));
   const extraParticipants = Math.max(0, safeParticipantsCount - 1);
@@ -128,27 +130,29 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2" data-client-pricing-facts>
-        <PricingFact
-          icon={<Clock className="h-4 w-4" />}
-          label="Formule"
-          value={packTypeLabel(packType)}
-          detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""} de 2h`}
-        />
-        <PricingFact
-          icon={<Users className="h-4 w-4" />}
-          label="Apprenants"
-          value={`${safeParticipantsCount} ${safeParticipantsCount > 1 ? "participants" : "participant"}`}
-          detail={isGroup ? `+50% x ${extraParticipants}` : "Individuel"}
-        />
-        <PricingFact
-          label="Prix / séance"
-          value={isQuoteOnly ? "À recalculer" : <Money amount={indicativeSessionAmount} />}
-          detail={`${totalHours}h au total`}
-        />
-      </div>
+      {!isCheckout && (
+        <div className="mt-3 grid grid-cols-1 gap-2" data-client-pricing-facts>
+          <PricingFact
+            icon={<Clock className="h-4 w-4" />}
+            label="Formule"
+            value={packTypeLabel(packType)}
+            detail={`${safeSessionsCount} séance${safeSessionsCount > 1 ? "s" : ""} de 2h`}
+          />
+          <PricingFact
+            icon={<Users className="h-4 w-4" />}
+            label="Apprenants"
+            value={`${safeParticipantsCount} ${safeParticipantsCount > 1 ? "participants" : "participant"}`}
+            detail={isGroup ? `+50% x ${extraParticipants}` : "Individuel"}
+          />
+          <PricingFact
+            label="Prix / séance"
+            value={isQuoteOnly ? "À recalculer" : <Money amount={indicativeSessionAmount} />}
+            detail={`${totalHours}h au total`}
+          />
+        </div>
+      )}
 
-      {audience === "client" && !isQuoteOnly && (
+      {audience === "client" && !isQuoteOnly && !isCheckout && (
         <div className="mt-3 rounded-lg border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-3 text-xs font-medium leading-5 text-[#312E81]">
           <p className="font-bold">Grille officielle appliquée</p>
           <p className="mt-1">
@@ -165,8 +169,39 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
         </div>
       )}
 
-      <div className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5" data-client-pricing-detail>
-        <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3" data-client-pricing-detail-header>
+      {isCheckout && !isQuoteOnly && (
+        <div className="mt-3 divide-y divide-[#EEF2F7] rounded-lg border border-[#D8DEE9] bg-white px-3" data-client-checkout-pricing-summary>
+          <CheckoutPricingLine
+            label="Cours"
+            detail={props.priceTierLabel || "Grille officielle"}
+            value={<Money amount={courseAmount} />}
+          />
+          {discountAmount > 0 && (
+            <CheckoutPricingLine label="Économie pack" value={<>- <Money amount={discountAmount} /></>} />
+          )}
+          <CheckoutPricingLine
+            label="Déplacement"
+            detail={transportRouteLabel ?? undefined}
+            value={transportFeePending ? "En attente" : transportFee === 0 ? "Gratuit" : <Money amount={transportFee} />}
+          />
+          {materialFee > 0 && <CheckoutPricingLine label="Matériel" value={<Money amount={materialFee} />} />}
+          <CheckoutPricingLine label={paymentServiceFeeLabel} value={<Money amount={paymentServiceFeeAmount} />} />
+        </div>
+      )}
+
+      <details
+        className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5"
+        data-client-pricing-detail
+        open={isCheckout ? undefined : true}
+      >
+        <summary className={isCheckout
+          ? "cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden"
+          : "sr-only"}
+        >
+          {isCheckout ? "Comprendre le calcul" : "Détail du calcul"}
+        </summary>
+        <div className={isCheckout ? "mt-3 border-t border-[#E3E8F2] pt-3" : undefined}>
+          <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3" data-client-pricing-detail-header>
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
             <p className="mt-0.5 hidden text-xs font-medium leading-5 text-[#64748B] min-[430px]:block">
@@ -180,9 +215,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               Moyenne <Money amount={averageSessionPrice} /> / séance
             </p>
           )}
-        </div>
+          </div>
 
-        <div className="mt-3 space-y-2 text-sm">
+          <div className="mt-3 space-y-2 text-sm">
           {isQuoteOnly ? (
             <PricingLine label="Montant" value="À recalculer avant paiement" strong />
           ) : (
@@ -254,8 +289,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               </div>
             </>
           )}
+          </div>
         </div>
-      </div>
+      </details>
 
       {transportRuleLabel && audience === "client" && (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
@@ -335,6 +371,26 @@ function PricingLine({
       <span className={strong ? "break-words font-semibold tabular-nums leading-snug text-[#111B4D]" : "break-words font-semibold tabular-nums leading-snug text-[#111827]"}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function CheckoutPricingLine({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3 text-sm">
+      <span className="min-w-0">
+        <span className="block font-medium text-[#64748B]">{label}</span>
+        {detail && <span className="mt-0.5 block break-words text-xs font-medium leading-4 text-[#94A3B8]">{detail}</span>}
+      </span>
+      <span className="shrink-0 font-semibold tabular-nums text-[#111827]">{value}</span>
     </div>
   );
 }

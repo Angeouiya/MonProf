@@ -1890,8 +1890,8 @@ export function ReserverForm({
             <div className="space-y-5">
               <StepIntro
                 step="Étape 5"
-                title="Paiement sécurisé"
-                description="Contrôlez le dossier, choisissez le moyen de paiement puis poursuivez sur la page sécurisée Jèko."
+                title="Payer avec Jèko"
+                description="Choisissez votre moyen de paiement. La réservation sera activée uniquement après confirmation serveur."
               />
 
               <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_20rem]">
@@ -1923,6 +1923,7 @@ export function ReserverForm({
                 </div>
 
                 <BookingPricingBreakdown
+                  presentation="checkout"
                   unitPrice={pricing.unitSessionAmount}
                   totalPrice={totalPrice}
                   sessionsCount={selectedPackSessions}
@@ -1947,7 +1948,7 @@ export function ReserverForm({
               </div>
 
               <div className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">
-                  <div className="grid gap-4 border-b border-[#E5E7EB] bg-white p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <div className="border-b border-[#E5E7EB] bg-white p-4">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Paiement externalisé</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -1957,12 +1958,8 @@ export function ReserverForm({
                         </span>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
-                        Compétence ne collecte aucun code secret Mobile Money. Votre choix est transmis à Jèko, qui collecte les informations nécessaires et confirme automatiquement le paiement à la plateforme.
+                        Jèko collecte les informations de paiement et confirme le résultat directement au serveur Compétence. Aucun code secret Mobile Money n'est enregistré ici.
                       </p>
-                    </div>
-                    <div className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-right">
-                      <p className="text-xs font-semibold uppercase tracking-normal text-[#64748B]">Montant Jèko</p>
-                      <p className="mt-1 text-2xl font-semibold text-[#111B4D]">{formatFCFA(totalPrice)}</p>
                     </div>
                   </div>
 

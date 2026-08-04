@@ -360,6 +360,16 @@ record(
 );
 
 record(
+  "Client checkout exposes essential amounts once and keeps the equation on demand",
+  /presentation="checkout"/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && !/Montant Jèko/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /data-client-checkout-pricing-summary/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
+    && /label="Cours"[\s\S]*?label="Déplacement"[\s\S]*?label=\{paymentServiceFeeLabel\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
+    && /Comprendre le calcul/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
+    && /open=\{isCheckout \? undefined : true\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx")),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
