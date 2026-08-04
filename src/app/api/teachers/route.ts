@@ -2,36 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 import { parseTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
+import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
+import {
+  filterLevelsForJourney,
+  filterSubjectsForJourney,
+  subjectNameMatchesJourney,
+} from "@/lib/catalog-journey";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const subject = searchParams.get("subject");
-  const level = searchParams.get("level");
-  const commune = searchParams.get("commune");
-  const format = searchParams.get("format"); // HOME | ONLINE
+  const requestedSubject = searchParams.get("subject")?.trim() ?? "";
+  const requestedLevel = searchParams.get("level")?.trim() ?? "";
+  const requestedCommune = searchParams.get("commune")?.trim() ?? "";
+  const requestedFormat = searchParams.get("format")?.trim() ?? "";
+  const format = ["HOME", "ONLINE"].includes(requestedFormat) ? requestedFormat : "";
   const search = searchParams.get("q")?.trim();
-  const journey = parseTeacherJourney(searchParams.get("journey"));
-  const sort = searchParams.get("sort") ?? "recommended"; // recommended | rating | experience
+  const journey = parseTeacherJourney(searchParams.get("journey")) ?? "ivoirien";
+  const requestedSort = searchParams.get("sort")?.trim() ?? "recommended";
+  const sort = ["recommended", "rating", "experience"].includes(requestedSort)
+    ? requestedSort
+    : "recommended";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const pageSize = Math.min(24, Math.max(6, Number(searchParams.get("pageSize")) || 12));
-
-  const where: any = {
-    status: "ACTIVE",
-    ...(journey ? teacherJourneyWhere(journey) : {}),
-    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(search)],
-  };
-
-  if (subject) {
-    where.subjects = { some: { subject: { slug: subject } } };
-  }
-  if (level) {
-    where.levels = { some: { level: { slug: level } } };
-  }
-  if (commune) {
-    where.zones = { some: { commune: { name: commune } } };
-  }
-  if (format === "HOME") where.offersHome = true;
-  if (format === "ONLINE") where.offersOnline = true;
 
   let orderBy: any;
   switch (sort) {
@@ -51,6 +43,23 @@ export async function GET(req: NextRequest) {
   let teachers: any[] = [];
 
   try {
+    const catalog = await getCachedTeacherSearchCatalog();
+    const subjects = filterSubjectsForJourney(catalog.subjects, journey);
+    const levels = filterLevelsForJourney(catalog.levels, journey);
+    const subject = subjects.some((item) => item.slug === requestedSubject) ? requestedSubject : "";
+    const level = levels.some((item) => item.slug === requestedLevel) ? requestedLevel : "";
+    const commune = catalog.communes.some((item) => item.name === requestedCommune) ? requestedCommune : "";
+    const where: any = {
+      status: "ACTIVE",
+      ...teacherJourneyWhere(journey),
+      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(search)],
+    };
+    if (subject) where.subjects = { some: { subject: { slug: subject } } };
+    if (level) where.levels = { some: { level: { slug: level } } };
+    if (commune) where.zones = { some: { commune: { name: commune } } };
+    if (format === "HOME") where.offersHome = true;
+    if (format === "ONLINE") where.offersOnline = true;
+
     total = await db.teacher.count({ where });
     teachers = total > 0
       ? await db.teacher.findMany({
@@ -107,7 +116,9 @@ export async function GET(req: NextRequest) {
       popular: t.badgePopular,
       premium: t.badgePremium,
     },
-    primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
+    primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects[0]?.subject.name,
     subjects: t.subjects.map((s) => s.subject.name),
     levels: t.levels.map((l) => l.level.name),
     zones: t.zones.map((z) => (z.commune as any).name),

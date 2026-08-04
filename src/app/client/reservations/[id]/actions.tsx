@@ -86,7 +86,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const status = booking.status;
   const paymentVerified = hasVerifiedPayDunyaClientPayment(booking);
-  const providerIsJeko = booking.paymentProvider === "JEKO";
+  const providerIsJeko = booking.paymentProvider !== "PAYDUNYA";
   const providerLabel = providerIsJeko
     ? "Jèko"
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
@@ -222,12 +222,11 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
         </Button>
         <ImportantActionConfirm
           title="Supprimer ce brouillon ?"
-          description={`Le dossier sera retiré de vos brouillons. Cette action est autorisée uniquement si aucun paiement ${providerLabel} n'a été vérifié et si aucune mission n'a été créée.`}
+          description="Le brouillon disparaîtra immédiatement de votre espace. Aucun cours ne sera réservé et le professeur ne sera pas notifié."
           badge="Suppression définitive"
           notices={[
-            "Le professeur ne sera pas notifié.",
-            "Aucun paiement vérifié ne peut être supprimé.",
-            `Un lien ${providerLabel} encore actif doit d'abord être annulé ou expiré.`,
+            "Vous pouvez supprimer un brouillon à tout moment.",
+            "Cette action ne confirme aucun cours.",
             "Vous devrez recommencer une nouvelle réservation si vous changez d'avis.",
           ]}
           confirmLabel={loading === "delete_draft" ? "Suppression..." : "Supprimer le brouillon"}
@@ -553,7 +552,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const canReview = isReviewableBookingStatus(status);
   const canCancel = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(status);
   const canRequestReschedule = canCancel && paymentVerified && !pendingRescheduleRequest;
-  const providerIsJeko = booking.paymentProvider === "JEKO";
+  const providerIsJeko = booking.paymentProvider !== "PAYDUNYA";
   const providerLabel = providerIsJeko
     ? "Jèko"
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt

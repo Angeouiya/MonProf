@@ -32,6 +32,7 @@ import { ScheduleProposalActions } from "./schedule-proposal-actions";
 import { ReplacementProposalActions } from "./replacement-proposal-actions";
 import { ClientRescheduleRequestPanel } from "./reschedule-request-panel";
 import { BookingSessionLedger } from "@/components/shared/booking-session-ledger";
+import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,7 @@ export default async function ReservationDetailPage({
     },
   });
   if (!booking || booking.clientId !== user.id) notFound();
+  if (isClientDeletedDraft(booking) && booking.paymentStatus === "FAILED") notFound();
 
   const paydunyaReturnToken = extractPayDunyaReturnToken(sp);
   const isPayDunyaReturn = sp.paydunya === "return" || Boolean(paydunyaReturnToken);

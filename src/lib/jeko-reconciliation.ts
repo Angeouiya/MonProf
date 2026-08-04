@@ -11,6 +11,7 @@ import {
 } from "@/lib/jeko";
 import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-recovery";
 import { reconcileJekoRescheduleWebhook } from "@/lib/jeko-reschedule-reconciliation";
+import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 import { resolveJekoPaymentStatusConsensus } from "@/lib/jeko-client-payment";
 import {
   isJekoIncomingPaymentType,
@@ -311,6 +312,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
             teacherId: true,
             clientId: true,
             status: true,
+            cancellationReason: true,
             paymentStatus: true,
             paymentProvider: true,
             providerPaymentStatus: true,
@@ -431,9 +433,12 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
 
     if (current.booking) {
       const bookingWasAlreadySecured = SECURED_PAYMENT_STATUSES.has(current.booking.paymentStatus);
+      const clientDeletedDraft = isClientDeletedDraft(current.booking);
       const nextPaymentStatus = bookingWasAlreadySecured
         ? current.booking.paymentStatus
-        : "BLOCKED";
+        : clientDeletedDraft
+          ? "REFUND_PENDING"
+          : "BLOCKED";
       const preserveAnotherProvider = bookingWasAlreadySecured && current.booking.paymentProvider !== "JEKO";
       await tx.booking.update({
         where: { id: current.booking.id },
@@ -449,14 +454,54 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
       await tx.adminActionLog.create({
         data: {
           adminId: null,
-          action: "Paiement Jèko vérifié serveur",
+          action: clientDeletedDraft
+            ? "Paiement Jèko reçu après suppression d'un brouillon"
+            : "Paiement Jèko vérifié serveur",
           entityType: "Booking",
           entityId: current.booking.id,
-          detail: `Référence ${reference}. Montant confirmé : ${paidAmountXof} FCFA. Frais Jèko couverts : ${providerFeeXof} FCFA (${confirmedTransaction.feeCents} unités mineures).${preserveAnotherProvider ? " Alerte : la réservation possédait déjà des fonds sécurisés par un autre flux ; contrôle de double encaissement requis." : ""}`,
+          detail: `Référence ${reference}. Montant confirmé : ${paidAmountXof} FCFA. Frais Jèko couverts : ${providerFeeXof} FCFA (${confirmedTransaction.feeCents} unités mineures).${clientDeletedDraft ? " Le brouillon avait déjà été retiré par le client : aucun cours n'est activé et les fonds passent en remboursement." : ""}${preserveAnotherProvider ? " Alerte : la réservation possédait déjà des fonds sécurisés par un autre flux ; contrôle de double encaissement requis." : ""}`,
           oldStatus: current.booking.paymentStatus,
           newStatus: nextPaymentStatus,
         },
       });
+      if (clientDeletedDraft) {
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: current.booking.clientId,
+              title: "Paiement reçu après suppression",
+              message: `Le paiement ${current.booking.reference} a été reçu alors que vous aviez supprimé le brouillon. Aucun cours n'a été activé ; le remboursement est maintenant en traitement.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "CLIENT",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: current.booking.id,
+              teacherId: current.booking.teacherId,
+              clientId: current.booking.clientId,
+              sentAt: now,
+              link: `/client/reservations/${current.booking.id}`,
+              actionLabel: "Suivre le remboursement",
+            },
+            {
+              userId: null,
+              title: "Remboursement requis après suppression",
+              message: `Jèko a confirmé ${current.booking.reference} après la suppression du brouillon par le client. Le cours reste annulé et ${paidAmountXof} FCFA doivent être remboursés.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "URGENT",
+              bookingId: current.booking.id,
+              teacherId: current.booking.teacherId,
+              clientId: current.booking.clientId,
+              sentAt: now,
+              link: `/admin/reservations/${current.booking.id}`,
+              actionLabel: "Traiter le remboursement",
+            },
+          ],
+        });
+      }
       if (preserveAnotherProvider) {
         await tx.notification.create({
           data: {

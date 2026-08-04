@@ -143,8 +143,8 @@ async function deliverOutboxItem(item: OutboxRow) {
   const payload = JSON.stringify({
     title: item.title,
     body: item.message.slice(0, 420),
-    icon: "/images/brand/competence-icon-512.png",
-    badge: "/images/brand/competence-icon.png",
+    icon: "/images/brand/competence-icon-512-safe.png",
+    badge: "/images/brand/competence-icon-192-safe.png",
     url: safeDestination(item.link, item.recipientType),
     tag: `competence-${item.id}`,
     priority: item.priority,

@@ -27,6 +27,11 @@ import {
 } from "lucide-react";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
+import {
+  filterLevelsForJourney,
+  filterSubjectsForJourney,
+  subjectNameMatchesJourney,
+} from "@/lib/catalog-journey";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 import {
   parseTeacherJourney,
@@ -40,10 +45,14 @@ export const dynamic = "force-dynamic";
 const fieldClassName = "mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 py-2.5 text-sm text-[#111827] outline-none transition focus:border-[#9AAAD0] focus:ring-2 focus:ring-[#DDE6F7]";
 type SearchParams = { [k: string]: string | undefined };
 
-const quickSearches = [
+const schoolQuickSearches = [
   { label: "Maths à Cocody", query: "q=math&commune=Cocody" },
   { label: "Anglais en ligne", query: "q=anglais&format=ONLINE" },
   { label: "Concours", query: "q=concours" },
+  { label: "Informatique", query: "q=informatique" },
+];
+
+const professionalQuickSearches = [
   { label: "Adultes", query: "q=professionnel" },
   { label: "Informatique", query: "q=informatique" },
   { label: "Art et métiers", query: "q=design" },
@@ -57,27 +66,17 @@ export default async function RechercherPage({
   const sp = await searchParams;
   const journey = parseTeacherJourney(sp.journey) ?? "ivoirien";
   const journeyConfig = TEACHER_JOURNEY_CONFIG[journey];
-  const subject = sp.subject;
-  const level = sp.level;
-  const commune = sp.commune;
-  const format = sp.format;
+  const requestedSubject = sp.subject?.trim() ?? "";
+  const requestedLevel = sp.level?.trim() ?? "";
+  const requestedCommune = sp.commune?.trim() ?? "";
+  const requestedFormat = sp.format?.trim() ?? "";
+  const requestedSort = sp.sort?.trim() ?? "recommended";
+  const format = ["HOME", "ONLINE"].includes(requestedFormat) ? requestedFormat : "";
   const q = sp.q?.trim();
-  const sort = sp.sort ?? "recommended";
-
-  const visibleTeacherWhere: any = {
-    status: "ACTIVE",
-    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
-  };
-  const where: any = {
-    ...visibleTeacherWhere,
-    ...teacherJourneyWhere(journey),
-    AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
-  };
-  if (subject) where.subjects = { some: { subject: { slug: subject } } };
-  if (level) where.levels = { some: { level: { slug: level } } };
-  if (commune) where.zones = { some: { commune: { name: commune } } };
-  if (format === "HOME") where.offersHome = true;
-  if (format === "ONLINE") where.offersOnline = true;
+  const sort = ["recommended", "rating", "experience"].includes(requestedSort)
+    ? requestedSort
+    : "recommended";
+  const quickSearches = journey === "professionnel" ? professionalQuickSearches : schoolQuickSearches;
 
   let orderBy: any;
   switch (sort) {
@@ -91,32 +90,54 @@ export default async function RechercherPage({
   let subjects: any[] = [];
   let levels: any[] = [];
   let communes: any[] = [];
+  let subject = "";
+  let level = "";
+  let commune = "";
 
   try {
-    const [teacherResults, catalog] = await Promise.all([
-      db.teacher.findMany({
-        where,
-        orderBy,
-        take: 24,
-        include: {
-          subjects: { include: { subject: true } },
-          _count: { select: { reviews: true } },
-        },
-      }),
-      getCachedTeacherSearchCatalog(),
-    ]);
+    const catalog = await getCachedTeacherSearchCatalog();
+    subjects = filterSubjectsForJourney(catalog.subjects, journey);
+    levels = filterLevelsForJourney(catalog.levels, journey);
+    communes = catalog.communes;
+    subject = subjects.some((item) => item.slug === requestedSubject) ? requestedSubject : "";
+    level = levels.some((item) => item.slug === requestedLevel) ? requestedLevel : "";
+    commune = communes.some((item) => item.name === requestedCommune) ? requestedCommune : "";
+
+    const visibleTeacherWhere: any = {
+      status: "ACTIVE",
+      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+    };
+    const where: any = {
+      ...visibleTeacherWhere,
+      ...teacherJourneyWhere(journey),
+      AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
+    };
+    if (subject) where.subjects = { some: { subject: { slug: subject } } };
+    if (level) where.levels = { some: { level: { slug: level } } };
+    if (commune) where.zones = { some: { commune: { name: commune } } };
+    if (format === "HOME") where.offersHome = true;
+    if (format === "ONLINE") where.offersOnline = true;
+
+    const teacherResults = await db.teacher.findMany({
+      where,
+      orderBy,
+      take: 24,
+      include: {
+        subjects: { include: { subject: true } },
+        _count: { select: { reviews: true } },
+      },
+    });
     teachers = teacherResults;
     totalVisibleTeachers = catalog.teacherCount;
-    subjects = catalog.subjects;
-    levels = catalog.levels;
-    communes = catalog.communes;
   } catch (error) {
     console.error("[client-search:query_failed]", error);
   }
 
   const items = teachers.map((t) => ({
     ...t,
-    primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
+    primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects[0]?.subject.name,
     href: `/client/reserver?teacherId=${t.id}&journey=${journey}`,
   }));
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
@@ -328,7 +349,7 @@ export default async function RechercherPage({
                   ))}
                 </div>
                 <Link
-                  href="/client/rechercher"
+                  href={`/client/rechercher?journey=${journey}`}
                   className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[#CAD7F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:bg-white"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -389,8 +410,6 @@ export default async function RechercherPage({
                   allLabel="Toutes les communes"
                   groups={communeGroups}
                   triggerClassName="mt-1.5 h-11 rounded-lg border-[#E3E8F2] py-2.5 focus:border-[#111B4D] focus:ring-2 focus:ring-[#111B4D]"
-                  allowCustomValue
-                  customValueLabel="Rechercher dans cette ville"
                 />
               </div>
               <div>
@@ -620,7 +639,7 @@ function buildSearchHref(
   updates: Record<string, string | null | undefined>,
 ) {
   const params = new URLSearchParams();
-  for (const key of ["q", "subject", "level", "commune", "format", "sort"]) {
+  for (const key of ["journey", "q", "subject", "level", "commune", "format", "sort"]) {
     const value = currentParams[key];
     if (!value || (key === "sort" && value === "recommended")) continue;
     params.set(key, value);
@@ -635,5 +654,5 @@ function buildSearchHref(
   }
 
   const query = params.toString();
-  return query ? `/client/rechercher?${query}` : "/client/rechercher";
+  return query ? `/client/rechercher?${query}` : "/client/rechercher?journey=ivoirien";
 }

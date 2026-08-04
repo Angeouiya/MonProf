@@ -1959,7 +1959,7 @@ export function ReserverForm({
                         </span>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
-                        Jèko collecte les informations de paiement et confirme le résultat directement au serveur Compétence. Aucun code secret Mobile Money n'est enregistré ici.
+                        Jèko collecte les informations de paiement et confirme le résultat directement au serveur Compétence.CI. Aucun code secret Mobile Money n'est enregistré ici.
                       </p>
                     </div>
                   </div>
@@ -1985,7 +1985,7 @@ export function ReserverForm({
                     </div>
                     <p className="mt-3 flex gap-2 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                      Le bouton final ouvre Jèko avec le moyen choisi. La réservation ne sera marquée payée qu'après confirmation signée et contrôle serveur.
+                      Le bouton final ouvre la page sécurisée Jèko, puis l'application officielle du moyen choisi pour autoriser le paiement. La réservation ne sera marquée payée qu'après confirmation signée et contrôle serveur.
                     </p>
                   </div>
               </div>
@@ -2012,7 +2012,7 @@ export function ReserverForm({
                 {submitting ? (
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
-                  <><ExternalLink className="mr-2 h-4 w-4" /> Payer via Jèko</>
+                  <><ExternalLink className="mr-2 h-4 w-4" /> Continuer vers Jèko</>
                 )}
               </Button>
             )}

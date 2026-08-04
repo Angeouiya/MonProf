@@ -24,7 +24,13 @@ import { formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
-import { parseTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
+import {
+  parseTeacherJourney,
+  teacherEligibleJourneys,
+  teacherJourneyWhere,
+  TEACHER_JOURNEY_CONFIG,
+} from "@/lib/teacher-journeys";
+import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 
 export const dynamic = "force-dynamic";
 
@@ -67,10 +73,23 @@ export default async function TeacherDetailPage({
   }
 
   const displayName = teacher.professionalName || teacher.fullName;
+  const eligibleJourneys = teacherEligibleJourneys(teacher);
+  const activeJourney = journey || eligibleJourneys[0] || "ivoirien";
+  const journeyConfig = TEACHER_JOURNEY_CONFIG[activeJourney];
+  const journeySubjects = filterSubjectsForJourney(teacher.subjects.map((item) => ({
+    ...item,
+    name: item.subject.name,
+    icon: item.subject.icon,
+  })), activeJourney);
+  const journeyLevels = filterLevelsForJourney(teacher.levels.map((item) => ({
+    ...item,
+    name: item.level.name,
+    order: item.level.order,
+  })), activeJourney);
   const primarySubject =
-    teacher.subjects.find((s) => s.isPrimary)?.subject.name ??
-    teacher.subjects[0]?.subject.name ??
-    "—";
+    journeySubjects.find((item) => item.isPrimary)?.subject.name ??
+    journeySubjects[0]?.subject.name ??
+    (activeJourney === "professionnel" ? "Compétence professionnelle" : "Accompagnement scolaire");
 
   const availability = parseAvailability(teacher.availability);
   const ratingBuckets = [5, 4, 3, 2, 1].map((rating) => ({
@@ -95,18 +114,18 @@ export default async function TeacherDetailPage({
   const availabilitySummary = availableSlotCount > 0
     ? `${availableDayCount} jour${availableDayCount > 1 ? "s" : ""} · ${availableSlotCount} créneau${availableSlotCount > 1 ? "x" : ""} de 2h`
     : "Disponibilités à confirmer";
-  const subjectsPreview = teacher.subjects.slice(0, 4).map((s) => s.subject.name).join(", ");
-  const levelsPreview = teacher.levels.slice(0, 5).map((l) => l.level.name).join(", ");
+  const subjectsPreview = journeySubjects.slice(0, 4).map((item) => item.subject.name).join(", ");
+  const levelsPreview = journeyLevels.slice(0, 5).map((item) => item.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
-  const sessionPriceLabel = "Calculé selon le parcours";
+  const sessionPriceLabel = journeyConfig.priceLabel;
   const formatLabel = teacher.offersHome && teacher.offersOnline
     ? "Domicile ou en ligne"
     : teacher.offersHome
       ? "Cours à domicile"
       : "Cours en ligne";
 
-  const teachersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
-  const bookingDestination = `/client/reserver?teacherId=${teacher.id}${journey ? `&journey=${journey}` : ""}`;
+  const teachersHref = `/professeurs?journey=${activeJourney}`;
+  const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`;
   const reserveHref = session?.user
     ? bookingDestination
     : `/connexion?from=${encodeURIComponent(bookingDestination)}`;
@@ -115,23 +134,54 @@ export default async function TeacherDetailPage({
     <PublicLayout backFallbackHref={teachersHref}>
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
         <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <nav
+            className="mb-3 grid grid-cols-3 gap-1.5 sm:max-w-2xl sm:gap-2"
+            aria-label="Parcours proposés par ce professeur"
+            data-public-teacher-journey-tabs
+          >
+            {eligibleJourneys.map((value) => {
+              const config = TEACHER_JOURNEY_CONFIG[value];
+              const active = value === activeJourney;
+              return (
+                <Link
+                  key={value}
+                  href={`/professeurs/${teacher.id}?journey=${value}`}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight transition sm:text-sm ${
+                    active
+                      ? "border-[#111B4D] bg-[#111B4D] text-white"
+                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
+                  }`}
+                >
+                  <span className="sm:hidden">{config.shortLabel}</span>
+                  <span className="hidden sm:inline">{config.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
             <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-5" data-public-teacher-hero>
-              <div className="grid grid-cols-[120px_minmax(0,1fr)] items-start gap-3 sm:gap-5">
-                <ProfessorImage
-                  photoUrl={teacher.photoUrl}
-                  name={displayName}
-                  size={112}
-                  shape="rounded"
-                  priority
-                  verified={teacher.badgeVerified}
-                />
+              <div
+                className="grid justify-items-center gap-4 min-[520px]:grid-cols-[184px_minmax(0,1fr)] min-[520px]:items-center min-[520px]:justify-items-start sm:gap-5"
+                data-public-teacher-photo-layout
+              >
+                <div className="flex items-center justify-center rounded-xl border border-[#DDE6F7] bg-[#F8FAFD] p-3">
+                  <ProfessorImage
+                    photoUrl={teacher.photoUrl}
+                    name={displayName}
+                    size={144}
+                    shape="rounded"
+                    className="drop-shadow-sm"
+                    priority
+                    verified={teacher.badgeVerified}
+                  />
+                </div>
 
-                <div className="min-w-0">
+                <div className="min-w-0 text-center min-[520px]:text-left">
                   <h1 className="text-2xl font-semibold leading-tight text-[#111827] sm:text-4xl">
                     {displayName}
                   </h1>
-                  <div className="mt-2">
+                  <div className="mt-2 flex justify-center min-[520px]:justify-start">
                     <ProfessorTrustBadges
                       verified={teacher.badgeVerified}
                       recommended={teacher.badgeRecommended}
@@ -145,12 +195,12 @@ export default async function TeacherDetailPage({
                   <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[#111B4D] sm:text-base">
                     {teacher.jobTitle}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#64748B] sm:text-sm">
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#64748B] min-[520px]:justify-start sm:text-sm">
                     <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{primarySubject}</span>
                     <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{teacher.commune ?? "Abidjan"}</span>
                     {displayRating > 0 && <span className="font-semibold text-[#111B4D]">{displayRatingLabel} {displayRating.toFixed(1)}/5</span>}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-[#111B4D] sm:text-xs">
+                  <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px] font-semibold text-[#111B4D] min-[520px]:justify-start sm:text-xs">
                     {teacher.offersHome && <span className="inline-flex items-center gap-1"><HomeIcon className="h-3 w-3" />Domicile</span>}
                     {teacher.offersOnline && <span className="inline-flex items-center gap-1"><Video className="h-3 w-3" />En ligne</span>}
                   </div>
@@ -165,8 +215,8 @@ export default async function TeacherDetailPage({
             </div>
 
             <aside className="hidden rounded-lg border border-[#111B4D] bg-white p-5 lg:flex lg:flex-col" data-public-teacher-primary-action>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Votre réservation</p>
-              <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">Trois choix, puis le prix exact.</h2>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{journeyConfig.label}</p>
+              <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">{sessionPriceLabel}</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
                 Niveau, lieu et créneau. Le moteur applique ensuite le tarif officiel et le déplacement.
               </p>
@@ -284,10 +334,11 @@ export default async function TeacherDetailPage({
               <DisclosureCard
                 icon={<GraduationCap className="h-4 w-4" />}
                 title="Matières et niveaux"
-                summary={`${teacher.subjects.length} matière${teacher.subjects.length > 1 ? "s" : ""} · ${teacher.levels.length} niveau${teacher.levels.length > 1 ? "x" : ""}`}
+                summary={`${journeySubjects.length} matière${journeySubjects.length > 1 ? "s" : ""} · ${journeyLevels.length} niveau${journeyLevels.length > 1 ? "x" : ""}`}
               >
-                <div className="flex flex-wrap gap-2">
-                  {teacher.subjects.map((s) => (
+                {journeySubjects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {journeySubjects.map((s) => (
                     <span
                       key={s.subject.id}
                       className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold ${
@@ -301,21 +352,32 @@ export default async function TeacherDetailPage({
                         <span className="text-xs uppercase tracking-wide text-[#64748B]">· Principale</span>
                       )}
                     </span>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium leading-6 text-[#64748B]">
+                    Les matières de ce parcours seront précisées avec votre besoin.
+                  </p>
+                )}
                 <h3 className="mt-6 mb-3 text-sm font-semibold text-[#111827]">
                   Niveaux enseignés
                 </h3>
-                <div className="flex flex-wrap gap-2">
-                  {teacher.levels.map((l) => (
+                {journeyLevels.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {journeyLevels.map((l) => (
                     <span
                       key={l.level.id}
                       className="inline-flex items-center rounded-lg border border-[#E3E8F2] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]"
                     >
                       {l.level.name}
                     </span>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium leading-6 text-[#64748B]">
+                    Le niveau exact sera choisi pendant la réservation.
+                  </p>
+                )}
               </DisclosureCard>
 
               {/* Zones d'intervention */}

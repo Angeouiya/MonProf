@@ -141,13 +141,20 @@ export function PublicLayout({
         </div>
       </header>
       {mobileOpen && (
-        <div
-          className="fixed inset-x-0 z-40 overflow-y-auto border-b border-[#E3E8F2] bg-white lg:hidden"
-          style={{
-            top: "var(--app-topbar-height)",
-            maxHeight: "calc(100dvh - var(--app-topbar-height))",
-          }}
-        >
+        <>
+          <button
+            type="button"
+            aria-label="Fermer le menu"
+            className="app-topbar-offset fixed inset-x-0 bottom-0 z-50 bg-[#111827]/25 backdrop-blur-[1px] lg:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div
+            className="fixed inset-x-0 z-[60] overflow-y-auto border-b border-[#E3E8F2] bg-white shadow-[0_18px_40px_rgba(17,24,39,0.14)] lg:hidden"
+            style={{
+              top: "var(--app-topbar-height)",
+              maxHeight: "calc(100dvh - var(--app-topbar-height))",
+            }}
+          >
           <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             <Link
               href="/professeurs"
@@ -210,8 +217,9 @@ export function PublicLayout({
                 </>
               )}
             </div>
-          </nav>
-        </div>
+            </nav>
+          </div>
+        </>
       )}
       <div className="app-topbar-spacer" aria-hidden="true" />
 

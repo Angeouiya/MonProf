@@ -55,10 +55,12 @@ const checks = [
   ],
   [
     "Teacher detail keeps the journey in back and booking destinations",
-    teacherDetail.includes('const teachersHref = journey ?')
-      && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}${journey ? `&journey=${journey}` : ""}`')
+    teacherDetail.includes('const activeJourney = journey || eligibleJourneys[0] || "ivoirien"')
+      && teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`')
+      && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`')
       && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref}>')
-      && teacherDetail.includes('href={reserveHref}'),
+      && teacherDetail.includes('href={reserveHref}')
+      && teacherDetail.includes('data-public-teacher-journey-tabs'),
   ],
   [
     "Public teacher cards preserve the exact booking destination across authentication",

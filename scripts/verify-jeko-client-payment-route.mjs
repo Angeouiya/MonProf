@@ -245,11 +245,19 @@ assert.match(bookingRoute, /code:\s*"PAYMENT_PROVIDER_LOCKED"/);
 assert.match(bookingRoute, /code:\s*"PAYDUNYA_NEW_CHECKOUT_DISABLED"/g);
 assert.doesNotMatch(bookingRoute, /createPayDunyaCheckoutInvoice/);
 assert.doesNotMatch(bookingRoute, /createPayDunyaRescheduleFeeInvoice/);
-assert.match(bookingRoute, /teacherAdminMessages:\s*true,[\s\S]*?paymentAttempts:\s*true/);
 assert.match(
   bookingRoute,
-  /case "delete_draft":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDATE[\s\S]*?paymentAttempts:\s*true[\s\S]*?tx\.booking\.delete/,
+  /case "delete_draft":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDATE[\s\S]*?paymentVerifiedAt:\s*true[\s\S]*?paydunyaVerifiedAt:\s*true/,
 );
+assert.match(
+  bookingRoute,
+  /case "delete_draft":[\s\S]*?tx\.booking\.update\([\s\S]*?status:\s*"CANCELLED"[\s\S]*?cancellationReason:\s*CLIENT_DELETED_DRAFT_REASON/,
+);
+const deleteDraftSection = bookingRoute.slice(
+  bookingRoute.indexOf('case "delete_draft"'),
+  bookingRoute.indexOf('case "paydunya_checkout"'),
+);
+assert.doesNotMatch(deleteDraftSection, /tx\.booking\.delete|paymentAttempts:\s*true|lien de paiement actif/i);
 assert.match(bookingRoute, /case "cancel":[\s\S]*?FROM "Booking"[\s\S]*?FOR UPDATE/);
 assert.match(bookingRoute, /!cancellableStatuses\.includes\(currentBooking\.status\)/);
 assert.match(bookingRoute, /status: "FAILED", providerOrderId: \{ not: null \}/);

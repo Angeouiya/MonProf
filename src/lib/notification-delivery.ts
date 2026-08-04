@@ -264,7 +264,7 @@ export function createClientResetPasswordEmailSnapshot(input: {
   return freezePasswordEmailSnapshot({
     provider: input.provider,
     senderIdentity,
-    subject: "Réinitialisation de votre mot de passe Compétence",
+    subject: "Réinitialisation de votre mot de passe Compétence.CI",
     text: content.text,
     html: content.html,
   });
@@ -298,7 +298,7 @@ export function createClientPasswordChangedEmailSnapshot(input: {
   return freezePasswordEmailSnapshot({
     provider: input.provider,
     senderIdentity,
-    subject: "Votre mot de passe Compétence a été modifié",
+    subject: "Votre mot de passe Compétence.CI a été modifié",
     text: content.text,
     html: content.html,
   });

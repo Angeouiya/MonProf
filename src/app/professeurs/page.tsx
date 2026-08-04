@@ -18,6 +18,11 @@ import { EmptyState } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
+import {
+  filterLevelsForJourney,
+  filterSubjectsForJourney,
+  subjectNameMatchesJourney,
+} from "@/lib/catalog-journey";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 import {
   parseTeacherJourney,
@@ -66,30 +71,16 @@ export default async function TeachersPage({
   const sp = await searchParams;
 
   const journey = parseBookingJourney(sp.journey?.trim()) || "ivoirien";
-  const subject = sp.subject?.trim() || "";
-  const level = sp.level?.trim() || "";
-  const commune = sp.commune?.trim() || "";
-  const format = sp.format?.trim() || "";
-  const sort = sp.sort?.trim() || "recommended";
+  const requestedSubject = sp.subject?.trim() || "";
+  const requestedLevel = sp.level?.trim() || "";
+  const requestedCommune = sp.commune?.trim() || "";
+  const requestedFormat = sp.format?.trim() || "";
+  const requestedSort = sp.sort?.trim() || "recommended";
+  const format = FORMATS.some((item) => item.value === requestedFormat) ? requestedFormat : "";
+  const sort = SORTS.some((item) => item.value === requestedSort) ? requestedSort : "recommended";
   const q = sp.q?.trim() || "";
   const page = Math.max(1, Number(sp.page) || 1);
   const journeyConfig = TEACHER_JOURNEY_CONFIG[journey];
-
-  // Build where clause (same logic as /api/teachers)
-  const visibleTeacherWhere: any = {
-    status: "ACTIVE",
-    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
-  };
-  const where: any = {
-    ...visibleTeacherWhere,
-    ...teacherJourneyWhere(journey),
-    AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
-  };
-  if (subject) where.subjects = { some: { subject: { slug: subject } } };
-  if (level) where.levels = { some: { level: { slug: level } } };
-  if (commune) where.zones = { some: { commune: { name: commune } } };
-  if (format === "HOME") where.offersHome = true;
-  if (format === "ONLINE") where.offersOnline = true;
 
   let orderBy: any;
   switch (sort) {
@@ -111,15 +102,36 @@ export default async function TeachersPage({
   let subjects: any[] = [];
   let levels: any[] = [];
   let communes: any[] = [];
+  let subject = "";
+  let level = "";
+  let commune = "";
 
   try {
     const catalog = await getCachedTeacherSearchCatalog();
     totalVisibleTeachers = catalog.teacherCount;
-    subjects = catalog.subjects;
-    levels = catalog.levels;
+    subjects = filterSubjectsForJourney(catalog.subjects, journey);
+    levels = filterLevelsForJourney(catalog.levels, journey);
     communes = catalog.communes;
+    subject = subjects.some((item) => item.slug === requestedSubject) ? requestedSubject : "";
+    level = levels.some((item) => item.slug === requestedLevel) ? requestedLevel : "";
+    commune = communes.some((item) => item.name === requestedCommune) ? requestedCommune : "";
 
     if (totalVisibleTeachers > 0) {
+      const visibleTeacherWhere: any = {
+        status: "ACTIVE",
+        AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+      };
+      const where: any = {
+        ...visibleTeacherWhere,
+        ...teacherJourneyWhere(journey),
+        AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
+      };
+      if (subject) where.subjects = { some: { subject: { slug: subject } } };
+      if (level) where.levels = { some: { level: { slug: level } } };
+      if (commune) where.zones = { some: { commune: { name: commune } } };
+      if (format === "HOME") where.offersHome = true;
+      if (format === "ONLINE") where.offersOnline = true;
+
       const [teacherTotal, teacherRows] = await db.$transaction([
         db.teacher.count({ where }),
         db.teacher.findMany({
@@ -171,7 +183,9 @@ export default async function TeachersPage({
     offersOnline: t.offersOnline,
     commune: t.commune,
     badgeVerified: t.badgeVerified,
-    primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
+    primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
+      ?? t.subjects[0]?.subject.name,
     _count: { reviews: t._count.reviews },
   }));
 
@@ -627,8 +641,6 @@ function FiltersForm({
             allLabel="Toutes les communes"
             groups={communeGroups}
             triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-            allowCustomValue
-            customValueLabel="Rechercher dans cette ville"
           />
         </Field>
 

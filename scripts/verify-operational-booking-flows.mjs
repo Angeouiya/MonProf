@@ -53,6 +53,8 @@ const payoutBalanceLock = read("src/lib/teacher-payout-reservations.ts");
 const payoutReconciliation = read("src/lib/jeko-payout-reconciliation.ts");
 const teacherPayments = read("src/lib/teacher-payments.ts");
 const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
+const jekoReconciliation = read("src/lib/jeko-reconciliation.ts");
+const paydunyaReconciliation = read("src/lib/paydunya-reconciliation.ts");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -196,15 +198,19 @@ record(
 );
 
 record(
-  "Client can resume or safely delete an unpaid draft",
+  "Client can freely remove an unpaid draft without activating a course",
   /case\s+"paydunya_checkout"/.test(bookingApi)
     && /case\s+"delete_draft"/.test(bookingApi)
     && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(bookingApi)
-    && /source:\s*"client_draft_delete"/.test(bookingApi)
-    && /terminalPayDunyaStatuses/.test(bookingApi)
-    && /Object\.values\(protectedRelations\._count\)\.some/.test(bookingApi)
+    && /cancellationReason:\s*CLIENT_DELETED_DRAFT_REASON/.test(bookingApi)
+    && /status:\s*"CANCELLED"/.test(bookingApi)
+    && !/Le lien Jèko est encore actif/.test(bookingApi)
+    && !/Le lien PayDunya est encore actif/.test(bookingApi)
     && /Supprimer le brouillon/.test(bookingActions)
-    && /Payer via PayDunya/.test(bookingActions),
+    && /Vous pouvez supprimer un brouillon à tout moment/.test(bookingActions)
+    && /clientDeletedDraft[\s\S]*?REFUND_PENDING/.test(jekoReconciliation)
+    && /clientDeletedDraft[\s\S]*?REFUND_PENDING/.test(paydunyaReconciliation)
+    && /!alreadyPaid && !clientDeletedDraft/.test(paydunyaReconciliation),
 );
 
 record(

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { ArrowRight, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { formatFCFA } from "@/lib/format";
 import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
@@ -131,10 +131,6 @@ export default function TarifsPage() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 flex items-start gap-2 text-sm font-medium leading-6 text-[#475569]">
-              <Check className="mt-1 h-4 w-4 shrink-0 text-[#111B4D]" />
-              Aucun professeur ne peut remplacer cette grille par son ancien prix indicatif.
-            </p>
           </div>
         </div>
       </section>

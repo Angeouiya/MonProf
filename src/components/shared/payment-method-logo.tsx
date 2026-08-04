@@ -78,6 +78,19 @@ export function PaymentMethodLogo({ method, className }: PaymentMethodLogoProps)
     );
   }
 
+  if (method === "DJAMO") {
+    return (
+      <span data-payment-method-logo className={shellClassName} aria-label={label}>
+        <span
+          className="-skew-x-6 text-[24px] font-black lowercase leading-none tracking-[-0.08em] text-black"
+          aria-hidden="true"
+        >
+          djamo
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span className={cn("inline-flex h-11 min-w-24 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#64748B]", className)}>
       {label}

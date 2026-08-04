@@ -69,10 +69,18 @@ export function SearchableCatalogSelect({
   customValueLabel = "Utiliser cette valeur",
 }: SearchableCatalogSelectProps) {
   const [open, setOpen] = useState(false);
-  const [selectedValue, setSelectedValue] = useState(value ?? "");
+  const externalValue = value ?? "";
+  const [localSelection, setLocalSelection] = useState({
+    externalValue,
+    selectedValue: externalValue,
+  });
   const [query, setQuery] = useState("");
   const isControlled = typeof onValueChange === "function";
-  const currentValue = isControlled ? value ?? "" : selectedValue;
+  const currentValue = isControlled
+    ? externalValue
+    : localSelection.externalValue === externalValue
+      ? localSelection.selectedValue
+      : externalValue;
 
   const selectedOption = useMemo(() => {
     if (!currentValue) return null;
@@ -107,7 +115,9 @@ export function SearchableCatalogSelect({
   }, [groups, normalizedQuery]);
 
   function choose(nextValue: string) {
-    if (!isControlled) setSelectedValue(nextValue);
+    if (!isControlled) {
+      setLocalSelection({ externalValue, selectedValue: nextValue });
+    }
     onValueChange?.(nextValue);
     setQuery("");
     setOpen(false);
@@ -136,7 +146,7 @@ export function SearchableCatalogSelect({
           >
             <span className="flex min-w-0 items-center gap-2">
               <Search className="h-4 w-4 shrink-0 text-[#64748B]" />
-              <span className={cn("min-w-0 truncate", !selectedOption && !selectedValue && "text-[#6B7280]")}>
+              <span className={cn("min-w-0 truncate", !selectedOption && !currentValue && "text-[#6B7280]")}>
                 {selectedOption?.label ?? (currentValue ? currentValue : placeholder)}
               </span>
             </span>

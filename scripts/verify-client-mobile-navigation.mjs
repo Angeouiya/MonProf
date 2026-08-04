@@ -458,6 +458,14 @@ record(
 );
 
 record(
+  "Public mobile menu dims and blocks the page behind its navigation panel",
+  /aria-label="Fermer le menu"/.test(publicLayout)
+    && /bg-\[#111827\]\/25/.test(publicLayout)
+    && /backdrop-blur-\[1px\]/.test(publicLayout)
+    && /z-\[60\]/.test(publicLayout),
+);
+
+record(
   "Public mobile shell avoids a footer that duplicates the bottom navigation",
   /mt-auto hidden border-t border-\[#E3E8F2\] bg-white sm:block/.test(publicLayout),
 );
@@ -505,6 +513,25 @@ record(
     && /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout)
     && /<PublicLayout backFallbackHref=\{teachersHref\}>/.test(publicTeacherDetail)
     && !/Retour à la liste/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher detail keeps each multi-system offer clear and journey-scoped",
+  /data-public-teacher-journey-tabs/.test(publicTeacherDetail)
+    && /teacherEligibleJourneys\(teacher\)/.test(publicTeacherDetail)
+    && /filterSubjectsForJourney\(teacher\.subjects/.test(publicTeacherDetail)
+    && /filterLevelsForJourney\(teacher\.levels/.test(publicTeacherDetail)
+    && /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
+    && /const sessionPriceLabel = journeyConfig\.priceLabel/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher portrait is centered on small phones and aligned beside identity on wider screens",
+  /data-public-teacher-photo-layout/.test(publicTeacherDetail)
+    && /justify-items-center/.test(publicTeacherDetail)
+    && /min-\[520px\]:grid-cols-\[184px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
+    && /size=\{144\}/.test(publicTeacherDetail)
+    && /bg-\[#F8FAFD\] p-3/.test(publicTeacherDetail),
 );
 
 record(

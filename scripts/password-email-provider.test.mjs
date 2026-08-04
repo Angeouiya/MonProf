@@ -185,6 +185,13 @@ test("a v3 snapshot keeps the exact Gmail body across env and template changes",
     new RegExp(`boundary="competence-${digest.slice(0, 48)}"`),
   );
   assert.match(decodedMime, new RegExp(`Message-ID: <${digest}@competence\\.ci>`));
+  assert.match(
+    decodedMime,
+    /^From: =\?UTF-8\?B\?Q29tcMOpdGVuY2UuQ0k=\?= <diplomateimmobilier99@gmail\.com>$/m,
+  );
+  assert.doesNotMatch(decodedMime, /MonProf/i);
+  assert.match(originalSnapshot.subject, /Compétence\.CI/);
+  assert.match(originalSnapshot.html, />Compétence\.CI</);
 });
 
 test("Resend failures preserve uncertainty without unsafe cross-provider failover", () => {

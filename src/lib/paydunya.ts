@@ -238,7 +238,7 @@ export async function createPayDunyaCheckoutInvoice(input: PayDunyaCheckoutInput
       name: config.storeName,
       tagline: config.storeTagline,
       phone: config.storePhone,
-      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon.png`,
+      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon-192-safe.png`,
       website_url: input.origin,
     },
     custom_data: {
@@ -370,7 +370,7 @@ export async function createPayDunyaRescheduleFeeInvoice(input: PayDunyaReschedu
       name: config.storeName,
       tagline: config.storeTagline,
       phone: config.storePhone,
-      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon.png`,
+      logo_url: config.storeLogoUrl || `${input.origin}/images/brand/competence-icon-192-safe.png`,
       website_url: input.origin,
     },
     custom_data: {

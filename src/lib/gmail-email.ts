@@ -123,7 +123,7 @@ export async function sendGmailEmail(input: {
   const raw = buildMimeMessage({
     ...input,
     senderEmail: senderIdentity,
-    senderName: "Compétence",
+    senderName: "Compétence.CI",
   });
 
   let accessToken: string;

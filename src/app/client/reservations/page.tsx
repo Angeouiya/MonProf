@@ -16,6 +16,7 @@ import { AlertTriangle, CalendarCheck, ArrowRight, CheckCircle2, Clock3, Lock, M
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { ReservationListClient, type ClientReservationListItem } from "./reservation-list-client";
+import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,14 @@ export default async function ReservationsPage({
     transactions: { where: { type: "CLIENT_PAYMENT" as const }, select: { type: true, status: true, amount: true } },
   };
   const allBookings = await db.booking.findMany({
-    where: { clientId: user.id },
+    where: {
+      clientId: user.id,
+      OR: [
+        { cancellationReason: null },
+        { cancellationReason: { not: CLIENT_DELETED_DRAFT_REASON } },
+        { paymentStatus: { not: "FAILED" } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: bookingInclude,
   });

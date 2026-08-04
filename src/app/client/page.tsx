@@ -19,6 +19,7 @@ import {
   ShieldCheck, BookOpen, Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,14 @@ export default async function ClientDashboardPage() {
   const now = new Date();
 
   const allClientBookings = await db.booking.findMany({
-    where: { clientId: user.id },
+    where: {
+      clientId: user.id,
+      OR: [
+        { cancellationReason: null },
+        { cancellationReason: { not: CLIENT_DELETED_DRAFT_REASON } },
+        { paymentStatus: { not: "FAILED" } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       teacher: {

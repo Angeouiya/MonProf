@@ -15,7 +15,7 @@ import { generateReference } from "@/lib/format";
 import { PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, getCancellationPenaltySplit, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { parsePricingSnapshot, pricingSnapshotToJson } from "@/lib/pricing";
 import { reconcilePayDunyaBookingPayment } from "@/lib/paydunya-reconciliation";
-import { reconcileJekoPaymentAttempt } from "@/lib/jeko-reconciliation";
+import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
 import { createRescheduleAwaitingTeacherNotifications, reconcilePayDunyaReschedulePayment } from "@/lib/paydunya-reschedule-reconciliation";
 import { planJekoRescheduleAttempt, platformMethodToJeko } from "@/lib/jeko-client-payment";
 import { reconcileJekoReschedulePaymentAttempt } from "@/lib/jeko-reschedule-reconciliation";
@@ -300,74 +300,6 @@ export async function PATCH(
         return NextResponse.json({ error: "Ce dossier contient un paiement vérifié et ne peut pas être supprimé." }, { status: 409 });
       }
 
-      const activeJekoAttempt = await db.paymentAttempt.findFirst({
-        where: {
-          bookingId: booking.id,
-          provider: "JEKO",
-          purpose: "BOOKING",
-          OR: [
-            { status: { in: ["CREATED", "REQUESTING", "PENDING"] } },
-            {
-              status: "FAILED",
-              providerOrderId: { not: null },
-              OR: [
-                { failureCode: null },
-                { failureCode: { not: "JEKO_PAYMENT_FAILED" } },
-              ],
-            },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        select: { id: true },
-      });
-      if (activeJekoAttempt) {
-        try {
-          const verification = await reconcileJekoPaymentAttempt(activeJekoAttempt.id, {
-            expectedBookingId: booking.id,
-            expectedClientId: userId,
-          });
-          if (verification.verified) {
-            return NextResponse.json({
-              error: "Le paiement vient d'être confirmé par Jèko. Le dossier est désormais actif et ne peut pas être supprimé.",
-            }, { status: 409 });
-          }
-          if (!["failed", "rejected"].includes(verification.action)) {
-            return NextResponse.json({
-              error: "Le lien Jèko est encore actif. Annulez le paiement sur Jèko ou attendez son expiration avant de supprimer ce brouillon.",
-            }, { status: 409 });
-          }
-        } catch (error) {
-          console.error("[booking:delete_draft_jeko_check_failed]", {
-            bookingId: booking.id,
-            attemptId: activeJekoAttempt.id,
-            reason: error instanceof Error ? error.message : "unknown",
-          });
-          return NextResponse.json({
-            error: "La tentative Jèko ne peut pas encore être contrôlée. Le brouillon reste conservé pour éviter de perdre un paiement en cours.",
-          }, { status: 409 });
-        }
-      }
-
-      const terminalPayDunyaStatuses = ["FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED", "CREATE_FAILED"];
-      const currentPayDunyaStatus = (booking.paydunyaStatus ?? "").toUpperCase();
-      if (booking.paydunyaToken && !terminalPayDunyaStatuses.includes(currentPayDunyaStatus)) {
-        const verification = await reconcilePayDunyaBookingPayment({
-          bookingId: booking.id,
-          expectedClientId: userId,
-          source: "client_draft_delete",
-        });
-        if (verification.verified) {
-          return NextResponse.json({
-            error: "Le paiement vient d'être confirmé par PayDunya. Le dossier est désormais une réservation active et ne peut pas être supprimé.",
-          }, { status: 409 });
-        }
-        if (!terminalPayDunyaStatuses.includes((verification.status ?? "").toUpperCase())) {
-          return NextResponse.json({
-            error: "Le lien PayDunya est encore actif. Annulez le paiement sur PayDunya ou attendez son expiration avant de supprimer ce brouillon.",
-          }, { status: 409 });
-        }
-      }
-
       let deletionResult:
         | { ok: true }
         | { ok: false; status: number; error: string };
@@ -395,27 +327,6 @@ export async function PATCH(
               paymentStatus: true,
               paymentVerifiedAt: true,
               paydunyaVerifiedAt: true,
-              paydunyaToken: true,
-              paydunyaStatus: true,
-              _count: {
-                select: {
-                  transactions: true,
-                  reviews: true,
-                  disputes: true,
-                  teacherTasks: true,
-                  teacherWarnings: true,
-                  teacherSanctions: true,
-                  replacements: true,
-                  clientRefundRequests: true,
-                  teacherPaymentAdjustments: true,
-                  teacherPayoutAllocations: true,
-                  missionLinks: true,
-                  scheduleProposals: true,
-                  rescheduleRequests: true,
-                  teacherAdminMessages: true,
-                  paymentAttempts: true,
-                },
-              },
             },
           });
           if (!protectedRelations || protectedRelations.clientId !== userId) {
@@ -433,35 +344,42 @@ export async function PATCH(
               error: "Ce dossier a changé ou contient maintenant un paiement et ne peut plus être supprimé.",
             };
           }
-          const lockedPayDunyaStatus = (protectedRelations.paydunyaStatus ?? "").toUpperCase();
-          if (
-            protectedRelations.paydunyaToken
-            && !terminalPayDunyaStatuses.includes(lockedPayDunyaStatus)
-          ) {
-            return {
-              ok: false as const,
-              status: 409,
-              error: "Le lien PayDunya est encore actif. Attendez son expiration avant de supprimer ce brouillon.",
-            };
-          }
-          if (Object.values(protectedRelations._count).some((count) => count > 0)) {
-            return {
-              ok: false as const,
-              status: 409,
-              error: "Ce brouillon possède déjà un historique opérationnel. Le service client doit l'archiver manuellement.",
-            };
-          }
 
           await tx.notification.deleteMany({ where: { bookingId: booking.id } });
           await tx.teacherNotification.deleteMany({ where: { bookingId: booking.id } });
           await tx.clientCommunication.deleteMany({ where: { bookingId: booking.id } });
-          await tx.booking.delete({ where: { id: booking.id } });
+          await tx.teacherTask.updateMany({
+            where: { bookingId: booking.id, status: { notIn: ["DONE", "CANCELLED"] } },
+            data: { status: "CANCELLED", completedAt: now },
+          });
+          await tx.bookingScheduleProposal.updateMany({
+            where: { bookingId: booking.id, status: "PENDING" },
+            data: { status: "CANCELLED", respondedAt: now },
+          });
+          await tx.teacherReplacement.updateMany({
+            where: { bookingId: booking.id, status: { in: ["DRAFT", "CLIENT_NOTIFIED"] } },
+            data: { status: "CANCELLED", details: "Brouillon supprimé par le client." },
+          });
+          await tx.teacherMissionLink.updateMany({
+            where: { bookingId: booking.id, status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] } },
+            data: { status: "EXPIRED", expiresAt: now, response: "Brouillon supprimé par le client." },
+          });
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: now,
+              cancelledBy: "CLIENT",
+              cancellationReason: CLIENT_DELETED_DRAFT_REASON,
+              cancellationDetail: "Brouillon retiré immédiatement de l'espace client.",
+            },
+          });
           await tx.adminActionLog.create({
             data: {
               action: "Brouillon client supprimé",
               entityType: "Booking",
               entityId: booking.id,
-              detail: `Le client ${booking.client.name} a supprimé le brouillon ${booking.reference}. Aucun paiement confirmé côté serveur ni workflow opérationnel n'était rattaché.`,
+              detail: `Le client ${booking.client.name} a retiré le brouillon ${booking.reference}. Le dossier technique reste neutralisé pour rapprocher sans risque un éventuel paiement reçu simultanément.`,
               oldStatus: "PENDING_PAYMENT",
               newStatus: "DRAFT_DELETED",
             },
@@ -480,7 +398,7 @@ export async function PATCH(
         return NextResponse.json({ error: deletionResult.error }, { status: deletionResult.status });
       }
 
-      return NextResponse.json({ ok: true, redirect: "/client/reservations?tab=brouillons" });
+      return NextResponse.json({ ok: true, deleted: true, redirect: "/client/reservations?tab=brouillons" });
     }
 
     case "paydunya_checkout": {

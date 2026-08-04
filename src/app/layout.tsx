@@ -47,11 +47,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/images/brand/competence-icon.png", sizes: "192x192", type: "image/png" },
-      { url: "/images/brand/competence-icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/images/brand/competence-icon-192-safe.png", sizes: "192x192", type: "image/png" },
+      { url: "/images/brand/competence-icon-512-safe.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/images/brand/competence-icon.png",
-    apple: "/images/brand/competence-icon.png",
+    shortcut: "/images/brand/competence-icon-192-safe.png",
+    apple: "/images/brand/competence-apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,

@@ -3,8 +3,8 @@ self.addEventListener("push", (event) => {
   const fallback = {
     title: "Compétence",
     body: "Une nouvelle information est disponible.",
-    icon: "/images/brand/competence-icon-512.png",
-    badge: "/images/brand/competence-icon.png",
+    icon: "/images/brand/competence-icon-512-safe.png",
+    badge: "/images/brand/competence-icon-192-safe.png",
     url: "/",
     tag: "competence-notification",
   };

@@ -4,6 +4,7 @@ import { generateReference } from "@/lib/format";
 import { confirmPayDunyaInvoice, type PayDunyaInvoiceStatus } from "@/lib/paydunya";
 import { hasVerifiedPayDunyaClientPayment, VERIFIED_CLIENT_FUND_STATUS_VALUES } from "@/lib/payment-security";
 import { productionIntegrationsAreEnabled } from "@/lib/production-integration-policy";
+import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 
 const SECURED_PAYMENT_STATUSES = new Set<string>(VERIFIED_CLIENT_FUND_STATUS_VALUES);
 type PayDunyaConfirmedInvoice = Awaited<ReturnType<typeof confirmPayDunyaInvoice>>;
@@ -256,7 +257,12 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
       };
     }
 
-    const nextPaymentStatus = alreadyPaid ? booking.paymentStatus : "BLOCKED";
+    const clientDeletedDraft = isClientDeletedDraft(booking);
+    const nextPaymentStatus = alreadyPaid
+      ? booking.paymentStatus
+      : clientDeletedDraft
+        ? "REFUND_PENDING"
+        : "BLOCKED";
     const nextTransactionStatus = alreadyPaid && booking.transactions[0]?.status
       ? booking.transactions[0].status
       : nextPaymentStatus;
@@ -314,7 +320,7 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
         });
       }
 
-      if (!alreadyPaid) {
+      if (!alreadyPaid && !clientDeletedDraft) {
         const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
         const dateLabel = formatDateFr(booking.scheduledDate ?? booking.startDate);
         const timeLabel = booking.scheduledTime || booking.preferredTime || "À confirmer";
@@ -428,6 +434,46 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
         }
       }
 
+      if (clientDeletedDraft) {
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: booking.clientId,
+              title: "Paiement reçu après suppression",
+              message: `Le paiement ${booking.reference} a été reçu alors que vous aviez supprimé le brouillon. Aucun cours n'a été activé ; le remboursement est maintenant en traitement.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "CLIENT",
+              recipientName: booking.client.name,
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: booking.id,
+              teacherId: booking.teacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              link: `/client/reservations/${booking.id}`,
+              actionLabel: "Suivre le remboursement",
+            },
+            {
+              userId: null,
+              title: "Remboursement requis après suppression",
+              message: `PayDunya a confirmé ${booking.reference} après la suppression du brouillon par le client. Le cours reste annulé et ${confirmation.totalAmount} FCFA doivent être remboursés.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "URGENT",
+              bookingId: booking.id,
+              teacherId: booking.teacherId,
+              clientId: booking.clientId,
+              sentAt: now,
+              link: `/admin/reservations/${booking.id}`,
+              actionLabel: "Traiter le remboursement",
+            },
+          ],
+        });
+      }
+
       if (providerConflict) {
         await tx.notification.create({
           data: {
@@ -452,10 +498,12 @@ export async function reconcilePayDunyaBookingPayment(input: ReconcilePayDunyaIn
       await tx.adminActionLog.create({
         data: {
           adminId: null,
-          action: "Paiement PayDunya vérifié serveur",
+          action: clientDeletedDraft
+            ? "Paiement PayDunya reçu après suppression d'un brouillon"
+            : "Paiement PayDunya vérifié serveur",
           entityType: "Booking",
           entityId: booking.id,
-          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Référence PayDunya: ${maskPayDunyaReference(token)}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.${providerConflict ? ` ALERTE : le fournisseur local était ${booking.paymentProvider}; risque de double encaissement.` : ""}`,
+          detail: `Source: ${input.source}. Statut PayDunya: completed. Montant confirmé: ${confirmation.totalAmount.toLocaleString("fr-FR")} FCFA. Référence PayDunya: ${maskPayDunyaReference(token)}. Preuve PayDunya: ${confirmation.hashValid ? "confirmation hash OK" : trustedWebhookHash ? "webhook hash OK" : "confirmation serveur API OK"}.${clientDeletedDraft ? " Le brouillon avait déjà été retiré par le client : aucun cours n'est activé et les fonds passent en remboursement." : ""}${providerConflict ? ` ALERTE : le fournisseur local était ${booking.paymentProvider}; risque de double encaissement.` : ""}`,
           oldStatus: booking.paymentStatus,
           newStatus: nextPaymentStatus,
         },

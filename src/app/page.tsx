@@ -74,8 +74,8 @@ export default async function HomePage() {
 
   return (
     <PublicLayout>
-      <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-6xl px-4 pb-7 pt-4 text-center sm:px-6 sm:pb-16 sm:pt-6 lg:px-8 lg:pb-20">
+      <section className="flex min-h-[calc(100dvh-var(--app-topbar-height)-7.25rem)] items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-7 pt-4 text-center sm:px-6 sm:pb-16 sm:pt-6 lg:px-8 lg:pb-20">
           <nav
             id="parcours"
             aria-label="Choisir une mini-application"
