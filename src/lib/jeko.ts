@@ -39,7 +39,10 @@ const jekoPaymentRequestSchema = z.object({
   storeId: z.string().trim().min(1),
   reference: z.string().trim().min(1),
   type: z.string().trim().min(1),
-  paymentMethod: z.string().trim().min(1),
+  // Certaines confirmations GET historiques Jèko omettent ce champ alors
+  // que la méthode reste figée dans notre tentative locale. Le POST de
+  // création continue de l'exiger par la comparaison stricte ci-dessous.
+  paymentMethod: z.string().trim().min(1).nullable().optional(),
   status: z.string().trim().min(1),
   redirectUrl: z.string().trim().min(1).optional(),
   errorReason: z.string().nullable().optional(),
@@ -182,7 +185,7 @@ export async function createJekoPaymentRequest(
     response.storeId !== config.storeId
     || response.reference !== reference
     || response.type.toLowerCase() !== "redirect"
-    || response.paymentMethod.toLowerCase() !== paymentMethod
+    || response.paymentMethod?.toLowerCase() !== paymentMethod
   ) {
     throw new JekoApiError("Jèko a renvoyé un magasin ou une référence incohérente.", 502, "RESPONSE_MISMATCH");
   }

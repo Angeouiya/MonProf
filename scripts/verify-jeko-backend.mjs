@@ -166,6 +166,30 @@ assert.match(sweeper, /reconcileJekoPaymentAttempt/);
 assert.match(sweeper, /reconcileJekoReschedulePaymentAttempt/);
 assert.match(sweeper, /verifyJekoTeacherPayoutRecord/);
 
+const jekoClient = readFileSync(
+  new URL("../src/lib/jeko.ts", import.meta.url),
+  "utf8",
+);
+assert.match(
+  jekoClient,
+  /paymentMethod:\s*z\.string\(\)\.trim\(\)\.min\(1\)\.nullable\(\)\.optional\(\)/,
+  "une confirmation GET historique sans paymentMethod doit rester réconciliable",
+);
+assert.match(
+  jekoClient,
+  /response\.paymentMethod\?\.toLowerCase\(\)\s*!==\s*paymentMethod/,
+  "la création POST doit toujours rejeter une réponse sans la méthode attendue",
+);
+const reconciliation = readFileSync(
+  new URL("../src/lib/jeko-reconciliation.ts", import.meta.url),
+  "utf8",
+);
+assert.match(
+  reconciliation,
+  /confirmation\.paymentMethod\s*\?\?\s*fromPlatformPaymentMethod\(attempt\.method\)/,
+  "la réconciliation doit reprendre la méthode locale figée quand Jèko l'omet",
+);
+
 const recovery = readFileSync(
   new URL("../src/lib/jeko-payment-request-recovery.ts", import.meta.url),
   "utf8",
