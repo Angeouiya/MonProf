@@ -24,6 +24,7 @@ import {
 } from "@/components/professor/professor-ui";
 
 export const dynamic = "force-dynamic";
+const PROFESSOR_COMMAND_CENTER_ENABLED = false;
 
 export default async function ProfesseurDashboardPage() {
   const { teacher } = await requireTeacher();
@@ -216,6 +217,78 @@ export default async function ProfesseurDashboardPage() {
   const payoutProfileReady = Boolean(fullTeacher?.defaultPayoutMethod && fullTeacher?.defaultPayoutPhone);
   const profileReady = Boolean(fullTeacher?.careerSummary || fullTeacher?.workHistory || fullTeacher?.skills);
   const payoutFeesCovered = payoutFeesCoveredAgg._sum.transferFeeCoveredByPlatform ?? 0;
+  const priority = verifiedPendingMissions.length > 0
+    ? {
+        eyebrow: "Mission à confirmer",
+        title: `${verifiedPendingMissions[0].booking.subjectName} · ${verifiedPendingMissions[0].booking.levelName}`,
+        detail: "Répondez avant l'expiration de la proposition.",
+        href: "/professeur/missions",
+        action: "Répondre",
+        icon: BookOpenCheck,
+      }
+    : verifiedTodayBookings.length > 0
+      ? {
+          eyebrow: "Cours aujourd'hui",
+          title: `${verifiedTodayBookings[0].subjectName} · ${verifiedTodayBookings[0].levelName}`,
+          detail: `${verifiedTodayBookings[0].scheduledTime || verifiedTodayBookings[0].preferredTime} · ${courseFormatLabel(verifiedTodayBookings[0].courseFormat)}`,
+          href: `/professeur/missions/${verifiedTodayBookings[0].id}`,
+          action: "Ouvrir",
+          icon: CalendarClock,
+        }
+      : verifiedOpenTasks.length > 0
+        ? {
+            eyebrow: "Action demandée",
+            title: verifiedOpenTasks[0].title,
+            detail: "Le service client attend votre réponse.",
+            href: "/professeur/missions",
+            action: "Traiter",
+            icon: ClipboardList,
+          }
+        : unreadServiceClientMessageCount > 0
+          ? {
+              eyebrow: "Nouveau message",
+              title: `${unreadServiceClientMessageCount} message${unreadServiceClientMessageCount > 1 ? "s" : ""} à lire`,
+              detail: "Consultez la réponse du service client.",
+              href: "/professeur/messages",
+              action: "Lire",
+              icon: MessageSquareText,
+            }
+          : !payoutProfileReady
+            ? {
+                eyebrow: "Paiement à configurer",
+                title: "Ajoutez votre numéro de retrait",
+                detail: "Votre moyen de paiement est nécessaire avant une demande de retrait.",
+                href: "/professeur/parametres",
+                action: "Configurer",
+                icon: CreditCard,
+              }
+            : readyToRequestAmount > 0
+              ? {
+                  eyebrow: "Retrait disponible",
+                  title: formatFCFA(readyToRequestAmount),
+                  detail: "Ce montant net peut être demandé maintenant.",
+                  href: "/professeur/paiements",
+                  action: "Retirer",
+                  icon: CreditCard,
+                }
+              : pendingScheduleProposalCount > 0
+                ? {
+                    eyebrow: "Créneau proposé",
+                    title: `${pendingScheduleProposalCount} proposition${pendingScheduleProposalCount > 1 ? "s" : ""} en attente`,
+                    detail: "Vérifiez le créneau proposé au client.",
+                    href: "/professeur/missions",
+                    action: "Vérifier",
+                    icon: CalendarClock,
+                  }
+                : {
+                    eyebrow: "Tout est à jour",
+                    title: "Aucune action urgente",
+                    detail: "Nous vous préviendrons dès qu'une action sera nécessaire.",
+                    href: "/professeur/disponibilites",
+                    action: "Mes disponibilités",
+                    icon: ShieldCheck,
+                  };
+  const PriorityIcon = priority.icon;
 
   return (
     <div className="space-y-6">
@@ -223,14 +296,6 @@ export default async function ProfesseurDashboardPage() {
         title={`Bonjour ${teacherName}`}
         description="Missions, disponibilités et paiements."
         rootTab
-        action={(
-          <Button asChild className="rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-            <Link href="/professeur/missions">
-              Voir mes missions
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        )}
       />
 
       <section aria-label="Solde professeur exact" className="overflow-hidden rounded-xl border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm">
@@ -245,11 +310,10 @@ export default async function ProfesseurDashboardPage() {
               Vous recevez exactement le net affiché. Les frais de transfert Jèko sont payés par Compétence et ne diminuent jamais ce montant.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 lg:min-w-[25rem]">
+          <div className="grid grid-cols-3 gap-2 lg:min-w-[25rem]">
             <DashboardBalanceMini label="Demandable" value={readyToRequestAmount} emphasized />
             <DashboardBalanceMini label="Encore bloqué" value={blockedTeacherAmount} />
             <DashboardBalanceMini label="Frais couverts" value={payoutFeesCovered} />
-            <DashboardBalanceMini label="Déduit de votre net" value={0} emphasized />
           </div>
         </div>
         <div className="border-t border-white/15 bg-white/5 px-5 py-3 sm:px-6">
@@ -260,6 +324,24 @@ export default async function ProfesseurDashboardPage() {
         </div>
       </section>
 
+      <PortalCard className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center" data-professor-dashboard-priority>
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
+          <PriorityIcon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{priority.eyebrow}</p>
+          <p className="mt-1 text-lg font-semibold leading-6 text-[#111827]">{priority.title}</p>
+          <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">{priority.detail}</p>
+        </div>
+        <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
+          <Link href={priority.href}>
+            {priority.action}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </PortalCard>
+
+      {PROFESSOR_COMMAND_CENTER_ENABLED && (<>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-6">
         <ProfessorQuickLink
           href="/professeur/missions"
@@ -470,13 +552,14 @@ export default async function ProfesseurDashboardPage() {
           </Link>
         </Button>
       </PortalCard>
+      </>)}
 
-      <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
+      <div className="grid gap-5">
         <PortalCard>
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-base font-semibold text-[#111827]">Prochaines missions</p>
-              <p className="text-sm font-medium text-[#64748B]">Cours attribués à votre fiche professeur.</p>
+              <p className="text-base font-semibold text-[#111827]">Prochain cours</p>
+              <p className="text-sm font-medium text-[#64748B]">La prochaine mission confirmée.</p>
             </div>
             <Button asChild variant="ghost" className="rounded-lg">
               <Link href="/professeur/missions">Tout voir</Link>
@@ -486,7 +569,7 @@ export default async function ProfesseurDashboardPage() {
             <EmptyProfessorState title="Aucune mission attribuée" description="Les prochaines réservations confirmées par le service client apparaîtront ici." />
           ) : (
             <div className="grid gap-3">
-              {verifiedUpcomingBookings.map((booking) => (
+              {verifiedUpcomingBookings.slice(0, 1).map((booking) => (
                 <Link
                   key={booking.id}
                   href={`/professeur/missions/${booking.id}`}
@@ -511,7 +594,7 @@ export default async function ProfesseurDashboardPage() {
           )}
         </PortalCard>
 
-        <div className="space-y-5">
+        {PROFESSOR_COMMAND_CENTER_ENABLED && (<div className="space-y-5">
           <PortalCard>
             <div className="mb-4 flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-[#111B4D]" />
@@ -553,7 +636,7 @@ export default async function ProfesseurDashboardPage() {
               </div>
             )}
           </PortalCard>
-        </div>
+        </div>)}
       </div>
     </div>
   );

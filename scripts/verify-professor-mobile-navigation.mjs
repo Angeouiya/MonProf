@@ -5,6 +5,8 @@ const read = (filePath) => fs.readFileSync(filePath, "utf8");
 const record = (label, passed) => checks.push({ label, passed });
 
 const ui = read("src/components/professor/professor-ui.tsx");
+const layout = read("src/components/layouts/professor-layout.tsx");
+const dashboard = read("src/app/professeur/(espace)/page.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
 const rootTabPaths = [
@@ -45,6 +47,23 @@ record(
   /export function ProfessorStatGrid/.test(ui)
     && /grid grid-cols-2 gap-2 min-\[680px\]:gap-3/.test(ui)
     && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 4,
+);
+
+record(
+  "Professor mobile navigation contains exactly four essential destinations",
+  /const mobileNavItems = \[[\s\S]*?label: "Accueil"[\s\S]*?label: "Missions"[\s\S]*?label: "Dispos"[\s\S]*?label: "Paiements"[\s\S]*?\];/.test(layout)
+    && /grid grid-cols-4 gap-1/.test(layout)
+    && !/label: "Msgs"/.test(layout),
+);
+
+record(
+  "Professor dashboard shows one priority action and hides its former command center",
+  /const PROFESSOR_COMMAND_CENTER_ENABLED = false/.test(dashboard)
+    && /data-professor-dashboard-priority/.test(dashboard)
+    && /\{PROFESSOR_COMMAND_CENTER_ENABLED && \(<>/.test(dashboard)
+    && /verifiedUpcomingBookings\.slice\(0, 1\)/.test(dashboard)
+    && /grid grid-cols-3 gap-2 lg:min-w-\[25rem\]/.test(dashboard)
+    && !/DashboardBalanceMini label="Déduit de votre net"/.test(dashboard),
 );
 
 record(

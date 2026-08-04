@@ -62,10 +62,9 @@ const navGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
 
 const mobileNavItems = [
   { href: "/professeur", label: "Accueil", icon: LayoutDashboard, exact: true },
-  { href: "/professeur/missions", label: "Miss.", icon: BookOpenCheck },
+  { href: "/professeur/missions", label: "Missions", icon: BookOpenCheck },
   { href: "/professeur/disponibilites", label: "Dispos", icon: CalendarClock },
-  { href: "/professeur/paiements", label: "Paie.", icon: CreditCard },
-  { href: "/professeur/messages", label: "Msgs", icon: MessageSquareText },
+  { href: "/professeur/paiements", label: "Paiements", icon: CreditCard },
 ];
 
 export function ProfessorLayout({
@@ -387,7 +386,7 @@ function MobileBottomNav({
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation professeur mobile"
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileNavItems.map((item) => {
           const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
           return (
