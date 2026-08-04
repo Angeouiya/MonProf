@@ -550,6 +550,14 @@ record(
 );
 
 record(
+  "Public teacher cards expose one dominant action",
+  /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
+    && !/>Voir profil</.test(teacherCard)
+    && /w-full rounded-lg bg-\[#111B4D\]/.test(teacherCard)
+    && />Réserver</.test(teacherCard),
+);
+
+record(
   "Client pricing copy avoids manual quote language",
   !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(clientPricingCopySources)
     && /Montant à recalculer/.test(clientPricingCopySources)

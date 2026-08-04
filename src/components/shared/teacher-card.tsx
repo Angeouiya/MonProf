@@ -41,7 +41,11 @@ export function TeacherCard({
       aria-label={`Professeur ${displayName}`}
       className="group flex h-full min-w-0 flex-col rounded-lg border border-[#DDE3EE] bg-white p-3 transition-colors duration-200 hover:border-[#111B4D] min-[640px]:p-4"
     >
-      <div className="flex min-w-0 items-start gap-3.5">
+      <Link
+        href={profileHref}
+        aria-label={`Voir le profil de ${displayName}`}
+        className="flex min-w-0 items-start gap-3.5 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-[#9AAAD0]"
+      >
         <ProfessorImage
           photoUrl={teacher.photoUrl}
           name={displayName}
@@ -73,7 +77,7 @@ export function TeacherCard({
             </p>
           </div>
         </div>
-      </div>
+      </Link>
 
       <div className="mt-3 border-t border-[#E3E8F2] pt-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#475569]">
@@ -96,14 +100,9 @@ export function TeacherCard({
           <span className="text-[#111827]">Tarif officiel selon le parcours</span>
           <span className="shrink-0 text-[#64748B]">avant paiement</span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#C8D2E3] bg-white px-3 text-sm text-[#111B4D] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
-            <Link href={profileHref}>Voir profil</Link>
-          </Button>
-          <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
-            <Link href={bookingHref}>Réserver</Link>
-          </Button>
-        </div>
+        <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
+          <Link href={bookingHref}>Réserver</Link>
+        </Button>
       </div>
     </article>
   );

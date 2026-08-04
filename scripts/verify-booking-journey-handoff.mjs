@@ -14,20 +14,23 @@ const safeReturnPath = read("src/lib/safe-return-path.ts");
 
 const checks = [
   [
-    "Homepage starts with one journey choice and distinct booking intents",
+    "Homepage starts with three explicit mini-app choices",
     home.includes('href: "/professeurs?journey=ivoirien"')
       && home.includes('href: "/professeurs?journey=francais"')
       && home.includes('href: "/professeurs?journey=professionnel"')
       && home.includes('id="parcours"')
+      && home.includes('data-home-journey-tabs')
       && !home.includes('Réserver une séance'),
   ],
   [
-    "Homepage exposes compact mobile journey choices before secondary content",
-    home.includes('py-6 text-center sm:px-6 sm:py-16')
+    "Homepage exposes one compact three-button mini-app row before secondary content",
+    home.includes('pb-7 pt-4 text-center')
       && home.includes('Choisissez un parcours. On calcule le reste.')
       && home.includes('Prix clair · Paiement sécurisé')
-      && home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
-      && home.includes('md:hidden">{price}</p>')
+      && home.includes('grid max-w-2xl scroll-mt-20 grid-cols-3')
+      && home.includes('<span className="sm:hidden">{shortTitle}</span>')
+      && !home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
+      && !home.includes('Votre parcours')
       && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')
       && home.includes('hidden bg-white sm:block')
       && home.includes('hidden bg-[#111B4D] text-white sm:block'),

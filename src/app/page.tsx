@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BriefcaseBusiness, Check, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { ArrowRight, Check, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { db } from "@/lib/db";
@@ -11,23 +11,17 @@ export const dynamic = "force-dynamic";
 const JOURNEYS = [
   {
     title: "Système ivoirien",
-    detail: "CP1 à Terminale",
-    price: "Dès 15 000 F",
-    icon: GraduationCap,
+    shortTitle: "Ivoirien",
     href: "/professeurs?journey=ivoirien",
   },
   {
     title: "Système français",
-    detail: "CP1 à Terminale",
-    price: "Dès 37 500 F",
-    icon: GraduationCap,
+    shortTitle: "Français",
     href: "/professeurs?journey=francais",
   },
   {
     title: "Professionnel",
-    detail: "Une compétence précise",
-    price: "40 000 F / séance",
-    icon: BriefcaseBusiness,
+    shortTitle: "Pro",
     href: "/professeurs?journey=professionnel",
   },
 ] as const;
@@ -81,8 +75,25 @@ export default async function HomePage() {
   return (
     <PublicLayout>
       <section className="border-b border-[#E3E8F2] bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-center sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-          <p className="mx-auto inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D]">
+        <div className="mx-auto max-w-6xl px-4 pb-7 pt-4 text-center sm:px-6 sm:pb-16 sm:pt-6 lg:px-8 lg:pb-20">
+          <nav
+            id="parcours"
+            aria-label="Choisir une mini-application"
+            data-home-journey-tabs
+            className="mx-auto grid max-w-2xl scroll-mt-20 grid-cols-3 gap-1.5 sm:gap-2"
+          >
+            {JOURNEYS.map(({ title, shortTitle, href }) => (
+              <Link
+                key={title}
+                href={href}
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-2 py-2 text-center text-[11px] font-semibold leading-tight text-[#475569] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:px-4 sm:text-sm"
+              >
+                <span className="sm:hidden">{shortTitle}</span>
+                <span className="hidden sm:inline">{title}</span>
+              </Link>
+            ))}
+          </nav>
+          <p className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D] sm:mt-6">
             <ShieldCheck className="h-4 w-4" />
             <span className="sm:hidden">Professeurs vérifiés</span>
             <span className="hidden sm:inline">Professeurs vérifiés en Côte d'Ivoire</span>
@@ -101,38 +112,6 @@ export default async function HomePage() {
             <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-[#111B4D]" /> Prix affiché avant paiement</span>
             <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#111B4D]" /> Transport calculé automatiquement</span>
             <span className="inline-flex items-center gap-1.5"><WalletCards className="h-4 w-4 text-[#111B4D]" /> Paiement Jèko sécurisé</span>
-          </div>
-        </div>
-      </section>
-
-      <section id="parcours" className="scroll-mt-20 bg-[#F8FAFD]">
-        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-          <div className="text-center">
-            <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B] sm:block">Une seule question pour commencer</p>
-            <h2 className="text-xl font-semibold text-[#111827] sm:mt-3 sm:text-3xl">Votre parcours</h2>
-          </div>
-          <div className="mt-4 grid gap-2 sm:mt-8 sm:gap-4 md:grid-cols-3">
-            {JOURNEYS.map(({ title, detail, price, icon: Icon, href }) => (
-              <Link
-                key={title}
-                href={href}
-                className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-[#DDE3EE] bg-white p-3.5 transition hover:-translate-y-0.5 hover:border-[#111B4D] hover:shadow-sm md:block md:rounded-3xl md:p-6"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F1F4FF] text-[#111B4D] md:h-12 md:w-12 md:rounded-2xl">
-                  <Icon className="h-5 w-5 md:h-6 md:w-6" />
-                </span>
-                <div className="min-w-0 md:mt-5">
-                  <h3 className="text-base font-semibold text-[#111827] md:text-lg">{title}</h3>
-                  <p className="mt-0.5 text-xs text-[#64748B] md:mt-1 md:text-sm">{detail}</p>
-                  <p className="mt-1.5 text-sm font-semibold text-[#111B4D] md:hidden">{price}</p>
-                </div>
-                <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1 md:hidden" />
-                <div className="mt-6 hidden items-center justify-between gap-3 md:flex">
-                  <span className="text-sm font-semibold text-[#111B4D]">{price}</span>
-                  <ArrowRight className="h-5 w-5 text-[#111B4D] transition group-hover:translate-x-1" />
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>
