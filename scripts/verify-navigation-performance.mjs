@@ -27,7 +27,12 @@ check("Professor session and profile reads are cached per render", /export const
 check("Client shell does not block navigation on database reads", !/from "@\/lib\/db"/.test(clientLayout));
 check("Client shell avoids dynamic route prefetch fan-out", /const CLIENT_NAV_PREFETCH\s*=\s*false/.test(clientShell) && !/CLIENT_PRIMARY_PREFETCH_ROUTES|requestIdleCallback/.test(clientShell));
 check("Client shell updates notification badges asynchronously", !/fetch\("\/api\/client\/notifications"/.test(clientShell) && /competence:notification-count/.test(clientShell) && /WebPushRealtime/.test(clientShell));
-check("Client dashboard batches bookings and recommendations on one pooled connection", hasDatabaseTransaction(clientDashboard));
+check(
+  "Client dashboard uses one focused booking read without loading unrelated recommendations",
+  /const allClientBookings = await db\.booking\.findMany/.test(clientDashboard)
+    && !/db\.teacher\.findMany/.test(clientDashboard)
+    && !/await db\.\$transaction\(\[/.test(clientDashboard),
+);
 check("Client search consolidates filter catalogs before render", /getCachedTeacherSearchCatalog/.test(clientSearch));
 check("Client search catalogs remain available without published teachers", !/const \[subjects, levels, communes\] = total > 0/.test(clientSearch));
 check("Client payments batch transactions and pending bookings on one pooled connection", hasDatabaseTransaction(clientPayments));
