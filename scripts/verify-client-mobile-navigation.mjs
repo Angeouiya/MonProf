@@ -539,6 +539,7 @@ record(
     && /aspect-\[3\/1\]/.test(publicTeacherDetail)
     && /className="object-contain"/.test(publicTeacherDetail)
     && /grid-cols-\[112px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
+    && /items-start/.test(publicTeacherDetail)
     && /size=\{104\}/.test(publicTeacherDetail)
     && /style=\{\{ transform: "translateY\(-50%\)" \}\}/.test(publicTeacherDetail)
     && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)

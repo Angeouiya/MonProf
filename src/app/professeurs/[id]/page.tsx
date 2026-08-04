@@ -180,7 +180,7 @@ export default async function TeacherDetailPage({
                 />
               </div>
 
-              <div className="grid grid-cols-[112px_minmax(0,1fr)] items-center gap-3 border-t border-[#E3E8F2] px-4 py-4 sm:gap-5 sm:px-6 sm:py-5" data-public-teacher-photo-layout>
+              <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3 border-t border-[#E3E8F2] px-4 pb-4 sm:gap-5 sm:px-6 sm:pb-5" data-public-teacher-photo-layout>
                 <div
                   className="relative z-10 w-fit rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]"
                   style={{ transform: "translateY(-50%)" }}
@@ -195,7 +195,7 @@ export default async function TeacherDetailPage({
                   />
                 </div>
 
-                <div className="min-w-0 text-left">
+                <div className="min-w-0 pt-4 text-left sm:pt-5">
                   <h1 className="break-words text-xl font-semibold leading-tight text-[#111827] sm:text-4xl">
                     {displayName}
                   </h1>

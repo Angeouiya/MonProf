@@ -76,14 +76,14 @@ export function TeacherProfileMediaForm({
         <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]" data-professor-cover-preview>
           <Image src={coverUrl} alt="Couverture pédagogique du profil" fill sizes="(max-width: 1280px) 100vw, 1100px" className="object-contain" priority />
         </div>
-        <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-3 border-t border-[#E3E8F2] px-4 py-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:px-6" data-professor-photo-preview>
+        <div className="grid grid-cols-[104px_minmax(0,1fr)] items-start gap-3 border-t border-[#E3E8F2] px-4 pb-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:px-6" data-professor-photo-preview>
           <div
             className="relative z-10 w-fit rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]"
             style={{ transform: "translateY(-50%)" }}
           >
             <ProfessorImage photoUrl={photoUrl} name={teacherName} size={96} verified={verified} />
           </div>
-          <div className="min-w-0 text-left">
+          <div className="min-w-0 pt-4 text-left sm:pt-5">
             <p className="break-words text-lg font-semibold leading-tight text-[#111827] sm:text-xl">{teacherName}</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">Votre présentation publique, optimisée sur mobile et ordinateur.</p>
           </div>
