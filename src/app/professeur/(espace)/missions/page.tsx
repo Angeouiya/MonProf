@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, MapPin, Phone } from "lucide-react";
+import { ArrowRight, CalendarDays, ChevronDown, MapPin, Phone } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
 import { requireTeacher } from "@/lib/teacher-auth";
@@ -43,6 +43,21 @@ export default async function ProfesseurMissionsPage() {
     take: 80,
   });
   const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
+  const missionSortNow = new Date();
+  const orderedBookings = verifiedBookings.toSorted((left, right) => {
+    const leftAction = missionNeedsAttention(left, missionSortNow);
+    const rightAction = missionNeedsAttention(right, missionSortNow);
+    if (leftAction !== rightAction) return leftAction ? -1 : 1;
+
+    const leftDate = left.scheduledDate ?? left.startDate ?? left.createdAt;
+    const rightDate = right.scheduledDate ?? right.startDate ?? right.createdAt;
+    const leftUpcoming = leftDate >= missionSortNow;
+    const rightUpcoming = rightDate >= missionSortNow;
+    if (leftUpcoming !== rightUpcoming) return leftUpcoming ? -1 : 1;
+    return leftUpcoming
+      ? leftDate.getTime() - rightDate.getTime()
+      : rightDate.getTime() - leftDate.getTime();
+  });
 
   return (
     <div className="space-y-6">
@@ -59,7 +74,7 @@ export default async function ProfesseurMissionsPage() {
         />
       ) : (
         <div className="grid gap-4">
-          {verifiedBookings.map((booking) => {
+          {orderedBookings.map((booking) => {
             const mission = booking.missionLinks[0];
             const pendingReschedule = booking.rescheduleRequests.find((request) => request.status === "AWAITING_TEACHER");
             const missionTiming = getTeacherMissionTiming(booking);
@@ -80,8 +95,6 @@ export default async function ProfesseurMissionsPage() {
                       {pendingReschedule && <StatusPill status={pendingReschedule.status} />}
                     </div>
                     <p className="mt-2 text-base font-semibold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">{booking.objective || booking.needDescription || "Besoin client transmis par le service client."}</p>
-
                     <div className="mt-4 grid gap-2 min-[680px]:grid-cols-2 lg:grid-cols-4">
                       <MissionInfo icon={<CalendarDays className="h-4 w-4" />} label="Date" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />
                       <MissionInfo label="Heure" value={booking.scheduledTime || booking.preferredTime} />
@@ -89,18 +102,28 @@ export default async function ProfesseurMissionsPage() {
                       <MissionInfo label="Net prévu" value={formatFCFA(booking.teacherNetAmount || booking.totalTeacherReceives)} />
                     </div>
 
-                    <div className="mt-3 grid gap-2 min-[680px]:grid-cols-2">
-                      <MissionInfo icon={<Phone className="h-4 w-4" />} label="Client" value={`${booking.client.name}${booking.client.phone ? ` · ${booking.client.phone}` : ""}`} />
-                      <MissionInfo icon={<MapPin className="h-4 w-4" />} label="Lieu" value={booking.courseFormat === "ONLINE" ? "En ligne" : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" · ") || "Adresse à confirmer"} />
-                    </div>
-
-                    {booking.teacherTasks.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {booking.teacherTasks.map((task) => (
-                          <StatusPill key={task.id} status={task.status} type="task" />
-                        ))}
+                    <details className="group mt-3 overflow-hidden rounded-lg border border-[#E6EAF3] bg-white" data-professor-mission-secondary>
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-[#111B4D] marker:hidden">
+                        Informations de la mission
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="space-y-3 border-t border-[#E6EAF3] p-3">
+                        <p className="text-sm font-semibold leading-6 text-[#64748B]">
+                          {booking.objective || booking.needDescription || "Besoin client transmis par le service client."}
+                        </p>
+                        <div className="grid gap-2 min-[680px]:grid-cols-2">
+                          <MissionInfo icon={<Phone className="h-4 w-4" />} label="Client" value={`${booking.client.name}${booking.client.phone ? ` · ${booking.client.phone}` : ""}`} />
+                          <MissionInfo icon={<MapPin className="h-4 w-4" />} label="Lieu" value={booking.courseFormat === "ONLINE" ? "En ligne" : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" · ") || "Adresse à confirmer"} />
+                        </div>
+                        {booking.teacherTasks.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {booking.teacherTasks.map((task) => (
+                              <StatusPill key={task.id} status={task.status} type="task" />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </details>
                   </div>
 
                   <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
@@ -149,6 +172,19 @@ export default async function ProfesseurMissionsPage() {
       )}
     </div>
   );
+}
+
+function missionNeedsAttention(booking: {
+  missionLinks: Array<{ status: string; expiresAt: Date }>;
+  rescheduleRequests: Array<{ status: string }>;
+}, now: Date) {
+  const mission = booking.missionLinks[0];
+  return booking.rescheduleRequests.some((request) => request.status === "AWAITING_TEACHER")
+    || Boolean(
+      mission
+      && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
+      && mission.expiresAt >= now,
+    );
 }
 
 function MissionInfo({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {

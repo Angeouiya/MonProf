@@ -7,6 +7,7 @@ const record = (label, passed) => checks.push({ label, passed });
 const ui = read("src/components/professor/professor-ui.tsx");
 const layout = read("src/components/layouts/professor-layout.tsx");
 const dashboard = read("src/app/professeur/(espace)/page.tsx");
+const missions = read("src/app/professeur/(espace)/missions/page.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
 const rootTabPaths = [
@@ -65,6 +66,16 @@ record(
     && !/ProfessorQuickLink|ProfessorActionTile|ProfessorControlStep/.test(dashboard)
     && !/teacherNotification\.findMany/.test(dashboard)
     && !/DashboardBalanceMini label="Déduit de votre net"/.test(dashboard),
+);
+
+record(
+  "Professor mission cards prioritize urgent work and reveal secondary details on demand",
+  /const orderedBookings = verifiedBookings\.toSorted/.test(missions)
+    && /missionNeedsAttention\(left, missionSortNow\)/.test(missions)
+    && /leftUpcoming \? -1 : 1/.test(missions)
+    && /data-professor-mission-secondary/.test(missions)
+    && /Informations de la mission/.test(missions)
+    && /group-open:rotate-180/.test(missions),
 );
 
 record(
