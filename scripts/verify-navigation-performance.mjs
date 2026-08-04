@@ -36,7 +36,11 @@ check("Admin dashboard batches operational indicators on one pooled connection",
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
 check("Public home uses one consolidated catalog read", /getCachedTeacherSearchCatalog/.test(publicHome) && !/getCachedSubjects|getCachedLevels|getCachedCommunes/.test(publicHome));
 check("Public teacher search batches results and uses the consolidated catalog", /getCachedTeacherSearchCatalog/.test(publicTeachers) && hasDatabaseTransaction(publicTeachers) && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers));
-check("Client onboarding and booking reuse the consolidated catalog", /getCachedTeacherSearchCatalog/.test(clientBooking) && /getCachedTeacherSearchCatalog/.test(clientRegistration));
+check(
+  "Client registration avoids unused catalog reads and booking reuses the consolidated catalog",
+  /getCachedTeacherSearchCatalog/.test(clientBooking)
+    && !/getCachedTeacherSearchCatalog|@\/lib\/db/.test(clientRegistration),
+);
 check("Client courses batch tab, overview, and pending reads", hasDatabaseTransaction(clientCourses));
 check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
 check("Client support batches eligible bookings and disputes", hasDatabaseTransaction(clientSupport));

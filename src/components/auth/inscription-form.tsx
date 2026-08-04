@@ -3,130 +3,95 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Info,
-  Lock,
-  Mail,
-  MapPin,
-  MessageSquareText,
-  Phone,
-  User,
-  GraduationCap,
-  CheckCircle2,
-  ShieldCheck,
-  CalendarCheck,
-  WalletCards,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Info, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
-type Commune = { id: string; name: string };
+const FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
+const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
 
-const ACCOUNT_BENEFITS = [
-  {
-    icon: CalendarCheck,
-    title: "Réservation suivie",
-    text: "Date, professeur, matière et statut restent centralisés dans votre espace.",
-  },
-  {
-    icon: WalletCards,
-    title: "Paiement protégé",
-    text: "Le montant payé reste relié à la réservation et consultable à tout moment.",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Service client traçable",
-    text: "Notifications, confirmations, avis et litiges gardent un historique clair.",
-  },
-];
-
-const TRUST_POINTS = [
-  "Professeurs vérifiés par le service client",
-  "Paiement bloqué jusqu'à confirmation",
-  "Historique complet des cours et avis",
-];
-
-const FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#E3E8F2] bg-white pl-10 pr-14 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
-export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; returnTo?: string | null }) {
+export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
   const router = useRouter();
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPwd, setShowPwd] = useState(false);
-  const [showPwdConfirm, setShowPwdConfirm] = useState(false);
-  const [commune, setCommune] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    quartier: "",
     password: "",
     confirmPassword: "",
   });
-  const communeGroups = [{
-    label: "Villes et communes",
-    options: communes.map((c) => ({
-      value: c.name,
-      label: c.name,
-      keywords: c.name,
-    })),
-  }];
+
+  const normalizedEmail = form.email.toLowerCase().trim();
+  const normalizedPhone = form.phone.trim();
+  const passwordValid = isPasswordCompliant(form.password);
+  const passwordsMatch = Boolean(form.confirmPassword) && form.password === form.confirmPassword;
 
   function update(field: keyof typeof form, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+    setForm((current) => ({ ...current, [field]: value }));
+    setError(null);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function validateIdentity() {
+    if (form.name.trim().length < 2) {
+      setError("Saisissez votre nom complet.");
+      return false;
+    }
+    if (!normalizedEmail && !normalizedPhone) {
+      setError("Saisissez un email ou un numéro de téléphone.");
+      return false;
+    }
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Vérifiez votre adresse email.");
+      return false;
+    }
+    if (normalizedPhone && normalizedPhone.replace(/\D/g, "").length < 8) {
+      setError("Vérifiez votre numéro de téléphone.");
+      return false;
+    }
+    return true;
+  }
+
+  function continueToPassword() {
+    setError(null);
+    if (!validateIdentity()) return;
+    setStep(2);
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (loading) return;
     setError(null);
 
-    // Basic validations
-    if (form.name.trim().length < 2) {
-      setError("Le nom doit comporter au moins 2 caractères.");
+    if (!validateIdentity()) {
+      setStep(1);
       return;
     }
-    const normalizedEmail = form.email.toLowerCase().trim();
-    const normalizedPhone = form.phone.trim();
-    if (!normalizedEmail && !normalizedPhone) {
-      setError("Renseignez au moins une adresse email ou un numéro de téléphone.");
+    if (!passwordValid) {
+      setError(`Choisissez au moins ${PASSWORD_MIN_LENGTH} caractères avec une lettre et un chiffre.`);
       return;
     }
-    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setError("Adresse email invalide.");
-      return;
-    }
-    if (normalizedPhone && normalizedPhone.replace(/\D/g, "").length < 8) {
-      setError("Numéro de téléphone invalide.");
-      return;
-    }
-    if (!isPasswordCompliant(form.password)) {
-      setError(`Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+    if (!passwordsMatch) {
+      setError("Les deux mots de passe doivent être identiques.");
       return;
     }
     if (!legalAccepted) {
-      setError("Vous devez accepter les conditions générales d'utilisation et la politique de confidentialité pour créer un compte.");
+      setError("Acceptez les conditions pour créer votre compte.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -134,15 +99,11 @@ export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; r
           email: normalizedEmail || undefined,
           phone: normalizedPhone || undefined,
           password: form.password,
-          commune: commune || undefined,
-          quartier: form.quartier.trim() || undefined,
           legalAccepted,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Inscription impossible");
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Inscription impossible");
 
       const signed = await signIn("credentials", {
         email: normalizedEmail || normalizedPhone,
@@ -150,325 +111,198 @@ export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; r
         redirect: false,
       });
       if (!signed || signed.error) {
-        toast.success("Compte créé ! Connectez-vous pour continuer.");
+        toast.success("Compte créé. Connectez-vous pour continuer.");
         router.push(returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion");
         return;
       }
 
-      toast.success("Bienvenue sur Compétence ! Votre compte a été créé.");
+      toast.success("Votre compte est prêt.");
       router.push(returnTo ?? "/client");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue. Réessayez.");
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Réessayez dans un instant.");
     } finally {
       setLoading(false);
     }
   }
 
+  const loginHref = returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion";
+
   return (
     <PublicLayout>
-      <section className="bg-white">
-        <div className="mx-auto grid max-w-6xl gap-5 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-[minmax(320px,430px)_minmax(0,1fr)] lg:items-start lg:gap-8 lg:py-14">
-          <aside className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6 lg:sticky lg:top-24">
-            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Nouveau compte client
+      <section className="min-h-[calc(100svh-8rem)] bg-[#F7F9FC] sm:bg-white">
+        <div className="mx-auto grid max-w-5xl gap-8 px-4 py-5 sm:px-6 sm:py-10 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:py-14">
+          <aside className="hidden overflow-hidden rounded-3xl bg-[#0D1745] p-9 text-white shadow-[0_24px_70px_rgba(13,23,69,0.16)] lg:block">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold">
+              <ShieldCheck className="h-4 w-4" />
+              Compte sécurisé
             </span>
-            <h1 className="mt-5 text-3xl font-semibold tracking-normal text-[#111827] text-balance sm:text-4xl">
-              Créez votre espace et réservez sans perdre le fil.
+            <h1 className="mt-7 text-4xl font-semibold leading-tight tracking-tight">
+              Réservez.<br />On s’occupe du reste.
             </h1>
-            <p className="mt-3 text-sm font-medium leading-7 text-[#475569]">
-              Votre compte client garde vos réservations, confirmations, paiements et avis dans un espace simple, lisible et sécurisé.
+            <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
+              Vos cours, paiements et confirmations restent réunis au même endroit.
             </p>
-
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              <Signal value="2h" label="par séance" />
-              <Signal value="CI" label="local" />
-              <Signal value="24/7" label="suivi" />
-            </div>
-
-            <div className="mt-6 space-y-3">
-              {TRUST_POINTS.map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-                    <ShieldCheck className="h-4 w-4" />
-                  </div>
-                  <p className="text-sm font-semibold text-[#111827]">{item}</p>
+            <div className="mt-10 grid gap-3">
+              {["Professeurs vérifiés", "Prix clair avant paiement", "Suivi de chaque cours"].map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-2xl bg-white/[0.07] px-4 py-3 text-sm font-semibold">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#D6AD48] text-[#0D1745]">
+                    <Check className="h-4 w-4" />
+                  </span>
+                  {item}
                 </div>
               ))}
             </div>
-
-            <div className="mt-5 rounded-lg border border-[#E3E8F2] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Après création</p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-[#111827]">
-                Vous arrivez directement dans votre dashboard client pour retrouver vos réservations, cours, paiements et notifications.
-              </p>
-            </div>
           </aside>
 
-          <div className="w-full">
-            <div className="mb-5 rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-                    <GraduationCap className="h-3.5 w-3.5" />
-                    Inscription gratuite
-                  </div>
-                  <h2 className="mt-3 text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">
-                    Créer un compte client
-                  </h2>
-                  <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-                    Renseignez vos informations de contact pour réserver plus vite et garder un suivi propre.
-                  </p>
+          <div className="mx-auto w-full max-w-[430px]">
+            <div className="rounded-2xl border border-[#E3E8F2] bg-white p-4 shadow-[0_16px_50px_rgba(15,23,42,0.06)] sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748B]">
+                    Étape {step} sur 2
+                  </span>
+                  <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#111827]">
+                    {step === 1 ? "Créer votre compte" : "Choisir votre mot de passe"}
+                  </h1>
                 </div>
-                <Link href={returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion"} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white">
-                  Déjà inscrit
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-6">
-            {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#991B1B] bg-white px-3 py-2.5 text-sm font-semibold text-[#991B1B]">
-                <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="font-semibold text-[#111827]">
-                  Nom complet <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                  <Input
-                    id="name"
-                    required
-                    value={form.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    placeholder="Ex. Kouassi Aya"
-                    className={FIELD_CLASS}
-                  />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#111B4D]">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="font-semibold text-[#111827]">
-                    Email <span className="text-xs font-medium text-[#64748B]">(recommandé)</span>
-                  </Label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                    <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      value={form.email}
-                      onChange={(e) => update("email", e.target.value)}
-                      placeholder="vous@exemple.ci"
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="font-semibold text-[#111827]">Téléphone</Label>
-                  <div className="relative">
-                    <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                      placeholder="+225 07 00 00 00 00"
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                </div>
-              </div>
-              <p className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-medium leading-5 text-[#64748B]">
-                Renseignez au moins l'un des deux. Avec un email, la réinitialisation est automatique par lien. Sans email, le service client vous aidera après vérification de votre numéro.
-              </p>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="commune" className="font-semibold text-[#111827]">Commune</Label>
-                  <SearchableCatalogSelect
-                    id="commune"
-                    name="commune"
-                    value={commune}
-                    onValueChange={setCommune}
-                    placeholder="Choisir une commune"
-                    searchPlaceholder="Tapez votre commune..."
-                    emptyLabel="Aucune commune trouvée"
-                    allLabel="Aucune commune"
-                    groups={communeGroups}
-                    triggerClassName="min-h-12 rounded-lg border-[#E3E8F2] focus:border-[#111B4D] focus:ring-[#111B4D]"
-                    allowCustomValue
-                    customValueLabel="Utiliser cette ville"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="quartier" className="font-semibold text-[#111827]">Quartier</Label>
-                  <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                    <Input
-                      id="quartier"
-                      value={form.quartier}
-                      onChange={(e) => update("quartier", e.target.value)}
-                      placeholder="Ex. Riviera Palmeraie"
-                      className={FIELD_CLASS}
-                    />
-                  </div>
-                </div>
+              <div className="mt-5 grid grid-cols-2 gap-2" aria-label={`Étape ${step} sur 2`}>
+                <span className="h-1.5 rounded-full bg-[#111B4D]" />
+                <span className={`h-1.5 rounded-full ${step === 2 ? "bg-[#111B4D]" : "bg-[#E3E8F2]"}`} />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="font-semibold text-[#111827]">
-                  Mot de passe <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                  <Input
-                    id="password"
-                    type={showPwd ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={form.password}
-                    onChange={(e) => update("password", e.target.value)}
-                    placeholder={`${PASSWORD_MIN_LENGTH} caractères, avec une lettre et un chiffre`}
-                    className={PASSWORD_FIELD_CLASS}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwd((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                    aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    aria-pressed={showPwd}
-                  >
-                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              {error && (
+                <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{error}</span>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="font-semibold text-[#111827]">
-                  Confirmer le mot de passe <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                  <Input
-                    id="confirmPassword"
-                    type={showPwdConfirm ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={form.confirmPassword}
-                    onChange={(e) => update("confirmPassword", e.target.value)}
-                    placeholder="Ressaisissez votre mot de passe"
-                    className={PASSWORD_FIELD_CLASS}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwdConfirm((v) => !v)}
-                    className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                    aria-label={showPwdConfirm ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
-                    aria-pressed={showPwdConfirm}
-                  >
-                    {showPwdConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+              <form onSubmit={handleSubmit} className="mt-5">
+                {step === 1 ? (
+                  <div className="space-y-4">
+                    <Field label="Nom complet" htmlFor="name">
+                      <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                      <Input
+                        id="name"
+                        autoComplete="name"
+                        required
+                        value={form.name}
+                        onChange={(event) => update("name", event.target.value)}
+                        placeholder="Kouassi Aya"
+                        className={FIELD_CLASS}
+                      />
+                    </Field>
 
-              <div className="rounded-lg border border-[#DDE6F7] bg-white p-3.5">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="legalAccepted"
-                    checked={legalAccepted}
-                    onCheckedChange={(checked) => setLegalAccepted(checked === true)}
-                    className="mt-0 !h-11 !w-11"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <label htmlFor="legalAccepted" className="block text-sm font-medium leading-6 text-[#475569]">
-                      J'ai lu et j'accepte le cadre légal de Compétence.
-                    </label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Link
-                        href="/conditions-utilisation"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
-                      >
-                        Conditions d'utilisation
-                      </Link>
-                      <Link
-                        href="/politique-confidentialite"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-3 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
-                      >
-                        Confidentialité
-                      </Link>
+                    <Field label="Email" hint="Recommandé" htmlFor="email">
+                      <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        value={form.email}
+                        onChange={(event) => update("email", event.target.value)}
+                        placeholder="vous@exemple.ci"
+                        className={FIELD_CLASS}
+                      />
+                    </Field>
+
+                    <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#94A3B8]">
+                      <span className="h-px flex-1 bg-[#E3E8F2]" />
+                      ou
+                      <span className="h-px flex-1 bg-[#E3E8F2]" />
                     </div>
-                    <p className="mt-2 text-sm font-medium leading-6 text-[#475569]">
-                      En créant mon compte, je reconnais que mes réservations, paiements, notifications, avis et demandes au service client sont traités pour assurer le service Compétence.
+
+                    <Field label="Téléphone" htmlFor="phone">
+                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        autoComplete="tel"
+                        value={form.phone}
+                        onChange={(event) => update("phone", event.target.value)}
+                        placeholder="+225 07 00 00 00 00"
+                        className={FIELD_CLASS}
+                      />
+                    </Field>
+
+                    <p className="text-xs leading-5 text-[#64748B]">
+                      Avec un email, vous pourrez récupérer votre mot de passe par lien.
                     </p>
+
+                    <Button type="button" onClick={continueToPassword} className="min-h-12 w-full rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                      Continuer
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                size="lg"
-                className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#64748B]" />
-                    Création du compte...
-                  </>
                 ) : (
-                  <>
-                    Créer mon compte
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
+                  <div className="space-y-4">
+                    <Field label="Mot de passe" htmlFor="password">
+                      <PasswordInput
+                        id="password"
+                        autoComplete="new-password"
+                        required
+                        value={form.password}
+                        onChange={(event) => update("password", event.target.value)}
+                        placeholder={`${PASSWORD_MIN_LENGTH} caractères minimum`}
+                        className={PASSWORD_FIELD_CLASS}
+                      />
+                    </Field>
 
-              <div className="grid gap-2 md:grid-cols-3">
-                {ACCOUNT_BENEFITS.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.title} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-[#111827]">{item.title}</p>
-                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{item.text}</p>
+                    <Field label="Confirmer" htmlFor="confirmPassword">
+                      <PasswordInput
+                        id="confirmPassword"
+                        autoComplete="new-password"
+                        required
+                        value={form.confirmPassword}
+                        onChange={(event) => update("confirmPassword", event.target.value)}
+                        placeholder="Répétez le mot de passe"
+                        className={PASSWORD_FIELD_CLASS}
+                      />
+                    </Field>
+
+                    <div className="grid gap-2 text-xs font-medium">
+                      <PasswordCheck ok={passwordValid} label={`${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre`} />
+                      <PasswordCheck ok={passwordsMatch} label="Les deux mots de passe sont identiques" />
                     </div>
-                  );
-                })}
-              </div>
 
-              <ul className="space-y-1.5 rounded-lg border border-[#E3E8F2] bg-white px-3.5 py-3 text-xs font-semibold text-[#111B4D]">
-                {TRUST_POINTS.map((point) => (
-                  <li key={point} className="flex items-start gap-1.5">
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </form>
+                    <label htmlFor="legalAccepted" className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border border-[#E3E8F2] p-3 text-sm leading-5 text-[#475569]">
+                      <Checkbox
+                        id="legalAccepted"
+                        checked={legalAccepted}
+                        onCheckedChange={(checked) => setLegalAccepted(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        J’accepte les <Link href="/conditions-utilisation" target="_blank" className="font-semibold text-[#111B4D] underline underline-offset-2">conditions</Link> et la <Link href="/politique-confidentialite" target="_blank" className="font-semibold text-[#111B4D] underline underline-offset-2">confidentialité</Link>.
+                      </span>
+                    </label>
 
-            <p className="mt-5 flex flex-col items-center justify-center gap-2 text-center text-sm font-medium text-[#64748B] min-[420px]:flex-row">
-              <span>Vous avez déjà un compte ?</span>
-              <Link
-                href={returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion"}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-4 font-semibold text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white"
-              >
-                Connectez-vous
-              </Link>
-            </p>
+                    <div className="grid grid-cols-[auto_1fr] gap-2">
+                      <Button type="button" variant="outline" onClick={() => { setError(null); setStep(1); }} className="min-h-12 rounded-xl px-4" aria-label="Revenir aux coordonnées">
+                        <ArrowLeft className="h-4 w-4" />
+                        Retour
+                      </Button>
+                      <Button type="submit" disabled={loading} className="min-h-12 rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                        {loading ? "Création..." : "Créer mon compte"}
+                        {!loading && <ArrowRight className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </form>
+
+              <p className="mt-5 text-center text-sm text-[#64748B]">
+                Déjà un compte ?{" "}
+                <Link href={loginHref} className="font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                  Se connecter
+                </Link>
+              </p>
             </div>
           </div>
         </div>
@@ -477,11 +311,35 @@ export function InscriptionForm({ communes, returnTo }: { communes: Commune[]; r
   );
 }
 
-function Signal({ value, label }: { value: string; label: string }) {
+function Field({
+  label,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-3 text-center">
-      <p className="text-lg font-semibold leading-none text-[#111B4D]">{value}</p>
-      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+    <div className="space-y-1.5">
+      <Label htmlFor={htmlFor} className="font-semibold text-[#111827]">
+        {label}
+        {hint && <span className="ml-2 text-xs font-medium text-[#64748B]">{hint}</span>}
+      </Label>
+      <div className="relative">{children}</div>
     </div>
+  );
+}
+
+function PasswordCheck({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <p className={`flex items-center gap-2 ${ok ? "text-emerald-700" : "text-[#64748B]"}`}>
+      <span className={`flex h-5 w-5 items-center justify-center rounded-full ${ok ? "bg-emerald-100" : "bg-[#EEF2F7]"}`}>
+        {ok ? <Check className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-[#94A3B8]" />}
+      </span>
+      {label}
+    </p>
   );
 }
