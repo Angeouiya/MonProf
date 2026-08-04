@@ -1748,8 +1748,44 @@ export function ReserverForm({
               </div>
 
               {/* Récap */}
-              <div className="overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
-                <dl className="divide-y divide-[#EEF2F7] text-sm">
+              <div className="grid gap-2 min-[720px]:grid-cols-2">
+                <SummaryLine
+                  icon={<ClipboardList className="h-4 w-4" />}
+                  label="Besoin"
+                  value={`${form.subjectName} · ${form.preciseLevel || form.levelName}`}
+                />
+                <SummaryLine
+                  icon={form.courseFormat === "HOME" ? <Home className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+                  label="Format"
+                  value={`${form.courseFormat === "HOME" ? "À domicile" : "En ligne"} · ${form.groupType === "INDIVIDUAL" ? "Individuel" : formatCount(participantsCount, "participant")}`}
+                />
+                <SummaryLine
+                  icon={form.courseFormat === "HOME" ? <Home className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+                  label="Lieu"
+                  value={form.courseFormat === "HOME"
+                    ? `${formatLocationSummary(form.city, form.commune, form.quartier)} · ${pricing.transportFee === 0 ? "déplacement gratuit" : formatFCFA(pricing.transportFee)}`
+                    : "En ligne"}
+                />
+                <SummaryLine
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  label="Planning"
+                  value={`${selectedStartDateLabel || "Date à choisir"} · ${preferredTimeSummary.join(" ; ") || "Créneau à choisir"}`}
+                />
+                <div className="min-[720px]:col-span-2">
+                  <SummaryLine
+                    icon={<WalletCards className="h-4 w-4" />}
+                    label="Formule"
+                    value={`${selectedPackLabel} · ${formatCount(selectedPackSessions, "séance")}`}
+                  />
+                </div>
+              </div>
+
+              <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
+                  Voir toutes les informations
+                </summary>
+                <div className="mt-4 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
+                  <dl className="divide-y divide-[#EEF2F7] text-sm">
                   <Row label="Type client" value={form.clientType} />
                   <Row label="Catégorie" value={categoryLabel} />
                   {form.schoolSystem && <Row label="Système scolaire" value={SCHOOL_SYSTEMS.find((system) => system.value === form.schoolSystem)?.label ?? form.schoolSystem} />}
@@ -1781,9 +1817,10 @@ export function ReserverForm({
                   <Row label="Date souhaitée" value={selectedStartDateLabel || "—"} />
                   <Row label="Validation planning" value={isScheduleReadyForPayment ? "Date et créneau prêts pour paiement" : paymentScheduleWarning || "Planning à compléter"} />
                   <Row label="Créneaux / préférence" value={preferredTimeSummary.join(" ; ") || "—"} />
-                  <Row label="Formule" value={PACK_OPTIONS.find((p) => p.value === form.packType)?.label ?? form.packType} />
-                </dl>
-              </div>
+                    <Row label="Formule" value={selectedPackLabel} />
+                  </dl>
+                </div>
+              </details>
 
               {/* Montants */}
               <div className="space-y-3">
@@ -1809,8 +1846,12 @@ export function ReserverForm({
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
                 />
-                {sessionPreview.length > 0 && (
-                  <div className="rounded-lg border border-[#DDE6F7] bg-white p-3">
+                {sessionPreview.length > 1 && (
+                  <details className="rounded-lg border border-[#DDE6F7] bg-white p-3">
+                    <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
+                      Voir le planning des {sessionPreview.length} séances
+                    </summary>
+                    <div className="mt-3 border-t border-[#E5E7EB] pt-3">
                     <div className="flex flex-col gap-1 min-[460px]:flex-row min-[460px]:items-end min-[460px]:justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Séances prévues</p>
@@ -1831,7 +1872,8 @@ export function ReserverForm({
                         </div>
                       ))}
                     </div>
-                  </div>
+                    </div>
+                  </details>
                 )}
                 <div className="flex items-start gap-2 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs font-medium leading-5 text-[#64748B]">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />

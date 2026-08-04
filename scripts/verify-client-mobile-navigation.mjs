@@ -352,6 +352,14 @@ record(
 );
 
 record(
+  "Client booking recap leads with five decisions and reveals audit detail on demand",
+  /label="Besoin"[\s\S]*?label="Format"[\s\S]*?label="Lieu"[\s\S]*?label="Planning"[\s\S]*?label="Formule"/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Voir toutes les informations/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /sessionPreview\.length\s*>\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Voir le planning des \{sessionPreview\.length\} séances/.test(read("src/app/client/reserver/reserver-form.tsx")),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
