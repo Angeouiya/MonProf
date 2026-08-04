@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.",
 };
 
-const version = "10 juillet 2026";
+const version = "4 août 2026";
 
 const sections: LegalSection[] = [
   {
@@ -23,6 +23,7 @@ const sections: LegalSection[] = [
       "Compétence met en relation des clients avec des professeurs vérifiés et suivis par le service client. La plateforme organise la réservation, le suivi, la notification, le paiement sécurisé, la traçabilité, la qualité, les avis, les remplacements et la comptabilité interne.",
       "Les professeurs ne disposent pas d'une inscription publique autonome. Ils sont enrôlés, vérifiés, activés, suspendus ou désactivés par le service client Compétence.",
       "Compétence conserve un pouvoir de contrôle opérationnel sur les professeurs, les missions, les paiements, les sanctions, les remplacements et la visibilité des profils.",
+      "Sauf disposition impérative contraire, le professeur intervient comme prestataire indépendant et reste responsable de ses déclarations, qualifications, méthodes, obligations professionnelles et fiscales. L'accès à la plateforme ne constitue ni une garantie de mission, ni un salaire, ni une relation d'exclusivité.",
     ],
   },
   {
@@ -39,6 +40,7 @@ const sections: LegalSection[] = [
       "L'accès professeur est un espace léger, interne et contrôlé. Il permet au professeur de consulter ses missions, confirmer sa disponibilité, signaler une indisponibilité selon la règle des 24 heures, proposer un créneau, suivre ses paiements, envoyer un message au service client et gérer certaines informations utiles.",
       "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il peut être retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
       "Le professeur s'engage à fournir une photo réelle, des informations exactes, des disponibilités sincères, un numéro de paiement fiable et à respecter les consignes du service client.",
+      "Une couverture de catalogue est décorative et ne remplace jamais la photo réelle. Toute couverture personnalisée, photo, CV ou information trompeuse, illicite ou portant atteinte aux droits d'un tiers peut être retirée immédiatement.",
     ],
   },
   {
@@ -52,7 +54,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
-      "Pour les nouvelles réservations, le paiement se fait via Jèko. Le client choisit son moyen de paiement sur la page sécurisée du prestataire. Les anciens dossiers PayDunya restent conservés dans l'historique.",
+      "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers PayDunya restent conservés uniquement dans l'historique.",
       "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Les frais propres au prestataire de paiement sont suivis séparément par la plateforme.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
     ],
@@ -63,6 +65,7 @@ const sections: LegalSection[] = [
       "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Le total peut ensuite varier selon le nombre de séances, les participants, le déplacement et les frais de service affichés avant paiement.",
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
+      "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur peut refuser une combinaison incompatible et demander au client de choisir un autre profil.",
     ],
   },
   {
@@ -114,8 +117,8 @@ const sections: LegalSection[] = [
       "La comptabilité professeur est interne à Compétence. Le professeur ne dispose pas d'un wallet autonome. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables par le service client.",
       "Pour une réservation comprenant plusieurs séances, chaque séance possède son propre planning, son professeur affecté et son décompte. Les fonds d'une séance deviennent libérables uniquement après sa réalisation puis sa confirmation par le client; les séances futures restent bloquées.",
       "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
-      "Le professeur choisit le moyen sur lequel il souhaite recevoir ses fonds parmi Wave, Orange Money, MTN Money et Moov Money. Il saisit puis confirme deux fois le numéro exact. Ce choix est enregistré comme préférence et peut être modifié dans Paramètres ou lors d'une nouvelle demande.",
-      "Lorsqu'un professeur fait une demande de paiement, il doit saisir le montant demandé, le moyen de paiement et confirmer le numéro exact. Une demande de paiement validement envoyée est traitée entre 1 heure et 72 heures ouvrées après contrôle du service client.",
+      "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
+      "Lorsqu'un professeur fait une demande de retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Une demande correctement envoyée est normalement traitée entre 1 heure et 72 heures ouvrées après contrôle.",
       "Ce délai peut être prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
       "Compétence peut payer partiellement, suspendre, différer, refuser ou ajuster un paiement professeur lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient.",
     ],
@@ -141,6 +144,7 @@ const sections: LegalSection[] = [
     title: "Notifications et communications",
     body: [
       "Compétence peut envoyer des notifications internes, emails, SMS, messages WhatsApp, liens privés sécurisés ou messages du service client pour gérer les réservations, paiements, confirmations, remplacements, annulations, remboursements, missions, litiges et alertes.",
+      "Les confirmations ordinaires sont affichées dans l'écran concerné. Les notifications flottantes sont réservées aux erreurs, risques de sécurité, changements financiers ou actions critiques qui exigent une attention immédiate.",
       "Le professeur accepte que les missions puissent lui être communiquées par téléphone, WhatsApp, SMS, email, lien privé ou espace professeur léger. Le client accepte de recevoir les informations utiles à la sécurité et au suivi de sa réservation.",
       "Les communications importantes peuvent être conservées comme preuve dans l'historique de la plateforme.",
     ],
@@ -158,6 +162,38 @@ const sections: LegalSection[] = [
       "Compétence met en œuvre des moyens sérieux pour vérifier les professeurs, sécuriser les paiements, organiser les cours et suivre la qualité, mais ne garantit pas un résultat scolaire, professionnel, concours ou financier déterminé.",
       "La responsabilité de Compétence ne peut être engagée pour une information fausse fournie par un utilisateur, un cas de force majeure, une indisponibilité technique externe, un incident du prestataire de paiement, une erreur de numéro fournie par le professeur ou le client, ou un comportement fautif d'une partie.",
       "Compétence peut suspendre temporairement un service ou une action lorsque cela est nécessaire pour la maintenance, la sécurité, la fraude, le contrôle de qualité, le litige ou la conformité.",
+      "Dans la mesure autorisée par la loi, Compétence n'indemnise pas les pertes indirectes, pertes d'opportunité, pertes de revenus, dommages résultant d'un usage hors plateforme ou conséquences d'informations inexactes fournies par une partie. Pour un dommage direct prouvé relatif à une réservation, la responsabilité totale de Compétence est limitée au montant effectivement payé à Compétence pour la réservation concernée.",
+      "Aucune limitation ne s'applique lorsqu'elle serait interdite par une disposition impérative, notamment en cas de faute lourde ou intentionnelle établie, d'atteinte corporelle imputable ou de droit légal du consommateur auquel il ne peut être renoncé.",
+    ],
+  },
+  {
+    title: "Preuve électronique et lutte contre la fraude",
+    body: [
+      "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique, sous réserve de leur recevabilité légale.",
+      "Une page de retour, une capture d'écran, un SMS isolé, un abandon de fenêtre ou une déclaration de paiement ne valent jamais confirmation. Seule la vérification serveur du prestataire et de la transaction exacte active la réservation ou libère des coordonnées.",
+      "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
+    ],
+  },
+  {
+    title: "Propriété intellectuelle et contenus",
+    body: [
+      "La marque, l'interface, le catalogue de couvertures, les textes, règles, composants, bases de données et éléments graphiques de Compétence.CI sont protégés. Toute extraction, copie systématique, revente, imitation ou réutilisation non autorisée est interdite.",
+      "L'utilisateur reste responsable des contenus qu'il fournit et garantit disposer des droits nécessaires. Il accorde à Compétence une licence non exclusive, gratuite et limitée à l'hébergement, l'optimisation, la modération et l'affichage du contenu pour fournir et promouvoir son profil ou le service.",
+      "Cette licence prend fin lorsque le contenu n'est plus nécessaire, sous réserve des sauvegardes, preuves, obligations légales et contenus déjà intégrés à un dossier litigieux ou financier.",
+    ],
+  },
+  {
+    title: "Garantie de l'utilisateur et indemnisation",
+    body: [
+      "Chaque utilisateur répond des informations, fichiers, instructions, coordonnées, qualifications et contenus qu'il fournit ainsi que de son comportement pendant le cours.",
+      "Dans la mesure permise par la loi, l'utilisateur indemnise Compétence des réclamations de tiers résultant de sa fraude, de son contenu illicite, d'une usurpation, d'une violation de droits, d'un paiement direct interdit ou d'un usage de la plateforme contraire aux présentes conditions.",
+    ],
+  },
+  {
+    title: "Force majeure, divisibilité et absence de renonciation",
+    body: [
+      "Compétence n'est pas responsable d'un retard ou d'une impossibilité causé par un événement raisonnablement hors de son contrôle, notamment panne générale, indisponibilité du prestataire financier ou télécom, catastrophe, décision d'autorité, trouble civil ou événement de force majeure reconnu.",
+      "Si une clause est déclarée invalide, les autres restent applicables et la clause concernée est interprétée au plus près de son objectif licite. Le fait de ne pas appliquer immédiatement une règle ne vaut pas renonciation à l'appliquer ultérieurement.",
     ],
   },
   {

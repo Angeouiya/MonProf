@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Award,
@@ -31,6 +32,8 @@ import {
   TEACHER_JOURNEY_CONFIG,
 } from "@/lib/teacher-journeys";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
+import { resolveTeacherCover } from "@/lib/teacher-cover";
+import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +120,12 @@ export default async function TeacherDetailPage({
   const subjectsPreview = journeySubjects.slice(0, 4).map((item) => item.subject.name).join(", ");
   const levelsPreview = journeyLevels.slice(0, 5).map((item) => item.level.name).join(", ");
   const zonesPreview = teacher.zones.slice(0, 4).map((z) => z.commune.name).join(", ");
-  const sessionPriceLabel = journeyConfig.priceLabel;
+  const sessionPriceLabel = teacherJourneyPriceLabel(
+    activeJourney,
+    journeyLevels.map((item) => item.level.name),
+  );
+  const resolvedCover = resolveTeacherCover({ teacherId: teacher.id, coverUrl: teacher.coverUrl });
+  const canBookActiveJourney = journeySubjects.length > 0 && journeyLevels.length > 0;
   const formatLabel = teacher.offersHome && teacher.offersOnline
     ? "Domicile ou en ligne"
     : teacher.offersHome
@@ -160,28 +168,39 @@ export default async function TeacherDetailPage({
             })}
           </nav>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
-            <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-5" data-public-teacher-hero>
-              <div
-                className="grid justify-items-center gap-4 min-[520px]:grid-cols-[184px_minmax(0,1fr)] min-[520px]:items-center min-[520px]:justify-items-start sm:gap-5"
-                data-public-teacher-photo-layout
-              >
-                <div className="flex items-center justify-center rounded-xl border border-[#DDE6F7] bg-[#F8FAFD] p-3">
+            <div className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white shadow-[0_18px_50px_rgba(17,27,77,0.08)]" data-public-teacher-hero>
+              <div className="relative aspect-[3/1] min-h-44 w-full overflow-hidden bg-[#111B4D]" data-public-teacher-cover>
+                <Image
+                  src={resolvedCover.url}
+                  alt={`Couverture pédagogique de ${displayName}`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 850px"
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#08103B]/60 via-[#08103B]/5 to-transparent" />
+                <span className="absolute right-3 top-3 rounded-full border border-white/35 bg-[#08103B]/55 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm sm:right-5 sm:top-5">
+                  Profil contrôlé par Compétence.CI
+                </span>
+              </div>
+
+              <div className="relative px-4 pb-4 pt-16 sm:px-6 sm:pb-5 sm:pt-5" data-public-teacher-photo-layout>
+                <div className="absolute -top-14 left-1/2 -translate-x-1/2 rounded-full bg-white p-1.5 shadow-xl sm:left-6 sm:-translate-x-0">
                   <ProfessorImage
                     photoUrl={teacher.photoUrl}
                     name={displayName}
-                    size={144}
-                    shape="rounded"
-                    className="drop-shadow-sm"
+                    size={124}
+                    shape="circle"
                     priority
                     verified={teacher.badgeVerified}
                   />
                 </div>
 
-                <div className="min-w-0 text-center min-[520px]:text-left">
+                <div className="min-w-0 text-center sm:ml-36 sm:text-left">
                   <h1 className="text-2xl font-semibold leading-tight text-[#111827] sm:text-4xl">
                     {displayName}
                   </h1>
-                  <div className="mt-2 flex justify-center min-[520px]:justify-start">
+                  <div className="mt-2 flex justify-center sm:justify-start">
                     <ProfessorTrustBadges
                       verified={teacher.badgeVerified}
                       recommended={teacher.badgeRecommended}
@@ -195,19 +214,19 @@ export default async function TeacherDetailPage({
                   <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[#111B4D] sm:text-base">
                     {teacher.jobTitle}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#64748B] min-[520px]:justify-start sm:text-sm">
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs font-medium text-[#64748B] sm:justify-start sm:text-sm">
                     <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{primarySubject}</span>
                     <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{teacher.commune ?? "Abidjan"}</span>
                     {displayRating > 0 && <span className="font-semibold text-[#111B4D]">{displayRatingLabel} {displayRating.toFixed(1)}/5</span>}
                   </div>
-                  <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px] font-semibold text-[#111B4D] min-[520px]:justify-start sm:text-xs">
+                  <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px] font-semibold text-[#111B4D] sm:justify-start sm:text-xs">
                     {teacher.offersHome && <span className="inline-flex items-center gap-1"><HomeIcon className="h-3 w-3" />Domicile</span>}
                     {teacher.offersOnline && <span className="inline-flex items-center gap-1"><Video className="h-3 w-3" />En ligne</span>}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 divide-x divide-[#E3E8F2] border-t border-[#E3E8F2] pt-3">
+              <div className="mx-4 grid grid-cols-3 divide-x divide-[#E3E8F2] border-t border-[#E3E8F2] pb-4 pt-3 sm:mx-6 sm:pb-5">
                 <HeroFact icon={<CheckCircle2 className="h-4 w-4" />} label="Contrôle" value="Vérifié" />
                 <HeroFact icon={<GraduationCap className="h-4 w-4" />} label="Expérience" value={`${teacher.experienceYears} ans`} />
                 <HeroFact icon={<Calendar className="h-4 w-4" />} label="Créneaux" value={availableDayCount > 0 ? `${availableDayCount} jours` : "À confirmer"} />
@@ -226,13 +245,24 @@ export default async function TeacherDetailPage({
                 <span className="flex items-center gap-2"><Wallet className="h-4 w-4 text-[#111B4D]" />Total affiché avant paiement</span>
                 <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#111B4D]" />Fonds protégés jusqu'au cours</span>
               </div>
-              <Link
-                href={reserveHref}
-                className="mt-auto inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
-              >
-                <Calendar className="h-4 w-4" />
-                Réserver maintenant
-              </Link>
+              {canBookActiveJourney ? (
+                <Link
+                  href={reserveHref}
+                  className="mt-auto inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Réserver maintenant
+                </Link>
+              ) : (
+                <div className="mt-auto space-y-3">
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-900">
+                    Ce professeur n'a pas de matière et de niveau compatibles avec ce parcours. Choisissez un autre profil.
+                  </p>
+                  <Link href={teachersHref} className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-[#111B4D] px-4 text-sm font-semibold text-[#111B4D]">
+                    Choisir un autre professeur
+                  </Link>
+                </div>
+              )}
             </aside>
           </div>
 
@@ -641,10 +671,10 @@ export default async function TeacherDetailPage({
             <p className="truncate text-xs font-semibold text-[#64748B]">{sessionPriceLabel}</p>
           </div>
           <Link
-            href={reserveHref}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white"
+            href={canBookActiveJourney ? reserveHref : teachersHref}
+            className={`inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold ${canBookActiveJourney ? "bg-[#111B4D] text-white" : "border border-[#111B4D] bg-white text-[#111B4D]"}`}
           >
-            Réserver
+            {canBookActiveJourney ? "Réserver" : "Autre professeur"}
           </Link>
         </div>
       </div>

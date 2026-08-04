@@ -315,10 +315,10 @@ export async function POST(req: NextRequest) {
   const teacherSubject = teacher.subjects.find((item) => normalizeLabel(item.subject.name) === normalizeLabel(subjectName));
   const teacherLevel = teacher.levels.find((item) => normalizeLabel(item.level.name) === normalizeLabel(levelName));
   if (!teacherSubject) {
-    return NextResponse.json({ error: "Cette matière n'est pas enseignée par ce professeur" }, { status: 400 });
+    return NextResponse.json({ error: "Ce professeur ne propose pas cette matière. Choisissez un autre profil compatible." }, { status: 400 });
   }
   if (!teacherLevel) {
-    return NextResponse.json({ error: "Ce niveau n'est pas enseigné par ce professeur" }, { status: 400 });
+    return NextResponse.json({ error: "Ce professeur ne prend pas ce niveau. Choisissez un autre profil compatible." }, { status: 400 });
   }
   const canonicalSubjectName = teacherSubject.subject.name;
   const canonicalLevelName = teacherLevel.level.name;
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest) {
   });
   if (!bookingJourney || !teacherSupportsJourney(teacher, bookingJourney)) {
     return NextResponse.json({
-      error: "Ce professeur ne propose pas ce parcours.",
+      error: "Ce professeur ne propose pas ce parcours. Choisissez un autre profil compatible.",
     }, { status: 400 });
   }
   const educationValidation = validateEducationSelection({
@@ -370,7 +370,7 @@ export async function POST(req: NextRequest) {
     selectedSubject: canonicalSubjectName,
   })) {
     return NextResponse.json({
-      error: "Le cours catalogue ne correspond pas à la matière, au niveau ou au système scolaire choisis.",
+      error: "Cette formation ne correspond pas aux matières, niveaux et parcours validés pour ce professeur. Choisissez un autre profil compatible.",
     }, { status: 400 });
   }
   const normalizedSchoolProgram = buildSchoolProgramSummary({

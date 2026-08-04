@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.",
 };
 
-const version = "10 juillet 2026";
+const version = "4 août 2026";
 
 const sections: LegalSection[] = [
   {
@@ -36,7 +36,7 @@ const sections: LegalSection[] = [
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
       "Données de brouillon : contenu du dossier non payé, référence éventuelle du prestataire de paiement, date de création et état de reprise ou de suppression.",
       "Données de paiement : montant payé, frais liés au moyen de paiement, référence Jèko ou PayDunya historique, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
-      "Données professeur : photo réelle obligatoire, identité, téléphone, email, matières, niveaux, disponibilités, mini-CV, expériences, notes du service client, avis, sanctions, paiements, moyen Mobile Money préféré, numéro confirmé et demandes de paiement.",
+      "Données professeur : photo réelle obligatoire, couverture personnalisée ou choisie dans le catalogue, identité, téléphone, email, matières, niveaux, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
       "Données de communication : notifications, emails, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
       "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes et preuves nécessaires à la lutte contre les faux paiements.",
     ],
@@ -56,6 +56,7 @@ const sections: LegalSection[] = [
       "Rechercher automatiquement un professeur remplaçant compatible lorsque le professeur initial signale une indisponibilité, puis permettre au client d'accepter ou de refuser la proposition.",
       "Prévenir la fraude, les paiements non vérifiés, les abus, les contournements de plateforme et les comportements non professionnels.",
       "Améliorer l'ergonomie, la qualité du service, la sécurité et la performance de la plateforme.",
+      "Analyser et structurer un CV professeur, supprimer les répétitions, suggérer des matières ou niveaux et signaler les preuves manquantes sans inventer de diplôme, d'expérience ou de résultat.",
     ],
   },
   {
@@ -72,10 +73,10 @@ const sections: LegalSection[] = [
       "Compétence ne vend pas les données personnelles. Les données sont partagées uniquement lorsqu'elles sont nécessaires au service, à la sécurité, au paiement, à l'exécution d'une réservation ou à une obligation légale.",
     ],
     bullets: [
-      "Le client peut recevoir les informations nécessaires sur le professeur choisi : nom public, photo, matière, contact lorsque la réservation est payée et confirmée, créneau et informations utiles au cours.",
-      "Le professeur peut recevoir les informations nécessaires à la mission : client, contact client, matière, niveau, date, heure, lieu, format, consignes et montant net prévu.",
+      "Le client reçoit le numéro du professeur uniquement après confirmation serveur du paiement correspondant. Un brouillon, une redirection abandonnée ou une capture d'écran ne débloque aucune coordonnée.",
+      "Le professeur reçoit le numéro du client uniquement dans une mission rattachée à un paiement dont le prestataire, la transaction et le montant exact ont été vérifiés côté serveur.",
       "L'équipe Compétence habilitée accède aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
-      "Jèko traite les informations strictement nécessaires aux nouveaux paiements ; PayDunya peut apparaître pour les dossiers historiques. Le choix du moyen et la saisie des informations de paiement se font sur la page sécurisée du prestataire concerné.",
+      "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; PayDunya peut apparaître uniquement dans des dossiers historiques. La saisie financière se fait dans l'environnement sécurisé du prestataire.",
       "Des prestataires techniques peuvent intervenir pour l'hébergement, la base de données, l'email, les notifications ou la sécurité, dans la limite de leur mission.",
     ],
   },
@@ -85,7 +86,7 @@ const sections: LegalSection[] = [
       "Aucune réservation active n'est créée tant que le paiement n'est pas effectué et confirmé côté serveur par le prestataire. Une réservation non payée reste un brouillon ou une intention de réservation.",
       "Le client peut reprendre un brouillon depuis son espace ou le supprimer si aucun paiement vérifié ni workflow protégé n'y est rattaché. La suppression retire le dossier et les notifications liées, tout en conservant une trace d'audit minimale non financière nécessaire à la sécurité.",
       "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions du service client.",
-      "Les demandes de paiement des professeurs sont suivies dans la comptabilité interne de Compétence. Le professeur choisit Wave, Orange Money, MTN Money ou Moov Money, saisit le montant demandé et confirme son numéro. La préférence enregistrée sert uniquement au traitement des versements et peut être modifiée par le professeur.",
+      "Les demandes de retrait des professeurs sont suivies dans la comptabilité interne de Compétence puis exécutées et rapprochées par Jèko. Le professeur confirme la destination Mobile Money, le numéro et le montant exact. Les frais de transfert pris en charge par Compétence sont conservés séparément pour l'audit financier.",
     ],
   },
   {
@@ -105,11 +106,19 @@ const sections: LegalSection[] = [
     ],
   },
   {
+    title: "Décisions automatisées et contrôle humain",
+    body: [
+      "Les moteurs de tarification, compatibilité professeur, transport, CV, détection de fraude et remplacement peuvent produire un calcul, une suggestion, un blocage préventif ou un classement à partir des informations du dossier.",
+      "Aucun moteur CV n'est autorisé à créer un diplôme, une expérience, une ancienneté ou un résultat absent du document source. Les champs sensibles, preuves manquantes et suggestions de catalogue restent contrôlables par l'administration avant publication.",
+      "Une personne peut demander l'examen humain d'une décision opérationnelle importante auprès du service client. Compétence conserve toutefois le droit de maintenir une mesure de sécurité, un gel de fonds ou une suspension pendant l'analyse d'une fraude, d'un litige ou d'un risque pour un apprenant.",
+    ],
+  },
+  {
     title: "Droits des personnes concernées",
     body: [
       "Sous réserve des limites légales et de la nécessité de conserver certaines preuves, une personne concernée peut demander l'accès à ses données, leur rectification, leur suppression, la limitation du traitement, l'opposition à certains traitements ou le retrait d'un consentement lorsque celui-ci est la base du traitement.",
       "Une demande peut être adressée à contact@competence.ci. Compétence peut refuser ou différer une demande lorsqu'elle porte atteinte à la sécurité, à la prévention de la fraude, à une obligation légale, à un litige en cours ou aux droits d'une autre personne.",
-      "En Côte d'Ivoire, les personnes concernées peuvent également se renseigner auprès de l'Autorité de Protection des données à caractère personnel.",
+      "En Côte d'Ivoire, les personnes concernées peuvent également saisir ou consulter l'ARTCI, Autorité de Protection des données à caractère personnel, dans les conditions de la loi n°2013-450 du 19 juin 2013.",
     ],
   },
   {

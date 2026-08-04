@@ -55,6 +55,9 @@ const teacherPayments = read("src/lib/teacher-payments.ts");
 const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 const jekoReconciliation = read("src/lib/jeko-reconciliation.ts");
 const paydunyaReconciliation = read("src/lib/paydunya-reconciliation.ts");
+const clientReservationDetail = read("src/app/client/reservations/[id]/page.tsx");
+const professorMissionDetail = read("src/app/professeur/(espace)/missions/[id]/page.tsx");
+const professorMissionList = read("src/app/professeur/(espace)/missions/page.tsx");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -214,6 +217,16 @@ record(
 );
 
 record(
+  "Client and professor phone numbers unlock only after verified provider payment",
+  /phone:\s*paymentConfirmed\s*\?\s*bookingTeacher\.phone\s*:\s*null/.test(clientReservationDetail)
+    && /paymentConfirmed\s*&&\s*booking\.teacher\.phone/.test(clientReservationDetail)
+    && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(clientReservationDetail)
+    && /verifiedPayDunyaBookingWhere/.test(professorMissionDetail)
+    && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(professorMissionDetail)
+    && /bookings\.filter\(hasVerifiedPayDunyaClientPayment\)/.test(professorMissionList),
+);
+
+record(
   "Client replacement response applies or cancels the operational workflow",
   /case\s+"accept_replacement_proposal"/.test(bookingApi)
     && /case\s+"reject_replacement_proposal"/.test(bookingApi)
@@ -331,13 +344,14 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /10 juillet 2026/.test(termsPage)
+  /4 août 2026/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
     && /À moins de 24 heures/.test(termsPage)
     && /Même quartier exact/.test(termsPage)
-    && /10 juillet 2026/.test(privacyPage)
+    && /4 août 2026/.test(privacyPage)
     && /Données de brouillon/.test(privacyPage)
-    && /moyen Mobile Money préféré/.test(privacyPage),
+    && /destination Mobile Money/.test(privacyPage)
+    && /confirmation serveur du paiement/.test(privacyPage),
 );
 
 record(

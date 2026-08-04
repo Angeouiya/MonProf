@@ -26,6 +26,7 @@ import {
   Home, Video, User, Users, Calendar, Clock, MapPin, MessageSquare,
   CheckCircle2, AlertTriangle, LockKeyhole, ClipboardCheck,
   WalletCards, ShieldCheck, Hourglass, RefreshCw, LifeBuoy,
+  Phone,
 } from "lucide-react";
 import { BookingActions, BookingPrimaryAction } from "./actions";
 import { ScheduleProposalActions } from "./schedule-proposal-actions";
@@ -468,8 +469,16 @@ export default async function ReservationDetailPage({
     paydunyaToken: _paydunyaToken,
     paydunyaCheckoutUrl: _paydunyaCheckoutUrl,
     paydunyaLastPayload: _paydunyaLastPayload,
-    ...bookingActionsPayload
+    teacher: bookingTeacher,
+    ...safeBookingActionsPayload
   } = booking as any;
+  const bookingActionsPayload = {
+    ...safeBookingActionsPayload,
+    teacher: {
+      ...bookingTeacher,
+      phone: paymentConfirmed ? bookingTeacher.phone : null,
+    },
+  };
 
   return (
     <div className="space-y-6">
@@ -611,6 +620,17 @@ export default async function ReservationDetailPage({
                 {booking.subjectName} avec {name}
               </h2>
               <p className="mt-1 text-sm font-semibold text-[#64748B]">{booking.teacher.jobTitle}</p>
+              {paymentConfirmed && booking.teacher.phone ? (
+                <a href={`tel:${booking.teacher.phone}`} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-3 text-sm font-semibold text-[#111B4D]">
+                  <Phone className="h-4 w-4" />
+                  Appeler le professeur · {booking.teacher.phone}
+                </a>
+              ) : (
+                <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#E3E8F2] bg-[#F8FAFD] px-3 py-2 text-xs font-semibold text-[#64748B]">
+                  <ShieldCheck className="h-4 w-4 text-[#111B4D]" />
+                  Numéro partagé après confirmation serveur du paiement Jèko.
+                </p>
+              )}
             </div>
           </div>
 

@@ -5462,3 +5462,9 @@ b {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
+/* Les confirmations ordinaires vivent dans l'écran concerné. Seules les
+   erreurs et alertes critiques peuvent interrompre l'utilisateur en flottant. */
+[data-sonner-toast][data-type="success"],
+[data-sonner-toast][data-type="info"] {
+  display: none !important;
+}

@@ -1145,9 +1145,9 @@ export function TeacherForm({
                         <ScanText className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-[#111827]">Analyse automatique du CV</h3>
+                        <h3 className="text-sm font-bold text-[#111827]">Moteur CV professionnel</h3>
                         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                          Chargez un CV PDF texte, DOCX, TXT ou MD (4 Mo maximum). L'analyse remplit l'identité disponible, le mini CV, les compétences, les expériences, les diplômes et les réalisations. Le document source reste privé et consultable uniquement par l'administration.
+                          Chargez un CV PDF texte, DOCX, TXT ou MD (4 Mo maximum). Le moteur structure les faits, retire les répétitions, professionnalise la présentation et signale ce qui manque sans inventer de diplôme, d'expérience ni de résultat. Le document source reste privé.
                         </p>
                       </div>
                     </div>
@@ -1233,18 +1233,30 @@ export function TeacherForm({
                           <SuggestionSummary label="Niveaux suggérés" values={cvAnalysis.suggestedLevels ?? []} />
                         </div>
                       )}
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className="mt-3">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Champs prêts à valider</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
                         {Object.entries(cvAnalysis.fields ?? {}).map(([key, value]) => {
                           if (value === undefined || value === null || value === "") return null;
                           const label = CV_FIELD_LABELS[key as keyof CvAnalysisFields] ?? key;
-                          const text = typeof value === "number" ? String(value) : String(value).split("\n").slice(0, 2).join(" · ");
                           return (
-                            <div key={key} className="rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
-                              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-                              <p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-[#111827]">{text}</p>
-                            </div>
+                            <Badge key={key} variant="outline" className="border-[#CAD7F2] bg-[#F8FAFD] text-[#111B4D]">{label}</Badge>
                           );
                         })}
+                        </div>
+                      </div>
+                      <div className="mt-4 border-t border-[#E3E8F2] pt-4">
+                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Dossier structuré sans doublons</p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          {(cvAnalysis.detectedSections ?? []).map((section) => (
+                            <div key={section.label} className="rounded-lg border border-[#E3E8F2] bg-[#F8FAFD] p-3">
+                              <p className="text-xs font-bold text-[#111B4D]">{section.label}</p>
+                              <ul className="mt-2 space-y-1.5 text-xs font-medium leading-5 text-[#475569]">
+                                {section.items.map((item) => <li key={item} className="flex gap-2"><span aria-hidden="true">•</span><span>{item}</span></li>)}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       {!!cvAnalysis.warnings?.length && (
                         <div className="mt-3 space-y-1 text-xs font-semibold text-amber-700">
@@ -1260,21 +1272,15 @@ export function TeacherForm({
                       )}
                     </div>
                     <div className="rounded-lg border border-[#E3E8F2] bg-white p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Sections détectées</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Contrôle qualité</p>
                       <div className="mt-2 space-y-2">
-                        {(cvAnalysis.detectedSections ?? []).slice(0, 5).map((section) => (
-                          <div key={section.label}>
-                            <p className="text-xs font-bold text-[#111B4D]">{section.label}</p>
-                            <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                              {section.items.slice(0, 3).join(" · ")}
-                            </p>
-                          </div>
-                        ))}
-                        {!cvAnalysis.detectedSections?.length && (
+                        <p className="text-xs font-semibold leading-5 text-[#475569]">Confiance documentaire : {cvAnalysis.confidence ?? 0}%</p>
+                        <p className="text-xs font-semibold leading-5 text-[#475569]">Volume analysé : {cvAnalysis.extractedCharacters ?? 0} caractères</p>
+                        {!cvAnalysis.detectedSections?.length ? (
                           <p className="text-xs leading-5 text-muted-foreground">
                             Aucune section structurée détectée. Les champs restent modifiables manuellement.
                           </p>
-                        )}
+                        ) : <p className="text-xs font-semibold leading-5 text-emerald-700">Les informations détaillées apparaissent une seule fois dans le dossier structuré.</p>}
                       </div>
                     </div>
                     </div>

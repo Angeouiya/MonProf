@@ -164,6 +164,8 @@ model Teacher {
   fullName               String
   professionalName       String?
   photoUrl               String?
+  coverUrl               String?
+  pendingCoverUrl        String?
   phone                  String
   email                  String?
   commune                String?

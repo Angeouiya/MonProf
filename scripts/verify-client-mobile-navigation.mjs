@@ -522,16 +522,18 @@ record(
     && /filterSubjectsForJourney\(teacher\.subjects/.test(publicTeacherDetail)
     && /filterLevelsForJourney\(teacher\.levels/.test(publicTeacherDetail)
     && /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
-    && /const sessionPriceLabel = journeyConfig\.priceLabel/.test(publicTeacherDetail),
+    && /teacherJourneyPriceLabel\(/.test(publicTeacherDetail)
+    && /journeyLevels\.map/.test(publicTeacherDetail),
 );
 
 record(
-  "Public teacher portrait is centered on small phones and aligned beside identity on wider screens",
+  "Public teacher cover and portrait stay premium and responsive on every viewport",
   /data-public-teacher-photo-layout/.test(publicTeacherDetail)
-    && /justify-items-center/.test(publicTeacherDetail)
-    && /min-\[520px\]:grid-cols-\[184px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
-    && /size=\{144\}/.test(publicTeacherDetail)
-    && /bg-\[#F8FAFD\] p-3/.test(publicTeacherDetail),
+    && /data-public-teacher-cover/.test(publicTeacherDetail)
+    && /aspect-\[3\/1\]/.test(publicTeacherDetail)
+    && /left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail)
+    && /sm:left-6 sm:-translate-x-0/.test(publicTeacherDetail)
+    && /size=\{124\}/.test(publicTeacherDetail),
 );
 
 record(

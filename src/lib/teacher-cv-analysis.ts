@@ -484,6 +484,9 @@ function buildEvidenceBasedBiography({
   if (diploma) {
     sentences.push(`Formation principale mentionnée : ${diploma.replace(/[.!?]+$/, "")}.`);
   }
+  if (sentences.length === 1 && role) {
+    sentences.push("Cette présentation est volontairement fondée sur les éléments vérifiables du document source ; les preuves manquantes restent signalées pour validation administrative.");
+  }
   return sentences.length ? sentences.join(" ").slice(0, MAX_FIELD_CHARS) : undefined;
 }
 
@@ -547,16 +550,42 @@ function findKnownTerms(text: string, terms: string[]) {
 }
 
 function uniqueLines(lines: string[]) {
-  const seen = new Set<string>();
+  const seen: string[] = [];
   const result: string[] = [];
   for (const line of lines.map(cleanLine).filter(Boolean)) {
-    const key = normalizeForSearch(line);
-    if (seen.has(key) || key.length < 3) continue;
-    seen.add(key);
+    const key = semanticKey(line);
+    if (key.length < 3 || seen.some((existing) => semanticallyEquivalent(existing, key))) continue;
+    seen.push(key);
     result.push(line.slice(0, 180));
   }
   return result;
 }
+
+function semanticKey(value: string) {
+  return normalizeForSearch(value)
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((token) => token.length > 1 && !SEMANTIC_STOP_WORDS.has(token))
+    .join(" ")
+    .trim();
+}
+
+function semanticallyEquivalent(left: string, right: string) {
+  if (left === right) return true;
+  const shortest = Math.min(left.length, right.length);
+  const longest = Math.max(left.length, right.length);
+  if (shortest >= 14 && shortest / longest >= 0.78 && (left.includes(right) || right.includes(left))) return true;
+  const leftTokens = new Set(left.split(" "));
+  const rightTokens = new Set(right.split(" "));
+  const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  const union = new Set([...leftTokens, ...rightTokens]).size;
+  return union >= 4 && intersection / union >= 0.86;
+}
+
+const SEMANTIC_STOP_WORDS = new Set([
+  "de", "du", "des", "la", "le", "les", "un", "une", "et", "en", "a", "au", "aux",
+  "pour", "par", "sur", "avec", "dans", "d", "l", "the", "of", "and", "to",
+]);
 
 function toList(lines: string[]) {
   return uniqueLines(lines).slice(0, MAX_LIST_ITEMS).join("\n");
@@ -581,16 +610,22 @@ function compactFields(fields: TeacherCvAnalysisFields) {
 }
 
 function buildDetectedSections(sections: Record<keyof typeof SECTION_PATTERNS, string[]>, fields: TeacherCvAnalysisFields) {
+  const seenAcrossSections: string[] = [];
   return [
     { label: "Mini CV", items: fields.careerSummary ? [fields.careerSummary] : sections.summary },
     { label: "Compétences", items: fields.skills?.split("\n") ?? sections.skills },
     { label: "Parcours", items: fields.workHistory?.split("\n") ?? sections.experience },
     { label: "Diplômes / preuves", items: fields.certifications?.split("\n") ?? sections.certification },
     { label: "Résultats", items: fields.teachingAchievements?.split("\n") ?? sections.achievement },
-  ].map((section) => ({
-    label: section.label,
-    items: uniqueLines(section.items).slice(0, 6),
-  })).filter((section) => section.items.length > 0);
+  ].map((section) => {
+    const items = uniqueLines(section.items).filter((item) => {
+      const key = semanticKey(item);
+      if (seenAcrossSections.some((existing) => semanticallyEquivalent(existing, key))) return false;
+      seenAcrossSections.push(key);
+      return true;
+    }).slice(0, 6);
+    return { label: section.label, items };
+  }).filter((section) => section.items.length > 0);
 }
 
 function computeConfidence(fields: TeacherCvAnalysisFields, extractedCharacters: number) {

@@ -3,11 +3,12 @@ import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { ProfessorImage } from "@/components/shared/professor-image";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
 import { Badge } from "@/components/ui/badge";
 import { InfoLine, PortalCard, ProfessorPageHeader, StatusPill } from "@/components/professor/professor-ui";
 import { TeacherProfessionalProfileForm } from "@/components/professor/teacher-professional-profile-form";
+import { TeacherProfileMediaForm } from "@/components/professor/teacher-profile-media-form";
+import { resolveTeacherCover } from "@/lib/teacher-cover";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function ProfesseurProfilPage() {
   if (!profile) return null;
   const teacherName = profile.professionalName || profile.fullName;
   const availabilitySlots = countSlots(profile.availability);
+  const resolvedCover = resolveTeacherCover({ teacherId: profile.id, coverUrl: profile.coverUrl });
 
   return (
     <div className="space-y-6">
@@ -41,8 +43,18 @@ export default async function ProfesseurProfilPage() {
         rootTab
       />
 
-      <PortalCard className="grid gap-5 lg:grid-cols-[auto_1fr] lg:items-start">
-        <ProfessorImage photoUrl={profile.photoUrl} name={teacherName} size="xl" verified={profile.badgeVerified} />
+      <PortalCard>
+        <TeacherProfileMediaForm
+          teacherName={teacherName}
+          photoUrl={profile.photoUrl}
+          coverUrl={resolvedCover.url}
+          selectedCoverUrl={profile.coverUrl}
+          pendingCoverUrl={profile.pendingCoverUrl}
+          verified={profile.badgeVerified}
+        />
+      </PortalCard>
+
+      <PortalCard>
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-semibold tracking-normal text-[#111827]">{teacherName}</h2>
