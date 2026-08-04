@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { resolveTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
 import {
   buildNeighborhoodAliasMap,
   calculateGrandAbidjanTransportFee,
@@ -126,6 +127,10 @@ export async function findReplacementCandidatesForBooking(
     scheduledDate: options?.scheduledDate ?? booking.scheduledDate,
     scheduledTime: options?.scheduledTime ?? booking.scheduledTime,
   };
+  const bookingJourney = resolveTeacherJourney({
+    courseCategory: booking.courseCategory,
+    schoolSystem: booking.schoolSystem,
+  });
   const teachers = await db.teacher.findMany({
     where: {
       id: {
@@ -137,6 +142,7 @@ export async function findReplacementCandidatesForBooking(
       },
       status: "ACTIVE",
       AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+      ...(bookingJourney ? teacherJourneyWhere(bookingJourney) : {}),
       ...(booking.courseFormat === "HOME" ? { offersHome: true } : { offersOnline: true }),
     },
     include: {

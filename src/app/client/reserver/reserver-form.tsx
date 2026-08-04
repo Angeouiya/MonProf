@@ -391,7 +391,7 @@ function toJekoPaymentMethod(method: string) {
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig, initialJourney,
+  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
@@ -399,6 +399,7 @@ export function ReserverForm({
   communes: CommuneOption[];
   pricingConfig: PricingConfig;
   initialJourney?: BookingJourney;
+  eligibleJourneys: BookingJourney[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -997,7 +998,7 @@ export function ReserverForm({
                     { value: "ivoirien", label: "Système ivoirien", detail: "CP1 à Terminale", Icon: GraduationCap },
                     { value: "francais", label: "Système français", detail: "CP1 à Terminale", Icon: GraduationCap },
                     { value: "professionnel", label: "Professionnel", detail: "40 000 F / séance", Icon: BriefcaseBusiness },
-                  ] as const).map(({ value, label, detail, Icon }) => (
+                  ] as const).filter(({ value }) => eligibleJourneys.includes(value)).map(({ value, label, detail, Icon }) => (
                     <button
                       key={value}
                       type="button"

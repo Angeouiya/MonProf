@@ -218,6 +218,11 @@ model Teacher {
   offersHome             Boolean            @default(true)
   offersOnline           Boolean            @default(true)
   offersGroup            Boolean            @default(false)
+  // Mini-applications dans lesquelles ce profil peut proposer son offre.
+  // Les trois autorisations sont cumulables sur un même professeur.
+  offersIvorianSystem       Boolean          @default(true)
+  offersFrenchSystem        Boolean          @default(true)
+  offersProfessionalTraining Boolean         @default(true)
   // Tarification (FCFA)
   pricePerHour           Int                @default(10000)
   pricePerSession        Int                @default(10000)

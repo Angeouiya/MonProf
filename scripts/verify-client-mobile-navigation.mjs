@@ -465,7 +465,7 @@ record(
   "Public teacher search puts profiles directly after one compact mobile command",
   /data-public-teacher-search-controls/.test(publicTeachersPage)
     && /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage)
-    && /placeholder="Matière, métier ou concours"/.test(publicTeachersPage)
+    && /placeholder=\{journeyConfig\.searchPlaceholder\}/.test(publicTeachersPage)
     && /aria-label="Rechercher"/.test(publicTeachersPage)
     && !/mt-4 flex flex-col gap-2/.test(publicTeachersPage),
 );
@@ -483,11 +483,11 @@ record(
   /parseBookingJourney\(sp\.journey\?\.trim\(\)\) \|\| "ivoirien"/.test(publicTeachersPage)
     && /data-public-journey-tabs/.test(publicTeachersPage)
     && /grid grid-cols-3 gap-1\.5/.test(publicTeachersPage)
-    && /Object\.entries\(JOURNEY_LABELS\)/.test(publicTeachersPage)
+    && /TEACHER_JOURNEYS\.map/.test(publicTeachersPage)
     && /data-public-journey-tab=\{value\}/.test(publicTeachersPage)
     && /aria-current=\{active \? "page" : undefined\}/.test(publicTeachersPage)
     && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
-    && /params\.set\("subject", subject\)/.test(publicTeachersPage)
+    && /teacherJourneyWhere\(journey\)/.test(publicTeachersPage)
     && /params\.set\("commune", commune\)/.test(publicTeachersPage),
 );
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
+import { parseTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -9,12 +10,14 @@ export async function GET(req: NextRequest) {
   const commune = searchParams.get("commune");
   const format = searchParams.get("format"); // HOME | ONLINE
   const search = searchParams.get("q")?.trim();
+  const journey = parseTeacherJourney(searchParams.get("journey"));
   const sort = searchParams.get("sort") ?? "recommended"; // recommended | rating | experience
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const pageSize = Math.min(24, Math.max(6, Number(searchParams.get("pageSize")) || 12));
 
   const where: any = {
     status: "ACTIVE",
+    ...(journey ? teacherJourneyWhere(journey) : {}),
     AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(search)],
   };
 
@@ -92,6 +95,9 @@ export async function GET(req: NextRequest) {
     learnersCoached: t.learnersCoached,
     offersHome: t.offersHome,
     offersOnline: t.offersOnline,
+    offersIvorianSystem: t.offersIvorianSystem,
+    offersFrenchSystem: t.offersFrenchSystem,
+    offersProfessionalTraining: t.offersProfessionalTraining,
     commune: t.commune,
     featured: t.featured,
     badges: {

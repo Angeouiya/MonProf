@@ -29,6 +29,7 @@ import {
   isSafeIdentityVerificationReference,
   normalizeIdentityVerificationReference,
 } from "@/lib/client-identity-verification";
+import { hasTeacherJourney } from "@/lib/teacher-journeys";
 import { TEACHER_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/teacher-password-assistance";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
@@ -173,6 +174,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         portalPhone: true,
         commune: true,
         offersHome: true,
+        offersIvorianSystem: true,
+        offersFrenchSystem: true,
+        offersProfessionalTraining: true,
         availability: true,
         status: true,
         qualityScore: true,
@@ -197,6 +201,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       "adminRating","adminRatingNote","adminRatingPublic",
       "badgeVerified","badgeRecommended","badgeNew","badgePopular","badgePremium",
       "internalNote","offersHome","offersOnline","offersGroup",
+      "offersIvorianSystem","offersFrenchSystem","offersProfessionalTraining",
       "pricePerHour","pricePerSession","pricePack4","pricePack8","commissionRate","pricingTier",
     ];
     for (const k of allowed) {
@@ -244,6 +249,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (k in data) data[k] = Math.max(0, Math.round(Number(data[k]) || 0));
     }
     if ("commissionRate" in data) data.commissionRate = Math.max(0, Math.min(60, Math.round(data.commissionRate)));
+    for (const key of ["offersIvorianSystem", "offersFrenchSystem", "offersProfessionalTraining"]) {
+      if (key in data) data[key] = Boolean(data[key]);
+    }
+    const journeyEligibility = {
+      offersIvorianSystem: "offersIvorianSystem" in data ? data.offersIvorianSystem : existingTeacher.offersIvorianSystem,
+      offersFrenchSystem: "offersFrenchSystem" in data ? data.offersFrenchSystem : existingTeacher.offersFrenchSystem,
+      offersProfessionalTraining: "offersProfessionalTraining" in data ? data.offersProfessionalTraining : existingTeacher.offersProfessionalTraining,
+    };
+    if (!hasTeacherJourney(journeyEligibility)) {
+      return NextResponse.json({ error: "Activez au moins une mini-application pour ce professeur." }, { status: 400 });
+    }
     if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
       const normalizedPortalPhone = normalizeTeacherPhone(data.portalPhone || data.phone || existingTeacher.phone);
       data.portalPhone = data.portalAccessEnabled === false ? null : normalizedPortalPhone;

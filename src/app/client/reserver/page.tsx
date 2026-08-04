@@ -3,6 +3,11 @@ import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound, redirect } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import {
+  parseTeacherJourney,
+  teacherEligibleJourneys,
+  teacherSupportsJourney,
+} from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +18,7 @@ export default async function ReserverPage({
 }) {
   const { teacherId, journey: requestedJourney } = await searchParams;
   if (!teacherId) redirect("/client/rechercher");
-  const initialJourney = requestedJourney === "ivoirien" || requestedJourney === "francais" || requestedJourney === "professionnel"
-    ? requestedJourney
-    : undefined;
+  const initialJourney = parseTeacherJourney(requestedJourney) ?? undefined;
 
   const teacher = await db.teacher.findFirst({
     where: { id: teacherId, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
@@ -26,6 +29,8 @@ export default async function ReserverPage({
     },
   });
   if (!teacher) notFound();
+  if (initialJourney && !teacherSupportsJourney(teacher, initialJourney)) notFound();
+  const eligibleJourneys = teacherEligibleJourneys(teacher);
 
   const [{ communes }, platformSettings] = await Promise.all([
     getCachedTeacherSearchCatalog(),
@@ -45,6 +50,7 @@ export default async function ReserverPage({
     <div>
       <ReserverForm
         initialJourney={initialJourney}
+        eligibleJourneys={eligibleJourneys}
         teacher={{
           id: teacher.id,
           fullName: teacher.fullName,

@@ -24,6 +24,7 @@ import { formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
+import { parseTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -36,13 +37,16 @@ export default async function TeacherDetailPage({
 }) {
   const { id } = await params;
   const { journey: requestedJourney } = await searchParams;
-  const journey = requestedJourney === "ivoirien" || requestedJourney === "francais" || requestedJourney === "professionnel"
-    ? requestedJourney
-    : "";
+  const journey = parseTeacherJourney(requestedJourney) ?? "";
   const [session, teacher] = await Promise.all([
     getServerSession(authOptions),
     db.teacher.findFirst({
-    where: { id, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+    where: {
+      id,
+      status: "ACTIVE",
+      ...(journey ? teacherJourneyWhere(journey) : {}),
+      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+    },
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true }, orderBy: { level: { order: "asc" } } },

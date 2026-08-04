@@ -1033,6 +1033,15 @@ export default async function ProfesseurDetailPage({
                 </p>
               </details>
               <Separator className="my-4" />
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mini-applications</p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={teacher.offersIvorianSystem ? "default" : "outline"}>Système ivoirien</Badge>
+                  <Badge variant={teacher.offersFrenchSystem ? "default" : "outline"}>Système français</Badge>
+                  <Badge variant={teacher.offersProfessionalTraining ? "default" : "outline"}>Professionnel</Badge>
+                </div>
+              </div>
+              <Separator className="my-4" />
               <div className="flex flex-wrap gap-3">
                 <Badge variant={teacher.offersHome ? "default" : "outline"}>À domicile</Badge>
                 <Badge variant={teacher.offersOnline ? "default" : "outline"}>En ligne</Badge>

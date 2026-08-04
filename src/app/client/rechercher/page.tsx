@@ -28,6 +28,12 @@ import {
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
+import {
+  parseTeacherJourney,
+  TEACHER_JOURNEY_CONFIG,
+  TEACHER_JOURNEYS,
+  teacherJourneyWhere,
+} from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +41,12 @@ const fieldClassName = "mt-1.5 h-11 w-full rounded-lg border border-[#DDE6F7] bg
 type SearchParams = { [k: string]: string | undefined };
 
 const quickSearches = [
-  { label: "Maths à Cocody", href: "/client/rechercher?q=math&commune=Cocody" },
-  { label: "Anglais en ligne", href: "/client/rechercher?q=anglais&format=ONLINE" },
-  { label: "Concours", href: "/client/rechercher?q=concours" },
-  { label: "Adultes", href: "/client/rechercher?q=professionnel" },
-  { label: "Informatique", href: "/client/rechercher?q=informatique" },
-  { label: "Art et métiers", href: "/client/rechercher?q=design" },
+  { label: "Maths à Cocody", query: "q=math&commune=Cocody" },
+  { label: "Anglais en ligne", query: "q=anglais&format=ONLINE" },
+  { label: "Concours", query: "q=concours" },
+  { label: "Adultes", query: "q=professionnel" },
+  { label: "Informatique", query: "q=informatique" },
+  { label: "Art et métiers", query: "q=design" },
 ];
 
 export default async function RechercherPage({
@@ -49,6 +55,8 @@ export default async function RechercherPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
+  const journey = parseTeacherJourney(sp.journey) ?? "ivoirien";
+  const journeyConfig = TEACHER_JOURNEY_CONFIG[journey];
   const subject = sp.subject;
   const level = sp.level;
   const commune = sp.commune;
@@ -62,6 +70,7 @@ export default async function RechercherPage({
   };
   const where: any = {
     ...visibleTeacherWhere,
+    ...teacherJourneyWhere(journey),
     AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
   };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
@@ -108,7 +117,7 @@ export default async function RechercherPage({
   const items = teachers.map((t) => ({
     ...t,
     primarySubject: t.subjects.find((s) => s.isPrimary)?.subject.name ?? t.subjects[0]?.subject.name,
-    href: `/client/reserver?teacherId=${t.id}`,
+    href: `/client/reserver?teacherId=${t.id}&journey=${journey}`,
   }));
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
@@ -145,11 +154,37 @@ export default async function RechercherPage({
   return (
     <div className="space-y-5">
       <ClientPageHeader
-        eyebrow="Trouver un professeur"
-        title="Rechercher un professeur"
-        description="Tapez une matière, un concours, un métier ou une commune."
+        eyebrow="Choisir un professeur"
+        title={journeyConfig.label}
+        description={journeyConfig.priceLabel}
         showBack={false}
       />
+
+      <nav
+        className="grid grid-cols-3 gap-1.5"
+        aria-label="Choisir une mini-application"
+        data-client-journey-tabs
+      >
+        {TEACHER_JOURNEYS.map((value) => {
+          const config = TEACHER_JOURNEY_CONFIG[value];
+          const active = value === journey;
+          return (
+            <Link
+              key={value}
+              href={`/client/rechercher?journey=${value}`}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 text-center text-xs font-semibold ${
+                active
+                  ? "border-[#111B4D] bg-[#111B4D] text-white"
+                  : "border-[#D6DEED] bg-white text-[#475569]"
+              }`}
+            >
+              <span className="sm:hidden">{config.shortLabel}</span>
+              <span className="hidden sm:inline">{config.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
       <ClientMetricStrip
         className="max-md:hidden"
@@ -179,6 +214,7 @@ export default async function RechercherPage({
         data-client-search-form
         className="scroll-mt-24 rounded-lg border border-[#DDE3EE] bg-white p-3 sm:p-4"
       >
+        <input type="hidden" name="journey" value={journey} />
         <div className="grid gap-2 min-[560px]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
             <label className="sr-only" htmlFor="client-search-query">Recherche</label>
@@ -189,7 +225,7 @@ export default async function RechercherPage({
                 type="text"
                 name="q"
                 defaultValue={q}
-                placeholder="Matière, concours, adulte, métier..."
+                placeholder={journeyConfig.searchPlaceholder}
                 className="h-12 w-full rounded-lg border border-[#DDE6F7] bg-white py-3 pl-10 pr-3 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#8A94A8] focus:border-[#111B4D] focus:ring-2 focus:ring-[#DDE6F7]"
               />
             </div>
@@ -222,7 +258,7 @@ export default async function RechercherPage({
             <p className="mt-1 max-w-3xl text-sm font-medium text-[#111827]">{resultIntro}</p>
           </div>
           <Link
-            href="/client/rechercher"
+            href={`/client/rechercher?journey=${journey}`}
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-3 text-xs font-semibold text-[#111B4D]"
           >
             Tous les profils
@@ -239,8 +275,8 @@ export default async function RechercherPage({
             >
               {quickSearches.map((item) => (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={item.query}
+                  href={`/client/rechercher?journey=${journey}&${item.query}`}
                   className="group inline-flex min-h-11 min-w-[10rem] snap-start items-center justify-between gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-sm font-semibold leading-4 text-[#111827] transition hover:border-[#111B4D] hover:text-[#111B4D] min-[820px]:min-w-0 min-[820px]:justify-center"
                 >
                   <span className="min-w-0">{item.label}</span>
@@ -428,15 +464,15 @@ export default async function RechercherPage({
               aria-label="Suggestions de recherche"
             >
               <Link
-                href={hasPublishedTeachers ? "/client/rechercher" : "/client/service-client"}
+                href={hasPublishedTeachers ? `/client/rechercher?journey=${journey}` : "/client/service-client"}
                 className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg bg-[#111B4D] px-4 text-center text-sm font-semibold text-white transition hover:bg-[#182260]"
               >
                 {hasPublishedTeachers ? "Voir tous les professeurs" : "Contacter le service client"}
               </Link>
               {(hasPublishedTeachers ? quickSearches.slice(0, 3) : quickSearches.slice(0, 2)).map((item) => (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={item.query}
+                  href={`/client/rechercher?journey=${journey}&${item.query}`}
                   className="inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg border border-[#DDE6F7] bg-white px-4 text-center text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
                 >
                   {item.label}
@@ -447,7 +483,7 @@ export default async function RechercherPage({
         ) : (
           <div className="grid min-w-0 gap-3 min-[720px]:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
-              <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}`} />
+              <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}&journey=${journey}`} />
             ))}
           </div>
         )}

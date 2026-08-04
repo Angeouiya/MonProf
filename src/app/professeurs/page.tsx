@@ -19,6 +19,13 @@ import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
+import {
+  parseTeacherJourney,
+  TEACHER_JOURNEY_CONFIG,
+  TEACHER_JOURNEYS,
+  teacherJourneyWhere,
+  type TeacherJourney as BookingJourney,
+} from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -33,16 +40,8 @@ type SearchParams = {
   page?: string;
 };
 
-const JOURNEY_LABELS = {
-  ivoirien: "Système ivoirien",
-  francais: "Système français",
-  professionnel: "Professionnel",
-} as const;
-
-type BookingJourney = keyof typeof JOURNEY_LABELS;
-
 function parseBookingJourney(value?: string): BookingJourney | "" {
-  return value && value in JOURNEY_LABELS ? value as BookingJourney : "";
+  return parseTeacherJourney(value) ?? "";
 }
 
 const PAGE_SIZE = 12;
@@ -74,6 +73,7 @@ export default async function TeachersPage({
   const sort = sp.sort?.trim() || "recommended";
   const q = sp.q?.trim() || "";
   const page = Math.max(1, Number(sp.page) || 1);
+  const journeyConfig = TEACHER_JOURNEY_CONFIG[journey];
 
   // Build where clause (same logic as /api/teachers)
   const visibleTeacherWhere: any = {
@@ -82,6 +82,7 @@ export default async function TeachersPage({
   };
   const where: any = {
     ...visibleTeacherWhere,
+    ...teacherJourneyWhere(journey),
     AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
   };
   if (subject) where.subjects = { some: { subject: { slug: subject } } };
@@ -191,9 +192,6 @@ export default async function TeachersPage({
 
   function buildJourneyUrl(nextJourney: BookingJourney): string {
     const params = new URLSearchParams({ journey: nextJourney });
-    if (q) params.set("q", q);
-    if (subject) params.set("subject", subject);
-    if (level) params.set("level", level);
     if (commune) params.set("commune", commune);
     if (format) params.set("format", format);
     if (sort && sort !== "recommended") params.set("sort", sort);
@@ -223,6 +221,33 @@ export default async function TeachersPage({
             <span>/</span>
             <span className="inline-flex min-h-10 items-center text-[#111827]">Professeurs</span>
           </nav>
+          <nav
+            className="mb-3 grid grid-cols-3 gap-1.5 sm:mb-5 sm:max-w-2xl sm:gap-2"
+            aria-label="Choisir une mini-application"
+            data-public-journey-tabs
+          >
+            {TEACHER_JOURNEYS.map((value) => {
+              const active = journey === value;
+              const config = TEACHER_JOURNEY_CONFIG[value];
+              return (
+                <Link
+                  key={value}
+                  href={buildJourneyUrl(value)}
+                  prefetch={true}
+                  aria-current={active ? "page" : undefined}
+                  data-public-journey-tab={value}
+                  className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-semibold leading-tight transition sm:px-4 sm:text-sm ${
+                    active
+                      ? "border-[#111B4D] bg-[#111B4D] text-white"
+                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
+                  }`}
+                >
+                  <span className="sm:hidden">{config.shortLabel}</span>
+                  <span className="hidden sm:inline">{config.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
           <div className="grid gap-3 lg:grid-cols-[1fr_360px] lg:items-end lg:gap-4">
             <div className="min-w-0">
               <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:mb-2 sm:text-xs">
@@ -230,8 +255,10 @@ export default async function TeachersPage({
                 Profils vérifiés
               </div>
               <h1 className="max-w-2xl text-2xl font-semibold leading-tight text-[#111827] text-balance sm:text-4xl lg:text-[2.65rem] lg:leading-[1.06]">
-                Choisissez le bon professeur.
+                <span className="sm:hidden">{journeyConfig.label}</span>
+                <span className="hidden sm:inline">Choisissez le bon professeur.</span>
               </h1>
+              <p className="mt-1 text-sm font-semibold text-[#111B4D] sm:hidden">{journeyConfig.priceLabel}</p>
               <p className="mt-2 hidden max-w-xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:block sm:text-base">
                 Scolaire, université, concours, métiers et formations adultes.
               </p>
@@ -254,32 +281,6 @@ export default async function TeachersPage({
             </div>
           </div>
 
-          <nav
-            className="mt-3 grid grid-cols-3 gap-1.5 sm:mt-5 sm:max-w-2xl sm:gap-2"
-            aria-label="Choisir un parcours"
-            data-public-journey-tabs
-          >
-            {(Object.entries(JOURNEY_LABELS) as [BookingJourney, string][]).map(([value, label]) => {
-              const active = journey === value;
-              return (
-                <Link
-                  key={value}
-                  href={buildJourneyUrl(value)}
-                  prefetch={true}
-                  aria-current={active ? "page" : undefined}
-                  data-public-journey-tab={value}
-                  className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-semibold leading-tight transition sm:px-4 sm:text-sm ${
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* Barre de recherche texte */}
           <form method="GET" action="/professeurs" className="mt-3 flex gap-2 rounded-lg border border-[#E3E8F2] bg-white p-1.5 sm:mt-6 sm:p-2">
             <input
@@ -287,7 +288,7 @@ export default async function TeachersPage({
               name="q"
               defaultValue={q}
               aria-label="Rechercher une matière, un métier ou un concours"
-              placeholder="Matière, métier ou concours"
+              placeholder={journeyConfig.searchPlaceholder}
               className="min-h-12 min-w-0 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-3 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7] sm:px-4"
               style={{ minHeight: 48 }}
             />
@@ -328,13 +329,8 @@ export default async function TeachersPage({
               <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm marker:hidden">
                 <span className="min-w-0">
                   <span className="block truncate font-semibold text-[#111827]">
-                    {journey ? JOURNEY_LABELS[journey] : `${total} professeur${total > 1 ? "s" : ""}`}
+                    {total} professeur{total > 1 ? "s" : ""}
                   </span>
-                  {journey && (
-                    <span className="mt-0.5 block text-xs font-medium text-[#64748B]">
-                      {total} professeur{total > 1 ? "s" : ""}
-                    </span>
-                  )}
                 </span>
                 <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-[#F1F4FF] px-3 font-semibold text-[#111B4D]">
                   <Filter className="h-4 w-4" />
@@ -343,12 +339,6 @@ export default async function TeachersPage({
                 </span>
               </summary>
               <div className="border-t border-[#E3E8F2] p-3">
-                {journey && (
-                  <div className="mb-3 flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[#F8FAFD] px-3 text-xs font-semibold text-[#64748B]">
-                    <span>Parcours actuel</span>
-                    <Link href="/#parcours" className="text-[#111B4D] underline-offset-4 hover:underline">Changer</Link>
-                  </div>
-                )}
                 <FiltersForm
                   activeFiltersCount={activeFiltersCount}
                   journey={journey}
@@ -384,12 +374,6 @@ export default async function TeachersPage({
                 )}
               </div>
             </details>
-          )}
-          {!showTeacherFilters && journey && (
-            <div className="mb-4 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-3">
-              <p className="truncate text-sm font-semibold text-[#111B4D]">{JOURNEY_LABELS[journey]}</p>
-              <Link href="/#parcours" className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-[#111B4D]">Changer</Link>
-            </div>
           )}
           <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
             {/* SIDEBAR FILTRES */}
@@ -430,13 +414,6 @@ export default async function TeachersPage({
               {showTeacherFilters && (
                 <div className="mb-5 hidden flex-col gap-2 rounded-lg border border-[#E3E8F2] bg-white p-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    {journey && (
-                      <p className="mb-1 text-xs font-semibold text-[#111B4D]">
-                        {JOURNEY_LABELS[journey]}
-                        <span className="mx-2 text-[#CBD5E1]">·</span>
-                        <Link href="/#parcours" className="underline-offset-4 hover:underline">Changer</Link>
-                      </p>
-                    )}
                     <p className="text-sm font-medium text-[#64748B]">
                       <span className="font-semibold text-[#111827]">{total}</span>{" "}
                       professeur{total > 1 ? "s" : ""} trouvé{total > 1 ? "s" : ""}

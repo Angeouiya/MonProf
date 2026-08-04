@@ -13,6 +13,7 @@ import {
   TEMPORARY_PASSWORD_TTL_HOURS,
   temporaryPasswordExpiresAt,
 } from "@/lib/temporary-password-policy";
+import { hasTeacherJourney } from "@/lib/teacher-journeys";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
       badgeVerified, badgeRecommended, badgeNew, badgePopular, badgePremium,
       internalNote, adminRating, adminRatingNote, adminRatingPublic,
       offersHome, offersOnline, offersGroup,
+      offersIvorianSystem, offersFrenchSystem, offersProfessionalTraining,
       pricePerHour, pricePerSession, pricePack4, pricePack8,
       commissionRate, pricingTier,
       availability,
@@ -79,6 +81,14 @@ export async function POST(req: NextRequest) {
     const nextStatus = status || "ACTIVE";
     const normalizedCommune = typeof commune === "string" ? commune.trim() : "";
     const effectiveOffersHome = offersHome ?? true;
+    const journeyEligibility = {
+      offersIvorianSystem: offersIvorianSystem ?? true,
+      offersFrenchSystem: offersFrenchSystem ?? true,
+      offersProfessionalTraining: offersProfessionalTraining ?? true,
+    };
+    if (!hasTeacherJourney(journeyEligibility)) {
+      return NextResponse.json({ error: "Activez au moins une mini-application pour ce professeur." }, { status: 400 });
+    }
     if (requiresTeacherHomeCommune({
       status: nextStatus,
       offersHome: effectiveOffersHome,
@@ -171,6 +181,7 @@ export async function POST(req: NextRequest) {
         offersHome: effectiveOffersHome,
         offersOnline: offersOnline ?? true,
         offersGroup: !!offersGroup,
+        ...journeyEligibility,
         pricePerHour: normalizedPricePerHour,
         pricePerSession: normalizedPricePerSession,
         pricePack4: Number(pricePack4) || 38000,

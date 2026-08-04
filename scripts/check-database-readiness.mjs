@@ -40,6 +40,7 @@ try {
 
   await checkPasswordRecoverySchema();
   await checkTeacherPayoutRequestIdempotencySchema();
+  await checkTeacherJourneyOffersSchema();
   await checkAdminAccount();
   checkRequiredCatalogs();
   await checkOperationalSettings();
@@ -103,6 +104,23 @@ async function checkTeacherPayoutRequestIdempotencySchema() {
   } catch (error) {
     warnings.push(`Teacher payout-request idempotency schema check failed: ${error instanceof Error ? error.message : "unknown error"}.`);
     record("Teacher payout-request idempotency migration is applied", false);
+  }
+}
+
+async function checkTeacherJourneyOffersSchema() {
+  try {
+    await db.teacher.findFirst({
+      select: {
+        id: true,
+        offersIvorianSystem: true,
+        offersFrenchSystem: true,
+        offersProfessionalTraining: true,
+      },
+    });
+    record("Teacher mini-app offers migration is applied", true);
+  } catch (error) {
+    warnings.push(`Teacher mini-app offers schema check failed: ${error instanceof Error ? error.message : "unknown error"}.`);
+    record("Teacher mini-app offers migration is applied", false);
   }
 }
 

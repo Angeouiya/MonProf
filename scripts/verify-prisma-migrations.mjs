@@ -119,6 +119,13 @@ checkDirectoryContainsSql("20260731010000_teacher_payout_request_idempotency", [
   'ADD COLUMN "idempotencyKey" TEXT',
   'CREATE UNIQUE INDEX "TeacherPayoutRequest_idempotencyKey_key"',
 ]);
+checkDirectoryContainsSql("20260804000000_teacher_journey_offers", [
+  'ALTER TABLE "Teacher"',
+  'ADD COLUMN "offersIvorianSystem" BOOLEAN NOT NULL DEFAULT true',
+  'ADD COLUMN "offersFrenchSystem" BOOLEAN NOT NULL DEFAULT true',
+  'ADD COLUMN "offersProfessionalTraining" BOOLEAN NOT NULL DEFAULT true',
+  'ADD CONSTRAINT "Teacher_at_least_one_journey_check"',
+]);
 
 const readinessScript = fs.readFileSync("scripts/check-database-readiness.mjs", "utf8");
 record(
@@ -131,6 +138,13 @@ record(
   readinessScript.includes("idempotencyKey: true")
     && readinessScript.includes("TeacherPayoutRequest_idempotencyKey_key")
     && readinessScript.includes("Teacher payout-request idempotency migration is applied"),
+);
+record(
+  "Database readiness verifies cumulative teacher mini-app offers",
+  readinessScript.includes("offersIvorianSystem: true")
+    && readinessScript.includes("offersFrenchSystem: true")
+    && readinessScript.includes("offersProfessionalTraining: true")
+    && readinessScript.includes("Teacher mini-app offers migration is applied"),
 );
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));

@@ -67,7 +67,8 @@ const checks = [
     "Booking page redirects a teacherless entry and passes a validated initial journey",
     bookingPage.includes('if (!teacherId) redirect("/client/rechercher")')
       && bookingPage.includes('initialJourney={initialJourney}')
-      && bookingPage.includes('requestedJourney === "professionnel"'),
+      && bookingPage.includes('parseTeacherJourney(requestedJourney)')
+      && bookingPage.includes('teacherSupportsJourney(teacher, initialJourney)'),
   ],
   [
     "Booking form seeds the chosen journey and never displays a fabricated price before selection",

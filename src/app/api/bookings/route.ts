@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { resolveTeacherJourney, teacherSupportsJourney } from "@/lib/teacher-journeys";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateReference } from "@/lib/format";
@@ -340,6 +341,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: schoolSystemResolution.error }, { status: 400 });
   }
   const canonicalSchoolSystem = schoolSystemResolution.schoolSystem;
+  const bookingJourney = resolveTeacherJourney({
+    courseCategory: canonicalCourseCategory,
+    schoolSystem: canonicalSchoolSystem,
+  });
+  if (!bookingJourney || !teacherSupportsJourney(teacher, bookingJourney)) {
+    return NextResponse.json({
+      error: "Ce professeur ne propose pas ce parcours.",
+    }, { status: 400 });
+  }
   const educationValidation = validateEducationSelection({
     category: canonicalCourseCategory,
     levelName: canonicalLevelName,

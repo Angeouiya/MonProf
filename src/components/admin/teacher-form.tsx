@@ -126,6 +126,9 @@ const schema = z.object({
   offersHome: z.boolean().default(true),
   offersOnline: z.boolean().default(true),
   offersGroup: z.boolean().default(false),
+  offersIvorianSystem: z.boolean().default(true),
+  offersFrenchSystem: z.boolean().default(true),
+  offersProfessionalTraining: z.boolean().default(true),
   pricePerHour: z.coerce.number().min(0).default(10000),
   pricePerSession: z.coerce.number().min(0).default(10000),
   pricePack4: z.coerce.number().min(0).default(38000),
@@ -133,6 +136,13 @@ const schema = z.object({
   commissionRate: z.coerce.number().min(0).max(60).default(PLATFORM_COMMISSION_PERCENT),
   pricingTier: z.string().default("STANDARD"),
 }).superRefine((values, ctx) => {
+  if (!values.offersIvorianSystem && !values.offersFrenchSystem && !values.offersProfessionalTraining) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["offersIvorianSystem"],
+      message: "Activez au moins une mini-application pour ce professeur.",
+    });
+  }
   const photoUrl = values.photoUrl?.trim() ?? "";
   if (requiresTeacherHomeCommune(values)) {
     ctx.addIssue({
@@ -214,6 +224,9 @@ const FIELD_TAB: Partial<Record<keyof FormValues, TeacherFormTab>> = {
   offersHome: "tarifs",
   offersOnline: "tarifs",
   offersGroup: "tarifs",
+  offersIvorianSystem: "tarifs",
+  offersFrenchSystem: "tarifs",
+  offersProfessionalTraining: "tarifs",
   adminRating: "eval",
   adminRatingNote: "eval",
   adminRatingPublic: "eval",
@@ -334,6 +347,9 @@ export function TeacherForm({
           adminRating: initial.adminRating ?? 0,
           adminRatingNote: initial.adminRatingNote ?? "",
           adminRatingPublic: initial.adminRatingPublic ?? true,
+          offersIvorianSystem: initial.offersIvorianSystem ?? true,
+          offersFrenchSystem: initial.offersFrenchSystem ?? true,
+          offersProfessionalTraining: initial.offersProfessionalTraining ?? true,
         }
       : {
           profileType: "ENSEIGNANT",
@@ -343,6 +359,9 @@ export function TeacherForm({
           badgeNew: true,
           offersHome: true,
           offersOnline: true,
+          offersIvorianSystem: true,
+          offersFrenchSystem: true,
+          offersProfessionalTraining: true,
           commissionRate: defaultCommissionPercent,
           pricePerHour: 10000,
           pricePerSession: 10000,
@@ -1681,6 +1700,23 @@ export function TeacherForm({
 
               <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
                 <div>
+                  <p className="text-sm font-black text-foreground">Mini-applications visibles</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Un même professeur peut apparaître dans une, deux ou trois mini-applications.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <FormatSwitch control={control} name="offersIvorianSystem" label="Système ivoirien" />
+                  <FormatSwitch control={control} name="offersFrenchSystem" label="Système français" />
+                  <FormatSwitch control={control} name="offersProfessionalTraining" label="Professionnel" />
+                </div>
+                {errors.offersIvorianSystem?.message && (
+                  <p className="text-xs font-semibold text-red-600">{errors.offersIvorianSystem.message}</p>
+                )}
+              </div>
+
+              <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
+                <div>
                   <p className="text-sm font-black text-foreground">Référence grille officielle</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Le professeur ne fixe aucun prix. Le parcours et la classe déterminent le cours ; le format, le pack, le groupe et le déplacement complètent le calcul.
@@ -1859,7 +1895,11 @@ function Field({ label, error, required, children }: { label: string; error?: st
   );
 }
 
-function FormatSwitch({ control, name, label }: { control: any; name: "offersHome" | "offersOnline" | "offersGroup"; label: string }) {
+function FormatSwitch({ control, name, label }: {
+  control: any;
+  name: "offersHome" | "offersOnline" | "offersGroup" | "offersIvorianSystem" | "offersFrenchSystem" | "offersProfessionalTraining";
+  label: string;
+}) {
   return (
     <Controller control={control} name={name} render={({ field }) => (
       <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-violet-100 bg-white px-3 py-2 transition hover:border-violet-200 hover:bg-violet-50/60">
