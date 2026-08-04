@@ -37,57 +37,45 @@ type AdminNotificationSummary = {
 
 const navSections: { title: string; items: NavItem[] }[] = [
   {
-    title: "Pilotage",
+    title: "Essentiel",
     items: [
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, permission: "DASHBOARD_VIEW" },
-      { href: "/admin/centre-operationnel", label: "Centre opérationnel", icon: Activity, permission: "OPERATIONS_MANAGE" },
+      { href: "/admin", label: "Accueil", icon: LayoutDashboard, exact: true, permission: "DASHBOARD_VIEW" },
+      { href: "/admin/centre-operationnel", label: "Opérations", icon: Activity, permission: "OPERATIONS_MANAGE" },
       { href: "/admin/reservations", label: "Réservations", icon: CalendarRange, permission: "BOOKINGS_VIEW" },
     ],
   },
   {
-    title: "Professeurs & Clients",
+    title: "Personnes",
     items: [
       { href: "/admin/professeurs", label: "Professeurs", icon: GraduationCap, permission: "TEACHERS_VIEW" },
-      { href: "/admin/suivi-professeurs", label: "Suivi professeurs", icon: ClipboardList, permission: "TEACHERS_VIEW" },
       { href: "/admin/professeurs/nouveau", label: "Ajouter professeur", icon: BookOpen, hideInList: true, permission: "TEACHERS_MANAGE" },
       { href: "/admin/clients", label: "Clients", icon: Users, permission: "CLIENTS_VIEW" },
     ],
   },
   {
-    title: "Finances",
+    title: "Argent & support",
     items: [
-      { href: "/admin/paiements", label: "Paiements reçus", icon: Wallet, permission: "FINANCE_VIEW" },
-      { href: "/admin/fonds-bloques", label: "Fonds bloqués", icon: Lock, permission: "FINANCE_VIEW" },
-      { href: "/admin/remboursements", label: "Remboursements", icon: RefreshCw, permission: "FINANCE_VIEW" },
-      { href: "/admin/paiements-a-liberer", label: "Paiements à libérer", icon: Banknote, permission: "FINANCE_VIEW" },
-      { href: "/admin/professeurs-a-payer", label: "Professeurs à payer", icon: Banknote, permission: "FINANCE_VIEW" },
-    ],
-  },
-  {
-    title: "Litiges & Avis",
-    items: [
-      { href: "/admin/litiges", label: "Litiges", icon: ShieldAlert, permission: "DISPUTES_MANAGE" },
-      { href: "/admin/avis", label: "Avis & notes", icon: MessageSquare, permission: "REVIEWS_MANAGE" },
-    ],
-  },
-  {
-    title: "Référentiels",
-    items: [
-      { href: "/admin/matieres", label: "Matières", icon: Tag, permission: "CATALOG_MANAGE" },
-      { href: "/admin/niveaux", label: "Niveaux", icon: BookOpen, permission: "CATALOG_MANAGE" },
-      { href: "/admin/communes", label: "Communes & quartiers", icon: MapPin, permission: "CATALOG_MANAGE" },
-    ],
-  },
-  {
-    title: "Communication",
-    items: [
+      { href: "/admin/paiements", label: "Finances", icon: Wallet, permission: "FINANCE_VIEW" },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare, permission: "COMMUNICATIONS_VIEW" },
-      { href: "/admin/notifications", label: "Centre de communication", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
-      { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
-      { href: "/admin/parametres", label: "Paramètres", icon: Settings, permission: "SETTINGS_MANAGE" },
+      { href: "/admin/parametres", label: "Réglages", icon: Settings, permission: "SETTINGS_MANAGE" },
       { href: "/admin/mon-compte", label: "Mon compte", icon: UserRoundCog, permission: "DASHBOARD_VIEW" },
     ],
   },
+];
+
+const secondaryNavItems: NavItem[] = [
+  { href: "/admin/suivi-professeurs", label: "Suivi professeurs", icon: ClipboardList, permission: "TEACHERS_VIEW" },
+  { href: "/admin/fonds-bloques", label: "Fonds bloqués", icon: Lock, permission: "FINANCE_VIEW" },
+  { href: "/admin/remboursements", label: "Remboursements", icon: RefreshCw, permission: "FINANCE_VIEW" },
+  { href: "/admin/paiements-a-liberer", label: "Paiements à libérer", icon: Banknote, permission: "FINANCE_VIEW" },
+  { href: "/admin/professeurs-a-payer", label: "Professeurs à payer", icon: Banknote, permission: "FINANCE_VIEW" },
+  { href: "/admin/litiges", label: "Litiges", icon: ShieldAlert, permission: "DISPUTES_MANAGE" },
+  { href: "/admin/avis", label: "Avis & notes", icon: MessageSquare, permission: "REVIEWS_MANAGE" },
+  { href: "/admin/matieres", label: "Matières", icon: Tag, permission: "CATALOG_MANAGE" },
+  { href: "/admin/niveaux", label: "Niveaux", icon: BookOpen, permission: "CATALOG_MANAGE" },
+  { href: "/admin/communes", label: "Communes & quartiers", icon: MapPin, permission: "CATALOG_MANAGE" },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
+  { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
 ];
 
 export function AdminLayout({
@@ -212,6 +200,8 @@ function SidebarContent({
   teamRole?: string | null;
 }) {
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
+  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => hasAdminPermission(permissions, item.permission));
+  const secondaryActive = visibleSecondaryNavItems.some((item) => isActive(item.href, item.exact));
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav data-admin-sidebar-nav className="admin-sidebar-main-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
@@ -268,6 +258,36 @@ function SidebarContent({
             </div>
           </div>
         ))}
+        {visibleSecondaryNavItems.length > 0 && (
+          <details open={secondaryActive || undefined} className="group rounded-lg border border-[#E6EAF3] bg-white">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[#475569] transition hover:text-[#111B4D]">
+              <Menu className="h-4 w-4 shrink-0" />
+              <span className="flex-1">Plus</span>
+              <ChevronRight className="h-4 w-4 transition group-open:rotate-90" />
+            </summary>
+            <div className="space-y-0.5 border-t border-[#E6EAF3] p-2">
+              {visibleSecondaryNavItems.map((item) => {
+                const active = isActive(item.href, item.exact);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={false}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                      active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]",
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                    {active && <ChevronRight className="ml-auto h-4 w-4" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </details>
+        )}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
         <div className="flex items-center gap-3 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">

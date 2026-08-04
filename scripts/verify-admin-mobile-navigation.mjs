@@ -8,6 +8,7 @@ const header = read("src/components/shared/page-header.tsx");
 const statCard = read("src/components/shared/stat-card.tsx");
 const css = read("src/app/globals.css");
 const dashboard = read("src/app/admin/page.tsx");
+const layout = read("src/components/layouts/admin-layout.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -86,6 +87,15 @@ record(
     && (dashboard.match(/<AdminAmount /g) ?? []).length === 4
     && (dashboard.match(/<FinanceRow /g) ?? []).length === 8
     && /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
+);
+
+record(
+  "Admin navigation exposes essentials first and progressively reveals secondary tools",
+  /title: "Essentiel"[\s\S]*?label: "Accueil"[\s\S]*?label: "Opérations"[\s\S]*?label: "Réservations"/.test(layout)
+    && /title: "Personnes"[\s\S]*?label: "Professeurs"[\s\S]*?label: "Clients"/.test(layout)
+    && /title: "Argent & support"[\s\S]*?label: "Finances"[\s\S]*?label: "Messages"[\s\S]*?label: "Réglages"[\s\S]*?label: "Mon compte"/.test(layout)
+    && /const secondaryNavItems:[\s\S]*?<details open=\{secondaryActive \|\| undefined\}[\s\S]*?<span className="flex-1">Plus<\/span>/.test(layout)
+    && /secondaryNavItems\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout),
 );
 
 const failed = checks.filter((check) => !check.passed);
