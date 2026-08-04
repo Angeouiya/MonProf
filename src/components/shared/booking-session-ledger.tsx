@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarClock, CheckCircle2, CircleDollarSign, RefreshCw, ShieldAlert, UserRoundCheck } from "lucide-react";
@@ -89,6 +89,11 @@ export function BookingSessionLedger({
   const released = sessions.reduce((sum, session) => sum + session.releasedAmount, 0);
   const paid = sessions.reduce((sum, session) => sum + session.paidAmount, 0);
   const blocked = sessions.reduce((sum, session) => sum + (session.releasedAmount > 0 ? 0 : session.teacherNetAmount), 0);
+  const hasClientSessionAction = audience === "client" && sessions.some((session) => [
+    "AWAITING_CLIENT_CONFIRMATION",
+    "RESCHEDULE_PROPOSED",
+    "REPLACEMENT_PROPOSED",
+  ].includes(session.status));
 
   return (
     <section id="seances" data-booking-session-ledger className="rounded-lg border border-[#D8DEE9] bg-white p-3 min-[640px]:p-5">
@@ -106,7 +111,7 @@ export function BookingSessionLedger({
         )}
       </div>
 
-      <div className="mt-4 grid gap-3">
+      <SessionList audience={audience} count={sessions.length} defaultOpen={hasClientSessionAction}>
         {sessions.map((session) => {
           const teacherName = session.teacher.professionalName || session.teacher.fullName;
           const pending = (action: string) => loading === session.id + ":" + action;
@@ -194,7 +199,7 @@ export function BookingSessionLedger({
             </article>
           );
         })}
-      </div>
+      </SessionList>
 
       <Dialog open={Boolean(dialog)} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent className="max-w-lg">
@@ -228,6 +233,30 @@ export function BookingSessionLedger({
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+function SessionList({
+  audience,
+  count,
+  defaultOpen,
+  children,
+}: {
+  audience: "client" | "professor" | "admin";
+  count: number;
+  defaultOpen: boolean;
+  children: ReactNode;
+}) {
+  if (audience !== "client") return <div className="mt-4 grid gap-3">{children}</div>;
+
+  return (
+    <details className="mt-4 rounded-lg border border-[#D8DEE9] bg-white p-3" open={defaultOpen || undefined} data-client-session-disclosure>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[#111B4D] marker:hidden">
+        <span>{defaultOpen ? "Action requise sur une séance" : `Voir les ${count} séance${count > 1 ? "s" : ""}`}</span>
+        <CalendarClock className="h-4 w-4 shrink-0" />
+      </summary>
+      <div className="mt-3 grid gap-3 border-t border-[#E3E8F2] pt-3">{children}</div>
+    </details>
   );
 }
 

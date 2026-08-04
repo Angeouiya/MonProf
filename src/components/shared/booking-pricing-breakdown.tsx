@@ -192,15 +192,15 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       <details
         className="mt-3 min-w-0 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:p-3.5"
         data-client-pricing-detail
-        open={isCheckout ? undefined : true}
+        open={audience === "admin" ? true : undefined}
       >
-        <summary className={isCheckout
+        <summary className={audience === "client"
           ? "cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden"
           : "sr-only"}
         >
-          {isCheckout ? "Comprendre le calcul" : "Détail du calcul"}
+          {isCheckout ? "Comprendre le calcul" : "Voir le détail du calcul"}
         </summary>
-        <div className={isCheckout ? "mt-3 border-t border-[#E3E8F2] pt-3" : undefined}>
+        <div className={audience === "client" ? "mt-3 border-t border-[#E3E8F2] pt-3" : undefined}>
           <div className="flex flex-col gap-1 border-b border-[#E3E8F2] pb-3" data-client-pricing-detail-header>
           <div>
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>

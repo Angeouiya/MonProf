@@ -26,7 +26,7 @@ import {
   Home, Video, User, Users, Calendar, Clock, MapPin, MessageSquare,
   CheckCircle2, AlertTriangle, LockKeyhole, ClipboardCheck,
   WalletCards, ShieldCheck, Hourglass, RefreshCw, LifeBuoy,
-  Phone,
+  Phone, ChevronDown,
 } from "lucide-react";
 import { BookingActions, BookingPrimaryAction } from "./actions";
 import { ScheduleProposalActions } from "./schedule-proposal-actions";
@@ -679,12 +679,10 @@ export default async function ReservationDetailPage({
         {/* Colonne gauche : détails */}
         <div className="order-2 min-w-0 space-y-4 lg:order-1">
           {/* Détails cours */}
-          <ClientSurface className="space-y-4">
-            <ClientSectionTitle
-              eyebrow="Cours"
-              title="Détails du cours"
-              description="Matière, niveau, format et consignes du dossier."
-            />
+          <ReservationDisclosure
+            title="Détails du cours"
+            summary={`${booking.subjectName} · ${booking.levelName} · ${booking.courseFormat === "HOME" ? "À domicile" : "En ligne"}`}
+          >
             <div className="space-y-3 text-sm">
               <div className="grid gap-3 min-[560px]:grid-cols-2">
                 <DetailRow icon={null} label="Matière" value={booking.subjectName} />
@@ -719,7 +717,7 @@ export default async function ReservationDetailPage({
                 <DetailRow icon={<MessageSquare className="h-4 w-4" />} label="Message" value={booking.message} />
               )}
             </div>
-          </ClientSurface>
+          </ReservationDisclosure>
 
           {booking.sessions.length > 0 && (
             <BookingSessionLedger
@@ -775,23 +773,16 @@ export default async function ReservationDetailPage({
           )}
 
           {/* Timeline */}
-          <ClientSurface className="space-y-4">
-            <ClientSectionTitle
-              eyebrow="Progression"
-              title="Suivi de la réservation"
-              description={timelineDescription}
-            />
+          <ReservationDisclosure title="Suivi de la réservation" summary={timelineDescription}>
             <ClientProcessTracker steps={processSteps} />
-          </ClientSurface>
+          </ReservationDisclosure>
 
           {/* Transactions */}
           {visibleTransactions.length > 0 && (
-            <ClientSurface className="space-y-4">
-              <ClientSectionTitle
-                eyebrow="Paiement"
-                title="Historique des transactions"
-                description="Paiements et remboursements confirmés par le système."
-              />
+            <ReservationDisclosure
+              title="Historique des transactions"
+              summary={`${visibleTransactions.length} transaction${visibleTransactions.length > 1 ? "s" : ""} confirmée${visibleTransactions.length > 1 ? "s" : ""}`}
+            >
               <div className="space-y-2">
                 {visibleTransactions.map((tx) => (
                   <div key={tx.id} className="flex flex-col gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm min-[460px]:flex-row min-[460px]:items-center min-[460px]:justify-between">
@@ -811,7 +802,7 @@ export default async function ReservationDetailPage({
                   </div>
                 ))}
               </div>
-            </ClientSurface>
+            </ReservationDisclosure>
           )}
         </div>
 
@@ -967,6 +958,35 @@ function ReservationHeroMetric({ icon, label, value }: { icon: ReactNode; label:
         <div className="mt-0.5 break-words text-sm font-semibold leading-5 text-[#111827]">{value}</div>
       </div>
     </div>
+  );
+}
+
+function ReservationDisclosure({
+  title,
+  summary,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  summary: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      className="group overflow-hidden rounded-lg border border-[#E3E8F2] bg-white"
+      open={defaultOpen || undefined}
+      data-client-reservation-disclosure
+    >
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-[#111827]">{title}</span>
+          <span className="mt-0.5 line-clamp-1 block text-xs font-medium text-[#64748B]">{summary}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-[#111B4D] transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-[#E6EAF3] p-4">{children}</div>
+    </details>
   );
 }
 

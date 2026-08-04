@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ReviewRatingSelector } from "@/components/shared/review-rating-selector";
 import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shared/important-action-confirm";
-import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, AlertCircle, RefreshCw, Ban, ShieldCheck, ExternalLink, Trash2, ChevronDown } from "lucide-react";
 import type { Booking, Review, Transaction } from "@prisma/client";
 import { CANCELLATION_REASONS, PAID_CLIENT_TRANSACTION_STATUSES, cancellationPolicySummary, cancellationWindowLabel, getCancellationPolicy } from "@/lib/cancellation-policy";
 import { RESCHEDULE_POLICY_WINDOWS, getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
@@ -350,14 +350,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
     }
   }
 
-  async function onConfirm() {
-    const ok = await callAction("confirm");
-    if (ok) {
-      toast.success("Cours confirmé. Le service client finalise le dossier.");
-      router.refresh();
-    }
-  }
-
   async function onSubmitDispute() {
     if (!disputeDesc.trim()) {
       toast.error("Veuillez décrire le problème");
@@ -558,8 +550,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
       ? "PayDunya (historique)"
       : "Paiement sécurisé";
-  const paymentActionKey = providerIsJeko ? "jeko_checkout" : "paydunya_checkout";
-  const verificationActionKey = providerIsJeko ? "jeko_verify" : "paydunya_verify";
   const canResumePayment = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
   const foregroundNotice = getForegroundNotice({
     status,
@@ -581,136 +571,30 @@ export function BookingActions({ booking }: BookingActionsProps) {
     paymentVerified,
     paymentProviderLabel: providerLabel,
   });
-
-  async function onResumePayment() {
-    setLoading(paymentActionKey);
-    try {
-      const res = await fetch(providerIsJeko
-        ? `/api/bookings/${booking.id}/jeko-payment`
-        : `/api/bookings/${booking.id}`, {
-        method: providerIsJeko ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(providerIsJeko
-          ? { paymentMethod: toJekoPaymentMethod(booking.paymentMethod) }
-          : { action: "paydunya_checkout" }),
-      });
-      const data = await res.json();
-      const checkoutUrl = data.payment?.checkoutUrl;
-      if (!res.ok || !checkoutUrl || (providerIsJeko && !isAllowedJekoRedirectUrl(checkoutUrl))) {
-        toast.error(data.payment?.message || data.error || `Impossible d'ouvrir ${providerLabel} pour le moment.`);
-        return;
-      }
-      toast.success(`Ouverture de ${providerLabel}...`);
-      window.location.assign(checkoutUrl);
-    } catch {
-      toast.error("Erreur réseau");
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  async function onVerifyPayment() {
-    setLoading(verificationActionKey);
-    try {
-      const res = providerIsJeko
-        ? await fetch(`/api/bookings/${booking.id}/jeko-payment`, { cache: "no-store" })
-        : await fetch(`/api/bookings/${booking.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "paydunya_verify" }),
-          });
-      const data = await res.json();
-      const message = data.payment?.message || data.error || `Vérification ${providerLabel} terminée.`;
-      if (!res.ok) {
-        toast.error(message);
-        router.refresh();
-        return;
-      }
-      if (data.payment?.verified || data.payment?.status === "success") {
-        toast.success(message);
-      } else {
-        toast(message);
-      }
-      router.refresh();
-    } catch {
-      toast.error("Erreur réseau");
-    } finally {
-      setLoading(null);
-    }
-  }
+  const shouldOpenActions = Boolean(foregroundNotice)
+    || status === "PENDING_CLIENT_VALIDATION"
+    || (["CANCELLED", "REFUNDED"].includes(status) && booking.cancellationRefundAmount > 0);
 
   return (
-    <section id="actions" className="scroll-mt-24 overflow-hidden rounded-lg border border-[#E3E8F2] bg-white p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-3 border-b border-[#E6EAF3] pb-3">
+    <details id="actions" className="group scroll-mt-24 overflow-hidden rounded-lg border border-[#E3E8F2] bg-white" open={shouldOpenActions || undefined} data-client-booking-options>
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 marker:hidden sm:px-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Dossier</p>
-          <h2 className="mt-0.5 text-base font-semibold leading-tight text-[#111827]">Actions rapides</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Options</p>
+          <h2 className="mt-0.5 text-base font-semibold leading-tight text-[#111827]">Gérer la réservation</h2>
+          <p className="mt-0.5 line-clamp-1 text-xs font-medium text-[#64748B]">{actionSummary.title}</p>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white [&>svg]:text-white">
-          {actionSummary.icon}
+        <span className="flex items-center gap-2 text-[#111B4D]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white [&>svg]:text-white">{actionSummary.icon}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
         </span>
-      </div>
-      <div className="mt-3 space-y-3">
-        <div className={`rounded-lg border p-3 ${actionSummary.className}`}>
-          <div className="flex items-start gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Situation actuelle</p>
-              <p className="mt-0.5 text-sm font-semibold leading-tight">{actionSummary.title}</p>
-              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">{actionSummary.description}</p>
-            </div>
-          </div>
-        </div>
+      </summary>
+      <div className="space-y-3 border-t border-[#E6EAF3] p-3 sm:p-4">
 
         {foregroundNotice && (
           <ImportantActionNotice
             title={foregroundNotice.title}
             description={foregroundNotice.description}
           />
-        )}
-
-        {canResumePayment && (
-          <>
-            <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm text-[#111B4D]">
-              <div className="flex items-center gap-2 font-semibold">
-                <ShieldCheck className="h-4 w-4" />
-                Brouillon non réservé
-              </div>
-              <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                Le paiement est finalisé sur {providerLabel}. Compétence relit le montant du dossier et ne l'active qu'après contrôle serveur.
-              </p>
-            </div>
-            <ImportantActionConfirm
-              title={`Ouvrir ${providerLabel} ?`}
-              description={`Vous allez quitter Compétence pour finaliser le paiement sur ${providerLabel}. Le montant est relu depuis votre dossier et ne peut pas être modifié par le navigateur.`}
-              badge="Paiement sécurisé"
-              notices={[
-                `Aucun paiement n'est validé sans confirmation serveur ${providerLabel}.`,
-                "Le montant affiché inclut les frais de service du moyen de paiement.",
-                "Après paiement, revenez sur le dossier pour suivre la validation du service client.",
-              ]}
-              confirmLabel={loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
-              cancelLabel="Rester sur le dossier"
-              onConfirm={onResumePayment}
-              trigger={
-                <Button
-                  className="min-h-11 w-full rounded-lg"
-                  disabled={loading === paymentActionKey}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  {loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
-                </Button>
-              }
-            />
-            <Button
-              variant="outline"
-              className="min-h-11 w-full rounded-lg"
-              onClick={onVerifyPayment}
-              disabled={loading === verificationActionKey}
-            >
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              {loading === verificationActionKey ? "Vérification..." : `Vérifier le paiement ${providerLabel}`}
-            </Button>
-          </>
         )}
 
         {/* DISPUTED */}
@@ -737,38 +621,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
 
         {/* PENDING_CLIENT_VALIDATION */}
         {status === "PENDING_CLIENT_VALIDATION" && (
-          <>
-            <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-sm text-[#111B4D]">
-              <div className="flex items-center gap-2 font-semibold">
-                <AlertCircle className="h-4 w-4" />
-                Action requise
-              </div>
-              <p className="mt-1 text-xs">
-                Le cours a été effectué. Confirmez-le pour clôturer le dossier, ou signalez un problème.
-              </p>
-            </div>
-            <ImportantActionConfirm
-              title="Confirmer que le cours est terminé ?"
-              description="Cette confirmation indique au service client que le cours a bien eu lieu. Elle déclenche la suite du traitement du paiement professeur."
-              badge="Validation du cours"
-              notices={[
-                "Confirmez seulement si le cours s'est réellement déroulé.",
-                "Si le professeur était absent, en retard ou si le cours n'était pas conforme, signalez plutôt un problème.",
-                "Après confirmation, le dossier passe en traitement service client.",
-              ]}
-              confirmLabel={loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
-              cancelLabel="Vérifier avant"
-              onConfirm={onConfirm}
-              trigger={
-                <Button
-                  className="min-h-11 w-full rounded-lg"
-                  disabled={loading === "confirm"}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {loading === "confirm" ? "Traitement..." : "Confirmer le cours"}
-                </Button>
-              }
-            />
             <Button
               variant="outline"
               className="min-h-11 w-full rounded-lg"
@@ -778,7 +630,6 @@ export function BookingActions({ booking }: BookingActionsProps) {
               <AlertTriangle className="mr-2 h-4 w-4" />
               Signaler un problème
             </Button>
-          </>
         )}
 
         {/* Avis après validation client */}
@@ -1351,7 +1202,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
           </DialogContent>
         </Dialog>
       </div>
-    </section>
+    </details>
   );
 }
 

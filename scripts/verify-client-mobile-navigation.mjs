@@ -21,6 +21,7 @@ const professorImagePath = "src/components/shared/professor-image.tsx";
 const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
 const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
+const bookingSessionLedgerPath = "src/components/shared/booking-session-ledger.tsx";
 const clientPricingCopyPaths = [
   "src/app/client/page.tsx",
   "src/app/client/reserver/reserver-form.tsx",
@@ -70,6 +71,7 @@ const professorImage = read(professorImagePath);
 const professorMedia = read(professorMediaPath);
 const professorMediaApi = read(professorMediaApiPath);
 const pricingBreakdown = read(pricingBreakdownPath);
+const bookingSessionLedger = read(bookingSessionLedgerPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
 const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
@@ -377,7 +379,36 @@ record(
     && /data-client-checkout-pricing-summary/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
     && /label="Cours"[\s\S]*?label="Déplacement"[\s\S]*?label=\{paymentServiceFeeLabel\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
     && /Comprendre le calcul/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
-    && /open=\{isCheckout \? undefined : true\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx")),
+    && /Voir le détail du calcul/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
+    && /open=\{audience === "admin" \? true : undefined\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx")),
+);
+
+record(
+  "Client reservation detail progressively reveals secondary information",
+  countOccurrences(clientReservationDetail, "<ReservationDisclosure") >= 3
+    && /data-client-reservation-disclosure/.test(clientReservationDetail)
+    && /title="Détails du cours"/.test(clientReservationDetail)
+    && /title="Suivi de la réservation"/.test(clientReservationDetail)
+    && /title="Historique des transactions"/.test(clientReservationDetail),
+);
+
+record(
+  "Client reservation keeps one payment command and folds secondary options",
+  /data-client-booking-options/.test(clientBookingActions)
+    && /const shouldOpenActions = Boolean\(foregroundNotice\)/.test(clientBookingActions)
+    && /status === "PENDING_CLIENT_VALIDATION"/.test(clientBookingActions)
+    && countOccurrences(clientBookingActions, "if (canResumePayment)") === 1
+    && countOccurrences(clientBookingActions, "onConfirm={onConfirmCourse}") === 1,
+);
+
+record(
+  "Client session history stays folded unless a session needs attention",
+  /data-client-session-disclosure/.test(bookingSessionLedger)
+    && /const hasClientSessionAction = audience === "client"/.test(bookingSessionLedger)
+    && /AWAITING_CLIENT_CONFIRMATION/.test(bookingSessionLedger)
+    && /RESCHEDULE_PROPOSED/.test(bookingSessionLedger)
+    && /REPLACEMENT_PROPOSED/.test(bookingSessionLedger)
+    && /defaultOpen=\{hasClientSessionAction\}/.test(bookingSessionLedger),
 );
 
 record(
