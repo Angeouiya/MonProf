@@ -46,7 +46,7 @@ record(
   "Professor statistics use a reusable two-column mobile grid",
   /export function ProfessorStatGrid/.test(ui)
     && /grid grid-cols-2 gap-2 min-\[680px\]:gap-3/.test(ui)
-    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 4,
+    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 3,
 );
 
 record(
@@ -57,12 +57,13 @@ record(
 );
 
 record(
-  "Professor dashboard shows one priority action and hides its former command center",
-  /const PROFESSOR_COMMAND_CENTER_ENABLED = false/.test(dashboard)
-    && /data-professor-dashboard-priority/.test(dashboard)
-    && /\{PROFESSOR_COMMAND_CENTER_ENABLED && \(<>/.test(dashboard)
+  "Professor dashboard renders only one priority, one next course and the exact balance",
+  /data-professor-dashboard-priority/.test(dashboard)
     && /verifiedUpcomingBookings\.slice\(0, 1\)/.test(dashboard)
     && /grid grid-cols-3 gap-2 lg:min-w-\[25rem\]/.test(dashboard)
+    && !/PROFESSOR_COMMAND_CENTER_ENABLED/.test(dashboard)
+    && !/ProfessorQuickLink|ProfessorActionTile|ProfessorControlStep/.test(dashboard)
+    && !/teacherNotification\.findMany/.test(dashboard)
     && !/DashboardBalanceMini label="Déduit de votre net"/.test(dashboard),
 );
 
