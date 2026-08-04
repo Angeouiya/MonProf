@@ -9,6 +9,7 @@ const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const login = read("src/app/connexion/page.tsx");
 const registrationPage = read("src/app/inscription/page.tsx");
 const registrationForm = read("src/components/auth/inscription-form.tsx");
+const publicLayout = read("src/components/layouts/public-layout.tsx");
 const safeReturnPath = read("src/lib/safe-return-path.ts");
 
 const checks = [
@@ -18,6 +19,23 @@ const checks = [
       && home.includes('href: "/professeurs?journey=francais"')
       && home.includes('href: "/professeurs?journey=professionnel"')
       && home.includes('href="#parcours"'),
+  ],
+  [
+    "Homepage exposes compact mobile journey choices before secondary content",
+    home.includes('py-9 text-center sm:px-6 sm:py-16')
+      && home.includes('Prix et trajet connus · Paiement sécurisé')
+      && home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
+      && home.includes('md:hidden">{price}</p>'),
+  ],
+  [
+    "Public navigation resolves client, admin and teacher sessions without blocking first render",
+    publicLayout.includes('queryKey: ["public-session-role"]')
+      && publicLayout.includes('enabled: !hideFooter')
+      && publicLayout.includes('staleTime: 60_000')
+      && publicLayout.includes('CLIENT: { href: "/client"')
+      && publicLayout.includes('ADMIN: { href: "/admin"')
+      && publicLayout.includes('TEACHER: { href: "/professeur"')
+      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store" })'),
   ],
   [
     "Public teacher search preserves the selected journey through search, filters, pagination and cards",

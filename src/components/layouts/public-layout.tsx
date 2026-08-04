@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -38,14 +39,28 @@ const mobileNavBase = [
   { href: "/tarifs", label: "Tarifs", icon: WalletCards },
 ];
 
+type PublicSessionRole = "CLIENT" | "ADMIN" | "TEACHER";
+
+const sessionDestinations: Record<PublicSessionRole, { href: string; label: string; navLabel: string }> = {
+  CLIENT: { href: "/client", label: "Mon espace", navLabel: "Espace" },
+  ADMIN: { href: "/admin", label: "Service client", navLabel: "Service client" },
+  TEACHER: { href: "/professeur", label: "Mon espace", navLabel: "Espace" },
+};
+
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isAdmin = false;
-  const isClient = false;
-  const isAuthenticated = false;
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
   const hideFooter = shouldHidePublicFooter(pathname);
+  const { data: sessionRole = null } = useQuery({
+    queryKey: ["public-session-role"],
+    queryFn: readPublicSessionRole,
+    enabled: !hideFooter,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const sessionDestination = sessionRole ? sessionDestinations[sessionRole] : null;
+  const isAuthenticated = sessionDestination !== null;
 
   return (
     <div className={cn(
@@ -84,16 +99,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            {isClient && (
+            {sessionDestination && (
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/client" prefetch={true}>
-                  <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
+                <Link href={sessionDestination.href} prefetch={true}>
+                  <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
                 </Link>
-              </Button>
-            )}
-            {isAdmin && (
-              <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href="/admin" prefetch={true}>Service client</Link>
               </Button>
             )}
             {!isAuthenticated && (
@@ -170,16 +180,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               })}
             </div>
             <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
-              {isClient && (
+              {sessionDestination && (
                 <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href="/client" prefetch={true} onClick={() => setMobileOpen(false)}>
-                    <LayoutDashboard className="mr-1.5 h-4 w-4" /> Mon espace
+                  <Link href={sessionDestination.href} prefetch={true} onClick={() => setMobileOpen(false)}>
+                    <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
                   </Link>
-                </Button>
-              )}
-              {isAdmin && (
-                <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href="/admin" prefetch={true} onClick={() => setMobileOpen(false)}>Service client</Link>
                 </Button>
               )}
               {!isAuthenticated && (
@@ -227,7 +232,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           </div>
       </footer>
       )}
-      {!hideMobileNav && !mobileOpen && <PublicMobileNav pathname={pathname} isClient={isClient} isAdmin={isAdmin} />}
+      {!hideMobileNav && !mobileOpen && <PublicMobileNav pathname={pathname} sessionRole={sessionRole} />}
     </div>
   );
 }
@@ -254,18 +259,18 @@ function shouldHidePublicFooter(pathname: string | null) {
 
 function PublicMobileNav({
   pathname,
-  isClient,
-  isAdmin,
+  sessionRole,
 }: {
   pathname: string | null;
-  isClient: boolean;
-  isAdmin: boolean;
+  sessionRole: PublicSessionRole | null;
 }) {
-  const accountLink = isAdmin
-    ? { href: "/admin", label: "Service client", icon: LayoutDashboard }
-    : isClient
-      ? { href: "/client", label: "Espace", icon: LayoutDashboard }
-      : { href: "/connexion", label: "Compte", icon: GraduationCap };
+  const accountLink = sessionRole
+    ? {
+        href: sessionDestinations[sessionRole].href,
+        label: sessionDestinations[sessionRole].navLabel,
+        icon: LayoutDashboard,
+      }
+    : { href: "/connexion", label: "Compte", icon: GraduationCap };
   const items = [...mobileNavBase, accountLink];
 
   return (
@@ -302,4 +307,13 @@ function PublicMobileNav({
       </div>
     </nav>
   );
+}
+
+async function readPublicSessionRole(): Promise<PublicSessionRole | null> {
+  const response = await fetch("/api/auth/me", { cache: "no-store" });
+  if (!response.ok) return null;
+
+  const payload = await response.json() as { user?: { role?: string } | null };
+  const role = payload.user?.role;
+  return role === "CLIENT" || role === "ADMIN" || role === "TEACHER" ? role : null;
 }
