@@ -623,6 +623,7 @@ export function ReserverForm({
     neighborhoodAliases,
   });
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
+  const selectedPackLabel = PACK_OPTIONS.find((pack) => pack.value === form.packType)?.label ?? form.packType;
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
   const courseFormulaAmount = pricing.courseAmount;
   const totalPrice = pricing.totalClientPays;
@@ -1346,11 +1347,8 @@ export function ReserverForm({
                       allowCustomValue
                       customValueLabel="Utiliser cette ville"
                     />
-                    <p className="mt-1 text-xs font-medium text-[#64748B]">
-                      Tapez les premières lettres pour filtrer. Pour Abidjan, choisissez ensuite la commune exacte.
-                    </p>
                   </div>
-                  {isAbidjanCity(form.city) ? (
+                  {isAbidjanCity(form.city) && (
                     <div>
                       <Label htmlFor="commune">Commune d'Abidjan *</Label>
                       <SearchableCatalogSelect
@@ -1365,17 +1363,6 @@ export function ReserverForm({
                         groups={abidjanCommuneGroups}
                         triggerClassName="mt-1.5 min-h-12 rounded-lg"
                       />
-                      <p className="mt-1 text-xs font-medium text-[#64748B]">
-                        Cette commune sert directement au calcul du forfait de déplacement.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Zone de calcul</p>
-                      <p className="mt-1 text-sm font-semibold text-[#111827]">{form.commune || "Ville à sélectionner"}</p>
-                      <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                        Hors Abidjan, la ville sélectionnée devient la commune de référence. Le quartier reste libre et recherché quand connu.
-                      </p>
                     </div>
                   )}
                   <div>
@@ -1394,11 +1381,8 @@ export function ReserverForm({
                       allowCustomValue
                       customValueLabel="Utiliser ce quartier"
                     />
-                    <p className="mt-1 text-xs font-medium text-[#64748B]">
-                      Si le quartier n'est pas dans la liste, saisissez-le librement.
-                    </p>
                   </div>
-                  <div>
+                  <div className={isAbidjanCity(form.city) ? undefined : "min-[720px]:col-span-2"}>
                     <Label htmlFor="addressHint">Repère / adresse approximative *</Label>
                     <Textarea
                       id="addressHint"
@@ -1407,25 +1391,24 @@ export function ReserverForm({
                       placeholder="Ex : près de la pharmacie, immeuble blanc, entrée principale... L'adresse exacte peut être confirmée après validation."
                       rows={2}
                     />
-                    <p className="mt-1 text-xs text-[#64748B]">
-                      Un repère clair aide le service client et le professeur à confirmer rapidement la faisabilité du déplacement.
-                    </p>
                   </div>
-                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <p className="text-sm font-semibold text-[#111827]">Déplacement calculé automatiquement</p>
-                    <div className="mt-3 grid gap-2 min-[760px]:grid-cols-3">
-                      <InfoMini label="Base professeur" value={[teacher.commune, teacher.quartier].filter(Boolean).join(" · ") || "À confirmer"} />
-                      <InfoMini label="Lieu client" value={formatLocationSummary(form.city, form.commune, form.quartier) || "À sélectionner"} />
-                      <InfoMini
-                        label="Frais estimés"
-                        value={!form.commune ? "En attente" : formatFCFA(pricing.transportFee)}
-                      />
+                  <div className="min-[720px]:col-span-2 rounded-lg border border-[#DDE6F7] bg-white px-4 py-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#111827]">Déplacement</p>
+                        <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
+                          {form.commune
+                            ? `${pricing.transportRouteLabel ?? formatLocationSummary(form.city, form.commune, form.quartier)} · ${formatSentencePart(pricing.transportRuleLabel ?? "règle de déplacement")}`
+                            : "Choisissez votre commune pour obtenir le montant exact."}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-base font-semibold text-[#111B4D]">
+                        {!form.commune ? "À calculer" : pricing.transportFee === 0 ? "Gratuit" : formatFCFA(pricing.transportFee)}
+                      </p>
                     </div>
-                    <p className="mt-2 text-xs font-medium text-[#6B7280]">
-                      {form.commune
-                        ? `${pricing.transportRouteLabel ?? "Trajet"} - ${formatSentencePart(pricing.transportRuleLabel ?? "règle de déplacement")}. Ces frais vont entièrement au professeur.`
-                        : "Choisissez la ville ou commune du client pour que la plateforme applique automatiquement les frais de déplacement."}
-                    </p>
+                    {form.commune && pricing.transportFee > 0 && (
+                      <p className="mt-1 text-xs font-medium text-[#64748B]">Versé intégralement au professeur.</p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1657,63 +1640,75 @@ export function ReserverForm({
 
               <div>
                 <Label>Formule *</Label>
-                <RadioGroup
-                  value={form.packType}
-                  onValueChange={(v) => update("packType", v as PackType)}
-                  className="mt-2 grid gap-2 min-[720px]:grid-cols-2 lg:grid-cols-3"
-                >
-                  {PACK_OPTIONS.map((p) => {
-                    const optionPricing = calculateBookingPricing({
-                      category: effectiveCourseCategory,
-                      schoolSystem: form.schoolSystem,
-                      levelName: form.levelName,
-                      preciseLevel: form.preciseLevel,
-                      subjectName: form.subjectName,
-                      courseCatalogName: selectedCatalogCourse?.nom,
-                      objective: form.objective,
-                      deliveryMode,
-                      requiresMaterial: false,
-                      packType: p.value,
-                      participantsCount,
-                      teacherPricePerSession: teacher.pricePerSession,
-                      teacherCommune: canResolveTransport ? teacher.commune : undefined,
-                      teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
-                      teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
-                      clientCommune: canResolveTransport ? form.commune : undefined,
-                      clientQuartier: canResolveTransport ? form.quartier : undefined,
-                      platformCommissionPercent: pricingConfig.commissionPercent,
-                      transportFeeAmounts: pricingConfig.transportFees,
-                      grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
-                      clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
-                      neighborhoodAliases,
-                    });
-                    const count = optionPricing.numberOfSessions ?? 0;
-                    const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;
-                    return (
-                      <label
-                        key={p.value}
-                        className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border p-3 text-sm transition-colors ${
-                          form.packType === p.value ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
+                <div className="mt-2 flex items-center justify-between gap-4 rounded-lg border border-[#111B4D] bg-white px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#111827]">{selectedPackLabel}</p>
+                    <p className="mt-0.5 text-xs font-medium text-[#64748B]">
+                      {formatCount(selectedPackSessions, "séance")} de 2h · env. {formatFCFA(averageSessionPrice)} / séance
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-base font-semibold text-[#111B4D]">{formatFCFA(pricing.totalClientPays)}</p>
+                </div>
+                <details className="mt-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
+                    Comparer les formules
+                  </summary>
+                  <RadioGroup
+                    value={form.packType}
+                    onValueChange={(v) => update("packType", v as PackType)}
+                    className="mt-4 grid gap-2 border-t border-[#E5E7EB] pt-4 min-[720px]:grid-cols-2"
+                  >
+                    {PACK_OPTIONS.map((p) => {
+                      const optionPricing = calculateBookingPricing({
+                        category: effectiveCourseCategory,
+                        schoolSystem: form.schoolSystem,
+                        levelName: form.levelName,
+                        preciseLevel: form.preciseLevel,
+                        subjectName: form.subjectName,
+                        courseCatalogName: selectedCatalogCourse?.nom,
+                        objective: form.objective,
+                        deliveryMode,
+                        requiresMaterial: false,
+                        packType: p.value,
+                        participantsCount,
+                        teacherPricePerSession: teacher.pricePerSession,
+                        teacherCommune: canResolveTransport ? teacher.commune : undefined,
+                        teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
+                        teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
+                        clientCommune: canResolveTransport ? form.commune : undefined,
+                        clientQuartier: canResolveTransport ? form.quartier : undefined,
+                        platformCommissionPercent: pricingConfig.commissionPercent,
+                        transportFeeAmounts: pricingConfig.transportFees,
+                        grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
+                        clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
+                        neighborhoodAliases,
+                      });
+                      const count = optionPricing.numberOfSessions ?? 0;
+                      const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;
+                      return (
+                        <label
+                          key={p.value}
+                          className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
+                            form.packType === p.value ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D]"
+                          }`}
+                        >
                           <RadioGroupItem value={p.value} />
                           <span>
                             <span className="block font-medium text-[#111827]">{p.label}</span>
                             <span className="block text-xs text-[#64748B]">
-                              {formatFCFA(optionPricing.totalClientPays)} · {formatCount(count, "séance")} de 2h · env. {formatFCFA(average)}/séance
+                              {formatCount(count, "séance")} · {formatFCFA(optionPricing.totalClientPays)} · env. {formatFCFA(average)} / séance
                             </span>
                             {optionPricing.discountAmount > 0 && (
                               <span className="mt-0.5 block text-xs font-semibold text-[#111B4D]">
-                                Remise pack {formatFCFA(optionPricing.discountAmount)} (taux réellement appliqué : {formatDiscountRate(optionPricing.discountRate)})
+                                Économie {formatFCFA(optionPricing.discountAmount)} · {formatDiscountRate(optionPricing.discountRate)}
                               </span>
                             )}
                           </span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </RadioGroup>
+                        </label>
+                      );
+                    })}
+                  </RadioGroup>
+                </details>
               </div>
 
               <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">

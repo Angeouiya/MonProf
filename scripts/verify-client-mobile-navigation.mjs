@@ -343,6 +343,15 @@ record(
 );
 
 record(
+  "Client booking condenses transport and pack choices into progressive summaries",
+  /pricing\.transportFee\s*===\s*0\s*\?\s*"Gratuit"/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Choisissez votre commune pour obtenir le montant exact/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && !/InfoMini label="Base professeur"/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /selectedPackLabel/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /<details className="mt-2[\s\S]*?Comparer les formules/.test(read("src/app/client/reserver/reserver-form.tsx")),
+);
+
+record(
   "Client app rails are swipeable on mobile without visible scrollbar noise",
   /Client app polish guard/.test(css)
     && /\[data-client-dashboard-action-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
