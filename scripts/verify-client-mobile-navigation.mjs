@@ -22,6 +22,7 @@ const professorMediaPath = "src/components/professor/teacher-profile-media-form.
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
 const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
 const bookingSessionLedgerPath = "src/components/shared/booking-session-ledger.tsx";
+const alertDialogPath = "src/components/ui/alert-dialog.tsx";
 const clientPricingCopyPaths = [
   "src/app/client/page.tsx",
   "src/app/client/reserver/reserver-form.tsx",
@@ -72,6 +73,7 @@ const professorMedia = read(professorMediaPath);
 const professorMediaApi = read(professorMediaApiPath);
 const pricingBreakdown = read(pricingBreakdownPath);
 const bookingSessionLedger = read(bookingSessionLedgerPath);
+const alertDialog = read(alertDialogPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
 const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
@@ -564,6 +566,21 @@ record(
 );
 
 record(
+  "Public and client format controls apply immediately through native form submission",
+  /type="submit"[\s\S]*?name="format"[\s\S]*?aria-pressed=\{format === item\.value\}/.test(publicTeachersPage)
+    && /const courseFormatFilters = \[/.test(read("src/app/client/rechercher/page.tsx"))
+    && /name="format"[\s\S]*?value=\{item\.value\}[\s\S]*?aria-pressed=\{format === item\.value\}/.test(read("src/app/client/rechercher/page.tsx")),
+);
+
+record(
+  "Logout confirmation renders above every mobile drawer",
+  /data-slot="alert-dialog-overlay"[\s\S]*?z-\[120\]/.test(alertDialog)
+    && /data-slot="alert-dialog-content"[\s\S]*?z-\[130\]/.test(alertDialog)
+    && countOccurrences(layout, "<ImportantActionConfirm") >= 2
+    && /confirmLabel="Me déconnecter"/.test(layout),
+);
+
+record(
   "Public teacher cover and portrait stay premium and responsive on every viewport",
   /data-public-teacher-photo-layout/.test(publicTeacherDetail)
     && /data-public-teacher-cover/.test(publicTeacherDetail)
@@ -650,8 +667,8 @@ record(
 record(
   "Public teacher cards stay focused on booking decisions",
   !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(teacherCard)
-    && /Tarif officiel selon le parcours/.test(teacherCard)
-    && /avant paiement/.test(teacherCard),
+    && /priceLabel = "Tarif officiel selon le parcours"/.test(teacherCard)
+    && /avant frais éventuels/.test(teacherCard),
 );
 
 record(

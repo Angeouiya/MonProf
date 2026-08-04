@@ -58,6 +58,12 @@ const professionalQuickSearches = [
   { label: "Art et métiers", query: "q=design" },
 ];
 
+const courseFormatFilters = [
+  { value: "", label: "Tout" },
+  { value: "HOME", label: "À domicile" },
+  { value: "ONLINE", label: "En ligne" },
+];
+
 export default async function RechercherPage({
   searchParams,
 }: {
@@ -414,15 +420,24 @@ export default async function RechercherPage({
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Format</label>
-                <select
-                  name="format"
-                  defaultValue={format ?? ""}
-                  className={fieldClassName}
-                >
-                  <option value="">Tous</option>
-                  <option value="HOME">À domicile</option>
-                  <option value="ONLINE">En ligne</option>
-                </select>
+                <div className="mt-1.5 grid h-11 grid-cols-3 gap-1.5">
+                  {courseFormatFilters.map((item) => (
+                    <button
+                      key={item.value || "all"}
+                      type="submit"
+                      name="format"
+                      value={item.value}
+                      aria-pressed={format === item.value}
+                      className={`min-w-0 rounded-lg border px-1 text-xs font-semibold transition ${
+                        format === item.value
+                          ? "border-[#111B4D] bg-[#111B4D] text-white"
+                          : "border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
+                      }`}
+                    >
+                      <span className="block truncate">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Trier par</label>
@@ -502,7 +517,7 @@ export default async function RechercherPage({
         ) : (
           <div className="grid min-w-0 gap-3 min-[720px]:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
-              <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}&journey=${journey}`} />
+              <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}&journey=${journey}`} priceLabel={journeyConfig.priceLabel} />
             ))}
           </div>
         )}

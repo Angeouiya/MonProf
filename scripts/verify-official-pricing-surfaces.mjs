@@ -5,6 +5,10 @@ const pricingBreakdown = read("src/components/shared/booking-pricing-breakdown.t
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const professorProfile = read("src/app/professeur/(espace)/profil/page.tsx");
 const publicTeachers = read("src/app/professeurs/page.tsx");
+const publicTariffs = read("src/app/tarifs/page.tsx");
+const clientTeacherSearch = read("src/app/client/rechercher/page.tsx");
+const teacherCard = read("src/components/shared/teacher-card.tsx");
+const teacherJourneys = read("src/lib/teacher-journeys.ts");
 const replacementMatching = read("src/lib/teacher-replacement-matching.ts");
 const replacementApi = read("src/app/api/admin/replacement-suggestions/route.ts");
 const replacementUi = read("src/app/admin/reservations/[id]/actions-client.tsx");
@@ -30,7 +34,18 @@ const checks = [
   ],
   [
     "Public teacher list does not serialize a legacy profile price into cards",
-    !/pricePerSession:\s*t\.pricePerSession/.test(publicTeachers),
+    !/pricePerSession:\s*t\.pricePerSession/.test(publicTeachers)
+      && publicTeachers.includes("priceLabel={journeyConfig.priceLabel}")
+      && clientTeacherSearch.includes("priceLabel={journeyConfig.priceLabel}"),
+  ],
+  [
+    "Professional pricing is visible early and remains high contrast",
+    publicTariffs.includes('id: "tarif-professionnel"')
+      && publicTariffs.includes('["Formation ou apprentissage métier", 40_000]')
+      && publicTariffs.includes('aria-label="Choisir une grille tarifaire"')
+      && teacherJourneys.includes('priceLabel: "40 000 F / séance de 2h"')
+      && teacherCard.includes("avant frais éventuels")
+      && teacherCard.includes('text-[#111B4D]">{priceLabel}'),
   ],
   [
     "Automatic replacement matching ignores obsolete teacher prices",

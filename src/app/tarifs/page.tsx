@@ -6,12 +6,18 @@ import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
 import { TRANSPORT_FEES } from "@/lib/pricing";
 
 const PRICE_GRIDS: Array<{
+  id: string;
   title: string;
+  shortLabel: string;
+  summaryPrice: string;
   subtitle: string;
   rates: ReadonlyArray<readonly [string, number]>;
 }> = [
   {
+    id: "tarif-ivoirien",
     title: "Système ivoirien",
+    shortLabel: "Ivoirien",
+    summaryPrice: "Dès 15 000 F",
     subtitle: "Tarif par séance de 2h",
     rates: [
       ["CP1 à CM1", 15_000],
@@ -21,13 +27,26 @@ const PRICE_GRIDS: Array<{
     ],
   },
   {
+    id: "tarif-francais",
     title: "Système français",
+    shortLabel: "Français",
+    summaryPrice: "Dès 37 500 F",
     subtitle: "Tarif par séance de 2h",
     rates: [
       ["CP1 à CM1", 37_500],
       ["CM2 à 4e", 50_000],
       ["3e à 1ère", 62_500],
       ["Terminale", 75_000],
+    ],
+  },
+  {
+    id: "tarif-professionnel",
+    title: "Professionnel",
+    shortLabel: "Pro",
+    summaryPrice: "40 000 F",
+    subtitle: "Tarif unique par séance de 2h",
+    rates: [
+      ["Formation ou apprentissage métier", 40_000],
     ],
   },
 ];
@@ -58,34 +77,36 @@ export default function TarifsPage() {
 
       <section className="bg-[#F8FAFD]">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <div className="grid gap-5 lg:grid-cols-2">
+          <nav className="mb-5 grid grid-cols-3 gap-2" aria-label="Choisir une grille tarifaire">
             {PRICE_GRIDS.map((grid) => (
-              <article key={grid.title} className="overflow-hidden rounded-3xl border border-[#DDE3EE] bg-white">
+              <a
+                key={grid.id}
+                href={`#${grid.id}`}
+                className="flex min-h-16 min-w-0 flex-col items-center justify-center rounded-lg border border-[#CAD7F2] bg-white px-2 py-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
+              >
+                <span className="text-xs font-bold sm:text-sm">{grid.shortLabel}</span>
+                <span className="mt-1 text-[11px] font-semibold tabular-nums text-[#111827] sm:text-xs">{grid.summaryPrice}</span>
+              </a>
+            ))}
+          </nav>
+
+          <div className="grid items-start gap-5 lg:grid-cols-3">
+            {PRICE_GRIDS.map((grid) => (
+              <article id={grid.id} key={grid.title} className="scroll-mt-24 overflow-hidden rounded-lg border border-[#CAD7F2] bg-white shadow-sm">
                 <div className="border-b border-[#E8ECF3] p-6">
                   <GraduationCap className="h-6 w-6 text-[#111B4D]" />
                   <h2 className="mt-4 text-xl font-semibold text-[#111827]">{grid.title}</h2>
-                  <p className="mt-1 text-sm text-[#64748B]">{grid.subtitle}</p>
+                  <p className="mt-1 text-sm font-medium text-[#475569]">{grid.subtitle}</p>
                 </div>
                 {grid.rates.map(([level, amount]) => (
                   <div key={level} className="flex items-center justify-between gap-4 border-b border-[#E8ECF3] px-6 py-4 last:border-0">
                     <span className="text-sm font-semibold text-[#111827]">{level}</span>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-[#111B4D]">{formatFCFA(amount)}</span>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-[#111B4D]">{formatFCFA(amount)}</span>
                   </div>
                 ))}
               </article>
             ))}
           </div>
-
-          <article className="mt-5 rounded-3xl bg-[#111B4D] p-6 text-white sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#C8D4F1]">Professionnel</p>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold">Une compétence, un tarif</h2>
-                <p className="mt-2 text-sm text-[#DDE6F7]">Formation professionnelle ou apprentissage métier.</p>
-              </div>
-              <p className="text-2xl font-semibold tabular-nums">{formatFCFA(40_000)} <span className="text-sm font-medium text-[#DDE6F7]">/ séance</span></p>
-            </div>
-          </article>
         </div>
       </section>
 

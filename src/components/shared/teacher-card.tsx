@@ -19,10 +19,12 @@ export function TeacherCard({
   teacher,
   href,
   profileHref = `/professeurs/${teacher.id}`,
+  priceLabel = "Tarif officiel selon le parcours",
 }: {
   teacher: TeacherCardData;
   href?: string;
   profileHref?: string;
+  priceLabel?: string;
 }) {
   const directBookingHref = `/client/reserver?teacherId=${teacher.id}`;
   const bookingHref = href ?? `/connexion?from=${encodeURIComponent(directBookingHref)}`;
@@ -109,9 +111,12 @@ export function TeacherCard({
         </div>
       </div>
       <div className="mx-3 mt-auto pb-3 pt-3 min-[640px]:mx-4 min-[640px]:pb-4">
-        <div className="mb-3 flex items-center justify-between gap-3 border-y border-[#E3E8F2] py-2.5 text-xs font-semibold">
-          <span className="text-[#111827]">Tarif officiel selon le parcours</span>
-          <span className="shrink-0 text-[#64748B]">avant paiement</span>
+        <div className="mb-3 flex items-end justify-between gap-3 border-y border-[#CAD7F2] py-2.5">
+          <span className="min-w-0">
+            <span className="block text-[10px] font-bold uppercase tracking-wide text-[#475569]">Tarif officiel</span>
+            <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
+          </span>
+          <span className="shrink-0 pb-0.5 text-[11px] font-semibold text-[#475569]">avant frais éventuels</span>
         </div>
         <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
           <Link href={bookingHref}>Réserver</Link>

@@ -34,7 +34,7 @@ export const TEACHER_JOURNEY_CONFIG: Record<TeacherJourney, {
     shortLabel: "Pro",
     teacherField: "offersProfessionalTraining",
     searchPlaceholder: "Compétence ou métier",
-    priceLabel: "40 000 F / séance",
+    priceLabel: "40 000 F / séance de 2h",
   },
 };
 
