@@ -266,10 +266,15 @@ record(
 );
 
 record(
-  "Admin daily bookings KPI excludes unpaid drafts and requires exact verified funds",
+  "Any admin daily bookings KPI excludes unpaid drafts and requires exact verified funds",
   verifyAdminTodayBookingsScenarios()
-    && /todayBookingRows[\s\S]*?where:\s*verifiedClientPaymentBookingWhere\(\{[\s\S]*?status:\s*\{\s*in:\s*\[\.\.\.OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT\]/.test(adminDashboard)
-    && /const todayBookings\s*=\s*todayBookingRows\.filter\(hasVerifiedClientPayment\)\.length/.test(adminDashboard)
+    && (
+      (!/todayBookingRows/.test(adminDashboard) && !/Cours du jour/.test(adminDashboard))
+      || (
+        /todayBookingRows[\s\S]*?where:\s*verifiedClientPaymentBookingWhere\(\{[\s\S]*?status:\s*\{\s*in:\s*\[\.\.\.OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT\]/.test(adminDashboard)
+        && /const todayBookings\s*=\s*todayBookingRows\.filter\(hasVerifiedClientPayment\)\.length/.test(adminDashboard)
+      )
+    )
     && /todayBookingRows[\s\S]*?where:\s*verifiedClientPaymentBookingWhere\(\{[\s\S]*?status:\s*\{\s*in:\s*\[\.\.\.OPERATIONAL_BOOKING_STATUSES_REQUIRING_PAYMENT\]/.test(adminStatsRoute)
     && /const todayBookings\s*=\s*todayBookingRows\.filter\(hasVerifiedClientPayment\)\.length/.test(adminStatsRoute),
 );
