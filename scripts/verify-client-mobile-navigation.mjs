@@ -540,7 +540,7 @@ record(
     && /className="object-contain"/.test(publicTeacherDetail)
     && /grid-cols-\[112px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
     && /size=\{104\}/.test(publicTeacherDetail)
-    && /-translate-y-1\/2/.test(publicTeacherDetail)
+    && /style=\{\{ transform: "translateY\(-50%\)" \}\}/.test(publicTeacherDetail)
     && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)
     && !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
 );
@@ -603,6 +603,16 @@ record(
     && /\{ratingLabel\s*&&/.test(teacherCard)
     && !/Profil suivi|const trustLabel/.test(teacherCard)
     && !/displayRating\.toFixed\(1\)\/5/.test(teacherCard),
+);
+
+record(
+  "Teacher list cards mirror the premium cover and overlapping portrait identity",
+  /data-client-teacher-cover/.test(teacherCard)
+    && /resolveTeacherCover\(\{ teacherId: teacher\.id, coverUrl: teacher\.coverUrl \}\)/.test(teacherCard)
+    && /aspect-\[3\/1\]/.test(teacherCard)
+    && /className="object-contain"/.test(teacherCard)
+    && /style=\{\{ marginTop: "-40px" \}\}/.test(teacherCard)
+    && /grid-cols-\[80px_minmax\(0,1fr\)\]/.test(teacherCard),
 );
 
 record(

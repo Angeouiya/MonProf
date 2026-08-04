@@ -49,6 +49,7 @@ export default async function HomePage() {
           fullName: true,
           professionalName: true,
           photoUrl: true,
+          coverUrl: true,
           jobTitle: true,
           rating: true,
           ratingCount: true,
