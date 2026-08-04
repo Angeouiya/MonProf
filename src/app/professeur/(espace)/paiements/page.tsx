@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
+import type { ReactNode } from "react";
+import { ChevronDown, ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatFCFA } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-methods";
@@ -15,10 +16,7 @@ import { TeacherPayoutReceiptActions } from "@/components/admin/teacher-payout-r
 import {
   EmptyProfessorState,
   InfoLine,
-  PortalCard,
   ProfessorPageHeader,
-  ProfessorStatCard,
-  ProfessorStatGrid,
   StatusPill,
 } from "@/components/professor/professor-ui";
 import { TeacherPayoutRequestForm } from "@/components/professor/teacher-payout-request-form";
@@ -229,24 +227,14 @@ export default async function ProfesseurPaiementsPage() {
         </div>
       </section>
 
-      <ProfessorStatGrid className="min-[680px]:grid-cols-2 xl:grid-cols-6" balanceOdd={false}>
-        <ProfessorStatCard label="Net prévu" value={formatFCFA(totalNet)} detail="Toutes les séances attribuées, libérées ou encore bloquées" icon="wallet" />
-        <ProfessorStatCard label="Déjà payé" value={formatFCFA(totalPaid)} detail="Versements enregistrés par le service client" icon="check" />
-        <ProfessorStatCard label="Reste dû" value={formatFCFA(remaining)} detail="Montant encore à traiter côté service client" icon="clock" />
-        <ProfessorStatCard label="Demandable" value={formatFCFA(requestableAmount)} detail="Après demandes et transferts déjà réservés" icon="wallet" />
-        <ProfessorStatCard label="Encore bloqué" value={formatFCFA(blockedAmount)} detail="En attente de confirmation ou contrôle" icon="clock" />
-        <ProfessorStatCard label="Retenues" value={formatFCFA(totalRetained)} detail="Retenues validées par le service client" icon="alert" />
-      </ProfessorStatGrid>
-
-      <PortalCard>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div>
-            <p className="text-base font-semibold text-[#111827]">Décompte comptable</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Calcul appliqué : montant payable professeur - versements enregistrés - retenues validées = reste dû. Les suppléments de report confirmés sont inclus dans le net, et les indemnités d'annulation apparaissent séparément lorsque le client a été remboursé ou que les fonds sont retenus.
-            </p>
-          </div>
-          <div className="grid gap-2 text-sm min-[520px]:grid-cols-3 lg:min-w-[36rem]">
+      <ProfessorDisclosure
+        title="Voir le calcul exact"
+        description="Net, fonds bloqués, retenues et transferts en cours."
+      >
+        <p className="mb-3 text-xs font-semibold leading-5 text-[#64748B]">
+          Net prévu − paiements reçus − retenues validées = reste à recevoir.
+        </p>
+        <div className="grid gap-2 text-sm min-[520px]:grid-cols-3">
             <AccountingMini label="Net prévu" value={formatFCFA(totalNet)} />
             <AccountingMini label="Déjà payé" value={formatFCFA(totalPaid)} />
             <AccountingMini label="Reste dû" value={formatFCFA(remaining)} strong />
@@ -256,31 +244,28 @@ export default async function ProfesseurPaiementsPage() {
             <AccountingMini label="Transferts en cours" value={formatFCFA(draftReservedAmount)} />
             <AccountingMini label="Demandable" value={formatFCFA(requestableAmount)} strong />
             <AccountingMini label="Encore bloqué" value={formatFCFA(blockedAmount)} />
+            <AccountingMini label="Retenues validées" value={formatFCFA(totalRetained)} />
             <AccountingMini label="En contrôle" value={formatFCFA(underControlAmount)} />
-          </div>
         </div>
-      </PortalCard>
+      </ProfessorDisclosure>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <TeacherPayoutRequestForm
-          readyToReceive={readyToReceive}
-          pendingRequested={pendingRequested}
-          draftReservedAmount={draftReservedAmount}
-          defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
-          defaultMethod={teacher.defaultPayoutMethod}
-          payoutInstructions={teacher.payoutInstructions}
-          minimumProcessingHours={platformSettings.payoutDelay.minimumHours}
-          maximumProcessingHours={platformSettings.payoutDelay.maximumHours}
-        />
+      <TeacherPayoutRequestForm
+        readyToReceive={readyToReceive}
+        pendingRequested={pendingRequested}
+        draftReservedAmount={draftReservedAmount}
+        defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
+        defaultMethod={teacher.defaultPayoutMethod}
+        payoutInstructions={teacher.payoutInstructions}
+        minimumProcessingHours={platformSettings.payoutDelay.minimumHours}
+        maximumProcessingHours={platformSettings.payoutDelay.maximumHours}
+      />
 
-        <PortalCard>
-          <div className="flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-[#111827]">Demandes de paiement</h2>
-              <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-                Les demandes restent en attente jusqu'à validation et versement réel par le service client.
-              </p>
-            </div>
+      <ProfessorDisclosure
+        title="Mes demandes"
+        description="Demandes en attente et paiements traités."
+        count={payoutRequests.length}
+      >
+          <div className="flex justify-end">
             <div className="rounded-lg border border-[#E6EAF3] bg-white px-3 py-2 text-right">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Demandable</p>
               <p className="text-sm font-semibold text-[#111B4D]">{formatFCFA(requestableAmount)}</p>
@@ -349,13 +334,15 @@ export default async function ProfesseurPaiementsPage() {
               ))}
             </div>
           )}
-        </PortalCard>
-      </div>
+      </ProfessorDisclosure>
 
       <div className="grid gap-5 xl:grid-cols-[1.25fr_0.9fr]">
-        <PortalCard>
-          <h2 className="text-base font-semibold text-[#111827]">Grand livre professeur</h2>
-          <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+        <ProfessorDisclosure
+          title="Détail des cours"
+          description="Montants générés par chaque cours."
+          count={visibleSettlementRows.length}
+        >
+          <p className="text-xs font-semibold leading-5 text-[#64748B]">
             100 dernières lignes affichées. Les totaux ci-dessus couvrent toutes les périodes.
           </p>
           {visibleSettlementRows.length === 0 ? (
@@ -396,15 +383,16 @@ export default async function ProfesseurPaiementsPage() {
               );})}
             </div>
           )}
-        </PortalCard>
+        </ProfessorDisclosure>
 
-        <PortalCard>
-          <div className="flex items-center gap-2">
-            <ReceiptText className="h-5 w-5 text-[#111B4D]" />
-            <h2 className="text-base font-semibold text-[#111827]">Factures / reçus de paiement</h2>
-          </div>
+        <ProfessorDisclosure
+          title="Mes reçus"
+          description="Preuves des transferts confirmés."
+          count={payouts.length}
+          icon={<ReceiptText className="h-5 w-5" aria-hidden />}
+        >
           {payouts.length === 0 ? (
-            <p className="mt-4 text-sm font-semibold leading-6 text-[#64748B]">Aucun versement enregistré pour le moment.</p>
+            <p className="text-sm font-semibold leading-6 text-[#64748B]">Aucun versement enregistré pour le moment.</p>
           ) : (
             <div className="mt-4 space-y-3">
               {payouts.map((payout) => (
@@ -485,9 +473,44 @@ export default async function ProfesseurPaiementsPage() {
               ))}
             </div>
           )}
-        </PortalCard>
+        </ProfessorDisclosure>
       </div>
     </div>
+  );
+}
+
+function ProfessorDisclosure({
+  title,
+  description,
+  count,
+  icon,
+  children,
+}: {
+  title: string;
+  description: string;
+  count?: number;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <details data-professor-payment-disclosure className="group overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">
+      <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#111B4D] [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-3">
+          {icon ? <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">{icon}</span> : null}
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-[#111827]">{title}</span>
+            <span className="mt-0.5 line-clamp-1 block text-xs font-semibold text-[#64748B]">{description}</span>
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-[#111B4D]">
+          {typeof count === "number" ? <span className="text-xs font-semibold tabular-nums">{count}</span> : null}
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+        </span>
+      </summary>
+      <div className="border-t border-[#EEF2F7] p-4 min-[640px]:p-5">
+        {children}
+      </div>
+    </details>
   );
 }
 

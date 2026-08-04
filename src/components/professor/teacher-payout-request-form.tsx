@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { formatFCFA } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-methods";
@@ -48,6 +48,7 @@ export function TeacherPayoutRequestForm({
   const [paymentPhoneConfirm, setPaymentPhoneConfirm] = useState(defaultPhone ?? "");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const pendingSubmissionRef = useRef<{ key: string; fingerprint: string } | null>(null);
 
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
@@ -83,6 +84,7 @@ export function TeacherPayoutRequestForm({
     }
     const idempotencyKey = pendingSubmissionRef.current.key;
     setLoading(true);
+    setNotice(null);
     try {
       const res = await fetch("/api/professor/payout-requests", {
         method: "POST",
@@ -101,9 +103,9 @@ export function TeacherPayoutRequestForm({
         return;
       }
       pendingSubmissionRef.current = null;
-      toast.success(data.idempotentReplay
+      setNotice(data.idempotentReplay
         ? "Cette demande avait déjà été reçue : aucune seconde réservation n'a été créée."
-        : `Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h après contrôle du service client.`);
+        : `Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h.`);
       setAmount("");
       setNote("");
       router.refresh();
@@ -115,41 +117,33 @@ export function TeacherPayoutRequestForm({
   };
 
   return (
-    <div data-professor-payout-request className="rounded-lg border border-[#E6EAF3] bg-white p-4">
-      <div className="flex flex-col gap-3 min-[640px]:flex-row min-[640px]:items-start min-[640px]:justify-between">
+    <div data-professor-payout-request className="rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-base font-semibold text-[#111827]">Demander un paiement</p>
-          <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-            Saisissez le montant souhaité, le moyen de paiement et le numéro exact. Retapez le numéro pour éviter toute erreur avant contrôle du service client.
-          </p>
-          <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold leading-5 text-emerald-800">
-            Montant exact garanti : les frais de transfert ou de retrait sont payés par Compétence et ne sont jamais déduits de votre solde.
-          </p>
-          <p className="mt-2 rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]">
-            Délai de traitement : toute demande validement envoyée est contrôlée puis traitée par le service client entre {minimumProcessingHours} heure(s) et {maximumProcessingHours} heure(s) ouvrées, selon les vérifications internes, les fonds disponibles, les litiges éventuels et la disponibilité du moyen de paiement choisi.
-          </p>
-          {payoutInstructions && (
-            <p className="mt-2 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 text-xs font-semibold leading-5 text-[#64748B]">
-              Consigne enregistrée : {payoutInstructions}
-            </p>
-          )}
+          <p className="text-lg font-semibold text-[#111827]">Retirer mon argent</p>
+          <p className="mt-1 text-sm font-semibold text-[#64748B]">Choisissez le montant et le numéro à payer.</p>
         </div>
-        <div className="rounded-lg border border-[#111B4D] bg-white px-3 py-2 text-right">
+        <div className="shrink-0 rounded-lg bg-[#EEF2FF] px-3 py-2 text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Disponible</p>
-          <p className="text-sm font-semibold text-[#111B4D]">{formatFCFA(requestableAmount)}</p>
+          <p className="text-base font-black text-[#111B4D]">{formatFCFA(requestableAmount)}</p>
         </div>
       </div>
 
-      <div data-professor-payout-fields className="mt-4 grid gap-3">
+      <p className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-emerald-700">
+        <CheckCircle2 className="h-4 w-4" aria-hidden />
+        Vous recevez le montant exact. Les frais sont pris en charge.
+      </p>
+
+      <div data-professor-payout-fields className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Montant demandé</label>
+          <label className="text-xs font-semibold text-[#475569]">Montant</label>
           <Input
             inputMode="numeric"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             placeholder="Ex : 25000"
             disabled={requestableAmount <= 0}
-            className="mt-1"
+            className="mt-1 min-h-12 text-base font-semibold"
           />
           {cleanAmount > requestableAmount && (
             <p className="mt-1 text-xs font-semibold text-red-700">Le montant dépasse le disponible ({formatFCFA(requestableAmount)}).</p>
@@ -161,19 +155,16 @@ export function TeacherPayoutRequestForm({
           )}
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Choisir où recevoir les fonds</p>
+          <p className="text-xs font-semibold text-[#475569]">Recevoir avec</p>
           <div className="mt-2">
             <PayoutMethodPicker value={method} onChange={setMethod} disabled={loading} />
           </div>
-          <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">
-            Votre choix est enregistré avec la demande et devient votre préférence pour les prochains paiements.
-          </p>
         </div>
       </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
+          <label className="text-xs font-semibold text-[#475569]">
             Numéro {paymentMethodLabel(method)}
           </label>
           <Input
@@ -182,54 +173,64 @@ export function TeacherPayoutRequestForm({
             onChange={(event) => setPaymentPhone(event.target.value)}
             placeholder="Ex : +225 07 00 00 00 00"
             disabled={requestableAmount <= 0}
-            className="mt-1"
+            className="mt-1 min-h-12"
           />
         </div>
         <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Confirmer le numéro</label>
+          <label className="text-xs font-semibold text-[#475569]">Retaper le numéro</label>
           <Input
             inputMode="tel"
             value={paymentPhoneConfirm}
             onChange={(event) => setPaymentPhoneConfirm(event.target.value)}
             placeholder="Retapez le numéro"
             disabled={requestableAmount <= 0}
-            className="mt-1"
+            className="mt-1 min-h-12"
           />
           {phoneMismatch && (
             <p className="mt-1 text-xs font-semibold text-red-700">Les deux numéros ne correspondent pas.</p>
           )}
           {phoneConfirmed && (
-            <p className="mt-1 text-xs font-semibold text-[#111B4D]">Numéro confirmé. Vérifiez encore l'indicatif et les chiffres avant l'envoi.</p>
+            <p className="mt-1 text-xs font-semibold text-emerald-700">Numéro confirmé.</p>
           )}
         </div>
       </div>
 
-      <div className="mt-3">
-        <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Note pour le service client</label>
-        <Textarea
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder="Ex : merci d'envoyer le paiement sur mon numéro Wave principal."
-          disabled={requestableAmount <= 0}
-          className="mt-1 min-h-24"
-        />
-        <p className={noteTooLong ? "mt-1 text-xs font-semibold text-red-700" : "mt-1 text-xs font-semibold text-[#64748B]"}>
-          {note.trim().length}/{MAX_NOTE_LENGTH} caractères
-        </p>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold text-[#64748B]">
-          <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
-          <span>
-            {pendingRequested > 0 || draftReservedAmount > 0
-              ? `${formatFCFA(pendingRequested + draftReservedAmount)} déjà réservé (demandes et transferts en cours).`
-              : "Aucune demande ou transfert en attente."}
-          </span>
+      <details className="group mt-3 rounded-lg border border-[#E6EAF3] bg-white">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-semibold text-[#475569] [&::-webkit-details-marker]:hidden">
+          Note ou consigne facultative
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="border-t border-[#EEF2F7] p-3">
+          <Textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Ajouter une précision au service client"
+            disabled={requestableAmount <= 0}
+            className="min-h-20"
+          />
+          <p className={noteTooLong ? "mt-1 text-xs font-semibold text-red-700" : "mt-1 text-xs font-semibold text-[#64748B]"}>
+            {note.trim().length}/{MAX_NOTE_LENGTH}
+          </p>
+          {payoutInstructions ? <p className="mt-2 text-xs font-semibold leading-5 text-[#64748B]">Consigne enregistrée : {payoutInstructions}</p> : null}
         </div>
-        <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+      </details>
+
+      {notice ? (
+        <p role="status" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+          <CheckCircle2 className="mr-1.5 inline h-4 w-4" aria-hidden />
+          {notice}
+        </p>
+      ) : null}
+
+      <div className="mt-4 grid gap-2 min-[640px]:grid-cols-[minmax(0,1fr)_auto] min-[640px]:items-center">
+        <p className="text-xs font-semibold leading-5 text-[#64748B]">
+          {pendingRequested > 0 || draftReservedAmount > 0
+            ? `${formatFCFA(pendingRequested + draftReservedAmount)} déjà en cours.`
+            : `Traitement : ${minimumProcessingHours}h à ${maximumProcessingHours}h après contrôle.`}
+        </p>
+        <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-12 w-full rounded-lg bg-[#111B4D] px-6 text-white hover:bg-[#1E2A78] min-[640px]:w-auto">
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-          Envoyer la demande
+          {cleanAmount > 0 && cleanAmount <= requestableAmount ? `Retirer ${formatFCFA(cleanAmount)}` : "Retirer"}
         </Button>
       </div>
     </div>

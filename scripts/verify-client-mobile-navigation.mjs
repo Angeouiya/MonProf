@@ -17,6 +17,9 @@ const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
+const professorImagePath = "src/components/shared/professor-image.tsx";
+const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
+const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
 const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
 const clientPricingCopyPaths = [
   "src/app/client/page.tsx",
@@ -63,6 +66,9 @@ const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
 const teacherCard = read(teacherCardPath);
+const professorImage = read(professorImagePath);
+const professorMedia = read(professorMediaPath);
+const professorMediaApi = read(professorMediaApiPath);
 const pricingBreakdown = read(pricingBreakdownPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
@@ -531,9 +537,28 @@ record(
   /data-public-teacher-photo-layout/.test(publicTeacherDetail)
     && /data-public-teacher-cover/.test(publicTeacherDetail)
     && /aspect-\[3\/1\]/.test(publicTeacherDetail)
-    && /left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail)
-    && /sm:left-6 sm:-translate-x-0/.test(publicTeacherDetail)
-    && /size=\{124\}/.test(publicTeacherDetail),
+    && /className="object-contain"/.test(publicTeacherDetail)
+    && /grid-cols-\[112px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
+    && /size=\{104\}/.test(publicTeacherDetail)
+    && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)
+    && !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
+);
+
+record(
+  "Verified badge overlays the portrait without changing its measured size",
+  /data-professor-image-badge/.test(professorImage)
+    && /style=\{\{ width: px, height: px \}\}/.test(professorImage)
+    && !/reservedBadgeOffset/.test(professorImage),
+);
+
+record(
+  "Professor can choose a full image, a premium color, or import an uncropped cover",
+  /data-professor-cover-preview/.test(professorMedia)
+    && /data-professor-cover-colors/.test(professorMedia)
+    && /data-professor-cover-images/.test(professorMedia)
+    && /Importer une couverture/.test(professorMedia)
+    && /className="object-contain"/.test(professorMedia)
+    && /fit: action === "custom-cover" \? "contain" : "cover"/.test(professorMediaApi),
 );
 
 record(

@@ -43,10 +43,10 @@ record(
 );
 
 record(
-  "Professor statistics use a reusable two-column mobile grid",
+  "Professor summary screens reuse the compact two-column mobile grid",
   /export function ProfessorStatGrid/.test(ui)
     && /grid grid-cols-2 gap-2 min-\[680px\]:gap-3/.test(ui)
-    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 3,
+    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 2,
 );
 
 record(

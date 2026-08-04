@@ -84,8 +84,8 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
       </PageHeader>
       {teacher.pendingCoverUrl ? (
         <section className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
-          <div className="relative aspect-[3/1] min-h-40 w-full overflow-hidden bg-[#111B4D]">
-            <Image src={teacher.pendingCoverUrl} alt="Couverture personnalisée en attente" fill sizes="100vw" className="object-cover" />
+          <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]">
+            <Image src={teacher.pendingCoverUrl} alt="Couverture personnalisée en attente" fill sizes="100vw" className="object-contain" />
           </div>
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

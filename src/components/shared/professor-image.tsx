@@ -75,12 +75,11 @@ export function ProfessorImage({
   const hasImage = Boolean(photoUrl && failedSrc !== photoUrl);
   const isRemote = Boolean(photoUrl && isRemoteImage(photoUrl));
   const badge = resolveBadgeMetrics(px);
-  const reservedBadgeOffset = verified ? badge.offset : 0;
 
   return (
     <span
-      className={cn("relative inline-flex shrink-0 items-start overflow-visible", className)}
-      style={{ width: px + reservedBadgeOffset, height: px + reservedBadgeOffset }}
+      className={cn("relative inline-flex shrink-0 overflow-visible", className)}
+      style={{ width: px, height: px }}
       aria-label={hasImage ? label : `Avatar du professeur ${displayName}`}
     >
       <span
@@ -135,8 +134,8 @@ export function ProfessorImage({
           style={{
             width: badge.size,
             height: badge.size,
-            right: 0,
-            bottom: 0,
+            right: Math.max(1, Math.round(px * 0.015)),
+            bottom: Math.max(1, Math.round(px * 0.015)),
             borderWidth: badge.borderWidth,
             outline: `${badge.haloWidth}px solid #FFFFFF`,
           }}

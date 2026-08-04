@@ -14,6 +14,7 @@ import {
   temporaryPasswordExpiresAt,
 } from "@/lib/temporary-password-policy";
 import { hasTeacherJourney } from "@/lib/teacher-journeys";
+import { selectLeastUsedTeacherCover } from "@/lib/teacher-cover";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -134,11 +135,17 @@ export async function POST(req: NextRequest) {
       ? Math.max(0, Math.round(Number(pricePerSession)))
       : 10_000;
     const portalTemporaryPasswordIssuedAt = enablePortal ? new Date() : null;
+    const existingCovers = await db.teacher.findMany({ select: { coverUrl: true } });
+    const automaticCover = selectLeastUsedTeacherCover(
+      existingCovers.map((item) => item.coverUrl),
+      `${phone}:${fullName}`,
+    );
     const teacher = await db.teacher.create({
       data: {
         fullName,
         professionalName: professionalName || null,
         photoUrl: storedPhotoUrl,
+        coverUrl: automaticCover.url,
         phone,
         email: email || null,
         commune: normalizedCommune || null,

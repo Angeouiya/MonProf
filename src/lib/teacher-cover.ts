@@ -115,10 +115,53 @@ export const TEACHER_COVER_CATALOG = [
   },
 ] as const;
 
-export type TeacherCoverCatalogItem = (typeof TEACHER_COVER_CATALOG)[number];
+export const TEACHER_COVER_COLOR_CATALOG = [
+  { id: "color-bleu-nuit", label: "Bleu nuit", url: "/images/teacher-covers/colors/bleu-nuit.svg" },
+  { id: "color-indigo", label: "Indigo", url: "/images/teacher-covers/colors/indigo.svg" },
+  { id: "color-emeraude", label: "Émeraude", url: "/images/teacher-covers/colors/emeraude.svg" },
+  { id: "color-lagune", label: "Lagune", url: "/images/teacher-covers/colors/lagune.svg" },
+  { id: "color-terracotta", label: "Terracotta", url: "/images/teacher-covers/colors/terracotta.svg" },
+  { id: "color-sable", label: "Sable", url: "/images/teacher-covers/colors/sable.svg" },
+  { id: "color-aubergine", label: "Aubergine", url: "/images/teacher-covers/colors/aubergine.svg" },
+  { id: "color-ardoise", label: "Ardoise", url: "/images/teacher-covers/colors/ardoise.svg" },
+] as const;
 
-export function isTeacherCoverCatalogUrl(value: unknown): value is TeacherCoverCatalogItem["url"] {
-  return typeof value === "string" && TEACHER_COVER_CATALOG.some((item) => item.url === value);
+export type TeacherCoverCatalogItem = (typeof TEACHER_COVER_CATALOG)[number];
+export type TeacherCoverColorItem = (typeof TEACHER_COVER_COLOR_CATALOG)[number];
+export type TeacherCoverOption = TeacherCoverCatalogItem | TeacherCoverColorItem;
+
+function stableCoverHash(value: string) {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash);
+}
+
+export function selectLeastUsedTeacherCover(
+  usedCoverUrls: Array<string | null | undefined>,
+  seed: string,
+): TeacherCoverCatalogItem {
+  const usage = new Map<string, number>(TEACHER_COVER_CATALOG.map((cover) => [cover.url, 0]));
+  for (const url of usedCoverUrls) {
+    if (url && usage.has(url)) usage.set(url, (usage.get(url) ?? 0) + 1);
+  }
+
+  const start = stableCoverHash(seed) % TEACHER_COVER_CATALOG.length;
+  let selected = TEACHER_COVER_CATALOG[start];
+  for (let offset = 1; offset < TEACHER_COVER_CATALOG.length; offset += 1) {
+    const candidate = TEACHER_COVER_CATALOG[(start + offset) % TEACHER_COVER_CATALOG.length];
+    if ((usage.get(candidate.url) ?? 0) < (usage.get(selected.url) ?? 0)) selected = candidate;
+  }
+  return selected;
+}
+
+export function isTeacherCoverCatalogUrl(value: unknown): value is TeacherCoverOption["url"] {
+  return typeof value === "string" && (
+    TEACHER_COVER_CATALOG.some((item) => item.url === value)
+    || TEACHER_COVER_COLOR_CATALOG.some((item) => item.url === value)
+  );
 }
 
 export function resolveTeacherCover({
@@ -127,10 +170,11 @@ export function resolveTeacherCover({
 }: {
   teacherId: string;
   coverUrl?: string | null;
-}): TeacherCoverCatalogItem | { id: "custom"; label: "Couverture personnalisée"; description: string; url: string } {
+}): TeacherCoverOption | { id: "custom"; label: "Couverture personnalisée"; description: string; url: string } {
   const custom = coverUrl?.trim();
   if (custom) {
-    const catalogItem = TEACHER_COVER_CATALOG.find((item) => item.url === custom);
+    const catalogItem = [...TEACHER_COVER_CATALOG, ...TEACHER_COVER_COLOR_CATALOG]
+      .find((item) => item.url === custom);
     return catalogItem ?? {
       id: "custom",
       label: "Couverture personnalisée",
@@ -139,10 +183,5 @@ export function resolveTeacherCover({
     };
   }
 
-  let hash = 2166136261;
-  for (const character of teacherId) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return TEACHER_COVER_CATALOG[Math.abs(hash) % TEACHER_COVER_CATALOG.length];
+  return TEACHER_COVER_CATALOG[stableCoverHash(teacherId) % TEACHER_COVER_CATALOG.length];
 }

@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { Camera, Check, ImagePlus, Loader2, Palette, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ProfessorImage } from "@/components/shared/professor-image";
-import { TEACHER_COVER_CATALOG } from "@/lib/teacher-cover";
+import { TEACHER_COVER_CATALOG, TEACHER_COVER_COLOR_CATALOG } from "@/lib/teacher-cover";
 
 type TeacherProfileMediaFormProps = {
   teacherName: string;
@@ -64,24 +64,24 @@ export function TeacherProfileMediaForm({
     const formData = new FormData();
     formData.set("action", action);
     if (nextCoverUrl) formData.set("coverUrl", nextCoverUrl);
+    const isColor = TEACHER_COVER_COLOR_CATALOG.some((cover) => cover.url === nextCoverUrl);
     void send(formData, nextCoverUrl ?? action, action === "automatic-cover"
       ? "La couverture automatique a été activée."
-      : "Couverture du catalogue sélectionnée.");
+      : isColor ? "Couleur de couverture sélectionnée." : "Couverture du catalogue sélectionnée.");
   }
 
   return (
     <div className="space-y-5">
       <div className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white">
-        <div className="relative aspect-[3/1] min-h-40 w-full overflow-hidden bg-[#111B4D]">
-          <Image src={coverUrl} alt="Couverture pédagogique du profil" fill sizes="(max-width: 1280px) 100vw, 1100px" className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#08103B]/55 via-transparent to-transparent" />
+        <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]" data-professor-cover-preview>
+          <Image src={coverUrl} alt="Couverture pédagogique du profil" fill sizes="(max-width: 1280px) 100vw, 1100px" className="object-contain" priority />
         </div>
-        <div className="relative px-4 pb-4 pt-14 sm:px-6 sm:pt-4">
-          <div className="absolute -top-14 left-1/2 -translate-x-1/2 rounded-full bg-white p-1.5 shadow-lg sm:left-6 sm:-translate-x-0">
-            <ProfessorImage photoUrl={photoUrl} name={teacherName} size={112} verified={verified} />
+        <div className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-3 border-t border-[#E3E8F2] px-4 py-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:px-6" data-professor-photo-preview>
+          <div className="w-fit rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]">
+            <ProfessorImage photoUrl={photoUrl} name={teacherName} size={96} verified={verified} />
           </div>
-          <div className="sm:ml-36">
-            <p className="text-lg font-semibold text-[#111827]">{teacherName}</p>
+          <div className="min-w-0 text-left">
+            <p className="break-words text-lg font-semibold leading-tight text-[#111827] sm:text-xl">{teacherName}</p>
             <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">Votre présentation publique, optimisée sur mobile et ordinateur.</p>
           </div>
         </div>
@@ -105,6 +105,9 @@ export function TeacherProfileMediaForm({
           Importer une couverture
         </Button>
       </div>
+      <p className="text-sm font-semibold leading-6 text-[#64748B]">
+        Choisissez une image du catalogue, un fond coloré ou importez votre propre couverture. L'image reste toujours visible en entier.
+      </p>
       {notice ? (
         <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
           <Check className="mr-1.5 inline h-4 w-4" />
@@ -118,7 +121,38 @@ export function TeacherProfileMediaForm({
         </div>
       ) : null}
 
-      <div>
+      <div data-professor-cover-colors>
+        <div className="flex items-center gap-2">
+          <Palette className="h-4 w-4 text-[#111B4D]" />
+          <p className="text-sm font-semibold text-[#111827]">Couleurs premium</p>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {TEACHER_COVER_COLOR_CATALOG.map((cover) => {
+            const selected = selectedCoverUrl === cover.url;
+            return (
+              <button
+                key={cover.id}
+                type="button"
+                disabled={Boolean(pending)}
+                onClick={() => selectCover("catalog-cover", cover.url)}
+                className={`overflow-hidden rounded-lg border bg-white text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111B4D] ${selected ? "border-[#111B4D] ring-2 ring-[#111B4D]/15" : "border-[#DDE6F7] hover:border-[#111B4D]"}`}
+                aria-pressed={selected}
+              >
+                <span className="relative block aspect-[3/1] overflow-hidden bg-[#111B4D]">
+                  <Image src={cover.url} alt="" fill sizes="(max-width: 640px) 50vw, 240px" className="object-contain" />
+                  {pending === cover.url ? <span className="absolute inset-0 grid place-items-center bg-[#08103B]/55 text-white"><Loader2 className="h-5 w-5 animate-spin" /></span> : null}
+                </span>
+                <span className="flex items-center justify-between gap-2 px-2.5 py-2 text-xs font-semibold text-[#111827]">
+                  {cover.label}
+                  {selected ? <Check className="h-4 w-4 shrink-0 text-[#111B4D]" /> : null}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div data-professor-cover-images>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-[#111827]">Catalogue pédagogique Compétence.CI · {TEACHER_COVER_CATALOG.length} couvertures</p>
@@ -142,7 +176,7 @@ export function TeacherProfileMediaForm({
                 aria-pressed={selected}
               >
                 <span className="relative block aspect-[3/1] overflow-hidden bg-[#111B4D]">
-                  <Image src={cover.url} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover" />
+                  <Image src={cover.url} alt="" fill sizes="(max-width: 640px) 100vw, 33vw" className="object-contain" />
                   {pending === cover.url ? <span className="absolute inset-0 grid place-items-center bg-[#08103B]/55 text-white"><Loader2 className="h-5 w-5 animate-spin" /></span> : null}
                 </span>
                 <span className="flex items-start justify-between gap-2 p-3">

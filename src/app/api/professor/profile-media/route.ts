@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { requireTeacherApi } from "@/lib/teacher-auth";
-import { isTeacherCoverCatalogUrl } from "@/lib/teacher-cover";
+import { isTeacherCoverCatalogUrl, selectLeastUsedTeacherCover } from "@/lib/teacher-cover";
 
 export const runtime = "nodejs";
 
@@ -35,8 +35,20 @@ export async function POST(request: NextRequest) {
     const action = String(formData.get("action") ?? "");
 
     if (action === "automatic-cover") {
-      await updateTeacherMedia(teacher.id, { coverUrl: null, pendingCoverUrl: null }, "Couverture automatique activée");
-      return NextResponse.json({ ok: true, coverUrl: null });
+      const otherCovers = await db.teacher.findMany({
+        where: { id: { not: teacher.id } },
+        select: { coverUrl: true },
+      });
+      const automaticCover = selectLeastUsedTeacherCover(
+        otherCovers.map((item) => item.coverUrl),
+        teacher.id,
+      );
+      await updateTeacherMedia(
+        teacher.id,
+        { coverUrl: automaticCover.url, pendingCoverUrl: null },
+        "Couverture automatique activée",
+      );
+      return NextResponse.json({ ok: true, coverUrl: automaticCover.url });
     }
 
     if (action === "catalog-cover") {
@@ -84,7 +96,13 @@ export async function POST(request: NextRequest) {
       : { width: 1000, height: 1000 };
     const { data, info } = await sharp(input, { failOn: "error", limitInputPixels: 40_000_000 })
       .rotate()
-      .resize({ ...dimensions, fit: "cover", position: "attention", withoutEnlargement: false })
+      .resize({
+        ...dimensions,
+        fit: action === "custom-cover" ? "contain" : "cover",
+        position: action === "custom-cover" ? "centre" : "attention",
+        background: { r: 17, g: 27, b: 77, alpha: 1 },
+        withoutEnlargement: false,
+      })
       .webp({ quality: action === "custom-cover" ? 82 : 86, effort: 4 })
       .toBuffer({ resolveWithObject: true });
 
