@@ -126,6 +126,11 @@ checkDirectoryContainsSql("20260804000000_teacher_journey_offers", [
   'ADD COLUMN "offersProfessionalTraining" BOOLEAN NOT NULL DEFAULT true',
   'ADD CONSTRAINT "Teacher_at_least_one_journey_check"',
 ]);
+checkDirectoryContainsSql("20260805000000_teacher_journey_strict_defaults", [
+  'ALTER TABLE "Teacher"',
+  'ALTER COLUMN "offersFrenchSystem" SET DEFAULT false',
+  'ALTER COLUMN "offersProfessionalTraining" SET DEFAULT false',
+]);
 
 const readinessScript = fs.readFileSync("scripts/check-database-readiness.mjs", "utf8");
 record(

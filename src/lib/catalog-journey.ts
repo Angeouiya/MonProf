@@ -41,6 +41,8 @@ export function filterSubjectsForJourney<
   T extends { name: string; icon?: string | null },
 >(subjects: T[], journey: TeacherJourney) {
   return subjects.filter((item) => {
+    const explicitJourney = explicitSubjectJourney(item.name);
+    if (explicitJourney) return explicitJourney === journey || (explicitJourney === "school" && journey !== "professionnel");
     const indexedJourneys = SUBJECT_JOURNEY_INDEX.get(normalizeCatalogName(item.name));
     if (indexedJourneys) return indexedJourneys.has(journey);
     return subjectCategoryMatchesJourney(getSubjectCategory(item.name, item.icon), journey);
@@ -56,10 +58,24 @@ export function filterLevelsForJourney<
 }
 
 export function subjectNameMatchesJourney(name: string, journey: TeacherJourney) {
+  const explicitJourney = explicitSubjectJourney(name);
+  if (explicitJourney) return explicitJourney === journey || (explicitJourney === "school" && journey !== "professionnel");
   const indexedJourneys = SUBJECT_JOURNEY_INDEX.get(normalizeCatalogName(name));
   return indexedJourneys
     ? indexedJourneys.has(journey)
     : subjectCategoryMatchesJourney(getSubjectCategory(name), journey);
+}
+
+export function teacherJourneyCatalogClauses<
+  S extends { slug: string },
+  L extends { slug: string },
+>(subjects: S[], levels: L[]) {
+  const subjectSlugs = subjects.map((item) => item.slug);
+  const levelSlugs = levels.map((item) => item.slug);
+  return [
+    { subjects: { some: { subject: { slug: { in: subjectSlugs } } } } },
+    { levels: { some: { level: { slug: { in: levelSlugs } } } } },
+  ];
 }
 
 function buildSubjectJourneyIndex() {
@@ -97,4 +113,13 @@ function normalizeCatalogName(value: string) {
     .replace(/[^a-z0-9]+/gi, " ")
     .trim()
     .toLowerCase();
+}
+
+function explicitSubjectJourney(value: string): TeacherJourney | "school" | null {
+  const normalized = normalizeCatalogName(value);
+  if (/\b(scolaire|enfant|aide aux devoirs|pre lecture)\b/.test(normalized)) return "school";
+  if (/\b(professionnel|business|entreprise|metier|pratique|administrative|entretien embauche|redaction de cv)\b/.test(normalized)) {
+    return "professionnel";
+  }
+  return null;
 }

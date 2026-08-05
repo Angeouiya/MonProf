@@ -89,6 +89,9 @@ export default async function TeacherDetailPage({
     name: item.level.name,
     order: item.level.order,
   })), activeJourney);
+  if (journey && (journeySubjects.length === 0 || journeyLevels.length === 0)) {
+    notFound();
+  }
   const primarySubject =
     journeySubjects.find((item) => item.isPrimary)?.subject.name ??
     journeySubjects[0]?.subject.name ??

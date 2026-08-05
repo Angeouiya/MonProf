@@ -21,10 +21,10 @@ const checks = [];
 const check = (label, ok) => checks.push({ label, ok: Boolean(ok) });
 
 check(
-  "One teacher owns three cumulative mini-app authorizations",
+  "One teacher owns three cumulative mini-app authorizations with safe defaults",
   /offersIvorianSystem\s+Boolean\s+@default\(true\)/.test(schema)
-    && /offersFrenchSystem\s+Boolean\s+@default\(true\)/.test(schema)
-    && /offersProfessionalTraining\s+Boolean\s+@default\(true\)/.test(schema)
+    && /offersFrenchSystem\s+Boolean\s+@default\(false\)/.test(schema)
+    && /offersProfessionalTraining\s+Boolean\s+@default\(false\)/.test(schema)
     && /Teacher_at_least_one_journey_check/.test(migration),
 );
 check(
@@ -44,11 +44,13 @@ check(
     && /hasTeacherJourney\(journeyEligibility\)/.test(updateTeacher),
 );
 check(
-  "Public mini-app tabs filter real professor eligibility",
+  "Public mini-app tabs require authorization plus compatible subject and level",
   /teacherJourneyWhere\(journey\)/.test(publicTeachers)
+    && /teacherJourneyCatalogClauses\(subjects, levels\)/.test(publicTeachers)
     && /TEACHER_JOURNEYS\.map/.test(publicTeachers)
     && /aria-label="Choisir une mini-application"/.test(publicTeachers)
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherApi)
+    && /teacherJourneyCatalogClauses\(subjects, levels\)/.test(publicTeacherApi)
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetail),
 );
 check(
@@ -61,6 +63,7 @@ check(
 check(
   "Authenticated client search keeps the mini-app through booking",
   /teacherJourneyWhere\(journey\)/.test(clientSearch)
+    && /teacherJourneyCatalogClauses\(subjects, levels\)/.test(clientSearch)
     && /data-client-journey-tabs/.test(clientSearch)
     && /teacherId=\$\{t\.id\}&journey=\$\{journey\}/.test(clientSearch)
     && /data-client-dashboard-journeys/.test(clientDashboard)
@@ -70,7 +73,9 @@ check(
 check(
   "Booking UI exposes only mini-apps enabled for the professor",
   /teacherEligibleJourneys\(teacher\)/.test(bookingPage)
-    && /teacherSupportsJourney\(teacher, initialJourney\)/.test(bookingPage)
+    && /filterSubjectsForJourney\(teacher\.subjects/.test(bookingPage)
+    && /filterLevelsForJourney\(teacher\.levels/.test(bookingPage)
+    && /!eligibleJourneys\.includes\(initialJourney\)/.test(bookingPage)
     && /eligibleJourneys: BookingJourney\[\]/.test(bookingForm)
     && /filter\(\(\{ value \}\) => eligibleJourneys\.includes\(value\)\)/.test(bookingForm),
 );

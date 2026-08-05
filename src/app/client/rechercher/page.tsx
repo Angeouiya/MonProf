@@ -31,6 +31,7 @@ import {
   filterLevelsForJourney,
   filterSubjectsForJourney,
   subjectNameMatchesJourney,
+  teacherJourneyCatalogClauses,
 } from "@/lib/catalog-journey";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 import {
@@ -117,7 +118,11 @@ export default async function RechercherPage({
     const where: any = {
       ...visibleTeacherWhere,
       ...teacherJourneyWhere(journey),
-      AND: [...visibleTeacherWhere.AND, ...buildTeacherSearchClauses(q)],
+      AND: [
+        ...visibleTeacherWhere.AND,
+        ...teacherJourneyCatalogClauses(subjects, levels),
+        ...buildTeacherSearchClauses(q),
+      ],
     };
     if (subject) where.subjects = { some: { subject: { slug: subject } } };
     if (level) where.levels = { some: { level: { slug: level } } };

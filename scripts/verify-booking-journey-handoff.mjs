@@ -73,7 +73,9 @@ const checks = [
     bookingPage.includes('if (!teacherId) redirect("/client/rechercher")')
       && bookingPage.includes('initialJourney={initialJourney}')
       && bookingPage.includes('parseTeacherJourney(requestedJourney)')
-      && bookingPage.includes('teacherSupportsJourney(teacher, initialJourney)'),
+      && bookingPage.includes('!eligibleJourneys.includes(initialJourney)')
+      && bookingPage.includes('filterSubjectsForJourney(teacher.subjects')
+      && bookingPage.includes('filterLevelsForJourney(teacher.levels'),
   ],
   [
     "Booking form seeds the chosen journey and never displays a fabricated price before selection",

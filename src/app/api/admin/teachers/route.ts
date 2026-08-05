@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
     const effectiveOffersHome = offersHome ?? true;
     const journeyEligibility = {
       offersIvorianSystem: offersIvorianSystem ?? true,
-      offersFrenchSystem: offersFrenchSystem ?? true,
-      offersProfessionalTraining: offersProfessionalTraining ?? true,
+      offersFrenchSystem: offersFrenchSystem ?? false,
+      offersProfessionalTraining: offersProfessionalTraining ?? false,
     };
     if (!hasTeacherJourney(journeyEligibility)) {
       return NextResponse.json({ error: "Activez au moins une mini-application pour ce professeur." }, { status: 400 });

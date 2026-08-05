@@ -6,8 +6,8 @@ import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   parseTeacherJourney,
   teacherEligibleJourneys,
-  teacherSupportsJourney,
 } from "@/lib/teacher-journeys";
+import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +29,17 @@ export default async function ReserverPage({
     },
   });
   if (!teacher) notFound();
-  if (initialJourney && !teacherSupportsJourney(teacher, initialJourney)) notFound();
-  const eligibleJourneys = teacherEligibleJourneys(teacher);
+  const eligibleJourneys = teacherEligibleJourneys(teacher).filter((journey) => (
+    filterSubjectsForJourney(teacher.subjects.map((item) => ({
+      name: item.subject.name,
+      icon: item.subject.icon,
+    })), journey).length > 0
+    && filterLevelsForJourney(teacher.levels.map((item) => ({
+      name: item.level.name,
+      order: item.level.order,
+    })), journey).length > 0
+  ));
+  if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 
   const [{ communes }, platformSettings] = await Promise.all([
     getCachedTeacherSearchCatalog(),

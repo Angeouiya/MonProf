@@ -7,6 +7,7 @@ import {
   filterLevelsForJourney,
   filterSubjectsForJourney,
   subjectNameMatchesJourney,
+  teacherJourneyCatalogClauses,
 } from "@/lib/catalog-journey";
 
 export async function GET(req: NextRequest) {
@@ -52,7 +53,12 @@ export async function GET(req: NextRequest) {
     const where: any = {
       status: "ACTIVE",
       ...teacherJourneyWhere(journey),
-      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }, ...buildTeacherSearchClauses(search)],
+      AND: [
+        { photoUrl: { not: null } },
+        { photoUrl: { not: "" } },
+        ...teacherJourneyCatalogClauses(subjects, levels),
+        ...buildTeacherSearchClauses(search),
+      ],
     };
     if (subject) where.subjects = { some: { subject: { slug: subject } } };
     if (level) where.levels = { some: { level: { slug: level } } };
