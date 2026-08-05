@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 
 type PasswordInputProps = Omit<ComponentProps<typeof Input>, "type"> & {
   wrapperClassName?: string;
+  defaultVisible?: boolean;
 };
 
-export function PasswordInput({ className, wrapperClassName, ...props }: PasswordInputProps) {
-  const [visible, setVisible] = useState(false);
+export function PasswordInput({ className, wrapperClassName, defaultVisible = false, ...props }: PasswordInputProps) {
+  const [visible, setVisible] = useState(defaultVisible);
 
   return (
     <div className={cn("relative", wrapperClassName)} data-password-field>

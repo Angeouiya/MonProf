@@ -14,7 +14,8 @@ export default function ClientError({
   return (
     <section
       data-client-error
-      className="grid min-h-[calc(100dvh-var(--app-topbar-height)-2rem)] place-items-center bg-white px-3 py-6 text-[#111827]"
+      className="grid place-items-center bg-white px-3 py-6 text-[#111827]"
+      style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 2rem)" }}
       aria-live="polite"
     >
       <div className="w-full max-w-2xl rounded-lg border border-[#D8DEE9] bg-white p-4 min-[560px]:p-6">

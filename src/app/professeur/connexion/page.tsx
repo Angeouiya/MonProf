@@ -4,10 +4,11 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
-import { ArrowRight, CheckCircle2, Eye, EyeOff, Info, Loader2, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Info, Loader2, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +21,6 @@ function ProfesseurConnexionContent() {
   const denied = searchParams.get("error") === "access";
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assistanceOpen, setAssistanceOpen] = useState(false);
   const [assistancePhone, setAssistancePhone] = useState("");
@@ -208,9 +208,8 @@ function ProfesseurConnexionContent() {
                   <Label htmlFor="teacher-password">Mot de passe d'accès</Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                    <Input
+                    <PasswordInput
                       id="teacher-password"
-                      type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       required
                       value={password}
@@ -218,14 +217,6 @@ function ProfesseurConnexionContent() {
                       placeholder="••••••••"
                       className="h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
                   </div>
                 </div>
 

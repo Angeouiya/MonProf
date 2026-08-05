@@ -31,6 +31,8 @@ assert.deepEqual(professionalLevels, ["BTS", "Formation adulte"]);
 
 const publicSearch = read("src/app/professeurs/page.tsx");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
+const publicTeachersApi = read("src/app/api/teachers/route.ts");
+const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const select = read("src/components/shared/searchable-catalog-select.tsx");
 
 assert.match(publicSearch, /filterSubjectsForJourney\(catalog\.subjects, journey\)/);
@@ -41,6 +43,13 @@ assert.match(clientSearch, /filterLevelsForJourney\(catalog\.levels, journey\)/)
 assert.match(clientSearch, /\["journey", "q", "subject", "level", "commune", "format", "sort"\]/);
 assert.match(clientSearch, /href=\{`\/client\/rechercher\?journey=\$\{journey\}`\}/);
 assert.doesNotMatch(clientSearch, /allowCustomValue/);
+assert.doesNotMatch(publicSearch, /Scolaire, université, concours, métiers/);
+assert.doesNotMatch(publicSearch, /t\.subjects\[0\]\?\.subject\.name/);
+assert.doesNotMatch(clientSearch, /t\.subjects\[0\]\?\.subject\.name/);
+assert.match(publicTeachersApi, /subjects: journeySubjects\.map\(\(item\) => item\.name\)/);
+assert.match(publicTeachersApi, /levels: journeyLevels\.map\(\(item\) => item\.name\)/);
+assert.match(bookingForm, /filterSubjectsForJourney\(subjects, bookingJourney\)/);
+assert.match(bookingForm, /filterLevelsForJourney\(levels, bookingJourney\)/);
 assert.match(select, /localSelection\.externalValue === externalValue/);
 
 console.log("OK Teacher filters stay scoped to the selected mini-application, preserve journey context and reject unknown communes.");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resolveTeacherJourney, teacherSupportsJourney } from "@/lib/teacher-journeys";
+import { filterLevelsForJourney, subjectNameMatchesJourney } from "@/lib/catalog-journey";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateReference } from "@/lib/format";
@@ -348,6 +349,16 @@ export async function POST(req: NextRequest) {
   if (!bookingJourney || !teacherSupportsJourney(teacher, bookingJourney)) {
     return NextResponse.json({
       error: "Ce professeur ne propose pas ce parcours. Choisissez un autre profil compatible.",
+    }, { status: 400 });
+  }
+  const subjectMatchesJourney = subjectNameMatchesJourney(canonicalSubjectName, bookingJourney);
+  const levelMatchesJourney = filterLevelsForJourney([{
+    name: canonicalLevelName,
+    order: teacherLevel.level.order,
+  }], bookingJourney).length === 1;
+  if (!subjectMatchesJourney || !levelMatchesJourney) {
+    return NextResponse.json({
+      error: "La matière ou le niveau ne correspond pas au système choisi. Revenez au parcours sélectionné.",
     }, { status: 400 });
   }
   const educationValidation = validateEducationSelection({

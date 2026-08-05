@@ -38,6 +38,7 @@ import {
   TEACHER_JOURNEY_CONFIG,
   TEACHER_JOURNEYS,
   teacherJourneyWhere,
+  type TeacherJourney,
 } from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
@@ -143,7 +144,7 @@ export default async function RechercherPage({
     ...t,
     primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
       ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
-      ?? t.subjects[0]?.subject.name,
+      ?? journeyConfig.primarySubjectFallback,
     href: `/client/reserver?teacherId=${t.id}&journey=${journey}`,
   }));
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
@@ -154,8 +155,8 @@ export default async function RechercherPage({
   const sortLabel = sort === "rating" ? "Mieux notés" : sort === "experience" ? "Expérience" : "";
   const activeFilters = [
     q ? { key: "q", label: `Recherche : ${q}`, href: buildSearchHref(sp, { q: null }) } : null,
-    subject ? { key: "subject", label: `Matière : ${subjectLabel}`, href: buildSearchHref(sp, { subject: null }) } : null,
-    level ? { key: "level", label: `Niveau : ${levelLabel}`, href: buildSearchHref(sp, { level: null }) } : null,
+    subject ? { key: "subject", label: `${journeyConfig.subjectLabel} : ${subjectLabel}`, href: buildSearchHref(sp, { subject: null }) } : null,
+    level ? { key: "level", label: `${journeyConfig.levelLabel} : ${levelLabel}`, href: buildSearchHref(sp, { level: null }) } : null,
     commune ? { key: "commune", label: `Commune : ${commune}`, href: buildSearchHref(sp, { commune: null }) } : null,
     format ? { key: "format", label: `Format : ${formatLabel}`, href: buildSearchHref(sp, { format: null }) } : null,
     sort !== "recommended" ? { key: "sort", label: `Tri : ${sortLabel}`, href: buildSearchHref(sp, { sort: null }) } : null,
@@ -171,7 +172,7 @@ export default async function RechercherPage({
   const hasActiveFilters = activeFilters.length > 0;
   const resultIntro = hasActiveFilters
     ? `Résultats pour ${activeFilters.map((filter) => filter.label.replace(" : ", " ")).join(", ")}.`
-    : "Recherche libre sur les matières, niveaux, communes, concours, métiers et parcours professeur.";
+    : journeyConfig.resultIntro;
   const homeCount = items.filter((teacher) => teacher.offersHome).length;
   const onlineCount = items.filter((teacher) => teacher.offersOnline).length;
   const certifiedCount = items.filter((teacher) => teacher.badgeVerified).length;
@@ -225,6 +226,7 @@ export default async function RechercherPage({
 
       {CLIENT_COMMAND_CENTERS_ENABLED && (
         <SearchCommandCenter
+          journey={journey}
           resultCount={items.length}
           activeFilterCount={activeFilters.length}
           hasQuery={Boolean(q)}
@@ -324,7 +326,9 @@ export default async function RechercherPage({
                 <span className="block truncate min-[380px]:hidden">Filtres</span>
                 <span className="hidden truncate min-[380px]:block">Filtres avancés</span>
                 <span className="block truncate text-xs font-medium text-[#64748B] min-[380px]:hidden">Affiner</span>
-                <span className="hidden truncate text-xs font-medium text-[#64748B] min-[380px]:block">Matière, niveau, commune, format.</span>
+                <span className="hidden truncate text-xs font-medium text-[#64748B] min-[380px]:block">
+                  {journeyConfig.subjectLabel}, {journeyConfig.levelLabel.toLowerCase()}, commune, format.
+                </span>
               </span>
             </span>
             <span className="inline-flex items-center gap-2">
@@ -366,14 +370,14 @@ export default async function RechercherPage({
 
             <div className="grid gap-3 min-[680px]:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Matière</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{journeyConfig.subjectLabel}</label>
                 <SearchableCatalogSelect
                   name="subject"
                   value={subject ?? ""}
-                  placeholder="Toutes"
-                  searchPlaceholder="Saisir une matière, concours, métier..."
-                  emptyLabel="Aucune matière trouvée"
-                  allLabel="Toutes les matières"
+                  placeholder={journeyConfig.subjectPlaceholder}
+                  searchPlaceholder={journeyConfig.subjectSearchPlaceholder}
+                  emptyLabel={journeyConfig.subjectEmptyLabel}
+                  allLabel={journeyConfig.subjectPlaceholder}
                   groups={subjectGroups.map((group) => ({
                     label: group.category.label,
                     options: group.items.map((s) => ({
@@ -386,14 +390,14 @@ export default async function RechercherPage({
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Niveau</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{journeyConfig.levelLabel}</label>
                 <SearchableCatalogSelect
                   name="level"
                   value={level ?? ""}
-                  placeholder="Tous"
-                  searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
-                  emptyLabel="Aucun niveau trouvé"
-                  allLabel="Tous les niveaux"
+                  placeholder={journeyConfig.levelPlaceholder}
+                  searchPlaceholder={journeyConfig.levelSearchPlaceholder}
+                  emptyLabel={`Aucun ${journeyConfig.levelLabel.toLowerCase()} trouvé`}
+                  allLabel={journeyConfig.levelPlaceholder}
                   groups={levelGroups.map((group) => ({
                     label: group.category.label,
                     options: group.items.map((l) => ({
@@ -527,6 +531,7 @@ export default async function RechercherPage({
 }
 
 function SearchCommandCenter({
+  journey,
   resultCount,
   activeFilterCount,
   hasQuery,
@@ -536,6 +541,7 @@ function SearchCommandCenter({
   formatLabel,
   primaryActionHref,
 }: {
+  journey: TeacherJourney;
   resultCount: number;
   activeFilterCount: number;
   hasQuery: boolean;
@@ -545,6 +551,10 @@ function SearchCommandCenter({
   formatLabel: string;
   primaryActionHref: string;
 }) {
+  const journeyConfig = TEACHER_JOURNEY_CONFIG[journey];
+  const needExamples = journey === "professionnel"
+    ? "compétence, métier, objectif professionnel, commune ou format"
+    : `${journeyConfig.subjectLabel.toLowerCase()}, concours, ${journeyConfig.levelLabel.toLowerCase()}, commune ou format`;
   const hasContext = hasQuery || activeFilterCount > 0;
   const bestContext = [
     subjectLabel || null,
@@ -565,8 +575,8 @@ function SearchCommandCenter({
               </h2>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
                 {hasContext
-                  ? "La recherche combine matière, niveau, commune, format et texte libre pour garder des résultats exploitables."
-                  : "Décrivez simplement le besoin : matière, concours, compétence professionnelle, commune ou format."}
+                  ? `La recherche combine ${journeyConfig.subjectLabel.toLowerCase()}, ${journeyConfig.levelLabel.toLowerCase()}, commune, format et texte libre.`
+                  : `Décrivez simplement le besoin : ${needExamples}.`}
               </p>
             </div>
             <a
@@ -590,12 +600,12 @@ function SearchCommandCenter({
                 {
                   label: "Saisir le besoin",
                   state: hasQuery || activeFilterCount > 0 ? "done" : "current",
-                  hint: "Matière, concours, métier, commune ou objectif.",
+                  hint: `${journeyConfig.subjectLabel}, ${journeyConfig.levelLabel.toLowerCase()}, commune ou objectif.`,
                 },
                 {
                   label: "Affiner sans effort",
                   state: activeFilterCount > 0 ? "done" : hasQuery ? "current" : "pending",
-                  hint: "Matière, niveau, zone, format et tri.",
+                  hint: `${journeyConfig.subjectLabel}, ${journeyConfig.levelLabel.toLowerCase()}, zone, format et tri.`,
                 },
                 {
                   label: "Réserver le bon professeur",

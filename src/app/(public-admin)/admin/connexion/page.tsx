@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
-import { ArrowRight, Eye, EyeOff, Info, Lock, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Info, Lock, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,6 @@ export default function AdminConnexionPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,9 +151,8 @@ export default function AdminConnexionPage() {
                   <Label htmlFor="admin-password">Mot de passe</Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-                    <Input
+                    <PasswordInput
                       id="admin-password"
-                      type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       required
                       value={password}
@@ -161,14 +160,6 @@ export default function AdminConnexionPage() {
                       placeholder="Mot de passe administrateur"
                       className={PASSWORD_FIELD_CLASS}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-white hover:text-[#111B4D]"
-                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
                   </div>
                 </div>
 

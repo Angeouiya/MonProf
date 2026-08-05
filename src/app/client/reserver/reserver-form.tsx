@@ -29,6 +29,7 @@ import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-
 import { formatFCFA } from "@/lib/format";
 import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
+import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { PackType } from "@prisma/client";
 import {
   COURSE_CATALOG,
@@ -411,11 +412,16 @@ export function ReserverForm({
   const teacherAvailability = parseAvailability(teacher.availability);
   const todayIso = useMemo(() => toDateInputValue(new Date()), []);
   const initialCourseCategory = initialJourney === "professionnel" ? "formation_professionnelle" : "soutien_scolaire";
+  const initialJourneySubjects = initialJourney ? filterSubjectsForJourney(subjects, initialJourney) : [];
+  const initialJourneyLevels = initialJourney ? filterLevelsForJourney(levels, initialJourney) : [];
   const initialLevelName = suggestLevelForCategory(
-    teacher.levels,
+    initialJourneyLevels.map((level) => level.name),
     initialCourseCategory,
-    teacher.levels[0] ?? "",
+    initialJourneyLevels[0]?.name ?? "",
   );
+  const initialSubjectName = initialJourneySubjects.find((subject) => (
+    teacher.subjects.some((item) => item.isPrimary && item.name === subject.name)
+  ))?.name ?? initialJourneySubjects[0]?.name ?? "";
 
   // Form state
   const [form, setForm] = useState({
@@ -425,7 +431,7 @@ export function ReserverForm({
     preciseLevel: "",
     courseCatalogId: "",
     levelName: initialLevelName,
-    subjectName: teacher.subjects[0]?.name ?? "",
+    subjectName: initialSubjectName,
     customSubjectDetail: "",
     objective: OBJECTIVES[0].value,
     schoolProgram: "",
@@ -492,8 +498,6 @@ export function ReserverForm({
   const categoryCopy = getCategoryCopy(effectiveCourseCategory);
   const categoryLabel = COURSE_CATEGORIES.find((category) => category.code === effectiveCourseCategory)?.label ?? effectiveCourseCategory;
   const schoolContext = isSchoolContext(effectiveCourseCategory);
-  const hasTeacherLevels = teacher.levels.length > 0;
-  const hasTeacherSubjects = teacher.subjects.length > 0;
   const needsCustomSubjectDetail = /autre|sp[ée]cifique|besoin/i.test(form.subjectName);
   const preciseLevelOptions = schoolContext && form.schoolSystem
     ? getPreciseLevelOptions(form.schoolSystem, form.levelName)
@@ -506,14 +510,31 @@ export function ReserverForm({
       : form.schoolSystem === "ivoirien"
         ? "ivoirien"
         : "";
-  const teacherSubjectNames = useMemo(() => teacher.subjects.map((subject) => subject.name), [teacher.subjects]);
+  const journeySubjects = useMemo(
+    () => bookingJourney ? filterSubjectsForJourney(subjects, bookingJourney) : [],
+    [bookingJourney, subjects],
+  );
+  const journeyLevels = useMemo(
+    () => bookingJourney ? filterLevelsForJourney(levels, bookingJourney) : [],
+    [bookingJourney, levels],
+  );
+  const hasTeacherLevels = journeyLevels.length > 0;
+  const hasTeacherSubjects = journeySubjects.length > 0;
+  const teacherSubjectNames = useMemo(
+    () => journeySubjects.map((subject) => subject.name),
+    [journeySubjects],
+  );
+  const teacherLevelNames = useMemo(
+    () => journeyLevels.map((level) => level.name),
+    [journeyLevels],
+  );
   const selectedCategoryCourses = COURSE_CATALOG.filter((item) => isCourseCatalogItemCompatible({
     item,
     category: effectiveCourseCategory,
     schoolSystem: form.schoolSystem,
     preciseLevel: form.preciseLevel,
     selectedLevel: form.levelName,
-    teacherLevels: teacher.levels,
+    teacherLevels: teacherLevelNames,
     teacherSubjects: teacherSubjectNames,
     selectedSubject: form.subjectName,
   })).sort((a, b) => (
@@ -537,20 +558,20 @@ export function ReserverForm({
   }));
   const levelSelectionGroups = useMemo(() => [{
     label: hasTeacherLevels ? `Niveaux de ${displayName}` : "Niveaux à configurer",
-    options: levels.map((level) => ({
+    options: journeyLevels.map((level) => ({
       value: level.name,
       label: level.name,
       keywords: level.slug,
     })),
-  }], [displayName, hasTeacherLevels, levels]);
+  }], [displayName, hasTeacherLevels, journeyLevels]);
   const subjectSelectionGroups = useMemo(() => [{
     label: hasTeacherSubjects ? `Matières de ${displayName}` : "Matières à configurer",
-    options: subjects.map((subject) => ({
+    options: journeySubjects.map((subject) => ({
       value: subject.name,
       label: subject.name,
       keywords: subject.slug,
     })),
-  }], [displayName, hasTeacherSubjects, subjects]);
+  }], [displayName, hasTeacherSubjects, journeySubjects]);
   const grandAbidjanCommunes = useMemo(() => communes.filter((commune) => commune.transportClass === "GRAND_ABIDJAN"), [communes]);
   const neighborhoodAliases = useMemo(() => {
     const relevantCommunes = new Set(
@@ -656,7 +677,10 @@ export function ReserverForm({
     : [];
   const progressPercent = Math.round(((step + 1) / STEPS.length) * 100);
   const currentStepDetail = STEP_DETAILS[step] ?? STEP_DETAILS[0];
-  const primarySubjectLabel = form.subjectName || teacher.subjects.find((subject) => subject.isPrimary)?.name || teacher.subjects[0]?.name || "Matière à choisir";
+  const primarySubjectLabel = form.subjectName
+    || journeySubjects.find((subject) => teacher.subjects.some((item) => item.isPrimary && item.name === subject.name))?.name
+    || journeySubjects[0]?.name
+    || (bookingJourney === "professionnel" ? "Compétence à choisir" : "Matière à choisir");
   const teacherTrustSignal = teacher.rating > 0
     ? `Note ${teacher.rating.toFixed(1)}/5 · ${teacher.commune ?? "Abidjan"}`
     : `Certifié · ${teacher.commune ?? "Abidjan"}`;
@@ -691,14 +715,23 @@ export function ReserverForm({
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
   function handleJourneyChange(journey: "ivoirien" | "francais" | "professionnel") {
+    const nextSubjects = filterSubjectsForJourney(subjects, journey);
+    const nextLevels = filterLevelsForJourney(levels, journey);
+    const nextSubject = nextSubjects.find((subject) => (
+      teacher.subjects.some((item) => item.isPrimary && item.name === subject.name)
+    ))?.name ?? nextSubjects[0]?.name ?? "";
     setForm((current) => {
       const nextCategory = journey === "professionnel" ? "formation_professionnelle" : "soutien_scolaire";
-      const nextLevel = suggestLevelForCategory(teacher.levels, nextCategory, current.levelName);
+      const nextLevel = suggestLevelForCategory(
+        nextLevels.map((level) => level.name),
+        nextCategory,
+        nextLevels[0]?.name ?? "",
+      );
       const canonicalCategory = resolveBookingCourseCategory({
         requestedCategory: nextCategory,
         levelName: nextLevel,
         preciseLevel: "",
-        subjectName: current.subjectName,
+        subjectName: nextSubject,
         catalogItem: null,
       }).category;
       return {
@@ -706,6 +739,7 @@ export function ReserverForm({
         clientType: journey === "professionnel" ? "Professionnel" : "Parent",
         courseCategory: canonicalCategory,
         levelName: nextLevel,
+        subjectName: nextSubject,
         schoolSystem: journey === "professionnel" ? "" : journey,
         preciseLevel: "",
         courseCatalogId: "",
@@ -1048,9 +1082,9 @@ export function ReserverForm({
                     groups={levelSelectionGroups}
                     triggerClassName="mt-1.5 min-h-12 rounded-lg"
                   />
-                  {teacher.levels.length > 0 ? (
+                  {journeyLevels.length > 0 ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#64748B]">
-                      Niveaux couverts : {teacher.levels.join(", ")}
+                      {bookingJourney === "professionnel" ? "Profils couverts" : "Niveaux couverts"} : {journeyLevels.map((item) => item.name).join(", ")}
                     </p>
                   ) : (
                     <p className="mt-1 text-xs font-medium text-[#111B4D]">
@@ -1060,7 +1094,7 @@ export function ReserverForm({
                 </div>
                 <div>
                   <Label htmlFor="subjectName">{categoryCopy.subjectLabel} *</Label>
-                  {subjects.length === 1 ? (
+                  {journeySubjects.length === 1 ? (
                     <div className="mt-1.5 flex min-h-12 items-center rounded-lg border border-[#DDE6F7] bg-[#F8FAFD] px-3 text-sm font-semibold text-[#111827]">
                       {form.subjectName}
                     </div>
@@ -1089,9 +1123,9 @@ export function ReserverForm({
                       triggerClassName="mt-1.5 min-h-12 rounded-lg"
                     />
                   )}
-                  {hasTeacherSubjects && subjects.length > 1 ? (
+                  {hasTeacherSubjects && journeySubjects.length > 1 ? (
                     <p className="mt-1 line-clamp-2 text-xs text-[#64748B]">
-                      Matières enseignées par {displayName}.
+                      {bookingJourney === "professionnel" ? "Compétences proposées" : "Matières enseignées"} par {displayName}.
                     </p>
                   ) : !hasTeacherSubjects ? (
                     <p className="mt-1 text-xs font-medium text-[#111B4D]">

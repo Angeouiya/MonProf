@@ -52,6 +52,13 @@ check(
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetail),
 );
 check(
+  "Public and client cards never leak a fallback subject from another mini-app",
+  !/t\.subjects\[0\]\?\.subject\.name/.test(publicTeachers)
+    && !/t\.subjects\[0\]\?\.subject\.name/.test(clientSearch)
+    && /journeyConfig\.primarySubjectFallback/.test(publicTeachers)
+    && /journeyConfig\.primarySubjectFallback/.test(clientSearch),
+);
+check(
   "Authenticated client search keeps the mini-app through booking",
   /teacherJourneyWhere\(journey\)/.test(clientSearch)
     && /data-client-journey-tabs/.test(clientSearch)
@@ -73,6 +80,14 @@ check(
     && /teacherSupportsJourney\(teacher, bookingJourney\)/.test(bookingApi)
     && /Ce professeur ne propose pas ce parcours/.test(bookingApi)
     && /teacherJourneyWhere\(bookingJourney\)/.test(replacement),
+);
+check(
+  "Booking choices and server validation stay inside the selected mini-app",
+  /filterSubjectsForJourney\(subjects, bookingJourney\)/.test(bookingForm)
+    && /filterLevelsForJourney\(levels, bookingJourney\)/.test(bookingForm)
+    && /subjectNameMatchesJourney\(canonicalSubjectName, bookingJourney\)/.test(bookingApi)
+    && /filterLevelsForJourney\(\[\{/.test(bookingApi)
+    && /ne correspond pas au système choisi/.test(bookingApi),
 );
 
 for (const item of checks) console.log(`${item.ok ? "OK" : "FAIL"} ${item.label}`);

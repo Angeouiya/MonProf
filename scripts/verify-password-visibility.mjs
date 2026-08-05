@@ -4,49 +4,65 @@ import path from "node:path";
 const sourceRoot = path.join(process.cwd(), "src");
 const files = walk(sourceRoot).filter((filePath) => filePath.endsWith(".tsx"));
 const sources = files.map((filePath) => ({ filePath, source: fs.readFileSync(filePath, "utf8") }));
-const passwordFieldSources = sources.filter(({ source }) => (
+const sharedControlPath = path.join(sourceRoot, "components", "shared", "password-input.tsx");
+const applicationSources = sources.filter(({ filePath }) => filePath !== sharedControlPath);
+
+const rawPasswordTypes = applicationSources.filter(({ source }) => (
   /type\s*=\s*["']password["']/.test(source)
   || /type\s*=\s*\{[\s\S]{0,120}?["']password["'][\s\S]{0,120}?\}/.test(source)
-  || /<PasswordInput\b/.test(source)
 ));
 
-const literalPasswordInputs = sources.filter(({ source }) => /type\s*=\s*["']password["']/.test(source));
-const uncoveredPasswordInputs = passwordFieldSources.filter(({ source }) => {
-  const usesSharedControl = /<PasswordInput\b/.test(source);
-  const ownsAccessibleToggle = source.includes("Afficher")
-    && source.includes("Masquer")
-    && /type=["']button["']/.test(source);
-  return !usesSharedControl && !ownsAccessibleToggle;
+const plaintextSensitiveInputs = applicationSources.flatMap(({ filePath, source }) => {
+  const tags = source.match(/<Input\b[\s\S]*?\/>/g) ?? [];
+  return tags
+    .filter((tag) => (
+      /autoComplete=["'](?:current|new)-password["']/.test(tag)
+      || /\{\.\.\.register\(["'][^"']*password["']\)\}/i.test(tag)
+      || /\b(?:id|name)=["'][^"']*password["']/i.test(tag)
+    ))
+    .map((tag) => ({ filePath, tag: tag.replace(/\s+/g, " ").slice(0, 220) }));
 });
 
+const duplicatedVisibilityLogic = applicationSources.filter(({ source }) => (
+  /showPassword|setShowPassword/.test(source)
+  || /visible\s*\?\s*["']text["']\s*:\s*["']password["']/.test(source)
+));
+
+const passwordSurfaces = [
+  "src/app/connexion/page.tsx",
+  "src/app/professeur/connexion/page.tsx",
+  "src/app/(public-admin)/admin/connexion/page.tsx",
+  "src/components/auth/inscription-form.tsx",
+  "src/app/reinitialiser-mot-de-passe/reset-password-form.tsx",
+  "src/app/client/parametres/settings-client.tsx",
+  "src/app/professeur/(espace)/parametres/settings-client.tsx",
+  "src/app/admin/mon-compte/password-form.tsx",
+  "src/app/admin/equipe/team-client.tsx",
+  "src/components/admin/teacher-form.tsx",
+  "src/components/admin/client-temporary-password-form.tsx",
+];
+
 const sharedPasswordInput = read("src/components/shared/password-input.tsx");
-const resetPasswordForm = read("src/app/reinitialiser-mot-de-passe/reset-password-form.tsx");
-const clientSettings = read("src/app/client/parametres/settings-client.tsx");
-const teacherSettings = read("src/app/professeur/(espace)/parametres/settings-client.tsx");
-const adminAccount = read("src/app/admin/mon-compte/password-form.tsx");
-const adminTeam = read("src/app/admin/equipe/team-client.tsx");
+const missingSharedControl = passwordSurfaces.filter((surface) => !/<PasswordInput\b/.test(read(surface)));
+const clientTemporaryPassword = read("src/components/admin/client-temporary-password-form.tsx");
 
 const checks = [
-  ["Every password field can be revealed before validation", literalPasswordInputs.length === 0 && uncoveredPasswordInputs.length === 0],
-  ["Shared password control starts masked and toggles without submitting", /useState\(false\)/.test(sharedPasswordInput) && /type=\{visible \? "text" : "password"\}/.test(sharedPasswordInput) && /type="button"/.test(sharedPasswordInput)],
-  ["Shared password control exposes accessible reveal state", /aria-label=\{visible \? "Masquer le mot de passe" : "Afficher le mot de passe"\}/.test(sharedPasswordInput) && /aria-pressed=\{visible\}/.test(sharedPasswordInput)],
-  ["Client reset and settings fields are revealable", /<PasswordInput/.test(resetPasswordForm) && /data-client-password-toggle/.test(clientSettings)],
-  ["Professor password settings are revealable", /<PasswordInput/.test(teacherSettings) && !/type="password"/.test(teacherSettings)],
-  ["Administrative password fields are revealable", /<PasswordInput/.test(adminAccount) && /<PasswordInput/.test(adminTeam)],
+  ["All 11 password surfaces use the same revealable control", missingSharedControl.length === 0],
+  ["No application password field bypasses the shared control", rawPasswordTypes.length === 0 && plaintextSensitiveInputs.length === 0],
+  ["Password visibility logic is not duplicated across pages", duplicatedVisibilityLogic.length === 0],
+  ["Shared password control starts masked unless explicitly requested", /defaultVisible\s*=\s*false/.test(sharedPasswordInput) && /useState\(defaultVisible\)/.test(sharedPasswordInput)],
+  ["Reveal button never submits and exposes its state accessibly", /type="button"/.test(sharedPasswordInput) && /aria-label=\{visible \? "Masquer le mot de passe" : "Afficher le mot de passe"\}/.test(sharedPasswordInput) && /aria-pressed=\{visible\}/.test(sharedPasswordInput)],
+  ["Generated one-time client password remains immediately readable", /<PasswordInput[\s\S]*?defaultVisible/.test(clientTemporaryPassword)],
 ];
 
 for (const [label, ok] of checks) console.log(`${ok ? "OK" : "FAIL"} ${label}`);
 
-if (literalPasswordInputs.length > 0) {
-  for (const { filePath } of literalPasswordInputs) console.log(`FAIL Literal password input: ${path.relative(process.cwd(), filePath)}`);
-}
-if (uncoveredPasswordInputs.length > 0) {
-  for (const { filePath } of uncoveredPasswordInputs) console.log(`FAIL Missing reveal control: ${path.relative(process.cwd(), filePath)}`);
-}
+for (const surface of missingSharedControl) console.log(`FAIL Missing shared password control: ${surface}`);
+for (const { filePath } of rawPasswordTypes) console.log(`FAIL Raw password type: ${path.relative(process.cwd(), filePath)}`);
+for (const { filePath, tag } of plaintextSensitiveInputs) console.log(`FAIL Password-like Input exposed as plain text: ${path.relative(process.cwd(), filePath)} :: ${tag}`);
+for (const { filePath } of duplicatedVisibilityLogic) console.log(`FAIL Duplicated visibility state: ${path.relative(process.cwd(), filePath)}`);
 
-if (checks.some(([, ok]) => !ok) || literalPasswordInputs.length > 0 || uncoveredPasswordInputs.length > 0) {
-  process.exitCode = 1;
-}
+if (checks.some(([, ok]) => !ok)) process.exitCode = 1;
 
 function read(relativePath) {
   return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");

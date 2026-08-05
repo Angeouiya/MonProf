@@ -155,7 +155,8 @@ export function SearchableCatalogSelect({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] p-0"
+          className="p-0"
+          style={{ width: "min(var(--radix-popover-trigger-width), calc(100vw - 2rem))" }}
         >
           <Command shouldFilter={false}>
             <CommandInput placeholder={searchPlaceholder} value={query} onValueChange={setQuery} />

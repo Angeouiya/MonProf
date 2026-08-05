@@ -187,7 +187,7 @@ export default async function TeachersPage({
     badgeVerified: t.badgeVerified,
     primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
       ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
-      ?? t.subjects[0]?.subject.name,
+      ?? journeyConfig.primarySubjectFallback,
     _count: { reviews: t._count.reviews },
   }));
 
@@ -276,7 +276,7 @@ export default async function TeachersPage({
               </h1>
               <p className="mt-1 text-sm font-semibold text-[#111B4D] sm:hidden">{journeyConfig.priceLabel}</p>
               <p className="mt-2 hidden max-w-xl text-[0.95rem] font-medium leading-6 text-[#64748B] sm:block sm:text-base">
-                Scolaire, université, concours, métiers et formations adultes.
+                {journeyConfig.description}
               </p>
             </div>
             <div className="hidden grid-cols-2 gap-2 lg:grid lg:grid-cols-1 lg:rounded-lg lg:border lg:border-[#E3E8F2] lg:bg-white lg:p-4">
@@ -303,7 +303,7 @@ export default async function TeachersPage({
               type="search"
               name="q"
               defaultValue={q}
-              aria-label="Rechercher une matière, un métier ou un concours"
+              aria-label={journeyConfig.searchAriaLabel}
               placeholder={journeyConfig.searchPlaceholder}
               className="min-h-12 min-w-0 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-3 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7] sm:px-4"
               style={{ minHeight: 48 }}
@@ -381,6 +381,7 @@ export default async function TeachersPage({
                     })),
                   }))}
                   communes={communes}
+                  journeyConfig={journeyConfig}
                   compact
                 />
                 {activeFiltersCount > 0 && (
@@ -421,6 +422,7 @@ export default async function TeachersPage({
                     })),
                   }))}
                   communes={communes}
+                  journeyConfig={journeyConfig}
                 />
               </aside>
             )}
@@ -456,7 +458,7 @@ export default async function TeachersPage({
                   className={hasPublishedTeachers ? undefined : "px-5 py-6 sm:min-h-[18rem] sm:px-8 sm:py-10"}
                   description={
                     hasPublishedTeachers
-                      ? "Essayez d'élargir la matière, le niveau, la commune ou le format, puis relancez la recherche."
+                      ? `Essayez d'élargir ${journeyConfig.subjectLabel.toLowerCase()}, ${journeyConfig.levelLabel.toLowerCase()}, la commune ou le format, puis relancez la recherche.`
                       : "Les profils avec vraie photo et disponibilités seront publiés après vérification par le service client."
                   }
                   action={
@@ -559,6 +561,7 @@ function FiltersForm({
   subjectGroups,
   levelGroups,
   communes,
+  journeyConfig,
   compact = false,
 }: {
   activeFiltersCount: number;
@@ -572,6 +575,7 @@ function FiltersForm({
   subjectGroups: CatalogFilterGroup[];
   levelGroups: CatalogFilterGroup[];
   communes: CommuneFilterOption[];
+  journeyConfig: (typeof TEACHER_JOURNEY_CONFIG)[BookingJourney];
   compact?: boolean;
 }) {
   const communeGroups = [{
@@ -608,27 +612,27 @@ function FiltersForm({
 
       <div className={compact ? "grid gap-3 min-[560px]:grid-cols-2" : "space-y-4"}>
         {journey && <input type="hidden" name="journey" value={journey} />}
-        <Field label="Matière">
+        <Field label={journeyConfig.subjectLabel}>
           <SearchableCatalogSelect
             name="subject"
             value={subject}
-            placeholder="Toutes les matières"
-            searchPlaceholder="Saisir une matière, concours, métier..."
-            emptyLabel="Aucune matière trouvée"
-            allLabel="Toutes les matières"
+            placeholder={journeyConfig.subjectPlaceholder}
+            searchPlaceholder={journeyConfig.subjectSearchPlaceholder}
+            emptyLabel={journeyConfig.subjectEmptyLabel}
+            allLabel={journeyConfig.subjectPlaceholder}
             groups={subjectGroups}
             triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
           />
         </Field>
 
-        <Field label="Niveau">
+        <Field label={journeyConfig.levelLabel}>
           <SearchableCatalogSelect
             name="level"
             value={level}
-            placeholder="Tous les niveaux"
-            searchPlaceholder="Saisir un niveau : BAC, adulte, BTS..."
-            emptyLabel="Aucun niveau trouvé"
-            allLabel="Tous les niveaux"
+            placeholder={journeyConfig.levelPlaceholder}
+            searchPlaceholder={journeyConfig.levelSearchPlaceholder}
+            emptyLabel={`Aucun ${journeyConfig.levelLabel.toLowerCase()} trouvé`}
+            allLabel={journeyConfig.levelPlaceholder}
             groups={levelGroups}
             triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
           />

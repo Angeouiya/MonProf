@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Camera, CheckCircle2, Clock, ExternalLink, FileText, KeyRound, Loader2, Save, ScanText, Search, ShieldCheck, Trash2, UploadCloud, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { PasswordInput } from "@/components/shared/password-input";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
@@ -1009,9 +1010,9 @@ export function TeacherForm({
                 label={mode === "create" ? "Mot de passe temporaire" : "Nouveau mot de passe temporaire"}
                 error={errors.portalPassword?.message}
               >
-                <Input
-                  type="text"
+                <PasswordInput
                   {...register("portalPassword")}
+                  autoComplete="new-password"
                   placeholder={mode === "create" ? "Ex : Professeur2026" : "Laisser vide pour conserver l'ancien"}
                   disabled={!portalAccessEnabled}
                 />

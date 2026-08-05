@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
-import { parseTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
+import { parseTeacherJourney, TEACHER_JOURNEY_CONFIG, teacherJourneyWhere } from "@/lib/teacher-journeys";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import {
   filterLevelsForJourney,
@@ -79,12 +79,21 @@ export async function GET(req: NextRequest) {
     console.error("[api:teachers_query_failed]", error);
   }
 
-  const items = teachers.map((t) => ({
-    displayRating: t.ratingCount > 0
-      ? t.rating
-      : t.adminRatingPublic && t.adminRating > 0
-        ? t.adminRating
-        : t.rating,
+  const items = teachers.map((t) => {
+    const journeySubjects = filterSubjectsForJourney(
+      t.subjects.map((item) => ({ name: item.subject.name, icon: item.subject.icon })),
+      journey,
+    );
+    const journeyLevels = filterLevelsForJourney(
+      t.levels.map((item) => ({ name: item.level.name, order: item.level.order })),
+      journey,
+    );
+    return {
+      displayRating: t.ratingCount > 0
+        ? t.rating
+        : t.adminRatingPublic && t.adminRating > 0
+          ? t.adminRating
+          : t.rating,
     displayRatingSource: t.ratingCount > 0 ? "CLIENT_REVIEWS" : t.adminRatingPublic && t.adminRating > 0 ? "SERVICE_CLIENT" : "NONE",
     id: t.id,
     fullName: t.fullName,
@@ -118,13 +127,14 @@ export async function GET(req: NextRequest) {
     },
     primarySubject: t.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
       ?? t.subjects.find((s) => subjectNameMatchesJourney(s.subject.name, journey))?.subject.name
-      ?? t.subjects[0]?.subject.name,
-    subjects: t.subjects.map((s) => s.subject.name),
-    levels: t.levels.map((l) => l.level.name),
+      ?? TEACHER_JOURNEY_CONFIG[journey].primarySubjectFallback,
+    subjects: journeySubjects.map((item) => item.name),
+    levels: journeyLevels.map((item) => item.name),
     zones: t.zones.map((z) => (z.commune as any).name),
     reviewsCount: t._count.reviews,
     bookingsCount: t._count.bookings,
-  }));
+    };
+  });
 
   return NextResponse.json({
     items,

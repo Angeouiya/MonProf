@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +26,6 @@ export function ClientTemporaryPasswordForm({
   hasPendingRequest: boolean;
 }) {
   const [password, setPassword] = useState("");
-  const [visible, setVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [issued, setIssued] = useState(false);
   const [identityVerified, setIdentityVerified] = useState(false);
@@ -65,7 +65,6 @@ export function ClientTemporaryPasswordForm({
       }
       setPassword(data.temporaryPassword);
       setIssued(true);
-      setVisible(true);
       toast.success("Accès temporaire créé. Le client devra remplacer ce mot de passe à la connexion.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Création impossible.");
@@ -93,24 +92,15 @@ export function ClientTemporaryPasswordForm({
       {issued ? (
         <div>
           <Label htmlFor="client-temporary-password">Mot de passe temporaire</Label>
-          <div className="relative mt-1.5">
-            <Input
-              id="client-temporary-password"
-              type={visible ? "text" : "password"}
-              value={password}
-              readOnly
-              autoComplete="new-password"
-              className="h-11 pr-12"
-            />
-            <button
-              type="button"
-              onClick={() => setVisible((current) => !current)}
-              className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-[#64748B]"
-              aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-            >
-              {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          <PasswordInput
+            id="client-temporary-password"
+            value={password}
+            readOnly
+            autoComplete="new-password"
+            defaultVisible
+            wrapperClassName="mt-1.5"
+            className="h-11 pr-12"
+          />
           <p className="mt-2 text-xs font-semibold text-amber-800">
             Copiez-le maintenant : il ne sera plus affiché après le rechargement de cette page.
           </p>

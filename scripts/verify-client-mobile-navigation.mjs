@@ -344,7 +344,7 @@ record(
 record(
   "Client booking reveals optional need details only on demand",
   /<details className="rounded-lg[\s\S]*?Ajouter des précisions \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /subjects\.length\s*===\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /journeySubjects\.length\s*===\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && !/Cours catalogue conseillé/.test(read("src/app/client/reserver/reserver-form.tsx")),
 );
 
