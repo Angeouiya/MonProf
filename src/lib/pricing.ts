@@ -478,12 +478,16 @@ function normalizeNeighborhood(
   if (configuredCanonical) return normalize(configuredCanonical.name);
   const normalizedCommune = normalize(commune);
   // Some legacy teacher profiles stored "Commune Quartier" in the quartier
-  // field. Strip only the exact commune prefix; never use a loose substring
+  // field, while some human-entered addresses invert it as "Quartier Commune".
+  // Strip only the exact commune prefix/suffix; never use a loose substring
   // comparison that could merge two genuinely different neighborhoods.
   const withoutCommunePrefix = normalizedCommune && normalized.startsWith(`${normalizedCommune} `)
     ? normalized.slice(normalizedCommune.length + 1).trim()
     : normalized;
-  return NEIGHBORHOOD_ALIASES[withoutCommunePrefix] ?? withoutCommunePrefix;
+  const withoutCommuneSuffix = normalizedCommune && withoutCommunePrefix.endsWith(` ${normalizedCommune}`)
+    ? withoutCommunePrefix.slice(0, -normalizedCommune.length - 1).trim()
+    : withoutCommunePrefix;
+  return NEIGHBORHOOD_ALIASES[withoutCommuneSuffix] ?? withoutCommuneSuffix;
 }
 
 function displayNeighborhoodName(
@@ -539,6 +543,11 @@ export function buildNeighborhoodAliasMap(
       if (entry.communeName && normalizedCommune && !normalizedLabel.startsWith(`${normalizedCommune} `)) {
         register(
           neighborhoodAliasLookupKey(entry.communeName, `${entry.communeName} ${label}`),
+          canonicalIdentity,
+          canonicalName,
+        );
+        register(
+          neighborhoodAliasLookupKey(entry.communeName, `${label} ${entry.communeName}`),
           canonicalIdentity,
           canonicalName,
         );

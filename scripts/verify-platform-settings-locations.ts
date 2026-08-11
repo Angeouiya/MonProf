@@ -19,6 +19,9 @@ async function main() {
   const catalogCache = read("src/lib/catalog-cache.ts");
   assert(/default_commission", value: "30"/.test(seed), "Fresh installations start with the 30 percent commission");
   assert(/Communes & quartiers/.test(settingsUi) && /href="\/admin\/communes"/.test(settingsUi), "Admin settings link directly to the location catalog");
+  assert(/Même quartier = 0 FCFA/.test(settingsUi), "Admin settings make same-neighborhood transport visibly free");
+  assert(/Même commune, quartier différent/.test(settingsUi), "Admin settings label the same-commune fee as different-neighborhood only");
+  assert(!/label="Même commune"/.test(settingsUi), "Admin settings avoid the ambiguous same-commune transport label");
   assert(/previousValues/.test(settingsRoute) && /nextValues/.test(settingsRoute), "Settings changes retain before and after audit values");
   assert(/Alias du quartier/.test(locationsUi) && /aliases: aliases \|\| null/.test(locationsUi), "Admin can create and edit neighborhood aliases");
   assert(/'aliases', q\."aliases"/.test(catalogCache), "Neighborhood aliases are available to client search");
@@ -67,6 +70,25 @@ async function main() {
   });
   assert(spellingVariantQuarter.transportFee === 0, "Known Ivorian neighborhood spelling variants remain transport-free");
   assert(spellingVariantQuarter.transportRouteLabel === "Cocody (Mermoz) -> Cocody (Mermoz)", "Neighborhood route labels use canonical spelling");
+
+  const suffixVariantQuarter = calculateBookingPricing({
+    category: "formation_professionnelle",
+    deliveryMode: "domicile",
+    packType: "SINGLE",
+    teacherPricePerSession: 20_000,
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz, Cocody",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    clientCommuneTransportFeeOverride: 9_000,
+  });
+  assert(suffixVariantQuarter.transportFee === 0, "Neighborhood plus commune suffix remains transport-free when it is the same exact neighborhood");
+  assert(suffixVariantQuarter.transportRouteLabel === "Cocody (Mermoz) -> Cocody (Mermoz)", "Neighborhood suffix labels use canonical spelling");
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    console.log("OK Live database catalog checks skipped because DATABASE_URL is not available in this environment");
+    return;
+  }
 
   const [commission, communes, quarters] = await Promise.all([
     db.setting.findUnique({ where: { key: "default_commission" } }),

@@ -204,6 +204,17 @@ function verifyTransportMatrix() {
   assert.equal(sameCanonicalMermozWithParentheses.key, "same_neighborhood");
   assert.equal(sameCanonicalMermozWithParentheses.amount, 0);
 
+  const sameCanonicalMermozWithCommuneSuffix = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz Cocody",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    neighborhoodAliases: cocodyCatalog,
+  });
+  assert.equal(sameCanonicalMermozWithCommuneSuffix.key, "same_neighborhood");
+  assert.equal(sameCanonicalMermozWithCommuneSuffix.amount, 0);
+  assert.equal(sameCanonicalMermozWithCommuneSuffix.routeLabel, "Cocody (Mermoz) -> Cocody (Mermoz)");
+
   const sameLegacyMermozWithoutCatalog = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",
     teacherQuartier: "Cocody Mermoz",
@@ -212,6 +223,16 @@ function verifyTransportMatrix() {
   });
   assert.equal(sameLegacyMermozWithoutCatalog.key, "same_neighborhood");
   assert.equal(sameLegacyMermozWithoutCatalog.amount, 0);
+
+  const sameLegacyMermozSuffixWithoutCatalog = calculateGrandAbidjanTransportFee({
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz, Cocody",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+  });
+  assert.equal(sameLegacyMermozSuffixWithoutCatalog.key, "same_neighborhood");
+  assert.equal(sameLegacyMermozSuffixWithoutCatalog.amount, 0);
+  assert.equal(sameLegacyMermozSuffixWithoutCatalog.routeLabel, "Cocody (Mermoz) -> Cocody (Mermoz)");
 
   const differentCanonicalCocodyNeighborhoods = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",
@@ -291,7 +312,11 @@ function verifyTransportMatrix() {
   const reversedAmbiguousAliases = buildNeighborhoodAliasMap([...duplicateAliasEntries].reverse());
   assert.deepEqual(ambiguousAliases, reversedAmbiguousAliases);
   assert.equal(ambiguousAliases.resolved["cocody::centre"], undefined);
-  assert.deepEqual(ambiguousAliases.ambiguous, ["cocody::centre", "cocody::cocody centre"]);
+  assert.deepEqual(ambiguousAliases.ambiguous, [
+    "cocody::centre",
+    "cocody::centre cocody",
+    "cocody::cocody centre",
+  ]);
   const ambiguousSameText = calculateGrandAbidjanTransportFee({
     teacherCommune: "Cocody",
     teacherQuartier: "Centre",

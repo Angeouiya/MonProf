@@ -121,9 +121,16 @@ export function ParametresClient({
         </p>
       </SettingSection>
 
-      <SettingSection icon={MapPinned} title="Déplacements" description="Forfaits automatiques pour les cours à domicile. Le même quartier exact reste à 0 FCFA.">
+      <SettingSection icon={MapPinned} title="Déplacements" description="Forfaits automatiques pour les cours à domicile. Le même quartier exact reste toujours à 0 FCFA.">
+        <div className="mb-4 rounded-lg border border-[#DDE6F7] bg-white p-4">
+          <p className="text-xs font-semibold uppercase text-[#111B4D]">Règle non modifiable</p>
+          <p className="mt-1 text-sm font-semibold text-[#111827]">Même quartier = 0 FCFA</p>
+          <p className="mt-1 text-xs leading-5 text-[#64748B]">
+            Exemple : Cocody Mermoz, Cocody (Mermoz) ou Mermoz Cocody sont reconnus comme Mermoz lorsque la commune est Cocody.
+          </p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MoneyField label="Même commune" value={values.transport_same_commune_fee} onChange={(value) => set("transport_same_commune_fee", value)} />
+          <MoneyField label="Même commune, quartier différent" value={values.transport_same_commune_fee} onChange={(value) => set("transport_same_commune_fee", value)} />
           <MoneyField label="Commune proche" value={values.transport_near_commune_fee} onChange={(value) => set("transport_near_commune_fee", value)} />
           <MoneyField label="Commune éloignée" value={values.transport_far_commune_fee} onChange={(value) => set("transport_far_commune_fee", value)} />
           <MoneyField label="Ville intérieure" value={values.transport_interior_fee} onChange={(value) => set("transport_interior_fee", value)} />
