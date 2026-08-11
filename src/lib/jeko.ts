@@ -4,9 +4,9 @@ import { z } from "zod";
 import { requireJekoServerConfig, type JekoServerConfig } from "./jeko-config";
 import { getPublicAppOrigin } from "./public-url";
 import {
-  buildCanonicalJekoCheckoutUrl,
   isAllowedJekoRedirectUrl,
   isJekoPaymentRequestId,
+  resolveJekoCheckoutUrl,
 } from "./jeko-checkout-url";
 import {
   assertJekoCallbackUrl,
@@ -192,11 +192,10 @@ export async function createJekoPaymentRequest(
   if (!isJekoPaymentRequestId(response.id)) {
     throw new JekoApiError("Jèko a renvoyé un identifiant de demande invalide.", 502, "INVALID_PAYMENT_REQUEST_ID");
   }
-  // L'URL officielle est déterministe (`/payment/{id}`). On la reconstruit à
-  // partir de l'identité validée au lieu de relayer une URL distante. Cela
-  // tolère les variations non contractuelles du champ redirectUrl observées
-  // en Production tout en conservant une allowlist plus stricte.
-  const redirectUrl = buildCanonicalJekoCheckoutUrl(response.id);
+  // En production Jèko peut renvoyer une URL courte (`/pr/...`) pour afficher
+  // la page mobile de paiement. Elle est relayée uniquement si elle reste sur
+  // le domaine officiel pay.jeko.africa ; sinon on retombe sur l'URL canonique.
+  const redirectUrl = resolveJekoCheckoutUrl(response.id, response.redirectUrl);
 
   return {
     id: response.id,
@@ -332,11 +331,7 @@ export function getJekoPaymentRedirectUrl(confirmation: JekoPaymentConfirmation)
   if (!isJekoPaymentRequestId(confirmation.id)) {
     throw new JekoApiError("Identifiant de redirection Jèko invalide.", 502, "UNSAFE_REDIRECT");
   }
-  const canonical = buildCanonicalJekoCheckoutUrl(confirmation.id);
-  // Une URL distante conforme doit aussi pointer vers le même ID. Dans tous
-  // les cas, seule la forme canonique locale est renvoyée au navigateur.
-  if (rawRedirectUrl && isAllowedJekoRedirectUrl(rawRedirectUrl, confirmation.id)) return canonical;
-  return canonical;
+  return resolveJekoCheckoutUrl(confirmation.id, rawRedirectUrl);
 }
 
 async function jekoFetchJson(

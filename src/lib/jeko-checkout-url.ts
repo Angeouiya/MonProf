@@ -4,6 +4,8 @@ const JEKO_CHECKOUT_ORIGIN = "https://pay.jeko.africa";
 // accepté pour relire les anciennes identités déjà supportées par le
 // rapprochement, sans ouvrir la redirection à un slug arbitraire.
 const JEKO_PAYMENT_REQUEST_ID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|pr[_-][A-Za-z0-9_-]{4,150})$/i;
+const JEKO_PAYMENT_PATH_PATTERN = /^\/payment\/([^/]+)\/?$/;
+const JEKO_SHORT_CHECKOUT_PATH_PATTERN = /^\/(?:pr|c)\/[A-Za-z0-9_-]{2,150}\/?$/;
 
 export function isJekoPaymentRequestId(value: string | null | undefined) {
   return Boolean(value && JEKO_PAYMENT_REQUEST_ID_PATTERN.test(value));
@@ -11,8 +13,8 @@ export function isJekoPaymentRequestId(value: string | null | undefined) {
 
 /**
  * Produit l'unique destination de checkout autorisée à partir de l'identité
- * fournisseur. La valeur `redirectUrl` de la réponse distante n'est jamais
- * relayée telle quelle au navigateur.
+ * fournisseur. Cette forme reste le filet de sécurité si Jèko ne renvoie pas
+ * de `redirectUrl` courte conforme à notre allowlist.
  */
 export function buildCanonicalJekoCheckoutUrl(paymentRequestId: string) {
   const id = paymentRequestId.trim();
@@ -22,12 +24,36 @@ export function buildCanonicalJekoCheckoutUrl(paymentRequestId: string) {
   return `${JEKO_CHECKOUT_ORIGIN}/payment/${id}`;
 }
 
+/**
+ * Jèko peut renvoyer une URL de checkout courte (`/pr/...`) en production.
+ * On la conserve si elle reste sur le domaine officiel ; sinon on retombe sur
+ * la forme déterministe documentée à partir de l'ID fournisseur validé.
+ */
+export function resolveJekoCheckoutUrl(
+  paymentRequestId: string,
+  providerRedirectUrl?: string | null,
+) {
+  const canonical = buildCanonicalJekoCheckoutUrl(paymentRequestId);
+  const safeProviderUrl = normalizeAllowedJekoRedirectUrl(
+    providerRedirectUrl,
+    paymentRequestId,
+  );
+  return safeProviderUrl ?? canonical;
+}
+
 /** Validation utilisable côté serveur comme côté navigateur. */
 export function isAllowedJekoRedirectUrl(
   value: string | null | undefined,
   expectedPaymentRequestId?: string,
 ) {
-  if (!value || value !== value.trim()) return false;
+  return Boolean(normalizeAllowedJekoRedirectUrl(value, expectedPaymentRequestId));
+}
+
+function normalizeAllowedJekoRedirectUrl(
+  value: string | null | undefined,
+  expectedPaymentRequestId?: string,
+) {
+  if (!value || value !== value.trim()) return null;
   try {
     const url = new URL(value);
     if (
@@ -40,16 +66,23 @@ export function isAllowedJekoRedirectUrl(
       || url.search
       || url.hash
     ) {
-      return false;
+      return null;
     }
 
-    const match = /^\/payment\/([^/]+)\/?$/.exec(url.pathname);
-    if (!match) return false;
-    const id = match[1];
-    if (!isJekoPaymentRequestId(id)) return false;
-    return !expectedPaymentRequestId
+    const paymentPath = JEKO_PAYMENT_PATH_PATTERN.exec(url.pathname);
+    if (paymentPath) {
+      const id = paymentPath[1];
+      if (!isJekoPaymentRequestId(id)) return null;
+      const matchesExpected = !expectedPaymentRequestId
       || id.toLowerCase() === expectedPaymentRequestId.trim().toLowerCase();
+      return matchesExpected ? url.toString() : null;
+    }
+
+    if (JEKO_SHORT_CHECKOUT_PATH_PATTERN.test(url.pathname)) {
+      return url.toString();
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }

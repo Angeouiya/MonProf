@@ -17,6 +17,7 @@ const {
 const {
   buildCanonicalJekoCheckoutUrl,
   isAllowedJekoRedirectUrl: isAllowedJekoCheckoutUrl,
+  resolveJekoCheckoutUrl,
 } = jiti("../src/lib/jeko-checkout-url.ts");
 const {
   getVerifiedClientPaymentTransaction,
@@ -42,6 +43,23 @@ assert.equal(
   buildCanonicalJekoCheckoutUrl("d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc"),
   "https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc",
 );
+assert.equal(
+  isAllowedJekoCheckoutUrl("https://pay.jeko.africa/pr/c4"),
+  true,
+  "la page mobile Jèko courte /pr/... doit être autorisée",
+);
+assert.equal(
+  isAllowedJekoCheckoutUrl("https://pay.jeko.africa/c/abc123def456"),
+  true,
+  "les liens de paiement Jèko documentés /c/... restent autorisés",
+);
+assert.equal(
+  resolveJekoCheckoutUrl(
+    "d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc",
+    "https://pay.jeko.africa/pr/c4",
+  ),
+  "https://pay.jeko.africa/pr/c4",
+);
 assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/abc"), false);
 assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/018f1f6e-7b2d-7c10-8a52-93bd728b39ac"), true);
 assert.equal(isAllowedJekoCheckoutUrl("https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc?next=x"), false);
@@ -53,6 +71,7 @@ assert.equal(isAllowedJekoCheckoutUrl(
 assert.equal(isAllowedJekoRedirectUrl("http://pay.jeko.africa/payment/abc"), false);
 assert.equal(isAllowedJekoRedirectUrl("https://pay.jeko.africa.evil.example/payment/abc"), false);
 assert.equal(isAllowedJekoRedirectUrl("https://evil.example/?next=https://pay.jeko.africa/payment/abc"), false);
+assert.equal(isAllowedJekoRedirectUrl("https://pay.jeko.africa/pr/c4?next=https://evil.example"), false);
 assert.equal(assertJekoCallbackUrl("https://www.competence.ci/paiement/retour", "successUrl").startsWith("https://"), true);
 assert.throws(() => assertJekoCallbackUrl("http://localhost:3000/retour", "errorUrl"));
 assert.throws(() => assertJekoCallbackUrl(
