@@ -21,6 +21,7 @@ export function PasswordInput({ className, wrapperClassName, defaultVisible = fa
     <div
       className={cn("relative", wrapperClassName)}
       data-password-field
+      data-password-can-verify="true"
       data-password-visible={visible ? "true" : "false"}
     >
       <Input

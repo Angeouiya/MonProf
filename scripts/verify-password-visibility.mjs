@@ -6,6 +6,7 @@ const files = walk(sourceRoot).filter((filePath) => filePath.endsWith(".tsx"));
 const sources = files.map((filePath) => ({ filePath, source: fs.readFileSync(filePath, "utf8") }));
 const sharedControlPath = path.join(sourceRoot, "components", "shared", "password-input.tsx");
 const applicationSources = sources.filter(({ filePath }) => filePath !== sharedControlPath);
+const toRelative = (filePath) => path.relative(process.cwd(), filePath).replaceAll("\\", "/");
 
 const rawPasswordTypes = applicationSources.filter(({ source }) => (
   /type\s*=\s*["']password["']/.test(source)
@@ -28,6 +29,17 @@ const duplicatedVisibilityLogic = applicationSources.filter(({ source }) => (
   || /visible\s*\?\s*["']text["']\s*:\s*["']password["']/.test(source)
 ));
 
+const renderedPasswordControlFiles = applicationSources
+  .filter(({ source }) => /<PasswordInput\b/.test(source))
+  .map(({ filePath }) => toRelative(filePath))
+  .sort();
+const importedPasswordControlFiles = applicationSources
+  .filter(({ source }) => /import\s*\{\s*PasswordInput\s*\}\s*from\s*["']@\/components\/shared\/password-input["']/.test(source))
+  .map(({ filePath }) => toRelative(filePath))
+  .sort();
+const importWithoutRender = importedPasswordControlFiles.filter((filePath) => !renderedPasswordControlFiles.includes(filePath));
+const renderWithoutImport = renderedPasswordControlFiles.filter((filePath) => !importedPasswordControlFiles.includes(filePath));
+
 const passwordSurfaces = [
   "src/app/connexion/page.tsx",
   "src/app/professeur/connexion/page.tsx",
@@ -47,13 +59,14 @@ const missingSharedControl = passwordSurfaces.filter((surface) => !/<PasswordInp
 const clientTemporaryPassword = read("src/components/admin/client-temporary-password-form.tsx");
 
 const checks = [
-  ["All 11 password surfaces use the same revealable control", missingSharedControl.length === 0],
+  [`All ${passwordSurfaces.length} required password surfaces use the same revealable control`, missingSharedControl.length === 0],
+  [`Every rendered password control is imported and tracked (${renderedPasswordControlFiles.length} surfaces)`, importWithoutRender.length === 0 && renderWithoutImport.length === 0],
   ["No application password field bypasses the shared control", rawPasswordTypes.length === 0 && plaintextSensitiveInputs.length === 0],
   ["Password visibility logic is not duplicated across pages", duplicatedVisibilityLogic.length === 0],
   ["Shared password control starts masked unless explicitly requested", /defaultVisible\s*=\s*false/.test(sharedPasswordInput) && /useState\(defaultVisible\)/.test(sharedPasswordInput)],
   ["Reveal button never submits and exposes its state accessibly", /type="button"/.test(sharedPasswordInput) && /const controlLabel = visible \? "Masquer le mot de passe" : "Afficher le mot de passe";/.test(sharedPasswordInput) && /aria-label=\{controlLabel\}/.test(sharedPasswordInput) && /aria-pressed=\{visible\}/.test(sharedPasswordInput)],
   ["Reveal button is readable on mobile with Voir/Masquer text", /const controlText = visible \? "Masquer" : "Voir";/.test(sharedPasswordInput) && /data-password-visibility-label=\{controlText\.toLowerCase\(\)\}/.test(sharedPasswordInput) && /<span>\{controlText\}<\/span>/.test(sharedPasswordInput)],
-  ["Shared password control exposes visible state for QA", /data-password-visible=\{visible \? "true" : "false"\}/.test(sharedPasswordInput)],
+  ["Shared password control exposes visible state and verification capability for QA", /data-password-can-verify="true"/.test(sharedPasswordInput) && /data-password-visible=\{visible \? "true" : "false"\}/.test(sharedPasswordInput)],
   ["Visible password input disables phone autocorrection", /autoCapitalize="none"/.test(sharedPasswordInput) && /autoCorrect="off"/.test(sharedPasswordInput) && /spellCheck=\{false\}/.test(sharedPasswordInput)],
   ["Reveal button is always tied to its controlled input", /useId/.test(sharedPasswordInput) && /const inputId = typeof props\.id === "string" && props\.id\.trim\(\) \? props\.id : `password-\$\{generatedId\}`;/.test(sharedPasswordInput) && /id=\{inputId\}/.test(sharedPasswordInput) && /aria-controls=\{inputId\}/.test(sharedPasswordInput)],
   ["Generated one-time client password remains immediately readable", /<PasswordInput[\s\S]*?defaultVisible/.test(clientTemporaryPassword)],
@@ -62,9 +75,11 @@ const checks = [
 for (const [label, ok] of checks) console.log(`${ok ? "OK" : "FAIL"} ${label}`);
 
 for (const surface of missingSharedControl) console.log(`FAIL Missing shared password control: ${surface}`);
-for (const { filePath } of rawPasswordTypes) console.log(`FAIL Raw password type: ${path.relative(process.cwd(), filePath)}`);
-for (const { filePath, tag } of plaintextSensitiveInputs) console.log(`FAIL Password-like Input exposed as plain text: ${path.relative(process.cwd(), filePath)} :: ${tag}`);
-for (const { filePath } of duplicatedVisibilityLogic) console.log(`FAIL Duplicated visibility state: ${path.relative(process.cwd(), filePath)}`);
+for (const filePath of importWithoutRender) console.log(`FAIL PasswordInput imported but not rendered: ${filePath}`);
+for (const filePath of renderWithoutImport) console.log(`FAIL PasswordInput rendered without direct shared import: ${filePath}`);
+for (const { filePath } of rawPasswordTypes) console.log(`FAIL Raw password type: ${toRelative(filePath)}`);
+for (const { filePath, tag } of plaintextSensitiveInputs) console.log(`FAIL Password-like Input exposed as plain text: ${toRelative(filePath)} :: ${tag}`);
+for (const { filePath } of duplicatedVisibilityLogic) console.log(`FAIL Duplicated visibility state: ${toRelative(filePath)}`);
 
 if (checks.some(([, ok]) => !ok)) process.exitCode = 1;
 
