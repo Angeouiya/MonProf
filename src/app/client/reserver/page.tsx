@@ -39,6 +39,7 @@ export default async function ReserverPage({
       order: item.level.order,
     })), journey).length > 0
   ));
+  if (eligibleJourneys.length === 0) notFound();
   if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 
   const [{ communes }, platformSettings] = await Promise.all([

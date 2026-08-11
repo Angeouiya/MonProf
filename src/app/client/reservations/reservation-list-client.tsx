@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   FilterX,
   Search,
@@ -254,21 +255,51 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
               </p>
             </div>
           </div>
-          <ClientRecordAmount value={reservation.amountLabel} className="min-[560px]:min-w-36 min-[560px]:text-right" />
+          <ClientRecordAmount value={reservation.amountLabel} className="hidden min-[560px]:block min-[560px]:min-w-36 min-[560px]:text-right" />
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 min-[560px]:hidden" data-client-reservation-mobile-snapshot>
+          <ReservationMini label="Date" value={reservation.dateLabel} />
+          <ReservationMini label="Montant" value={reservation.amountLabel} strong />
         </div>
 
         <dl
           data-client-reservation-card-facts
-          className="mt-3 grid grid-cols-1 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white min-[520px]:grid-cols-3"
+          className="mt-3 hidden grid-cols-1 overflow-hidden rounded-lg border border-[#D8DEE9] bg-white min-[560px]:grid min-[560px]:grid-cols-3"
         >
           <ReservationFact label="Date" value={reservation.dateLabel} />
           <ReservationFact label="Créneau" value={reservation.timeLabel} />
           <ReservationFact label="Format" value={reservation.formatLabel} />
         </dl>
 
+        <div
+          className={cn("mt-3 rounded-lg border bg-white px-3 py-2.5 min-[620px]:hidden", reservation.stepClassName)}
+          data-client-reservation-mobile-status
+        >
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <p className="truncate text-sm font-semibold text-[#111827]">{reservation.stepLabel}</p>
+            <span className="shrink-0 text-xs font-semibold text-[#111B4D]">{reservation.paymentLabel}</span>
+          </div>
+        </div>
+
+        <details
+          className="group mt-2 overflow-hidden rounded-lg border border-[#E3E8F2] bg-white min-[620px]:hidden"
+          data-client-reservation-mobile-details
+        >
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-[#111B4D] marker:hidden">
+            Infos
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="grid gap-2 border-t border-[#E6EAF3] p-3 text-xs font-medium leading-5 text-[#64748B]">
+            <p><span className="font-semibold text-[#111827]">Créneau :</span> {reservation.timeLabel}</p>
+            <p><span className="font-semibold text-[#111827]">Format :</span> {reservation.formatLabel}</p>
+            <p>{reservation.stepHint}</p>
+          </div>
+        </details>
+
         <div className="mt-3 grid gap-3 min-[620px]:grid-cols-[minmax(0,1fr)_auto] min-[620px]:items-center">
           <ClientRecordStatusLine
-            className={reservation.stepClassName}
+            className={cn("hidden min-[620px]:block", reservation.stepClassName)}
             label={reservation.stepLabel}
             hint={reservation.stepHint}
             aside={reservation.paymentLabel}
@@ -281,6 +312,15 @@ function ReservationCard({ reservation }: { reservation: ClientReservationListIt
         </div>
       </div>
     </ClientRecordCard>
+  );
+}
+
+function ReservationMini({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className={cn("mt-1 truncate text-sm font-semibold leading-5", strong ? "text-[#111B4D]" : "text-[#111827]")}>{value || "—"}</p>
+    </div>
   );
 }
 

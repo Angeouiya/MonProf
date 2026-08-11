@@ -728,8 +728,16 @@ export function ReserverForm({
             ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
           : "";
   function handleJourneyChange(journey: "ivoirien" | "francais" | "professionnel") {
+    if (!eligibleJourneys.includes(journey)) {
+      toast.error("Ce professeur n'enseigne pas dans ce système. Choisissez un parcours autorisé.");
+      return;
+    }
     const nextSubjects = filterSubjectsForJourney(subjects, journey);
     const nextLevels = filterLevelsForJourney(levels, journey);
+    if (nextSubjects.length === 0 || nextLevels.length === 0) {
+      toast.error("Ce professeur n'a pas encore de matière et niveau compatibles avec ce système.");
+      return;
+    }
     const nextSubject = nextSubjects.find((subject) => (
       teacher.subjects.some((item) => item.isPrimary && item.name === subject.name)
     ))?.name ?? nextSubjects[0]?.name ?? "";

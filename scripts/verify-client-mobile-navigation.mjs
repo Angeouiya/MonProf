@@ -81,6 +81,7 @@ const pricingBreakdown = read(pricingBreakdownPath);
 const bookingSessionLedger = read(bookingSessionLedgerPath);
 const alertDialog = read(alertDialogPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
+const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
 const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
 const clientPricingCopySources = clientPricingCopyPaths.map(read).join("\n");
@@ -301,6 +302,17 @@ record(
 record(
   "Client reservation summary keeps its three financial facts readable",
   /data-client-reservation-mobile-priority[\s\S]*?mt-3 grid grid-cols-3 gap-2/.test(clientReservationsPage),
+);
+
+record(
+  "Client reservation cards keep mobile decisions visible while folding long details",
+  /data-client-reservation-mobile-snapshot/.test(clientReservationList)
+    && /data-client-reservation-mobile-status/.test(clientReservationList)
+    && /data-client-reservation-mobile-details/.test(clientReservationList)
+    && /Infos/.test(clientReservationList)
+    && /group-open:rotate-180/.test(clientReservationList)
+    && /hidden min-\[560px\]:block/.test(clientReservationList)
+    && /hidden min-\[620px\]:block/.test(clientReservationList),
 );
 
 record(
