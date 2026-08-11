@@ -24,6 +24,7 @@ import { BackButton } from "@/components/shared/back-button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-breakdown";
+import { JekoHostedCheckoutPreview } from "@/components/shared/jeko-hosted-checkout-preview";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { formatFCFA } from "@/lib/format";
@@ -2005,6 +2006,12 @@ export function ReserverForm({
                       <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#64748B]">
                         Jèko collecte les informations de paiement et confirme le résultat directement au serveur Compétence.CI. Aucun code secret Mobile Money n'est enregistré ici.
                       </p>
+                      <JekoHostedCheckoutPreview
+                        amount={totalPrice}
+                        method={selectedPaymentMethod}
+                        merchantName="Boutique Compétence"
+                        className="mt-4 max-w-md"
+                      />
                     </div>
                   </div>
 

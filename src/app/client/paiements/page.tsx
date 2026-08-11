@@ -14,6 +14,7 @@ import {
 } from "@/components/shared/client-page-primitives";
 import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { JekoHostedCheckoutPreview } from "@/components/shared/jeko-hosted-checkout-preview";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatFCFAShort, formatDate } from "@/lib/format";
@@ -83,6 +84,7 @@ export default async function PaiementsPage() {
       transportFee: true,
       paymentServiceFeeAmount: true,
       paymentProvider: true,
+      paymentMethod: true,
       paydunyaCheckoutUrl: true,
       teacher: {
         select: {
@@ -464,6 +466,7 @@ type PendingPaymentBooking = {
   transportFee: number;
   paymentServiceFeeAmount: number;
   paymentProvider: string | null;
+  paymentMethod: string | null;
   paydunyaCheckoutUrl: string | null;
   teacher: {
     fullName: string;
@@ -557,6 +560,13 @@ function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] 
                 transportFee={booking.transportFee}
                 serviceFeeAmount={booking.paymentServiceFeeAmount}
                 totalAmount={getPendingBookingAmount(booking)}
+              />
+
+              <JekoHostedCheckoutPreview
+                amount={getPendingBookingAmount(booking)}
+                method={booking.paymentMethod}
+                merchantName="Boutique Compétence"
+                className="mt-3 bg-[#FAFBFF]"
               />
 
               <ClientRecordStatusLine

@@ -189,6 +189,18 @@ const jekoClient = readFileSync(
   new URL("../src/lib/jeko.ts", import.meta.url),
   "utf8",
 );
+const jekoCheckoutPreview = readFileSync(
+  new URL("../src/components/shared/jeko-hosted-checkout-preview.tsx", import.meta.url),
+  "utf8",
+);
+const clientBookingForm = readFileSync(
+  new URL("../src/app/client/reserver/reserver-form.tsx", import.meta.url),
+  "utf8",
+);
+const clientPaymentsPage = readFileSync(
+  new URL("../src/app/client/paiements/page.tsx", import.meta.url),
+  "utf8",
+);
 assert.match(
   jekoClient,
   /paymentMethod:\s*z\.string\(\)\.trim\(\)\.min\(1\)\.nullable\(\)\.optional\(\)/,
@@ -208,6 +220,12 @@ assert.match(
   /confirmation\.paymentMethod\s*\?\?\s*fromPlatformPaymentMethod\(attempt\.method\)/,
   "la réconciliation doit reprendre la méthode locale figée quand Jèko l'omet",
 );
+assert.match(jekoCheckoutPreview, /merchantName = "Boutique Compétence"/);
+assert.match(clientBookingForm, /merchantName="Boutique Compétence"/);
+assert.match(clientPaymentsPage, /merchantName="Boutique Compétence"/);
+for (const source of [jekoCheckoutPreview, clientBookingForm, clientPaymentsPage]) {
+  assert.doesNotMatch(source, /Buildify|Bluidify/i, "la boutique visible côté client doit rester Compétence");
+}
 
 const recovery = readFileSync(
   new URL("../src/lib/jeko-payment-request-recovery.ts", import.meta.url),
