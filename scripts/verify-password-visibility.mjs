@@ -55,7 +55,7 @@ const checks = [
   ["Reveal button is readable on mobile with Voir/Masquer text", /const controlText = visible \? "Masquer" : "Voir";/.test(sharedPasswordInput) && /data-password-visibility-label=\{controlText\.toLowerCase\(\)\}/.test(sharedPasswordInput) && /<span>\{controlText\}<\/span>/.test(sharedPasswordInput)],
   ["Shared password control exposes visible state for QA", /data-password-visible=\{visible \? "true" : "false"\}/.test(sharedPasswordInput)],
   ["Visible password input disables phone autocorrection", /autoCapitalize="none"/.test(sharedPasswordInput) && /autoCorrect="off"/.test(sharedPasswordInput) && /spellCheck=\{false\}/.test(sharedPasswordInput)],
-  ["Reveal button is tied to its controlled input", /aria-controls=\{typeof props\.id === "string" \? props\.id : undefined\}/.test(sharedPasswordInput)],
+  ["Reveal button is always tied to its controlled input", /useId/.test(sharedPasswordInput) && /const inputId = typeof props\.id === "string" && props\.id\.trim\(\) \? props\.id : `password-\$\{generatedId\}`;/.test(sharedPasswordInput) && /id=\{inputId\}/.test(sharedPasswordInput) && /aria-controls=\{inputId\}/.test(sharedPasswordInput)],
   ["Generated one-time client password remains immediately readable", /<PasswordInput[\s\S]*?defaultVisible/.test(clientTemporaryPassword)],
 ];
 
