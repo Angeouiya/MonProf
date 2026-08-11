@@ -59,6 +59,7 @@ export function JourneySwitcher({
       className={cn("journey-switcher", className)}
       data-journey-switcher
       data-mini-app-tabs
+      data-mini-app-system-switcher
       data-active-journey={selectedJourney}
       data-journey-count={journeys.length}
       data-size={size}
@@ -70,8 +71,9 @@ export function JourneySwitcher({
         role="tablist"
         aria-label={label}
         data-mini-app-tablist
+        data-mini-app-rail
       >
-        <span className="journey-switcher__indicator" aria-hidden="true" />
+        <span className="journey-switcher__indicator" aria-hidden="true" data-mini-app-active-pill />
         {journeys.map((journey) => {
           const config = TEACHER_JOURNEY_CONFIG[journey];
           const href = hrefs[journey];
@@ -91,6 +93,7 @@ export function JourneySwitcher({
               role="tab"
               data-journey-tab={journey}
               data-active={active ? "true" : "false"}
+              data-state={active ? "active" : "inactive"}
               className="journey-switcher__link"
               onClick={() => setPendingSelection({ source: resolvedActive, target: journey })}
             >

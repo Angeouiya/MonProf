@@ -72,6 +72,8 @@ check(
     && /<JourneySwitcher/.test(clientDashboard)
     && /data-journey-tab=\{journey\}/.test(journeySwitcher)
     && /data-mini-app-tabs/.test(journeySwitcher)
+    && /data-mini-app-system-switcher/.test(journeySwitcher)
+    && /data-mini-app-active-pill/.test(journeySwitcher)
     && /role="tablist"/.test(journeySwitcher)
     && /role="tab"/.test(journeySwitcher)
     && !/Professeurs recommandés/.test(clientDashboard),

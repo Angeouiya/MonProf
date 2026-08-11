@@ -25,6 +25,8 @@ const checks = [
       && home.includes('<JourneySwitcher')
       && journeySwitcher.includes('data-journey-tab={journey}')
       && journeySwitcher.includes('data-mini-app-tablist')
+      && journeySwitcher.includes('data-mini-app-system-switcher')
+      && journeySwitcher.includes('data-mini-app-active-pill')
       && journeySwitcher.includes('role="tablist"')
       && journeySwitcher.includes('role="tab"')
       && journeySwitcher.includes('aria-selected={active}')
