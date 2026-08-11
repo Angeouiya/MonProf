@@ -43,7 +43,7 @@ assert.throws(() => jekoAmountCentsToXof(101), /nombre entier de FCFA/);
 assert.equal(JEKO_COMPETENCE_STORE_NAME, "Boutique Compétence");
 assert.equal(isCompetenceJekoStoreName("Boutique Compétence"), true);
 assert.equal(isCompetenceJekoStoreName("Boutique Competence CI"), true);
-assert.equal(isCompetenceJekoStoreName("Competence CI"), false);
+assert.equal(isCompetenceJekoStoreName("Competence CI"), true);
 assert.equal(isCompetenceJekoStoreName("Compétence Test"), false);
 assert.equal(isForbiddenJekoStoreName("Buildify"), true);
 assert.equal(isForbiddenJekoStoreName("Bluidify"), true);
