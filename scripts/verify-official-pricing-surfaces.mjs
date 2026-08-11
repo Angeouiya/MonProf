@@ -48,6 +48,19 @@ const checks = [
       && teacherCard.includes('text-[#111B4D]">{priceLabel}'),
   ],
   [
+    "Public tariffs behave like one journey-scoped mini-app",
+    publicTariffs.includes('searchParams: Promise<{ journey?: string }>')
+      && publicTariffs.includes('const activeJourney = parseTeacherJourney(sp.journey) ?? "ivoirien"')
+      && publicTariffs.includes('activeJourney={activeJourney}')
+      && publicTariffs.includes('ivoirien: "/tarifs?journey=ivoirien"')
+      && publicTariffs.includes('francais: "/tarifs?journey=francais"')
+      && publicTariffs.includes('professionnel: "/tarifs?journey=professionnel"')
+      && publicTariffs.includes('data-tariff-active-grid={activeGrid.journey}')
+      && publicTariffs.includes('activeGrid.rates.map')
+      && !/PRICE_GRIDS\.map\(\(grid\)[\s\S]{0,500}<article/.test(publicTariffs)
+      && publicTariffs.includes('const teacherHref = `/professeurs?journey=${activeJourney}`'),
+  ],
+  [
     "Automatic replacement matching ignores obsolete teacher prices",
     !/priceDiff|priceCompatible|Tarif compatible|Écart tarifaire/.test(replacementMatching)
       && !/priceDiff|priceCompatible|Tarif compatible|Écart tarifaire|pricePerSession:\s*teacher\.pricePerSession/.test(replacementApi)
