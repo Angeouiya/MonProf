@@ -10,8 +10,8 @@ const balanceFunction = payoutLibrary.match(
 
 assert.match(liveVerifier, /getJekoStoreBalance\(\{ config \}\)/);
 assert.match(liveVerifier, /getJekoStores\(\{ config \}\)/);
-assert.match(liveVerifier, /assertCompetenceStoreName\(configuredStore\.name\)/);
-assert.match(liveVerifier, /Buildify\/Bluidify/);
+assert.match(liveVerifier, /assertCompetenceJekoStoreName\(configuredStore\.name\)/);
+assert.match(liveVerifier, /jeko-store-identity/);
 assert.match(liveVerifier, /boutique Compétence/);
 assert.match(liveVerifier, /server-only[\s\S]*?empty\.js/);
 assert.doesNotMatch(liveVerifier, /createJekoTeacherPayout|ensureJekoMobileMoneyContact|createJekoPaymentRequest/);

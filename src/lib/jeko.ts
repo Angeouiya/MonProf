@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { requireJekoServerConfig, type JekoServerConfig } from "./jeko-config";
 import { getPublicAppOrigin } from "./public-url";
+import { assertCompetenceJekoStoreName } from "./jeko-store-identity";
 import {
   isAllowedJekoRedirectUrl,
   isJekoPaymentRequestId,
@@ -181,6 +182,7 @@ export async function createJekoPaymentRequest(
     options.fetchImpl,
   );
   const response = jekoPaymentRequestSchema.parse(raw);
+  assertJekoPaymentResponseStoreIdentity(raw);
   if (
     response.storeId !== config.storeId
     || response.reference !== reference
@@ -225,6 +227,7 @@ export async function confirmJekoPaymentRequest(
     options.fetchImpl,
   );
   const response = jekoPaymentRequestSchema.parse(raw);
+  assertJekoPaymentResponseStoreIdentity(raw);
   if (response.id !== safeId || response.storeId !== config.storeId) {
     throw new JekoApiError("La confirmation Jèko ne correspond pas à la demande attendue.", 502, "RESPONSE_MISMATCH");
   }
@@ -556,4 +559,33 @@ function firstString(...values: unknown[]) {
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
+}
+
+function assertJekoPaymentResponseStoreIdentity(raw: unknown) {
+  const storeName = extractJekoStoreName(raw);
+  if (!storeName) return;
+  try {
+    assertCompetenceJekoStoreName(storeName, "La boutique Jèko renvoyée par le paiement");
+  } catch (error) {
+    throw new JekoApiError(
+      error instanceof Error ? error.message : "La boutique Jèko renvoyée est invalide.",
+      502,
+      "JEKO_STORE_MISMATCH",
+      isRecord(raw) ? raw : null,
+    );
+  }
+}
+
+function extractJekoStoreName(raw: unknown): string | null {
+  if (!isRecord(raw)) return null;
+  return firstString(
+    raw.storeName,
+    raw.merchantName,
+    raw.businessName,
+    raw.shopName,
+    isRecord(raw.store) ? raw.store.name : null,
+    isRecord(raw.merchant) ? raw.merchant.name : null,
+    isRecord(raw.business) ? raw.business.name : null,
+    isRecord(raw.shop) ? raw.shop.name : null,
+  );
 }

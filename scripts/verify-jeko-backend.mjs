@@ -20,6 +20,12 @@ const {
   resolveJekoCheckoutUrl,
 } = jiti("../src/lib/jeko-checkout-url.ts");
 const {
+  JEKO_COMPETENCE_STORE_NAME,
+  assertCompetenceJekoStoreName,
+  isCompetenceJekoStoreName,
+  isForbiddenJekoStoreName,
+} = jiti("../src/lib/jeko-store-identity.ts");
+const {
   getVerifiedClientPaymentTransaction,
   hasCompletedClientPaymentProviderProof,
   hasVerifiedClientPayment,
@@ -34,6 +40,14 @@ assert.throws(() => xofToJekoAmountCents(0));
 assert.throws(() => xofToJekoAmountCents(1.5));
 assert.throws(() => xofToJekoAmountCents(21_474_837));
 assert.throws(() => jekoAmountCentsToXof(101), /nombre entier de FCFA/);
+assert.equal(JEKO_COMPETENCE_STORE_NAME, "Boutique Compétence");
+assert.equal(isCompetenceJekoStoreName("Boutique Compétence"), true);
+assert.equal(isCompetenceJekoStoreName("Competence CI"), true);
+assert.equal(isForbiddenJekoStoreName("Buildify"), true);
+assert.equal(isForbiddenJekoStoreName("Bluidify"), true);
+assert.doesNotThrow(() => assertCompetenceJekoStoreName("Boutique Compétence"));
+assert.throws(() => assertCompetenceJekoStoreName("Buildify"), /Buildify\/Bluidify/);
+assert.throws(() => assertCompetenceJekoStoreName("Autre boutique"), /Boutique Compétence/);
 
 assert.equal(
   isAllowedJekoRedirectUrl("https://pay.jeko.africa/payment/d22c81f3-ee04-4ec5-8bd2-cd8af5dabcfc"),
@@ -211,6 +225,10 @@ assert.match(
   /response\.paymentMethod\?\.toLowerCase\(\)\s*!==\s*paymentMethod/,
   "la création POST doit toujours rejeter une réponse sans la méthode attendue",
 );
+assert.match(jekoClient, /assertCompetenceJekoStoreName/);
+assert.match(jekoClient, /JEKO_STORE_MISMATCH/);
+assert.match(jekoClient, /raw\.storeName/);
+assert.match(jekoClient, /raw\.merchantName/);
 const reconciliation = readFileSync(
   new URL("../src/lib/jeko-reconciliation.ts", import.meta.url),
   "utf8",
