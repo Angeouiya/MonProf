@@ -117,11 +117,11 @@ export function TeacherPayoutRequestForm({
   };
 
   return (
-    <div id="demande-retrait-professeur" data-professor-payout-request className="scroll-mt-24 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
+    <div id="demande-retrait-professeur" data-professor-payout-request data-professor-payout-primary-action className="scroll-mt-24 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-[#111827]">Retirer mon argent</p>
-          <p className="mt-1 text-sm font-semibold text-[#64748B]">Choisissez le montant et le numéro à payer.</p>
+          <p className="text-lg font-semibold text-[#111827]">Retirer</p>
+          <p className="mt-1 text-sm font-semibold text-[#64748B]">Montant. Numéro. Validation.</p>
         </div>
         <div className="shrink-0 rounded-lg bg-[#EEF2FF] px-3 py-2 text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Disponible</p>
@@ -131,7 +131,7 @@ export function TeacherPayoutRequestForm({
 
       <p className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-emerald-700">
         <CheckCircle2 className="h-4 w-4" aria-hidden />
-        Vous recevez le montant exact. Les frais sont pris en charge.
+        Vous recevez le montant exact. Frais pris en charge.
       </p>
 
       <div data-professor-payout-fields className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
@@ -225,7 +225,7 @@ export function TeacherPayoutRequestForm({
       <div className="mt-4 grid gap-2 min-[640px]:grid-cols-[minmax(0,1fr)_auto] min-[640px]:items-center">
         <p className="text-xs font-semibold leading-5 text-[#64748B]">
           {pendingRequested > 0 || draftReservedAmount > 0
-            ? `${formatFCFA(pendingRequested + draftReservedAmount)} déjà en cours.`
+            ? `${formatFCFA(pendingRequested + draftReservedAmount)} en cours.`
             : `Traitement : ${minimumProcessingHours}h à ${maximumProcessingHours}h après contrôle.`}
         </p>
         <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-12 w-full rounded-lg bg-[#111B4D] px-6 text-white hover:bg-[#1E2A78] min-[640px]:w-auto">

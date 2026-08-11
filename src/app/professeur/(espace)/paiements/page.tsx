@@ -234,6 +234,17 @@ export default async function ProfesseurPaiementsPage() {
         </div>
       </section>
 
+      <TeacherPayoutRequestForm
+        readyToReceive={readyToReceive}
+        pendingRequested={pendingRequested}
+        draftReservedAmount={draftReservedAmount}
+        defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
+        defaultMethod={teacher.defaultPayoutMethod}
+        payoutInstructions={teacher.payoutInstructions}
+        minimumProcessingHours={platformSettings.payoutDelay.minimumHours}
+        maximumProcessingHours={platformSettings.payoutDelay.maximumHours}
+      />
+
       <ProfessorDisclosure
         title="Voir le calcul exact"
         description="Net, fonds bloqués, retenues et transferts en cours."
@@ -255,17 +266,6 @@ export default async function ProfesseurPaiementsPage() {
             <AccountingMini label="En contrôle" value={formatFCFA(underControlAmount)} />
         </div>
       </ProfessorDisclosure>
-
-      <TeacherPayoutRequestForm
-        readyToReceive={readyToReceive}
-        pendingRequested={pendingRequested}
-        draftReservedAmount={draftReservedAmount}
-        defaultPhone={teacher.defaultPayoutPhone || teacher.phone}
-        defaultMethod={teacher.defaultPayoutMethod}
-        payoutInstructions={teacher.payoutInstructions}
-        minimumProcessingHours={platformSettings.payoutDelay.minimumHours}
-        maximumProcessingHours={platformSettings.payoutDelay.maximumHours}
-      />
 
       <ProfessorDisclosure
         title="Mes demandes"
