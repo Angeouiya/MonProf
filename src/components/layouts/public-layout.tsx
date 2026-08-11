@@ -231,7 +231,12 @@ export function PublicLayout({
         </div>
       )}
 
-      <main className={cn("flex-1", !hideMobileNav && "public-main-with-mobile-nav")}>{children}</main>
+      <main
+        data-public-main
+        className={cn("flex-1", !hideMobileNav && "public-main-with-mobile-nav")}
+      >
+        {children}
+      </main>
 
       {!hideFooter && (
       <footer className={cn("mt-auto hidden border-t border-[#E3E8F2] bg-white sm:block lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
@@ -292,7 +297,8 @@ function PublicMobileNav({
 
   return (
     <nav
-      className="public-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      data-public-mobile-nav
+      className="public-mobile-nav fixed inset-x-0 z-40 border-t border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation publique mobile"
     >

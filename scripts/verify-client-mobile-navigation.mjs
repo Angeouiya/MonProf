@@ -517,6 +517,19 @@ record(
 );
 
 record(
+  "Public mobile bottom navigation never masks page content",
+  /data-public-main/.test(publicLayout)
+    && /public-main-with-mobile-nav/.test(publicLayout)
+    && /data-public-mobile-nav/.test(publicLayout)
+    && /public-mobile-nav fixed inset-x-0/.test(publicLayout)
+    && !/public-mobile-nav fixed inset-x-3/.test(publicLayout)
+    && /Mobile app safe area: bottom navigation never covers page content/.test(css)
+    && /\.public-shell\.public-shell--mobile-nav-visible main\.public-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
+    && /\.public-shell\s*\[data-public-mobile-nav\],[\s\S]*?\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?\}/.test(css)
+    && /\.public-shell\s*\[data-public-mobile-nav\]\s*>\s*div,[\s\S]*?\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Public root tabs suppress the redundant back strip",
   /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/contact"\]\)/.test(publicLayout)
     && /shouldShowPublicBack\(pathname\)/.test(publicLayout)
