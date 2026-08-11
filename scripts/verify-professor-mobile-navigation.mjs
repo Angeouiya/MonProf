@@ -60,6 +60,20 @@ record(
 );
 
 record(
+  "Professor mobile bottom navigation never masks missions or payout actions",
+  /data-professor-main/.test(layout)
+    && /professor-main-with-mobile-nav/.test(layout)
+    && /data-professor-mobile-nav/.test(layout)
+    && /professor-mobile-nav fixed inset-x-0/.test(layout)
+    && !/professor-mobile-nav fixed inset-x-3/.test(layout)
+    && /style=\{\{\s*bottom:\s*"0px"\s*\}\}/.test(layout)
+    && /Mobile app safe area: bottom navigation never covers page content/.test(css)
+    && /\.professor-shell main\.professor-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(8\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
+    && /\.professor-shell\s*\[data-professor-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?margin-inline:\s*0\s*!important;[\s\S]*?\}/.test(css)
+    && /\.professor-shell\s*\[data-professor-mobile-nav\]\s*>\s*div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+);
+
+record(
   "Professor dashboard renders only one priority, one next course and the exact balance",
   /data-professor-dashboard-priority/.test(dashboard)
     && /verifiedUpcomingBookings\.slice\(0, 1\)/.test(dashboard)

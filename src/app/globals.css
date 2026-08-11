@@ -4934,14 +4934,20 @@ b {
     padding-bottom: calc(2rem + env(safe-area-inset-bottom)) !important;
   }
 
+  .professor-shell main.professor-main-with-mobile-nav {
+    padding-bottom: calc(8.25rem + env(safe-area-inset-bottom)) !important;
+  }
+
   .public-mobile-nav,
   .public-shell [data-public-mobile-nav],
-  .client-shell [data-client-mobile-nav] {
+  .client-shell [data-client-mobile-nav],
+  .professor-shell [data-professor-mobile-nav] {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
     max-width: none !important;
+    margin-inline: 0 !important;
     max-height: calc(100dvh - var(--app-topbar-height) - 1.5rem) !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
@@ -4950,7 +4956,8 @@ b {
 
   .public-mobile-nav > div,
   .public-shell [data-public-mobile-nav] > div,
-  .client-shell [data-client-mobile-nav] > div {
+  .client-shell [data-client-mobile-nav] > div,
+  .professor-shell [data-professor-mobile-nav] > div {
     max-width: 28rem;
     margin-inline: auto;
   }

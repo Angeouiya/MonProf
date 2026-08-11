@@ -212,7 +212,7 @@ export function ProfessorLayout({
           </div>
         )}
 
-        <main data-professor-main className="min-w-0 flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
+        <main data-professor-main className="professor-main-with-mobile-nav min-w-0 flex-1 overflow-x-hidden pb-24 lg:ml-72 lg:pb-0">
           <div data-professor-content className="mx-auto w-full max-w-7xl px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">
             {children}
           </div>
@@ -382,8 +382,8 @@ function MobileBottomNav({
   return (
     <nav
       data-professor-mobile-nav
-      className="professor-mobile-nav fixed inset-x-3 z-40 rounded-lg border border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
-      style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      className="professor-mobile-nav fixed inset-x-0 z-40 border-t border-[#E1E7F2] bg-white px-2 py-2 lg:hidden"
+      style={{ bottom: "0px" }}
       aria-label="Navigation professeur mobile"
     >
       <div className="grid grid-cols-4 gap-1">
