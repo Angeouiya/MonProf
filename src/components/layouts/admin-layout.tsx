@@ -78,6 +78,26 @@ const secondaryNavItems: NavItem[] = [
   { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
 ];
 
+const mobileNavPriorityHrefs = [
+  "/admin",
+  "/admin/centre-operationnel",
+  "/admin/reservations",
+  "/admin/paiements",
+  "/admin/professeurs",
+  "/admin/clients",
+] as const;
+
+function buildAdminMobileNavItems(permissions: AdminPermission[]) {
+  const availableItems = navSections
+    .flatMap((section) => section.items)
+    .filter((item) => !item.hideInList && hasAdminPermission(permissions, item.permission));
+  const priorityItems = mobileNavPriorityHrefs
+    .map((href) => availableItems.find((item) => item.href === href))
+    .filter((item): item is NavItem => Boolean(item));
+  const fallbackItems = availableItems.filter((item) => !priorityItems.some((priority) => priority.href === item.href));
+  return [...priorityItems, ...fallbackItems].slice(0, 4);
+}
+
 export function AdminLayout({
   children,
   userName,
@@ -96,6 +116,7 @@ export function AdminLayout({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const summary = notificationSummary ?? { total: notificationCount, urgent: 0, teacher: 0, payment: 0 };
+  const mobileNavItems = buildAdminMobileNavItems(permissions);
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname?.startsWith(href);
@@ -174,11 +195,75 @@ export function AdminLayout({
           </div>
         )}
 
-        <main data-admin-main className="min-w-0 flex-1 overflow-x-hidden lg:ml-72">
+        <main data-admin-main className="admin-main-with-mobile-nav min-w-0 flex-1 overflow-x-hidden lg:ml-72">
           <div data-admin-content className="mx-auto w-full max-w-[86rem] px-3 py-5 min-[380px]:px-4 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
+      <AdminMobileBottomNav items={mobileNavItems} isActive={isActive} summary={summary} />
     </div>
+  );
+}
+
+function AdminMobileBottomNav({
+  items,
+  isActive,
+  summary,
+}: {
+  items: NavItem[];
+  isActive: (href: string, exact?: boolean) => boolean;
+  summary: AdminNotificationSummary;
+}) {
+  if (items.length === 0) return null;
+
+  const getBadge = (href: string) => {
+    if (href === "/admin/centre-operationnel") return summary.urgent;
+    if (href === "/admin/paiements") return summary.payment;
+    if (href === "/admin/professeurs") return summary.teacher;
+    return 0;
+  };
+
+  return (
+    <nav
+      data-admin-mobile-nav
+      aria-label="Navigation admin mobile"
+      className="admin-mobile-nav fixed inset-x-0 bottom-0 z-[60] border-t border-[#E6EAF3] bg-white/95 px-2 pt-2 shadow-[0_-18px_44px_rgba(17,24,39,0.10)] backdrop-blur lg:hidden"
+    >
+      <div
+        className="mx-auto grid max-w-[28rem] gap-1 rounded-t-[1.35rem] bg-white"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
+        {items.map((item) => {
+          const active = isActive(item.href, item.exact);
+          const badge = getBadge(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              data-admin-mobile-item
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-[4rem] flex-col items-center justify-center gap-1 rounded-lg px-1.5 text-[11px] font-black transition-colors",
+                active ? "bg-[#111B4D] text-white" : "text-[#64748B] hover:bg-[#F7F9FC] hover:text-[#111B4D]",
+              )}
+            >
+              <span className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-full",
+                active ? "bg-white/15" : "bg-[#F3F6FB]",
+              )}>
+                <item.icon className="h-4 w-4" />
+              </span>
+              <span className="max-w-full truncate">{item.label}</span>
+              {badge > 0 && (
+                <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 

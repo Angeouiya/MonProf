@@ -98,6 +98,18 @@ record(
     && /secondaryNavItems\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout),
 );
 
+record(
+  "Admin mobile app exposes four thumb-reachable essentials without covering content",
+  /const mobileNavPriorityHrefs = \[[\s\S]*?"\/admin"[\s\S]*?"\/admin\/centre-operationnel"[\s\S]*?"\/admin\/reservations"[\s\S]*?"\/admin\/paiements"/.test(layout)
+    && /return \[\.\.\.priorityItems, \.\.\.fallbackItems\]\.slice\(0, 4\)/.test(layout)
+    && /data-admin-mobile-nav/.test(layout)
+    && /data-admin-mobile-item/.test(layout)
+    && /className="admin-main-with-mobile-nav/.test(layout)
+    && /\.admin-shell main\.admin-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(8\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
+    && /\.admin-shell \[data-admin-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?\}/.test(css)
+    && /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+);
+
 const failed = checks.filter((check) => !check.passed);
 for (const check of checks) {
   console.log(`${check.passed ? "PASS" : "FAIL"}: ${check.label}`);
