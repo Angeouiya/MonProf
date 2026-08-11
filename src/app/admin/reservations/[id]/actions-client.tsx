@@ -247,8 +247,8 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Suggestions indisponibles.");
       setAvailableTeachers(data.items || []);
-    } catch {
-      toast.error("Suggestions de remplacement indisponibles.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Suggestions de remplacement indisponibles.");
     } finally {
       setReplacementLoading(false);
     }

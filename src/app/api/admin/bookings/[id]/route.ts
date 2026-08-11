@@ -35,6 +35,7 @@ import { absoluteAppUrl } from "@/lib/public-url";
 import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
 import { normalizeBookingRefundExternalReference } from "@/lib/booking-refund";
 import { lockTeacherPayoutBalances } from "@/lib/teacher-payout-reservations";
+import { resolveTeacherJourney, teacherSupportsJourney } from "@/lib/teacher-journeys";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -289,6 +290,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         });
         if (!newTeacher || newTeacher.status !== "ACTIVE" || !newTeacher.photoUrl) {
           return NextResponse.json({ error: "Professeur introuvable ou inactif" }, { status: 400 });
+        }
+        const bookingJourney = resolveTeacherJourney({
+          courseCategory: booking.courseCategory,
+          schoolSystem: booking.schoolSystem,
+        });
+        if (!bookingJourney) {
+          return NextResponse.json({
+            error: "Le système d'enseignement de cette réservation est introuvable. Reprenez le dossier avant remplacement.",
+          }, { status: 400 });
+        }
+        if (!teacherSupportsJourney(newTeacher, bookingJourney)) {
+          return NextResponse.json({
+            error: "Le professeur remplaçant n'enseigne pas dans le système de cette réservation.",
+          }, { status: 400 });
         }
         const teachesSubject = includesNormalized(newTeacher.subjects.map((item) => item.subject.name), booking.subjectName);
         const teachesLevel = includesNormalized(newTeacher.levels.map((item) => item.level.name), booking.levelName);

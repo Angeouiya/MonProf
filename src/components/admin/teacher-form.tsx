@@ -1707,9 +1707,9 @@ export function TeacherForm({
 
               <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
                 <div>
-                  <p className="text-sm font-black text-foreground">Mini-applications visibles</p>
+                  <p className="text-sm font-black text-foreground">Systèmes enseignés et autorisés</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Un même professeur peut apparaître dans une, deux ou trois mini-applications.
+                    Cochez uniquement les systèmes réellement enseignés. Un professeur hors système est masqué et ne peut pas recevoir une réservation ni un remplacement sur ce parcours.
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">

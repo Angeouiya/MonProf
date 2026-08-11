@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { calculateGrandAbidjanTransportFee } from "@/lib/pricing";
+import { resolveTeacherJourney, teacherJourneyWhere } from "@/lib/teacher-journeys";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -100,12 +101,22 @@ export async function GET(req: NextRequest) {
     },
   });
   if (!booking) return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+  const bookingJourney = resolveTeacherJourney({
+    courseCategory: booking.courseCategory,
+    schoolSystem: booking.schoolSystem,
+  });
+  if (!bookingJourney) {
+    return NextResponse.json({
+      error: "Le système d'enseignement de cette réservation est introuvable. Reprenez le dossier avant remplacement.",
+    }, { status: 400 });
+  }
 
   const teachers = await db.teacher.findMany({
     where: {
       id: { not: booking.teacherId },
       status: "ACTIVE",
       AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+      ...teacherJourneyWhere(bookingJourney),
       ...(booking.courseFormat === "HOME" ? { offersHome: true } : { offersOnline: true }),
     },
     include: {
@@ -164,6 +175,7 @@ export async function GET(req: NextRequest) {
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const matchReasons = [
+        "Même système d'enseignement",
         sameSubject ? "Même matière" : "",
         sameLevel ? "Même niveau" : "",
         sameCommune ? "Même commune/zone" : "",
@@ -230,6 +242,7 @@ export async function GET(req: NextRequest) {
         riskFlags,
         compatibility: {
           score,
+          sameJourney: true,
           sameSubject,
           sameLevel,
           sameCommune,

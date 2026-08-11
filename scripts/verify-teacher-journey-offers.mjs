@@ -14,6 +14,8 @@ const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const bookingApi = read("src/app/api/bookings/route.ts");
 const replacement = read("src/lib/teacher-replacement-matching.ts");
+const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
+const adminBookingApi = read("src/app/api/admin/bookings/[id]/route.ts");
 const teacherForm = read("src/components/admin/teacher-form.tsx");
 const createTeacher = read("src/app/api/admin/teachers/route.ts");
 const updateTeacher = read("src/app/api/admin/teachers/[id]/route.ts");
@@ -97,6 +99,17 @@ check(
     && /teacherSupportsJourney\(teacher, bookingJourney\)/.test(bookingApi)
     && /Ce professeur ne propose pas ce parcours/.test(bookingApi)
     && /teacherJourneyWhere\(bookingJourney\)/.test(replacement),
+);
+check(
+  "Admin replacement suggestions and forced replacement stay locked to the booking mini-app",
+  /resolveTeacherJourney/.test(adminReplacementSuggestions)
+    && /teacherJourneyWhere\(bookingJourney\)/.test(adminReplacementSuggestions)
+    && /Même système d'enseignement/.test(adminReplacementSuggestions)
+    && /resolveTeacherJourney/.test(adminBookingApi)
+    && /teacherSupportsJourney\(newTeacher, bookingJourney\)/.test(adminBookingApi)
+    && /Le professeur remplaçant n'enseigne pas dans le système/.test(adminBookingApi)
+    && /Systèmes enseignés et autorisés/.test(teacherForm)
+    && /ne peut pas recevoir une réservation ni un remplacement/.test(teacherForm),
 );
 check(
   "Booking choices and server validation stay inside the selected mini-app",
