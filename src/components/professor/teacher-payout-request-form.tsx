@@ -117,7 +117,7 @@ export function TeacherPayoutRequestForm({
   };
 
   return (
-    <div data-professor-payout-request className="rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
+    <div id="demande-retrait-professeur" data-professor-payout-request className="scroll-mt-24 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold text-[#111827]">Retirer mon argent</p>

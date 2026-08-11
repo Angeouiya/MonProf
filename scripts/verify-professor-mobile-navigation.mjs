@@ -8,6 +8,8 @@ const ui = read("src/components/professor/professor-ui.tsx");
 const layout = read("src/components/layouts/professor-layout.tsx");
 const dashboard = read("src/app/professeur/(espace)/page.tsx");
 const missions = read("src/app/professeur/(espace)/missions/page.tsx");
+const payments = read("src/app/professeur/(espace)/paiements/page.tsx");
+const payoutRequestForm = read("src/components/professor/teacher-payout-request-form.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
 const rootTabPaths = [
@@ -66,6 +68,24 @@ record(
     && !/ProfessorQuickLink|ProfessorActionTile|ProfessorControlStep/.test(dashboard)
     && !/teacherNotification\.findMany/.test(dashboard)
     && !/DashboardBalanceMini label="Déduit de votre net"/.test(dashboard),
+);
+
+record(
+  "Professor payments open as a simple cashier screen before accounting details",
+  /data-professor-payment-pulse/.test(payments)
+    && /href="#demande-retrait-professeur"/.test(payments)
+    && /id="demande-retrait-professeur"/.test(payoutRequestForm)
+    && /Disponible maintenant\. Aucun frais retiré\./.test(payments)
+    && /TeacherExactMetric label="À recevoir" value=\{remaining\} emphasized/.test(payments)
+    && /TeacherExactMetric label="En cours" value=\{pendingRequested \+ draftReservedAmount\}/.test(payments)
+    && /TeacherExactMetric label="Frais payés" value=\{transferFeesCovered\}/.test(payments),
+);
+
+record(
+  "Professor payment accounting stays behind progressive disclosure",
+  /<ProfessorDisclosure[\s\S]*?title="Voir le calcul exact"[\s\S]*?Net prévu − paiements reçus − retenues validées = reste à recevoir\./.test(payments)
+    && /<ProfessorDisclosure[\s\S]*?title="Détail des cours"/.test(payments)
+    && /<ProfessorDisclosure[\s\S]*?title="Mes reçus"/.test(payments),
 );
 
 record(

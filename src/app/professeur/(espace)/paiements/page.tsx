@@ -198,32 +198,39 @@ export default async function ProfesseurPaiementsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paiements"
-        description="Montants disponibles, demandes et reçus."
+        description="Retraits et reçus."
         rootTab
       />
 
-      <section aria-labelledby="teacher-exact-balance" className="overflow-hidden rounded-xl border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm">
+      <section
+        data-professor-payment-pulse
+        aria-labelledby="teacher-exact-balance"
+        className="overflow-hidden rounded-[1.35rem] border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm"
+      >
         <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
             <div className="flex items-center gap-2 text-[#C7D2FE]">
               <ShieldCheck className="h-5 w-5" aria-hidden />
-              <p className="text-xs font-black uppercase tracking-[0.16em]">Montant exact garanti</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em]">Net professeur</p>
             </div>
-            <h2 id="teacher-exact-balance" className="mt-2 text-2xl font-black sm:text-3xl">{formatFCFA(remaining)} à recevoir</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#E0E7FF]">
-              Le montant affiché est votre net : aucun frais Jèko de transfert ou de retrait n'est retranché. Compétence prend ces frais à sa charge.
+            <h2 id="teacher-exact-balance" className="mt-2 text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl">
+              {formatFCFA(requestableAmount)}
+            </h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#E0E7FF]">
+              Disponible maintenant. Aucun frais retiré.
             </p>
           </div>
-          <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 lg:min-w-64 lg:text-right">
-            <p className="text-xs font-bold uppercase tracking-wide text-[#C7D2FE]">Disponible maintenant</p>
-            <p className="mt-1 text-2xl font-black tabular-nums">{formatFCFA(requestableAmount)}</p>
-          </div>
+          <a
+            href="#demande-retrait-professeur"
+            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-black text-[#111B4D] shadow-sm transition hover:bg-[#EEF2FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111B4D]"
+          >
+            Retirer
+          </a>
         </div>
-        <div className="grid gap-2 border-t border-white/15 bg-white/5 p-4 min-[520px]:grid-cols-4 sm:px-6">
-          <TeacherExactMetric label="Net total généré" value={totalNet} />
-          <TeacherExactMetric label="Déjà payé" value={totalPaid} />
-          <TeacherExactMetric label="Reste exact" value={remaining} emphasized />
-          <TeacherExactMetric label="Frais couverts par Compétence" value={transferFeesCovered} />
+        <div className="grid grid-cols-3 gap-2 border-t border-white/15 bg-white/5 p-4 sm:px-6">
+          <TeacherExactMetric label="À recevoir" value={remaining} emphasized />
+          <TeacherExactMetric label="En cours" value={pendingRequested + draftReservedAmount} />
+          <TeacherExactMetric label="Frais payés" value={transferFeesCovered} />
         </div>
       </section>
 
@@ -525,11 +532,9 @@ function AccountingMini({ label, value, strong = false }: { label: string; value
 
 function TeacherExactMetric({ label, value, emphasized = false }: { label: string; value: number; emphasized?: boolean }) {
   return (
-    <div className={emphasized ? "rounded-lg border border-emerald-300 bg-emerald-400/15 px-3 py-3" : "rounded-lg border border-white/15 bg-white/10 px-3 py-3"}>
-      <div className="flex items-center gap-2">
-        <WalletCards className="h-4 w-4 text-[#C7D2FE]" aria-hidden />
-        <p className="text-[10px] font-bold uppercase tracking-wide text-[#C7D2FE]">{label}</p>
-      </div>
+    <div className={emphasized ? "rounded-xl border border-emerald-300 bg-emerald-400/15 px-3 py-3" : "rounded-xl border border-white/15 bg-white/10 px-3 py-3"}>
+      <WalletCards className="h-4 w-4 text-[#C7D2FE]" aria-hidden />
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-[#C7D2FE]">{label}</p>
       <p className="mt-1 text-sm font-black tabular-nums text-white">{formatFCFA(value)}</p>
     </div>
   );
