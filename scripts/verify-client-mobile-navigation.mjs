@@ -17,6 +17,7 @@ const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
+const courseFormatControlPath = "src/components/shared/course-format-segmented-control.tsx";
 const journeySwitcherPath = "src/components/shared/journey-switcher.tsx";
 const professorImagePath = "src/components/shared/professor-image.tsx";
 const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
@@ -69,6 +70,7 @@ const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
 const teacherCard = read(teacherCardPath);
+const courseFormatControl = read(courseFormatControlPath);
 const journeySwitcher = read(journeySwitcherPath);
 const professorImage = read(professorImagePath);
 const professorMedia = read(professorMediaPath);
@@ -575,10 +577,17 @@ record(
 );
 
 record(
-  "Public and client format controls apply immediately through native form submission",
-  /type="submit"[\s\S]*?name="format"[\s\S]*?aria-pressed=\{format === item\.value\}/.test(publicTeachersPage)
-    && /const courseFormatFilters = \[/.test(read("src/app/client/rechercher/page.tsx"))
-    && /name="format"[\s\S]*?value=\{item\.value\}[\s\S]*?aria-pressed=\{format === item\.value\}/.test(read("src/app/client/rechercher/page.tsx")),
+  "Public and client format controls persist through native radio form submission",
+  /data-course-format-control/.test(courseFormatControl)
+    && /type="radio"/.test(courseFormatControl)
+    && /name=\{name\}/.test(courseFormatControl)
+    && /defaultChecked=\{checked\}/.test(courseFormatControl)
+    && /normalizeCourseFormat\(requestedFormat\)/.test(publicTeachersPage)
+    && /normalizeCourseFormat\(requestedFormat\)/.test(read("src/app/client/rechercher/page.tsx"))
+    && /<CourseFormatSegmentedControl/.test(publicTeachersPage)
+    && /<CourseFormatSegmentedControl/.test(read("src/app/client/rechercher/page.tsx"))
+    && !/<button[\s\S]{0,220}name="format"/.test(publicTeachersPage)
+    && !/<button[\s\S]{0,220}name="format"/.test(read("src/app/client/rechercher/page.tsx")),
 );
 
 record(
@@ -679,7 +688,8 @@ record(
   "Public teacher cards stay focused on booking decisions",
   !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(teacherCard)
     && /priceLabel = "Tarif officiel selon le parcours"/.test(teacherCard)
-    && /avant frais éventuels/.test(teacherCard),
+    && /data-client-teacher-price/.test(teacherCard)
+    && /Prix officiel/.test(teacherCard),
 );
 
 record(
@@ -687,7 +697,7 @@ record(
     /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
     && !/>Voir profil</.test(teacherCard)
     && /w-full rounded-xl bg-\[#111B4D\]/.test(teacherCard)
-    && />Réserver</.test(teacherCard),
+    && />Choisir</.test(teacherCard),
 );
 
 record(

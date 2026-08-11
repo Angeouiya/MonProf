@@ -43,14 +43,14 @@ export function TeacherCard({
     <article
       data-client-teacher-card
       aria-label={`Professeur ${displayName}`}
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.4rem] border border-[#DDE3EE] bg-white shadow-[0_10px_32px_rgba(17,24,39,0.045)] transition duration-300 hover:-translate-y-1 hover:border-[#C9D1DD] hover:shadow-[0_20px_48px_rgba(17,24,39,0.1)]"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.6rem] border border-[#DDE3EE] bg-white shadow-[0_12px_34px_rgba(17,24,39,0.055)] transition duration-300 hover:-translate-y-1 hover:border-[#C9D1DD] hover:shadow-[0_22px_54px_rgba(17,24,39,0.11)]"
     >
       <Link
         href={profileHref}
         aria-label={`Voir le profil de ${displayName}`}
         className="block min-w-0 outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#9AAAD0]"
       >
-        <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#F4F6F8]" data-client-teacher-cover>
+        <div className="relative aspect-[3/1] w-full overflow-hidden bg-gradient-to-br from-[#F8FAFF] via-white to-[#EEF3FF]" data-client-teacher-cover>
           <Image
             src={cover.url}
             alt=""
@@ -62,7 +62,7 @@ export function TeacherCard({
 
         <div className="grid min-w-0 grid-cols-[80px_minmax(0,1fr)] items-start gap-3 px-4 pb-2">
           <div
-            className="relative z-10 w-fit rounded-full bg-white p-[3px] shadow-[0_9px_24px_rgba(17,24,39,0.14)]"
+            className="relative z-10 w-fit rounded-full bg-white p-[3px] shadow-[0_9px_24px_rgba(17,24,39,0.14)] ring-1 ring-white"
             style={{ marginTop: "-40px" }}
           >
             <ProfessorImage
@@ -111,15 +111,12 @@ export function TeacherCard({
         </div>
       </div>
       <div className="mx-4 mt-auto pb-4 pt-3">
-        <div className="mb-3 flex items-end justify-between gap-3 border-y border-[#E3E8F2] py-2.5">
-          <span className="min-w-0">
-            <span className="block text-[10px] font-bold uppercase tracking-wide text-[#475569]">Tarif officiel</span>
-            <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
-          </span>
-          <span className="shrink-0 pb-0.5 text-[11px] font-semibold text-[#475569]">avant frais éventuels</span>
+        <div className="mb-3 rounded-2xl border border-[#E3E8F2] bg-[#F8FAFF] px-3 py-2.5" data-client-teacher-price>
+          <span className="block text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Prix officiel</span>
+          <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
         </div>
         <Button asChild className="min-h-12 w-full rounded-xl bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
-          <Link href={bookingHref}>Réserver</Link>
+          <Link href={bookingHref}>Choisir</Link>
         </Button>
       </div>
     </article>

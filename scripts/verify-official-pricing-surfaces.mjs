@@ -44,7 +44,8 @@ const checks = [
       && publicTariffs.includes('["Formation ou apprentissage métier", 40_000]')
       && publicTariffs.includes('aria-label="Choisir une grille tarifaire"')
       && teacherJourneys.includes('priceLabel: "40 000 F / séance de 2h"')
-      && teacherCard.includes("avant frais éventuels")
+      && teacherCard.includes("data-client-teacher-price")
+      && teacherCard.includes("Prix officiel")
       && teacherCard.includes('text-[#111B4D]">{priceLabel}'),
   ],
   [

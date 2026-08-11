@@ -11,6 +11,10 @@ import {
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
 import { TeacherCard } from "@/components/shared/teacher-card";
+import {
+  CourseFormatSegmentedControl,
+  normalizeCourseFormat,
+} from "@/components/shared/course-format-segmented-control";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import {
@@ -61,12 +65,6 @@ const professionalQuickSearches = [
   { label: "Art et métiers", query: "q=design" },
 ];
 
-const courseFormatFilters = [
-  { value: "", label: "Tout" },
-  { value: "HOME", label: "À domicile" },
-  { value: "ONLINE", label: "En ligne" },
-];
-
 export default async function RechercherPage({
   searchParams,
 }: {
@@ -80,7 +78,7 @@ export default async function RechercherPage({
   const requestedCommune = sp.commune?.trim() ?? "";
   const requestedFormat = sp.format?.trim() ?? "";
   const requestedSort = sp.sort?.trim() ?? "recommended";
-  const format = ["HOME", "ONLINE"].includes(requestedFormat) ? requestedFormat : "";
+  const format = normalizeCourseFormat(requestedFormat);
   const q = sp.q?.trim();
   const sort = ["recommended", "rating", "experience"].includes(requestedSort)
     ? requestedSort
@@ -415,24 +413,12 @@ export default async function RechercherPage({
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Format</label>
-                <div className="mt-1.5 grid h-11 grid-cols-3 gap-1.5">
-                  {courseFormatFilters.map((item) => (
-                    <button
-                      key={item.value || "all"}
-                      type="submit"
-                      name="format"
-                      value={item.value}
-                      aria-pressed={format === item.value}
-                      className={`min-w-0 rounded-lg border px-1 text-xs font-semibold transition ${
-                        format === item.value
-                          ? "border-[#111B4D] bg-[#111B4D] text-white"
-                          : "border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D]"
-                      }`}
-                    >
-                      <span className="block truncate">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                <CourseFormatSegmentedControl
+                  idPrefix="client-search-format"
+                  value={format}
+                  className="mt-1.5"
+                  compact
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Trier par</label>

@@ -12,6 +12,10 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import {
+  CourseFormatSegmentedControl,
+  normalizeCourseFormat,
+} from "@/components/shared/course-format-segmented-control";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
@@ -59,12 +63,6 @@ const SORTS = [
   { value: "experience", label: "Plus expérimentés" },
 ];
 
-const FORMATS = [
-  { value: "", label: "Tout" },
-  { value: "HOME", label: "À domicile" },
-  { value: "ONLINE", label: "En ligne" },
-];
-
 export default async function TeachersPage({
   searchParams,
 }: {
@@ -78,7 +76,7 @@ export default async function TeachersPage({
   const requestedCommune = sp.commune?.trim() || "";
   const requestedFormat = sp.format?.trim() || "";
   const requestedSort = sp.sort?.trim() || "recommended";
-  const format = FORMATS.some((item) => item.value === requestedFormat) ? requestedFormat : "";
+  const format = normalizeCourseFormat(requestedFormat);
   const sort = SORTS.some((item) => item.value === requestedSort) ? requestedSort : "recommended";
   const q = sp.q?.trim() || "";
   const page = Math.max(1, Number(sp.page) || 1);
@@ -645,24 +643,11 @@ function FiltersForm({
         </Field>
 
         <Field label="Format">
-          <div className="grid grid-cols-3 gap-1.5">
-            {FORMATS.map((item) => (
-              <button
-                type="submit"
-                name="format"
-                value={item.value}
-                key={item.value || "all"}
-                className={`flex h-10 cursor-pointer items-center justify-center rounded-lg border text-xs font-semibold transition ${
-                  format === item.value
-                    ? "border-[#111B4D] bg-[#111B4D] text-white"
-                    : "border-[#D6DEED] bg-white text-[#64748B] hover:border-[#111B4D] hover:text-[#111B4D]"
-                }`}
-                aria-pressed={format === item.value}
-              >
-                <span className="truncate px-1">{item.label}</span>
-              </button>
-            ))}
-          </div>
+          <CourseFormatSegmentedControl
+            idPrefix={compact ? "public-teacher-format-mobile" : "public-teacher-format-desktop"}
+            value={format}
+            compact={compact}
+          />
         </Field>
 
         <Field label="Trier par">

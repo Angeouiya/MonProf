@@ -35,6 +35,7 @@ const clientSearch = read("src/app/client/rechercher/page.tsx");
 const publicTeachersApi = read("src/app/api/teachers/route.ts");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const select = read("src/components/shared/searchable-catalog-select.tsx");
+const formatControl = read("src/components/shared/course-format-segmented-control.tsx");
 
 assert.match(publicSearch, /filterSubjectsForJourney\(catalog\.subjects, journey\)/);
 assert.match(publicSearch, /filterLevelsForJourney\(catalog\.levels, journey\)/);
@@ -55,6 +56,14 @@ assert.match(publicTeachersApi, /teacherJourneyCatalogClauses\(subjects, levels\
 assert.match(bookingForm, /filterSubjectsForJourney\(subjects, bookingJourney\)/);
 assert.match(bookingForm, /filterLevelsForJourney\(levels, bookingJourney\)/);
 assert.match(select, /localSelection\.externalValue === externalValue/);
+assert.match(formatControl, /data-course-format-control/);
+assert.match(formatControl, /type="radio"/);
+assert.match(formatControl, /name=\{name\}/);
+assert.match(formatControl, /defaultChecked=\{checked\}/);
+assert.match(publicSearch, /<CourseFormatSegmentedControl/);
+assert.match(clientSearch, /<CourseFormatSegmentedControl/);
+assert.doesNotMatch(publicSearch, /<button[\s\S]{0,220}name="format"/);
+assert.doesNotMatch(clientSearch, /<button[\s\S]{0,220}name="format"/);
 
 console.log("OK Teacher filters stay scoped to the selected mini-application, preserve journey context and reject unknown communes.");
 
