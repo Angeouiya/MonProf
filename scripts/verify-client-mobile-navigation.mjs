@@ -661,6 +661,15 @@ record(
 );
 
 record(
+  "Public teacher detail keeps the biography compact before full reading",
+  /compactTeacherBio\(profileBio\)/.test(publicTeacherDetail)
+    && /data-public-teacher-compact-bio/.test(publicTeacherDetail)
+    && /data-public-teacher-about/.test(publicTeacherDetail)
+    && /Lire le portrait complet/.test(publicTeacherDetail)
+    && !/À propos de \{displayName\}/.test(publicTeacherDetail),
+);
+
+record(
   "Public teacher detail explains transport and payment fees before booking",
   /value="0 même quartier"/.test(publicTeacherDetail)
     && /value="Service 3 %"/.test(publicTeacherDetail)

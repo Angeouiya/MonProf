@@ -145,6 +145,9 @@ export default async function TeacherDetailPage({
     experienceYears: teacher.experienceYears,
     learnersCoached: teacher.learnersCoached,
   });
+  const profileBio = teacher.bio?.trim() || `${displayName} accompagne les apprenants avec un suivi encadré par Compétence.`;
+  const compactBio = compactTeacherBio(profileBio);
+  const hasLongBio = compactBio !== profileBio;
 
   const teachersHref = `/professeurs?journey=${activeJourney}`;
   const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`;
@@ -293,14 +296,25 @@ export default async function TeacherDetailPage({
           <div className="min-w-0">
             {/* COLONNE PRINCIPALE */}
             <div className="min-w-0 space-y-3 sm:space-y-4">
-              {/* À propos */}
+              {/* Portrait court, bio complète à la demande. */}
               <Card>
                 <CardTitle icon={<BookOpen className="h-4 w-4" />}>
-                  À propos de {displayName}
+                  Portrait
                 </CardTitle>
-                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[#111827]">
-                  {teacher.bio}
+                <p className="mt-3 text-sm font-medium leading-6 text-[#111827]" data-public-teacher-compact-bio>
+                  {compactBio}
                 </p>
+                {hasLongBio && (
+                  <details className="mt-3 rounded-xl border border-[#DDE6F7] bg-white" data-public-teacher-about>
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-semibold text-[#111B4D] marker:hidden">
+                      Lire le portrait complet
+                      <ChevronDown className="h-4 w-4 shrink-0" />
+                    </summary>
+                    <p className="whitespace-pre-line border-t border-[#E3E8F2] px-3 py-3 text-sm leading-relaxed text-[#111827]">
+                      {profileBio}
+                    </p>
+                  </details>
+                )}
               </Card>
 
               {/* Expertise adaptée au système actif */}
@@ -761,4 +775,19 @@ function PriceTile({
       <p className="mt-0.5 text-xs font-medium text-[#64748B]">{sub}</p>
     </div>
   );
+}
+
+function compactTeacherBio(value: string, maxLength = 185) {
+  const bio = value.trim().replace(/\s+/g, " ");
+  if (bio.length <= maxLength) return bio;
+
+  const head = bio.slice(0, maxLength);
+  const naturalBreak = Math.max(
+    head.lastIndexOf("."),
+    head.lastIndexOf(";"),
+    head.lastIndexOf(","),
+    head.lastIndexOf(" "),
+  );
+  const cutAt = naturalBreak >= Math.floor(maxLength * 0.58) ? naturalBreak : maxLength;
+  return `${head.slice(0, cutAt).trim().replace(/[.,;:!?]+$/u, "")}…`;
 }
