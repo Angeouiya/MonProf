@@ -9,6 +9,7 @@ const statCard = read("src/components/shared/stat-card.tsx");
 const css = read("src/app/globals.css");
 const dashboard = read("src/app/admin/page.tsx");
 const layout = read("src/components/layouts/admin-layout.tsx");
+const reservations = read("src/app/admin/reservations/page.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -108,6 +109,18 @@ record(
     && /\.admin-shell main\.admin-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(8\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
     && /\.admin-shell \[data-admin-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?\}/.test(css)
     && /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+);
+
+record(
+  "Admin reservation mobile cards expose one decision and fold secondary dossier details",
+  /data-admin-reservation-mobile-card/.test(reservations)
+    && /data-admin-reservation-decision/.test(reservations)
+    && /data-admin-reservation-snapshot/.test(reservations)
+    && /data-admin-reservation-secondary/.test(reservations)
+    && /Infos dossier/.test(reservations)
+    && /data-admin-reservation-compact-actions/.test(reservations)
+    && /Calcul à reprendre/.test(reservations)
+    && !/space-y-2 rounded-lg border border-blue-100 bg-blue-50\/70 p-3/.test(reservations),
 );
 
 const failed = checks.filter((check) => !check.passed);

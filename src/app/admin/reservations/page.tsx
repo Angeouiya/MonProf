@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, Banknote, CalendarRange, Clock, Eye, ExternalLink, Phone, UserCog, Wallet } from "lucide-react";
+import { AlertTriangle, Banknote, CalendarRange, ChevronDown, Clock, Eye, ExternalLink, Phone, UserCog, Wallet } from "lucide-react";
 import Link from "next/link";
 import { ReservationsListClient } from "./list-client";
 import { formatFCFA, formatDate, timeAgo } from "@/lib/format";
@@ -146,24 +146,25 @@ export default async function AdminReservationsPage({
               const paymentVerified = hasVerifiedPayDunyaClientPayment(b);
               const risk = getReservationRisk(b.status, b.paymentStatus, b.scheduledDate ?? b.startDate, b.createdAt, now, paymentVerified);
               return (
-                <Card key={b.id} className="border-violet-100 bg-white">
-                  <CardContent className="space-y-4 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link href={`/admin/reservations/${b.id}`} className="font-mono text-xs font-bold text-primary">
-                          {b.reference}
-                        </Link>
-                        <p className="mt-1 truncate text-sm font-semibold text-foreground">{b.subjectName}</p>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {b.clientType && <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-800">{b.clientType}</Badge>}
-                          {b.courseCategory && <Badge variant="outline" className="border-violet-100 bg-violet-50 text-violet-800">{categoryLabel(b.courseCategory)}</Badge>}
-                          {b.schoolSystem && <Badge variant="outline" className="border-amber-100 bg-amber-50 text-amber-800">{schoolSystemLabel(b.schoolSystem)}</Badge>}
-                          {b.preciseLevel && <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">{b.preciseLevel}</Badge>}
-                          {b.courseCatalogName && <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">{b.courseCatalogName}</Badge>}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{b.scheduledDate ? "Planifiée" : "Souhaitée"} : {formatDate(displayDate)}</p>
-                      </div>
-                      <p className="shrink-0 text-sm font-black text-foreground">{b.isQuoteOnly ? "Prix à finaliser" : <Money amount={b.totalClientPays || b.totalPrice} />}</p>
+                <Card key={b.id} className="border-violet-100 bg-white" data-admin-reservation-mobile-card>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between gap-2" data-admin-reservation-decision>
+                      <Badge variant="outline" className={risk.className}>{risk.label}</Badge>
+                      <Link href={`/admin/reservations/${b.id}`} className="rounded-full bg-[#F6F8FC] px-3 py-1.5 font-mono text-xs font-bold text-primary">
+                        {b.reference}
+                      </Link>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-base font-black leading-tight text-[#111827]">{b.subjectName}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-[#64748B]">{b.levelName}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2" data-admin-reservation-snapshot>
+                      <ReservationMini label={b.scheduledDate ? "Planifiée" : "Souhaitée"} value={formatDate(displayDate)} />
+                      <ReservationMini label="Paiement" value={<PaymentStatusBadge status={b.paymentStatus} quoteOnly={b.isQuoteOnly} />} />
+                      <ReservationMini label="Client" value={b.client.name} />
+                      <ReservationMini label="Montant" value={b.isQuoteOnly ? "Calcul à reprendre" : <Money amount={b.totalClientPays || b.totalPrice} />} strong />
                     </div>
 
                     <div className="flex min-w-0 items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3">
@@ -178,26 +179,36 @@ export default async function AdminReservationsPage({
                         <Link href={`/admin/professeurs/${b.teacher.id}?tab=cours&bookingId=${b.id}`} className="block truncate text-sm font-bold text-foreground">
                           {b.teacher.professionalName || b.teacher.fullName}
                         </Link>
-                        {b.teacher.phone && (
-                          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <Phone className="h-3.5 w-3.5" />
-                            {b.teacher.phone}
-                          </p>
-                        )}
                         <Link href={`/admin/clients/${b.client.id}`} className="inline-flex min-h-10 max-w-full items-center truncate text-xs text-muted-foreground">
                           Client : {b.client.name}
                         </Link>
                       </div>
                     </div>
 
-                    <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
-                      <div className="flex flex-wrap gap-2">
-                        <BookingStatusBadge status={b.status} />
-                        <PaymentStatusBadge status={b.paymentStatus} quoteOnly={b.isQuoteOnly} />
-                        <Badge variant="outline" className={risk.className}>{risk.label}</Badge>
+                    <details className="group overflow-hidden rounded-lg border border-[#E6EAF3] bg-white" data-admin-reservation-secondary>
+                      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-[#111B4D] marker:hidden">
+                        Infos dossier
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="space-y-3 border-t border-[#E6EAF3] p-3">
+                        <div className="flex flex-wrap gap-2">
+                          <BookingStatusBadge status={b.status} />
+                          <PaymentStatusBadge status={b.paymentStatus} quoteOnly={b.isQuoteOnly} />
+                          {b.clientType && <Badge variant="outline" className="border-blue-100 bg-blue-50 text-blue-800">{b.clientType}</Badge>}
+                          {b.courseCategory && <Badge variant="outline" className="border-violet-100 bg-violet-50 text-violet-800">{categoryLabel(b.courseCategory)}</Badge>}
+                          {b.schoolSystem && <Badge variant="outline" className="border-amber-100 bg-amber-50 text-amber-800">{schoolSystemLabel(b.schoolSystem)}</Badge>}
+                          {b.preciseLevel && <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">{b.preciseLevel}</Badge>}
+                          {b.courseCatalogName && <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">{b.courseCatalogName}</Badge>}
+                        </div>
+                        {b.teacher.phone && (
+                          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Phone className="h-3.5 w-3.5" />
+                            {b.teacher.phone}
+                          </p>
+                        )}
+                        <p className="text-xs font-medium text-blue-950/72">{risk.hint}</p>
                       </div>
-                      <p className="text-xs font-medium text-blue-950/72">{risk.hint}</p>
-                    </div>
+                    </details>
 
                     <ReservationActions
                       bookingId={b.id}
@@ -304,6 +315,23 @@ export default async function AdminReservationsPage({
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+function ReservationMini({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: React.ReactNode;
+  strong?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#E6EAF3] bg-white px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <div className={strong ? "mt-1 truncate text-sm font-black text-[#111B4D]" : "mt-1 truncate text-sm font-semibold text-[#111827]"}>{value || "—"}</div>
     </div>
   );
 }
@@ -434,6 +462,33 @@ function ReservationActions({
 }) {
   const canReplace = paymentVerified && ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "DISPUTED"].includes(status);
   const canPay = paymentVerified && paymentStatus === "TO_PAY_TEACHER";
+  if (compact) {
+    const primaryHref = canPay
+      ? `/admin/reservations/${bookingId}?action=pay`
+      : canReplace
+        ? `/admin/reservations/${bookingId}?action=replace`
+        : `/admin/reservations/${bookingId}`;
+    const PrimaryIcon = canPay ? Banknote : canReplace ? UserCog : ExternalLink;
+    const primaryLabel = canPay ? "Payer" : canReplace ? "Remplacer" : "Dossier";
+    return (
+      <div className="grid gap-2" data-admin-reservation-compact-actions>
+        <Button asChild size="sm" className="h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+          <Link href={primaryHref}>
+            <PrimaryIcon className="mr-1.5 h-4 w-4" />
+            {primaryLabel}
+          </Link>
+        </Button>
+        {primaryLabel !== "Dossier" && (
+          <Button asChild size="sm" variant="outline" className="h-11 rounded-lg">
+            <Link href={`/admin/reservations/${bookingId}`}>
+              <ExternalLink className="mr-1.5 h-4 w-4" />
+              Dossier
+            </Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={compact ? "grid gap-2" : "flex flex-wrap justify-end gap-2"}>
       <Button asChild size="sm" variant="secondary" className={compact ? "h-11 rounded-lg" : undefined}>
