@@ -239,6 +239,13 @@ assert.match(
   "la réconciliation doit reprendre la méthode locale figée quand Jèko l'omet",
 );
 assert.match(jekoCheckoutPreview, /merchantName = "Boutique Compétence"/);
+assert.match(jekoCheckoutPreview, /data-jeko-checkout-merchant/);
+assert.match(jekoCheckoutPreview, /data-jeko-checkout-amount/);
+assert.match(jekoCheckoutPreview, /data-jeko-checkout-phone-placeholder/);
+assert.match(jekoCheckoutPreview, /data-jeko-checkout-disabled-button/);
+assert.match(jekoCheckoutPreview, /data-jeko-secured-by-competence/);
+assert.match(jekoCheckoutPreview, /Payer par <span className="font-black text-\[#111827\]">\{methodDisplay\}<\/span>/);
+assert.match(jekoCheckoutPreview, /Paiement sécurisé par <span className="font-black text-\[#4938B8\]">Jèko<\/span>/);
 assert.match(clientBookingForm, /merchantName="Boutique Compétence"/);
 assert.match(clientPaymentsPage, /merchantName="Boutique Compétence"/);
 for (const source of [jekoCheckoutPreview, clientBookingForm, clientPaymentsPage]) {
