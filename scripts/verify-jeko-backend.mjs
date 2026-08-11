@@ -228,6 +228,7 @@ assert.match(
   "la création POST doit toujours rejeter une réponse sans la méthode attendue",
 );
 assert.match(jekoClient, /assertCompetenceJekoStoreName/);
+assert.match(jekoClient, /resolveJekoCompetenceStoreConfig/);
 assert.match(jekoClient, /JEKO_STORE_MISMATCH/);
 assert.match(jekoClient, /raw\.storeName/);
 assert.match(jekoClient, /raw\.merchantName/);

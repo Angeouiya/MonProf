@@ -11,7 +11,12 @@ const jiti = createJiti(import.meta.url, {
   },
 });
 const { getJekoServerConfig } = jiti("../src/lib/jeko-config.ts");
-const { getJekoStoreBalance, getJekoStores, JekoPayoutApiError } = jiti("../src/lib/jeko-payout.ts");
+const {
+  getJekoStoreBalance,
+  getJekoStores,
+  JekoPayoutApiError,
+  resolveJekoCompetenceStoreConfig,
+} = jiti("../src/lib/jeko-payout.ts");
 const { assertCompetenceJekoStoreName } = jiti("../src/lib/jeko-store-identity.ts");
 
 const REQUIRED_VARIABLES = [
@@ -20,7 +25,6 @@ const REQUIRED_VARIABLES = [
   "JEKO_STORE_ID",
   "JEKO_WEBHOOK_SECRET",
 ];
-const SAFE_JEKO_PROVIDER_ID_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
 
 function mainHelpRequested(args) {
   if (args.length === 0) return false;
@@ -52,30 +56,26 @@ async function main() {
   }
 
   const issues = [];
-  const storeIdLooksSafe = SAFE_JEKO_PROVIDER_ID_PATTERN.test(config.storeId);
-  if (!storeIdLooksSafe) {
-    issues.push("JEKO_STORE_ID doit être l'identifiant brut du magasin Jèko Boutique Compétence.");
+  const resolvedConfig = await resolveJekoCompetenceStoreConfig({ config });
+  const balance = await getJekoStoreBalance({ config: resolvedConfig });
+  const stores = await getJekoStores({ config: resolvedConfig });
+  const configuredStore = stores.find((store) => store.id === resolvedConfig.storeId);
+  if (!configuredStore) {
+    issues.push("La boutique Compétence résolue n'existe pas dans les boutiques accessibles par cette clé API.");
   } else {
-    const balance = await getJekoStoreBalance({ config });
-    const stores = await getJekoStores({ config });
-    const configuredStore = stores.find((store) => store.id === config.storeId);
-    if (!configuredStore) {
-      issues.push("Le JEKO_STORE_ID configuré n'existe pas dans les boutiques accessibles par cette clé API.");
-    } else {
-      try {
-        assertCompetenceJekoStoreName(configuredStore.name);
-      } catch (error) {
-        issues.push(error instanceof Error ? error.message : "La boutique Jèko configurée est invalide.");
-      }
+    try {
+      assertCompetenceJekoStoreName(configuredStore.name);
+    } catch (error) {
+      issues.push(error instanceof Error ? error.message : "La boutique Jèko configurée est invalide.");
     }
-    if (
-      balance.storeId !== config.storeId
-      || balance.currency !== "XOF"
-      || !Number.isFinite(balance.availableAmountCents)
-      || balance.availableAmountCents < 0
-    ) {
-      issues.push("Jèko a renvoyé un solde marchand incohérent.");
-    }
+  }
+  if (
+    balance.storeId !== resolvedConfig.storeId
+    || balance.currency !== "XOF"
+    || !Number.isFinite(balance.availableAmountCents)
+    || balance.availableAmountCents < 0
+  ) {
+    issues.push("Jèko a renvoyé un solde marchand incohérent.");
   }
   if ((process.env.JEKO_WEBHOOK_SECRET?.trim().length ?? 0) < 24) {
     issues.push("JEKO_WEBHOOK_SECRET doit contenir au moins 24 caractères.");

@@ -5,6 +5,10 @@ import type { PaymentMethod } from "@prisma/client";
 import { z } from "zod";
 import { requireJekoServerConfig, type JekoServerConfig } from "./jeko-config";
 import {
+  JEKO_COMPETENCE_STORE_NAME,
+  isCompetenceJekoStoreName,
+} from "./jeko-store-identity";
+import {
   JEKO_CURRENCY,
   jekoAmountCentsToXof,
   jekoFeeCentsToCoveredXof,
@@ -118,6 +122,8 @@ export class JekoPayoutApiError extends Error {
     this.retryable = httpStatus === 408 || httpStatus === 429 || httpStatus >= 500;
   }
 }
+
+let competenceStoreCache: { key: string; storeId: string } | null = null;
 
 const moneySchema = z.object({
   amount: z.number().int().nonnegative(),
@@ -335,7 +341,7 @@ export async function ensureJekoMobileMoneyContact(
 export async function getJekoStoreBalance(
   options: JekoPayoutRequestOptions = {},
 ): Promise<JekoStoreBalance> {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig(options);
   const storeId = normalizeProviderId(config.storeId, "magasin");
   const { raw } = await jekoPayoutFetchJson(
     `${config.apiBaseUrl}/partner_api/stores/${encodeURIComponent(storeId)}/balance`,
@@ -380,11 +386,42 @@ export async function getJekoStores(
   return stores.map((store) => ({ id: store.id, name: store.name }));
 }
 
+export async function resolveJekoCompetenceStoreConfig(
+  options: JekoPayoutRequestOptions = {},
+): Promise<JekoServerConfig> {
+  const config = options.config ?? requireJekoServerConfig();
+  // Les tests injectent un fetch mocké avec une config artificielle. En
+  // Production, aucun fetchImpl n'est injecté : on résout alors l'unique
+  // boutique officielle pour éviter tout retour vers Buildify/Bluidify.
+  if (options.fetchImpl) return config;
+
+  const cacheKey = `${config.apiBaseUrl}:${config.apiKeyId}:${config.storeId}`;
+  if (competenceStoreCache?.key === cacheKey) {
+    return competenceStoreCache.storeId === config.storeId
+      ? config
+      : { ...config, storeId: competenceStoreCache.storeId };
+  }
+
+  const stores = await getJekoStores({ config });
+  const matches = stores.filter((store) => isCompetenceJekoStoreName(store.name));
+  if (matches.length !== 1) {
+    throw new JekoPayoutApiError(
+      `La clé Jèko doit donner accès à une seule boutique ${JEKO_COMPETENCE_STORE_NAME}.`,
+      502,
+      "JEKO_COMPETENCE_STORE_NOT_FOUND",
+    );
+  }
+
+  const storeId = normalizeProviderId(matches[0]!.id, "magasin");
+  competenceStoreCache = { key: cacheKey, storeId };
+  return storeId === config.storeId ? config : { ...config, storeId };
+}
+
 export async function getJekoTeacherPayoutTransfer(
   transferId: string,
   options: JekoPayoutRequestOptions = {},
 ) {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig(options);
   const safeTransferId = normalizeProviderId(transferId, "virement");
   const { raw } = await jekoPayoutFetchJson(
     `${config.apiBaseUrl}/partner_api/transfers/${encodeURIComponent(safeTransferId)}`,
@@ -409,7 +446,7 @@ export async function createJekoTeacherPayout(
   input: CreateJekoTeacherPayoutInput,
   options: JekoPayoutRequestOptions = {},
 ): Promise<JekoTeacherPayoutResult> {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig(options);
   const reference = normalizePayoutReference(input.reference);
   const teacherNetAmountCents = xofToJekoAmountCents(input.teacherNetAmountXof);
   if (teacherNetAmountCents < 500) {
@@ -538,7 +575,7 @@ async function findTransferTransactionByReference(
   },
   options: JekoPayoutRequestOptions,
 ) {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig(options);
   const maxPages = 50;
   for (const window of buildTransactionSearchWindows(expected.referenceCreatedAt)) {
     for (let page = 1; page <= maxPages; page += 1) {

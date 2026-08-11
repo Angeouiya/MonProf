@@ -8,13 +8,12 @@ const balanceFunction = payoutLibrary.match(
   /export async function getJekoStoreBalance\([\s\S]*?\n}\r?\n\r?\nexport async function getJekoTeacherPayoutTransfer/,
 )?.[0] ?? "";
 
-assert.match(liveVerifier, /getJekoStoreBalance\(\{ config \}\)/);
-assert.match(liveVerifier, /getJekoStores\(\{ config \}\)/);
+assert.match(liveVerifier, /getJekoStoreBalance\(\{ config: resolvedConfig \}\)/);
+assert.match(liveVerifier, /getJekoStores\(\{ config: resolvedConfig \}\)/);
 assert.match(liveVerifier, /assertCompetenceJekoStoreName\(configuredStore\.name\)/);
 assert.match(liveVerifier, /jeko-store-identity/);
 assert.match(liveVerifier, /boutique Compétence/);
-assert.match(liveVerifier, /SAFE_JEKO_PROVIDER_ID_PATTERN/);
-assert.match(liveVerifier, /JEKO_STORE_ID doit être l'identifiant brut du magasin Jèko Boutique Compétence/);
+assert.match(liveVerifier, /resolveJekoCompetenceStoreConfig/);
 assert.match(liveVerifier, /issues\.push\("JEKO_WEBHOOK_SECRET doit contenir au moins 24 caractères\."\)/);
 assert.match(liveVerifier, /server-only[\s\S]*?empty\.js/);
 assert.doesNotMatch(liveVerifier, /createJekoTeacherPayout|ensureJekoMobileMoneyContact|createJekoPaymentRequest/);
@@ -24,6 +23,8 @@ assert.match(balanceFunction, /method:\s*"GET"/);
 assert.doesNotMatch(balanceFunction, /method:\s*"POST"/);
 assert.match(payoutLibrary, /\/partner_api\/stores/);
 assert.match(payoutLibrary, /liste des magasins/);
+assert.match(payoutLibrary, /resolveJekoCompetenceStoreConfig/);
+assert.match(payoutLibrary, /JEKO_COMPETENCE_STORE_NOT_FOUND/);
 assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:jeko-live/);
 
 console.log("Jèko live verification safety passed: store-list and balance-only GET, no contact, checkout, transfer or amount disclosure.");

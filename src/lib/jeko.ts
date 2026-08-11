@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { requireJekoServerConfig, type JekoServerConfig } from "./jeko-config";
+import { resolveJekoCompetenceStoreConfig } from "./jeko-payout";
 import { getPublicAppOrigin } from "./public-url";
 import { assertCompetenceJekoStoreName } from "./jeko-store-identity";
 import {
@@ -150,7 +151,10 @@ export async function createJekoPaymentRequest(
   input: CreateJekoPaymentRequestInput,
   options: JekoRequestOptions = {},
 ): Promise<JekoPaymentRequestResult> {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig({
+    config: options.config ?? requireJekoServerConfig(),
+    fetchImpl: options.fetchImpl,
+  });
   const reference = normalizeReference(input.reference);
   const amountCents = xofToJekoAmountCents(input.amountXof);
   const paymentMethod = normalizeRequestedMethod(input.paymentMethod);
@@ -216,7 +220,10 @@ export async function confirmJekoPaymentRequest(
   paymentRequestId: string,
   options: JekoRequestOptions = {},
 ): Promise<JekoPaymentConfirmation> {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig({
+    config: options.config ?? requireJekoServerConfig(),
+    fetchImpl: options.fetchImpl,
+  });
   const safeId = paymentRequestId.trim();
   if (!safeId || safeId.length > 160) throw new Error("Identifiant de demande Jèko invalide.");
 
@@ -277,7 +284,10 @@ export async function recoverJekoPaymentRequestByReference(
   },
   options: JekoRequestOptions = {},
 ): Promise<JekoPaymentRequestRecoveryResult | null> {
-  const config = options.config ?? requireJekoServerConfig();
+  const config = await resolveJekoCompetenceStoreConfig({
+    config: options.config ?? requireJekoServerConfig(),
+    fetchImpl: options.fetchImpl,
+  });
   const reference = normalizeReference(input.reference);
   const paymentMethod = normalizeRequestedMethod(input.paymentMethod);
   const amountCents = xofToJekoAmountCents(input.amountXof);
