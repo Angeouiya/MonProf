@@ -42,7 +42,9 @@ assert.throws(() => xofToJekoAmountCents(21_474_837));
 assert.throws(() => jekoAmountCentsToXof(101), /nombre entier de FCFA/);
 assert.equal(JEKO_COMPETENCE_STORE_NAME, "Boutique Compétence");
 assert.equal(isCompetenceJekoStoreName("Boutique Compétence"), true);
-assert.equal(isCompetenceJekoStoreName("Competence CI"), true);
+assert.equal(isCompetenceJekoStoreName("Boutique Competence CI"), true);
+assert.equal(isCompetenceJekoStoreName("Competence CI"), false);
+assert.equal(isCompetenceJekoStoreName("Compétence Test"), false);
 assert.equal(isForbiddenJekoStoreName("Buildify"), true);
 assert.equal(isForbiddenJekoStoreName("Bluidify"), true);
 assert.doesNotThrow(() => assertCompetenceJekoStoreName("Boutique Compétence"));
@@ -104,7 +106,7 @@ const directPayload = JSON.stringify({
   paymentMethod: "wave",
   transactionType: "PaymentRequest",
   businessName: "Compétence",
-  storeName: "Compétence Test",
+  storeName: "Boutique Compétence",
   description: "Réservation MP-TEST",
   executedAt: "2026-07-27T10:00:00.000Z",
   transactionDetails: {

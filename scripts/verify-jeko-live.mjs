@@ -20,6 +20,7 @@ const REQUIRED_VARIABLES = [
   "JEKO_STORE_ID",
   "JEKO_WEBHOOK_SECRET",
 ];
+const SAFE_JEKO_PROVIDER_ID_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
 
 function mainHelpRequested(args) {
   if (args.length === 0) return false;
@@ -43,10 +44,6 @@ async function main() {
   if (missing.length > 0) {
     throw new Error(`Configuration Jèko incomplète. Variables manquantes : ${missing.join(", ")}.`);
   }
-  if ((process.env.JEKO_WEBHOOK_SECRET?.trim().length ?? 0) < 24) {
-    throw new Error("JEKO_WEBHOOK_SECRET doit contenir au moins 24 caractères.");
-  }
-
   const config = getJekoServerConfig();
   if (!config) {
     throw new Error(
@@ -54,20 +51,37 @@ async function main() {
     );
   }
 
-  const balance = await getJekoStoreBalance({ config });
-  const stores = await getJekoStores({ config });
-  const configuredStore = stores.find((store) => store.id === config.storeId);
-  if (!configuredStore) {
-    throw new Error("Le JEKO_STORE_ID configuré n'existe pas dans les boutiques accessibles par cette clé API.");
+  const issues = [];
+  const storeIdLooksSafe = SAFE_JEKO_PROVIDER_ID_PATTERN.test(config.storeId);
+  if (!storeIdLooksSafe) {
+    issues.push("JEKO_STORE_ID doit être l'identifiant brut du magasin Jèko Boutique Compétence.");
+  } else {
+    const balance = await getJekoStoreBalance({ config });
+    const stores = await getJekoStores({ config });
+    const configuredStore = stores.find((store) => store.id === config.storeId);
+    if (!configuredStore) {
+      issues.push("Le JEKO_STORE_ID configuré n'existe pas dans les boutiques accessibles par cette clé API.");
+    } else {
+      try {
+        assertCompetenceJekoStoreName(configuredStore.name);
+      } catch (error) {
+        issues.push(error instanceof Error ? error.message : "La boutique Jèko configurée est invalide.");
+      }
+    }
+    if (
+      balance.storeId !== config.storeId
+      || balance.currency !== "XOF"
+      || !Number.isFinite(balance.availableAmountCents)
+      || balance.availableAmountCents < 0
+    ) {
+      issues.push("Jèko a renvoyé un solde marchand incohérent.");
+    }
   }
-  assertCompetenceJekoStoreName(configuredStore.name);
-  if (
-    balance.storeId !== config.storeId
-    || balance.currency !== "XOF"
-    || !Number.isFinite(balance.availableAmountCents)
-    || balance.availableAmountCents < 0
-  ) {
-    throw new Error("Jèko a renvoyé un solde marchand incohérent.");
+  if ((process.env.JEKO_WEBHOOK_SECRET?.trim().length ?? 0) < 24) {
+    issues.push("JEKO_WEBHOOK_SECRET doit contenir au moins 24 caractères.");
+  }
+  if (issues.length > 0) {
+    throw new Error(issues.join(" "));
   }
 
   console.log(

@@ -1,6 +1,7 @@
 export const JEKO_COMPETENCE_STORE_NAME = "Boutique Compétence";
 
 const FORBIDDEN_JEKO_STORE_PATTERN = /\b(?:buildify|bluidify)\b/i;
+const COMPETENCE_JEKO_STORE_PATTERN = /\bboutique\s+competence(?:\s+ci)?\b/i;
 
 export function normalizeJekoStoreName(value: string) {
   return value
@@ -16,7 +17,7 @@ export function isForbiddenJekoStoreName(value: string) {
 }
 
 export function isCompetenceJekoStoreName(value: string) {
-  return normalizeJekoStoreName(value).includes("competence");
+  return COMPETENCE_JEKO_STORE_PATTERN.test(normalizeJekoStoreName(value));
 }
 
 export function assertCompetenceJekoStoreName(value: string, source = "La boutique Jèko") {

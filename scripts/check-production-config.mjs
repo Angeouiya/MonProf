@@ -461,6 +461,15 @@ function checkHealthEndpoint() {
 }
 
 function checkJekoConfiguration() {
+  const identitySource = fs.readFileSync("src/lib/jeko-store-identity.ts", "utf8");
+  const liveVerifier = fs.readFileSync("scripts/verify-jeko-live.mjs", "utf8");
+  record(
+    "Jèko live verification is locked to Boutique Compétence",
+    /JEKO_COMPETENCE_STORE_NAME\s*=\s*"Boutique Compétence"/.test(identitySource)
+      && /COMPETENCE_JEKO_STORE_PATTERN/.test(identitySource)
+      && /assertCompetenceJekoStoreName\(configuredStore\.name\)/.test(liveVerifier),
+  );
+
   if (isVercelNonProductionDeployment()) {
     const source = fs.readFileSync("src/lib/jeko-config.ts", "utf8");
     record(
@@ -472,7 +481,12 @@ function checkJekoConfiguration() {
 
   record("Jèko API key is configured server-side", Boolean(getEnv("JEKO_API_KEY")));
   record("Jèko API key id is configured server-side", Boolean(getEnv("JEKO_API_KEY_ID")));
-  record("Jèko store id is configured server-side", Boolean(getEnv("JEKO_STORE_ID")));
+  const storeId = getEnv("JEKO_STORE_ID");
+  record("Jèko store id is configured server-side", Boolean(storeId));
+  record(
+    "Jèko store id is a raw provider id for Boutique Compétence",
+    /^[A-Za-z0-9._:-]{1,200}$/.test(storeId),
+  );
   record("Jèko webhook secret is strong and server-side", getEnv("JEKO_WEBHOOK_SECRET").length >= 24);
 }
 
