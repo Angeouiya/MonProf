@@ -5546,6 +5546,38 @@ b {
   font-weight: 680;
 }
 
+.journey-switcher__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+}
+
+.journey-switcher__title,
+.journey-switcher__meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journey-switcher__title {
+  line-height: 1.05;
+}
+
+.journey-switcher__meta {
+  color: #7a8492;
+  font-size: clamp(0.62rem, 1.1vw, 0.78rem);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.journey-switcher__link[data-active="true"] .journey-switcher__meta {
+  color: #111b4d;
+}
+
 .journey-switcher__link:focus-visible {
   outline: 3px solid #9aaad0;
   outline-offset: -4px;
@@ -5578,6 +5610,14 @@ b {
   font-size: clamp(1rem, 2vw, 1.6rem);
 }
 
+.journey-switcher[data-size="hero"] .journey-switcher__text {
+  gap: clamp(0.16rem, 0.7vw, 0.35rem);
+}
+
+.journey-switcher[data-size="hero"] .journey-switcher__meta {
+  font-size: clamp(0.68rem, 1.45vw, 0.95rem);
+}
+
 .journey-switcher[data-size="compact"] .journey-switcher__rail {
   min-height: 3.55rem;
   border-radius: 1.15rem;
@@ -5595,6 +5635,20 @@ b {
   min-height: 3rem;
   border-radius: 0.85rem;
   font-size: 0.82rem;
+}
+
+.journey-switcher[data-size="compact"] .journey-switcher__meta {
+  display: none;
+}
+
+@media (max-width: 379px) {
+  .journey-switcher[data-size="hero"] .journey-switcher__link {
+    padding-inline: 0.25rem;
+  }
+
+  .journey-switcher[data-size="hero"] .journey-switcher__meta {
+    font-size: 0.62rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

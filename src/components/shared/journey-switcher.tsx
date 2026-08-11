@@ -16,6 +16,7 @@ type JourneySwitcherProps = {
   journeys?: readonly TeacherJourney[];
   label?: string;
   showLabel?: boolean;
+  showMeta?: boolean;
   size?: "hero" | "regular" | "compact";
   className?: string;
 };
@@ -31,6 +32,7 @@ export function JourneySwitcher({
   journeys = TEACHER_JOURNEYS,
   label = "Système",
   showLabel = false,
+  showMeta = false,
   size = "regular",
   className,
 }: JourneySwitcherProps) {
@@ -74,6 +76,7 @@ export function JourneySwitcher({
           const config = TEACHER_JOURNEY_CONFIG[journey];
           const href = hrefs[journey];
           const active = selectedJourney === journey;
+          const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;
 
           if (!href) return null;
 
@@ -82,7 +85,7 @@ export function JourneySwitcher({
               key={journey}
               href={href}
               prefetch
-              aria-label={config.label}
+              aria-label={showMeta ? `${config.label} · ${tabMeta}` : config.label}
               aria-current={active ? "page" : undefined}
               aria-selected={active}
               role="tab"
@@ -91,7 +94,14 @@ export function JourneySwitcher({
               className="journey-switcher__link"
               onClick={() => setPendingSelection({ source: resolvedActive, target: journey })}
             >
-              {config.shortLabel}
+              <span className="journey-switcher__text">
+                <span className="journey-switcher__title">{config.shortLabel}</span>
+                {showMeta && (
+                  <span className="journey-switcher__meta" data-journey-tab-meta>
+                    {tabMeta}
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

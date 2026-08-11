@@ -77,6 +77,7 @@ export default async function HomePage() {
               hrefs={HOME_JOURNEY_HREFS}
               label="Système"
               showLabel
+              showMeta
               size="hero"
             />
           </nav>

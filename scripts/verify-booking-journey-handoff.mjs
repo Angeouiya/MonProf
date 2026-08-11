@@ -5,6 +5,7 @@ const publicTeachers = read("src/app/professeurs/page.tsx");
 const teacherDetail = read("src/app/professeurs/[id]/page.tsx");
 const teacherCard = read("src/components/shared/teacher-card.tsx");
 const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
+const journeyModel = read("src/lib/teacher-journeys.ts");
 const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const login = read("src/app/connexion/page.tsx");
@@ -27,6 +28,11 @@ const checks = [
       && journeySwitcher.includes('role="tablist"')
       && journeySwitcher.includes('role="tab"')
       && journeySwitcher.includes('aria-selected={active}')
+      && journeySwitcher.includes('data-journey-tab-meta')
+      && home.includes('showMeta')
+      && journeyModel.includes('priceLabel: "Dès 15 000 F"')
+      && journeyModel.includes('priceLabel: "Dès 37 500 F"')
+      && journeySwitcher.includes('const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;')
       && !home.includes('Réserver une séance'),
   ],
   [
