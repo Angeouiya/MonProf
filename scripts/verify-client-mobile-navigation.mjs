@@ -743,6 +743,16 @@ record(
 );
 
 record(
+  "Public teacher cards keep a one-row mobile decision area",
+  /data-client-teacher-card-essentials/.test(teacherCard)
+    && /data-client-teacher-card-action-row/.test(teacherCard)
+    && /grid-cols-\[minmax\(0,1fr\)_112px\]/.test(teacherCard)
+    && !/mx-4 border-t border-\[#E3E8F2\] pt-3/.test(teacherCard)
+    && /sm:inline-flex">\{ratingLabel\}/.test(teacherCard)
+    && /sm:inline-flex">\{teacher\.experienceYears\} ans exp\./.test(teacherCard),
+);
+
+record(
   "Public teacher cards expose one dominant action",
     /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
     && !/>Voir profil</.test(teacherCard)

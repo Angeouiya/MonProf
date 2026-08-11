@@ -38,6 +38,13 @@ export function TeacherCard({
   const primarySubject = teacher.primarySubject ?? "Matière à confirmer";
   const commune = teacher.commune ?? "Abidjan";
   const cover = resolveTeacherCover({ teacherId: teacher.id, coverUrl: teacher.coverUrl });
+  const formatLabel = teacher.offersHome && teacher.offersOnline
+    ? "Domicile · En ligne"
+    : teacher.offersHome
+      ? "Domicile"
+      : teacher.offersOnline
+        ? "En ligne"
+        : "Format à confirmer";
 
   return (
     <article
@@ -77,45 +84,33 @@ export function TeacherCard({
             <h3 className="line-clamp-2 text-[1.05rem] font-semibold leading-snug tracking-[-0.018em] text-[#111827]">
               {displayName}
             </h3>
-            <p className="mt-0.5 line-clamp-2 text-[13px] font-medium leading-5 text-[#64748B]">{teacher.jobTitle || "Professeur Compétence"}</p>
+            <p className="mt-0.5 line-clamp-1 text-[12.5px] font-medium leading-5 text-[#64748B] sm:line-clamp-2 sm:text-[13px]">{teacher.jobTitle || "Professeur Compétence"}</p>
           </div>
         </div>
 
-        <div className="grid gap-2 px-4 pb-3 text-[12.5px] font-medium leading-5 text-[#475569]">
-          <p className="line-clamp-1 w-fit rounded-full border border-[#E3E8F2] px-2.5 py-1 font-semibold text-[#111827]">{primarySubject}</p>
-          <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
-            <span className="inline-flex min-w-0 items-center gap-1.5">
+        <div data-client-teacher-card-essentials className="px-4 pb-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[12.5px] font-semibold leading-5 text-[#475569]">
+            <span className="line-clamp-1 max-w-full rounded-full border border-[#E3E8F2] bg-white px-2.5 py-1 text-[#111827]">{primarySubject}</span>
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-[#F8FAFF] px-2.5 py-1">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-[#111B4D]" />
               <span className="truncate">{commune}</span>
             </span>
-            {ratingLabel && <span className="font-semibold text-[#111827]">{ratingLabel}</span>}
-            <span>{teacher.experienceYears} ans exp.</span>
-          </p>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F8FAFF] px-2.5 py-1">
+              {teacher.offersOnline && !teacher.offersHome ? <Video className="h-3.5 w-3.5 text-[#111B4D]" /> : <Home className="h-3.5 w-3.5 text-[#111B4D]" />}
+              {formatLabel}
+            </span>
+            {ratingLabel && <span className="hidden rounded-full bg-[#F8FAFF] px-2.5 py-1 text-[#111827] sm:inline-flex">{ratingLabel}</span>}
+            <span className="hidden rounded-full bg-[#F8FAFF] px-2.5 py-1 sm:inline-flex">{teacher.experienceYears} ans exp.</span>
+          </div>
         </div>
       </Link>
 
-      <div className="mx-4 border-t border-[#E3E8F2] pt-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-[#475569]">
-          {teacher.offersHome && (
-            <span className="inline-flex items-center gap-1.5">
-              <Home className="h-3.5 w-3.5 text-[#111B4D]" />
-              Domicile
-            </span>
-          )}
-          {teacher.offersOnline && (
-            <span className="inline-flex items-center gap-1.5">
-              <Video className="h-3.5 w-3.5 text-[#111B4D]" />
-              En ligne
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="mx-4 mt-auto pb-4 pt-3">
-        <div className="mb-3 rounded-2xl border border-[#E3E8F2] bg-[#F8FAFF] px-3 py-2.5" data-client-teacher-price>
+      <div className="mx-4 mt-auto grid grid-cols-[minmax(0,1fr)_112px] items-stretch gap-2 border-t border-[#E3E8F2] pb-4 pt-3" data-client-teacher-card-action-row>
+        <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-[#F8FAFF] px-3 py-2.5" data-client-teacher-price>
           <span className="block text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Prix officiel</span>
           <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
         </div>
-        <Button asChild className="min-h-12 w-full rounded-xl bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
+        <Button asChild className="h-full min-h-12 w-full rounded-xl bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
           <Link href={bookingHref}>Choisir</Link>
         </Button>
       </div>
