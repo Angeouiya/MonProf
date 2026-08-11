@@ -44,6 +44,11 @@ export type JekoStoreBalance = {
   currency: typeof JEKO_CURRENCY;
 };
 
+export type JekoStoreSummary = {
+  id: string;
+  name: string;
+};
+
 export type JekoTransferDetails = {
   providerTransferId: string;
   providerTransactionId: string | null;
@@ -171,6 +176,13 @@ const transactionListSchema = z.object({
   currentPage: z.number().int().positive(),
   data: z.array(partnerTransactionSchema),
 }).passthrough();
+
+const storeSchema = z.object({
+  id: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1).max(300),
+}).passthrough();
+
+const storesSchema = z.array(storeSchema);
 
 type ParsedTransfer = z.infer<typeof transferSchema>;
 type ParsedPartnerTransaction = z.infer<typeof partnerTransactionSchema>;
@@ -339,6 +351,33 @@ export async function getJekoStoreBalance(
     availableAmountXof: balance.amount / 100,
     currency: JEKO_CURRENCY,
   };
+}
+
+/**
+ * Lecture sûre des boutiques disponibles. Cette opération n'ouvre aucun
+ * paiement et ne déclenche aucun transfert ; elle sert à contrôler que
+ * Production pointe vers la boutique Compétence, pas vers une boutique
+ * historique comme Buildify/Bluidify.
+ */
+export async function getJekoStores(
+  options: JekoPayoutRequestOptions = {},
+): Promise<JekoStoreSummary[]> {
+  const config = options.config ?? requireJekoServerConfig();
+  const { raw } = await jekoPayoutFetchJson(
+    `${config.apiBaseUrl}/partner_api/stores`,
+    { method: "GET", cache: "no-store" },
+    config,
+    options.fetchImpl,
+  );
+  const rawStores = Array.isArray(raw)
+    ? raw
+    : isRecord(raw) && Array.isArray(raw.data)
+      ? raw.data
+      : isRecord(raw) && Array.isArray(raw.stores)
+        ? raw.stores
+        : null;
+  const stores = parseJekoResponse(storesSchema, rawStores, "liste des magasins");
+  return stores.map((store) => ({ id: store.id, name: store.name }));
 }
 
 export async function getJekoTeacherPayoutTransfer(

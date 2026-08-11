@@ -9,12 +9,18 @@ const balanceFunction = payoutLibrary.match(
 )?.[0] ?? "";
 
 assert.match(liveVerifier, /getJekoStoreBalance\(\{ config \}\)/);
+assert.match(liveVerifier, /getJekoStores\(\{ config \}\)/);
+assert.match(liveVerifier, /assertCompetenceStoreName\(configuredStore\.name\)/);
+assert.match(liveVerifier, /Buildify\/Bluidify/);
+assert.match(liveVerifier, /boutique Compétence/);
 assert.match(liveVerifier, /server-only[\s\S]*?empty\.js/);
 assert.doesNotMatch(liveVerifier, /createJekoTeacherPayout|ensureJekoMobileMoneyContact|createJekoPaymentRequest/);
 assert.doesNotMatch(liveVerifier, /availableAmount(?:Cents|Xof).*console|console[\s\S]{0,120}availableAmount/);
 assert.match(liveVerifier, /Aucun mouvement d'argent effectué; solde non affiché/);
 assert.match(balanceFunction, /method:\s*"GET"/);
 assert.doesNotMatch(balanceFunction, /method:\s*"POST"/);
+assert.match(payoutLibrary, /\/partner_api\/stores/);
+assert.match(payoutLibrary, /liste des magasins/);
 assert.match(packageJson.scripts?.["build:production"] ?? "", /npm run verify:jeko-live/);
 
-console.log("Jèko live verification safety passed: balance-only GET, no contact, checkout, transfer or amount disclosure.");
+console.log("Jèko live verification safety passed: store-list and balance-only GET, no contact, checkout, transfer or amount disclosure.");

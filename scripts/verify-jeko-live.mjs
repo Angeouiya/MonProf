@@ -11,7 +11,7 @@ const jiti = createJiti(import.meta.url, {
   },
 });
 const { getJekoServerConfig } = jiti("../src/lib/jeko-config.ts");
-const { getJekoStoreBalance, JekoPayoutApiError } = jiti("../src/lib/jeko-payout.ts");
+const { getJekoStoreBalance, getJekoStores, JekoPayoutApiError } = jiti("../src/lib/jeko-payout.ts");
 
 const REQUIRED_VARIABLES = [
   "JEKO_API_KEY",
@@ -54,6 +54,12 @@ async function main() {
   }
 
   const balance = await getJekoStoreBalance({ config });
+  const stores = await getJekoStores({ config });
+  const configuredStore = stores.find((store) => store.id === config.storeId);
+  if (!configuredStore) {
+    throw new Error("Le JEKO_STORE_ID configuré n'existe pas dans les boutiques accessibles par cette clé API.");
+  }
+  assertCompetenceStoreName(configuredStore.name);
   if (
     balance.storeId !== config.storeId
     || balance.currency !== "XOF"
@@ -64,8 +70,21 @@ async function main() {
   }
 
   console.log(
-    "Vérification Jèko réussie : clé API, identifiant de clé, magasin et lecture XOF confirmés. Aucun mouvement d'argent effectué; solde non affiché.",
+    "Vérification Jèko réussie : clé API, identifiant de clé, boutique Compétence et lecture XOF confirmés. Aucun mouvement d'argent effectué; solde non affiché.",
   );
+}
+
+function assertCompetenceStoreName(value) {
+  const normalized = value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+  if (/buildify|bluidify/.test(normalized)) {
+    throw new Error("La boutique Jèko configurée correspond encore à Buildify/Bluidify.");
+  }
+  if (!normalized.includes("competence")) {
+    throw new Error("La boutique Jèko configurée n'est pas identifiée comme Boutique Compétence.");
+  }
 }
 
 main().catch((error) => {
