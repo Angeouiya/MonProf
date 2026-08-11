@@ -109,8 +109,8 @@ export default async function ServiceClientPage() {
     <div className="space-y-6">
       <ClientPageHeader
         eyebrow="Assistance"
-        title="Service client et litiges"
-        description="Une aide claire pour suivre vos cours, protéger votre paiement et garder une trace de chaque décision."
+        title="Aide"
+        description="Signalez un cours ou suivez un dossier. Le moteur garde la trace."
         showBack={false}
       />
 
@@ -170,15 +170,11 @@ export default async function ServiceClientPage() {
               Signaler un cours
             </span>
           }
-          description="Choisissez la réservation, décrivez le problème, le service client garde la trace."
+          description="Choisissez le cours. Expliquez en quelques mots. Envoyez."
           action={<p className="text-sm font-semibold text-[#111B4D]">{formatCount(bookableForDispute.length, "éligible")}</p>}
         />
           {bookableForDispute.length === 0 ? (
-            <ClientEmptyState
-              icon={FileText}
-              title="Aucune réservation éligible"
-              description="Vous pouvez ouvrir un litige uniquement sur une réservation en cours ou récemment terminée."
-            />
+            <ClientEmptyState icon={FileText} title="Rien à signaler" description="Aucun cours éligible pour le moment." />
           ) : (
             <DisputeForm bookings={bookableForDispute.map((b) => ({
               id: b.id,
@@ -287,18 +283,6 @@ function SupportMobilePriorityCard({
         <ClientInfoPill label="Éligibles" value={eligibleCount} strong={eligibleCount > 0} />
         <ClientInfoPill label="En cours" value={openCount} strong={openCount > 0} />
         <ClientInfoPill label="Clos" value={resolvedCount} strong={resolvedCount > 0} />
-      </div>
-
-      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-support-action-rail aria-label="Actions service client">
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="/client/reservations">Réservations</Link>
-        </Button>
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="/client/paiements">Paiements</Link>
-        </Button>
-        <Button asChild variant="outline" size="sm" className="min-h-10 shrink-0 rounded-lg border-[#CAD7F2] bg-white px-3 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-          <Link href="mailto:contact@competence.ci">Email</Link>
-        </Button>
       </div>
     </ClientSurface>
   );

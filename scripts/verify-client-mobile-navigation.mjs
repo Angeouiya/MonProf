@@ -88,6 +88,8 @@ const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
+const clientSupportPage = read("src/app/client/service-client/page.tsx");
+const clientSupportHistory = read("src/app/client/support/support-history-client.tsx");
 const clientUiSources = readClientUiSources(clientSourceRoots);
 const clientRootTabSources = clientRootTabPaths.map(read).join("\n");
 
@@ -493,6 +495,19 @@ record(
   /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(clientPrimitives)
     && commandCenterRenderCount === 9
     && gatedCommandCenterRenderCount === commandCenterRenderCount,
+);
+
+record(
+  "Client support stays action-first and hides secondary details on mobile",
+  /title="Aide"/.test(clientSupportPage)
+    && !/data-client-support-action-rail/.test(clientSupportPage)
+    && /data-client-support-mobile-priority/.test(clientSupportPage)
+    && /data-client-support-filter-toggle/.test(clientSupportHistory)
+    && /data-client-support-filter-panel/.test(clientSupportHistory)
+    && !/data-client-support-filter-rail/.test(clientSupportHistory)
+    && /data-client-support-case-detail/.test(clientSupportHistory)
+    && /Voir le détail/.test(clientSupportHistory)
+    && /Vos dossiers de support/.test(clientSupportHistory),
 );
 
 record(

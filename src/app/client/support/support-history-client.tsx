@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FilterX, Search } from "lucide-react";
+import { ArrowRight, CheckCircle2, FilterX, Search, SlidersHorizontal } from "lucide-react";
 import {
   ClientEmptyState,
   ClientRecordCard,
@@ -46,6 +46,7 @@ const FILTERS: Array<{ id: ClientSupportDisputeItem["statusKind"] | "all"; label
 export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisputeItem[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const normalizedQuery = normalize(query);
   const counts = useMemo(() => {
@@ -72,11 +73,11 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
     <ClientSurface data-client-support-history className="space-y-4">
       <ClientSectionTitle
         title={`Historique (${disputes.length})`}
-        description="Dossiers ouverts et décisions du service client."
+        description="Vos dossiers de support."
         action={<span className="text-sm font-semibold text-[#111B4D]">{filteredDisputes.length} affiché(s)</span>}
       />
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div className="grid gap-3 min-[760px]:grid-cols-[minmax(0,1fr)_auto] min-[760px]:items-center">
         <label className="relative block min-w-0">
           <span className="sr-only">Rechercher un dossier de support</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
@@ -89,7 +90,26 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
           />
         </label>
 
-        <div className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-0.5 min-[760px]:flex-wrap min-[760px]:justify-end min-[760px]:overflow-visible min-[760px]:pb-0" data-client-support-filter-rail>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="support-filters"
+          className="min-h-11 justify-between rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white min-[760px]:w-36"
+          data-client-support-filter-toggle
+        >
+          <span className="inline-flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtrer
+          </span>
+          <span className="text-xs font-semibold text-[#64748B]">{activeFilter.label}</span>
+        </Button>
+      </div>
+
+      {(filtersOpen || filter !== "all") && (
+        <div id="support-filters" className="flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-0.5 min-[760px]:flex-wrap min-[760px]:overflow-visible min-[760px]:pb-0" data-client-support-filter-panel>
           {FILTERS.map((item) => {
             const active = item.id === filter;
             return (
@@ -98,7 +118,7 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
                 type="button"
                 onClick={() => setFilter(item.id)}
                 className={cn(
-                  "min-h-10 min-w-[8.25rem] shrink-0 snap-start rounded-lg border px-3 text-xs font-semibold transition-colors min-[760px]:min-w-0",
+                  "min-h-10 min-w-[7.25rem] shrink-0 snap-start rounded-lg border px-3 text-xs font-semibold transition-colors min-[760px]:min-w-0",
                   active
                     ? "border-[#111B4D] bg-[#111B4D] text-white"
                     : "border-[#D8DEE9] bg-white text-[#111827] hover:border-[#111B4D]",
@@ -111,7 +131,7 @@ export function SupportHistoryClient({ disputes }: { disputes: ClientSupportDisp
             );
           })}
         </div>
-      </div>
+      )}
 
       {hasSearch && (
         <div className="flex flex-col gap-2 rounded-lg border border-[#D8DEE9] bg-white p-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
@@ -180,13 +200,18 @@ function SupportCaseCard({ dispute }: { dispute: ClientSupportDisputeItem }) {
           </Link>
         </Button>
       </div>
-      <div className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs leading-5">
-        <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{dispute.reason}</span></p>
-        <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{dispute.description}</span></p>
-        {dispute.resolution && (
-          <p className="mt-1"><span className="font-semibold text-[#111827]">Décision :</span> <span className="text-[#64748B]">{dispute.resolution}</span></p>
-        )}
-      </div>
+      <details className="mt-3 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs leading-5" data-client-support-case-detail>
+        <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D]">
+          Voir le détail
+        </summary>
+        <div className="mt-3 border-t border-[#E3E8F2] pt-3">
+          <p><span className="font-semibold text-[#111827]">Motif :</span> <span className="text-[#64748B]">{dispute.reason}</span></p>
+          <p className="mt-1"><span className="font-semibold text-[#111827]">Message :</span> <span className="text-[#64748B]">{dispute.description}</span></p>
+          {dispute.resolution && (
+            <p className="mt-1"><span className="font-semibold text-[#111827]">Décision :</span> <span className="text-[#64748B]">{dispute.resolution}</span></p>
+          )}
+        </div>
+      </details>
     </ClientRecordCard>
   );
 }
