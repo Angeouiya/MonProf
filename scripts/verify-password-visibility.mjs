@@ -52,6 +52,7 @@ const checks = [
   ["Password visibility logic is not duplicated across pages", duplicatedVisibilityLogic.length === 0],
   ["Shared password control starts masked unless explicitly requested", /defaultVisible\s*=\s*false/.test(sharedPasswordInput) && /useState\(defaultVisible\)/.test(sharedPasswordInput)],
   ["Reveal button never submits and exposes its state accessibly", /type="button"/.test(sharedPasswordInput) && /const controlLabel = visible \? "Masquer le mot de passe" : "Afficher le mot de passe";/.test(sharedPasswordInput) && /aria-label=\{controlLabel\}/.test(sharedPasswordInput) && /aria-pressed=\{visible\}/.test(sharedPasswordInput)],
+  ["Reveal button is readable on mobile with Voir/Masquer text", /const controlText = visible \? "Masquer" : "Voir";/.test(sharedPasswordInput) && /data-password-visibility-label=\{controlText\.toLowerCase\(\)\}/.test(sharedPasswordInput) && /<span>\{controlText\}<\/span>/.test(sharedPasswordInput)],
   ["Shared password control exposes visible state for QA", /data-password-visible=\{visible \? "true" : "false"\}/.test(sharedPasswordInput)],
   ["Visible password input disables phone autocorrection", /autoCapitalize="none"/.test(sharedPasswordInput) && /autoCorrect="off"/.test(sharedPasswordInput) && /spellCheck=\{false\}/.test(sharedPasswordInput)],
   ["Reveal button is tied to its controlled input", /aria-controls=\{typeof props\.id === "string" \? props\.id : undefined\}/.test(sharedPasswordInput)],
