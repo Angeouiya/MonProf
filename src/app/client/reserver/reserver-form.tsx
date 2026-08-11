@@ -1040,16 +1040,25 @@ export function ReserverForm({
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
               <div>
                 <Label>Quel parcours ? *</Label>
-                <div className="journey-switcher mt-2" data-size="regular" data-booking-journey-switcher>
-                  <div className="journey-switcher__rail" style={bookingJourneyRailStyle}>
+                <div
+                  className="journey-switcher mt-2"
+                  data-size="regular"
+                  data-booking-journey-switcher
+                  data-mini-app-tabs
+                  data-active-journey={bookingJourney || "none"}
+                  data-journey-count={eligibleJourneyChoices.length}
+                >
+                  <div className="journey-switcher__rail" style={bookingJourneyRailStyle} role="tablist" aria-label="Choisir un parcours" data-mini-app-tablist>
                     <span className="journey-switcher__indicator" aria-hidden="true" />
                     {eligibleJourneyChoices.map(({ value, label }) => (
                       <button
                         key={value}
                         type="button"
                         onClick={() => handleJourneyChange(value)}
-                        aria-pressed={bookingJourney === value}
+                        aria-selected={bookingJourney === value}
+                        role="tab"
                         data-active={bookingJourney === value ? "true" : "false"}
+                        data-journey-tab={value}
                         className="journey-switcher__link"
                       >
                         {label}

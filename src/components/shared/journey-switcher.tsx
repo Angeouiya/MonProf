@@ -53,9 +53,22 @@ export function JourneySwitcher({
   };
 
   return (
-    <div className={cn("journey-switcher", className)} data-journey-switcher data-size={size}>
+    <div
+      className={cn("journey-switcher", className)}
+      data-journey-switcher
+      data-mini-app-tabs
+      data-active-journey={selectedJourney}
+      data-journey-count={journeys.length}
+      data-size={size}
+    >
       {showLabel && <p className="journey-switcher__label">{label}</p>}
-      <div className="journey-switcher__rail" style={style}>
+      <div
+        className="journey-switcher__rail"
+        style={style}
+        role="tablist"
+        aria-label={label}
+        data-mini-app-tablist
+      >
         <span className="journey-switcher__indicator" aria-hidden="true" />
         {journeys.map((journey) => {
           const config = TEACHER_JOURNEY_CONFIG[journey];
@@ -71,6 +84,8 @@ export function JourneySwitcher({
               prefetch
               aria-label={config.label}
               aria-current={active ? "page" : undefined}
+              aria-selected={active}
+              role="tab"
               data-journey-tab={journey}
               data-active={active ? "true" : "false"}
               className="journey-switcher__link"

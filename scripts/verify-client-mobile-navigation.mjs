@@ -543,7 +543,13 @@ record(
     && /TEACHER_JOURNEYS\.map/.test(publicTeachersPage)
     && /<JourneySwitcher/.test(publicTeachersPage)
     && /data-journey-tab=\{journey\}/.test(journeySwitcher)
+    && /data-mini-app-tablist/.test(journeySwitcher)
+    && /role="tablist"/.test(journeySwitcher)
+    && /role="tab"/.test(journeySwitcher)
+    && /aria-selected=\{active\}/.test(journeySwitcher)
     && /aria-current=\{active \? "page" : undefined\}/.test(journeySwitcher)
+    && /grid-template-columns: repeat\(var\(--journey-count\), minmax\(0, 1fr\)\)/.test(css)
+    && /white-space: nowrap/.test(css)
     && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
     && /teacherJourneyWhere\(journey\)/.test(publicTeachersPage)
     && /params\.set\("commune", commune\)/.test(publicTeachersPage),

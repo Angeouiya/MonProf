@@ -23,6 +23,10 @@ const checks = [
       && home.includes('data-home-journey-tabs')
       && home.includes('<JourneySwitcher')
       && journeySwitcher.includes('data-journey-tab={journey}')
+      && journeySwitcher.includes('data-mini-app-tablist')
+      && journeySwitcher.includes('role="tablist"')
+      && journeySwitcher.includes('role="tab"')
+      && journeySwitcher.includes('aria-selected={active}')
       && !home.includes('Réserver une séance'),
   ],
   [
@@ -34,6 +38,7 @@ const checks = [
       && home.includes('showLabel')
       && home.includes('size="hero"')
       && journeySwitcher.includes('journey-switcher__indicator')
+      && journeySwitcher.includes('data-journey-count={journeys.length}')
       && !home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
       && !home.includes('Votre parcours')
       && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')
@@ -87,6 +92,9 @@ const checks = [
     bookingForm.includes('initialJourney?: BookingJourney')
       && bookingForm.includes('schoolSystem: initialJourney && initialJourney !== "professionnel" ? initialJourney : ""')
       && bookingForm.includes('const hasResolvedPricing = bookingJourney !== ""')
+      && bookingForm.includes('data-booking-journey-switcher')
+      && bookingForm.includes('role="tablist"')
+      && bookingForm.includes('role="tab"')
       && count(bookingForm, 'hasResolvedPricing ? formatFCFA(totalPrice) : "À calculer"') >= 2,
   ],
   [

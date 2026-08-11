@@ -71,6 +71,9 @@ check(
     && /CLIENT_JOURNEY_HREFS/.test(clientDashboard)
     && /<JourneySwitcher/.test(clientDashboard)
     && /data-journey-tab=\{journey\}/.test(journeySwitcher)
+    && /data-mini-app-tabs/.test(journeySwitcher)
+    && /role="tablist"/.test(journeySwitcher)
+    && /role="tab"/.test(journeySwitcher)
     && !/Professeurs recommandés/.test(clientDashboard),
 );
 check(
@@ -80,7 +83,11 @@ check(
     && /filterLevelsForJourney\(teacher\.levels/.test(bookingPage)
     && /!eligibleJourneys\.includes\(initialJourney\)/.test(bookingPage)
     && /eligibleJourneys: BookingJourney\[\]/.test(bookingForm)
-    && /filter\(\(\{ value \}\) => eligibleJourneys\.includes\(value\)\)/.test(bookingForm),
+    && /filter\(\(\{ value \}\) => eligibleJourneys\.includes\(value\)\)/.test(bookingForm)
+    && /data-booking-journey-switcher/.test(bookingForm)
+    && /data-mini-app-tablist/.test(bookingForm)
+    && /role="tablist"/.test(bookingForm)
+    && /role="tab"/.test(bookingForm),
 );
 check(
   "Server booking and automatic replacement enforce the selected mini-app",
