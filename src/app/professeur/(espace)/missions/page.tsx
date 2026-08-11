@@ -83,31 +83,44 @@ export default async function ProfesseurMissionsPage() {
               && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
               && mission.expiresAt >= new Date(),
             );
+            const missionDate = booking.scheduledDate ?? booking.startDate ?? booking.createdAt;
+            const missionTime = booking.scheduledTime || booking.preferredTime || "Heure à confirmer";
+            const missionNet = booking.teacherNetAmount || booking.totalTeacherReceives;
+            const decisionLabel = pendingReschedule ? "Nouveau créneau" : canRespond ? "Répondre" : "Suivi";
+            const placeLabel = booking.courseFormat === "ONLINE"
+              ? "En ligne"
+              : booking.commune || "Adresse à confirmer";
 
             return (
-              <PortalCard key={booking.id}>
-                <div className="grid gap-4 xl:grid-cols-[1fr_360px] xl:items-start">
+              <PortalCard key={booking.id} data-professor-mission-card>
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-semibold text-[#111827]">{booking.reference}</p>
-                      <StatusPill status={booking.status} />
-                      {mission && <StatusPill status={mission.status} type="mission" />}
-                      {pendingReschedule && <StatusPill status={pendingReschedule.status} />}
+                    <div className="flex flex-wrap items-center justify-between gap-2" data-professor-mission-decision>
+                      <span className={pendingReschedule || canRespond ? "inline-flex min-h-9 items-center rounded-full bg-[#111B4D] px-3 text-sm font-semibold text-white" : "inline-flex min-h-9 items-center rounded-full border border-[#DDE6F7] bg-white px-3 text-sm font-semibold text-[#111B4D]"}>
+                        {decisionLabel}
+                      </span>
+                      <span className="rounded-full bg-[#F6F8FC] px-3 py-1.5 text-xs font-bold text-[#64748B]">{booking.reference}</span>
                     </div>
-                    <p className="mt-2 text-base font-semibold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
-                    <div className="mt-4 grid gap-2 min-[680px]:grid-cols-2 lg:grid-cols-4">
-                      <MissionInfo icon={<CalendarDays className="h-4 w-4" />} label="Date" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />
-                      <MissionInfo label="Heure" value={booking.scheduledTime || booking.preferredTime} />
+                    <p className="mt-3 text-lg font-semibold leading-tight text-[#111827]">{booking.subjectName}</p>
+                    <p className="mt-1 text-sm font-semibold text-[#64748B]">{booking.levelName}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 min-[720px]:grid-cols-4" data-professor-mission-snapshot>
+                      <MissionInfo icon={<CalendarDays className="h-4 w-4" />} label="Quand" value={`${formatDate(missionDate)} · ${missionTime}`} />
                       <MissionInfo label="Format" value={courseFormatLabel(booking.courseFormat)} />
-                      <MissionInfo label="Net prévu" value={formatFCFA(booking.teacherNetAmount || booking.totalTeacherReceives)} />
+                      <MissionInfo icon={<MapPin className="h-4 w-4" />} label="Lieu" value={placeLabel} />
+                      <MissionInfo label="Net" value={formatFCFA(missionNet)} />
                     </div>
 
                     <details className="group mt-3 overflow-hidden rounded-lg border border-[#E6EAF3] bg-white" data-professor-mission-secondary>
                       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-[#111B4D] marker:hidden">
-                        Informations de la mission
+                        Infos mission
                         <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
                       </summary>
                       <div className="space-y-3 border-t border-[#E6EAF3] p-3">
+                        <div className="flex flex-wrap gap-2">
+                          <StatusPill status={booking.status} />
+                          {mission && <StatusPill status={mission.status} type="mission" />}
+                          {pendingReschedule && <StatusPill status={pendingReschedule.status} />}
+                        </div>
                         <p className="text-sm font-semibold leading-6 text-[#64748B]">
                           {booking.objective || booking.needDescription || "Besoin client transmis par le service client."}
                         </p>
@@ -145,11 +158,11 @@ export default async function ProfesseurMissionsPage() {
                     ) : (
                       <div className="space-y-3">
                         <p className="text-sm font-semibold leading-6 text-[#64748B]">
-                          {mission ? "Aucune action immédiate demandée sur cette mission." : "Aucun lien de confirmation actif pour cette réservation."}
+                          {mission ? "Mission suivie." : "Aucune confirmation ouverte."}
                         </p>
                         <Button asChild className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
                           <Link href={`/professeur/missions/${booking.id}`}>
-                            Ouvrir le détail
+                            Détail
                             <ArrowRight className="h-4 w-4" />
                           </Link>
                         </Button>
@@ -158,7 +171,7 @@ export default async function ProfesseurMissionsPage() {
                     {canRespond && (
                       <Button asChild variant="ghost" className="mt-2 w-full rounded-lg bg-white text-[#111B4D]">
                         <Link href={`/professeur/missions/${booking.id}`}>
-                          Détail complet
+                          Détail
                           <ArrowRight className="h-4 w-4" />
                         </Link>
                       </Button>

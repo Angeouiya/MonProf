@@ -110,8 +110,12 @@ record(
   /const orderedBookings = verifiedBookings\.toSorted/.test(missions)
     && /missionNeedsAttention\(left, missionSortNow\)/.test(missions)
     && /leftUpcoming \? -1 : 1/.test(missions)
+    && /data-professor-mission-card/.test(missions)
+    && /data-professor-mission-decision/.test(missions)
+    && /data-professor-mission-snapshot/.test(missions)
     && /data-professor-mission-secondary/.test(missions)
-    && /Informations de la mission/.test(missions)
+    && /Infos mission/.test(missions)
+    && !/Détail complet/.test(missions)
     && /group-open:rotate-180/.test(missions),
 );
 
