@@ -5468,3 +5468,131 @@ b {
 [data-sonner-toast][data-type="info"] {
   display: none !important;
 }
+
+/* Sélecteur des trois mini-applications — langage visuel central de Compétence. */
+.journey-switcher {
+  width: 100%;
+  min-width: 0;
+}
+
+.journey-switcher__label {
+  margin: 0 0 0.85rem 0.2rem;
+  color: #111827;
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.journey-switcher__rail {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(var(--journey-count), minmax(0, 1fr));
+  min-height: 4.25rem;
+  overflow: hidden;
+  border: 1px solid #dfe4eb;
+  border-radius: 1.45rem;
+  background: #f4f6f8;
+  box-shadow: inset 0 1px 1px rgba(17, 24, 39, 0.025);
+  padding: 0.32rem;
+}
+
+.journey-switcher__indicator {
+  position: absolute;
+  z-index: 0;
+  inset-block: 0.32rem;
+  left: 0.32rem;
+  width: calc((100% - 0.64rem) / var(--journey-count));
+  border: 1px solid rgba(226, 230, 236, 0.82);
+  border-radius: 1.15rem;
+  background: #ffffff;
+  box-shadow:
+    0 0.7rem 1.5rem rgba(17, 24, 39, 0.09),
+    0 0.15rem 0.42rem rgba(17, 24, 39, 0.055);
+  transform: translate3d(calc(var(--journey-index) * 100%), 0, 0);
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.journey-switcher__link {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  min-width: 0;
+  min-height: 3.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: 1.1rem;
+  padding: 0.7rem 0.5rem;
+  color: #68717d;
+  font-size: clamp(0.86rem, 1.3vw, 1.05rem);
+  font-weight: 620;
+  letter-spacing: -0.018em;
+  text-align: center;
+  transition: color 240ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.journey-switcher__link[data-active="true"] {
+  color: #111827;
+  font-weight: 680;
+}
+
+.journey-switcher__link:focus-visible {
+  outline: 3px solid #9aaad0;
+  outline-offset: -4px;
+}
+
+.journey-switcher[data-size="hero"] .journey-switcher__label {
+  margin-bottom: 1.1rem;
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+}
+
+.journey-switcher[data-size="hero"] .journey-switcher__rail {
+  min-height: clamp(5.3rem, 9vw, 7.3rem);
+  border-radius: 1.85rem;
+  padding: 0.48rem;
+}
+
+.journey-switcher[data-size="hero"] .journey-switcher__indicator {
+  inset-block: 0.48rem;
+  left: 0.48rem;
+  width: calc((100% - 0.96rem) / var(--journey-count));
+  border-radius: 1.45rem;
+  box-shadow:
+    0 1rem 2.3rem rgba(17, 24, 39, 0.105),
+    0 0.2rem 0.55rem rgba(17, 24, 39, 0.06);
+}
+
+.journey-switcher[data-size="hero"] .journey-switcher__link {
+  min-height: clamp(4.35rem, 8vw, 6.3rem);
+  border-radius: 1.4rem;
+  font-size: clamp(1rem, 2vw, 1.6rem);
+}
+
+.journey-switcher[data-size="compact"] .journey-switcher__rail {
+  min-height: 3.55rem;
+  border-radius: 1.15rem;
+  padding: 0.25rem;
+}
+
+.journey-switcher[data-size="compact"] .journey-switcher__indicator {
+  inset-block: 0.25rem;
+  left: 0.25rem;
+  width: calc((100% - 0.5rem) / var(--journey-count));
+  border-radius: 0.9rem;
+}
+
+.journey-switcher[data-size="compact"] .journey-switcher__link {
+  min-height: 3rem;
+  border-radius: 0.85rem;
+  font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-switcher__indicator,
+  .journey-switcher__link {
+    transition: none;
+  }
+}

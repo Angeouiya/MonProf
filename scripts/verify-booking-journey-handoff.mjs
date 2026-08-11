@@ -4,6 +4,7 @@ const home = read("src/app/page.tsx");
 const publicTeachers = read("src/app/professeurs/page.tsx");
 const teacherDetail = read("src/app/professeurs/[id]/page.tsx");
 const teacherCard = read("src/components/shared/teacher-card.tsx");
+const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
 const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const login = read("src/app/connexion/page.tsx");
@@ -15,20 +16,24 @@ const safeReturnPath = read("src/lib/safe-return-path.ts");
 const checks = [
   [
     "Homepage starts with three explicit mini-app choices",
-    home.includes('href: "/professeurs?journey=ivoirien"')
-      && home.includes('href: "/professeurs?journey=francais"')
-      && home.includes('href: "/professeurs?journey=professionnel"')
+    home.includes('ivoirien: "/professeurs?journey=ivoirien"')
+      && home.includes('francais: "/professeurs?journey=francais"')
+      && home.includes('professionnel: "/professeurs?journey=professionnel"')
       && home.includes('id="parcours"')
       && home.includes('data-home-journey-tabs')
+      && home.includes('<JourneySwitcher')
+      && journeySwitcher.includes('data-journey-tab={journey}')
       && !home.includes('Réserver une séance'),
   ],
   [
-    "Homepage exposes one compact three-button mini-app row before secondary content",
-    home.includes('pb-7 pt-4 text-center')
+    "Homepage exposes one premium three-system switcher before secondary content",
+    home.includes('pb-8 pt-5 text-center')
       && home.includes('Choisissez un parcours. On calcule le reste.')
       && home.includes('Prix clair · Paiement sécurisé')
-      && home.includes('grid max-w-2xl scroll-mt-20 grid-cols-3')
-      && home.includes('<span className="sm:hidden">{shortTitle}</span>')
+      && home.includes('max-w-5xl scroll-mt-20 text-left')
+      && home.includes('showLabel')
+      && home.includes('size="hero"')
+      && journeySwitcher.includes('journey-switcher__indicator')
       && !home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
       && !home.includes('Votre parcours')
       && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')

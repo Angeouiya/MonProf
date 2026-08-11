@@ -11,6 +11,7 @@ import {
 } from "@/components/shared/client-page-primitives";
 import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
@@ -38,11 +39,11 @@ const CLIENT_BOOKING_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Annulé",
 };
 
-const CLIENT_JOURNEYS = [
-  { label: "Ivoirien", fullLabel: "Système ivoirien", value: "ivoirien" },
-  { label: "Français", fullLabel: "Système français", value: "francais" },
-  { label: "Pro", fullLabel: "Professionnel", value: "professionnel" },
-] as const;
+const CLIENT_JOURNEY_HREFS = {
+  ivoirien: "/client/rechercher?journey=ivoirien",
+  francais: "/client/rechercher?journey=francais",
+  professionnel: "/client/rechercher?journey=professionnel",
+} as const;
 
 export default async function ClientDashboardPage() {
   const user = await getSessionUser();
@@ -125,18 +126,9 @@ export default async function ClientDashboardPage() {
       <nav
         aria-label="Choisir une mini-application"
         data-client-dashboard-journeys
-        className="grid grid-cols-3 gap-1.5 sm:gap-2"
+        className="max-w-3xl"
       >
-        {CLIENT_JOURNEYS.map(({ label, fullLabel, value }) => (
-          <Link
-            key={value}
-            href={`/client/rechercher?journey=${value}`}
-            className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-2 py-2 text-center text-[11px] font-semibold leading-tight text-[#475569] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:px-4 sm:text-sm"
-          >
-            <span className="sm:hidden">{label}</span>
-            <span className="hidden sm:inline">{fullLabel}</span>
-          </Link>
-        ))}
+        <JourneySwitcher activeJourney="ivoirien" hrefs={CLIENT_JOURNEY_HREFS} size="regular" />
       </nav>
       <p className="text-center text-xs font-medium text-[#64748B]">
         Tarif officiel calculé selon le parcours.

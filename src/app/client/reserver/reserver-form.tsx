@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ import {
   isAbidjanCity,
 } from "@/lib/ivory-coast-locations";
 import {
-  ArrowLeft, ArrowRight, Home, Video, User, Users, GraduationCap, BriefcaseBusiness,
+  ArrowLeft, ArrowRight, Home, Video, User, Users,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink, AlertTriangle,
 } from "lucide-react";
 
@@ -110,6 +110,12 @@ type PricingConfig = {
 };
 
 type BookingJourney = "ivoirien" | "francais" | "professionnel";
+
+const BOOKING_JOURNEY_CHOICES = [
+  { value: "ivoirien", label: "Ivoirien", detail: "CP1 à Terminale" },
+  { value: "francais", label: "Français", detail: "CP1 à Terminale" },
+  { value: "professionnel", label: "Pro", detail: "40 000 F / séance de 2h" },
+] as const;
 
 type PriceChangeNotice = {
   fingerprint: string;
@@ -510,6 +516,12 @@ export function ReserverForm({
       : form.schoolSystem === "ivoirien"
         ? "ivoirien"
         : "";
+  const eligibleJourneyChoices = BOOKING_JOURNEY_CHOICES.filter(({ value }) => eligibleJourneys.includes(value));
+  const bookingJourneyIndex = Math.max(0, eligibleJourneyChoices.findIndex(({ value }) => value === bookingJourney));
+  const bookingJourneyRailStyle = {
+    "--journey-count": Math.max(1, eligibleJourneyChoices.length),
+    "--journey-index": bookingJourneyIndex,
+  } as CSSProperties;
   const journeySubjects = useMemo(
     () => bookingJourney ? filterSubjectsForJourney(subjects, bookingJourney) : [],
     [bookingJourney, subjects],
@@ -1027,28 +1039,26 @@ export function ReserverForm({
               <StepIntro step="Étape 1" title="Besoin du cours" description={categoryCopy.intro} />
               <div>
                 <Label>Quel parcours ? *</Label>
-                <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                  {([
-                    { value: "ivoirien", label: "Système ivoirien", detail: "CP1 à Terminale", Icon: GraduationCap },
-                    { value: "francais", label: "Système français", detail: "CP1 à Terminale", Icon: GraduationCap },
-                    { value: "professionnel", label: "Professionnel", detail: "40 000 F / séance", Icon: BriefcaseBusiness },
-                  ] as const).filter(({ value }) => eligibleJourneys.includes(value)).map(({ value, label, detail, Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleJourneyChange(value)}
-                      className={`min-h-24 rounded-lg border p-4 text-left transition ${
-                        bookingJourney === value
-                          ? "border-[#111B4D] bg-[#F3F6FF] text-[#111B4D] shadow-sm"
-                          : "border-[#DDE3EE] bg-white text-[#111827] hover:border-[#111B4D]"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span className="mt-3 block text-sm font-semibold">{label}</span>
-                      <span className="mt-1 block text-xs font-medium text-[#64748B]">{detail}</span>
-                    </button>
-                  ))}
+                <div className="journey-switcher mt-2" data-size="regular" data-booking-journey-switcher>
+                  <div className="journey-switcher__rail" style={bookingJourneyRailStyle}>
+                    <span className="journey-switcher__indicator" aria-hidden="true" />
+                    {eligibleJourneyChoices.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleJourneyChange(value)}
+                        aria-pressed={bookingJourney === value}
+                        data-active={bookingJourney === value ? "true" : "false"}
+                        className="journey-switcher__link"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                <p className="mt-2 text-center text-xs font-semibold text-[#64748B]">
+                  {eligibleJourneyChoices.find(({ value }) => value === bookingJourney)?.detail}
+                </p>
               </div>
               {bookingJourney && (
               <>

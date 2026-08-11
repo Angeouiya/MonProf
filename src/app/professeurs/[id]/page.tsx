@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
-  Award,
   BadgeCheck,
   BookOpen,
   BriefcaseBusiness,
@@ -17,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
@@ -34,6 +34,7 @@ import {
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
 import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
+import { hasTeacherCvContent } from "@/lib/teacher-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -134,45 +135,45 @@ export default async function TeacherDetailPage({
     : teacher.offersHome
       ? "Cours à domicile"
       : "Cours en ligne";
+  const hasProfessionalDossier = hasTeacherCvContent({
+    careerSummary: teacher.careerSummary,
+    skills: teacher.skills,
+    workHistory: teacher.workHistory,
+    certifications: teacher.certifications,
+    teachingAchievements: teacher.teachingAchievements,
+    diploma: teacher.diploma,
+    experienceYears: teacher.experienceYears,
+    learnersCoached: teacher.learnersCoached,
+  });
 
   const teachersHref = `/professeurs?journey=${activeJourney}`;
   const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`;
   const reserveHref = session?.user
     ? bookingDestination
     : `/connexion?from=${encodeURIComponent(bookingDestination)}`;
+  const journeyHrefs = Object.fromEntries(
+    eligibleJourneys.map((value) => [value, `/professeurs/${teacher.id}?journey=${value}`]),
+  );
 
   return (
     <PublicLayout backFallbackHref={teachersHref}>
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
         <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <nav
-            className="mb-3 grid grid-cols-3 gap-1.5 sm:max-w-2xl sm:gap-2"
+            className="mb-5 max-w-3xl"
             aria-label="Parcours proposés par ce professeur"
             data-public-teacher-journey-tabs
           >
-            {eligibleJourneys.map((value) => {
-              const config = TEACHER_JOURNEY_CONFIG[value];
-              const active = value === activeJourney;
-              return (
-                <Link
-                  key={value}
-                  href={`/professeurs/${teacher.id}?journey=${value}`}
-                  aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-2 text-center text-[11px] font-semibold leading-tight transition sm:text-sm ${
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
-                  }`}
-                >
-                  <span className="sm:hidden">{config.shortLabel}</span>
-                  <span className="hidden sm:inline">{config.label}</span>
-                </Link>
-              );
-            })}
+            <JourneySwitcher
+              activeJourney={activeJourney}
+              hrefs={journeyHrefs}
+              journeys={eligibleJourneys}
+              size="compact"
+            />
           </nav>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
-            <div className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white shadow-[0_18px_50px_rgba(17,27,77,0.08)]" data-public-teacher-hero>
-              <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]" data-public-teacher-cover>
+            <div className="overflow-hidden rounded-[1.75rem] border border-[#DDE3EE] bg-white shadow-[0_24px_65px_rgba(17,24,39,0.09)]" data-public-teacher-hero>
+              <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#F4F6F8]" data-public-teacher-cover>
                 <Image
                   src={resolvedCover.url}
                   alt={`Couverture pédagogique de ${displayName}`}
@@ -183,15 +184,15 @@ export default async function TeacherDetailPage({
                 />
               </div>
 
-              <div className="grid grid-cols-[112px_minmax(0,1fr)] items-start gap-3 border-t border-[#E3E8F2] px-4 pb-4 sm:gap-5 sm:px-6 sm:pb-5" data-public-teacher-photo-layout>
+              <div className="grid grid-cols-[100px_minmax(0,1fr)] items-start gap-3 border-t border-[#E3E8F2] px-4 pb-4 sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-5 sm:px-6 sm:pb-5" data-public-teacher-photo-layout>
                 <div
-                  className="relative z-10 w-fit rounded-full bg-white p-1 shadow-[0_10px_30px_rgba(17,27,77,0.16)]"
+                  className="relative z-10 w-fit rounded-full bg-white p-[3px] shadow-[0_12px_30px_rgba(17,24,39,0.14)]"
                   style={{ transform: "translateY(-50%)" }}
                 >
                   <ProfessorImage
                     photoUrl={teacher.photoUrl}
                     name={displayName}
-                    size={104}
+                    size={96}
                     shape="circle"
                     priority
                     verified={teacher.badgeVerified}
@@ -199,7 +200,7 @@ export default async function TeacherDetailPage({
                 </div>
 
                 <div className="min-w-0 pt-4 text-left sm:pt-5">
-                  <h1 className="break-words text-xl font-semibold leading-tight text-[#111827] sm:text-4xl">
+                  <h1 className="break-words text-xl font-semibold leading-tight tracking-[-0.025em] text-[#111827] sm:text-4xl">
                     {displayName}
                   </h1>
                   <div className="mt-2 flex justify-start">
@@ -235,7 +236,7 @@ export default async function TeacherDetailPage({
               </div>
             </div>
 
-            <aside className="hidden rounded-lg border border-[#111B4D] bg-white p-5 lg:flex lg:flex-col" data-public-teacher-primary-action>
+            <aside className="hidden rounded-[1.5rem] border border-[#DDE3EE] bg-white p-6 shadow-[0_18px_45px_rgba(17,24,39,0.06)] lg:flex lg:flex-col" data-public-teacher-primary-action>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{journeyConfig.label}</p>
               <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">{sessionPriceLabel}</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
@@ -268,7 +269,7 @@ export default async function TeacherDetailPage({
             </aside>
           </div>
 
-          <div className="mt-3 rounded-lg border border-[#DDE6F7] bg-white p-3 sm:p-4" data-public-teacher-decision-summary>
+          <div className="mt-4 rounded-[1.5rem] border border-[#DDE3EE] bg-white p-4 sm:p-5" data-public-teacher-decision-summary>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">L'essentiel pour décider</p>
@@ -302,71 +303,11 @@ export default async function TeacherDetailPage({
                 </p>
               </Card>
 
-              {/* Expérience & diplômes */}
-              <DisclosureCard
-                icon={<Award className="h-4 w-4" />}
-                title="Expérience et diplômes"
-                summary={`${teacher.experienceYears} ans d'expérience · ${teacher.diploma || "Diplôme à confirmer"}`}
-              >
-                <div className="grid gap-4 min-[680px]:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                      Années d'expérience
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#111827]">
-                      {teacher.experienceYears} ans
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                      Diplôme principal
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#111827]">
-                      {teacher.diploma || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                      Type de profil
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#111827]">
-                      {formatProfileType(teacher.profileType)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-                      Réservations effectuées
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#111827]">
-                      {teacher._count.bookings} cours
-                    </p>
-                  </div>
-                </div>
-              </DisclosureCard>
-
-              {/* Mini CV professionnel */}
-              <DisclosureCard
-                icon={<BriefcaseBusiness className="h-4 w-4" />}
-                title="Parcours professionnel"
-                summary={teacher.careerSummary || "Compétences et expériences vérifiées"}
-              >
-                <div>
-                  <TeacherMiniCv
-                    careerSummary={teacher.careerSummary}
-                    skills={teacher.skills}
-                    workHistory={teacher.workHistory}
-                    certifications={teacher.certifications || teacher.diploma}
-                    teachingAchievements={teacher.teachingAchievements}
-                    learnersCoached={teacher.learnersCoached}
-                  />
-                </div>
-              </DisclosureCard>
-
-              {/* Matières & Niveaux */}
+              {/* Expertise adaptée au système actif */}
               <DisclosureCard
                 icon={<GraduationCap className="h-4 w-4" />}
-                title="Matières et niveaux"
-                summary={`${journeySubjects.length} matière${journeySubjects.length > 1 ? "s" : ""} · ${journeyLevels.length} niveau${journeyLevels.length > 1 ? "x" : ""}`}
+                title={activeJourney === "professionnel" ? "Compétences et profils" : "Matières et niveaux"}
+                summary={`${journeySubjects.length} ${journeyConfig.subjectLabel.toLowerCase()}${journeySubjects.length > 1 ? "s" : ""} · ${journeyLevels.length} ${journeyConfig.levelLabel.toLowerCase()}${journeyLevels.length > 1 ? "s" : ""}`}
               >
                 {journeySubjects.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -411,6 +352,26 @@ export default async function TeacherDetailPage({
                   </p>
                 )}
               </DisclosureCard>
+
+              {/* CV consolidé : aucune information répétée entre les rubriques. */}
+              {hasProfessionalDossier && (
+                <DisclosureCard
+                  icon={<BriefcaseBusiness className="h-4 w-4" />}
+                  title="Dossier professionnel"
+                  summary={`${teacher.experienceYears} ans d'expérience${teacher.diploma ? ` · ${teacher.diploma}` : ""}`}
+                >
+                  <TeacherMiniCv
+                    careerSummary={teacher.careerSummary}
+                    skills={teacher.skills}
+                    workHistory={teacher.workHistory}
+                    certifications={teacher.certifications}
+                    teachingAchievements={teacher.teachingAchievements}
+                    learnersCoached={teacher.learnersCoached}
+                    experienceYears={teacher.experienceYears}
+                    diploma={teacher.diploma}
+                  />
+                </DisclosureCard>
+              )}
 
               {/* Zones d'intervention */}
               <DisclosureCard
@@ -683,10 +644,9 @@ export default async function TeacherDetailPage({
     </PublicLayout>
   );
 }
-
 function Card({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <div id={id} className="min-w-0 scroll-mt-24 rounded-lg border border-[#E3E8F2] bg-white p-5 sm:p-6">
+    <div id={id} className="min-w-0 scroll-mt-24 rounded-[1.35rem] border border-[#E3E8F2] bg-white p-5 sm:p-6">
       {children}
     </div>
   );
@@ -704,7 +664,7 @@ function DisclosureCard({
   summary: string;
 }) {
   return (
-    <details className="rounded-lg border border-[#E3E8F2] bg-white" data-public-teacher-disclosure>
+    <details className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white" data-public-teacher-disclosure>
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden sm:px-5">
         <span className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F4FF] text-[#111B4D]">{icon}</span>
@@ -713,7 +673,7 @@ function DisclosureCard({
             <span className="mt-0.5 block truncate text-xs font-medium text-[#64748B] sm:text-sm">{summary}</span>
           </span>
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-[#111B4D]" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-[#111B4D] transition-transform duration-200 group-open:rotate-180" />
       </summary>
       <div className="border-t border-[#E3E8F2] p-4 sm:p-5">{children}</div>
     </details>
@@ -763,7 +723,7 @@ function DecisionPoint({
   value: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-3">
+    <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-white p-3.5">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
         <span className="text-[#111B4D]">{icon}</span>
         {label}
@@ -801,15 +761,4 @@ function PriceTile({
       <p className="mt-0.5 text-xs font-medium text-[#64748B]">{sub}</p>
     </div>
   );
-}
-
-function formatProfileType(p: string): string {
-  const map: Record<string, string> = {
-    ENSEIGNANT: "Enseignant",
-    ETUDIANT: "Étudiant",
-    REPETITEUR: "Répétiteur",
-    FORMATEUR: "Formateur",
-    PROFESSIONNEL: "Professionnel",
-  };
-  return map[p] || p;
 }

@@ -9,6 +9,8 @@ import { InfoLine, PortalCard, ProfessorPageHeader, StatusPill } from "@/compone
 import { TeacherProfessionalProfileForm } from "@/components/professor/teacher-professional-profile-form";
 import { TeacherProfileMediaForm } from "@/components/professor/teacher-profile-media-form";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
+import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
+import { teacherEligibleJourneys, TEACHER_JOURNEY_CONFIG } from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,20 @@ export default async function ProfesseurProfilPage() {
   const teacherName = profile.professionalName || profile.fullName;
   const availabilitySlots = countSlots(profile.availability);
   const resolvedCover = resolveTeacherCover({ teacherId: profile.id, coverUrl: profile.coverUrl });
+  const journeyCatalogs = teacherEligibleJourneys(profile).map((journey) => ({
+    journey,
+    config: TEACHER_JOURNEY_CONFIG[journey],
+    subjects: filterSubjectsForJourney(profile.subjects.map((item) => ({
+      ...item,
+      name: item.subject.name,
+      icon: item.subject.icon,
+    })), journey),
+    levels: filterLevelsForJourney(profile.levels.map((item) => ({
+      ...item,
+      name: item.level.name,
+      order: item.level.order,
+    })), journey),
+  }));
 
   return (
     <div className="space-y-6">
@@ -82,32 +98,31 @@ export default async function ProfesseurProfilPage() {
               careerSummary={profile.careerSummary}
               skills={profile.skills}
               workHistory={profile.workHistory}
-              certifications={profile.certifications || profile.diploma}
+              certifications={profile.certifications}
               teachingAchievements={profile.teachingAchievements}
               learnersCoached={profile.learnersCoached}
-            />
-          </div>
-          <div className="mt-5 border-t border-[#E6EAF3] pt-5">
-            <h4 className="text-sm font-semibold text-[#111827]">Compléter mon mini-CV</h4>
-            <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-              Renseignez votre parcours, vos expériences et vos compétences. Le service client reçoit une notification et garde la traçabilité.
-            </p>
-            <TeacherProfessionalProfileForm
-              careerSummary={profile.careerSummary}
-              skills={profile.skills}
-              workHistory={profile.workHistory}
-              certifications={profile.certifications || profile.diploma}
-              teachingAchievements={profile.teachingAchievements}
-              learnersCoached={profile.learnersCoached}
+              experienceYears={profile.experienceYears}
+              diploma={profile.diploma}
             />
           </div>
         </PortalCard>
 
         <PortalCard>
-          <h3 className="text-base font-semibold text-[#111827]">Matières, niveaux et zones</h3>
-          <div className="mt-4 space-y-5">
-            <TagGroup title="Matières enseignées" items={profile.subjects.map((item) => item.subject.name)} />
-            <TagGroup title="Niveaux acceptés" items={profile.levels.map((item) => item.level.name)} />
+          <h3 className="text-base font-semibold text-[#111827]">Mes systèmes et expertises</h3>
+          <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">Chaque bloc contient uniquement les cours visibles dans ce système.</p>
+          <div className="mt-4 space-y-3">
+            {journeyCatalogs.map(({ journey, config, subjects, levels }) => (
+              <section key={journey} className="rounded-2xl border border-[#DDE3EE] bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-semibold text-[#111827]">{config.label}</h4>
+                  <span className="shrink-0 text-xs font-semibold text-[#111B4D]">{config.priceLabel}</span>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <TagGroup title={config.subjectLabel} items={subjects.map((item) => item.subject.name)} />
+                  <TagGroup title={config.levelLabel} items={levels.map((item) => item.level.name)} />
+                </div>
+              </section>
+            ))}
             <TagGroup title="Zones d'intervention" items={profile.zones.map((item) => item.commune.name)} />
           </div>
         </PortalCard>
@@ -125,6 +140,29 @@ export default async function ProfesseurProfilPage() {
             Les tarifs finaux et les paiements sont contrôlés par le service client selon la grille tarifaire et les réservations validées.
           </p>
         </PortalCard>
+
+        <PortalCard>
+          <details className="group" data-professor-cv-editor>
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 marker:hidden">
+              <span>
+                <span className="block text-base font-semibold text-[#111827]">Modifier mon dossier professionnel</span>
+                <span className="mt-1 block text-sm font-semibold leading-5 text-[#64748B]">Parcours, compétences, preuves et résultats.</span>
+              </span>
+              <span className="shrink-0 rounded-xl border border-[#DDE3EE] px-3 py-2 text-xs font-semibold text-[#111B4D] group-open:hidden">Ouvrir</span>
+              <span className="hidden shrink-0 rounded-xl border border-[#DDE3EE] px-3 py-2 text-xs font-semibold text-[#111B4D] group-open:inline-flex">Fermer</span>
+            </summary>
+            <div className="mt-5 border-t border-[#E6EAF3] pt-5">
+              <TeacherProfessionalProfileForm
+                careerSummary={profile.careerSummary}
+                skills={profile.skills}
+                workHistory={profile.workHistory}
+                certifications={profile.certifications}
+                teachingAchievements={profile.teachingAchievements}
+                learnersCoached={profile.learnersCoached}
+              />
+            </div>
+          </details>
+        </PortalCard>
       </div>
     </div>
   );
@@ -140,14 +178,15 @@ function ContactTile({ icon, label, value }: { icon: React.ReactNode; label: str
 }
 
 function TagGroup({ title, items }: { title: string; items: string[] }) {
+  const uniqueItems = Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{title}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        {items.length === 0 ? (
+        {uniqueItems.length === 0 ? (
           <span className="text-sm font-semibold text-[#64748B]">Non renseigné</span>
         ) : (
-          items.map((item) => (
+          uniqueItems.map((item) => (
             <Badge key={item} variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
               {item}
             </Badge>

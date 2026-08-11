@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Check, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
@@ -8,23 +9,11 @@ import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 
 export const dynamic = "force-dynamic";
 
-const JOURNEYS = [
-  {
-    title: "Système ivoirien",
-    shortTitle: "Ivoirien",
-    href: "/professeurs?journey=ivoirien",
-  },
-  {
-    title: "Système français",
-    shortTitle: "Français",
-    href: "/professeurs?journey=francais",
-  },
-  {
-    title: "Professionnel",
-    shortTitle: "Pro",
-    href: "/professeurs?journey=professionnel",
-  },
-] as const;
+const HOME_JOURNEY_HREFS = {
+  ivoirien: "/professeurs?journey=ivoirien",
+  francais: "/professeurs?journey=francais",
+  professionnel: "/professeurs?journey=professionnel",
+} as const;
 
 const IVORIAN_RATES = [
   ["CP1 à CM1", 15_000],
@@ -76,25 +65,22 @@ export default async function HomePage() {
   return (
     <PublicLayout>
       <section className="flex min-h-[calc(100dvh-var(--app-topbar-height)-7.25rem)] items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0">
-        <div className="mx-auto w-full max-w-6xl px-4 pb-7 pt-4 text-center sm:px-6 sm:pb-16 sm:pt-6 lg:px-8 lg:pb-20">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 text-center sm:px-6 sm:pb-16 sm:pt-10 lg:px-8 lg:pb-20">
           <nav
             id="parcours"
             aria-label="Choisir une mini-application"
             data-home-journey-tabs
-            className="mx-auto grid max-w-2xl scroll-mt-20 grid-cols-3 gap-1.5 sm:gap-2"
+            className="mx-auto max-w-5xl scroll-mt-20 text-left"
           >
-            {JOURNEYS.map(({ title, shortTitle, href }) => (
-              <Link
-                key={title}
-                href={href}
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#D6DEED] bg-white px-2 py-2 text-center text-[11px] font-semibold leading-tight text-[#475569] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:px-4 sm:text-sm"
-              >
-                <span className="sm:hidden">{shortTitle}</span>
-                <span className="hidden sm:inline">{title}</span>
-              </Link>
-            ))}
+            <JourneySwitcher
+              activeJourney="ivoirien"
+              hrefs={HOME_JOURNEY_HREFS}
+              label="Système"
+              showLabel
+              size="hero"
+            />
           </nav>
-          <p className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D] sm:mt-6">
+          <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D] sm:mt-9">
             <ShieldCheck className="h-4 w-4" />
             <span className="sm:hidden">Professeurs vérifiés</span>
             <span className="hidden sm:inline">Professeurs vérifiés en Côte d'Ivoire</span>
@@ -161,7 +147,7 @@ export default async function HomePage() {
 
       <section className="hidden bg-[#111B4D] text-white sm:block">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-semibold">Prêt à commencer ?</h2>
+          <h2 className="text-3xl font-semibold text-white">Prêt à commencer ?</h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#DDE6F7]">Trois choix suffisent pour lancer votre recherche.</p>
           <Link href="#parcours" className="mt-7 inline-flex min-h-14 items-center gap-2 rounded-2xl bg-white px-7 text-base font-semibold text-[#111B4D]">
             Trouver un professeur <ArrowRight className="h-5 w-5" />

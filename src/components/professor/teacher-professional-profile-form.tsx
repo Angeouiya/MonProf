@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Save } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +41,7 @@ export function TeacherProfessionalProfileForm({
   const [achievementText, setAchievementText] = useState(teachingAchievements ?? "");
   const [coached, setCoached] = useState(String(learnersCoached ?? 0));
   const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const coachedNumber = Number(coached);
   const hasInvalidLength = (
@@ -60,11 +60,12 @@ export function TeacherProfessionalProfileForm({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) {
-      toast.error("Vérifiez les longueurs et le nombre d'apprenants encadrés.");
+      setFeedback({ type: "error", text: "Vérifiez les longueurs et le nombre d'apprenants encadrés." });
       return;
     }
 
     setSaving(true);
+    setFeedback(null);
     try {
       const res = await fetch("/api/professor/profile", {
         method: "PATCH",
@@ -81,10 +82,10 @@ export function TeacherProfessionalProfileForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Mise à jour impossible.");
-      toast.success("Profil professionnel mis à jour et transmis au service client.");
+      setFeedback({ type: "success", text: "Dossier professionnel mis à jour." });
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Mise à jour impossible.");
+      setFeedback({ type: "error", text: error instanceof Error ? error.message : "Mise à jour impossible." });
     } finally {
       setSaving(false);
     }
@@ -171,6 +172,17 @@ export function TeacherProfessionalProfileForm({
           Enregistrer
         </Button>
       </div>
+
+      {feedback && (
+        <p
+          role={feedback.type === "error" ? "alert" : "status"}
+          className={feedback.type === "error"
+            ? "rounded-xl border border-red-200 bg-white p-3 text-sm font-semibold text-red-700"
+            : "rounded-xl border border-[#DDE3EE] bg-white p-3 text-sm font-semibold text-[#111B4D]"}
+        >
+          {feedback.text}
+        </p>
+      )}
 
       <p className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
         <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 text-[#111B4D]" />

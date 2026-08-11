@@ -11,6 +11,7 @@ import {
   ClientSurface,
 } from "@/components/shared/client-page-primitives";
 import { TeacherCard } from "@/components/shared/teacher-card";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import {
   BookOpenCheck,
@@ -183,6 +184,9 @@ export default async function RechercherPage({
   const certifiedCount = items.filter((teacher) => teacher.badgeVerified).length;
   const primaryActionHref = items.length > 0 ? "#resultats-professeurs" : "#filtres-professeurs";
   const hasPublishedTeachers = totalVisibleTeachers > 0 || items.length > 0;
+  const journeyHrefs = Object.fromEntries(
+    TEACHER_JOURNEYS.map((value) => [value, `/client/rechercher?journey=${value}`]),
+  ) as Record<TeacherJourney, string>;
 
   return (
     <div className="space-y-5">
@@ -194,29 +198,11 @@ export default async function RechercherPage({
       />
 
       <nav
-        className="grid grid-cols-3 gap-1.5"
+        className="max-w-3xl"
         aria-label="Choisir une mini-application"
         data-client-journey-tabs
       >
-        {TEACHER_JOURNEYS.map((value) => {
-          const config = TEACHER_JOURNEY_CONFIG[value];
-          const active = value === journey;
-          return (
-            <Link
-              key={value}
-              href={`/client/rechercher?journey=${value}`}
-              aria-current={active ? "page" : undefined}
-              className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 text-center text-xs font-semibold ${
-                active
-                  ? "border-[#111B4D] bg-[#111B4D] text-white"
-                  : "border-[#D6DEED] bg-white text-[#475569]"
-              }`}
-            >
-              <span className="sm:hidden">{config.shortLabel}</span>
-              <span className="hidden sm:inline">{config.label}</span>
-            </Link>
-          );
-        })}
+        <JourneySwitcher activeJourney={journey} hrefs={journeyHrefs} size="regular" />
       </nav>
 
       <ClientMetricStrip

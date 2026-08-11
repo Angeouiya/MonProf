@@ -9,6 +9,7 @@ const publicTeacherDetail = read("src/app/professeurs/[id]/page.tsx");
 const publicTeacherApi = read("src/app/api/teachers/route.ts");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientDashboard = read("src/app/client/page.tsx");
+const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
 const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const bookingApi = read("src/app/api/bookings/route.ts");
@@ -67,7 +68,9 @@ check(
     && /data-client-journey-tabs/.test(clientSearch)
     && /teacherId=\$\{t\.id\}&journey=\$\{journey\}/.test(clientSearch)
     && /data-client-dashboard-journeys/.test(clientDashboard)
-    && /href=\{`\/client\/rechercher\?journey=\$\{value\}`\}/.test(clientDashboard)
+    && /CLIENT_JOURNEY_HREFS/.test(clientDashboard)
+    && /<JourneySwitcher/.test(clientDashboard)
+    && /data-journey-tab=\{journey\}/.test(journeySwitcher)
     && !/Professeurs recommandés/.test(clientDashboard),
 );
 check(

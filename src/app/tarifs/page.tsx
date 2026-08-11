@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { formatFCFA } from "@/lib/format";
 import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
 import { TRANSPORT_FEES } from "@/lib/pricing";
@@ -60,6 +61,12 @@ const TRANSPORT_EXPLANATIONS: Record<string, string> = {
   outside_grand_abidjan: "Ville intérieure ou zone étendue.",
 };
 
+const TARIFF_JOURNEY_HREFS = {
+  ivoirien: "#tarif-ivoirien",
+  francais: "#tarif-francais",
+  professionnel: "#tarif-professionnel",
+} as const;
+
 export default function TarifsPage() {
   return (
     <PublicLayout>
@@ -77,17 +84,14 @@ export default function TarifsPage() {
 
       <section className="bg-[#F8FAFD]">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <nav className="mb-5 grid grid-cols-3 gap-2" aria-label="Choisir une grille tarifaire">
-            {PRICE_GRIDS.map((grid) => (
-              <a
-                key={grid.id}
-                href={`#${grid.id}`}
-                className="flex min-h-16 min-w-0 flex-col items-center justify-center rounded-lg border border-[#CAD7F2] bg-white px-2 py-2 text-center text-[#111B4D] transition hover:border-[#111B4D]"
-              >
-                <span className="text-xs font-bold sm:text-sm">{grid.shortLabel}</span>
-                <span className="mt-1 text-[11px] font-semibold tabular-nums text-[#111827] sm:text-xs">{grid.summaryPrice}</span>
-              </a>
-            ))}
+          <nav className="mx-auto mb-8 max-w-4xl" aria-label="Choisir une grille tarifaire">
+            <JourneySwitcher
+              activeJourney="ivoirien"
+              hrefs={TARIFF_JOURNEY_HREFS}
+              label="Système"
+              showLabel
+              size="regular"
+            />
           </nav>
 
           <div className="grid items-start gap-5 lg:grid-cols-3">

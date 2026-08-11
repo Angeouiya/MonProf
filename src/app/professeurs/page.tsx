@@ -12,6 +12,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
+import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { EmptyState } from "@/components/shared/page-header";
@@ -227,6 +228,9 @@ export default async function TeachersPage({
     q,
   ].filter(Boolean).length;
   const resetFiltersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
+  const journeyHrefs = Object.fromEntries(
+    TEACHER_JOURNEYS.map((value) => [value, buildJourneyUrl(value)]),
+  ) as Record<BookingJourney, string>;
   const hasPublishedTeachers = totalVisibleTeachers > 0;
   const showTeacherFilters = hasPublishedTeachers;
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
@@ -243,31 +247,15 @@ export default async function TeachersPage({
             <span className="inline-flex min-h-10 items-center text-[#111827]">Professeurs</span>
           </nav>
           <nav
-            className="mb-3 grid grid-cols-3 gap-1.5 sm:mb-5 sm:max-w-2xl sm:gap-2"
+            className="mb-5 max-w-3xl"
             aria-label="Choisir une mini-application"
             data-public-journey-tabs
           >
-            {TEACHER_JOURNEYS.map((value) => {
-              const active = journey === value;
-              const config = TEACHER_JOURNEY_CONFIG[value];
-              return (
-                <Link
-                  key={value}
-                  href={buildJourneyUrl(value)}
-                  prefetch={true}
-                  aria-current={active ? "page" : undefined}
-                  data-public-journey-tab={value}
-                  className={`inline-flex min-h-12 items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-semibold leading-tight transition sm:px-4 sm:text-sm ${
-                    active
-                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                      : "border-[#D6DEED] bg-white text-[#475569] hover:border-[#111B4D] hover:text-[#111B4D]"
-                  }`}
-                >
-                  <span className="sm:hidden">{config.shortLabel}</span>
-                  <span className="hidden sm:inline">{config.label}</span>
-                </Link>
-              );
-            })}
+            <JourneySwitcher
+              activeJourney={journey}
+              hrefs={journeyHrefs}
+              size="regular"
+            />
           </nav>
           <div className="grid gap-3 lg:grid-cols-[1fr_360px] lg:items-end lg:gap-4">
             <div className="min-w-0">

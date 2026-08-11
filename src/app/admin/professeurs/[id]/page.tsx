@@ -856,9 +856,11 @@ export default async function ProfesseurDetailPage({
                       careerSummary={teacher.careerSummary}
                       skills={teacher.skills}
                       workHistory={teacher.workHistory}
-                      certifications={teacher.certifications || teacher.diploma}
+                      certifications={teacher.certifications}
                       teachingAchievements={teacher.teachingAchievements}
                       learnersCoached={teacher.learnersCoached}
+                      experienceYears={teacher.experienceYears}
+                      diploma={teacher.diploma}
                     />
                   </div>
                 </div>
@@ -1303,9 +1305,11 @@ export default async function ProfesseurDetailPage({
                 careerSummary={teacher.careerSummary}
                 skills={teacher.skills}
                 workHistory={teacher.workHistory}
-                certifications={teacher.certifications || teacher.diploma}
+                certifications={teacher.certifications}
                 teachingAchievements={teacher.teachingAchievements}
                 learnersCoached={teacher.learnersCoached}
+                experienceYears={teacher.experienceYears}
+                diploma={teacher.diploma}
               />
             </CardContent>
           </Card>

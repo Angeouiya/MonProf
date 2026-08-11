@@ -17,6 +17,7 @@ const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
+const journeySwitcherPath = "src/components/shared/journey-switcher.tsx";
 const professorImagePath = "src/components/shared/professor-image.tsx";
 const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
@@ -68,6 +69,7 @@ const clientError = read(clientErrorPath);
 const clientNotFound = read(clientNotFoundPath);
 const backButton = read(backButtonPath);
 const teacherCard = read(teacherCardPath);
+const journeySwitcher = read(journeySwitcherPath);
 const professorImage = read(professorImagePath);
 const professorMedia = read(professorMediaPath);
 const professorMediaApi = read(professorMediaApiPath);
@@ -323,9 +325,10 @@ record(
 record(
   "Client dashboard launches exactly three journey-aware mini-apps without duplicate quick actions",
   /data-client-dashboard-journeys/.test(read("src/app/client/page.tsx"))
-    && /grid grid-cols-3 gap-1\.5/.test(read("src/app/client/page.tsx"))
-    && /CLIENT_JOURNEYS\.map/.test(read("src/app/client/page.tsx"))
-    && /href=\{`\/client\/rechercher\?journey=\$\{value\}`\}/.test(read("src/app/client/page.tsx"))
+    && /CLIENT_JOURNEY_HREFS/.test(read("src/app/client/page.tsx"))
+    && /<JourneySwitcher/.test(read("src/app/client/page.tsx"))
+    && countOccurrences(read("src/app/client/page.tsx"), "/client/rechercher?journey=") === 3
+    && /journey-switcher__indicator/.test(journeySwitcher)
     && !/Professeurs recommandés/.test(read("src/app/client/page.tsx"))
     && !/data-client-dashboard-action-rail/.test(read("src/app/client/page.tsx"))
     && /\{actionHref && \(/.test(read("src/app/client/page.tsx")),
@@ -537,10 +540,10 @@ record(
   "Public teacher search exposes three real journey tabs in one mobile row",
   /parseBookingJourney\(sp\.journey\?\.trim\(\)\) \|\| "ivoirien"/.test(publicTeachersPage)
     && /data-public-journey-tabs/.test(publicTeachersPage)
-    && /grid grid-cols-3 gap-1\.5/.test(publicTeachersPage)
     && /TEACHER_JOURNEYS\.map/.test(publicTeachersPage)
-    && /data-public-journey-tab=\{value\}/.test(publicTeachersPage)
-    && /aria-current=\{active \? "page" : undefined\}/.test(publicTeachersPage)
+    && /<JourneySwitcher/.test(publicTeachersPage)
+    && /data-journey-tab=\{journey\}/.test(journeySwitcher)
+    && /aria-current=\{active \? "page" : undefined\}/.test(journeySwitcher)
     && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
     && /teacherJourneyWhere\(journey\)/.test(publicTeachersPage)
     && /params\.set\("commune", commune\)/.test(publicTeachersPage),
@@ -586,9 +589,9 @@ record(
     && /data-public-teacher-cover/.test(publicTeacherDetail)
     && /aspect-\[3\/1\]/.test(publicTeacherDetail)
     && /className="object-contain"/.test(publicTeacherDetail)
-    && /grid-cols-\[112px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
+    && /grid-cols-\[100px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
     && /items-start/.test(publicTeacherDetail)
-    && /size=\{104\}/.test(publicTeacherDetail)
+    && /size=\{96\}/.test(publicTeacherDetail)
     && /style=\{\{ transform: "translateY\(-50%\)" \}\}/.test(publicTeacherDetail)
     && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)
     && !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
@@ -617,15 +620,17 @@ record(
     && /data-public-teacher-primary-action/.test(publicTeacherDetail)
     && /const hideGlobalBookingAction = isPublicTeacherDetail\(pathname\)/.test(publicLayout)
     && /!isAuthenticated && !hideGlobalBookingAction/.test(publicLayout)
-    && /hidden rounded-lg border border-\[#111B4D\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
+    && /data-public-teacher-primary-action/.test(publicTeacherDetail)
+    && /hidden rounded-\[1\.5rem\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
     && /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail)
     && !/Réserver ce professeur/.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail reveals long evidence progressively",
-  countOccurrences(publicTeacherDetail, "<DisclosureCard") >= 4
+  countOccurrences(publicTeacherDetail, "<DisclosureCard") >= 3
     && /data-public-teacher-disclosure/.test(publicTeacherDetail)
+    && /<TeacherMiniCv/.test(publicTeacherDetail)
     && /data-public-teacher-availability/.test(publicTeacherDetail)
     && /Voir le planning détaillé/.test(publicTeacherDetail),
 );
@@ -673,9 +678,9 @@ record(
 
 record(
   "Public teacher cards expose one dominant action",
-  /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
+    /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
     && !/>Voir profil</.test(teacherCard)
-    && /w-full rounded-lg bg-\[#111B4D\]/.test(teacherCard)
+    && /w-full rounded-xl bg-\[#111B4D\]/.test(teacherCard)
     && />Réserver</.test(teacherCard),
 );
 
