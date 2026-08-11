@@ -12,24 +12,34 @@ type PasswordInputProps = Omit<ComponentProps<typeof Input>, "type"> & {
 
 export function PasswordInput({ className, wrapperClassName, defaultVisible = false, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(defaultVisible);
+  const controlLabel = visible ? "Masquer le mot de passe" : "Afficher le mot de passe";
 
   return (
-    <div className={cn("relative", wrapperClassName)} data-password-field>
+    <div
+      className={cn("relative", wrapperClassName)}
+      data-password-field
+      data-password-visible={visible ? "true" : "false"}
+    >
       <Input
         {...props}
         type={visible ? "text" : "password"}
+        autoCapitalize="none"
+        autoCorrect="off"
         className={cn("pr-12", className)}
         data-password-input
+        spellCheck={false}
       />
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
         className="absolute inset-y-0 right-0 inline-flex min-w-11 items-center justify-center rounded-r-lg text-[#64748B] transition hover:text-[#111B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9AAAD0]"
-        aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+        aria-controls={typeof props.id === "string" ? props.id : undefined}
+        aria-label={controlLabel}
         aria-pressed={visible}
         data-password-visibility-toggle
+        title={controlLabel}
       >
-        {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        {visible ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}
       </button>
     </div>
   );
