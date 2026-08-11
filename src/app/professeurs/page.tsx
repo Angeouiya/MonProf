@@ -17,6 +17,7 @@ import {
   normalizeCourseFormat,
 } from "@/components/shared/course-format-segmented-control";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
+import { MobileFilterSheet } from "@/components/shared/mobile-filter-sheet";
 import { TeacherCard } from "@/components/shared/teacher-card";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { EmptyState } from "@/components/shared/page-header";
@@ -231,6 +232,7 @@ export default async function TeachersPage({
   ) as Record<BookingJourney, string>;
   const hasPublishedTeachers = totalVisibleTeachers > 0;
   const showTeacherFilters = hasPublishedTeachers;
+  const mobileResultLabel = `${total} professeur${total > 1 ? "s" : ""}`;
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
 
@@ -332,56 +334,42 @@ export default async function TeachersPage({
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
           {showTeacherFilters && (
-            <details className="mb-3 rounded-lg border border-[#DDE6F7] bg-white lg:hidden" data-public-teacher-search-controls>
-              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm marker:hidden">
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-[#111827]">
-                    {total} professeur{total > 1 ? "s" : ""}
-                  </span>
-                </span>
-                <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-[#F1F4FF] px-3 font-semibold text-[#111B4D]">
-                  <Filter className="h-4 w-4" />
-                  Filtres
-                  {activeFiltersCount > 0 && <span className="tabular-nums">· {activeFiltersCount}</span>}
-                </span>
-              </summary>
-              <div className="border-t border-[#E3E8F2] p-3">
-                <FiltersForm
-                  activeFiltersCount={activeFiltersCount}
-                  journey={journey}
-                  q={q}
-                  subject={subject}
-                  level={level}
-                  commune={commune}
-                  format={format}
-                  sort={sort}
-                  subjectGroups={subjectGroups.map((group) => ({
-                    label: group.category.label,
-                    options: group.items.map((s) => ({
-                      value: s.slug,
-                      label: s.name,
-                      keywords: group.category.label,
-                    })),
-                  }))}
-                  levelGroups={levelGroups.map((group) => ({
-                    label: group.category.label,
-                    options: group.items.map((l) => ({
-                      value: l.slug,
-                      label: l.name,
-                      keywords: group.category.label,
-                    })),
-                  }))}
-                  communes={communes}
-                  journeyConfig={journeyConfig}
-                  compact
-                />
-                {activeFiltersCount > 0 && (
-                  <Link href={resetFiltersHref} className="mt-3 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[#111B4D]">
-                    Effacer les filtres ({activeFiltersCount})
-                  </Link>
-                )}
-              </div>
-            </details>
+            <MobileFilterSheet resultLabel={mobileResultLabel} activeFiltersCount={activeFiltersCount}>
+              <FiltersForm
+                activeFiltersCount={activeFiltersCount}
+                journey={journey}
+                q={q}
+                subject={subject}
+                level={level}
+                commune={commune}
+                format={format}
+                sort={sort}
+                subjectGroups={subjectGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((s) => ({
+                    value: s.slug,
+                    label: s.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                levelGroups={levelGroups.map((group) => ({
+                  label: group.category.label,
+                  options: group.items.map((l) => ({
+                    value: l.slug,
+                    label: l.name,
+                    keywords: group.category.label,
+                  })),
+                }))}
+                communes={communes}
+                journeyConfig={journeyConfig}
+                compact
+              />
+              {activeFiltersCount > 0 && (
+                <Link href={resetFiltersHref} className="mt-3 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[#111B4D]">
+                  Effacer ({activeFiltersCount})
+                </Link>
+              )}
+            </MobileFilterSheet>
           )}
           <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
             {/* SIDEBAR FILTRES */}

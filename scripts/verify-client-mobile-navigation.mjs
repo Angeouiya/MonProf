@@ -9,6 +9,7 @@ const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
 const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
+const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
@@ -62,6 +63,7 @@ const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]
 const publicLayout = read(publicLayoutPath);
 const publicTeachersPage = read(publicTeachersPath);
 const publicTeacherDetail = read(publicTeacherDetailPath);
+const mobileFilterSheet = read(mobileFilterSheetPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
@@ -522,11 +524,19 @@ record(
 );
 
 record(
-  "Public teacher search puts profiles directly after one compact mobile command",
-  /data-public-teacher-search-controls/.test(publicTeachersPage)
+  "Public teacher search uses one app-like mobile filter sheet before profiles",
+  /data-public-teacher-search-controls/.test(mobileFilterSheet)
+    && /<MobileFilterSheet resultLabel=\{mobileResultLabel\} activeFiltersCount=\{activeFiltersCount\}>/.test(publicTeachersPage)
     && /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage)
     && /placeholder=\{journeyConfig\.searchPlaceholder\}/.test(publicTeachersPage)
     && /aria-label="Rechercher"/.test(publicTeachersPage)
+    && /data-mobile-filter-trigger/.test(mobileFilterSheet)
+    && /data-mobile-filter-backdrop/.test(mobileFilterSheet)
+    && /data-mobile-filter-panel/.test(mobileFilterSheet)
+    && /document\.body\.style\.overflow = "hidden"/.test(mobileFilterSheet)
+    && /aria-label="Fermer les filtres"/.test(mobileFilterSheet)
+    && /bg-\[#111827\]\/30/.test(mobileFilterSheet)
+    && /backdrop-blur-\[2px\]/.test(mobileFilterSheet)
     && !/mt-4 flex flex-col gap-2/.test(publicTeachersPage),
 );
 
