@@ -79,6 +79,11 @@ const secondaryNavItems: NavItem[] = [
   { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
 ];
 
+const connectedLegalLinks = [
+  { href: "/conditions-utilisation", label: "CGU" },
+  { href: "/politique-confidentialite", label: "Confidentialité" },
+];
+
 const mobileNavPriorityHrefs = [
   "/admin",
   "/admin/centre-operationnel",
@@ -385,6 +390,23 @@ function SidebarContent({
             <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Admin"}</p>
             <p className="truncate text-xs font-semibold text-[#64748B]">{ADMIN_ROLE_LABELS[normalizeAdminRole(teamRole)]}</p>
           </div>
+        </div>
+        <div
+          data-admin-connected-legal-links
+          className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2"
+          aria-label="Documents légaux Compétence.CI"
+        >
+          {connectedLegalLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={false}
+              onClick={onNavigate}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </div>
     </div>

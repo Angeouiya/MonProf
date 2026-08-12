@@ -54,6 +54,11 @@ const quickSearchItems = [
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
 
+const connectedLegalLinks = [
+  { href: "/conditions-utilisation", label: "CGU" },
+  { href: "/politique-confidentialite", label: "Confidentialité" },
+];
+
 // Dynamic client pages read operational data from Supabase. Automatic viewport
 // prefetching can fan out those reads before the user has chosen a destination.
 // The shell prefetches on pointer, hover or keyboard intent instead.
@@ -652,6 +657,23 @@ function SidebarContent({
               <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
               <p className="truncate text-xs font-medium text-[#64748B]">Compte client</p>
             </div>
+          </div>
+          <div
+            data-client-connected-legal-links
+            className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-[#E6EAF3] bg-white p-2"
+            aria-label="Documents légaux Compétence.CI"
+          >
+            {connectedLegalLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={false}
+                onClick={onNavigate}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white px-2 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
           <ImportantActionConfirm
             title="Quitter l'espace client ?"

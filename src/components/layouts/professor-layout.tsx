@@ -330,7 +330,7 @@ function SidebarContent({
         ))}
       </nav>
       <div className="border-t border-[#E6EAF3] p-3">
-        <div className="mb-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-[11px] font-semibold leading-5 text-[#64748B]">
+        <div data-professor-connected-legal-links className="mb-3 rounded-lg border border-[#E6EAF3] bg-white p-3 text-[11px] font-semibold leading-5 text-[#64748B]">
           <p className="text-[#111827]">Cadre Compétence</p>
           <p className="mt-1">L'accès professeur suppose l'acceptation des règles présentées pendant l'enrôlement avec le service client.</p>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
