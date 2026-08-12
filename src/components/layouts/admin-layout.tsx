@@ -8,7 +8,7 @@ import {
   ShieldAlert, Tag, Bell, Settings, LogOut, Menu, X, BookOpen,
   Banknote, Lock, MessageSquare, MapPin, ChevronRight, Home, Activity,
   ClipboardList, AlertTriangle, RefreshCw,
-  UserRoundCog,
+  UserRoundCog, Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -56,6 +56,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     title: "Argent & support",
     items: [
       { href: "/admin/paiements", label: "Finances", icon: Wallet, permission: "FINANCE_VIEW" },
+      { href: "/admin/partenariats", label: "Partenariats", icon: Handshake, permission: "FINANCE_VIEW" },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare, permission: "COMMUNICATIONS_VIEW" },
       { href: "/admin/parametres", label: "Réglages", icon: Settings, permission: "SETTINGS_MANAGE" },
       { href: "/admin/mon-compte", label: "Mon compte", icon: UserRoundCog, permission: "DASHBOARD_VIEW" },
@@ -83,6 +84,7 @@ const mobileNavPriorityHrefs = [
   "/admin/centre-operationnel",
   "/admin/reservations",
   "/admin/paiements",
+  "/admin/partenariats",
   "/admin/professeurs",
   "/admin/clients",
 ] as const;

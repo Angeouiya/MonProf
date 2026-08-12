@@ -36,6 +36,7 @@ import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "
 import { normalizeBookingRefundExternalReference } from "@/lib/booking-refund";
 import { lockTeacherPayoutBalances } from "@/lib/teacher-payout-reservations";
 import { resolveTeacherJourney, teacherSupportsJourney } from "@/lib/teacher-journeys";
+import { markPartnerReferralBookingConfirmedInTransaction } from "@/lib/partner-referrals";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -178,9 +179,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (requiresVerifiedPayDunyaForOperationalAction(booking)) {
           return NextResponse.json({ error: PAYMENT_PROOF_REQUIRED_ERROR }, { status: 409 });
         }
-        await db.booking.update({
-          where: { id },
-          data: { status: "CONFIRMED", confirmedAt: now },
+        await db.$transaction(async (tx) => {
+          await tx.booking.update({
+            where: { id },
+            data: { status: "CONFIRMED", confirmedAt: now },
+          });
+          await markPartnerReferralBookingConfirmedInTransaction(tx, {
+            id: booking.id,
+            clientId: booking.clientId,
+            teacherId: booking.teacherId,
+            status: "CONFIRMED",
+            confirmedAt: now,
+            paymentConfirmedAt: booking.paymentVerifiedAt,
+          }, now);
         });
         await db.notification.create({
           data: {

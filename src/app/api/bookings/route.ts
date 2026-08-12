@@ -51,6 +51,7 @@ import {
 } from "@/lib/pricing-confirmation";
 import { bookingDraftMatchesExpected } from "@/lib/booking-draft-consistency";
 import { hasVerifiedClientPayment } from "@/lib/payment-security";
+import { buildPartnerReferralCreateData } from "@/lib/partner-referrals";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
@@ -283,6 +284,8 @@ export async function POST(req: NextRequest) {
     preferredDays, selectedTimeSlots, preferredTime, customStartTime, startDate, packType, message, participantsCount,
     clientCreationKey: rawClientCreationKey, paymentMethod: rawPaymentMethod,
     expectedPricing, confirmedPricingFingerprint,
+    partnerReferralName: rawPartnerReferralName,
+    partnerReferralPhone: rawPartnerReferralPhone,
   } = body;
 
   const clientCreationKey = normalizeClientCreationKey(rawClientCreationKey);
@@ -662,6 +665,17 @@ export async function POST(req: NextRequest) {
     : "Créneaux demandés: à confirmer avec le client.";
   const now = new Date();
   const startDateLine = `Date souhaitée: ${formatDateFr(parsedStartDate)}.`;
+  const partnerReferralCreateData = buildPartnerReferralCreateData({
+    booking: {
+      id: "",
+      clientId: userId,
+      teacherId,
+      courseAmount: pricing.courseAmount,
+    },
+    promoterName: rawPartnerReferralName,
+    promoterPhone: rawPartnerReferralPhone,
+    now,
+  });
 
   let booking = await db.booking.findUnique({ where: { clientCreationKey } });
   let bookingCreatedNow = false;
@@ -697,6 +711,14 @@ export async function POST(req: NextRequest) {
         transportFee: pricing.transportFee,
       }),
     });
+    if (partnerReferralCreateData) {
+      await tx.partnerReferral.create({
+        data: {
+          ...partnerReferralCreateData,
+          bookingId: createdBooking.id,
+        },
+      });
+    }
     await tx.notification.create({
       data: {
         userId,

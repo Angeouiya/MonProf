@@ -5,6 +5,7 @@ import {
   getJekoServerConfig,
   hasJekoEnvironmentConfiguration,
 } from "@/lib/jeko-config";
+import { getOperationalRiskRadar, type OperationalRiskRadar } from "@/lib/operational-risk-radar";
 import {
   hasGmailEnvironmentConfiguration,
   isGmailConfigured,
@@ -67,27 +68,33 @@ export async function GET() {
     database: false,
     catalog: false,
     adminAccount: false,
+    sensitiveFlowsHealthy: false,
     integrationsConfigured: !integrationPolicy.enabled
       || (integrations.jeko.runtimeEnabled && integrations.passwordEmail.runtimeEnabled),
   };
   let legacyPaydunya = false;
+  let operationalRisk: OperationalRiskRadar | null = null;
 
   try {
     await db.$queryRaw`SELECT 1`;
     checks.database = true;
 
-    const [subjects, levels, communes, admins, paydunyaConfig] = await Promise.all([
+    const [subjects, levels, communes, admins, paydunyaConfig, riskRadar] = await Promise.all([
       db.subject.count(),
       db.level.count(),
       db.commune.count(),
       db.user.count({ where: { role: "ADMIN" } }),
       getPayDunyaConfig().catch(() => null),
+      getOperationalRiskRadar(),
     ]);
 
     checks.catalog = subjects > 0 && levels > 0 && communes > 0;
     checks.adminAccount = admins > 0;
+    checks.sensitiveFlowsHealthy = riskRadar.status !== "critical";
     legacyPaydunya = Boolean(paydunyaConfig);
-  } catch {
+    operationalRisk = riskRadar;
+  } catch (error) {
+    console.error("[health] Operational readiness check failed.", error instanceof Error ? error.message : error);
     // Keep the response intentionally non-sensitive; logs can carry details server-side.
   }
 
@@ -106,6 +113,7 @@ export async function GET() {
         vercelEnvironment: integrationPolicy.vercelEnvironment,
       },
       integrations,
+      operationalRisk,
       legacy: { paydunyaConfigured: legacyPaydunya },
     },
     {

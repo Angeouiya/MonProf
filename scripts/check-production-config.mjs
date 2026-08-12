@@ -253,6 +253,7 @@ function checkProductionScripts() {
   const navigationPerformanceVerify = pkg.scripts?.["verify:navigation-performance"] ?? "";
   const teacherPhotoStorageVerify = pkg.scripts?.["verify:teacher-photo-storage"] ?? "";
   const deploymentSafetyVerify = pkg.scripts?.["verify:deployment-safety"] ?? "";
+  const operationalRiskVerify = pkg.scripts?.["verify:operational-risk"] ?? "";
   const databaseDeploy = pkg.scripts?.["db:deploy"] ?? "";
   record("Production build runs explicit TypeScript gate", productionQualityPipeline.includes("npm run typecheck") && /tsc\s+--noEmit/.test(typecheck));
   record("Production install regenerates Prisma Client", /prisma\s+generate/.test(postinstall));
@@ -281,6 +282,11 @@ function checkProductionScripts() {
     "Production build verifies Vercel integration isolation and cron authorization",
     productionQualityPipeline.includes("npm run verify:deployment-safety")
       && deploymentSafetyVerify.includes("verify-deployment-safety.mjs"),
+  );
+  record(
+    "Operational risk radar protects Jèko and password email health",
+    productionQualityPipeline.includes("npm run verify:operational-risk")
+      && operationalRiskVerify.includes("verify-operational-risk-radar.mjs"),
   );
   record(
     "Preview build runs the same static quality pipeline",

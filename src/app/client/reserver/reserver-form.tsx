@@ -459,6 +459,8 @@ export function ReserverForm({
     startDate: "",
     packType: "SINGLE" as PackType,
     message: "",
+    partnerReferralName: "",
+    partnerReferralPhone: "",
   });
 
   const update = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
@@ -904,6 +906,8 @@ export function ReserverForm({
           sessionsCount: PACK_OPTIONS.find((p) => p.value === form.packType)?.count ?? 1,
           packType: form.packType,
           message: form.message.trim(),
+          partnerReferralName: form.partnerReferralName.trim() || undefined,
+          partnerReferralPhone: form.partnerReferralPhone.trim() || undefined,
           clientCreationKey,
           paymentMethod: toJekoPaymentMethod(selectedPaymentMethod),
           expectedPricing: {
@@ -2010,6 +2014,43 @@ export function ReserverForm({
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
                 />
+              </div>
+
+              <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
+                <div className="max-w-2xl">
+                  <p className="text-sm font-semibold text-[#111827]">Quelqu’un vous a recommandé Compétence.CI ?</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                    Si oui, indiquez son nom avant le paiement. Sa commission éventuelle sera calculée uniquement après paiement Jèko confirmé et réservation validée.
+                  </p>
+                </div>
+                <div className="mt-4 grid gap-3 min-[720px]:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="partnerReferralName">Nom de l’apporteur d’affaires</Label>
+                    <Input
+                      id="partnerReferralName"
+                      value={form.partnerReferralName}
+                      onChange={(event) => update("partnerReferralName", event.target.value)}
+                      placeholder="Ex : Kouamé Jean"
+                      maxLength={120}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="partnerReferralPhone">Téléphone de l’apporteur</Label>
+                    <Input
+                      id="partnerReferralPhone"
+                      value={form.partnerReferralPhone}
+                      onChange={(event) => update("partnerReferralPhone", event.target.value)}
+                      placeholder="+225 XX XX XX XX XX"
+                      maxLength={32}
+                      inputMode="tel"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+                <p className="mt-3 rounded-lg border border-[#EEF2F7] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
+                  La déclaration doit être faite pendant la période de promotion. Après la fin, une personne non déclarée ne pourra pas réclamer cette commission.
+                </p>
               </div>
 
               <div className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">

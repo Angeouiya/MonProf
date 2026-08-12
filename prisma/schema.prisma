@@ -63,6 +63,8 @@ model User {
   passwordResetTokens           PasswordResetToken[]
   communicationCampaigns        CommunicationCampaign[]    @relation("CommunicationCampaignCreator")
   webPushSubscriptions          WebPushSubscription[]
+  partnerReferrals              PartnerReferral[]          @relation("PartnerReferralClient")
+  partnerReferralPayouts         PartnerReferral[]          @relation("PartnerReferralPaidBy")
 
   @@index([role])
   @@index([adminTeamRole, adminAccountStatus])
@@ -261,6 +263,7 @@ model Teacher {
   bookingSessions      BookingSession[]            @relation("BookingSessionTeacher")
   proposedSessions     BookingSession[]            @relation("BookingSessionProposedTeacher")
   passwordResetTokens  TeacherPasswordResetToken[]
+  partnerReferrals     PartnerReferral[]
 
   @@index([status])
   @@index([featured])
@@ -464,6 +467,7 @@ model Booking {
   teacherAdminMessages      TeacherAdminMessage[]
   sessions                  BookingSession[]
   paymentAttempts           PaymentAttempt[]
+  partnerReferral           PartnerReferral?
 
   @@index([clientId])
   @@index([teacherId])
@@ -609,6 +613,61 @@ enum PaymentMethod {
   MOOV_MONEY
   DJAMO
   CARD
+}
+
+// ============================================================
+// PARTENARIAT / APPORTEURS D'AFFAIRES
+// ============================================================
+model PartnerReferral {
+  id                       String                @id @default(cuid())
+  bookingId                String                @unique
+  clientId                 String
+  teacherId                String?
+  promoterName             String
+  promoterPhone            String?
+  promotionCode            String?
+  promotionStartsAt        DateTime
+  promotionEndsAt          DateTime
+  declaredAt               DateTime              @default(now())
+  status                   PartnerReferralStatus @default(DECLARED)
+  courseAmount             Int
+  commissionRate           Int                   @default(10)
+  commissionAmount         Int
+  paymentConfirmedAt       DateTime?
+  bookingConfirmedAt       DateTime?
+  payableAt                DateTime?
+  paidAt                   DateTime?
+  paidById                 String?
+  payoutMethod             PaymentMethod?
+  payoutPhone              String?
+  payoutReference          String?
+  promoterIdentityName     String?
+  promoterIdentityVerifiedAt DateTime?
+  adminNote                String?
+  rejectedAt               DateTime?
+  expiredAt                DateTime?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+
+  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client  User     @relation("PartnerReferralClient", fields: [clientId], references: [id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  paidBy  User?    @relation("PartnerReferralPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+
+  @@index([status, promotionEndsAt])
+  @@index([clientId, declaredAt])
+  @@index([teacherId, declaredAt])
+  @@index([promoterName])
+  @@index([promoterPhone])
+}
+
+enum PartnerReferralStatus {
+  DECLARED
+  PAYMENT_CONFIRMED
+  PAYABLE
+  PAID
+  REJECTED
+  EXPIRED
 }
 
 // ============================================================

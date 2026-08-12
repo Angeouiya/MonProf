@@ -13,6 +13,7 @@ import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-re
 import { reconcileJekoRescheduleWebhook } from "@/lib/jeko-reschedule-reconciliation";
 import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 import { resolveJekoPaymentStatusConsensus } from "@/lib/jeko-client-payment";
+import { markPartnerReferralPaymentConfirmedInTransaction } from "@/lib/partner-referrals";
 import {
   isJekoIncomingPaymentType,
   jekoAmountCentsToXof,
@@ -312,6 +313,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
             teacherId: true,
             clientId: true,
             status: true,
+            confirmedAt: true,
             cancellationReason: true,
             paymentStatus: true,
             paymentProvider: true,
@@ -451,6 +453,16 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
           paymentVerifiedAt: preserveAnotherProvider ? current.booking.paymentVerifiedAt : now,
         },
       });
+      if (!clientDeletedDraft && !preserveAnotherProvider) {
+        await markPartnerReferralPaymentConfirmedInTransaction(tx, {
+          id: current.booking.id,
+          clientId: current.booking.clientId,
+          teacherId: current.booking.teacherId,
+          status: current.booking.status === "PENDING_PAYMENT" ? "PAID" : current.booking.status,
+          confirmedAt: current.booking.confirmedAt,
+          paymentConfirmedAt: now,
+        }, now);
+      }
       await tx.adminActionLog.create({
         data: {
           adminId: null,

@@ -14,6 +14,7 @@ const highlights = [
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
   "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
+  "Programme partenariat : une commission de lancement peut être versée uniquement si l'apporteur est déclaré pendant la réservation, pendant la période promotionnelle, puis si le paiement et la réservation sont confirmés.",
   "Un brouillon non payé peut être supprimé par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
 ];
 
@@ -124,6 +125,18 @@ const sections: LegalSection[] = [
       "Si le professeur propose un nouveau créneau, le client peut accepter ou refuser depuis son espace. Une absence de réponse peut entraîner une relance, un remplacement ou une décision du service client.",
       "À moins de 24 heures du cours, le professeur ne peut pas annuler directement la réservation. Il doit prioritairement proposer un nouveau créneau. En cas d'empêchement absolu signalé comme urgence, la réservation reste active pendant que Compétence recherche automatiquement un remplaçant compatible et soumet la proposition au client.",
       "Compétence peut modifier, remplacer ou annuler une attribution si la qualité du service, la sécurité, le paiement, l'adresse, la disponibilité ou la satisfaction client l'exige.",
+    ],
+  },
+  {
+    title: "Programme partenariat et apporteurs d'affaires",
+    body: [
+      "Compétence peut organiser une promotion temporaire permettant à une personne ayant apporté un client de recevoir une commission commerciale. Cette promotion est limitée dans le temps, par défaut sur la période officielle affichée par la plateforme ou validée par Compétence.",
+      "Pour qu'une déclaration soit valable, le client doit indiquer le nom de l'apporteur pendant la réservation, avant le paiement. Une personne qui n'a pas été déclarée pendant la période promotionnelle ne peut pas réclamer une commission après la fin de la promotion.",
+      "La commission de lancement est fixée à 10 % du montant du cours ou de la formation effectivement confirmé. Les frais de transport, les frais de service Compétence, les frais techniques Jèko, les remboursements, pénalités et montants non liés au cours sont exclus de cette base.",
+      "La déclaration ne devient pas automatiquement payable. Elle devient payable uniquement lorsque le paiement a été confirmé côté serveur par Jèko et lorsque la réservation a été validée par Compétence. Un brouillon, une promesse de paiement, une capture d'écran ou une réclamation verbale ne crée aucun droit au paiement.",
+      "L'apporteur peut être invité à fournir son identité, une pièce justificative, une photo ou un numéro de dépôt afin que Compétence vérifie la cohérence de la déclaration avant tout versement. Compétence peut refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
+      "Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période peuvent être expirées automatiquement à la fin de la promotion.",
+      "Le suivi des partenariats est effectué dans le dashboard administrateur. Les paiements aux apporteurs sont des dépôts manuels ou contrôlés par Compétence et ne constituent ni un salaire, ni un emploi, ni une relation d'agence permanente.",
     ],
   },
   {

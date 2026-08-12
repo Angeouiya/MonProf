@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/professeurs", label: "Trouver un professeur" },
   { href: "/tarifs", label: "Tarifs" },
+  { href: "/partenariat", label: "Partenariat" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -40,7 +41,7 @@ const mobileNavBase = [
   { href: "/tarifs", label: "Tarifs", icon: WalletCards },
 ];
 
-const publicRootPaths = new Set(["/", "/professeurs", "/tarifs", "/contact"]);
+const publicRootPaths = new Set(["/", "/professeurs", "/tarifs", "/partenariat", "/contact"]);
 
 type PublicSessionRole = "CLIENT" | "ADMIN" | "TEACHER";
 

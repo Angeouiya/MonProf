@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { ArrowRight, Check, Handshake, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { formatFCFA } from "@/lib/format";
@@ -61,6 +61,13 @@ export default function HomePage() {
             <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#111B4D]" /> Transport calculé automatiquement</span>
             <span className="inline-flex items-center gap-1.5"><WalletCards className="h-4 w-4 text-[#111B4D]" /> Paiement Jèko sécurisé</span>
           </div>
+          <Link
+            href="/partenariat"
+            className="mx-auto mt-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]"
+          >
+            <Handshake className="h-4 w-4" />
+            Partenariat : gagnez 10 %
+          </Link>
         </div>
       </section>
 
