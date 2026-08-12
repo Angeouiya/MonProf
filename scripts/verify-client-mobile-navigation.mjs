@@ -12,6 +12,7 @@ const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
 const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
+const clientNotificationActionsPath = "src/app/client/notifications/actions-client.tsx";
 const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
 const clientLoadingPath = "src/app/client/loading.tsx";
 const clientErrorPath = "src/app/client/error.tsx";
@@ -66,6 +67,7 @@ const publicTeacherDetail = read(publicTeacherDetailPath);
 const mobileFilterSheet = read(mobileFilterSheetPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
+const clientNotificationActions = read(clientNotificationActionsPath);
 const clientReschedulePanel = read(clientReschedulePanelPath);
 const clientLoading = read(clientLoadingPath);
 const clientError = read(clientErrorPath);
@@ -333,6 +335,16 @@ record(
     && /role="status"\s+aria-live="polite"/.test(clientProfilePage)
     && /Vos prochaines réservations utiliseront ces informations/.test(clientProfilePage)
     && !/toast\.success\("Profil mis à jour"\)/.test(clientProfilePage),
+);
+
+record(
+  "Client notifications confirm routine actions inline instead of floating success toasts",
+  /data-client-notification-inline-status/.test(clientNotificationActions)
+    && /role="status"\s+aria-live="polite"/.test(clientNotificationActions)
+    && /setNotice\(success\)/.test(clientNotificationActions)
+    && /Notifications marquées comme lues/.test(clientNotificationActions)
+    && /Notification confirmée/.test(clientNotificationActions)
+    && !/toast\.success/.test(clientNotificationActions),
 );
 
 record(

@@ -19,8 +19,10 @@ export function ClientNotificationActions({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
 
   async function patch(body: Record<string, unknown>, success: string) {
+    setNotice("");
     setLoading(true);
     try {
       const res = await fetch("/api/client/notifications", {
@@ -30,7 +32,7 @@ export function ClientNotificationActions({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action impossible.");
-      toast.success(success);
+      setNotice(success);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Action impossible.");
@@ -41,10 +43,13 @@ export function ClientNotificationActions({
 
   if (mode === "all") {
     return (
-      <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-11 w-full rounded-lg px-3 text-xs min-[460px]:w-auto min-[460px]:text-sm">
-        {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
-        Tout marquer lu
-      </Button>
+      <div className="grid gap-1.5">
+        <Button variant="outline" onClick={() => patch({ markAllRead: true }, "Notifications marquées comme lues")} disabled={loading} className="min-h-11 w-full rounded-lg px-3 text-xs min-[460px]:w-auto min-[460px]:text-sm">
+          {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
+          Tout marquer lu
+        </Button>
+        <InlineNotificationStatus message={notice} />
+      </div>
     );
   }
 
@@ -52,29 +57,47 @@ export function ClientNotificationActions({
   const confirmed = status === "CONFIRMED";
 
   return (
-    <div className="grid w-full grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
-      {!confirmed && (
+    <div className="grid w-full grid-cols-1 gap-2">
+      <div className="grid w-full grid-cols-1 gap-2 min-[460px]:grid-cols-2 min-[720px]:grid-cols-1">
+        {!confirmed && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => patch({ id, action: "confirm" }, "Notification confirmée")}
+            disabled={loading}
+            className="min-h-11 w-full rounded-lg"
+          >
+            {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
+            Confirmer réception
+          </Button>
+        )}
         <Button
-          variant="default"
+          variant="outline"
           size="sm"
-          onClick={() => patch({ id, action: "confirm" }, "Notification confirmée")}
+          onClick={() => patch({ id, read: !read }, read ? "Notification remise en non lue" : "Notification marquée comme lue")}
           disabled={loading}
           className="min-h-11 w-full rounded-lg"
         >
-          {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-1.5 h-4 w-4" />}
-          Confirmer réception
+          {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : read ? <Bell className="mr-1.5 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
+          {read ? "Remettre non lue" : "Marquer lue"}
         </Button>
-      )}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => patch({ id, read: !read }, read ? "Notification remise en non lue" : "Notification marquée comme lue")}
-        disabled={loading}
-        className="min-h-11 w-full rounded-lg"
-      >
-        {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : read ? <Bell className="mr-1.5 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
-        {read ? "Remettre non lue" : "Marquer lue"}
-      </Button>
+      </div>
+      <InlineNotificationStatus message={notice} />
     </div>
+  );
+}
+
+function InlineNotificationStatus({ message }: { message: string }) {
+  if (!message) return null;
+
+  return (
+    <p
+      className="rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-xs font-bold leading-5 text-emerald-800"
+      role="status"
+      aria-live="polite"
+      data-client-notification-inline-status
+    >
+      {message}
+    </p>
   );
 }
