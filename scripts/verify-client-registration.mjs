@@ -41,6 +41,9 @@ check(
   (form.match(/<PasswordInput/g) ?? []).length === 2
     && /<PasswordRuleList rules=\{passwordRules\}/.test(form)
     && /data-client-registration-password-rules/.test(form)
+    && /data-client-registration-password-username/.test(form)
+    && /autoComplete="username"/.test(form)
+    && /value=\{normalizedEmail \|\| normalizedPhone\}/.test(form)
     && /passwordValid/.test(form)
     && /passwordsMatch/.test(form)
     && /Les deux mots de passe sont identiques/.test(form),

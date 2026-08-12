@@ -247,6 +247,17 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    <input
+                      type="text"
+                      name="username"
+                      autoComplete="username"
+                      value={normalizedEmail || normalizedPhone}
+                      readOnly
+                      tabIndex={-1}
+                      aria-label="Identifiant du compte"
+                      className="sr-only"
+                      data-client-registration-password-username
+                    />
                     <Field label="Mot de passe" htmlFor="password">
                       <PasswordInput
                         id="password"
