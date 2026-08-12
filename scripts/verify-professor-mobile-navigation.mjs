@@ -101,15 +101,18 @@ record(
 record(
   "Professor payments open as a simple cashier screen before accounting details",
   /data-professor-payment-pulse/.test(payments)
+    && /data-professor-payment-app-hero/.test(payments)
+    && /data-professor-payment-net-exact/.test(payments)
     && /href="#demande-retrait-professeur"/.test(payments)
     && /id="demande-retrait-professeur"/.test(payoutRequestForm)
     && /data-professor-payout-primary-action/.test(payoutRequestForm)
     && payments.indexOf("<TeacherPayoutRequestForm") > payments.indexOf("data-professor-payment-pulse")
     && payments.indexOf("<TeacherPayoutRequestForm") < payments.indexOf('title="Voir le calcul exact"')
-    && /Disponible maintenant\. Aucun frais retiré\./.test(payments)
-    && /TeacherExactMetric label="À recevoir" value=\{remaining\} emphasized/.test(payments)
-    && /TeacherExactMetric label="En cours" value=\{pendingRequested \+ draftReservedAmount\}/.test(payments)
-    && /TeacherExactMetric label="Frais payés" value=\{transferFeesCovered\}/.test(payments),
+    && /À retirer maintenant/.test(payments)
+    && /Net exact demandable\. Frais Jèko pris en charge\./.test(payments)
+    && /TeacherExactMetric label="Reste total" value=\{remaining\} emphasized/.test(payments)
+    && /TeacherExactMetric label="En traitement" value=\{pendingRequested \+ draftReservedAmount\}/.test(payments)
+    && /TeacherExactMetric label="Frais couverts" value=\{transferFeesCovered\}/.test(payments),
 );
 
 record(

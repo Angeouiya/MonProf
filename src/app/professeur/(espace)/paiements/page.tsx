@@ -198,12 +198,12 @@ export default async function ProfesseurPaiementsPage() {
     <div className="space-y-6">
       <ProfessorPageHeader
         title="Paiements"
-        description="Retraits et reçus."
         rootTab
       />
 
       <section
         data-professor-payment-pulse
+        data-professor-payment-app-hero
         aria-labelledby="teacher-exact-balance"
         className="overflow-hidden rounded-[1.35rem] border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm"
       >
@@ -211,13 +211,17 @@ export default async function ProfesseurPaiementsPage() {
           <div>
             <div className="flex items-center gap-2 text-[#C7D2FE]">
               <ShieldCheck className="h-5 w-5" aria-hidden />
-              <p className="text-xs font-black uppercase tracking-[0.16em]">Net professeur</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em]">À retirer maintenant</p>
             </div>
-            <h2 id="teacher-exact-balance" className="mt-2 text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl">
+            <h2
+              id="teacher-exact-balance"
+              className="mt-2 text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl"
+              data-professor-payment-net-exact
+            >
               {formatFCFA(requestableAmount)}
             </h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-[#E0E7FF]">
-              Disponible maintenant. Aucun frais retiré.
+              Net exact demandable. Frais Jèko pris en charge.
             </p>
           </div>
           <a
@@ -228,9 +232,9 @@ export default async function ProfesseurPaiementsPage() {
           </a>
         </div>
         <div className="grid grid-cols-3 gap-2 border-t border-white/15 bg-white/5 p-4 sm:px-6">
-          <TeacherExactMetric label="À recevoir" value={remaining} emphasized />
-          <TeacherExactMetric label="En cours" value={pendingRequested + draftReservedAmount} />
-          <TeacherExactMetric label="Frais payés" value={transferFeesCovered} />
+          <TeacherExactMetric label="Reste total" value={remaining} emphasized />
+          <TeacherExactMetric label="En traitement" value={pendingRequested + draftReservedAmount} />
+          <TeacherExactMetric label="Frais couverts" value={transferFeesCovered} />
         </div>
       </section>
 
@@ -268,8 +272,8 @@ export default async function ProfesseurPaiementsPage() {
       </ProfessorDisclosure>
 
       <ProfessorDisclosure
-        title="Mes demandes"
-        description="Demandes en attente et paiements traités."
+        title="Retraits"
+        description="Demandes et confirmations."
         count={payoutRequests.length}
       >
           <div className="flex justify-end">
