@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { toast } from "sonner";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) {
-      toast.error("Vérifiez les trois champs avant de continuer.");
+      setFormError("Vérifiez les trois champs avant de continuer.");
       return;
     }
 
@@ -64,7 +63,6 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
     } catch (error) {
       const message = error instanceof Error ? error.message : "Modification impossible.";
       setFormError(message);
-      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -76,12 +74,15 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         id="client-old-password"
         label="Mot de passe actuel"
         value={oldPassword}
-        onChange={setOldPassword}
+        onChange={(value) => {
+          setOldPassword(value);
+          setFormError(null);
+        }}
         autoComplete="current-password"
       />
 
       {formError && (
-        <p role="alert" className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">
+        <p role="alert" data-password-settings-inline-error className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">
           {formError}
         </p>
       )}
@@ -89,7 +90,10 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         id="client-new-password"
         label="Nouveau mot de passe"
         value={newPassword}
-        onChange={setNewPassword}
+        onChange={(value) => {
+          setNewPassword(value);
+          setFormError(null);
+        }}
         autoComplete="new-password"
       />
       <PasswordStrengthMeter score={strength.score} label={strength.label} />
@@ -97,7 +101,10 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         id="client-confirm-password"
         label="Confirmer le nouveau mot de passe"
         value={confirmPassword}
-        onChange={setConfirmPassword}
+        onChange={(value) => {
+          setConfirmPassword(value);
+          setFormError(null);
+        }}
         autoComplete="new-password"
       />
 

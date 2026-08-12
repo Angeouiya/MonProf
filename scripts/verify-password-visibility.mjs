@@ -81,14 +81,21 @@ const checks = [
   ["Reveal button is always tied to its controlled input", /useId/.test(sharedPasswordInput) && /const inputId = typeof props\.id === "string" && props\.id\.trim\(\) \? props\.id : `password-\$\{generatedId\}`;/.test(sharedPasswordInput) && /id=\{inputId\}/.test(sharedPasswordInput) && /aria-controls=\{inputId\}/.test(sharedPasswordInput)],
   ["Generated one-time client password remains immediately readable", /<PasswordInput[\s\S]*?defaultVisible/.test(clientTemporaryPassword)],
   [
-    "Password changes use calm inline login states instead of non-critical success toasts",
-    !/toast\.success|toast\.warning/.test(clientPasswordSettings)
-      && !/toast\.success|toast\.warning/.test(professorPasswordSettings)
-      && !/toast\.success|toast\.warning/.test(adminPasswordSettings)
+    "Password changes use calm inline states instead of non-critical floating toasts",
+    !/toast\./.test(clientPasswordSettings)
+      && !/toast\./.test(professorPasswordSettings)
+      && !/toast\./.test(adminPasswordSettings)
+      && countOccurrences(`${clientPasswordSettings}\n${professorPasswordSettings}\n${adminPasswordSettings}`, "data-password-settings-inline-error") >= 3
       && /data-password-changed-login-state/.test(clientLogin)
       && /data-password-changed-login-state/.test(professorLogin)
       && /data-password-changed-login-state/.test(adminLogin)
       && !/Connexion réussie|Connexion professeur réussie|Connexion administrateur réussie/.test(`${clientLogin}\n${professorLogin}\n${adminLogin}`),
+  ],
+  [
+    "Professor payout settings use inline status instead of routine floating toasts",
+    !/toast\./.test(professorPasswordSettings)
+      && /data-professor-payout-profile-inline-error/.test(professorPasswordSettings)
+      && /data-professor-payout-profile-saved/.test(professorPasswordSettings),
   ],
   [
     "Forgot and reset password flows keep routine feedback inline",
@@ -137,4 +144,8 @@ function walk(directory) {
     const fullPath = path.join(directory, entry.name);
     return entry.isDirectory() ? walk(fullPath) : [fullPath];
   });
+}
+
+function countOccurrences(source, fragment) {
+  return source.split(fragment).length - 1;
 }

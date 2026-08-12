@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { toast } from "sonner";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ export function AdminPasswordForm() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Modification impossible.";
       setFormError(message);
-      toast.error(message);
     }
     finally { setLoading(false); }
   };
@@ -73,15 +71,24 @@ export function AdminPasswordForm() {
       </CardHeader>
       <CardContent className="p-4 sm:p-5">
         <form onSubmit={submit} className="space-y-4">
-        <Field label="Mot de passe actuel"><PasswordInput name="currentPassword" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required /></Field>
+        <Field id="admin-current-password" label="Mot de passe actuel"><PasswordInput id="admin-current-password" name="currentPassword" autoComplete="current-password" value={currentPassword} onChange={(event) => {
+          setCurrentPassword(event.target.value);
+          setFormError(null);
+        }} required /></Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nouveau mot de passe"><PasswordInput name="newPassword" autoComplete="new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></Field>
-          <Field label="Confirmer le nouveau mot de passe"><PasswordInput name="confirmPassword" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></Field>
+          <Field id="admin-new-password" label="Nouveau mot de passe"><PasswordInput id="admin-new-password" name="newPassword" autoComplete="new-password" value={newPassword} onChange={(event) => {
+            setNewPassword(event.target.value);
+            setFormError(null);
+          }} required /></Field>
+          <Field id="admin-confirm-password" label="Confirmer le nouveau mot de passe"><PasswordInput id="admin-confirm-password" name="confirmPassword" autoComplete="new-password" value={confirmPassword} onChange={(event) => {
+            setConfirmPassword(event.target.value);
+            setFormError(null);
+          }} required /></Field>
         </div>
         <div className="grid gap-2 text-xs font-semibold text-[#64748B] sm:grid-cols-2">
           {rules.map((rule) => <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>{rule.label}</p>)}
         </div>
-        {formError && <p role="alert" className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">{formError}</p>}
+        {formError && <p role="alert" data-password-settings-inline-error className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">{formError}</p>}
         <div className="flex justify-end"><Button type="submit" disabled={!canSubmit} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />} {loading ? "Modification..." : "Enregistrer"}</Button></div>
         </form>
       </CardContent>
@@ -89,4 +96,4 @@ export function AdminPasswordForm() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div>; }
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label htmlFor={id}>{label}</Label>{children}</div>; }

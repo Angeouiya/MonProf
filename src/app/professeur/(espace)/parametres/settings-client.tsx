@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { toast } from "sonner";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ export function TeacherPasswordSettingsForm() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const rules = [
     { label: "Ancien mot de passe saisi", ok: oldPassword.trim().length > 0 },
@@ -36,11 +36,12 @@ export function TeacherPasswordSettingsForm() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) {
-      toast.error("Vérifiez les trois champs avant de continuer.");
+      setFormError("Vérifiez les trois champs avant de continuer.");
       return;
     }
 
     setSaving(true);
+    setFormError(null);
     try {
       const res = await fetch("/api/professor/profile", {
         method: "PATCH",
@@ -66,7 +67,7 @@ export function TeacherPasswordSettingsForm() {
       router.replace("/professeur/connexion?passwordChanged=1");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Modification impossible.");
+      setFormError(error instanceof Error ? error.message : "Modification impossible.");
     } finally {
       setSaving(false);
     }
@@ -74,9 +75,41 @@ export function TeacherPasswordSettingsForm() {
 
   return (
     <form onSubmit={submit} className="mt-5 grid gap-4">
-      <PasswordField id="teacher-old-password" label="Mot de passe actuel" value={oldPassword} onChange={setOldPassword} autoComplete="current-password" />
-      <PasswordField id="teacher-new-password" label="Nouveau mot de passe" value={newPassword} onChange={setNewPassword} autoComplete="new-password" />
-      <PasswordField id="teacher-confirm-password" label="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" />
+      <PasswordField
+        id="teacher-old-password"
+        label="Mot de passe actuel"
+        value={oldPassword}
+        onChange={(value) => {
+          setOldPassword(value);
+          setFormError(null);
+        }}
+        autoComplete="current-password"
+      />
+      {formError && (
+        <p role="alert" data-password-settings-inline-error className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">
+          {formError}
+        </p>
+      )}
+      <PasswordField
+        id="teacher-new-password"
+        label="Nouveau mot de passe"
+        value={newPassword}
+        onChange={(value) => {
+          setNewPassword(value);
+          setFormError(null);
+        }}
+        autoComplete="new-password"
+      />
+      <PasswordField
+        id="teacher-confirm-password"
+        label="Confirmer le nouveau mot de passe"
+        value={confirmPassword}
+        onChange={(value) => {
+          setConfirmPassword(value);
+          setFormError(null);
+        }}
+        autoComplete="new-password"
+      />
 
       <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-4">
         {rules.map((rule) => (
@@ -112,6 +145,7 @@ export function TeacherPaymentProfileSettingsForm({
   const [instructions, setInstructions] = useState(payoutInstructions ?? "");
   const [saving, setSaving] = useState(false);
   const [payoutSavedMessage, setPayoutSavedMessage] = useState<string | null>(null);
+  const [payoutError, setPayoutError] = useState<string | null>(null);
 
   const normalizedPhone = normalizePaymentPhone(phone);
   const normalizedConfirm = normalizePaymentPhone(phoneConfirm);
@@ -123,11 +157,12 @@ export function TeacherPaymentProfileSettingsForm({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) {
-      toast.error("Vérifiez le moyen de paiement et les deux saisies du numéro.");
+      setPayoutError("Vérifiez le moyen de paiement et les deux saisies du numéro.");
       return;
     }
     setSaving(true);
     setPayoutSavedMessage(null);
+    setPayoutError(null);
     try {
       const res = await fetch("/api/professor/profile", {
         method: "PATCH",
@@ -144,7 +179,7 @@ export function TeacherPaymentProfileSettingsForm({
       if (!res.ok) throw new Error(data.error || "Enregistrement impossible.");
       setPayoutSavedMessage(`Coordonnées ${paymentMethodLabel(method)} enregistrées. Les prochaines demandes de retrait utiliseront ce numéro confirmé.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
+      setPayoutError(error instanceof Error ? error.message : "Enregistrement impossible.");
     } finally {
       setSaving(false);
     }
@@ -157,6 +192,7 @@ export function TeacherPaymentProfileSettingsForm({
         <PayoutMethodPicker value={method} onChange={(value) => {
           setMethod(value);
           setPayoutSavedMessage(null);
+          setPayoutError(null);
         }} disabled={saving} />
         <p className="text-xs font-semibold leading-5 text-[#64748B]">
           Orange Money, MTN Money, Moov Money ou Wave. Le moyen sélectionné préremplit chaque nouvelle demande.
@@ -173,6 +209,7 @@ export function TeacherPaymentProfileSettingsForm({
             onChange={(event) => {
               setPhone(event.target.value);
               setPayoutSavedMessage(null);
+              setPayoutError(null);
             }}
             placeholder="Ex : +225 07 00 00 00 00"
             className="h-11 rounded-lg border-[#DDE6F7] bg-white"
@@ -188,6 +225,7 @@ export function TeacherPaymentProfileSettingsForm({
             onChange={(event) => {
               setPhoneConfirm(event.target.value);
               setPayoutSavedMessage(null);
+              setPayoutError(null);
             }}
             placeholder="Retapez le même numéro"
             className="h-11 rounded-lg border-[#DDE6F7] bg-white"
@@ -206,6 +244,7 @@ export function TeacherPaymentProfileSettingsForm({
           onChange={(event) => {
             setInstructions(event.target.value);
             setPayoutSavedMessage(null);
+            setPayoutError(null);
           }}
           placeholder="Ex : utiliser ce numéro uniquement pour mes paiements Wave."
           className="min-h-24 rounded-lg border-[#DDE6F7] bg-white"
@@ -215,6 +254,15 @@ export function TeacherPaymentProfileSettingsForm({
         </p>
       </div>
 
+      {payoutError && (
+        <div
+          data-professor-payout-profile-inline-error
+          className="rounded-lg border border-red-200 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-red-700"
+          role="alert"
+        >
+          {payoutError}
+        </div>
+      )}
       <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Enregistrer mes coordonnées
