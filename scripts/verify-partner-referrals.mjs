@@ -129,6 +129,17 @@ const checks = [
     ],
   },
   {
+    file: "src/components/layouts/client-layout.tsx",
+    patterns: [
+      /data-client-partnership-link/,
+      /href: "\/partenariat"/,
+      /label: "Partenariat"/,
+      /detail: "Gagnez 10 %"/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+    ],
+  },
+  {
     file: "src/app/api/cron/partner-referrals/route.ts",
     patterns: [
       /CRON_SECRET/,

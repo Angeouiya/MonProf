@@ -6,7 +6,7 @@ import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, us
 import {
   LayoutDashboard, Search, BookOpen, WalletCards,
   LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, WifiOff
+  ArrowRight, WifiOff, Handshake
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -39,6 +39,13 @@ const accountNavItems: ClientNavItem[] = [
   { href: "/client/service-client", label: "Aide", icon: LifeBuoy, matchPrefixes: ["/client/service-client", "/client/support"] },
   { href: "/client/profil", label: "Mon compte", icon: User, matchPrefixes: ["/client/profil", "/client/parametres", "/client/avis"] },
 ];
+
+const partnershipNavItem = {
+  href: "/partenariat",
+  label: "Partenariat",
+  detail: "Gagnez 10 %",
+  icon: Handshake,
+};
 
 const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
@@ -581,6 +588,7 @@ function SidebarContent({
   compactAccount?: boolean;
 }) {
   const primaryActive = isActive(primaryNavItem);
+  const PartnershipIcon = partnershipNavItem.icon;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -624,6 +632,24 @@ function SidebarContent({
             </Link>
           );
         })}
+        <Link
+          href={partnershipNavItem.href}
+          prefetch={false}
+          onClick={onNavigate}
+          data-client-partnership-link
+          className="mt-2 flex min-h-12 items-center justify-between gap-3 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-sm font-semibold text-[#111B4D] transition hover:border-[#111B4D]"
+        >
+          <span className="inline-flex min-w-0 items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F8FAFC] text-[#111B4D]">
+              <PartnershipIcon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate">{partnershipNavItem.label}</span>
+              <span className="block truncate text-[11px] font-semibold text-[#64748B]">{partnershipNavItem.detail}</span>
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4 shrink-0" />
+        </Link>
         <div className="my-2 border-t border-[#E6EAF3]" />
         {accountNavItems.map((item) => {
           const active = isActive(item);
