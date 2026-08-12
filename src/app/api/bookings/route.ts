@@ -51,7 +51,12 @@ import {
 } from "@/lib/pricing-confirmation";
 import { bookingDraftMatchesExpected } from "@/lib/booking-draft-consistency";
 import { hasVerifiedClientPayment } from "@/lib/payment-security";
-import { buildPartnerReferralCreateData } from "@/lib/partner-referrals";
+import {
+  attachPartnerReferralLeadReferralInTransaction,
+  buildPartnerReferralCreateData,
+  claimPartnerReferralLeadInTransaction,
+  getActivePartnerReferralLeadSource,
+} from "@/lib/partner-referrals";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
@@ -284,6 +289,7 @@ export async function POST(req: NextRequest) {
     preferredDays, selectedTimeSlots, preferredTime, customStartTime, startDate, packType, message, participantsCount,
     clientCreationKey: rawClientCreationKey, paymentMethod: rawPaymentMethod,
     expectedPricing, confirmedPricingFingerprint,
+    partnerReferralCode: rawPartnerReferralCode,
     partnerReferralName: rawPartnerReferralName,
     partnerReferralPhone: rawPartnerReferralPhone,
   } = body;
@@ -664,6 +670,12 @@ export async function POST(req: NextRequest) {
     ? `Créneaux demandés: ${normalizedPreferredTime}.`
     : "Créneaux demandés: à confirmer avec le client.";
   const now = new Date();
+  const partnerReferralLeadSource = rawPartnerReferralCode
+    ? await getActivePartnerReferralLeadSource(rawPartnerReferralCode, now)
+    : null;
+  if (rawPartnerReferralCode && !partnerReferralLeadSource) {
+    return NextResponse.json({ error: "Lien apporteur invalide, déjà utilisé ou expiré. Demandez un nouveau lien à l'apporteur." }, { status: 409 });
+  }
   const startDateLine = `Date souhaitée: ${formatDateFr(parsedStartDate)}.`;
   const partnerReferralCreateData = buildPartnerReferralCreateData({
     booking: {
@@ -672,8 +684,9 @@ export async function POST(req: NextRequest) {
       teacherId,
       courseAmount: pricing.courseAmount,
     },
-    promoterName: rawPartnerReferralName,
-    promoterPhone: rawPartnerReferralPhone,
+    promoterName: partnerReferralLeadSource?.promoterName ?? rawPartnerReferralName,
+    promoterPhone: partnerReferralLeadSource?.promoterPhone ?? rawPartnerReferralPhone,
+    promotionCode: partnerReferralLeadSource?.code ?? rawPartnerReferralCode,
     now,
   });
 
@@ -712,12 +725,26 @@ export async function POST(req: NextRequest) {
       }),
     });
     if (partnerReferralCreateData) {
-      await tx.partnerReferral.create({
+      if (partnerReferralLeadSource) {
+        const claimed = await claimPartnerReferralLeadInTransaction(tx, {
+          leadId: partnerReferralLeadSource.id,
+          bookingId: createdBooking.id,
+          now,
+        });
+        if (!claimed) throw new Error("PARTNER_REFERRAL_LEAD_ALREADY_USED");
+      }
+      const createdReferral = await tx.partnerReferral.create({
         data: {
           ...partnerReferralCreateData,
           bookingId: createdBooking.id,
         },
       });
+      if (partnerReferralLeadSource) {
+        await attachPartnerReferralLeadReferralInTransaction(tx, {
+          leadId: partnerReferralLeadSource.id,
+          referralId: createdReferral.id,
+        });
+      }
     }
     await tx.notification.create({
       data: {
@@ -758,6 +785,9 @@ export async function POST(req: NextRequest) {
       });
       bookingCreatedNow = true;
     } catch (error) {
+      if (error instanceof Error && error.message === "PARTNER_REFERRAL_LEAD_ALREADY_USED") {
+        return NextResponse.json({ error: "Ce lien apporteur vient d'être utilisé. Demandez un nouveau lien à l'apporteur." }, { status: 409 });
+      }
       if (!isUniqueConstraintError(error)) throw error;
       booking = await db.booking.findUnique({ where: { clientCreationKey } });
       if (!booking || booking.clientId !== userId) throw error;

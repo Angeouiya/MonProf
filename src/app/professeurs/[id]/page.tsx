@@ -35,6 +35,7 @@ import { resolveTeacherCover } from "@/lib/teacher-cover";
 import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
 import { hasTeacherCvContent } from "@/lib/teacher-profile";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
+import { normalizePartnerReferralCode } from "@/lib/partner-referrals";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +44,12 @@ export default async function TeacherDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ journey?: string }>;
+  searchParams: Promise<{ journey?: string; ref?: string; partnerRef?: string }>;
 }) {
   const { id } = await params;
-  const { journey: requestedJourney } = await searchParams;
+  const { journey: requestedJourney, ref, partnerRef } = await searchParams;
   const journey = parseTeacherJourney(requestedJourney) ?? "";
+  const referralCode = normalizePartnerReferralCode(ref || partnerRef);
   const [session, teacher] = await Promise.all([
     getServerSession(authOptions),
     db.teacher.findFirst({
@@ -164,13 +166,14 @@ export default async function TeacherDetailPage({
   const compactBio = compactTeacherBio(profileBio);
   const hasLongBio = compactBio !== profileBio;
 
-  const teachersHref = `/professeurs?journey=${activeJourney}`;
-  const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`;
+  const teachersHref = buildTeachersHref(activeJourney, referralCode);
+  let bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`;
+  if (referralCode) bookingDestination = `${bookingDestination}&ref=${encodeURIComponent(referralCode)}`;
   const reserveHref = session?.user
     ? bookingDestination
     : `/connexion?from=${encodeURIComponent(bookingDestination)}`;
   const journeyHrefs = Object.fromEntries(
-    eligibleJourneys.map((value) => [value, `/professeurs/${teacher.id}?journey=${value}`]),
+    eligibleJourneys.map((value) => [value, buildTeacherJourneyHref(teacher.id, value, referralCode)]),
   );
 
   const tariffsHref = `/tarifs?journey=${activeJourney}`;
@@ -834,4 +837,16 @@ function compactTeacherBio(value: string, maxLength = 185) {
   );
   const cutAt = naturalBreak >= Math.floor(maxLength * 0.58) ? naturalBreak : maxLength;
   return `${head.slice(0, cutAt).trim().replace(/[.,;:!?]+$/u, "")}…`;
+}
+
+function buildTeachersHref(journey: string, referralCode: string) {
+  const params = new URLSearchParams({ journey });
+  if (referralCode) params.set("ref", referralCode);
+  return `/professeurs?${params.toString()}`;
+}
+
+function buildTeacherJourneyHref(teacherId: string, journey: string, referralCode: string) {
+  const params = new URLSearchParams({ journey });
+  if (referralCode) params.set("ref", referralCode);
+  return `/professeurs/${teacherId}?${params.toString()}`;
 }

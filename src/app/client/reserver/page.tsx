@@ -7,15 +7,16 @@ import {
   parseTeacherJourney,
 } from "@/lib/teacher-journeys";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
+import { getActivePartnerReferralLeadSource } from "@/lib/partner-referrals";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReserverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ teacherId?: string; journey?: string }>;
+  searchParams: Promise<{ teacherId?: string; journey?: string; ref?: string; partnerRef?: string }>;
 }) {
-  const { teacherId, journey: requestedJourney } = await searchParams;
+  const { teacherId, journey: requestedJourney, ref, partnerRef } = await searchParams;
   if (!teacherId) redirect("/client/rechercher");
   const initialJourney = parseTeacherJourney(requestedJourney) ?? undefined;
 
@@ -44,9 +45,10 @@ export default async function ReserverPage({
   if (eligibleJourneys.length === 0) notFound();
   if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 
-  const [{ communes }, platformSettings] = await Promise.all([
+  const [{ communes }, platformSettings, partnerReferral] = await Promise.all([
     getCachedTeacherSearchCatalog(),
     getPlatformRuntimeSettings(),
+    getActivePartnerReferralLeadSource(ref || partnerRef),
   ]);
 
   const teacherSubjects = teacher.subjects.map((s) => ({
@@ -95,6 +97,11 @@ export default async function ReserverPage({
           commissionPercent: teacher.commissionRate,
           transportFees: platformSettings.transportFees,
         }}
+        initialPartnerReferral={partnerReferral ? {
+          code: partnerReferral.code,
+          promoterName: partnerReferral.promoterName,
+          promoterPhone: partnerReferral.promoterPhone ?? "",
+        } : undefined}
       />
     </div>
   );

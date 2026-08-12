@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
-import { getPartnerPromotionWindow } from "@/lib/partner-referrals";
+import { buildPartnerReferralSharePath, getPartnerPromotionWindow } from "@/lib/partner-referrals";
 import { PartnerReferralActionsClient } from "./partner-referral-actions-client";
 
 const STATUS_LABELS: Record<PartnerReferralStatus, string> = {
@@ -30,6 +30,20 @@ const STATUS_CLASSES: Record<PartnerReferralStatus, string> = {
   EXPIRED: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
+const LEAD_STATUS_LABELS: Record<string, string> = {
+  DECLARED: "Pré-déclarée",
+  MATCHED: "Rattachée",
+  EXPIRED: "Expirée",
+  REJECTED: "Rejetée",
+};
+
+const LEAD_STATUS_CLASSES: Record<string, string> = {
+  DECLARED: "border-blue-200 bg-blue-50 text-blue-800",
+  MATCHED: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  EXPIRED: "border-slate-200 bg-slate-50 text-slate-700",
+  REJECTED: "border-red-200 bg-red-50 text-red-800",
+};
+
 export default async function AdminPartenariatsPage({
   searchParams,
 }: {
@@ -40,7 +54,7 @@ export default async function AdminPartenariatsPage({
   const selectedStatus = isPartnerReferralStatus(params?.status) ? params.status : undefined;
   const where = selectedStatus ? { status: selectedStatus } : {};
 
-  const [items, counts, sums] = await Promise.all([
+  const [items, counts, sums, leads] = await Promise.all([
     db.partnerReferral.findMany({
       where,
       orderBy: [{ status: "asc" }, { declaredAt: "desc" }],
@@ -75,6 +89,10 @@ export default async function AdminPartenariatsPage({
       _sum: { courseAmount: true, commissionAmount: true },
       _count: { _all: true },
     }),
+    db.partnerReferralLead.findMany({
+      orderBy: [{ status: "asc" }, { declaredAt: "desc" }],
+      take: 40,
+    }),
   ]);
 
   const countsByStatus = new Map(counts.map((item) => [item.status, item]));
@@ -95,11 +113,55 @@ export default async function AdminPartenariatsPage({
       </PageHeader>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={Handshake} label="Déclarations" value={`${sums._count._all}`} detail={`${formatDate(startsAt)} → ${formatDate(endsAt)}`} />
+        <MetricCard icon={Handshake} label="Déclarations" value={`${sums._count._all}`} detail={`${formatDate(startsAt)} → ${formatDate(endsAt)} · ${leads.length} lien(s)`} />
         <MetricCard icon={WalletCards} label="Commissions totales" value={formatFCFA(sums._sum.commissionAmount ?? 0)} detail="10 % du montant cours uniquement" />
         <MetricCard icon={Clock3} label="À payer" value={formatFCFA(payableAmount)} detail={`${countsByStatus.get("PAYABLE")?._count._all ?? 0} dossier(s)`} />
         <MetricCard icon={CheckCircle2} label="Déjà payé" value={formatFCFA(paidAmount)} detail={`${countsByStatus.get("PAID")?._count._all ?? 0} dépôt(s)`} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Pré-déclarations apporteurs</CardTitle>
+          <p className="text-sm font-medium leading-6 text-[#64748B]">
+            Ces dossiers viennent du formulaire mobile apporteur. Ils restent en attente tant qu’un client ne réserve pas avec le lien généré.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {leads.length === 0 ? (
+            <EmptyState
+              icon={Handshake}
+              title="Aucune pré-déclaration"
+              description="Les liens créés par les apporteurs apparaîtront ici avant d’être rattachés à une réservation."
+            />
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {leads.map((lead) => (
+                <div key={lead.id} className="rounded-2xl border border-[#E3E8F2] bg-white p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Code</p>
+                      <Link href={buildPartnerReferralSharePath(lead.code, lead.requestedJourney)} className="mt-1 inline-flex text-lg font-black text-[#111B4D] hover:underline">
+                        {lead.code}
+                      </Link>
+                    </div>
+                    <Badge variant="outline" className={LEAD_STATUS_CLASSES[lead.status] ?? "border-slate-200 bg-slate-50 text-slate-700"}>
+                      {LEAD_STATUS_LABELS[lead.status] ?? lead.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <InfoBlock label="Apporteur" value={lead.promoterName} detail={lead.promoterPhone} />
+                    <InfoBlock label="Client annoncé" value={lead.expectedClientName || "Non renseigné"} detail={lead.expectedClientPhone || lead.requestedJourney || "—"} />
+                  </div>
+                  <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
+                    Déclaré le {formatDate(lead.declaredAt)} · valable jusqu’au {formatDate(lead.promotionEndsAt)}
+                    {lead.matchedBookingId ? ` · réservation rattachée ${lead.matchedBookingId}` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="gap-3">
@@ -221,6 +283,16 @@ function AmountLine({ label, value, strong = false, muted = false }: { label: st
     <div className={`flex items-center justify-between gap-3 text-xs ${strong ? "font-bold text-[#111B4D]" : muted ? "font-medium text-[#64748B]" : "font-semibold text-[#111827]"}`}>
       <span>{label}</span>
       <span className="tabular-nums">{formatFCFA(value)}</span>
+    </div>
+  );
+}
+
+function InfoBlock({ label, value, detail }: { label: string; value: string; detail?: string | null }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-[#EEF2F7] bg-[#F8FAFC] p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold text-[#111827]">{value}</p>
+      {detail && <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{detail}</p>}
     </div>
   );
 }

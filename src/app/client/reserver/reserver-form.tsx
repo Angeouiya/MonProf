@@ -110,6 +110,12 @@ type PricingConfig = {
   transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
 };
 
+type InitialPartnerReferral = {
+  code: string;
+  promoterName: string;
+  promoterPhone: string;
+};
+
 type BookingJourney = "ivoirien" | "francais" | "professionnel";
 
 const BOOKING_JOURNEY_CHOICES = [
@@ -399,7 +405,7 @@ function toJekoPaymentMethod(method: string) {
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys,
+  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys, initialPartnerReferral,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
@@ -408,6 +414,7 @@ export function ReserverForm({
   pricingConfig: PricingConfig;
   initialJourney?: BookingJourney;
   eligibleJourneys: BookingJourney[];
+  initialPartnerReferral?: InitialPartnerReferral;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -459,8 +466,9 @@ export function ReserverForm({
     startDate: "",
     packType: "SINGLE" as PackType,
     message: "",
-    partnerReferralName: "",
-    partnerReferralPhone: "",
+    partnerReferralCode: initialPartnerReferral?.code ?? "",
+    partnerReferralName: initialPartnerReferral?.promoterName ?? "",
+    partnerReferralPhone: initialPartnerReferral?.promoterPhone ?? "",
   });
 
   const update = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
@@ -906,6 +914,7 @@ export function ReserverForm({
           sessionsCount: PACK_OPTIONS.find((p) => p.value === form.packType)?.count ?? 1,
           packType: form.packType,
           message: form.message.trim(),
+          partnerReferralCode: form.partnerReferralCode || undefined,
           partnerReferralName: form.partnerReferralName.trim() || undefined,
           partnerReferralPhone: form.partnerReferralPhone.trim() || undefined,
           clientCreationKey,
@@ -2022,6 +2031,11 @@ export function ReserverForm({
                   <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
                     Si oui, indiquez son nom avant le paiement. Sa commission éventuelle sera calculée uniquement après paiement Jèko confirmé et réservation validée.
                   </p>
+                  {form.partnerReferralCode && (
+                    <p className="mt-3 inline-flex min-h-8 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-900">
+                      Lien apporteur détecté · {form.partnerReferralCode}
+                    </p>
+                  )}
                 </div>
                 <div className="mt-4 grid gap-3 min-[720px]:grid-cols-2">
                   <div className="space-y-2">
@@ -2033,6 +2047,8 @@ export function ReserverForm({
                       placeholder="Ex : Kouamé Jean"
                       maxLength={120}
                       autoComplete="off"
+                      readOnly={Boolean(form.partnerReferralCode)}
+                      className={form.partnerReferralCode ? "bg-[#F8FAFC]" : undefined}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2045,6 +2061,8 @@ export function ReserverForm({
                       maxLength={32}
                       inputMode="tel"
                       autoComplete="off"
+                      readOnly={Boolean(form.partnerReferralCode)}
+                      className={form.partnerReferralCode ? "bg-[#F8FAFC]" : undefined}
                     />
                   </div>
                 </div>

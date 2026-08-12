@@ -1,7 +1,9 @@
 import type { Prisma } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 
 export const PARTNER_REFERRAL_RATE_PERCENT = 10;
+export const PARTNER_REFERRAL_QUERY_PARAM = "ref";
 
 const DEFAULT_PROMOTION_START_ISO = "2026-08-12T00:00:00.000Z";
 const DEFAULT_PROMOTION_END_ISO = "2027-02-12T23:59:59.999Z";
@@ -16,6 +18,13 @@ type PartnerReferralBooking = {
   courseAmount?: number | null;
   paymentConfirmedAt?: Date | null;
   confirmedAt?: Date | null;
+};
+
+type PartnerReferralLeadSource = {
+  id: string;
+  code: string;
+  promoterName: string;
+  promoterPhone: string | null;
 };
 
 export function getPartnerPromotionWindow() {
@@ -42,6 +51,22 @@ export function normalizePartnerReferralPhone(value: unknown) {
   return normalized || null;
 }
 
+export function normalizePartnerReferralEmail(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\s+/g, "").trim().toLowerCase().slice(0, 160);
+  return normalized.includes("@") ? normalized : null;
+}
+
+export function normalizePartnerReferralCode(value: unknown) {
+  if (typeof value !== "string") return "";
+  return value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 24);
+}
+
+export function normalizePartnerReferralJourney(value: unknown) {
+  if (value === "ivoirien" || value === "francais" || value === "professionnel") return value;
+  return null;
+}
+
 export function calculatePartnerReferralCommission(courseAmount: number, ratePercent = PARTNER_REFERRAL_RATE_PERCENT) {
   const safeCourseAmount = Math.max(0, Math.round(Number.isFinite(courseAmount) ? courseAmount : 0));
   const safeRate = Math.max(0, Math.min(100, Math.round(Number.isFinite(ratePercent) ? ratePercent : PARTNER_REFERRAL_RATE_PERCENT)));
@@ -52,6 +77,7 @@ export function buildPartnerReferralCreateData(input: {
   booking: PartnerReferralBooking;
   promoterName: string;
   promoterPhone?: string | null;
+  promotionCode?: string | null;
   now?: Date;
 }) {
   const now = input.now ?? new Date();
@@ -66,6 +92,7 @@ export function buildPartnerReferralCreateData(input: {
     teacherId: input.booking.teacherId ?? null,
     promoterName,
     promoterPhone: normalizePartnerReferralPhone(input.promoterPhone),
+    promotionCode: normalizePartnerReferralCode(input.promotionCode) || null,
     promotionStartsAt: startsAt,
     promotionEndsAt: endsAt,
     declaredAt: now,
@@ -73,6 +100,156 @@ export function buildPartnerReferralCreateData(input: {
     commissionRate: PARTNER_REFERRAL_RATE_PERCENT,
     commissionAmount: calculatePartnerReferralCommission(courseAmount),
   };
+}
+
+export async function createPartnerReferralLead(input: {
+  promoterName: unknown;
+  promoterPhone: unknown;
+  promoterEmail?: unknown;
+  expectedClientName?: unknown;
+  expectedClientPhone?: unknown;
+  requestedJourney?: unknown;
+  message?: unknown;
+  now?: Date;
+}) {
+  const now = input.now ?? new Date();
+  if (!isPartnerPromotionActive(now)) {
+    return { ok: false as const, error: "La promotion partenariat n'est pas active actuellement." };
+  }
+
+  const promoterName = normalizePartnerReferralName(input.promoterName);
+  const promoterPhone = normalizePartnerReferralPhone(input.promoterPhone);
+  if (!promoterName || !promoterPhone) {
+    return { ok: false as const, error: "Nom et téléphone de l'apporteur requis." };
+  }
+
+  const { startsAt, endsAt } = getPartnerPromotionWindow();
+  const expectedClientName = normalizePartnerReferralName(input.expectedClientName);
+  const message = normalizePartnerReferralMessage(input.message);
+  const baseData = {
+    promoterName,
+    promoterPhone,
+    promoterEmail: normalizePartnerReferralEmail(input.promoterEmail),
+    expectedClientName: expectedClientName || null,
+    expectedClientPhone: normalizePartnerReferralPhone(input.expectedClientPhone),
+    requestedJourney: normalizePartnerReferralJourney(input.requestedJourney),
+    message: message || null,
+    promotionStartsAt: startsAt,
+    promotionEndsAt: endsAt,
+    declaredAt: now,
+  };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generatePartnerReferralCode();
+    try {
+      const lead = await db.partnerReferralLead.create({
+        data: {
+          ...baseData,
+          code,
+        },
+      });
+      return { ok: true as const, lead };
+    } catch (error) {
+      if (isUniqueConstraintError(error)) continue;
+      throw error;
+    }
+  }
+
+  return { ok: false as const, error: "Création du code impossible. Réessayez." };
+}
+
+export async function getActivePartnerReferralLeadSource(rawCode: unknown, now = new Date()): Promise<PartnerReferralLeadSource | null> {
+  const code = normalizePartnerReferralCode(rawCode);
+  if (!code) return null;
+
+  const lead = await db.partnerReferralLead.findUnique({
+    where: { code },
+    select: {
+      id: true,
+      code: true,
+      promoterName: true,
+      promoterPhone: true,
+      status: true,
+      declaredAt: true,
+      promotionStartsAt: true,
+      promotionEndsAt: true,
+    },
+  });
+  if (!lead) return null;
+
+  if (lead.status === "DECLARED" && now > lead.promotionEndsAt) {
+    await db.partnerReferralLead.updateMany({
+      where: { id: lead.id, status: "DECLARED" },
+      data: { status: "EXPIRED", expiredAt: now },
+    });
+    return null;
+  }
+
+  if (
+    lead.status !== "DECLARED" ||
+    lead.declaredAt < lead.promotionStartsAt ||
+    lead.declaredAt > lead.promotionEndsAt ||
+    now < lead.promotionStartsAt ||
+    now > lead.promotionEndsAt
+  ) {
+    return null;
+  }
+
+  return {
+    id: lead.id,
+    code: lead.code,
+    promoterName: lead.promoterName,
+    promoterPhone: lead.promoterPhone,
+  };
+}
+
+export async function claimPartnerReferralLeadInTransaction(
+  tx: PartnerReferralTx,
+  input: {
+    leadId: string;
+    bookingId: string;
+    now?: Date;
+  },
+) {
+  const now = input.now ?? new Date();
+  const result = await tx.partnerReferralLead.updateMany({
+    where: {
+      id: input.leadId,
+      status: "DECLARED",
+      promotionStartsAt: { lte: now },
+      promotionEndsAt: { gte: now },
+    },
+    data: {
+      status: "MATCHED",
+      matchedBookingId: input.bookingId,
+      matchedAt: now,
+    },
+  });
+
+  return result.count === 1;
+}
+
+export async function attachPartnerReferralLeadReferralInTransaction(
+  tx: PartnerReferralTx,
+  input: {
+    leadId: string;
+    referralId: string;
+  },
+) {
+  await tx.partnerReferralLead.updateMany({
+    where: { id: input.leadId, status: "MATCHED" },
+    data: { convertedReferralId: input.referralId },
+  });
+}
+
+export function buildPartnerReferralSharePath(code: string, requestedJourney?: string | null) {
+  const params = new URLSearchParams();
+  const normalizedCode = normalizePartnerReferralCode(code);
+  if (normalizedCode) params.set(PARTNER_REFERRAL_QUERY_PARAM, normalizedCode);
+  const journey = normalizePartnerReferralJourney(requestedJourney);
+  if (journey) params.set("journey", journey);
+  const query = params.toString();
+  return query ? `/professeurs?${query}` : "/professeurs";
 }
 
 export async function markPartnerReferralPaymentConfirmedInTransaction(
@@ -129,17 +306,29 @@ export async function markPartnerReferralBookingConfirmedInTransaction(
 }
 
 export async function expirePartnerReferrals(now = new Date()) {
-  const result = await db.partnerReferral.updateMany({
-    where: {
-      status: { in: ["DECLARED", "PAYMENT_CONFIRMED"] },
-      promotionEndsAt: { lt: now },
-    },
-    data: {
-      status: "EXPIRED",
-      expiredAt: now,
-    },
-  });
-  return result.count;
+  const [referrals, leads] = await db.$transaction([
+    db.partnerReferral.updateMany({
+      where: {
+        status: { in: ["DECLARED", "PAYMENT_CONFIRMED"] },
+        promotionEndsAt: { lt: now },
+      },
+      data: {
+        status: "EXPIRED",
+        expiredAt: now,
+      },
+    }),
+    db.partnerReferralLead.updateMany({
+      where: {
+        status: "DECLARED",
+        promotionEndsAt: { lt: now },
+      },
+      data: {
+        status: "EXPIRED",
+        expiredAt: now,
+      },
+    }),
+  ]);
+  return referrals.count + leads.count;
 }
 
 function parsePromotionDate(value: string | undefined, fallback: string) {
@@ -149,4 +338,16 @@ function parsePromotionDate(value: string | undefined, fallback: string) {
 
 function appendAdminNote(existing: string | null, note: string) {
   return [existing, note].filter(Boolean).join("\n");
+}
+
+function normalizePartnerReferralMessage(value: unknown) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 600) : "";
+}
+
+function generatePartnerReferralCode() {
+  return `CP-${randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
 }

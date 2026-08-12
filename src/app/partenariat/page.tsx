@@ -28,7 +28,7 @@ export default function PartenariatPage() {
                 <Link href="/professeurs">Trouver un professeur <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
               <Button asChild variant="outline" className="min-h-12 rounded-2xl">
-                <Link href="#contact-partenaire">Déclarer votre intérêt</Link>
+                <Link href="#contact-partenaire">Créer mon lien apporteur</Link>
               </Button>
             </div>
           </div>
@@ -48,7 +48,8 @@ export default function PartenariatPage() {
             <div className="space-y-3">
               {[
                 "Vous recommandez Compétence.CI à une personne.",
-                "Le client vous déclare dans le formulaire de réservation avant de payer.",
+                "Vous créez un lien apporteur mobile et vous l’envoyez au client.",
+                "Le client réserve avec ce lien ou vous déclare dans le formulaire avant de payer.",
                 "Le serveur confirme le paiement Jèko et l’équipe valide la réservation.",
                 "Vous contactez Compétence.CI avec votre pièce et votre numéro de dépôt.",
                 `L’administration verse ${formatFCFA(2_000)} sur un cours de ${formatFCFA(20_000)}.`,

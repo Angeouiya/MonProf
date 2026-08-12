@@ -5,7 +5,9 @@ const checks = [
     file: "prisma/schema.prisma",
     patterns: [
       /model PartnerReferral/,
+      /model PartnerReferralLead/,
       /enum PartnerReferralStatus/,
+      /enum PartnerReferralLeadStatus/,
       /commissionRate\s+Int\s+@default\(10\)/,
       /bookingId\s+String\s+@unique/,
     ],
@@ -16,6 +18,10 @@ const checks = [
       /PARTNER_REFERRAL_RATE_PERCENT\s*=\s*10/,
       /isPartnerPromotionActive/,
       /calculatePartnerReferralCommission/,
+      /createPartnerReferralLead/,
+      /getActivePartnerReferralLeadSource/,
+      /claimPartnerReferralLeadInTransaction/,
+      /buildPartnerReferralSharePath/,
       /markPartnerReferralPaymentConfirmedInTransaction/,
       /markPartnerReferralBookingConfirmedInTransaction/,
       /expirePartnerReferrals/,
@@ -25,16 +31,46 @@ const checks = [
     file: "src/app/api/bookings/route.ts",
     patterns: [
       /partnerReferralName/,
+      /partnerReferralCode/,
       /buildPartnerReferralCreateData/,
+      /claimPartnerReferralLeadInTransaction/,
       /tx\.partnerReferral\.create/,
+    ],
+  },
+  {
+    file: "src/app/client/reserver/page.tsx",
+    patterns: [
+      /getActivePartnerReferralLeadSource/,
+      /initialPartnerReferral/,
+      /ref\?: string/,
     ],
   },
   {
     file: "src/app/client/reserver/reserver-form.tsx",
     patterns: [
       /Quelqu’un vous a recommandé Compétence\.CI/,
+      /Lien apporteur détecté/,
+      /partnerReferralCode/,
       /partnerReferralName/,
       /partnerReferralPhone/,
+    ],
+  },
+  {
+    file: "src/app/professeurs/page.tsx",
+    patterns: [
+      /normalizePartnerReferralCode/,
+      /buildTeacherProfileHref/,
+      /buildBookingHref/,
+      /name="ref"/,
+    ],
+  },
+  {
+    file: "src/app/professeurs/[id]/page.tsx",
+    patterns: [
+      /normalizePartnerReferralCode/,
+      /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/,
+      /bookingDestination = `\$\{bookingDestination\}&ref=\$\{encodeURIComponent\(referralCode\)\}`/,
+      /buildTeacherJourneyHref/,
     ],
   },
   {
@@ -55,9 +91,20 @@ const checks = [
     file: "src/app/admin/partenariats/page.tsx",
     patterns: [
       /Registre des commissions/,
+      /Pré-déclarations apporteurs/,
+      /partnerReferralLead\.findMany/,
       /Transport exclu/,
       /Frais service exclus/,
       /PartnerReferralActionsClient/,
+    ],
+  },
+  {
+    file: "src/app/api/partner-interest/route.ts",
+    patterns: [
+      /createPartnerReferralLead/,
+      /buildPartnerReferralSharePath/,
+      /shareUrl/,
+      /Code apporteur/,
     ],
   },
   {
@@ -74,6 +121,8 @@ const checks = [
     file: "src/app/partenariat/page.tsx",
     patterns: [
       /Apportez un client\. Gagnez/,
+      /Créer mon lien apporteur/,
+      /lien apporteur mobile/,
       /du montant cours/,
       /déclaration faite par le client/,
       /6 mois ou 1 an/,
@@ -97,6 +146,7 @@ const checks = [
     patterns: [
       /Programme partenariat et apporteurs d'affaires/,
       /pendant la réservation/,
+      /lien apporteur généré/,
       /six mois ou un an/,
       /frais techniques Jèko.*exclus/s,
     ],
@@ -105,8 +155,17 @@ const checks = [
     file: "src/app/politique-confidentialite/page.tsx",
     patterns: [
       /Données partenariat/,
+      /code ou lien de recommandation/,
       /commission calculée/,
       /déclarations partenariat non confirmées peuvent expirer/,
+    ],
+  },
+  {
+    file: "prisma/migrations/20260812110000_partner_referral_leads/migration.sql",
+    patterns: [
+      /CREATE TABLE "PartnerReferralLead"/,
+      /CREATE TYPE "PartnerReferralLeadStatus"/,
+      /PartnerReferralLead_code_key/,
     ],
   },
 ];

@@ -661,6 +661,35 @@ model PartnerReferral {
   @@index([promoterPhone])
 }
 
+model PartnerReferralLead {
+  id                  String                    @id @default(cuid())
+  code                String                    @unique
+  promoterName        String
+  promoterPhone       String
+  promoterEmail       String?
+  expectedClientName  String?
+  expectedClientPhone String?
+  requestedJourney    String?
+  message             String?
+  promotionStartsAt   DateTime
+  promotionEndsAt     DateTime
+  declaredAt          DateTime                  @default(now())
+  status              PartnerReferralLeadStatus @default(DECLARED)
+  matchedBookingId    String?
+  convertedReferralId String?
+  matchedAt           DateTime?
+  rejectedAt          DateTime?
+  expiredAt           DateTime?
+  adminNote           String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  @@index([status, promotionEndsAt])
+  @@index([promoterPhone, declaredAt])
+  @@index([expectedClientPhone, declaredAt])
+  @@index([code])
+}
+
 enum PartnerReferralStatus {
   DECLARED
   PAYMENT_CONFIRMED
@@ -668,6 +697,13 @@ enum PartnerReferralStatus {
   PAID
   REJECTED
   EXPIRED
+}
+
+enum PartnerReferralLeadStatus {
+  DECLARED
+  MATCHED
+  EXPIRED
+  REJECTED
 }
 
 // ============================================================

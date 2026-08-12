@@ -38,6 +38,7 @@ import {
   teacherJourneyWhere,
   type TeacherJourney as BookingJourney,
 } from "@/lib/teacher-journeys";
+import { normalizePartnerReferralCode } from "@/lib/partner-referrals";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,8 @@ type SearchParams = {
   sort?: string;
   q?: string;
   page?: string;
+  ref?: string;
+  partnerRef?: string;
 };
 
 function parseBookingJourney(value?: string): BookingJourney | "" {
@@ -77,6 +80,7 @@ export default async function TeachersPage({
   const requestedCommune = sp.commune?.trim() || "";
   const requestedFormat = sp.format?.trim() || "";
   const requestedSort = sp.sort?.trim() || "recommended";
+  const referralCode = normalizePartnerReferralCode(sp.ref || sp.partnerRef);
   const format = normalizeCourseFormat(requestedFormat);
   const sort = SORTS.some((item) => item.value === requestedSort) ? requestedSort : "recommended";
   const q = sp.q?.trim() || "";
@@ -206,6 +210,7 @@ export default async function TeachersPage({
     if (commune) params.set("commune", commune);
     if (format) params.set("format", format);
     if (sort && sort !== "recommended") params.set("sort", sort);
+    if (referralCode) params.set("ref", referralCode);
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
     return qs ? `/professeurs?${qs}` : "/professeurs";
@@ -216,6 +221,7 @@ export default async function TeachersPage({
     if (commune) params.set("commune", commune);
     if (format) params.set("format", format);
     if (sort && sort !== "recommended") params.set("sort", sort);
+    if (referralCode) params.set("ref", referralCode);
     return `/professeurs?${params.toString()}`;
   }
 
@@ -226,7 +232,10 @@ export default async function TeachersPage({
     format,
     q,
   ].filter(Boolean).length;
-  const resetFiltersHref = journey ? `/professeurs?journey=${journey}` : "/professeurs";
+  const resetFiltersParams = new URLSearchParams();
+  if (journey) resetFiltersParams.set("journey", journey);
+  if (referralCode) resetFiltersParams.set("ref", referralCode);
+  const resetFiltersHref = resetFiltersParams.toString() ? `/professeurs?${resetFiltersParams.toString()}` : "/professeurs";
   const journeyHrefs = Object.fromEntries(
     TEACHER_JOURNEYS.map((value) => [value, buildJourneyUrl(value)]),
   ) as Record<BookingJourney, string>;
@@ -302,6 +311,7 @@ export default async function TeachersPage({
               commune={commune}
               format={format}
               sort={sort}
+              referralCode={referralCode}
               journeyConfig={journeyConfig}
               resetSearchHref={buildPaginationUrl(1, false)}
               variant="mobile"
@@ -349,6 +359,7 @@ export default async function TeachersPage({
             commune={commune}
             format={format}
             sort={sort}
+            referralCode={referralCode}
             journeyConfig={journeyConfig}
             resetSearchHref={buildPaginationUrl(1, false)}
             variant="desktop"
@@ -370,6 +381,7 @@ export default async function TeachersPage({
                 commune={commune}
                 format={format}
                 sort={sort}
+                referralCode={referralCode}
                 subjectGroups={subjectGroups.map((group) => ({
                   label: group.category.label,
                   options: group.items.map((s) => ({
@@ -410,6 +422,7 @@ export default async function TeachersPage({
                   commune={commune}
                   format={format}
                   sort={sort}
+                  referralCode={referralCode}
                   subjectGroups={subjectGroups.map((group) => ({
                     label: group.category.label,
                     options: group.items.map((s) => ({
@@ -486,8 +499,8 @@ export default async function TeachersPage({
                         teacher={t as any}
                         priceLabel={journeyConfig.priceLabel}
                         journeyLabel={journeyConfig.shortLabel}
-                        profileHref={journey ? `/professeurs/${t.id}?journey=${journey}` : `/professeurs/${t.id}`}
-                        href={`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}${journey ? `&journey=${journey}` : ""}`)}`}
+                        profileHref={buildTeacherProfileHref(t.id, journey, referralCode)}
+                        href={`/connexion?from=${encodeURIComponent(buildBookingHref(t.id, journey, referralCode))}`}
                       />
                     ))}
                   </div>
@@ -542,6 +555,7 @@ function TeacherSearchForm({
   commune,
   format,
   sort,
+  referralCode,
   journeyConfig,
   resetSearchHref,
   variant,
@@ -553,6 +567,7 @@ function TeacherSearchForm({
   commune: string;
   format: string;
   sort: string;
+  referralCode: string;
   journeyConfig: (typeof TEACHER_JOURNEY_CONFIG)[BookingJourney];
   resetSearchHref: string;
   variant: "mobile" | "desktop";
@@ -585,6 +600,7 @@ function TeacherSearchForm({
       {commune && <input type="hidden" name="commune" value={commune} />}
       {format && <input type="hidden" name="format" value={format} />}
       {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
+      {referralCode && <input type="hidden" name="ref" value={referralCode} />}
       <button
         type="submit"
         className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto sm:rounded-lg sm:px-5"
@@ -637,6 +653,7 @@ function FiltersForm({
   commune,
   format,
   sort,
+  referralCode,
   subjectGroups,
   levelGroups,
   communes,
@@ -651,6 +668,7 @@ function FiltersForm({
   commune: string;
   format: string;
   sort: string;
+  referralCode: string;
   subjectGroups: CatalogFilterGroup[];
   levelGroups: CatalogFilterGroup[];
   communes: CommuneFilterOption[];
@@ -680,7 +698,7 @@ function FiltersForm({
           </h2>
           {activeFiltersCount > 0 && (
             <Link
-              href={journey ? `/professeurs?journey=${journey}` : "/professeurs"}
+              href={buildTeacherResetHref(journey, referralCode)}
               className="text-xs font-medium text-[#111B4D] hover:underline"
             >
               Réinitialiser ({activeFiltersCount})
@@ -691,6 +709,7 @@ function FiltersForm({
 
       <div className={compact ? "grid gap-3 min-[560px]:grid-cols-2" : "space-y-4"}>
         {journey && <input type="hidden" name="journey" value={journey} />}
+        {referralCode && <input type="hidden" name="ref" value={referralCode} />}
         <Field label={journeyConfig.subjectLabel}>
           <SearchableCatalogSelect
             name="subject"
@@ -774,4 +793,27 @@ function InlineFilter({ icon, label }: { icon: React.ReactNode; label: string })
       {label}
     </span>
   );
+}
+
+function buildTeacherProfileHref(teacherId: string, journey: BookingJourney | "", referralCode: string) {
+  const params = new URLSearchParams();
+  if (journey) params.set("journey", journey);
+  if (referralCode) params.set("ref", referralCode);
+  const query = params.toString();
+  return query ? `/professeurs/${teacherId}?${query}` : `/professeurs/${teacherId}`;
+}
+
+function buildBookingHref(teacherId: string, journey: BookingJourney | "", referralCode: string) {
+  const params = new URLSearchParams({ teacherId });
+  if (journey) params.set("journey", journey);
+  if (referralCode) params.set("ref", referralCode);
+  return `/client/reserver?${params.toString()}`;
+}
+
+function buildTeacherResetHref(journey: BookingJourney | "", referralCode: string) {
+  const params = new URLSearchParams();
+  if (journey) params.set("journey", journey);
+  if (referralCode) params.set("ref", referralCode);
+  const query = params.toString();
+  return query ? `/professeurs?${query}` : "/professeurs";
 }
