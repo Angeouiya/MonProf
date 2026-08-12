@@ -750,7 +750,20 @@ record(
     && /data-public-teacher-primary-action/.test(publicTeacherDetail)
     && /hidden rounded-\[1\.5rem\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
     && /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail)
+    && /data-public-teacher-tablet-action/.test(publicTeacherDetail)
+    && /sm:inline-flex lg:hidden/.test(publicTeacherDetail)
     && !/Réserver ce professeur/.test(publicTeacherDetail),
+);
+
+record(
+  "Public teacher detail opens with a simple price cashier before long details",
+  /data-public-teacher-decision-cashier/.test(publicTeacherDetail)
+    && /Prix officiel/.test(publicTeacherDetail)
+    && /total exact avant paiement/.test(publicTeacherDetail)
+    && publicTeacherDetail.includes('data-public-teacher-fees-disclosure={marker === "pricing" ? "true" : undefined}')
+    && /title="Prix et frais"/.test(publicTeacherDetail)
+    && publicTeacherDetail.includes('summary={`${sessionPriceLabel} · total affiché avant Jèko`}')
+    && !/>\s*Tarifs\s*</.test(publicTeacherDetail),
 );
 
 record(

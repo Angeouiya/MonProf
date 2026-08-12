@@ -260,7 +260,7 @@ export default async function TeacherDetailPage({
               <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{journeyConfig.label}</p>
               <h2 className="mt-1 text-xl font-semibold text-[#111B4D]">{sessionPriceLabel}</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-                Niveau, lieu et créneau. Le moteur applique ensuite le tarif officiel et le déplacement.
+                Le total exact s'affiche avant Jèko. Pas de prix caché.
               </p>
               <div className="mt-4 space-y-3 text-sm font-semibold text-[#111827]">
                 <span className="flex items-center gap-2"><HomeIcon className="h-4 w-4 text-[#111B4D]" />{formatLabel}</span>
@@ -290,12 +290,31 @@ export default async function TeacherDetailPage({
           </div>
 
           <div className="mt-4 rounded-[1.5rem] border border-[#DDE3EE] bg-white p-4 sm:p-5" data-public-teacher-decision-summary>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">L'essentiel pour décider</p>
-                <h2 className="mt-0.5 text-base font-semibold text-[#111827] sm:text-lg">Ce que vous pouvez réserver</h2>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" data-public-teacher-decision-cashier>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Prix officiel</p>
+                <h2 className="mt-0.5 text-2xl font-black leading-tight tracking-[-0.035em] text-[#111827] sm:text-3xl">{sessionPriceLabel}</h2>
+                <p className="mt-1 line-clamp-1 text-sm font-semibold text-[#64748B]">
+                  {formatLabel} · total exact avant paiement
+                </p>
               </div>
-              <span className="hidden text-xs font-semibold text-[#111B4D] sm:inline">Suivi par le service client</span>
+              {canBookActiveJourney ? (
+                <Link
+                  href={reserveHref}
+                  className="hidden min-h-12 items-center justify-center rounded-xl bg-[#111B4D] px-5 text-sm font-semibold text-white sm:inline-flex lg:hidden"
+                  data-public-teacher-tablet-action
+                >
+                  Réserver
+                </Link>
+              ) : (
+                <Link
+                  href={teachersHref}
+                  className="hidden min-h-12 items-center justify-center rounded-xl border border-[#111B4D] bg-white px-5 text-sm font-semibold text-[#111B4D] sm:inline-flex lg:hidden"
+                  data-public-teacher-tablet-action
+                >
+                  Autre professeur
+                </Link>
+              )}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
               <DecisionPoint icon={<BookOpen className="h-4 w-4" />} label="Matières" value={subjectsPreview || primarySubject} />
@@ -540,10 +559,12 @@ export default async function TeacherDetailPage({
               </Card>
 
               {/* Tarifs */}
-              <Card>
-                <CardTitle icon={<Wallet className="h-4 w-4" />}>
-                  Tarifs
-                </CardTitle>
+              <DisclosureCard
+                icon={<Wallet className="h-4 w-4" />}
+                title="Prix et frais"
+                summary={`${sessionPriceLabel} · total affiché avant Jèko`}
+                marker="pricing"
+              >
                 <div className="mt-4 grid gap-3 min-[760px]:grid-cols-3">
                   <PriceTile
                     label="Tarif officiel"
@@ -568,7 +589,7 @@ export default async function TeacherDetailPage({
                 <Link href={tariffsHref} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
                   Voir la grille officielle
                 </Link>
-              </Card>
+              </DisclosureCard>
 
               {/* Avis clients */}
               <Card>
@@ -688,14 +709,20 @@ function DisclosureCard({
   icon,
   title,
   summary,
+  marker,
 }: {
   children: React.ReactNode;
   icon: React.ReactNode;
   title: string;
   summary: string;
+  marker?: "pricing";
 }) {
   return (
-    <details className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white" data-public-teacher-disclosure>
+    <details
+      className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white"
+      data-public-teacher-disclosure
+      data-public-teacher-fees-disclosure={marker === "pricing" ? "true" : undefined}
+    >
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden sm:px-5">
         <span className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F4FF] text-[#111B4D]">{icon}</span>

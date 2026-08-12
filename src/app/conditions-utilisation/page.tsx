@@ -8,7 +8,24 @@ export const metadata: Metadata = {
 
 const version = "12 août 2026";
 
+const highlights = [
+  "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
+  "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence, jamais Buildify, Bluidify ou une boutique inconnue.",
+  "Chaque mini-application verrouille son périmètre : un professeur non coché dans un système ne peut pas y être réservé, payé ou proposé en remplacement.",
+  "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
+  "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
+  "Un brouillon non payé peut être supprimé par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
+];
+
 const sections: LegalSection[] = [
+  {
+    title: "Résumé opposable",
+    body: [
+      "Ce résumé facilite la lecture, mais ne remplace pas les articles détaillés. En cas de contradiction apparente, les règles les plus protectrices de la sécurité, du paiement vérifié, de la protection des apprenants et des droits de Compétence s'appliquent dans la limite de la loi.",
+      "Compétence.CI est une plateforme organisée autour d'un moteur interne : l'utilisateur voit un parcours simple, mais les contrôles de compatibilité, prix, paiement, déplacement, remplacement, retrait, fraude et preuve restent traités par le serveur.",
+      "Les présentes conditions, la politique de confidentialité, les règles affichées avant paiement et les preuves enregistrées dans le dossier forment ensemble le cadre contractuel applicable au service.",
+    ],
+  },
   {
     title: "Champ d'application",
     body: [
@@ -66,6 +83,7 @@ const sections: LegalSection[] = [
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
       "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
       "Le retour du navigateur, la fermeture de la fenêtre Jèko, une capture d'écran ou une déclaration orale ne créent aucune réservation active. Le moteur attend une confirmation serveur portant sur la référence, le marchand, le moyen de paiement et le montant exact.",
+      "Si le marchand affiché, le montant, le moyen, le statut serveur ou la référence ne correspondent pas au dossier attendu, Compétence peut bloquer l'activation, demander un contrôle manuel, rejeter le webhook ou demander au client de relancer un paiement propre.",
     ],
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
@@ -242,6 +260,14 @@ const sections: LegalSection[] = [
     ],
   },
   {
+    title: "Contact officiel et canal transitoire",
+    body: [
+      "Le contact opérationnel de référence est contact@competence.ci. Les messages envoyés au service client peuvent être conservés lorsqu'ils servent à prouver une demande, une décision, un incident, une assistance mot de passe, un paiement, un retrait, un litige ou un remboursement.",
+      "À titre transitoire, certains emails techniques de sécurité peuvent partir depuis diplomateimmobilier99@gmail.com avec le nom d'expéditeur Compétence.CI. Cette adresse ne modifie pas la marque, les droits, les obligations ni le cadre contractuel de Compétence.CI.",
+      "Compétence ne demande jamais à un client ou à un professeur de communiquer son mot de passe par email, téléphone, WhatsApp ou SMS.",
+    ],
+  },
+  {
     title: "Modification des conditions",
     body: [
       "Compétence peut modifier les présentes conditions pour tenir compte de l'évolution du service, des tarifs, des paiements, des règles d'annulation, des obligations légales ou de la sécurité.",
@@ -264,6 +290,7 @@ export default function ConditionsUtilisationPage() {
       title="Conditions générales d'utilisation"
       description="Ces conditions définissent les droits, obligations et règles opérationnelles applicables aux clients, professeurs et à l'équipe Compétence utilisant la plateforme."
       version={version}
+      highlights={highlights}
       sections={sections}
     />
   );

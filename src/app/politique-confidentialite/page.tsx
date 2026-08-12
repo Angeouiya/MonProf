@@ -8,7 +8,24 @@ export const metadata: Metadata = {
 
 const version = "12 août 2026";
 
+const highlights = [
+  "Compétence ne vend pas les données personnelles et limite l'accès aux personnes ou prestataires nécessaires au service.",
+  "Les numéros client et professeur restent masqués jusqu'à la confirmation serveur du paiement exact.",
+  "Les paiements et retraits Jèko conservent des preuves techniques afin d'empêcher les faux paiements et les doubles validations.",
+  "Les brouillons supprimés retirent les données opérationnelles inutiles, sauf trace minimale nécessaire à la sécurité ou à la preuve.",
+  "Les CV, photos, couvertures et mini-CV professeurs peuvent être structurés, modérés ou remplacés pour protéger l'image de Compétence.CI.",
+  "Les demandes sensibles peuvent exiger une vérification d'identité avant divulgation, correction ou suppression.",
+];
+
 const sections: LegalSection[] = [
+  {
+    title: "Résumé de protection",
+    body: [
+      "Ce résumé présente les engagements essentiels de Compétence.CI. Les articles détaillés ci-dessous précisent les finalités, données, preuves, droits et limites applicables.",
+      "La plateforme collecte uniquement les données utiles au service : compte, réservation, système choisi, paiement, paiement professeur, sécurité, assistance, qualité, CV, avis, litiges et obligations légales.",
+      "Compétence cherche à garder l'interface simple, mais conserve derrière elle les contrôles nécessaires pour protéger les clients, les apprenants, les professeurs et la plateforme.",
+    ],
+  },
   {
     title: "Objet de la politique",
     body: [
@@ -23,6 +40,7 @@ const sections: LegalSection[] = [
       "Le responsable du traitement est l'éditeur de la plateforme Compétence. Les demandes relatives aux données personnelles peuvent être adressées au service client de la plateforme.",
       "Contact opérationnel : contact@competence.ci. Adresse de référence : Abidjan, Côte d'Ivoire. Lorsque l'identité juridique complète de l'éditeur est finalisée, elle remplace automatiquement cette mention dans les documents contractuels.",
       "Pour certaines opérations transitoires, notamment l'envoi de liens de réinitialisation, Compétence peut utiliser l'adresse opérationnelle diplomateimmobilier99@gmail.com avec un nom d'expéditeur Compétence.CI. Cette adresse reste un canal technique de service et ne change pas l'identité de la plateforme.",
+      "Les échanges liés à une demande de droit, un incident, une assistance mot de passe, une fraude, un paiement, un retrait, un remboursement ou un litige peuvent être conservés dans la limite nécessaire à la preuve et au suivi.",
       "Compétence peut demander une preuve d'identité avant de traiter une demande sensible afin d'éviter toute divulgation frauduleuse.",
     ],
   },
@@ -41,6 +59,7 @@ const sections: LegalSection[] = [
       "Données de paiement : montant payé, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko ou PayDunya historique, statut serveur vérifié, statut webhook, montant remboursable, numéro de remboursement si le client le fournit.",
       "Données professeur : photo réelle obligatoire, couverture personnalisée, couleur ou couverture choisie dans le catalogue, identité, téléphone, email, matières, niveaux, systèmes enseignés, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
       "Données de communication : notifications, emails de réinitialisation client, mots de passe temporaires professeurs émis par le service client, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
+      "Données de preuve : version juridique acceptée, parcours de paiement, coordonnées partagées après confirmation, historique de suppression de brouillon, journaux de retrait et éléments nécessaires à la défense des droits de Compétence, d'un client, d'un professeur ou d'un apprenant.",
       "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes, signatures, empreintes de preuve et traces nécessaires à la lutte contre les faux paiements.",
     ],
   },
@@ -81,6 +100,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Le client reçoit le numéro du professeur uniquement après confirmation serveur du paiement correspondant. Un brouillon, une redirection abandonnée ou une capture d'écran ne débloque aucune coordonnée.",
       "Le professeur reçoit le numéro du client uniquement dans une mission rattachée à un paiement dont le prestataire, la transaction et le montant exact ont été vérifiés côté serveur.",
+      "Un administrateur habilité peut consulter ou partager les coordonnées uniquement pour organiser le cours, résoudre une difficulté, traiter un remboursement, contrôler un paiement, gérer un litige ou protéger la plateforme.",
       "L'équipe Compétence habilitée accède aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
       "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; la boutique ou le marchand attendu doit correspondre à Compétence.CI ou à la Boutique Compétence. Une boutique tierce ou un marchand inattendu ne doit pas être utilisé pour valider un paiement Compétence. PayDunya peut apparaître uniquement dans des dossiers historiques.",
       "La saisie du numéro de paiement, de l'opérateur mobile money ou des informations financières s'effectue dans l'environnement sécurisé du prestataire lorsque celui-ci l'exige. Compétence conserve seulement les références, statuts, montants et informations nécessaires au rapprochement.",
@@ -181,6 +201,7 @@ export default function PolitiqueConfidentialitePage() {
       title="Politique de confidentialité"
       description="Ce document explique comment Compétence protège les données des clients, apprenants, professeurs et de l'équipe Compétence dans le cadre des réservations, paiements, notifications, remboursements, avis et opérations internes."
       version={version}
+      highlights={highlights}
       sections={sections}
     />
   );

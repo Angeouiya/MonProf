@@ -14,12 +14,14 @@ export function LegalDocumentPage({
   description,
   version,
   sections,
+  highlights = [],
 }: {
   eyebrow: string;
   title: string;
   description: string;
   version: string;
   sections: LegalSection[];
+  highlights?: string[];
 }) {
   return (
     <PublicLayout>
@@ -41,6 +43,16 @@ export function LegalDocumentPage({
               <span>Plateforme Compétence - Côte d'Ivoire</span>
             </div>
           </div>
+
+          {!!highlights.length && (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Résumé légal Compétence">
+              {highlights.map((highlight) => (
+                <div key={highlight} className="rounded-lg border border-[#DDE6F7] bg-[#F8FAFC] p-4 text-sm font-semibold leading-6 text-[#111827]">
+                  {highlight}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-5 grid gap-4">
             {sections.map((section, index) => (
