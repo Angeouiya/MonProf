@@ -39,6 +39,8 @@ check(
 check(
   "Both password fields can be revealed before validation",
   (form.match(/<PasswordInput/g) ?? []).length === 2
+    && /<PasswordRuleList rules=\{passwordRules\}/.test(form)
+    && /data-client-registration-password-rules/.test(form)
     && /passwordValid/.test(form)
     && /passwordsMatch/.test(form)
     && /Les deux mots de passe sont identiques/.test(form),

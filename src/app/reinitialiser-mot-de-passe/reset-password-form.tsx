@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CLIENT_PASSWORD_MIN_LENGTH, isClientPasswordCompliant } from "@/lib/password-policy";
@@ -18,6 +19,11 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
   const [formError, setFormError] = useState("");
   const strongPassword = isClientPasswordCompliant(password);
   const valid = strongPassword && password === confirmPassword && Boolean(token);
+  const passwordRules = [
+    { label: `${CLIENT_PASSWORD_MIN_LENGTH} caractères minimum`, ok: password.length >= CLIENT_PASSWORD_MIN_LENGTH },
+    { label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(password) && /\d/.test(password) },
+    { label: "Confirmation identique", ok: Boolean(confirmPassword) && password === confirmPassword },
+  ];
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -84,20 +90,7 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
           required
         />
       </div>
-      <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-        <p className={password.length >= CLIENT_PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
-          <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          {CLIENT_PASSWORD_MIN_LENGTH} caractères minimum
-        </p>
-        <p className={/[A-Za-z]/.test(password) && /\d/.test(password) ? "text-[#111B4D]" : ""}>
-          <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          Au moins une lettre et un chiffre
-        </p>
-        <p className={confirmPassword && password === confirmPassword ? "text-[#111B4D]" : ""}>
-          <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          Confirmation identique
-        </p>
-      </div>
+      <PasswordRuleList rules={passwordRules} data-reset-password-rules />
       {formError && (
         <div className="rounded-lg border border-red-200 bg-white p-3 text-sm font-semibold leading-6 text-red-700" role="alert">
           {formError}

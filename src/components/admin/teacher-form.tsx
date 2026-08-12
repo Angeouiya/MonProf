@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarClock, Camera, CheckCircle2, Clock, ExternalLink, FileText, KeyRound, Loader2, Save, ScanText, Search, ShieldCheck, Trash2, UploadCloud, X } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
 import { createEmptyAvailability, normalizeAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { validateTeacherPhotoUrl } from "@/lib/teacher-photo";
@@ -446,6 +447,10 @@ export function TeacherForm({
   const teacherPasswordResetRequested = mode === "edit"
     && typeof portalPasswordValue === "string"
     && Boolean(portalPasswordValue.trim());
+  const portalPasswordText = typeof portalPasswordValue === "string" ? portalPasswordValue : "";
+  const portalPasswordRules = teacherPortalPasswordRules(portalPasswordText);
+  const showPortalPasswordRules = Boolean(portalAccessEnabled)
+    && (mode === "create" || !initial?.hasPortalPassword || portalPasswordText.trim().length > 0);
   const previewName = professionalName || fullName || initial?.professionalName || initial?.fullName || "Professeur";
   const activeWithoutPhoto = isPublicVisibleTeacherStatus(status) && !photoUrl;
   const communeSelectionGroups = useMemo(() => [{
@@ -1066,6 +1071,13 @@ export function TeacherForm({
                   placeholder={mode === "create" ? "Ex : Professeur2026" : "Laisser vide pour conserver l'ancien"}
                   disabled={!portalAccessEnabled}
                 />
+                {showPortalPasswordRules && (
+                  <PasswordRuleList
+                    rules={portalPasswordRules}
+                    columnsClassName="sm:grid-cols-3"
+                    data-admin-teacher-portal-password-rules
+                  />
+                )}
                 <p className="text-xs font-medium leading-5 text-muted-foreground">
                   Transmettez-le directement au professeur. Il reste valable {TEMPORARY_PASSWORD_TTL_HOURS} heures et pour une seule première connexion, puis le professeur doit créer son mot de passe personnel.
                 </p>
@@ -2057,6 +2069,14 @@ function AvailabilityMetric({ label, value, detail }: { label: string; value: st
       <p className="mt-1 text-xs font-medium text-muted-foreground">{detail}</p>
     </div>
   );
+}
+
+function teacherPortalPasswordRules(value: string) {
+  return [
+    { label: `${PASSWORD_MIN_LENGTH} caractères minimum`, ok: value.length >= PASSWORD_MIN_LENGTH },
+    { label: "Une lettre", ok: /[A-Za-z]/.test(value) },
+    { label: "Un chiffre", ok: /\d/.test(value) },
+  ];
 }
 
 function BadgeToggle({ control, name, label }: { control: any; name: any; label: string }) {

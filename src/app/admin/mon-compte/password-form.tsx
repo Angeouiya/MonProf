@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -85,9 +86,7 @@ export function AdminPasswordForm() {
             setFormError(null);
           }} required /></Field>
         </div>
-        <div className="grid gap-2 text-xs font-semibold text-[#64748B] sm:grid-cols-2">
-          {rules.map((rule) => <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>{rule.label}</p>)}
-        </div>
+        <PasswordRuleList rules={rules} columnsClassName="sm:grid-cols-2" data-admin-password-rules />
         {formError && <p role="alert" data-password-settings-inline-error className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700">{formError}</p>}
         <div className="flex justify-end"><Button type="submit" disabled={!canSubmit} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]">{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />} {loading ? "Modification..." : "Enregistrer"}</Button></div>
         </form>

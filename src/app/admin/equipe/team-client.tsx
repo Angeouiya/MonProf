@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import {
   ADMIN_PERMISSIONS,
   ADMIN_PERMISSION_LABELS,
@@ -49,6 +50,8 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "SUPPORT" });
   const [createStatus, setCreateStatus] = useState<TeamInlineStatus>(null);
+  const createPasswordRules = temporaryPasswordRules(form.password);
+  const createPasswordReady = createPasswordRules.every((rule) => rule.ok);
 
   const createAdmin = async () => {
     if (!isPasswordCompliant(form.password)) {
@@ -102,8 +105,11 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
               <SelectContent>{Object.entries(ADMIN_ROLE_LABELS).filter(([role]) => role !== "OWNER").map(([role, label]) => <SelectItem key={role} value={role}>{label}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
+          <div className="sm:col-span-2 lg:col-span-5">
+            <PasswordRuleList rules={createPasswordRules} columnsClassName="sm:grid-cols-2 lg:grid-cols-3" data-admin-team-create-password-rules />
+          </div>
           <div className="sm:col-span-2 lg:col-span-5 flex justify-end">
-            <Button onClick={createAdmin} disabled={creating} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+            <Button onClick={createAdmin} disabled={creating || !createPasswordReady} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]">
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />} Créer l'accès
             </Button>
           </div>
@@ -133,6 +139,8 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<TeamInlineStatus>(null);
+  const resetPasswordRules = temporaryPasswordRules(password);
+  const resetPasswordReady = resetPasswordRules.every((rule) => rule.ok);
 
   const chooseRole = (value: string) => {
     const nextRole = value as AdminTeamRoleValue;
@@ -263,8 +271,11 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
         </div>
 
         <div className="grid gap-3 border-t border-[#E2E8F0] pt-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
-          <Field label="Nouveau mot de passe temporaire"><PasswordInput autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="10 caractères minimum" /></Field>
-          <Button variant="outline" onClick={resetPassword} disabled={loading || !password}><KeyRound className="mr-2 h-4 w-4" /> Réinitialiser</Button>
+          <div className="grid gap-2">
+            <Field label="Nouveau mot de passe temporaire"><PasswordInput autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="10 caractères minimum" /></Field>
+            <PasswordRuleList rules={resetPasswordRules} columnsClassName="sm:grid-cols-3" data-admin-team-reset-password-rules />
+          </div>
+          <Button variant="outline" onClick={resetPassword} disabled={loading || !resetPasswordReady}><KeyRound className="mr-2 h-4 w-4" /> Réinitialiser</Button>
           <Button onClick={save} disabled={loading || owner} className="bg-[#111B4D] text-white hover:bg-[#1E2A78]"><Save className="mr-2 h-4 w-4" /> Enregistrer les accès</Button>
         </div>
         {statusMessage && <TeamInlineStatusBanner status={statusMessage} />}
@@ -293,4 +304,12 @@ function TeamInlineStatusBanner({ status }: { status: NonNullable<TeamInlineStat
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-2"><Label>{label}</Label>{children}</div>;
+}
+
+function temporaryPasswordRules(value: string) {
+  return [
+    { label: `${PASSWORD_MIN_LENGTH} caractères minimum`, ok: value.length >= PASSWORD_MIN_LENGTH },
+    { label: "Une lettre", ok: /[A-Za-z]/.test(value) },
+    { label: "Un chiffre", ok: /\d/.test(value) },
+  ];
 }

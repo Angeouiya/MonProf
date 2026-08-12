@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { CheckCircle2, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CLIENT_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
@@ -108,14 +109,7 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
         autoComplete="new-password"
       />
 
-      <div data-client-password-rules className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2.5 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-4">
-        {rules.map((rule) => (
-          <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""} data-client-password-rule={rule.ok ? "ok" : "pending"}>
-            <CheckCircle2 className={rule.ok ? "mr-1 inline h-3.5 w-3.5 text-[#111B4D]" : "mr-1 inline h-3.5 w-3.5 text-[#94A3B8]"} />
-            {rule.label}
-          </p>
-        ))}
-      </div>
+      <PasswordRuleList rules={rules} columnsClassName="min-[760px]:grid-cols-4" data-client-password-rules />
 
       <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}

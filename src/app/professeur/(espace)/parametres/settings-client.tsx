@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -111,14 +112,7 @@ export function TeacherPasswordSettingsForm() {
         autoComplete="new-password"
       />
 
-      <div className="grid gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B] min-[760px]:grid-cols-4">
-        {rules.map((rule) => (
-          <p key={rule.label} className={rule.ok ? "text-[#111B4D]" : ""}>
-            <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-            {rule.label}
-          </p>
-        ))}
-      </div>
+      <PasswordRuleList rules={rules} columnsClassName="min-[760px]:grid-cols-4" data-teacher-password-rules />
 
       <Button type="submit" disabled={!canSubmit} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-fit">
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}

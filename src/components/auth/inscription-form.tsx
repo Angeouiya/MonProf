@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordRuleList } from "@/components/shared/password-rule-list";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,10 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
   const normalizedPhone = form.phone.trim();
   const passwordValid = isClientPasswordCompliant(form.password);
   const passwordsMatch = Boolean(form.confirmPassword) && form.password === form.confirmPassword;
+  const passwordRules = [
+    { label: `${CLIENT_PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre`, ok: passwordValid },
+    { label: "Les deux mots de passe sont identiques", ok: passwordsMatch },
+  ];
 
   function update(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -266,10 +271,7 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
                       />
                     </Field>
 
-                    <div className="grid gap-2 text-xs font-medium">
-                      <PasswordCheck ok={passwordValid} label={`${CLIENT_PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre`} />
-                      <PasswordCheck ok={passwordsMatch} label="Les deux mots de passe sont identiques" />
-                    </div>
+                    <PasswordRuleList rules={passwordRules} data-client-registration-password-rules />
 
                     <label htmlFor="legalAccepted" className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border border-[#E3E8F2] p-3 text-sm leading-5 text-[#475569]">
                       <Checkbox
@@ -310,7 +312,6 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
     </PublicLayout>
   );
 }
-
 function Field({
   label,
   hint,
@@ -330,16 +331,5 @@ function Field({
       </Label>
       <div className="relative">{children}</div>
     </div>
-  );
-}
-
-function PasswordCheck({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <p className={`flex items-center gap-2 ${ok ? "text-emerald-700" : "text-[#64748B]"}`}>
-      <span className={`flex h-5 w-5 items-center justify-center rounded-full ${ok ? "bg-emerald-100" : "bg-[#EEF2F7]"}`}>
-        {ok ? <Check className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-[#94A3B8]" />}
-      </span>
-      {label}
-    </p>
   );
 }
