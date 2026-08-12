@@ -63,7 +63,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <PublicLayout>
+    <PublicLayout activeJourney="ivoirien">
       <section
         className="flex items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0"
         style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 7.25rem)" }}

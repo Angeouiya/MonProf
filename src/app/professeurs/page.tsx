@@ -237,7 +237,7 @@ export default async function TeachersPage({
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
 
   return (
-    <PublicLayout>
+    <PublicLayout activeJourney={journey}>
       {/* HEADER */}
       <section className="relative overflow-hidden border-b border-[#E6EAF3] bg-white">
         <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-7">

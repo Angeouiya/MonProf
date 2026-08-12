@@ -173,8 +173,10 @@ export default async function TeacherDetailPage({
     eligibleJourneys.map((value) => [value, `/professeurs/${teacher.id}?journey=${value}`]),
   );
 
+  const tariffsHref = `/tarifs?journey=${activeJourney}`;
+
   return (
-    <PublicLayout backFallbackHref={teachersHref}>
+    <PublicLayout backFallbackHref={teachersHref} activeJourney={activeJourney}>
       <section className="relative overflow-hidden border-b border-[#E3E8F2] bg-white">
         <div className="relative mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
           <nav
@@ -563,7 +565,7 @@ export default async function TeacherDetailPage({
                 <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
                   Choisissez 1, 4, 8 ou 12 séances de 2h. Le moteur calcule le cours officiel, le déplacement éventuel et chaque frais séparément avant le paiement.
                 </p>
-                <Link href="/tarifs" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
+                <Link href={tariffsHref} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[#111B4D] underline-offset-4 hover:underline">
                   Voir la grille officielle
                 </Link>
               </Card>

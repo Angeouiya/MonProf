@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/shared/back-button";
 import { BrandLogo } from "@/components/shared/brand-logo";
+import type { TeacherJourney } from "@/lib/teacher-journeys";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -52,15 +53,24 @@ const sessionDestinations: Record<PublicSessionRole, { href: string; label: stri
 export function PublicLayout({
   children,
   backFallbackHref = "/",
+  activeJourney,
 }: {
   children: React.ReactNode;
   backFallbackHref?: string;
+  activeJourney?: TeacherJourney | "";
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const hideGlobalBookingAction = isPublicTeacherDetail(pathname);
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
   const hideFooter = shouldHidePublicFooter(pathname);
+  const professorListHref = buildPublicJourneyHref("/professeurs", activeJourney);
+  const tariffsHref = buildPublicJourneyHref("/tarifs", activeJourney);
+  const journeyAwareNavLinks = navLinks.map((link) => ({
+    ...link,
+    href: buildPublicJourneyHref(link.href, activeJourney),
+    baseHref: link.href,
+  }));
   const { data: sessionRole = null } = useQuery({
     queryKey: ["public-session-role"],
     queryFn: readPublicSessionRole,
@@ -90,14 +100,14 @@ export function PublicLayout({
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((link) => (
+            {journeyAwareNavLinks.map((link) => (
               <Link
-                key={link.href}
+                key={link.baseHref}
                 href={link.href}
                 prefetch={true}
                 className={cn(
                   "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors",
-                  pathname?.startsWith(link.href)
+                  pathname?.startsWith(link.baseHref)
                     ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
                     : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
                 )}
@@ -122,7 +132,7 @@ export function PublicLayout({
             )}
             {!isAuthenticated && !hideGlobalBookingAction && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href="/professeurs" prefetch={true}>
+                <Link href={professorListHref} prefetch={true}>
                   Réserver
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -157,7 +167,7 @@ export function PublicLayout({
           >
           <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             <Link
-              href="/professeurs"
+              href={professorListHref}
               prefetch={true}
               onClick={() => setMobileOpen(false)}
               className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
@@ -168,15 +178,15 @@ export function PublicLayout({
               </span>
               <ArrowRight className="h-4 w-4" />
             </Link>
-            {navLinks.filter((link) => link.href !== "/professeurs").map((link) => (
+            {journeyAwareNavLinks.filter((link) => link.baseHref !== "/professeurs").map((link) => (
               <Link
-                key={link.href}
+                key={link.baseHref}
                 href={link.href}
                 prefetch={true}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
-                  pathname?.startsWith(link.href)
+                  pathname?.startsWith(link.baseHref)
                     ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
                     : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
                 )}
@@ -209,7 +219,7 @@ export function PublicLayout({
                     <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
                   </Button>
                   <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href="/professeurs" prefetch={true} onClick={() => setMobileOpen(false)}>
+                    <Link href={professorListHref} prefetch={true} onClick={() => setMobileOpen(false)}>
                       Réserver une séance
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
@@ -246,7 +256,7 @@ export function PublicLayout({
             <p className="mt-2 text-xs font-medium text-[#64748B]">© {new Date().getFullYear()} Compétence · Cocody, Abidjan</p>
           </div>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#64748B]">
-            <Link href="/tarifs" className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
+            <Link href={tariffsHref} className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
             <Link href="/contact" className="min-h-10 content-center hover:text-[#111B4D]">Aide</Link>
             <Link href="/conditions-utilisation" className="min-h-10 content-center hover:text-[#111B4D]">Conditions</Link>
             <Link href="/politique-confidentialite" className="min-h-10 content-center hover:text-[#111B4D]">Confidentialité</Link>
@@ -254,7 +264,9 @@ export function PublicLayout({
           </div>
       </footer>
       )}
-      {!hideMobileNav && !mobileOpen && <PublicMobileNav pathname={pathname} sessionRole={sessionRole} />}
+      {!hideMobileNav && !mobileOpen && (
+        <PublicMobileNav pathname={pathname} sessionRole={sessionRole} activeJourney={activeJourney} />
+      )}
     </div>
   );
 }
@@ -282,9 +294,11 @@ function shouldHidePublicFooter(pathname: string | null) {
 function PublicMobileNav({
   pathname,
   sessionRole,
+  activeJourney,
 }: {
   pathname: string | null;
   sessionRole: PublicSessionRole | null;
+  activeJourney?: TeacherJourney | "";
 }) {
   const accountLink = sessionRole
     ? {
@@ -293,7 +307,14 @@ function PublicMobileNav({
         icon: LayoutDashboard,
       }
     : { href: "/connexion", label: "Compte", icon: GraduationCap };
-  const items = [...mobileNavBase, accountLink];
+  const items = [
+    ...mobileNavBase.map((item) => ({
+      ...item,
+      href: buildPublicJourneyHref(item.href, activeJourney),
+      baseHref: item.href,
+    })),
+    { ...accountLink, baseHref: accountLink.href },
+  ];
 
   return (
     <nav
@@ -305,8 +326,8 @@ function PublicMobileNav({
       <div className="grid grid-cols-4 gap-1">
         {items.map((item) => {
           const active = "exact" in item && item.exact
-            ? pathname === item.href
-            : pathname?.startsWith(item.href);
+            ? pathname === item.baseHref
+            : pathname?.startsWith(item.baseHref);
           const Icon = item.icon;
 
           return (
@@ -330,6 +351,17 @@ function PublicMobileNav({
       </div>
     </nav>
   );
+}
+
+function buildPublicJourneyHref(href: string, activeJourney?: TeacherJourney | "") {
+  if (!activeJourney) return href;
+  if (!href.startsWith("/professeurs") && !href.startsWith("/tarifs")) return href;
+
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("journey", activeJourney);
+  const serialized = params.toString();
+  return serialized ? `${path}?${serialized}` : path;
 }
 
 function isPublicTeacherDetail(pathname: string | null) {

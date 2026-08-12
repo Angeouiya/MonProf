@@ -7,8 +7,10 @@ const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layo
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
+const publicHomePath = "src/app/page.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
 const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
+const publicTariffsPath = "src/app/tarifs/page.tsx";
 const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
@@ -62,8 +64,10 @@ const desktopNavSource = layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\]
 const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const publicLayout = read(publicLayoutPath);
+const publicHome = read(publicHomePath);
 const publicTeachersPage = read(publicTeachersPath);
 const publicTeacherDetail = read(publicTeacherDetailPath);
+const publicTariffs = read(publicTariffsPath);
 const mobileFilterSheet = read(mobileFilterSheetPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
@@ -546,8 +550,28 @@ record(
   "Public mobile menu avoids duplicated professor search entries",
   !/useSession/.test(publicLayout)
     && !/SessionProvider/.test(providers)
-    && /navLinks\.filter\(\(link\)\s*=>\s*link\.href\s*!==\s*"\/professeurs"\)\.map/.test(publicLayout)
-    && /!\s*hideMobileNav\s*&&\s*!\s*mobileOpen\s*&&\s*<PublicMobileNav/.test(publicLayout),
+    && /journeyAwareNavLinks\.filter\(\(link\)\s*=>\s*link\.baseHref\s*!==\s*"\/professeurs"\)\.map/.test(publicLayout)
+    && /!\s*hideMobileNav\s*&&\s*!\s*mobileOpen\s*&&\s*\(\s*<PublicMobileNav/.test(publicLayout),
+);
+
+record(
+  "Public navigation preserves the selected mini-application between Profs, Tarifs and Réserver",
+  /activeJourney\?: TeacherJourney \| ""/.test(publicLayout)
+    && /const professorListHref = buildPublicJourneyHref\("\/professeurs", activeJourney\)/.test(publicLayout)
+    && /const tariffsHref = buildPublicJourneyHref\("\/tarifs", activeJourney\)/.test(publicLayout)
+    && /function buildPublicJourneyHref\(href: string, activeJourney\?: TeacherJourney \| ""\)/.test(publicLayout)
+    && /params\.set\("journey", activeJourney\)/.test(publicLayout)
+    && /<PublicMobileNav pathname=\{pathname\} sessionRole=\{sessionRole\} activeJourney=\{activeJourney\} \/>/.test(publicLayout)
+    && /href=\{professorListHref\}/.test(publicLayout)
+    && /href=\{tariffsHref\}/.test(publicLayout)
+    && /pathname\?\.startsWith\(link\.baseHref\)/.test(publicLayout)
+    && /pathname\?\.startsWith\(item\.baseHref\)/.test(publicLayout)
+    && /<PublicLayout activeJourney="ivoirien">/.test(publicHome)
+    && /<PublicLayout activeJourney=\{journey\}>/.test(publicTeachersPage)
+    && /<PublicLayout activeJourney=\{activeJourney\}>/.test(publicTariffs)
+    && /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(publicTeacherDetail)
+    && /const tariffsHref = `\/tarifs\?journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
+    && /<Link href=\{tariffsHref\}[\s\S]*?>\s*Voir la grille officielle/.test(publicTeacherDetail),
 );
 
 record(
@@ -634,7 +658,7 @@ record(
   "Public teacher detail has one journey-aware back action",
   /backFallbackHref = "\/"/.test(publicLayout)
     && /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout)
-    && /<PublicLayout backFallbackHref=\{teachersHref\}>/.test(publicTeacherDetail)
+    && /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(publicTeacherDetail)
     && !/Retour à la liste/.test(publicTeacherDetail),
 );
 

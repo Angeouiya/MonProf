@@ -83,7 +83,7 @@ export default async function TarifsPage({
   const teacherHref = `/professeurs?journey=${activeJourney}`;
 
   return (
-    <PublicLayout>
+    <PublicLayout activeJourney={activeJourney}>
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-5xl px-4 py-10 text-center sm:px-6 lg:px-8 lg:py-16">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D]">
