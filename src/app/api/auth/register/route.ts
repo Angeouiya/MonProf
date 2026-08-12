@@ -4,15 +4,15 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { normalizeAccountEmail, normalizeAccountPhone } from "@/lib/account-phone";
-import { isPasswordCompliant, PASSWORD_MIN_LENGTH, passwordHashRounds } from "@/lib/password-policy";
+import { CLIENT_PASSWORD_MIN_LENGTH, isClientPasswordCompliant, passwordHashRounds } from "@/lib/password-policy";
 
 const schema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
   email: z.string().trim().email("Email invalide").optional().or(z.literal("")),
   phone: z.string().trim().max(32, "Téléphone invalide").optional().or(z.literal("")),
   password: z.string().refine(
-    isPasswordCompliant,
-    `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`,
+    isClientPasswordCompliant,
+    `Le mot de passe doit contenir au moins ${CLIENT_PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`,
   ),
   commune: z.string().optional(),
   quartier: z.string().optional(),

@@ -51,7 +51,7 @@ const sections: LegalSection[] = [
     ],
     bullets: [
       "Données d'identification : nom, prénom ou nom affiché, email, téléphone, commune, quartier, adresse de cours si nécessaire.",
-      "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité.",
+      "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité. Pour les clients, la règle minimale est de 6 caractères avec une lettre et un chiffre ; Compétence ne conserve jamais le mot de passe en clair.",
       "Données de consentement : version des CGU et de la politique acceptée, date, heure, adresse IP disponible, navigateur, preuve de case cochée ou action équivalente.",
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
       "Données de parcours : mini-application choisie, système ivoirien, système français ou professionnel, matières et niveaux compatibles, systèmes enseignés cochés par l'administration pour chaque professeur.",
@@ -121,6 +121,7 @@ const sections: LegalSection[] = [
     title: "Réinitialisation des mots de passe",
     body: [
       "Pour les clients, la réinitialisation autonome repose sur un lien temporaire envoyé à l'adresse email déclarée lors de la création du compte. Le lien est limité dans le temps et ne révèle jamais l'ancien mot de passe.",
+      "Le nouveau mot de passe client doit respecter la règle minimale de 6 caractères avec une lettre et un chiffre. Seul le résultat chiffré, la date de changement et les preuves de sécurité nécessaires sont conservés.",
       "Lorsqu'un client n'a pas d'adresse email exploitable, il peut contacter le service client avec son numéro de téléphone. Compétence peut alors vérifier l'identité du demandeur avant de proposer une assistance manuelle ou un mot de passe temporaire.",
       "Pour les professeurs, l'oubli de mot de passe passe par le service client. Le mot de passe temporaire éventuellement créé doit être changé à la connexion et peut être désactivé en cas de doute.",
       "Les demandes ordinaires de mot de passe oublié ne sont pas destinées à exposer inutilement les données du client dans le dashboard administrateur. Une trace technique peut être conservée pour la sécurité, mais l'alerte humaine est réservée aux cas d'assistance, blocage ou risque.",
@@ -138,7 +139,7 @@ const sections: LegalSection[] = [
   {
     title: "Sécurité",
     body: [
-      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, liens de réinitialisation temporaires pour les clients, mots de passe temporaires professeurs à renouveler, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
+      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, règle client minimale de 6 caractères avec une lettre et un chiffre, liens de réinitialisation temporaires pour les clients, mots de passe temporaires professeurs à renouveler, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
       "Les coordonnées entre client et professeur restent masquées tant qu'une réservation n'est pas confirmée par un paiement serveur exact. Cette séparation protège les utilisateurs et réduit le contournement, les faux paiements et les prises de contact non autorisées.",
       "L'utilisateur reste responsable de la confidentialité de ses identifiants. Tout accès suspect, perte de téléphone, erreur de numéro de paiement ou tentative de fraude doit être signalé rapidement au service client.",
       "Aucun système n'étant invulnérable, Compétence peut suspendre temporairement une action, un paiement, une réservation ou un accès lorsqu'un risque de sécurité ou de fraude est détecté.",

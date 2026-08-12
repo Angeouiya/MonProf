@@ -6,7 +6,7 @@ import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { CLIENT_PASSWORD_MIN_LENGTH, isClientPasswordCompliant } from "@/lib/password-policy";
 
 export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: string }) {
   const router = useRouter();
@@ -16,7 +16,7 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
-  const strongPassword = isPasswordCompliant(password);
+  const strongPassword = isClientPasswordCompliant(password);
   const valid = strongPassword && password === confirmPassword && Boolean(token);
 
   async function submit(event: React.FormEvent) {
@@ -85,9 +85,9 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
         />
       </div>
       <div className="rounded-lg border border-[#E3E8F2] bg-white p-3 text-xs font-semibold leading-5 text-[#64748B]">
-        <p className={password.length >= PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
+        <p className={password.length >= CLIENT_PASSWORD_MIN_LENGTH ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-          {PASSWORD_MIN_LENGTH} caractères minimum
+          {CLIENT_PASSWORD_MIN_LENGTH} caractères minimum
         </p>
         <p className={/[A-Za-z]/.test(password) && /\d/.test(password) ? "text-[#111B4D]" : ""}>
           <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />

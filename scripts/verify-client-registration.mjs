@@ -4,6 +4,11 @@ const formPath = "src/components/auth/inscription-form.tsx";
 const pagePath = "src/app/inscription/page.tsx";
 const form = fs.readFileSync(formPath, "utf8");
 const page = fs.readFileSync(pagePath, "utf8");
+const passwordPolicy = fs.readFileSync("src/lib/password-policy.ts", "utf8");
+const registerRoute = fs.readFileSync("src/app/api/auth/register/route.ts", "utf8");
+const resetRoute = fs.readFileSync("src/app/api/auth/reset-password/route.ts", "utf8");
+const resetForm = fs.readFileSync("src/app/reinitialiser-mot-de-passe/reset-password-form.tsx", "utf8");
+const clientSettings = fs.readFileSync("src/app/client/parametres/settings-client.tsx", "utf8");
 
 const checks = [];
 
@@ -37,6 +42,23 @@ check(
     && /passwordValid/.test(form)
     && /passwordsMatch/.test(form)
     && /Les deux mots de passe sont identiques/.test(form),
+);
+check(
+  "Client passwords start at 6 characters while admin and professor policies stay stricter",
+  /CLIENT_PASSWORD_MIN_LENGTH\s*=\s*6/.test(passwordPolicy)
+    && /PASSWORD_MIN_LENGTH\s*=\s*10/.test(passwordPolicy)
+    && /ADMIN_PASSWORD_MIN_LENGTH\s*=\s*10/.test(passwordPolicy)
+    && /TEACHER_PASSWORD_MIN_LENGTH\s*=\s*PASSWORD_MIN_LENGTH/.test(passwordPolicy)
+    && /input\.role === "CLIENT" \? CLIENT_PASSWORD_MIN_LENGTH : PASSWORD_MIN_LENGTH/.test(passwordPolicy)
+    && /isClientPasswordCompliant/.test(passwordPolicy)
+    && /CLIENT_PASSWORD_MIN_LENGTH/.test(form)
+    && /isClientPasswordCompliant/.test(form)
+    && /CLIENT_PASSWORD_MIN_LENGTH/.test(registerRoute)
+    && /isClientPasswordCompliant/.test(registerRoute)
+    && /validatePasswordForAccount\(password, resetToken\.user\)/.test(resetRoute)
+    && /CLIENT_PASSWORD_MIN_LENGTH/.test(resetForm)
+    && /isClientPasswordCompliant/.test(resetForm)
+    && /CLIENT_PASSWORD_MIN_LENGTH/.test(clientSettings),
 );
 check(
   "Legal acceptance stays mandatory",

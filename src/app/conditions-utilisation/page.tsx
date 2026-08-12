@@ -11,7 +11,7 @@ const version = "12 août 2026";
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence, jamais Buildify, Bluidify ou une boutique inconnue.",
-  "Chaque mini-application verrouille son périmètre : un professeur non coché dans un système ne peut pas y être réservé, payé ou proposé en remplacement.",
+  "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
   "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
   "Un brouillon non payé peut être supprimé par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
@@ -51,8 +51,11 @@ const sections: LegalSection[] = [
     body: [
       "Un professeur peut être autorisé dans un seul système, dans deux systèmes ou dans les trois systèmes, uniquement si l'administration Compétence a coché les systèmes concernés sur sa fiche.",
       "L'autorisation d'un système suppose également un catalogue cohérent : matières, compétences, classes, niveaux ou profils compatibles avec ce système. Une autorisation sans catalogue suffisant peut être refusée ou désactivée.",
+      "La fiche professeur administrée par Compétence est la source de vérité opérationnelle. Les cases système contrôlent l'affichage public, les filtres, la page profil, la réservation, le lancement du paiement, les remplacements automatiques et les remplacements forcés par l'administration.",
       "Lorsqu'un professeur n'enseigne pas dans un système, l'action est verrouillée : le profil peut être masqué du parcours, la réservation est impossible, le paiement ne doit pas être lancé et le remplacement ne peut pas sélectionner ce professeur pour ce système.",
+      "Un système décoché ne supprime pas automatiquement les réservations historiques, les preuves, les paiements, les litiges ou les obligations déjà nés. Il bloque les nouvelles actions incompatibles et peut exiger la fin, l'annulation ou le remplacement des missions actives avant retrait complet de l'autorisation.",
       "Le client doit choisir un professeur compatible avec le système sélectionné. Lorsqu'il change de mini-application, la plateforme doit présenter uniquement les professeurs, cours, niveaux, formations, prix et filtres rattachés à ce système.",
+      "Si une incohérence apparaît entre le système choisi, le niveau, la matière, le CV, le catalogue ou les cases d'autorisation, Compétence peut refuser la réservation, demander un autre profil, corriger la fiche ou suspendre l'affichage jusqu'à clarification.",
     ],
   },
   {
@@ -60,6 +63,7 @@ const sections: LegalSection[] = [
     body: [
       "Le client doit fournir des informations exactes, à jour et suffisantes pour permettre la réservation, le paiement, l'organisation du cours, la communication avec le professeur et le suivi service client.",
       "Le client est responsable de son compte, de son mot de passe, de ses informations de contact, de l'exactitude de l'adresse et des décisions prises depuis son espace.",
+      "Le mot de passe client doit contenir au moins 6 caractères, avec au minimum une lettre et un chiffre. Compétence peut exiger un changement si le mot de passe est temporaire, compromis, réutilisé de manière risquée ou jugé insuffisant pour protéger le compte.",
       "La modification autonome du mot de passe client se fait par lien temporaire envoyé à l'adresse email enregistrée sur le compte. Si aucun email fiable n'est associé au compte, le client doit contacter le service client, qui peut vérifier son identité par téléphone avant de proposer une assistance manuelle.",
       "Une simple demande de mot de passe oublié par un client n'a pas vocation à créer une alerte administrative visible. L'intervention du service client devient nécessaire uniquement en cas d'assistance manuelle, d'absence d'email, de suspicion de fraude ou de blocage de sécurité.",
       "Lorsqu'un apprenant est mineur, le compte doit être utilisé par un parent, tuteur ou représentant autorisé. Le client garantit qu'il est habilité à réserver le cours pour l'apprenant concerné.",
@@ -71,6 +75,7 @@ const sections: LegalSection[] = [
       "L'accès professeur est un espace léger, interne et contrôlé. Il permet au professeur de consulter ses missions, confirmer sa disponibilité, signaler une indisponibilité selon la règle des 24 heures, proposer un créneau, suivre ses paiements, envoyer un message au service client et gérer certaines informations utiles.",
       "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il peut être retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
       "Le professeur s'engage à fournir une photo réelle, des informations exactes, des disponibilités sincères, un numéro de paiement fiable et à respecter les consignes du service client.",
+      "Le professeur accepte que Compétence qualifie, limite ou étende ses systèmes enseignés selon les preuves fournies, son CV, ses matières, ses niveaux, ses résultats, son expérience et les besoins de qualité de la plateforme. La présence dans un système n'est jamais automatique ni définitive.",
       "Une couverture de catalogue est décorative et ne remplace jamais la photo réelle. Toute couverture personnalisée, photo, CV ou information trompeuse, illicite ou portant atteinte aux droits d'un tiers peut être retirée immédiatement.",
       "En cas d'oubli de mot de passe professeur, le professeur doit contacter le service client. Compétence peut créer un mot de passe temporaire après vérification, puis imposer son changement à la connexion afin de protéger l'espace professeur et les données de mission.",
     ],
@@ -81,6 +86,7 @@ const sections: LegalSection[] = [
       "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko ou, pour un ancien dossier, par le prestataire historique concerné. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
       "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence à partir d'une réponse API, webhook ou transaction vérifiable.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
+      "Avant d'ouvrir Jèko, Compétence peut recalculer la compatibilité du professeur avec le système choisi. Si le professeur n'est pas autorisé dans ce système ou si son catalogue ne couvre pas la demande, le paiement doit être bloqué afin d'éviter une commande impossible à exécuter.",
       "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
       "Le retour du navigateur, la fermeture de la fenêtre Jèko, une capture d'écran ou une déclaration orale ne créent aucune réservation active. Le moteur attend une confirmation serveur portant sur la référence, le marchand, le moyen de paiement et le montant exact.",
       "Si le marchand affiché, le montant, le moyen, le statut serveur ou la référence ne correspondent pas au dossier attendu, Compétence peut bloquer l'activation, demander un contrôle manuel, rejeter le webhook ou demander au client de relancer un paiement propre.",
@@ -100,6 +106,7 @@ const sections: LegalSection[] = [
       "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Les montants visibles pendant la navigation sont indicatifs tant que le dossier n'est pas recalculé par le serveur avec le parcours, le niveau, le format, le nombre de séances, les participants, le déplacement et les frais applicables.",
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Aucun professeur ne peut remplacer la grille officielle par son propre prix public. Une exception commerciale ou un accord particulier doit être validé par Compétence et apparaître dans le dossier avant paiement.",
+      "L'affichage “dès” sur un profil professeur dépend du système actif et des niveaux réellement couverts. Un profil professionnel doit afficher la base professionnelle lorsqu'il est consulté dans la mini-application Pro, tandis qu'un profil scolaire affiche la base du système ivoirien ou français concerné.",
       "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
       "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur peut refuser une combinaison incompatible et demander au client de choisir un autre profil.",
     ],
@@ -248,7 +255,7 @@ const sections: LegalSection[] = [
     body: [
       "L'utilisation de Compétence implique le traitement de données personnelles nécessaires au service. Les règles détaillées sont présentées dans la politique de confidentialité.",
       "Le client accepte cette politique lors de son inscription. Le professeur en prend connaissance lors de l'enrôlement par le service client et peut la consulter depuis son espace.",
-      "La réinitialisation du mot de passe client repose sur l'adresse email enregistrée par le client. Pour les professeurs, l'assistance mot de passe passe par le service client, qui peut émettre un mot de passe temporaire à changer à la connexion.",
+      "La réinitialisation du mot de passe client repose sur l'adresse email enregistrée par le client et respecte la règle client de 6 caractères minimum avec une lettre et un chiffre. Pour les professeurs, l'assistance mot de passe passe par le service client, qui peut émettre un mot de passe temporaire à changer à la connexion.",
     ],
   },
   {

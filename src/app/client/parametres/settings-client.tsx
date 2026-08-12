@@ -7,7 +7,7 @@ import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { CLIENT_PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?: boolean }) {
   const router = useRouter();
@@ -20,7 +20,7 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
 
   const rules = [
     { label: "Ancien mot de passe saisi", ok: oldPassword.trim().length > 0 },
-    { label: `${PASSWORD_MIN_LENGTH} caractères minimum`, ok: newPassword.length >= PASSWORD_MIN_LENGTH },
+    { label: `${CLIENT_PASSWORD_MIN_LENGTH} caractères minimum`, ok: newPassword.length >= CLIENT_PASSWORD_MIN_LENGTH },
     { label: "Une lettre et un chiffre", ok: /[A-Za-z]/.test(newPassword) && /\d/.test(newPassword) },
     { label: "Différent de l'ancien", ok: newPassword.length > 0 && newPassword !== oldPassword },
     { label: "Confirmation identique", ok: confirmPassword.length > 0 && newPassword === confirmPassword },
@@ -177,8 +177,8 @@ function getPasswordStrength(value: string) {
   if (!value) return { score: 0, label: "À définir" };
 
   let score = 0;
-  if (value.length >= PASSWORD_MIN_LENGTH) score += 1;
-  if (value.length >= PASSWORD_MIN_LENGTH + 2) score += 1;
+  if (value.length >= CLIENT_PASSWORD_MIN_LENGTH) score += 1;
+  if (value.length >= CLIENT_PASSWORD_MIN_LENGTH + 2) score += 1;
   if (/[A-Za-z]/.test(value) && /\d/.test(value)) score += 1;
   if (/[^A-Za-z0-9]/.test(value)) score += 1;
 

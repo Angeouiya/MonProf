@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
+import { CLIENT_PASSWORD_MIN_LENGTH, isClientPasswordCompliant } from "@/lib/password-policy";
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
@@ -33,7 +33,7 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
 
   const normalizedEmail = form.email.toLowerCase().trim();
   const normalizedPhone = form.phone.trim();
-  const passwordValid = isPasswordCompliant(form.password);
+  const passwordValid = isClientPasswordCompliant(form.password);
   const passwordsMatch = Boolean(form.confirmPassword) && form.password === form.confirmPassword;
 
   function update(field: keyof typeof form, value: string) {
@@ -77,7 +77,7 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
       return;
     }
     if (!passwordValid) {
-      setError(`Choisissez au moins ${PASSWORD_MIN_LENGTH} caractères avec une lettre et un chiffre.`);
+      setError(`Choisissez au moins ${CLIENT_PASSWORD_MIN_LENGTH} caractères avec une lettre et un chiffre.`);
       return;
     }
     if (!passwordsMatch) {
@@ -249,7 +249,7 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
                         required
                         value={form.password}
                         onChange={(event) => update("password", event.target.value)}
-                        placeholder={`${PASSWORD_MIN_LENGTH} caractères minimum`}
+                        placeholder={`${CLIENT_PASSWORD_MIN_LENGTH} caractères minimum`}
                         className={PASSWORD_FIELD_CLASS}
                       />
                     </Field>
@@ -267,7 +267,7 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
                     </Field>
 
                     <div className="grid gap-2 text-xs font-medium">
-                      <PasswordCheck ok={passwordValid} label={`${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre`} />
+                      <PasswordCheck ok={passwordValid} label={`${CLIENT_PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre`} />
                       <PasswordCheck ok={passwordsMatch} label="Les deux mots de passe sont identiques" />
                     </div>
 
