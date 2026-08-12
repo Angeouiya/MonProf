@@ -629,7 +629,7 @@ record(
 
 record(
   "Public root tabs suppress the redundant back strip",
-  /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/contact"\]\)/.test(publicLayout)
+  /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/partenariat", "\/contact"\]\)/.test(publicLayout)
     && /shouldShowPublicBack\(pathname\)/.test(publicLayout)
     && /!publicRootPaths\.has\(pathname\)/.test(publicLayout),
 );
