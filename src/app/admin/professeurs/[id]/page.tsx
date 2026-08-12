@@ -106,7 +106,17 @@ export default async function ProfesseurDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; action?: string; bookingId?: string; status?: string; messageId?: string; payoutRequestId?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    action?: string;
+    bookingId?: string;
+    status?: string;
+    messageId?: string;
+    payoutRequestId?: string;
+    created?: string;
+    updated?: string;
+    passwordEmail?: string;
+  }>;
 }) {
   const user = await requireAdmin("TEACHERS_VIEW");
   const { id } = await params;
@@ -116,6 +126,16 @@ export default async function ProfesseurDetailPage({
   const canReview = user.adminPermissions?.includes("REVIEWS_MANAGE") ?? false;
   const canViewAudit = user.adminPermissions?.includes("AUDIT_VIEW") ?? false;
   const requestedTab = sp.tab || "infos";
+  const teacherSaveNotice = sp.created === "1"
+    ? "Professeur créé. La fiche est prête à contrôler."
+    : sp.updated === "1"
+      ? "Fiche professeur mise à jour."
+      : "";
+  const teacherPasswordEmailNotice = sp.passwordEmail === "ok"
+    ? "Email Compétence de confirmation pris en charge."
+    : sp.passwordEmail === "pending"
+      ? "Mot de passe temporaire enregistré. L'email de confirmation reste en file de traitement."
+      : "";
   const defaultTab = (
     (requestedTab === "paiements" && !canViewFinance)
     || (["messages", "historique"].includes(requestedTab) && !canViewCommunications)
@@ -544,6 +564,20 @@ export default async function ProfesseurDetailPage({
           </Link>
         </Button>
       </PageHeader>
+      {teacherSaveNotice && (
+        <div
+          className="flex flex-col gap-2 rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-sm font-semibold text-[#111B4D] shadow-sm sm:flex-row sm:items-center"
+          data-admin-teacher-save-state
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{teacherSaveNotice}</span>
+          {teacherPasswordEmailNotice && (
+            <span className="text-xs font-semibold text-[#64748B] sm:ml-auto">
+              {teacherPasswordEmailNotice}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Header card */}
       <Card>

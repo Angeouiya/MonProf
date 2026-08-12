@@ -6,6 +6,7 @@ const teacherForm = read("src/components/admin/teacher-form.tsx");
 const cvRoute = read("src/app/api/admin/teachers/analyze-cv/route.ts");
 const teacherCreateRoute = read("src/app/api/admin/teachers/route.ts");
 const teacherUpdateRoute = read("src/app/api/admin/teachers/[id]/route.ts");
+const teacherDetailPage = read("src/app/admin/professeurs/[id]/page.tsx");
 const scheduling = read("src/lib/scheduling.ts");
 
 record(
@@ -29,6 +30,15 @@ record(
       "experienceYears",
       "learnersCoached",
     ].every((field) => teacherForm.includes(`\"${field}\"`)),
+);
+
+record(
+  "Admin teacher onboarding confirms routine actions inline",
+  /data-admin-teacher-photo-saved-state/.test(teacherForm)
+    && /data-admin-teacher-cv-saved-state/.test(teacherForm)
+    && /data-admin-teacher-save-state/.test(teacherDetailPage)
+    && /URLSearchParams/.test(teacherForm)
+    && !/toast\.success|toast\.warning/.test(teacherForm),
 );
 
 record(

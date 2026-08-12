@@ -314,9 +314,11 @@ export function TeacherForm({
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoSavedMessage, setPhotoSavedMessage] = useState("");
   const [analyzingCv, setAnalyzingCv] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
   const [cvAnalysis, setCvAnalysis] = useState<CvAnalysisResult | null>(null);
+  const [cvSavedMessage, setCvSavedMessage] = useState("");
   const [passwordIdentityVerified, setPasswordIdentityVerified] = useState(false);
   const [passwordVerificationMethod, setPasswordVerificationMethod] = useState("");
   const [passwordVerificationReference, setPasswordVerificationReference] = useState("");
@@ -522,6 +524,7 @@ export function TeacherForm({
 
   const uploadPhoto = async (file?: File) => {
     setPhotoError(null);
+    setPhotoSavedMessage("");
     if (!file) return;
     if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
       setPhotoError("Format non autorisé. Utilisez JPG, JPEG, PNG ou WEBP.");
@@ -559,7 +562,7 @@ export function TeacherForm({
         throw new Error("Le serveur n'a pas retourné la photo enregistrée. Réessayez.");
       }
       setValue("photoUrl", data.photoUrl, { shouldDirty: true, shouldValidate: true });
-      toast.success("Photo du professeur ajoutée");
+      setPhotoSavedMessage("Photo enregistrée. Le profil peut rester visible après validation.");
     } catch (e: any) {
       setPhotoError(e.message || "Erreur pendant l'upload de la photo.");
     } finally {
@@ -604,7 +607,9 @@ export function TeacherForm({
       applied += 1;
     }
     if (showToast) {
-      toast.success(applied ? `${applied} champ(s) professionnel(s) appliqué(s)` : "Aucun champ exploitable à appliquer");
+      setCvSavedMessage(applied
+        ? `${applied} champ(s) professionnel(s) appliqué(s). Contrôlez puis enregistrez.`
+        : "Aucun champ exploitable supplémentaire à appliquer.");
     }
   };
 
@@ -640,6 +645,7 @@ export function TeacherForm({
 
   const analyzeCv = async (file?: File) => {
     setCvError(null);
+    setCvSavedMessage("");
     if (!file) return;
     const lowerName = file.name.toLowerCase();
     const allowed = [".pdf", ".docx", ".txt", ".md"].some((extension) => lowerName.endsWith(extension));
@@ -685,7 +691,7 @@ export function TeacherForm({
       setCvAnalysis(data);
       applyCvAnalysis({ ...data.fields, cvUrl: data.cvUrl });
       const catalogMatches = applyCvCatalogSuggestions(data);
-      toast.success(`CV analysé : profil prérempli${catalogMatches.subjects || catalogMatches.levels ? `, ${catalogMatches.subjects} matière(s) et ${catalogMatches.levels} niveau(x) suggérés` : ""}`);
+      setCvSavedMessage(`CV analysé : profil prérempli${catalogMatches.subjects || catalogMatches.levels ? `, ${catalogMatches.subjects} matière(s) et ${catalogMatches.levels} niveau(x) suggérés` : ""}.`);
     } catch (e: any) {
       setCvError(e.message || "Erreur pendant l'analyse du CV.");
     } finally {
@@ -778,13 +784,15 @@ export function TeacherForm({
       if (!res.ok) {
         throw new Error(data.error || `L'enregistrement a échoué (code ${res.status}).`);
       }
-      toast.success(mode === "create" ? "Professeur créé" : "Professeur mis à jour");
-      if (data.passwordEmail?.ok) toast.success("Le professeur a reçu un email Compétence de confirmation.");
-      else if (data.passwordEmail) toast.warning(data.passwordEmail.message || "L'email de confirmation est en attente.");
+      const saveParams = new URLSearchParams();
+      saveParams.set(mode === "create" ? "created" : "updated", "1");
+      if (data.passwordEmail) {
+        saveParams.set("passwordEmail", data.passwordEmail.ok ? "ok" : "pending");
+      }
       if (mode === "create" && data.id) {
-        window.location.assign(`/admin/professeurs/${data.id}`);
+        window.location.assign(`/admin/professeurs/${data.id}?${saveParams.toString()}`);
       } else {
-        window.location.assign(`/admin/professeurs/${teacherId}?updated=1`);
+        window.location.assign(`/admin/professeurs/${teacherId}?${saveParams.toString()}`);
       }
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de l'enregistrement");
@@ -924,6 +932,14 @@ export function TeacherForm({
                     <Input {...register("photoUrl")} placeholder="Photo enregistrée automatiquement après import" className="max-w-xl" />
                     {errors.photoUrl?.message && <p className="text-xs font-medium text-destructive">{errors.photoUrl.message}</p>}
                     {photoError && <p className="text-xs font-medium text-destructive">{photoError}</p>}
+                    {photoSavedMessage && (
+                      <p
+                        className="rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]"
+                        data-admin-teacher-photo-saved-state
+                      >
+                        {photoSavedMessage}
+                      </p>
+                    )}
                     {activeWithoutPhoto && !errors.photoUrl?.message && (
                       <p className="text-xs font-medium text-amber-700">
                         Un professeur actif n'apparait jamais publiquement sans vraie photo. Ajoutez une photo ou changez son statut.
@@ -1222,6 +1238,14 @@ export function TeacherForm({
                 {cvError && (
                   <p className="mt-3 rounded-lg border border-red-100 bg-white px-3 py-2 text-sm font-semibold text-red-700">
                     {cvError}
+                  </p>
+                )}
+                {cvSavedMessage && (
+                  <p
+                    className="mt-3 rounded-lg border border-[#DDE6F7] bg-white px-3 py-2 text-sm font-semibold text-[#111B4D]"
+                    data-admin-teacher-cv-saved-state
+                  >
+                    {cvSavedMessage}
                   </p>
                 )}
                 {cvAnalysis && (
