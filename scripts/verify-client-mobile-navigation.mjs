@@ -328,6 +328,14 @@ record(
 );
 
 record(
+  "Client profile saves with inline state instead of a routine success toast",
+  /data-client-profile-saved-state/.test(clientProfilePage)
+    && /role="status"\s+aria-live="polite"/.test(clientProfilePage)
+    && /Vos prochaines réservations utiliseront ces informations/.test(clientProfilePage)
+    && !/toast\.success\("Profil mis à jour"\)/.test(clientProfilePage),
+);
+
+record(
   "Client mobile pages keep app-like compact copy",
   /data-client-page-header-description/.test(clientPrimitives)
     && /data-client-root-tab-header/.test(clientPrimitives)

@@ -78,6 +78,7 @@ export function ProfileClient({
   const [commune, setCommune] = useState(initialProfile.commune ?? "");
   const [quartier, setQuartier] = useState(initialProfile.quartier ?? "");
   const [savingInfo, setSavingInfo] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
   const communeGroups = useMemo(() => [{
     label: "Villes et communes",
     options: communeOptions.map((item) => ({
@@ -101,7 +102,12 @@ export function ProfileClient({
       });
   }, [initialCommuneOptions.length]);
 
+  function markProfileEdited() {
+    if (saveMessage) setSaveMessage("");
+  }
+
   async function persistInfo() {
+    setSaveMessage("");
     if (!name.trim()) {
       toast.error("Le nom est requis");
       return false;
@@ -123,7 +129,6 @@ export function ProfileClient({
         toast.error(data.error || "Erreur");
         return false;
       }
-      toast.success("Profil mis à jour");
       if (data.user) {
         setProfile(data.user);
         setName(data.user.name ?? "");
@@ -131,6 +136,7 @@ export function ProfileClient({
         setCommune(data.user.commune ?? "");
         setQuartier(data.user.quartier ?? "");
       }
+      setSaveMessage("Profil mis à jour. Vos prochaines réservations utiliseront ces informations.");
       return true;
     } catch {
       toast.error("Erreur réseau");
@@ -151,6 +157,7 @@ export function ProfileClient({
     setPhone(profile.phone ?? "");
     setCommune(profile.commune ?? "");
     setQuartier(profile.quartier ?? "");
+    setSaveMessage("");
   }
 
   const completedFields = [name, phone, commune, quartier].filter((value) => value.trim().length > 0).length;
@@ -193,6 +200,22 @@ export function ProfileClient({
           { icon: ShieldCheck, label: "Sécurité", value: "Active" },
         ]}
       />
+
+      {saveMessage && (
+        <ClientSurface
+          compact
+          className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-950 sm:p-4"
+          data-client-profile-saved-state
+        >
+          <div className="flex items-start gap-3" role="status" aria-live="polite">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Profil mis à jour</p>
+              <p className="mt-0.5 text-xs font-medium leading-5 text-emerald-900">{saveMessage}</p>
+            </div>
+          </div>
+        </ClientSurface>
+      )}
 
       {CLIENT_COMMAND_CENTERS_ENABLED && (
         <ProfileCommandCenter
@@ -312,7 +335,16 @@ export function ProfileClient({
               <div className="grid gap-3 min-[640px]:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="name">Nom complet *</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]" data-client-profile-name />
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => {
+                    markProfileEdited();
+                    setName(e.target.value);
+                  }}
+                  className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
+                  data-client-profile-name
+                />
               </div>
                 <div className="sm:col-span-2 lg:col-span-1 2xl:col-span-2">
                 <Label htmlFor="email">Email</Label>
@@ -324,7 +356,10 @@ export function ProfileClient({
                 <Input
                   id="phone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    markProfileEdited();
+                    setPhone(e.target.value);
+                  }}
                   className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="+225 07 00 00 00 00"
                   inputMode="tel"
@@ -337,7 +372,10 @@ export function ProfileClient({
                   id="commune"
                   name="commune"
                   value={commune}
-                  onValueChange={setCommune}
+                  onValueChange={(value) => {
+                    markProfileEdited();
+                    setCommune(value);
+                  }}
                   placeholder="Sélectionner une commune"
                   searchPlaceholder="Tapez une ville ou commune..."
                   emptyLabel="Aucune commune trouvée"
@@ -353,7 +391,10 @@ export function ProfileClient({
                 <Input
                   id="quartier"
                   value={quartier}
-                  onChange={(e) => setQuartier(e.target.value)}
+                  onChange={(e) => {
+                    markProfileEdited();
+                    setQuartier(e.target.value);
+                  }}
                   className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
                   placeholder="Ex: Riviera Palmeraie"
                   data-client-profile-quartier
