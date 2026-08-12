@@ -51,19 +51,19 @@ export function MobileFilterSheet({
         aria-label="Ouvrir les filtres"
         data-mobile-filter-trigger
         onClick={() => setOpen(true)}
-        className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-[#DDE6F7] bg-white px-3 py-2 text-sm shadow-[0_10px_28px_rgba(17,24,39,0.055)] transition active:scale-[0.99]"
+        className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 rounded-[1.35rem] border border-[#DDE6F7] bg-white px-3 py-2 text-sm shadow-[0_10px_28px_rgba(17,24,39,0.055)] transition active:scale-[0.99]"
       >
         <span className="min-w-0 text-left">
           <span className="block truncate text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-            Professeurs
+            Résultats
           </span>
-          <span className="block truncate text-base font-semibold tracking-[-0.01em] text-[#111827]">
+          <span className="block truncate text-sm font-black tracking-[-0.01em] text-[#111827]">
             {resultLabel}
           </span>
         </span>
-        <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-[#111B4D] px-3 font-semibold text-white">
+        <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-2xl bg-[#111B4D] px-3 font-semibold text-white">
           <Filter className="h-4 w-4" />
-          Affiner{activeLabel}
+          Filtres{activeLabel}
         </span>
       </button>
 

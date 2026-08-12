@@ -233,6 +233,9 @@ export default async function TeachersPage({
   const hasPublishedTeachers = totalVisibleTeachers > 0;
   const showTeacherFilters = hasPublishedTeachers;
   const mobileResultLabel = `${total} professeur${total > 1 ? "s" : ""}`;
+  const activeFilterLabel = activeFiltersCount > 0
+    ? `${activeFiltersCount} filtre${activeFiltersCount > 1 ? "s" : ""}`
+    : "Sans filtre";
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
 
@@ -247,7 +250,7 @@ export default async function TeachersPage({
             <span className="inline-flex min-h-10 items-center text-[#111827]">Professeurs</span>
           </nav>
           <nav
-            className="mb-5 max-w-3xl"
+            className="mx-auto mb-3 max-w-3xl sm:mb-5 sm:mx-0"
             aria-label="Choisir une mini-application"
             data-public-journey-tabs
           >
@@ -257,7 +260,55 @@ export default async function TeachersPage({
               size="regular"
             />
           </nav>
-          <div className="grid gap-3 lg:grid-cols-[1fr_360px] lg:items-end lg:gap-4">
+
+          <div
+            className="rounded-[1.6rem] border border-[#DDE6F7] bg-[#F8FAFF] p-3 shadow-[0_16px_42px_rgba(17,24,39,0.07)] sm:hidden"
+            data-public-teacher-app-header
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#64748B]">
+                  Système
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-black leading-none tracking-[-0.045em] text-[#111827]">
+                  {journeyConfig.shortLabel}
+                </h1>
+              </div>
+              <div className="shrink-0 text-right" data-public-teacher-count>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#64748B]">
+                  Profs
+                </p>
+                <p className="mt-1 text-base font-black leading-none text-[#111B4D]">
+                  {total}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+              <p
+                className="min-w-0 truncate rounded-2xl border border-[#E3E8F2] bg-white px-3 py-2 text-sm font-black text-[#111B4D]"
+                data-public-teacher-system-pill
+              >
+                {journeyConfig.priceLabel}
+              </p>
+              <p className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-[#64748B]">
+                {activeFilterLabel}
+              </p>
+            </div>
+            <TeacherSearchForm
+              q={q}
+              journey={journey}
+              subject={subject}
+              level={level}
+              commune={commune}
+              format={format}
+              sort={sort}
+              journeyConfig={journeyConfig}
+              resetSearchHref={buildPaginationUrl(1, false)}
+              variant="mobile"
+            />
+          </div>
+
+          <div className="hidden gap-3 sm:grid lg:grid-cols-[1fr_360px] lg:items-end lg:gap-4">
             <div className="min-w-0">
               <div className="mb-1.5 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[#111B4D] sm:mb-2 sm:text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" />
@@ -290,43 +341,18 @@ export default async function TeachersPage({
             </div>
           </div>
 
-          {/* Barre de recherche texte */}
-          <form method="GET" action="/professeurs" className="mt-3 flex gap-2 rounded-lg border border-[#E3E8F2] bg-white p-1.5 sm:mt-6 sm:p-2">
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              aria-label={journeyConfig.searchAriaLabel}
-              placeholder={journeyConfig.searchPlaceholder}
-              className="min-h-12 min-w-0 flex-1 rounded-lg border border-[#DDE6F7] bg-white px-3 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7] sm:px-4"
-              style={{ minHeight: 48 }}
-            />
-            {/* Préserve les autres filtres */}
-            {journey && <input type="hidden" name="journey" value={journey} />}
-            {subject && <input type="hidden" name="subject" value={subject} />}
-            {level && <input type="hidden" name="level" value={level} />}
-            {commune && <input type="hidden" name="commune" value={commune} />}
-            {format && <input type="hidden" name="format" value={format} />}
-            {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
-            <button
-              type="submit"
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto sm:px-5"
-              aria-label="Rechercher"
-            >
-              <Search className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Rechercher</span>
-            </button>
-            {q && (
-              <Link
-                href={buildPaginationUrl(1, false)}
-                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#D6DEED] bg-white text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D]"
-                title="Réinitialiser la recherche"
-                aria-label="Effacer la recherche"
-              >
-                <X className="h-4 w-4" />
-              </Link>
-            )}
-          </form>
+          <TeacherSearchForm
+            q={q}
+            journey={journey}
+            subject={subject}
+            level={level}
+            commune={commune}
+            format={format}
+            sort={sort}
+            journeyConfig={journeyConfig}
+            resetSearchHref={buildPaginationUrl(1, false)}
+            variant="desktop"
+          />
         </div>
       </section>
 
@@ -505,6 +531,79 @@ export default async function TeachersPage({
         </div>
       </section>
     </PublicLayout>
+  );
+}
+
+function TeacherSearchForm({
+  q,
+  journey,
+  subject,
+  level,
+  commune,
+  format,
+  sort,
+  journeyConfig,
+  resetSearchHref,
+  variant,
+}: {
+  q: string;
+  journey: BookingJourney | "";
+  subject: string;
+  level: string;
+  commune: string;
+  format: string;
+  sort: string;
+  journeyConfig: (typeof TEACHER_JOURNEY_CONFIG)[BookingJourney];
+  resetSearchHref: string;
+  variant: "mobile" | "desktop";
+}) {
+  const mobile = variant === "mobile";
+
+  return (
+    <form
+      method="GET"
+      action="/professeurs"
+      className={
+        mobile
+          ? "mt-3 flex gap-2 rounded-2xl border border-[#DDE6F7] bg-white p-1.5"
+          : "mt-3 hidden gap-2 rounded-lg border border-[#E3E8F2] bg-white p-2 sm:mt-6 sm:flex"
+      }
+      data-public-teacher-quick-search={mobile ? "true" : undefined}
+    >
+      <input
+        type="search"
+        name="q"
+        defaultValue={q}
+        aria-label={journeyConfig.searchAriaLabel}
+        placeholder={journeyConfig.searchPlaceholder}
+        className="min-h-12 min-w-0 flex-1 rounded-xl border border-[#DDE6F7] bg-white px-3 py-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7] sm:rounded-lg sm:px-4"
+        style={{ minHeight: 48 }}
+      />
+      {journey && <input type="hidden" name="journey" value={journey} />}
+      {subject && <input type="hidden" name="subject" value={subject} />}
+      {level && <input type="hidden" name="level" value={level} />}
+      {commune && <input type="hidden" name="commune" value={commune} />}
+      {format && <input type="hidden" name="format" value={format} />}
+      {sort !== "recommended" && <input type="hidden" name="sort" value={sort} />}
+      <button
+        type="submit"
+        className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-sm font-semibold text-white transition hover:bg-[#182260] sm:w-auto sm:rounded-lg sm:px-5"
+        aria-label="Rechercher"
+      >
+        <Search className="h-5 w-5 sm:mr-2 sm:h-4 sm:w-4" />
+        <span className="hidden sm:inline">Rechercher</span>
+      </button>
+      {q && (
+        <Link
+          href={resetSearchHref}
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#D6DEED] bg-white text-sm text-[#64748B] transition hover:border-[#111B4D] hover:text-[#111B4D] sm:rounded-lg"
+          title="Réinitialiser la recherche"
+          aria-label="Effacer la recherche"
+        >
+          <X className="h-4 w-4" />
+        </Link>
+      )}
+    </form>
   );
 }
 

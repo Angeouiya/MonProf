@@ -635,10 +635,18 @@ record(
   "Public teacher search uses one app-like mobile filter sheet before profiles",
   /data-public-teacher-search-controls/.test(mobileFilterSheet)
     && /<MobileFilterSheet resultLabel=\{mobileResultLabel\} activeFiltersCount=\{activeFiltersCount\}>/.test(publicTeachersPage)
+    && /data-public-teacher-app-header/.test(publicTeachersPage)
+    && /data-public-teacher-system-pill/.test(publicTeachersPage)
+    && /data-public-teacher-count/.test(publicTeachersPage)
+    && /data-public-teacher-quick-search/.test(publicTeachersPage)
+    && /const activeFilterLabel = activeFiltersCount > 0/.test(publicTeachersPage)
+    && /variant: "mobile" \| "desktop"/.test(publicTeachersPage)
     && /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage)
     && /placeholder=\{journeyConfig\.searchPlaceholder\}/.test(publicTeachersPage)
     && /aria-label="Rechercher"/.test(publicTeachersPage)
     && /data-mobile-filter-trigger/.test(mobileFilterSheet)
+    && /Résultats/.test(mobileFilterSheet)
+    && /Filtres\{activeLabel\}/.test(mobileFilterSheet)
     && /data-mobile-filter-backdrop/.test(mobileFilterSheet)
     && /data-mobile-filter-panel/.test(mobileFilterSheet)
     && /document\.body\.style\.overflow = "hidden"/.test(mobileFilterSheet)
@@ -652,7 +660,8 @@ record(
   "Public teacher search clear action removes the text query",
   /function buildPaginationUrl\(p: number, includeQuery = true\)/.test(publicTeachersPage)
     && /if \(includeQuery && q\) params\.set\("q", q\)/.test(publicTeachersPage)
-    && /href=\{buildPaginationUrl\(1, false\)\}/.test(publicTeachersPage)
+    && /resetSearchHref=\{buildPaginationUrl\(1, false\)\}/.test(publicTeachersPage)
+    && /href=\{resetSearchHref\}/.test(publicTeachersPage)
     && /aria-label="Effacer la recherche"/.test(publicTeachersPage),
 );
 
