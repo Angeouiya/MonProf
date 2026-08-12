@@ -118,7 +118,9 @@ assert.match(
 const temporaryPasswordGate = read("../src/components/professor/temporary-password-gate.tsx");
 const bookingSessionRoute = read("../src/app/api/bookings/[id]/sessions/[sessionId]/route.ts");
 assert.match(teacherModel, /portalPasswordMustChange\s+Boolean\s+@default\(false\)/);
-assert.match(temporaryPasswordGate, /mot de passe transmis par le service client est temporaire/);
+assert.match(temporaryPasswordGate, /data-temporary-password-gate="professor"/);
+assert.match(temporaryPasswordGate, /remplacez le mot de passe reçu/);
+assert.match(temporaryPasswordGate, /<TeacherPasswordSettingsForm \/>/);
 assert.match(professorProfile, /portalPasswordMustChange: false/);
 assert.match(professorProfile, /portalTemporaryPasswordIssuedAt: null/);
 assert.match(
