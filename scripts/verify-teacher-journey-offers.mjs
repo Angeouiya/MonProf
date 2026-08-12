@@ -7,6 +7,7 @@ const journeyModel = read("src/lib/teacher-journeys.ts");
 const publicTeachers = read("src/app/professeurs/page.tsx");
 const publicTeacherDetail = read("src/app/professeurs/[id]/page.tsx");
 const publicTeacherApi = read("src/app/api/teachers/route.ts");
+const publicTeacherDetailApi = read("src/app/api/teachers/[id]/route.ts");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientDashboard = read("src/app/client/page.tsx");
 const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
@@ -59,7 +60,13 @@ check(
     && /aria-label="Choisir une mini-application"/.test(publicTeachers)
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherApi)
     && /teacherJourneyCatalogClauses\(subjects, levels\)/.test(publicTeacherApi)
-    && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetail),
+    && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetail)
+    && /parseTeacherJourney\(requestedJourney\)/.test(publicTeacherDetailApi)
+    && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetailApi)
+    && /teacherEligibleJourneys\(teacher\)/.test(publicTeacherDetailApi)
+    && /filterSubjectsForJourney/.test(publicTeacherDetailApi)
+    && /filterLevelsForJourney/.test(publicTeacherDetailApi)
+    && /n'enseigne pas dans ce système/.test(publicTeacherDetailApi),
 );
 check(
   "Public and client cards never leak a fallback subject from another mini-app",

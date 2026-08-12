@@ -9,9 +9,11 @@ const layout = read("src/components/layouts/professor-layout.tsx");
 const dashboard = read("src/app/professeur/(espace)/page.tsx");
 const missions = read("src/app/professeur/(espace)/missions/page.tsx");
 const payments = read("src/app/professeur/(espace)/paiements/page.tsx");
+const messages = read("src/app/professeur/(espace)/messages/page.tsx");
 const notifications = read("src/app/professeur/(espace)/notifications/page.tsx");
 const markNotificationsRead = read("src/components/professor/mark-teacher-notifications-read.tsx");
 const payoutRequestForm = read("src/components/professor/teacher-payout-request-form.tsx");
+const serviceClientMessageCompose = read("src/components/professor/teacher-admin-message-compose.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
 const rootTabPaths = [
@@ -51,7 +53,7 @@ record(
   "Professor summary screens reuse the compact two-column mobile grid",
   /export function ProfessorStatGrid/.test(ui)
     && /grid grid-cols-2 gap-2 min-\[680px\]:gap-3/.test(ui)
-    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 2,
+    && rootTabs.filter((source) => /<ProfessorStatGrid/.test(source)).length === 1,
 );
 
 record(
@@ -132,6 +134,21 @@ record(
     && /group-open:rotate-180/.test(notifications)
     && !/toast\.success/.test(markNotificationsRead)
     && /data-professor-notification-read-state/.test(markNotificationsRead),
+);
+
+record(
+  "Professor messages show one priority and fold compose plus history",
+  /data-professor-message-priority/.test(messages)
+    && /const priorityMessage =/.test(messages)
+    && /const historyMessages = priorityMessage/.test(messages)
+    && /data-professor-message-metrics/.test(messages)
+    && /data-professor-message-compose/.test(messages)
+    && /open=\{messages\.length === 0\}/.test(messages)
+    && /data-professor-message-history/.test(messages)
+    && !/<ProfessorStatGrid/.test(messages)
+    && /data-professor-message-compose-form/.test(serviceClientMessageCompose)
+    && /data-professor-message-sent-state/.test(serviceClientMessageCompose)
+    && !/toast\.success/.test(serviceClientMessageCompose),
 );
 
 record(

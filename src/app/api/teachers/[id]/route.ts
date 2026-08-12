@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { filterLevelsForJourney, filterSubjectsForJourney, subjectNameMatchesJourney } from "@/lib/catalog-journey";
+import {
+  parseTeacherJourney,
+  teacherEligibleJourneys,
+  teacherJourneyWhere,
+  type TeacherJourney,
+} from "@/lib/teacher-journeys";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { searchParams } = new URL(req.url);
+  const requestedJourney = searchParams.get("journey");
+  const journey = requestedJourney ? parseTeacherJourney(requestedJourney) : null;
+
+  if (requestedJourney && !journey) {
+    return NextResponse.json({ error: "Système d'enseignement invalide." }, { status: 400 });
+  }
+
   const teacher = await db.teacher.findFirst({
-    where: { id, status: "ACTIVE", AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
+    where: {
+      id,
+      status: "ACTIVE",
+      ...(journey ? teacherJourneyWhere(journey) : {}),
+      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+    },
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true } },
@@ -21,6 +41,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!teacher || teacher.status !== "ACTIVE") {
     return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
+  }
+
+  const eligibleJourneys = teacherEligibleJourneys(teacher);
+  const activeJourney: TeacherJourney | null = journey ?? eligibleJourneys[0] ?? null;
+  const journeySubjects = activeJourney
+    ? filterSubjectsForJourney(
+        teacher.subjects.map((s) => ({ name: s.subject.name, isPrimary: s.isPrimary })),
+        activeJourney,
+      )
+    : teacher.subjects.map((s) => ({ name: s.subject.name, isPrimary: s.isPrimary }));
+  const journeyLevels = activeJourney
+    ? filterLevelsForJourney(
+        teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order })),
+        activeJourney,
+      )
+    : teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order }));
+
+  if (journey && (journeySubjects.length === 0 || journeyLevels.length === 0)) {
+    return NextResponse.json({
+      error: "Ce professeur n'enseigne pas dans ce système. Choisissez un autre profil compatible.",
+    }, { status: 404 });
   }
 
   const displayRating = teacher.ratingCount > 0
@@ -64,18 +105,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     offersHome: teacher.offersHome,
     offersOnline: teacher.offersOnline,
     offersGroup: teacher.offersGroup,
+    offersIvorianSystem: teacher.offersIvorianSystem,
+    offersFrenchSystem: teacher.offersFrenchSystem,
+    offersProfessionalTraining: teacher.offersProfessionalTraining,
+    eligibleJourneys,
+    activeJourney,
     commune: teacher.commune,
     pricingTier: teacher.pricingTier,
     pricePerHour: teacher.pricePerHour,
     pricePerSession: teacher.pricePerSession,
     pricePack4: teacher.pricePack4,
     pricePack8: teacher.pricePack8,
-    primarySubject: teacher.subjects.find((s) => s.isPrimary)?.subject.name ?? teacher.subjects[0]?.subject.name,
-    subjects: teacher.subjects.map((s) => ({
-      name: s.subject.name,
+    primarySubject: activeJourney
+      ? teacher.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, activeJourney))?.subject.name
+        ?? journeySubjects[0]?.name
+      : teacher.subjects.find((s) => s.isPrimary)?.subject.name ?? teacher.subjects[0]?.subject.name,
+    subjects: journeySubjects.map((s) => ({
+      name: s.name,
       isPrimary: s.isPrimary,
     })),
-    levels: teacher.levels.map((l) => l.level.name),
+    levels: journeyLevels.map((l) => l.name),
     zones: teacher.zones.map((z) => (z.commune as any).name),
     availability: teacher.availability ? JSON.parse(teacher.availability) : null,
     reviews: teacher.reviews.map((r) => ({

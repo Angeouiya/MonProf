@@ -30,6 +30,7 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
   const [bookingId, setBookingId] = useState("");
   const [priority, setPriority] = useState("IMPORTANT");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -54,11 +55,11 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Message impossible à envoyer.");
 
-      toast.success("Message envoyé au service client.");
       setSubject("");
       setMessage("");
       setBookingId("");
       setPriority("IMPORTANT");
+      setSent(true);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erreur réseau.");
@@ -68,14 +69,25 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <form onSubmit={submit} className="grid gap-4" data-professor-message-compose-form>
+      {sent && (
+        <div
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800"
+          data-professor-message-sent-state
+        >
+          Message envoyé. Le service client le verra dans votre fiche.
+        </div>
+      )}
       <div className="grid gap-3 md:grid-cols-[1fr_220px]">
         <div className="space-y-1.5">
           <Label htmlFor="teacher-service-client-subject">Sujet</Label>
           <Input
             id="teacher-service-client-subject"
             value={subject}
-            onChange={(event) => setSubject(event.target.value)}
+            onChange={(event) => {
+              setSubject(event.target.value);
+              setSent(false);
+            }}
             maxLength={140}
             placeholder="Ex : précision sur une mission, paiement, indisponibilité..."
             className="min-h-12 rounded-lg border-[#D7DEE9] bg-white"
@@ -86,7 +98,10 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
           <select
             id="teacher-service-client-priority"
             value={priority}
-            onChange={(event) => setPriority(event.target.value)}
+            onChange={(event) => {
+              setPriority(event.target.value);
+              setSent(false);
+            }}
             className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
           >
             {priorities.map((item) => (
@@ -101,7 +116,10 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
         <select
           id="teacher-service-client-booking"
           value={bookingId}
-          onChange={(event) => setBookingId(event.target.value)}
+          onChange={(event) => {
+            setBookingId(event.target.value);
+            setSent(false);
+          }}
           className="min-h-12 w-full rounded-lg border border-[#D7DEE9] bg-white px-3 text-sm font-semibold text-[#111827] outline-none focus:border-[#111B4D]"
         >
           <option value="">Aucune mission spécifique</option>
@@ -119,7 +137,10 @@ export function TeacherServiceClientMessageCompose({ bookings }: { bookings: Boo
           id="teacher-service-client-message"
           rows={5}
           value={message}
-          onChange={(event) => setMessage(event.target.value)}
+          onChange={(event) => {
+            setMessage(event.target.value);
+            setSent(false);
+          }}
           maxLength={2500}
           placeholder="Expliquez clairement la situation. Le service client verra ce message dans votre fiche professeur."
           className="rounded-lg border-[#D7DEE9] bg-white"
