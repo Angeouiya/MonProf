@@ -10,6 +10,7 @@ const publicTeacherApi = read("src/app/api/teachers/route.ts");
 const publicTeacherDetailApi = read("src/app/api/teachers/[id]/route.ts");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientDashboard = read("src/app/client/page.tsx");
+const teacherCard = read("src/components/shared/teacher-card.tsx");
 const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
 const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
@@ -98,7 +99,10 @@ check(
   !/t\.subjects\[0\]\?\.subject\.name/.test(publicTeachers)
     && !/t\.subjects\[0\]\?\.subject\.name/.test(clientSearch)
     && /journeyConfig\.primarySubjectFallback/.test(publicTeachers)
-    && /journeyConfig\.primarySubjectFallback/.test(clientSearch),
+    && /journeyConfig\.primarySubjectFallback/.test(clientSearch)
+    && /journeyLabel=\{journeyConfig\.shortLabel\}/.test(publicTeachers)
+    && /journeyLabel=\{journeyConfig\.shortLabel\}/.test(clientSearch)
+    && /data-client-teacher-journey-chip/.test(teacherCard),
 );
 check(
   "Authenticated client search keeps the mini-app through booking",

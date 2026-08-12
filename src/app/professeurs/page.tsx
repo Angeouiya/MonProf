@@ -459,6 +459,7 @@ export default async function TeachersPage({
                         key={`${t.id}-${index}`}
                         teacher={t as any}
                         priceLabel={journeyConfig.priceLabel}
+                        journeyLabel={journeyConfig.shortLabel}
                         profileHref={journey ? `/professeurs/${t.id}?journey=${journey}` : `/professeurs/${t.id}`}
                         href={`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}${journey ? `&journey=${journey}` : ""}`)}`}
                       />

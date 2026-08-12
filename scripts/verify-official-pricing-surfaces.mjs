@@ -36,7 +36,9 @@ const checks = [
     "Public teacher list does not serialize a legacy profile price into cards",
     !/pricePerSession:\s*t\.pricePerSession/.test(publicTeachers)
       && publicTeachers.includes("priceLabel={journeyConfig.priceLabel}")
-      && clientTeacherSearch.includes("priceLabel={journeyConfig.priceLabel}"),
+      && clientTeacherSearch.includes("priceLabel={journeyConfig.priceLabel}")
+      && publicTeachers.includes("journeyLabel={journeyConfig.shortLabel}")
+      && clientTeacherSearch.includes("journeyLabel={journeyConfig.shortLabel}"),
   ],
   [
     "Professional pricing is visible early and remains high contrast",
@@ -45,6 +47,7 @@ const checks = [
       && publicTariffs.includes('aria-label="Choisir une grille tarifaire"')
       && teacherJourneys.includes('priceLabel: "40 000 F / séance de 2h"')
       && teacherCard.includes("data-client-teacher-price")
+      && teacherCard.includes("data-client-teacher-journey-chip")
       && teacherCard.includes("Prix officiel")
       && teacherCard.includes('text-[#111B4D]">{priceLabel}'),
   ],

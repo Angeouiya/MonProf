@@ -498,7 +498,13 @@ export default async function RechercherPage({
         ) : (
           <div className="grid min-w-0 gap-3 min-[720px]:grid-cols-2 xl:grid-cols-3">
             {items.map((t, index) => (
-              <TeacherCard key={`${t.id}-${index}`} teacher={t as any} href={`/client/reserver?teacherId=${t.id}&journey=${journey}`} priceLabel={journeyConfig.priceLabel} />
+              <TeacherCard
+                key={`${t.id}-${index}`}
+                teacher={t as any}
+                href={`/client/reserver?teacherId=${t.id}&journey=${journey}`}
+                priceLabel={journeyConfig.priceLabel}
+                journeyLabel={journeyConfig.shortLabel}
+              />
             ))}
           </div>
         )}

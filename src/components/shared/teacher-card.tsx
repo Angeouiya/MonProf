@@ -20,11 +20,13 @@ export function TeacherCard({
   href,
   profileHref = `/professeurs/${teacher.id}`,
   priceLabel = "Tarif officiel selon le parcours",
+  journeyLabel,
 }: {
   teacher: TeacherCardData;
   href?: string;
   profileHref?: string;
   priceLabel?: string;
+  journeyLabel?: string;
 }) {
   const directBookingHref = `/client/reserver?teacherId=${teacher.id}`;
   const bookingHref = href ?? `/connexion?from=${encodeURIComponent(directBookingHref)}`;
@@ -65,6 +67,14 @@ export function TeacherCard({
             sizes="(max-width: 679px) 100vw, (max-width: 1179px) 50vw, 33vw"
             className="object-contain"
           />
+          {journeyLabel && (
+            <span
+              className="absolute right-3 top-3 inline-flex min-h-8 items-center rounded-full border border-white/80 bg-white/95 px-3 text-[11px] font-black uppercase tracking-[0.12em] text-[#111B4D] shadow-[0_10px_28px_rgba(17,24,39,0.12)] backdrop-blur"
+              data-client-teacher-journey-chip
+            >
+              {journeyLabel}
+            </span>
+          )}
         </div>
 
         <div className="grid min-w-0 grid-cols-[80px_minmax(0,1fr)] items-start gap-3 px-4 pb-2">
@@ -107,7 +117,9 @@ export function TeacherCard({
 
       <div className="mx-4 mt-auto grid grid-cols-[minmax(0,1fr)_112px] items-stretch gap-2 border-t border-[#E3E8F2] pb-4 pt-3" data-client-teacher-card-action-row>
         <div className="min-w-0 rounded-2xl border border-[#E3E8F2] bg-[#F8FAFF] px-3 py-2.5" data-client-teacher-price>
-          <span className="block text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Prix officiel</span>
+          <span className="block text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+            Prix officiel{journeyLabel ? ` · ${journeyLabel}` : ""}
+          </span>
           <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
         </div>
         <Button asChild className="h-full min-h-12 w-full rounded-xl bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">

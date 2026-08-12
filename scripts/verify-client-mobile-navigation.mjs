@@ -795,8 +795,10 @@ record(
   "Public teacher cards stay focused on booking decisions",
   !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(teacherCard)
     && /priceLabel = "Tarif officiel selon le parcours"/.test(teacherCard)
+    && /journeyLabel\?: string/.test(teacherCard)
+    && /data-client-teacher-journey-chip/.test(teacherCard)
     && /data-client-teacher-price/.test(teacherCard)
-    && /Prix officiel/.test(teacherCard),
+    && /Prix officiel\{journeyLabel \? ` · \$\{journeyLabel\}` : ""\}/.test(teacherCard),
 );
 
 record(
