@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
@@ -16,13 +15,15 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
   const strongPassword = isPasswordCompliant(password);
   const valid = strongPassword && password === confirmPassword && Boolean(token);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    setFormError("");
     if (!valid) {
-      toast.error("Vérifiez le lien et les deux mots de passe.");
+      setFormError("Vérifiez le lien et les deux mots de passe.");
       return;
     }
     setLoading(true);
@@ -42,13 +43,11 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
         }
       }
       if (!res.ok) throw new Error(data.error || "Réinitialisation impossible.");
-      toast.success(data.email?.queued
-        ? "Mot de passe modifié. La confirmation email est prise en charge automatiquement."
-        : "Mot de passe modifié. Vous pouvez vous connecter.");
-      if (!data.email?.queued && data.email?.message) toast.warning(data.email.message);
-      router.push(data.redirectTo || loginHref);
+      const target = new URL(data.redirectTo || loginHref, window.location.origin);
+      target.searchParams.set("passwordChanged", "1");
+      router.push(`${target.pathname}${target.search}${target.hash}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Réinitialisation impossible.");
+      setFormError(error instanceof Error ? error.message : "Réinitialisation impossible.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +65,7 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
         <PasswordInput
           id="new-password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => { setPassword(event.target.value); setFormError(""); }}
           autoComplete="new-password"
           wrapperClassName="mt-1.5"
           className="h-11 rounded-lg border-[#DDE6F7]"
@@ -78,7 +77,7 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
         <PasswordInput
           id="confirm-password"
           value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
+          onChange={(event) => { setConfirmPassword(event.target.value); setFormError(""); }}
           autoComplete="new-password"
           wrapperClassName="mt-1.5"
           className="h-11 rounded-lg border-[#DDE6F7]"
@@ -99,6 +98,11 @@ export function ResetPasswordForm({ loginHref = "/connexion" }: { loginHref?: st
           Confirmation identique
         </p>
       </div>
+      {formError && (
+        <div className="rounded-lg border border-red-200 bg-white p-3 text-sm font-semibold leading-6 text-red-700" role="alert">
+          {formError}
+        </div>
+      )}
       <Button type="submit" disabled={!valid || loading} className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
         Modifier le mot de passe

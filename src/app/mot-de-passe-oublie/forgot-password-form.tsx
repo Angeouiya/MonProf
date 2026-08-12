@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Headphones, Loader2, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +13,12 @@ export function ForgotPasswordForm() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState("");
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
+    setFormError("");
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
@@ -27,9 +28,8 @@ export function ForgotPasswordForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Demande impossible.");
       setSent(true);
-      toast.success("Demande prise en compte.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Demande impossible.");
+      setFormError(error instanceof Error ? error.message : "Demande impossible.");
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export function ForgotPasswordForm() {
             type="button"
             variant={mode === "email" ? "default" : "ghost"}
             className={mode === "email" ? "min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]" : "min-h-11 text-[#111B4D]"}
-            onClick={() => { setMode("email"); setSent(false); }}
+            onClick={() => { setMode("email"); setSent(false); setFormError(""); }}
             role="tab"
             aria-selected={mode === "email"}
           >
@@ -53,7 +53,7 @@ export function ForgotPasswordForm() {
             type="button"
             variant={mode === "phone" ? "default" : "ghost"}
             className={mode === "phone" ? "min-h-11 bg-[#111B4D] text-white hover:bg-[#1E2A78]" : "min-h-11 text-[#111B4D]"}
-            onClick={() => { setMode("phone"); setSent(false); }}
+            onClick={() => { setMode("phone"); setSent(false); setFormError(""); }}
             role="tab"
             aria-selected={mode === "phone"}
           >
@@ -68,7 +68,7 @@ export function ForgotPasswordForm() {
               id="forgot-email"
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => { setEmail(event.target.value); setSent(false); setFormError(""); }}
               placeholder="client@email.com"
               autoComplete="email"
               className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
@@ -82,7 +82,7 @@ export function ForgotPasswordForm() {
               id="forgot-phone"
               type="tel"
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              onChange={(event) => { setPhone(event.target.value); setSent(false); setFormError(""); }}
               placeholder="+225 07 00 00 00 00"
               autoComplete="tel"
               className="mt-1.5 h-11 rounded-lg border-[#DDE6F7]"
@@ -95,10 +95,16 @@ export function ForgotPasswordForm() {
         )}
 
         {sent && (
-          <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm font-semibold leading-6 text-[#111B4D]">
+          <div className="rounded-lg border border-[#DDE6F7] bg-white p-3 text-sm font-semibold leading-6 text-[#111B4D]" data-forgot-password-inline-state>
             {mode === "email"
               ? "Si un compte client correspond à cette adresse, vous recevrez un lien personnel valable une heure. Pensez à vérifier les courriers indésirables."
               : "Si un compte client correspond à ce numéro, le service client recevra une demande d'assistance et vous indiquera la procédure après vérification."}
+          </div>
+        )}
+
+        {formError && (
+          <div className="rounded-lg border border-red-200 bg-white p-3 text-sm font-semibold leading-6 text-red-700" role="alert">
+            {formError}
           </div>
         )}
 

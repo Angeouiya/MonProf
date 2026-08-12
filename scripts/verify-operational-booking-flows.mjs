@@ -172,6 +172,15 @@ record(
 );
 
 record(
+  "Client booking opens Jèko with inline progress instead of non-critical success toasts",
+  /data-booking-payment-inline-state/.test(bookingForm)
+    && /setPaymentLaunchMessage\("Page Jèko prête\. Ouverture du paiement sécurisé\.\.\."\)/.test(bookingForm)
+    && /setPaymentLaunchMessage\("Paiement confirmé\. Ouverture de votre réservation\.\.\."\)/.test(bookingForm)
+    && !/toast\.success\("Redirection vers Jèko/.test(bookingForm)
+    && !/toast\.success\("Paiement Jèko déjà confirmé/.test(bookingForm),
+);
+
+record(
   "Teacher unavailable response proposes an automatic replacement to the client",
   /findBestReplacementCandidate/.test(missionRoute)
     && /status:\s*"CLIENT_NOTIFIED"/.test(missionRoute)

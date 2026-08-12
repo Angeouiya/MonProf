@@ -415,6 +415,7 @@ export function ReserverForm({
   const [clientCreationKey] = useState(createClientCreationKey);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("WAVE");
   const [priceChangeNotice, setPriceChangeNotice] = useState<PriceChangeNotice | null>(null);
+  const [paymentLaunchMessage, setPaymentLaunchMessage] = useState("");
   const displayName = teacher.professionalName || teacher.fullName;
   const teacherAvailability = parseAvailability(teacher.availability);
   const todayIso = useMemo(() => toDateInputValue(new Date()), []);
@@ -867,6 +868,7 @@ export function ReserverForm({
       return;
     }
     setSubmitting(true);
+    setPaymentLaunchMessage("");
     try {
       const res = await fetch("/api/bookings", {
         method: "POST",
@@ -942,10 +944,10 @@ export function ReserverForm({
       }
       setPriceChangeNotice(null);
       if (isAllowedJekoRedirectUrl(data.payment?.checkoutUrl)) {
-        toast.success("Redirection vers Jèko...");
+        setPaymentLaunchMessage("Page Jèko prête. Ouverture du paiement sécurisé...");
         window.location.assign(data.payment.checkoutUrl);
       } else if (data.payment?.status === "succeeded") {
-        toast.success("Paiement Jèko déjà confirmé.");
+        setPaymentLaunchMessage("Paiement confirmé. Ouverture de votre réservation...");
         router.push(`/client/reservations/${data.booking.id}?jeko=confirmed`);
       } else {
         toast.error(data.payment?.message || data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.");
@@ -2055,6 +2057,11 @@ export function ReserverForm({
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                       Le bouton final ouvre la page sécurisée Jèko, puis l'application officielle du moyen choisi pour autoriser le paiement. La réservation ne sera marquée payée qu'après confirmation signée et contrôle serveur.
                     </p>
+                    {paymentLaunchMessage && (
+                      <p className="mt-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]" data-booking-payment-inline-state>
+                        {paymentLaunchMessage}
+                      </p>
+                    )}
                   </div>
               </div>
             </div>

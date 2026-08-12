@@ -63,6 +63,8 @@ const adminPasswordSettings = read("src/app/admin/mon-compte/password-form.tsx")
 const clientLogin = read("src/app/connexion/page.tsx");
 const professorLogin = read("src/app/professeur/connexion/page.tsx");
 const adminLogin = read("src/app/(public-admin)/admin/connexion/page.tsx");
+const forgotPasswordForm = read("src/app/mot-de-passe-oublie/forgot-password-form.tsx");
+const resetPasswordForm = read("src/app/reinitialiser-mot-de-passe/reset-password-form.tsx");
 
 const checks = [
   [`All ${passwordSurfaces.length} required password surfaces use the same revealable control`, missingSharedControl.length === 0],
@@ -85,6 +87,14 @@ const checks = [
       && /data-password-changed-login-state/.test(professorLogin)
       && /data-password-changed-login-state/.test(adminLogin)
       && !/Connexion réussie|Connexion professeur réussie|Connexion administrateur réussie/.test(`${clientLogin}\n${professorLogin}\n${adminLogin}`),
+  ],
+  [
+    "Forgot and reset password flows keep routine feedback inline",
+    !/toast\.success|toast\.warning/.test(`${forgotPasswordForm}\n${resetPasswordForm}`)
+      && /data-forgot-password-inline-state/.test(forgotPasswordForm)
+      && /passwordChanged/.test(resetPasswordForm)
+      && /setFormError/.test(forgotPasswordForm)
+      && /setFormError/.test(resetPasswordForm),
   ],
 ];
 
