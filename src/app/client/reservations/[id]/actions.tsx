@@ -177,8 +177,9 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   async function onDeleteDraft() {
     const data = await callAction("delete_draft");
     if (!data) return;
-    toast.success("Brouillon supprimé.");
-    router.replace(data.redirect || "/client/reservations?tab=brouillons");
+    const redirectTarget = new URL(data.redirect || "/client/reservations?tab=brouillons", window.location.origin);
+    redirectTarget.searchParams.set("draftDeleted", "1");
+    router.replace(`${redirectTarget.pathname}${redirectTarget.search}`);
     router.refresh();
   }
 

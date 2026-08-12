@@ -34,13 +34,14 @@ const SECURED_PAYMENT_STATUSES: PaymentStatus[] = ["RECEIVED", "BLOCKED", "VALID
 export default async function ReservationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; draftDeleted?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user) return null;
   const sp = await searchParams;
   const tabId = sp.tab ?? "toutes";
   const tab = TABS.find((t) => t.id === tabId) ?? TABS[0];
+  const draftDeleted = sp.draftDeleted === "1";
 
   const bookingInclude = {
     teacher: {
@@ -182,6 +183,24 @@ export default async function ReservationsPage({
         description="Dates, professeurs, paiements et confirmations dans un suivi clair."
         showBack={false}
       />
+
+      {draftDeleted && (
+        <ClientSurface
+          compact
+          className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-950 sm:p-4"
+          data-client-draft-deleted-state
+        >
+          <div className="flex items-start gap-3" role="status" aria-live="polite">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Brouillon supprimé</p>
+              <p className="mt-0.5 text-xs font-medium leading-5 text-emerald-900">
+                Aucun cours n'a été réservé et aucun professeur n'a été notifié.
+              </p>
+            </div>
+          </div>
+        </ClientSurface>
+      )}
 
       <ClientMetricStrip
         className="max-md:hidden"

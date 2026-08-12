@@ -56,6 +56,7 @@ const sessionLedger = read("src/components/shared/booking-session-ledger.tsx");
 const jekoReconciliation = read("src/lib/jeko-reconciliation.ts");
 const paydunyaReconciliation = read("src/lib/paydunya-reconciliation.ts");
 const clientReservationDetail = read("src/app/client/reservations/[id]/page.tsx");
+const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const professorMissionDetail = read("src/app/professeur/(espace)/missions/[id]/page.tsx");
 const professorMissionList = read("src/app/professeur/(espace)/missions/page.tsx");
 
@@ -220,6 +221,10 @@ record(
     && !/Le lien PayDunya est encore actif/.test(bookingApi)
     && /Supprimer le brouillon/.test(bookingActions)
     && /Vous pouvez supprimer un brouillon à tout moment/.test(bookingActions)
+    && /draftDeleted",\s*"1"/.test(bookingActions)
+    && !/toast\.success\("Brouillon supprimé\."\)/.test(bookingActions)
+    && /data-client-draft-deleted-state/.test(clientReservationsPage)
+    && /Aucun cours n'a été réservé et aucun professeur n'a été notifié/.test(clientReservationsPage)
     && /clientDeletedDraft[\s\S]*?REFUND_PENDING/.test(jekoReconciliation)
     && /clientDeletedDraft[\s\S]*?REFUND_PENDING/.test(paydunyaReconciliation)
     && /!alreadyPaid && !clientDeletedDraft/.test(paydunyaReconciliation),
