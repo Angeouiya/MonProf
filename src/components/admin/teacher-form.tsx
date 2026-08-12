@@ -225,9 +225,9 @@ const FIELD_TAB: Partial<Record<keyof FormValues, TeacherFormTab>> = {
   offersHome: "tarifs",
   offersOnline: "tarifs",
   offersGroup: "tarifs",
-  offersIvorianSystem: "tarifs",
-  offersFrenchSystem: "tarifs",
-  offersProfessionalTraining: "tarifs",
+  offersIvorianSystem: "matieres",
+  offersFrenchSystem: "matieres",
+  offersProfessionalTraining: "matieres",
   adminRating: "eval",
   adminRatingNote: "eval",
   adminRatingPublic: "eval",
@@ -1346,6 +1346,43 @@ export function TeacherForm({
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="rounded-[1.15rem] border border-[#CBD7EC] bg-[#F8FAFD] p-4 shadow-sm" data-admin-teacher-journey-locks>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                  <div>
+                    <p className="text-sm font-black text-[#111B4D]">Systèmes enseignés et autorisés</p>
+                    <p className="mt-1 text-sm font-medium leading-6 text-[#526070]">
+                      Cochez uniquement les systèmes réellement couverts par le professeur. Un système décoché est verrouillé partout :
+                      liste client, profil, réservation, paiement et remplacement.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="w-fit border-[#111B4D]/15 bg-white text-[#111B4D]">
+                    Hors système = action impossible
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <JourneyAuthorizationCard
+                    control={control}
+                    name="offersIvorianSystem"
+                    label="Système ivoirien"
+                    detail="CP1 à Terminale · grille ivoirienne officielle"
+                  />
+                  <JourneyAuthorizationCard
+                    control={control}
+                    name="offersFrenchSystem"
+                    label="Système français"
+                    detail="CP1 à Terminale · grille française officielle"
+                  />
+                  <JourneyAuthorizationCard
+                    control={control}
+                    name="offersProfessionalTraining"
+                    label="Professionnel"
+                    detail="Compétences, métiers et adultes · 40 000 F / séance"
+                  />
+                </div>
+                {errors.offersIvorianSystem?.message && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">{errors.offersIvorianSystem.message}</p>
+                )}
+              </div>
               <div className="grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1707,23 +1744,6 @@ export function TeacherForm({
 
               <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
                 <div>
-                  <p className="text-sm font-black text-foreground">Systèmes enseignés et autorisés</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Cochez uniquement les systèmes réellement enseignés. Un professeur hors système est masqué et ne peut pas recevoir une réservation ni un remplacement sur ce parcours.
-                  </p>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <FormatSwitch control={control} name="offersIvorianSystem" label="Système ivoirien" />
-                  <FormatSwitch control={control} name="offersFrenchSystem" label="Système français" />
-                  <FormatSwitch control={control} name="offersProfessionalTraining" label="Professionnel" />
-                </div>
-                {errors.offersIvorianSystem?.message && (
-                  <p className="text-xs font-semibold text-red-600">{errors.offersIvorianSystem.message}</p>
-                )}
-              </div>
-
-              <div className="grid gap-3 rounded-lg border border-violet-100 bg-violet-50/50 p-4 sm:col-span-2">
-                <div>
                   <p className="text-sm font-black text-foreground">Référence grille officielle</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Le professeur ne fixe aucun prix. Le parcours et la classe déterminent le cours ; le format, le pack, le groupe et le déplacement complètent le calcul.
@@ -1904,7 +1924,7 @@ function Field({ label, error, required, children }: { label: string; error?: st
 
 function FormatSwitch({ control, name, label }: {
   control: any;
-  name: "offersHome" | "offersOnline" | "offersGroup" | "offersIvorianSystem" | "offersFrenchSystem" | "offersProfessionalTraining";
+  name: "offersHome" | "offersOnline" | "offersGroup";
   label: string;
 }) {
   return (
@@ -1914,6 +1934,41 @@ function FormatSwitch({ control, name, label }: {
         <Switch checked={!!field.value} onCheckedChange={field.onChange} />
       </label>
     )} />
+  );
+}
+
+function JourneyAuthorizationCard({ control, name, label, detail }: {
+  control: any;
+  name: "offersIvorianSystem" | "offersFrenchSystem" | "offersProfessionalTraining";
+  label: string;
+  detail: string;
+}) {
+  return (
+    <Controller control={control} name={name} render={({ field }) => {
+      const active = Boolean(field.value);
+      return (
+        <label
+          className={`flex min-h-[118px] cursor-pointer flex-col justify-between rounded-[1rem] border p-3 transition ${active ? "border-[#111B4D] bg-white text-[#111B4D] shadow-sm" : "border-[#D7DEE9] bg-white/70 text-[#64748B] hover:border-[#B7C2D4]"}`}
+          data-admin-teacher-journey-lock={name}
+          data-state={active ? "authorized" : "locked"}
+        >
+          <span className="flex items-start justify-between gap-3">
+            <span>
+              <span className="block text-sm font-black">{label}</span>
+              <span className={`mt-1 block text-xs font-semibold leading-5 ${active ? "text-[#526070]" : "text-[#7A8797]"}`}>{detail}</span>
+            </span>
+            <Checkbox
+              checked={active}
+              onCheckedChange={(value) => field.onChange(value === true)}
+              aria-label={`Autoriser ${label}`}
+            />
+          </span>
+          <span className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-black ${active ? "bg-[#E8F5EE] text-[#116149]" : "bg-[#EEF2F7] text-[#64748B]"}`}>
+            {active ? "Autorisé" : "Verrouillé"}
+          </span>
+        </label>
+      );
+    }} />
   );
 }
 

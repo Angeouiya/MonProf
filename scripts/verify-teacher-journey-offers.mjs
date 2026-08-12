@@ -42,6 +42,11 @@ check(
   /name="offersIvorianSystem"/.test(teacherForm)
     && /name="offersFrenchSystem"/.test(teacherForm)
     && /name="offersProfessionalTraining"/.test(teacherForm)
+    && /data-admin-teacher-journey-locks/.test(teacherForm)
+    && /data-admin-teacher-journey-lock=\{name\}/.test(teacherForm)
+    && /offersFrenchSystem: "matieres"/.test(teacherForm)
+    && /Hors système = action impossible/.test(teacherForm)
+    && /Verrouillé/.test(teacherForm)
     && /Activez au moins une mini-application/.test(teacherForm)
     && /hasTeacherJourney\(journeyEligibility\)/.test(createTeacher)
     && /hasTeacherJourney\(journeyEligibility\)/.test(updateTeacher),
@@ -112,7 +117,7 @@ check(
     && /teacherSupportsJourney\(newTeacher, bookingJourney\)/.test(adminBookingApi)
     && /Le professeur remplaçant n'enseigne pas dans le système/.test(adminBookingApi)
     && /Systèmes enseignés et autorisés/.test(teacherForm)
-    && /ne peut pas recevoir une réservation ni un remplacement/.test(teacherForm),
+    && /liste client, profil, réservation, paiement et remplacement/.test(teacherForm),
 );
 check(
   "Booking choices and server validation stay inside the selected mini-app",
