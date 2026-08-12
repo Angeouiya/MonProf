@@ -13,6 +13,8 @@ const reservations = read("src/app/admin/reservations/page.tsx");
 const notifications = read("src/app/admin/notifications/page.tsx");
 const messages = read("src/app/admin/messages/page.tsx");
 const messagesClient = read("src/app/admin/messages/client.tsx");
+const subjectsClient = read("src/app/admin/matieres/client.tsx");
+const levelsClient = read("src/app/admin/niveaux/client.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -155,6 +157,22 @@ record(
     && /data-admin-message-filter/.test(messagesClient)
     && /À traiter/.test(messagesClient)
     && !/toast\.success/.test(messagesClient),
+);
+
+record(
+  "Admin catalogs confirm routine saves inline instead of floating success toasts",
+  /data-admin-catalog-inline-status/.test(subjectsClient)
+    && /data-admin-catalog-inline-status/.test(levelsClient)
+    && /confirmDeleteOpen/.test(subjectsClient)
+    && /confirmDeleteOpen/.test(levelsClient)
+    && /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(subjectsClient)
+    && /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(levelsClient)
+    && /setNotice\(subject \? "Matière modifiée\." : "Matière créée\."\)/.test(subjectsClient)
+    && /setNotice\(`\$\{data\.imported\} matière\(s\) importée\(s\), \$\{data\.skipped\} déjà présente\(s\)\.`\)/.test(subjectsClient)
+    && /setNotice\(level \? "Niveau modifié\." : "Niveau créé\."\)/.test(levelsClient)
+    && !/toast\.success\(subject \?/.test(subjectsClient)
+    && !/toast\.success\(`\$\{data\.imported\}/.test(subjectsClient)
+    && !/toast\.success\(level \?/.test(levelsClient),
 );
 
 const failed = checks.filter((check) => !check.passed);
