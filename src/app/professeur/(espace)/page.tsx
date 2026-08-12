@@ -265,98 +265,89 @@ export default async function ProfesseurDashboardPage() {
                     icon: ShieldCheck,
                   };
   const PriorityIcon = priority.icon;
+  const nextCourse = verifiedUpcomingBookings[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <ProfessorPageHeader
         title={`Bonjour ${teacherName}`}
-        description="Missions, disponibilités et paiements."
         rootTab
       />
 
-      <section aria-label="Solde professeur exact" className="overflow-hidden rounded-xl border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm">
-        <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div>
-            <div className="flex items-center gap-2 text-[#C7D2FE]">
-              <ShieldCheck className="h-5 w-5" aria-hidden />
-              <p className="text-xs font-black uppercase tracking-[0.16em]">Votre solde, sans déduction</p>
-            </div>
-            <p className="mt-2 text-3xl font-black tabular-nums">{formatFCFA(amountToReceive)}</p>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#E0E7FF]">
-              Vous recevez exactement le net affiché. Les frais de transfert Jèko sont payés par Compétence et ne diminuent jamais ce montant.
+      <section
+        aria-label="Accueil professeur"
+        className="overflow-hidden rounded-[1.35rem] border border-[#1E2A78] bg-[#111B4D] text-white shadow-sm"
+        data-professor-dashboard-app-hero
+        data-professor-dashboard-priority
+      >
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-end">
+          <div className="min-w-0">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#111B4D]">
+              <PriorityIcon className="h-5 w-5" aria-hidden />
+            </span>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.18em] text-[#C7D2FE]">
+              {priority.eyebrow}
             </p>
+            <h2 className="mt-2 max-w-xl text-2xl font-black leading-[1.05] tracking-tight sm:text-4xl">
+              {priority.title}
+            </h2>
+            <p className="mt-3 max-w-lg text-sm font-semibold leading-6 text-[#E0E7FF]">
+              {priority.detail}
+            </p>
+            <Button asChild className="mt-5 min-h-12 w-full rounded-2xl bg-white text-[#111B4D] hover:bg-[#E0E7FF] min-[520px]:w-auto">
+              <Link href={priority.href}>
+                {priority.action}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
-          <div className="grid grid-cols-3 gap-2 lg:min-w-[25rem]">
-            <DashboardBalanceMini label="Demandable" value={readyToRequestAmount} emphasized />
-            <DashboardBalanceMini label="Encore bloqué" value={blockedTeacherAmount} />
-            <DashboardBalanceMini label="Frais couverts" value={payoutFeesCovered} />
+
+          <div className="grid gap-2" data-professor-dashboard-balance-strip>
+            <div className="rounded-2xl border border-white/15 bg-white/10 p-4" data-professor-dashboard-net-exact>
+              <div className="flex items-center gap-2 text-[#C7D2FE]">
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+                <p className="text-[10px] font-black uppercase tracking-[0.16em]">Net exact</p>
+              </div>
+              <p className="mt-2 text-3xl font-black tabular-nums">{formatFCFA(amountToReceive)}</p>
+              <p className="mt-1 text-xs font-bold text-[#C7D2FE]">Frais Jèko pris en charge.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <DashboardBalanceMini label="Retirable" value={readyToRequestAmount} emphasized />
+              <DashboardBalanceMini label="Bloqué" value={blockedTeacherAmount} />
+              <DashboardBalanceMini label="Frais payés" value={payoutFeesCovered} />
+            </div>
           </div>
-        </div>
-        <div className="border-t border-white/15 bg-white/5 px-5 py-3 sm:px-6">
-          <Link href="/professeur/paiements" className="inline-flex items-center text-sm font-black text-white hover:text-[#C7D2FE]">
-            Voir le décompte complet
-            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-          </Link>
         </div>
       </section>
 
-      <PortalCard className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center" data-professor-dashboard-priority>
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-          <PriorityIcon className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">{priority.eyebrow}</p>
-          <p className="mt-1 text-lg font-semibold leading-6 text-[#111827]">{priority.title}</p>
-          <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">{priority.detail}</p>
-        </div>
-        <Button asChild className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] sm:w-auto">
-          <Link href={priority.href}>
-            {priority.action}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      </PortalCard>
-
       <div className="grid gap-5">
         <PortalCard>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-base font-semibold text-[#111827]">Prochain cours</p>
-              <p className="text-sm font-medium text-[#64748B]">La prochaine mission confirmée.</p>
-            </div>
-            <Button asChild variant="ghost" className="rounded-lg">
-              <Link href="/professeur/missions">Tout voir</Link>
-            </Button>
+          <div className="mb-4">
+            <p className="text-base font-semibold text-[#111827]">Prochain cours</p>
           </div>
-          {verifiedUpcomingBookings.length === 0 ? (
-            <EmptyProfessorState title="Aucune mission attribuée" description="Les prochaines réservations confirmées par le service client apparaîtront ici." />
+          {!nextCourse ? (
+            <EmptyProfessorState title="Aucune mission attribuée" description="Les prochaines réservations confirmées apparaîtront ici." />
           ) : (
-            <div className="grid gap-3">
-              {verifiedUpcomingBookings.slice(0, 1).map((booking) => (
-                <Link
-                  key={booking.id}
-                  href={`/professeur/missions/${booking.id}`}
-                  className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-[#111827]">{booking.reference}</p>
-                      <StatusPill status={booking.status} />
-                    </div>
-                    <p className="mt-1 text-sm font-bold text-[#111827]">{booking.subjectName} - {booking.levelName}</p>
-                    <p className="mt-1 text-xs font-semibold text-[#64748B]">
-                      {formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} · {booking.scheduledTime || booking.preferredTime} · {courseFormatLabel(booking.courseFormat)}
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#111B4D]">
-                    Ouvrir <ArrowRight className="h-4 w-4" />
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <Link
+              href={`/professeur/missions/${nextCourse.id}`}
+              className="grid gap-3 rounded-2xl border border-[#E6EAF3] bg-[#F8FAFD] p-4 transition hover:border-[#111B4D] min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-[#111827]">{nextCourse.reference}</p>
+                  <StatusPill status={nextCourse.status} />
+                </div>
+                <p className="mt-1 text-sm font-black text-[#111827]">{nextCourse.subjectName} - {nextCourse.levelName}</p>
+                <p className="mt-1 text-xs font-semibold text-[#64748B]">
+                  {formatDate(nextCourse.scheduledDate ?? nextCourse.startDate ?? nextCourse.createdAt)} · {nextCourse.scheduledTime || nextCourse.preferredTime} · {courseFormatLabel(nextCourse.courseFormat)}
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#111B4D]">
+                Ouvrir <ArrowRight className="h-4 w-4" />
+              </span>
+            </Link>
           )}
         </PortalCard>
-
       </div>
     </div>
   );
@@ -364,9 +355,9 @@ export default async function ProfesseurDashboardPage() {
 
 function DashboardBalanceMini({ label, value, emphasized = false }: { label: string; value: number; emphasized?: boolean }) {
   return (
-    <div className={emphasized ? "rounded-lg border border-emerald-300 bg-emerald-400/15 px-3 py-3" : "rounded-lg border border-white/15 bg-white/10 px-3 py-3"}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-[#C7D2FE]">{label}</p>
-      <p className="mt-1 text-sm font-black tabular-nums text-white">{formatFCFA(value)}</p>
+    <div className={emphasized ? "rounded-xl border border-emerald-300 bg-emerald-400/15 px-3 py-2.5" : "rounded-xl border border-white/15 bg-white/10 px-3 py-2.5"}>
+      <p className="text-[9px] font-black uppercase tracking-wide text-[#C7D2FE]">{label}</p>
+      <p className="mt-1 text-xs font-black tabular-nums text-white min-[420px]:text-sm">{formatFCFA(value)}</p>
     </div>
   );
 }

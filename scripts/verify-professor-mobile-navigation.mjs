@@ -81,10 +81,17 @@ record(
 );
 
 record(
-  "Professor dashboard renders only one priority, one next course and the exact balance",
+  "Professor dashboard opens with one app hero, one priority action and the exact balance",
   /data-professor-dashboard-priority/.test(dashboard)
-    && /verifiedUpcomingBookings\.slice\(0, 1\)/.test(dashboard)
-    && /grid grid-cols-3 gap-2 lg:min-w-\[25rem\]/.test(dashboard)
+    && /data-professor-dashboard-app-hero/.test(dashboard)
+    && /data-professor-dashboard-balance-strip/.test(dashboard)
+    && /data-professor-dashboard-net-exact/.test(dashboard)
+    && /const nextCourse = verifiedUpcomingBookings\[0\]/.test(dashboard)
+    && /DashboardBalanceMini label="Retirable"/.test(dashboard)
+    && /DashboardBalanceMini label="Bloqué"/.test(dashboard)
+    && /DashboardBalanceMini label="Frais payés"/.test(dashboard)
+    && /Frais Jèko pris en charge\./.test(dashboard)
+    && !/Voir le décompte complet|Tout voir|La prochaine mission confirmée/.test(dashboard)
     && !/PROFESSOR_COMMAND_CENTER_ENABLED/.test(dashboard)
     && !/ProfessorQuickLink|ProfessorActionTile|ProfessorControlStep/.test(dashboard)
     && !/teacherNotification\.findMany/.test(dashboard)
