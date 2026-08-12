@@ -18,10 +18,12 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
   const router = useRouter();
   const [availability, setAvailability] = useState<AvailabilityGrid>(() => normalizeAvailability(initialAvailability));
   const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState("");
   const selectedSlots = useMemo(() => countSlots(availability), [availability]);
   const selectedHours = selectedSlots * 2;
 
   function updateSlot(dayKey: string, slotKey: string, value: boolean) {
+    setSavedMessage("");
     setAvailability((prev) => ({
       ...prev,
       [dayKey]: {
@@ -32,6 +34,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
   }
 
   function setDay(dayKey: string, value: boolean) {
+    setSavedMessage("");
     setAvailability((prev) => ({
       ...prev,
       [dayKey]: Object.fromEntries(TWO_HOUR_SLOTS.map((slot) => [slot.key, value])),
@@ -39,6 +42,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
   }
 
   function setPreset(preset: "weekdays" | "weekends" | "evenings" | "clear") {
+    setSavedMessage("");
     if (preset === "clear") {
       setAvailability(createEmptyAvailability());
       return;
@@ -70,7 +74,7 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Enregistrement impossible");
-      toast.success("Disponibilités enregistrées.");
+      setSavedMessage("Disponibilités enregistrées. Les prochains dossiers utiliseront ces créneaux.");
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erreur réseau");
@@ -170,7 +174,14 @@ export function TeacherAvailabilityEditor({ initialAvailability }: { initialAvai
         </table>
       </div>
 
-      <div className="sticky bottom-20 z-10 flex justify-end rounded-lg border border-[#E6EAF3] bg-white p-3 lg:bottom-3">
+      <div className="sticky bottom-20 z-10 flex flex-col gap-2 rounded-lg border border-[#E6EAF3] bg-white p-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between lg:bottom-3">
+        {savedMessage ? (
+          <p className="rounded-lg border border-[#DDE6F7] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]" data-professor-availability-saved-state>
+            {savedMessage}
+          </p>
+        ) : (
+          <span className="hidden min-[640px]:block" aria-hidden="true" />
+        )}
         <Button type="button" onClick={saveAvailability} disabled={saving} className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78] min-[640px]:w-auto">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Enregistrer les disponibilités

@@ -31,6 +31,8 @@ import { normalizeTeacherFormInitial } from "@/lib/teacher-form-data";
 import { isPasswordCompliant, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
+import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
+import { TEACHER_JOURNEY_CONFIG, TEACHER_JOURNEYS, type TeacherJourneyEligibility } from "@/lib/teacher-journeys";
 import {
   CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS,
   IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH,
@@ -240,7 +242,7 @@ const FIELD_TAB: Partial<Record<keyof FormValues, TeacherFormTab>> = {
 };
 
 type Subject = { id: string; name: string };
-type Level = { id: string; name: string };
+type Level = { id: string; name: string; order?: number };
 type Commune = { id: string; name: string; quarters?: Array<{ id: string; name: string }> };
 type CvAnalysisFields = Partial<Pick<
   FormValues,
@@ -419,6 +421,9 @@ export function TeacherForm({
     portalAccessEnabled,
     selectedCommuneName,
     portalPasswordValue,
+    offersIvorianSystem,
+    offersFrenchSystem,
+    offersProfessionalTraining,
   ] = useWatch({
     control,
     name: [
@@ -431,6 +436,9 @@ export function TeacherForm({
       "portalAccessEnabled",
       "commune",
       "portalPassword",
+      "offersIvorianSystem",
+      "offersFrenchSystem",
+      "offersProfessionalTraining",
     ],
   });
   const teacherPasswordResetRequested = mode === "edit"
@@ -485,6 +493,32 @@ export function TeacherForm({
     () => levels.filter((level) => selectedLevels[level.id]),
     [levels, selectedLevels],
   );
+  const journeyCatalogStates = useMemo(() => {
+    const eligibility: TeacherJourneyEligibility = {
+      offersIvorianSystem: Boolean(offersIvorianSystem),
+      offersFrenchSystem: Boolean(offersFrenchSystem),
+      offersProfessionalTraining: Boolean(offersProfessionalTraining),
+    };
+    return TEACHER_JOURNEYS.map((journey) => {
+      const enabled = eligibility[TEACHER_JOURNEY_CONFIG[journey].teacherField];
+      const subjectCount = filterSubjectsForJourney(selectedSubjectItems, journey).length;
+      const levelCount = filterLevelsForJourney(selectedLevelItems, journey).length;
+      return {
+        journey,
+        enabled,
+        label: TEACHER_JOURNEY_CONFIG[journey].shortLabel,
+        subjectCount,
+        levelCount,
+        ready: !enabled || (subjectCount > 0 && levelCount > 0),
+      };
+    });
+  }, [
+    offersFrenchSystem,
+    offersIvorianSystem,
+    offersProfessionalTraining,
+    selectedLevelItems,
+    selectedSubjectItems,
+  ]);
 
   const uploadPhoto = async (file?: File) => {
     setPhotoError(null);
@@ -1382,6 +1416,25 @@ export function TeacherForm({
                 {errors.offersIvorianSystem?.message && (
                   <p className="mt-2 text-xs font-semibold text-red-600">{errors.offersIvorianSystem.message}</p>
                 )}
+                <div className="mt-3 grid gap-2 sm:grid-cols-3" data-admin-teacher-journey-catalog-state>
+                  {journeyCatalogStates.map((state) => (
+                    <div
+                      key={state.journey}
+                      className={`rounded-lg border px-3 py-2 ${state.ready ? "border-[#DDE6F7] bg-white" : "border-amber-200 bg-amber-50"}`}
+                      data-admin-teacher-journey-catalog={state.journey}
+                      data-state={state.enabled ? (state.ready ? "ready" : "missing-catalog") : "locked"}
+                    >
+                      <p className={`text-xs font-black ${state.ready ? "text-[#111B4D]" : "text-amber-950"}`}>
+                        {state.label} · {state.enabled ? state.ready ? "prêt" : "à compléter" : "verrouillé"}
+                      </p>
+                      <p className={`mt-1 text-[11px] font-semibold leading-4 ${state.ready ? "text-[#64748B]" : "text-amber-800"}`}>
+                        {state.enabled
+                          ? `${state.subjectCount} matière/compétence · ${state.levelCount} niveau/profil`
+                          : "Invisible côté client et réservation impossible."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="grid gap-2 rounded-lg border border-violet-100 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div className="relative">

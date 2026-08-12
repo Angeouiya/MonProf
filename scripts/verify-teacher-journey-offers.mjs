@@ -20,6 +20,7 @@ const adminBookingApi = read("src/app/api/admin/bookings/[id]/route.ts");
 const teacherForm = read("src/components/admin/teacher-form.tsx");
 const createTeacher = read("src/app/api/admin/teachers/route.ts");
 const updateTeacher = read("src/app/api/admin/teachers/[id]/route.ts");
+const journeyValidation = read("src/lib/teacher-journey-validation.ts");
 
 const checks = [];
 const check = (label, ok) => checks.push({ label, ok: Boolean(ok) });
@@ -51,6 +52,19 @@ check(
     && /Activez au moins une mini-application/.test(teacherForm)
     && /hasTeacherJourney\(journeyEligibility\)/.test(createTeacher)
     && /hasTeacherJourney\(journeyEligibility\)/.test(updateTeacher),
+);
+check(
+  "Admin journey locks require a real compatible catalog and protect active missions",
+  /teacherJourneyCatalogIssues/.test(journeyValidation)
+    && /filterSubjectsForJourney\(subjects, journey\)/.test(journeyValidation)
+    && /filterLevelsForJourney/.test(journeyValidation)
+    && /data-admin-teacher-journey-catalog-state/.test(teacherForm)
+    && /data-admin-teacher-journey-catalog=\{state\.journey\}/.test(teacherForm)
+    && /teacherJourneyCatalogIssueMessage\(teacherJourneyCatalogIssues/.test(createTeacher)
+    && /teacherJourneyCatalogIssueMessage\(teacherJourneyCatalogIssues/.test(updateTeacher)
+    && /const disabledJourneys = TEACHER_JOURNEYS\.filter/.test(updateTeacher)
+    && /resolveTeacherJourney\(\{[\s\S]*?courseCategory: booking\.courseCategory/.test(updateTeacher)
+    && /Impossible de verrouiller/.test(updateTeacher),
 );
 check(
   "Public mini-app tabs require authorization plus compatible subject and level",

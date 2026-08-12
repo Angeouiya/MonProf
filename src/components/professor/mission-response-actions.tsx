@@ -73,7 +73,6 @@ export function MissionResponseActions({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action impossible");
-      toast.success("Réponse enregistrée");
       setDone(true);
       router.refresh();
     } catch (error) {
@@ -85,7 +84,7 @@ export function MissionResponseActions({
 
   if (done) {
     return (
-      <div className="rounded-lg border border-[#D7DEE9] bg-white p-4 text-sm font-bold text-[#111B4D]">
+      <div className="rounded-lg border border-[#D7DEE9] bg-white p-4 text-sm font-bold text-[#111B4D]" data-professor-mission-response-sent>
         Merci, votre réponse a été transmise au service client.
       </div>
     );

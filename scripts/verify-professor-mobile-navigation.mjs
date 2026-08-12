@@ -17,6 +17,8 @@ const serviceClientMessageCompose = read("src/components/professor/teacher-admin
 const settings = read("src/app/professeur/(espace)/parametres/settings-client.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
+const missionResponseActions = read("src/components/professor/mission-response-actions.tsx");
+const rescheduleRequestActions = read("src/components/professor/reschedule-request-actions.tsx");
 const rootTabPaths = [
   "src/app/professeur/(espace)/page.tsx",
   "src/app/professeur/(espace)/missions/page.tsx",
@@ -170,6 +172,16 @@ record(
   /data-professor-availability-metrics/.test(availability)
     && /grid grid-cols-2 gap-2/.test(availability)
     && /col-span-2 min-\[760px\]:col-span-1/.test(availability),
+);
+
+record(
+  "Professor routine actions confirm inline instead of floating success toasts",
+  /data-professor-availability-saved-state/.test(availability)
+    && /data-professor-mission-response-sent/.test(missionResponseActions)
+    && /data-professor-reschedule-response-state/.test(rescheduleRequestActions)
+    && !/toast\.success|toast\.warning/.test(availability)
+    && !/toast\.success|toast\.warning/.test(missionResponseActions)
+    && !/toast\.success|toast\.warning/.test(rescheduleRequestActions),
 );
 
 record(

@@ -112,7 +112,7 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
         teacherId={teacher.id}
         initial={initial}
         subjects={subjects.map((s) => ({ id: s.id, name: s.name }))}
-        levels={levels.map((l) => ({ id: l.id, name: l.name }))}
+        levels={levels.map((l) => ({ id: l.id, name: l.name, order: l.order }))}
         communes={communes.map((c) => ({ id: c.id, name: c.name, quarters: c.quarters.map((q) => ({ id: q.id, name: q.name })) }))}
         defaultCommissionPercent={settings.commissionPercent}
       />

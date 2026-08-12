@@ -15,6 +15,10 @@ import {
 } from "@/lib/temporary-password-policy";
 import { hasTeacherJourney } from "@/lib/teacher-journeys";
 import { selectLeastUsedTeacherCover } from "@/lib/teacher-cover";
+import {
+  teacherJourneyCatalogIssueMessage,
+  teacherJourneyCatalogIssues,
+} from "@/lib/teacher-journey-validation";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -27,6 +31,15 @@ function validateTeacherRelations(subjects: unknown, levels: unknown) {
     return "Sélectionnez au moins un niveau enseigné par ce professeur.";
   }
   return null;
+}
+
+function relationIds(items: unknown, primaryKey: "subjectId" | "levelId") {
+  if (!Array.isArray(items)) return [];
+  return Array.from(new Set(
+    items
+      .map((item: any) => item?.[primaryKey] || item?.id)
+      .filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim())),
+  ));
 }
 
 const PUBLIC_VISIBLE_TEACHER_STATUSES = ["ACTIVE"] as const;
@@ -115,6 +128,29 @@ export async function POST(req: NextRequest) {
     const relationError = validateTeacherRelations(subjects, levels);
     if (relationError) {
       return NextResponse.json({ error: relationError }, { status: 400 });
+    }
+    const subjectIds = relationIds(subjects, "subjectId");
+    const levelIds = relationIds(levels, "levelId");
+    const [journeySubjects, journeyLevels] = await db.$transaction([
+      db.subject.findMany({
+        where: { id: { in: subjectIds } },
+        select: { id: true, name: true, icon: true },
+      }),
+      db.level.findMany({
+        where: { id: { in: levelIds } },
+        select: { id: true, name: true, order: true },
+      }),
+    ]);
+    if (journeySubjects.length !== subjectIds.length || journeyLevels.length !== levelIds.length) {
+      return NextResponse.json({ error: "Certaines matières ou certains niveaux sélectionnés sont introuvables." }, { status: 400 });
+    }
+    const journeyCatalogError = teacherJourneyCatalogIssueMessage(teacherJourneyCatalogIssues({
+      eligibility: journeyEligibility,
+      subjects: journeySubjects,
+      levels: journeyLevels,
+    }));
+    if (journeyCatalogError) {
+      return NextResponse.json({ error: journeyCatalogError }, { status: 400 });
     }
     const normalizedAvailability = normalizeAvailability(availability);
     if (isPublicVisibleTeacherStatus(nextStatus) && countAvailabilitySlots(normalizedAvailability) === 0) {

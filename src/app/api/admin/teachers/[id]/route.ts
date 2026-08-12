@@ -29,8 +29,18 @@ import {
   isSafeIdentityVerificationReference,
   normalizeIdentityVerificationReference,
 } from "@/lib/client-identity-verification";
-import { hasTeacherJourney } from "@/lib/teacher-journeys";
+import {
+  TEACHER_JOURNEY_CONFIG,
+  TEACHER_JOURNEYS,
+  hasTeacherJourney,
+  resolveTeacherJourney,
+  teacherSupportsJourney,
+} from "@/lib/teacher-journeys";
 import { TEACHER_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE } from "@/lib/teacher-password-assistance";
+import {
+  teacherJourneyCatalogIssueMessage,
+  teacherJourneyCatalogIssues,
+} from "@/lib/teacher-journey-validation";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -73,6 +83,15 @@ function validateTeacherRelationPatch(subjects: unknown, levels: unknown) {
     return "Sélectionnez au moins un niveau enseigné par ce professeur.";
   }
   return null;
+}
+
+function relationIds(items: unknown, primaryKey: "subjectId" | "levelId") {
+  if (!Array.isArray(items)) return [];
+  return Array.from(new Set(
+    items
+      .map((item: any) => item?.[primaryKey] || item?.id)
+      .filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim())),
+  ));
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -177,6 +196,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         offersIvorianSystem: true,
         offersFrenchSystem: true,
         offersProfessionalTraining: true,
+        subjects: {
+          select: {
+            subject: { select: { id: true, name: true, icon: true } },
+          },
+        },
+        levels: {
+          select: {
+            level: { select: { id: true, name: true, order: true } },
+          },
+        },
         availability: true,
         status: true,
         qualityScore: true,
@@ -186,8 +215,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         portalPasswordHash: true,
         bookings: {
           where: { status: { in: [...ACTIVE_BOOKING_STATUSES] as any } },
-          select: { id: true, reference: true, subjectName: true, levelName: true, scheduledDate: true, scheduledTime: true },
-          take: 50,
+          select: {
+            id: true,
+            reference: true,
+            subjectName: true,
+            levelName: true,
+            courseCategory: true,
+            schoolSystem: true,
+            scheduledDate: true,
+            scheduledTime: true,
+          },
         },
       },
     });
@@ -259,6 +296,52 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     };
     if (!hasTeacherJourney(journeyEligibility)) {
       return NextResponse.json({ error: "Activez au moins une mini-application pour ce professeur." }, { status: 400 });
+    }
+    const disabledJourneys = TEACHER_JOURNEYS.filter((journey) => (
+      teacherSupportsJourney(existingTeacher, journey) && !teacherSupportsJourney(journeyEligibility, journey)
+    ));
+    if (disabledJourneys.length > 0) {
+      const blockedBookings = existingTeacher.bookings.filter((booking) => {
+        const bookingJourney = resolveTeacherJourney({
+          courseCategory: booking.courseCategory,
+          schoolSystem: booking.schoolSystem,
+        });
+        return Boolean(bookingJourney && disabledJourneys.includes(bookingJourney));
+      });
+      if (blockedBookings.length > 0) {
+        const journeyLabels = disabledJourneys.map((journey) => TEACHER_JOURNEY_CONFIG[journey].label).join(", ");
+        const bookingRefs = blockedBookings.map((booking) => booking.reference).join(", ");
+        return NextResponse.json({
+          error: `Impossible de verrouiller ${journeyLabels} : ${blockedBookings.length} réservation(s) active(s) utilisent encore ce système (${bookingRefs}). Terminez ou remplacez ces missions avant de retirer l'autorisation.`,
+        }, { status: 409 });
+      }
+    }
+    const nextSubjectIds = Array.isArray(subjects)
+      ? relationIds(subjects, "subjectId")
+      : existingTeacher.subjects.map((item) => item.subject.id);
+    const nextLevelIds = Array.isArray(levels)
+      ? relationIds(levels, "levelId")
+      : existingTeacher.levels.map((item) => item.level.id);
+    const [journeySubjects, journeyLevels] = await db.$transaction([
+      db.subject.findMany({
+        where: { id: { in: nextSubjectIds } },
+        select: { id: true, name: true, icon: true },
+      }),
+      db.level.findMany({
+        where: { id: { in: nextLevelIds } },
+        select: { id: true, name: true, order: true },
+      }),
+    ]);
+    if (journeySubjects.length !== nextSubjectIds.length || journeyLevels.length !== nextLevelIds.length) {
+      return NextResponse.json({ error: "Certaines matières ou certains niveaux sélectionnés sont introuvables." }, { status: 400 });
+    }
+    const journeyCatalogError = teacherJourneyCatalogIssueMessage(teacherJourneyCatalogIssues({
+      eligibility: journeyEligibility,
+      subjects: journeySubjects,
+      levels: journeyLevels,
+    }));
+    if (journeyCatalogError) {
+      return NextResponse.json({ error: journeyCatalogError }, { status: 400 });
     }
     if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
       const normalizedPortalPhone = normalizeTeacherPhone(data.portalPhone || data.phone || existingTeacher.phone);

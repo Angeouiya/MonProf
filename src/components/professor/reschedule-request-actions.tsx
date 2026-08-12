@@ -17,6 +17,7 @@ export function ProfessorRescheduleRequestActions({
   const router = useRouter();
   const [loading, setLoading] = useState<"accept" | "reject" | null>(null);
   const [response, setResponse] = useState("");
+  const [doneMessage, setDoneMessage] = useState("");
 
   async function respond(action: "accept" | "reject") {
     const cleanResponse = response.trim();
@@ -25,6 +26,7 @@ export function ProfessorRescheduleRequestActions({
       return;
     }
     setLoading(action);
+    setDoneMessage("");
     try {
       const res = await fetch(`/api/professor/reschedule-requests/${requestId}`, {
         method: "PATCH",
@@ -36,7 +38,7 @@ export function ProfessorRescheduleRequestActions({
         toast.error(data.error || "Action impossible.");
         return;
       }
-      toast.success(action === "accept" ? "Nouveau créneau confirmé." : "Refus transmis au service client.");
+      setDoneMessage(action === "accept" ? "Nouveau créneau confirmé." : "Refus transmis au service client.");
       setResponse("");
       router.refresh();
     } catch {
@@ -52,10 +54,15 @@ export function ProfessorRescheduleRequestActions({
         rows={3}
         value={response}
         disabled={disabled || !!loading}
-        onChange={(event) => setResponse(event.target.value)}
+        onChange={(event) => { setResponse(event.target.value); setDoneMessage(""); }}
         placeholder="Message optionnel si vous acceptez, obligatoire si vous refusez."
         className="rounded-lg border-[#D7DEE9] bg-white"
       />
+      {doneMessage && (
+        <div className="rounded-lg border border-[#DDE6F7] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold leading-5 text-[#111B4D]" data-professor-reschedule-response-state>
+          {doneMessage}
+        </div>
+      )}
       <div className="grid gap-2 min-[520px]:grid-cols-2">
         <Button
           disabled={disabled || !!loading}
