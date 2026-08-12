@@ -78,8 +78,10 @@ const checks = [
       && teacherDetail.includes("const activeJourney = journey || eligibleJourneys[0]!")
       && teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`')
       && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`')
-      && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref}>')
+      && teacherDetail.includes('const tariffsHref = `/tarifs?journey=${activeJourney}`')
+      && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref} activeJourney={activeJourney}>')
       && teacherDetail.includes('href={reserveHref}')
+      && teacherDetail.includes('href={tariffsHref}')
       && teacherDetail.includes('data-public-teacher-journey-tabs'),
   ],
   [
