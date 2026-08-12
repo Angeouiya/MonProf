@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GraduationCap, Lock, Mail, ArrowRight, Info, ShieldCheck, WalletCards, CalendarCheck, Users, ClipboardCheck, Bell } from "lucide-react";
-import { toast } from "sonner";
 import { signIn, signOut } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { PasswordInput } from "@/components/shared/password-input";
@@ -34,6 +33,7 @@ function ConnexionContent() {
   const from = getSafeInternalReturnPath(searchParams.get("from"));
   const isAdminAuth = from?.startsWith("/admin") ?? false;
   const isClientAuth = from?.startsWith("/client") ?? false;
+  const passwordChanged = searchParams.get("passwordChanged") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -101,7 +101,6 @@ function ConnexionContent() {
         r.ok ? r.json() : null
       );
 
-      toast.success("Connexion réussie. Redirection...");
       const role = me?.user?.role;
       if (isAdminAuth && role !== "ADMIN") {
         await signOut({ redirect: false });
@@ -186,6 +185,17 @@ function ConnexionContent() {
             </div>
 
           <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
+            {passwordChanged && (
+              <div
+                data-password-changed-login-state
+                className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-emerald-800"
+                role="status"
+                aria-live="polite"
+              >
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.</span>
+              </div>
+            )}
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />

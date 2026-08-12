@@ -53,12 +53,7 @@ export function AdminPasswordForm() {
       }
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
       setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-      toast.success("Mot de passe administrateur modifié et action historisée.");
-      if (data.email?.queued) {
-        toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
-      } else {
-        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
-      }
+      void data.email;
       await signOut({ redirect: false });
       router.replace("/admin/connexion?passwordChanged=1");
       router.refresh();

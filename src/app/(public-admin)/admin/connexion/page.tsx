@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { ArrowRight, Info, Lock, Mail, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label";
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
 
-export default function AdminConnexionPage() {
+function AdminConnexionContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const passwordChanged = searchParams.get("passwordChanged") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -68,7 +70,6 @@ export default function AdminConnexionPage() {
         return;
       }
 
-      toast.success("Connexion administrateur réussie.");
       router.replace("/admin");
       router.refresh();
     } catch (err: any) {
@@ -122,6 +123,17 @@ export default function AdminConnexionPage() {
             </div>
 
             <div className="rounded-lg border border-[#E3E8F2] bg-white p-4 sm:p-5">
+              {passwordChanged && (
+                <div
+                  data-password-changed-login-state
+                  className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-emerald-800"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>Mot de passe administrateur modifié. Reconnectez-vous avec le nouveau mot de passe.</span>
+                </div>
+              )}
               {error && (
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -191,5 +203,13 @@ export default function AdminConnexionPage() {
         </div>
       </section>
     </PublicLayout>
+  );
+}
+
+export default function AdminConnexionPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminConnexionContent />
+    </Suspense>
   );
 }

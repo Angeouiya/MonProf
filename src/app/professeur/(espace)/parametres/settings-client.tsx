@@ -58,12 +58,7 @@ export function TeacherPasswordSettingsForm() {
       }
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
-      toast.success("Mot de passe professeur modifié.");
-      if (data.email?.queued) {
-        toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
-      } else {
-        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
-      }
+      void data.email;
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -116,6 +111,7 @@ export function TeacherPaymentProfileSettingsForm({
   const [phoneConfirm, setPhoneConfirm] = useState(defaultPhone || fallbackPhone || "");
   const [instructions, setInstructions] = useState(payoutInstructions ?? "");
   const [saving, setSaving] = useState(false);
+  const [payoutSavedMessage, setPayoutSavedMessage] = useState<string | null>(null);
 
   const normalizedPhone = normalizePaymentPhone(phone);
   const normalizedConfirm = normalizePaymentPhone(phoneConfirm);
@@ -131,6 +127,7 @@ export function TeacherPaymentProfileSettingsForm({
       return;
     }
     setSaving(true);
+    setPayoutSavedMessage(null);
     try {
       const res = await fetch("/api/professor/profile", {
         method: "PATCH",
@@ -145,7 +142,7 @@ export function TeacherPaymentProfileSettingsForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Enregistrement impossible.");
-      toast.success("Coordonnées de paiement enregistrées.");
+      setPayoutSavedMessage(`Coordonnées ${paymentMethodLabel(method)} enregistrées. Les prochaines demandes de retrait utiliseront ce numéro confirmé.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
     } finally {
@@ -157,7 +154,10 @@ export function TeacherPaymentProfileSettingsForm({
     <form onSubmit={submit} className="mt-5 grid gap-4">
       <div className="space-y-2">
         <p className="text-sm font-semibold text-[#111827]">Moyen de paiement préféré</p>
-        <PayoutMethodPicker value={method} onChange={setMethod} disabled={saving} />
+        <PayoutMethodPicker value={method} onChange={(value) => {
+          setMethod(value);
+          setPayoutSavedMessage(null);
+        }} disabled={saving} />
         <p className="text-xs font-semibold leading-5 text-[#64748B]">
           Orange Money, MTN Money, Moov Money ou Wave. Le moyen sélectionné préremplit chaque nouvelle demande.
         </p>
@@ -170,7 +170,10 @@ export function TeacherPaymentProfileSettingsForm({
             id="teacher-payout-phone"
             inputMode="tel"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              setPayoutSavedMessage(null);
+            }}
             placeholder="Ex : +225 07 00 00 00 00"
             className="h-11 rounded-lg border-[#DDE6F7] bg-white"
             required
@@ -182,7 +185,10 @@ export function TeacherPaymentProfileSettingsForm({
             id="teacher-payout-phone-confirm"
             inputMode="tel"
             value={phoneConfirm}
-            onChange={(event) => setPhoneConfirm(event.target.value)}
+            onChange={(event) => {
+              setPhoneConfirm(event.target.value);
+              setPayoutSavedMessage(null);
+            }}
             placeholder="Retapez le même numéro"
             className="h-11 rounded-lg border-[#DDE6F7] bg-white"
             required
@@ -197,7 +203,10 @@ export function TeacherPaymentProfileSettingsForm({
         <Textarea
           id="teacher-payout-instructions"
           value={instructions}
-          onChange={(event) => setInstructions(event.target.value)}
+          onChange={(event) => {
+            setInstructions(event.target.value);
+            setPayoutSavedMessage(null);
+          }}
           placeholder="Ex : utiliser ce numéro uniquement pour mes paiements Wave."
           className="min-h-24 rounded-lg border-[#DDE6F7] bg-white"
         />
@@ -210,6 +219,17 @@ export function TeacherPaymentProfileSettingsForm({
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
         Enregistrer mes coordonnées
       </Button>
+      {payoutSavedMessage && (
+        <div
+          data-professor-payout-profile-saved
+          className="rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-emerald-800"
+          role="status"
+          aria-live="polite"
+        >
+          <CheckCircle2 className="mr-1 inline h-4 w-4" aria-hidden />
+          {payoutSavedMessage}
+        </div>
+      )}
     </form>
   );
 }

@@ -57,6 +57,12 @@ const passwordSurfaces = [
 const sharedPasswordInput = read("src/components/shared/password-input.tsx");
 const missingSharedControl = passwordSurfaces.filter((surface) => !/<PasswordInput\b/.test(read(surface)));
 const clientTemporaryPassword = read("src/components/admin/client-temporary-password-form.tsx");
+const clientPasswordSettings = read("src/app/client/parametres/settings-client.tsx");
+const professorPasswordSettings = read("src/app/professeur/(espace)/parametres/settings-client.tsx");
+const adminPasswordSettings = read("src/app/admin/mon-compte/password-form.tsx");
+const clientLogin = read("src/app/connexion/page.tsx");
+const professorLogin = read("src/app/professeur/connexion/page.tsx");
+const adminLogin = read("src/app/(public-admin)/admin/connexion/page.tsx");
 
 const checks = [
   [`All ${passwordSurfaces.length} required password surfaces use the same revealable control`, missingSharedControl.length === 0],
@@ -70,6 +76,16 @@ const checks = [
   ["Visible password input disables phone autocorrection", /autoCapitalize="none"/.test(sharedPasswordInput) && /autoCorrect="off"/.test(sharedPasswordInput) && /spellCheck=\{false\}/.test(sharedPasswordInput)],
   ["Reveal button is always tied to its controlled input", /useId/.test(sharedPasswordInput) && /const inputId = typeof props\.id === "string" && props\.id\.trim\(\) \? props\.id : `password-\$\{generatedId\}`;/.test(sharedPasswordInput) && /id=\{inputId\}/.test(sharedPasswordInput) && /aria-controls=\{inputId\}/.test(sharedPasswordInput)],
   ["Generated one-time client password remains immediately readable", /<PasswordInput[\s\S]*?defaultVisible/.test(clientTemporaryPassword)],
+  [
+    "Password changes use calm inline login states instead of non-critical success toasts",
+    !/toast\.success|toast\.warning/.test(clientPasswordSettings)
+      && !/toast\.success|toast\.warning/.test(professorPasswordSettings)
+      && !/toast\.success|toast\.warning/.test(adminPasswordSettings)
+      && /data-password-changed-login-state/.test(clientLogin)
+      && /data-password-changed-login-state/.test(professorLogin)
+      && /data-password-changed-login-state/.test(adminLogin)
+      && !/Connexion réussie|Connexion professeur réussie|Connexion administrateur réussie/.test(`${clientLogin}\n${professorLogin}\n${adminLogin}`),
+  ],
 ];
 
 for (const [label, ok] of checks) console.log(`${ok ? "OK" : "FAIL"} ${label}`);

@@ -14,6 +14,7 @@ const notifications = read("src/app/professeur/(espace)/notifications/page.tsx")
 const markNotificationsRead = read("src/components/professor/mark-teacher-notifications-read.tsx");
 const payoutRequestForm = read("src/components/professor/teacher-payout-request-form.tsx");
 const serviceClientMessageCompose = read("src/components/professor/teacher-admin-message-compose.tsx");
+const settings = read("src/app/professeur/(espace)/parametres/settings-client.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
 const rootTabPaths = [
@@ -169,6 +170,13 @@ record(
   /data-professor-availability-metrics/.test(availability)
     && /grid grid-cols-2 gap-2/.test(availability)
     && /col-span-2 min-\[760px\]:col-span-1/.test(availability),
+);
+
+record(
+  "Professor settings confirm routine updates inline instead of floating success toasts",
+  /data-professor-payout-profile-saved/.test(settings)
+    && /setPayoutSavedMessage/.test(settings)
+    && !/toast\.success|toast\.warning/.test(settings),
 );
 
 const failed = checks.filter((check) => !check.passed);

@@ -64,7 +64,10 @@ export default async function HomePage() {
 
   return (
     <PublicLayout>
-      <section className="flex min-h-[calc(100dvh-var(--app-topbar-height)-7.25rem)] items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0">
+      <section
+        className="flex items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0"
+        style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 7.25rem)" }}
+      >
         <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 text-center sm:px-6 sm:pb-16 sm:pt-10 lg:px-8 lg:pb-20">
           <nav
             id="parcours"

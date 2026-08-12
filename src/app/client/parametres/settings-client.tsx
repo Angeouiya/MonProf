@@ -54,12 +54,7 @@ export function ClientPasswordSettingsForm({ ownerAdmin = false }: { ownerAdmin?
       }
       if (!res.ok) throw new Error(data.error || "Modification impossible.");
 
-      toast.success(ownerAdmin ? "Mot de passe administrateur modifié." : "Mot de passe client modifié.");
-      if (data.email?.queued) {
-        toast.success("L'email personnel de confirmation est pris en charge automatiquement.");
-      } else {
-        toast.warning(data.email?.message || "Le mot de passe est modifié, mais l'email de confirmation est en attente.");
-      }
+      void data.email;
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");

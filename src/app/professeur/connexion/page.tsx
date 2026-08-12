@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import { ArrowRight, CheckCircle2, Info, Loader2, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { PasswordInput } from "@/components/shared/password-input";
@@ -19,6 +18,7 @@ function ProfesseurConnexionContent() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/professeur";
   const denied = searchParams.get("error") === "access";
+  const passwordChanged = searchParams.get("passwordChanged") === "1";
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,6 @@ function ProfesseurConnexionContent() {
         return;
       }
 
-      toast.success("Connexion professeur réussie.");
       const target = me?.user?.portalPasswordMustChange
         ? "/professeur/parametres?motDePasseTemporaire=1"
         : from.startsWith("/professeur") ? from : "/professeur";
@@ -123,7 +122,6 @@ function ProfesseurConnexionContent() {
 
       setAssistanceSent(true);
       setAssistanceMessage(data.message || "Votre demande a été prise en compte.");
-      toast.success("Demande d'assistance prise en compte.");
     } catch {
       setAssistanceError("Le service est momentanément indisponible. Utilisez le contact email ci-dessous.");
     } finally {
@@ -179,6 +177,17 @@ function ProfesseurConnexionContent() {
             </div>
 
             <div className="rounded-lg border border-[#E3E8F2] bg-white p-6">
+              {passwordChanged && (
+                <div
+                  data-password-changed-login-state
+                  className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-semibold leading-6 text-emerald-800"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>Mot de passe professeur modifié. Reconnectez-vous avec le nouveau mot de passe.</span>
+                </div>
+              )}
               {error && (
                 <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
