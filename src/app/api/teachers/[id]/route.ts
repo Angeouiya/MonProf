@@ -3,10 +3,10 @@ import { db } from "@/lib/db";
 import { filterLevelsForJourney, filterSubjectsForJourney, subjectNameMatchesJourney } from "@/lib/catalog-journey";
 import {
   parseTeacherJourney,
-  teacherEligibleJourneys,
   teacherJourneyWhere,
   type TeacherJourney,
 } from "@/lib/teacher-journeys";
+import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,26 +43,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Professeur introuvable" }, { status: 404 });
   }
 
-  const eligibleJourneys = teacherEligibleJourneys(teacher);
-  const activeJourney: TeacherJourney | null = journey ?? eligibleJourneys[0] ?? null;
-  const journeySubjects = activeJourney
-    ? filterSubjectsForJourney(
-        teacher.subjects.map((s) => ({ name: s.subject.name, isPrimary: s.isPrimary })),
-        activeJourney,
-      )
-    : teacher.subjects.map((s) => ({ name: s.subject.name, isPrimary: s.isPrimary }));
-  const journeyLevels = activeJourney
-    ? filterLevelsForJourney(
-        teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order })),
-        activeJourney,
-      )
-    : teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order }));
-
-  if (journey && (journeySubjects.length === 0 || journeyLevels.length === 0)) {
+  const eligibleJourneys = teacherCatalogEligibleJourneys({
+    eligibility: teacher,
+    subjects: teacher.subjects.map((s) => ({ name: s.subject.name, icon: s.subject.icon })),
+    levels: teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order })),
+  });
+  if (eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))) {
     return NextResponse.json({
       error: "Ce professeur n'enseigne pas dans ce système. Choisissez un autre profil compatible.",
     }, { status: 404 });
   }
+  const activeJourney: TeacherJourney = journey ?? eligibleJourneys[0]!;
+  const journeySubjects = filterSubjectsForJourney(
+    teacher.subjects.map((s) => ({ name: s.subject.name, isPrimary: s.isPrimary })),
+    activeJourney,
+  );
+  const journeyLevels = filterLevelsForJourney(
+    teacher.levels.map((l) => ({ name: l.level.name, order: l.level.order })),
+    activeJourney,
+  );
 
   const displayRating = teacher.ratingCount > 0
     ? teacher.rating
@@ -116,10 +115,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     pricePerSession: teacher.pricePerSession,
     pricePack4: teacher.pricePack4,
     pricePack8: teacher.pricePack8,
-    primarySubject: activeJourney
-      ? teacher.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, activeJourney))?.subject.name
-        ?? journeySubjects[0]?.name
-      : teacher.subjects.find((s) => s.isPrimary)?.subject.name ?? teacher.subjects[0]?.subject.name,
+    primarySubject: teacher.subjects.find((s) => s.isPrimary && subjectNameMatchesJourney(s.subject.name, activeJourney))?.subject.name
+      ?? journeySubjects[0]?.name,
     subjects: journeySubjects.map((s) => ({
       name: s.name,
       isPrimary: s.isPrimary,

@@ -5,9 +5,8 @@ import { ReserverForm } from "./reserver-form";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   parseTeacherJourney,
-  teacherEligibleJourneys,
 } from "@/lib/teacher-journeys";
-import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
+import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +28,19 @@ export default async function ReserverPage({
     },
   });
   if (!teacher) notFound();
-  const eligibleJourneys = teacherEligibleJourneys(teacher).filter((journey) => (
-    filterSubjectsForJourney(teacher.subjects.map((item) => ({
-      name: item.subject.name,
-      icon: item.subject.icon,
-    })), journey).length > 0
-    && filterLevelsForJourney(teacher.levels.map((item) => ({
-      name: item.level.name,
-      order: item.level.order,
-    })), journey).length > 0
-  ));
+  const teacherCatalogSubjects = teacher.subjects.map((item) => ({
+    name: item.subject.name,
+    icon: item.subject.icon,
+  }));
+  const teacherCatalogLevels = teacher.levels.map((item) => ({
+    name: item.level.name,
+    order: item.level.order,
+  }));
+  const eligibleJourneys = teacherCatalogEligibleJourneys({
+    eligibility: teacher,
+    subjects: teacherCatalogSubjects,
+    levels: teacherCatalogLevels,
+  });
   if (eligibleJourneys.length === 0) notFound();
   if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 

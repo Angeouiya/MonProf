@@ -641,9 +641,10 @@ record(
 record(
   "Public teacher detail keeps each multi-system offer clear and journey-scoped",
   /data-public-teacher-journey-tabs/.test(publicTeacherDetail)
-    && /teacherEligibleJourneys\(teacher\)/.test(publicTeacherDetail)
-    && /filterSubjectsForJourney\(teacher\.subjects/.test(publicTeacherDetail)
-    && /filterLevelsForJourney\(teacher\.levels/.test(publicTeacherDetail)
+    && /teacherCatalogEligibleJourneys/.test(publicTeacherDetail)
+    && /teacherCatalogSubjects/.test(publicTeacherDetail)
+    && /teacherCatalogLevels/.test(publicTeacherDetail)
+    && /eligibleJourneys\.length === 0 \|\| \(journey && !eligibleJourneys\.includes\(journey\)\)/.test(publicTeacherDetail)
     && /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
     && /teacherJourneyPriceLabel\(/.test(publicTeacherDetail)
     && /journeyLevels\.map/.test(publicTeacherDetail),

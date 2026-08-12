@@ -27,7 +27,6 @@ import { authOptions } from "@/lib/auth";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   parseTeacherJourney,
-  teacherEligibleJourneys,
   teacherJourneyWhere,
   TEACHER_JOURNEY_CONFIG,
 } from "@/lib/teacher-journeys";
@@ -35,6 +34,7 @@ import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-
 import { resolveTeacherCover } from "@/lib/teacher-cover";
 import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
 import { hasTeacherCvContent } from "@/lib/teacher-profile";
+import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -77,8 +77,23 @@ export default async function TeacherDetailPage({
   }
 
   const displayName = teacher.professionalName || teacher.fullName;
-  const eligibleJourneys = teacherEligibleJourneys(teacher);
-  const activeJourney = journey || eligibleJourneys[0] || "ivoirien";
+  const teacherCatalogSubjects = teacher.subjects.map((item) => ({
+    name: item.subject.name,
+    icon: item.subject.icon,
+  }));
+  const teacherCatalogLevels = teacher.levels.map((item) => ({
+    name: item.level.name,
+    order: item.level.order,
+  }));
+  const eligibleJourneys = teacherCatalogEligibleJourneys({
+    eligibility: teacher,
+    subjects: teacherCatalogSubjects,
+    levels: teacherCatalogLevels,
+  });
+  if (eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))) {
+    notFound();
+  }
+  const activeJourney = journey || eligibleJourneys[0]!;
   const journeyConfig = TEACHER_JOURNEY_CONFIG[activeJourney];
   const journeySubjects = filterSubjectsForJourney(teacher.subjects.map((item) => ({
     ...item,

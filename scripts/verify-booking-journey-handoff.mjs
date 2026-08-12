@@ -73,7 +73,9 @@ const checks = [
   ],
   [
     "Teacher detail keeps the journey in back and booking destinations",
-    teacherDetail.includes('const activeJourney = journey || eligibleJourneys[0] || "ivoirien"')
+    teacherDetail.includes("teacherCatalogEligibleJourneys")
+      && teacherDetail.includes("eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))")
+      && teacherDetail.includes("const activeJourney = journey || eligibleJourneys[0]!")
       && teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`')
       && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`')
       && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref}>')
@@ -92,8 +94,9 @@ const checks = [
       && bookingPage.includes('initialJourney={initialJourney}')
       && bookingPage.includes('parseTeacherJourney(requestedJourney)')
       && bookingPage.includes('!eligibleJourneys.includes(initialJourney)')
-      && bookingPage.includes('filterSubjectsForJourney(teacher.subjects')
-      && bookingPage.includes('filterLevelsForJourney(teacher.levels'),
+      && bookingPage.includes("teacherCatalogEligibleJourneys")
+      && bookingPage.includes("teacherCatalogSubjects")
+      && bookingPage.includes("teacherCatalogLevels"),
   ],
   [
     "Booking form seeds the chosen journey and never displays a fabricated price before selection",

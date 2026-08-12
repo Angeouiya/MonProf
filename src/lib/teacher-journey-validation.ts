@@ -48,6 +48,24 @@ export function teacherJourneyCatalogIssues({
   });
 }
 
+export function teacherCatalogEligibleJourneys({
+  eligibility,
+  subjects,
+  levels,
+}: {
+  eligibility: TeacherJourneyEligibility;
+  subjects: TeacherJourneyCatalogSubject[];
+  levels: TeacherJourneyCatalogLevel[];
+}) {
+  return teacherEligibleJourneys(eligibility).filter((journey) => (
+    filterSubjectsForJourney(subjects, journey).length > 0
+    && filterLevelsForJourney(
+      levels.map((level) => ({ name: level.name, order: level.order ?? 0 })),
+      journey,
+    ).length > 0
+  ));
+}
+
 export function teacherJourneyCatalogIssueMessage(issues: TeacherJourneyCatalogIssue[]) {
   if (issues.length === 0) return null;
   const details = issues.map((issue) => {

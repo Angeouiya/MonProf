@@ -41,6 +41,13 @@ check(
     && /teacherEligibleJourneys/.test(journeyModel),
 );
 check(
+  "Catalog-compatible journey helper combines admin authorization with real subject and level coverage",
+  /export function teacherCatalogEligibleJourneys/.test(journeyValidation)
+    && /teacherEligibleJourneys\(eligibility\)\.filter/.test(journeyValidation)
+    && /filterSubjectsForJourney\(subjects, journey\)\.length > 0/.test(journeyValidation)
+    && /filterLevelsForJourney/.test(journeyValidation),
+);
+check(
   "Admin can activate any combination but cannot disable all mini-apps",
   /name="offersIvorianSystem"/.test(teacherForm)
     && /name="offersFrenchSystem"/.test(teacherForm)
@@ -76,9 +83,12 @@ check(
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherApi)
     && /teacherJourneyCatalogClauses\(subjects, levels\)/.test(publicTeacherApi)
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetail)
+    && /teacherCatalogEligibleJourneys/.test(publicTeacherDetail)
+    && /eligibleJourneys\.length === 0 \|\| \(journey && !eligibleJourneys\.includes\(journey\)\)/.test(publicTeacherDetail)
     && /parseTeacherJourney\(requestedJourney\)/.test(publicTeacherDetailApi)
     && /teacherJourneyWhere\(journey\)/.test(publicTeacherDetailApi)
-    && /teacherEligibleJourneys\(teacher\)/.test(publicTeacherDetailApi)
+    && /teacherCatalogEligibleJourneys/.test(publicTeacherDetailApi)
+    && /eligibleJourneys\.length === 0 \|\| \(journey && !eligibleJourneys\.includes\(journey\)\)/.test(publicTeacherDetailApi)
     && /filterSubjectsForJourney/.test(publicTeacherDetailApi)
     && /filterLevelsForJourney/.test(publicTeacherDetailApi)
     && /n'enseigne pas dans ce système/.test(publicTeacherDetailApi),
@@ -109,9 +119,9 @@ check(
 );
 check(
   "Booking UI exposes only mini-apps enabled for the professor",
-  /teacherEligibleJourneys\(teacher\)/.test(bookingPage)
-    && /filterSubjectsForJourney\(teacher\.subjects/.test(bookingPage)
-    && /filterLevelsForJourney\(teacher\.levels/.test(bookingPage)
+  /teacherCatalogEligibleJourneys/.test(bookingPage)
+    && /teacherCatalogSubjects/.test(bookingPage)
+    && /teacherCatalogLevels/.test(bookingPage)
     && /eligibleJourneys\.length === 0\) notFound/.test(bookingPage)
     && /!eligibleJourneys\.includes\(initialJourney\)/.test(bookingPage)
     && /eligibleJourneys: BookingJourney\[\]/.test(bookingForm)
