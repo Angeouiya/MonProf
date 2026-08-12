@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import { LegalDocumentPage, type LegalSection } from "@/components/legal/legal-document-page";
 
 export const metadata: Metadata = {
-  title: "Conditions générales d'utilisation | Compétence",
-  description: "Conditions générales d'utilisation de la plateforme Compétence.",
+  title: "Conditions générales d'utilisation | Compétence.CI",
+  description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "4 août 2026";
+const version = "12 août 2026";
 
 const sections: LegalSection[] = [
   {
     title: "Champ d'application",
     body: [
-      "Les présentes conditions générales d'utilisation encadrent l'accès et l'utilisation de la plateforme Compétence, service ivoirien de réservation et de suivi de cours à domicile, cours en ligne, accompagnement scolaire, universitaire, professionnel, concours, métiers et formations.",
+      "Les présentes conditions générales d'utilisation encadrent l'accès et l'utilisation de la plateforme Compétence.CI, service ivoirien de réservation et de suivi de cours à domicile, cours en ligne, accompagnement scolaire, universitaire, professionnel, concours, métiers et formations.",
       "Toute création de compte, réservation, demande de cours, paiement, demande de remboursement, demande de paiement professeur, notification ou utilisation d'un espace Compétence implique l'acceptation pleine et entière des présentes conditions.",
       "Compétence peut refuser, suspendre ou limiter l'accès à la plateforme en cas de fraude, usage abusif, paiement non vérifié, contournement, comportement non professionnel, litige grave ou violation des présentes conditions.",
     ],
@@ -21,9 +21,19 @@ const sections: LegalSection[] = [
     title: "Nature du service",
     body: [
       "Compétence met en relation des clients avec des professeurs vérifiés et suivis par le service client. La plateforme organise la réservation, le suivi, la notification, le paiement sécurisé, la traçabilité, la qualité, les avis, les remplacements et la comptabilité interne.",
+      "Le service est structuré autour de trois mini-applications principales : Système ivoirien, Système français et Professionnel. Elles servent à afficher uniquement les offres, professeurs, niveaux, prix et règles compatibles avec le parcours choisi.",
       "Les professeurs ne disposent pas d'une inscription publique autonome. Ils sont enrôlés, vérifiés, activés, suspendus ou désactivés par le service client Compétence.",
       "Compétence conserve un pouvoir de contrôle opérationnel sur les professeurs, les missions, les paiements, les sanctions, les remplacements et la visibilité des profils.",
       "Sauf disposition impérative contraire, le professeur intervient comme prestataire indépendant et reste responsable de ses déclarations, qualifications, méthodes, obligations professionnelles et fiscales. L'accès à la plateforme ne constitue ni une garantie de mission, ni un salaire, ni une relation d'exclusivité.",
+    ],
+  },
+  {
+    title: "Mini-applications et systèmes enseignés",
+    body: [
+      "Un professeur peut être autorisé dans un seul système, dans deux systèmes ou dans les trois systèmes, uniquement si l'administration Compétence a coché les systèmes concernés sur sa fiche.",
+      "L'autorisation d'un système suppose également un catalogue cohérent : matières, compétences, classes, niveaux ou profils compatibles avec ce système. Une autorisation sans catalogue suffisant peut être refusée ou désactivée.",
+      "Lorsqu'un professeur n'enseigne pas dans un système, l'action est verrouillée : le profil peut être masqué du parcours, la réservation est impossible, le paiement ne doit pas être lancé et le remplacement ne peut pas sélectionner ce professeur pour ce système.",
+      "Le client doit choisir un professeur compatible avec le système sélectionné. Lorsqu'il change de mini-application, la plateforme doit présenter uniquement les professeurs, cours, niveaux, formations, prix et filtres rattachés à ce système.",
     ],
   },
   {
@@ -46,8 +56,8 @@ const sections: LegalSection[] = [
   {
     title: "Réservations et paiement client",
     body: [
-      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par le prestataire. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
-      "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence.",
+      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko ou, pour un ancien dossier, par le prestataire historique concerné. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
+      "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence à partir d'une réponse API, webhook ou transaction vérifiable.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
       "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
     ],
@@ -55,6 +65,7 @@ const sections: LegalSection[] = [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
       "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers PayDunya restent conservés uniquement dans l'historique.",
+      "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
       "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Les frais propres au prestataire de paiement sont suivis séparément par la plateforme.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
     ],
@@ -66,6 +77,12 @@ const sections: LegalSection[] = [
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
       "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur peut refuser une combinaison incompatible et demander au client de choisir un autre profil.",
+    ],
+    bullets: [
+      "Système ivoirien : CP1 à CM1 15 000 FCFA, CM2 à 4e 20 000 FCFA, 3e à 1ère 25 000 FCFA, Terminale 30 000 FCFA par séance de 2 heures.",
+      "Système français : CP1 à CM1 37 500 FCFA, CM2 à 4e 50 000 FCFA, 3e à 1ère 62 500 FCFA, Terminale 75 000 FCFA par séance de 2 heures.",
+      "Professionnel : 40 000 FCFA par séance de 2 heures, sauf accord écrit spécifique validé par Compétence.",
+      "Les frais de déplacement, frais de service et frais techniques éventuels sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
     ],
   },
   {
@@ -118,6 +135,7 @@ const sections: LegalSection[] = [
       "Pour une réservation comprenant plusieurs séances, chaque séance possède son propre planning, son professeur affecté et son décompte. Les fonds d'une séance deviennent libérables uniquement après sa réalisation puis sa confirmation par le client; les séances futures restent bloquées.",
       "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
       "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
+      "Le professeur retire le montant net libérable validé dans son espace. Lorsque Compétence décide de prendre en charge des frais techniques de transfert, ces frais sont comptabilisés séparément et ne diminuent pas le net professeur déjà validé.",
       "Lorsqu'un professeur fait une demande de retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Une demande correctement envoyée est normalement traitée entre 1 heure et 72 heures ouvrées après contrôle.",
       "Ce délai peut être prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
       "Compétence peut payer partiellement, suspendre, différer, refuser ou ajuster un paiement professeur lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient.",
@@ -172,6 +190,7 @@ const sections: LegalSection[] = [
       "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique, sous réserve de leur recevabilité légale.",
       "Une page de retour, une capture d'écran, un SMS isolé, un abandon de fenêtre ou une déclaration de paiement ne valent jamais confirmation. Seule la vérification serveur du prestataire et de la transaction exacte active la réservation ou libère des coordonnées.",
       "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
+      "Les coordonnées directes du client et du professeur ne sont partagées entre eux qu'après confirmation serveur d'un paiement exact et rattaché à la réservation concernée.",
     ],
   },
   {
@@ -201,6 +220,15 @@ const sections: LegalSection[] = [
     body: [
       "L'utilisation de Compétence implique le traitement de données personnelles nécessaires au service. Les règles détaillées sont présentées dans la politique de confidentialité.",
       "Le client accepte cette politique lors de son inscription. Le professeur en prend connaissance lors de l'enrôlement par le service client et peut la consulter depuis son espace.",
+      "La réinitialisation du mot de passe client repose sur l'adresse email enregistrée par le client. Pour les professeurs, l'assistance mot de passe passe par le service client, qui peut émettre un mot de passe temporaire à changer à la connexion.",
+    ],
+  },
+  {
+    title: "Références légales",
+    body: [
+      "Les présentes conditions tiennent compte du droit applicable en Côte d'Ivoire, notamment des règles relatives aux transactions électroniques et à la protection des données personnelles, sans préjudice des règles impératives applicables aux consommateurs.",
+      "Les transactions électroniques, confirmations numériques, informations précontractuelles, preuves et parcours de paiement s'inscrivent notamment dans le cadre de la loi n°2013-546 du 30 juillet 2013 relative aux transactions électroniques.",
+      "Les traitements de données personnelles sont détaillés dans la politique de confidentialité et tiennent notamment compte de la loi n°2013-450 du 19 juin 2013 relative à la protection des données à caractère personnel.",
     ],
   },
   {

@@ -65,15 +65,16 @@ export default async function HomePage() {
   return (
     <PublicLayout activeJourney="ivoirien">
       <section
-        className="flex items-center border-b border-[#E3E8F2] bg-white sm:block sm:min-h-0"
+        className="flex items-center border-b border-[#E3E8F2] bg-[radial-gradient(circle_at_top,#F1F5FF_0,#FFFFFF_48%,#F8FAFD_100%)]"
         style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 7.25rem)" }}
+        data-home-centered-entry
       >
-        <div className="mx-auto w-full max-w-6xl px-4 pb-8 pt-5 text-center sm:px-6 sm:pb-16 sm:pt-10 lg:px-8 lg:pb-20">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 text-center sm:px-6 sm:py-14 lg:px-8">
           <nav
             id="parcours"
             aria-label="Choisir une mini-application"
             data-home-journey-tabs
-            className="mx-auto max-w-5xl scroll-mt-20 text-left"
+            className="mx-auto max-w-4xl scroll-mt-20 text-left"
           >
             <JourneySwitcher
               activeJourney="ivoirien"
@@ -84,16 +85,16 @@ export default async function HomePage() {
               size="hero"
             />
           </nav>
-          <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D] sm:mt-9">
+          <p className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#111B4D] shadow-sm ring-1 ring-[#DDE6F7] sm:mt-8">
             <ShieldCheck className="h-4 w-4" />
             <span className="sm:hidden">Professeurs vérifiés</span>
             <span className="hidden sm:inline">Professeurs vérifiés en Côte d'Ivoire</span>
           </p>
-          <h1 className="mx-auto mt-4 max-w-3xl text-[2rem] font-semibold leading-[1.08] tracking-tight text-[#111827] sm:mt-6 sm:text-5xl lg:text-6xl">
-            Trouvez votre professeur.
+          <h1 className="mx-auto mt-4 max-w-2xl text-[2.15rem] font-black leading-[1.04] tracking-tight text-[#111827] sm:mt-6 sm:text-5xl lg:text-6xl">
+            Choisissez. Payez. Commencez.
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#64748B] sm:mt-5 sm:text-lg sm:leading-7">
-            Choisissez un parcours. On calcule le reste.
+          <p className="mx-auto mt-3 max-w-lg text-sm font-semibold leading-6 text-[#64748B] sm:mt-5 sm:text-lg sm:leading-7">
+            Un parcours. Un prix clair. Un professeur vérifié.
           </p>
           <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-[#F8FAFD] px-3 py-2 text-xs font-semibold text-[#475569] sm:hidden">
             <Check className="h-4 w-4 shrink-0 text-[#111B4D]" />

@@ -361,14 +361,25 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /4 août 2026/.test(termsPage)
+  /12 août 2026/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
     && /À moins de 24 heures/.test(termsPage)
     && /Même quartier exact/.test(termsPage)
-    && /4 août 2026/.test(privacyPage)
+    && /Boutique Compétence/.test(termsPage)
+    && /Mini-applications et systèmes enseignés/.test(termsPage)
+    && /CP1 à CM1 15 000 FCFA/.test(termsPage)
+    && /Professionnel : 40 000 FCFA/.test(termsPage)
+    && /net professeur déjà validé/.test(termsPage)
+    && /loi n°2013-546/.test(termsPage)
+    && /loi n°2013-450/.test(termsPage)
+    && /12 août 2026/.test(privacyPage)
     && /Données de brouillon/.test(privacyPage)
+    && /Données de parcours/.test(privacyPage)
+    && /systèmes enseignés/.test(privacyPage)
+    && /Boutique Compétence/.test(privacyPage)
     && /destination Mobile Money/.test(privacyPage)
-    && /confirmation serveur du paiement/.test(privacyPage),
+    && /confirmation serveur du paiement/.test(privacyPage)
+    && /liens de réinitialisation temporaires/.test(privacyPage),
 );
 
 record(

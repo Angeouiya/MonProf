@@ -2,19 +2,19 @@ import type { Metadata } from "next";
 import { LegalDocumentPage, type LegalSection } from "@/components/legal/legal-document-page";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité | Compétence",
-  description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.",
+  title: "Politique de confidentialité | Compétence.CI",
+  description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.CI.",
 };
 
-const version = "4 août 2026";
+const version = "12 août 2026";
 
 const sections: LegalSection[] = [
   {
     title: "Objet de la politique",
     body: [
-      "La présente politique explique comment Compétence collecte, utilise, conserve, sécurise et partage les données personnelles nécessaires au fonctionnement de la plateforme de cours à domicile, cours en ligne, accompagnement professionnel, concours, métiers et formations.",
+      "La présente politique explique comment Compétence.CI collecte, utilise, conserve, sécurise et partage les données personnelles nécessaires au fonctionnement de la plateforme de cours à domicile, cours en ligne, accompagnement professionnel, concours, métiers et formations.",
       "Elle s'applique aux visiteurs, clients, parents, apprenants, professeurs suivis par le service client, équipe Compétence habilitée, prospects, personnes qui contactent le service client et toute personne utilisant les services Compétence.",
-      "Compétence s'engage à traiter les données de manière loyale, utile, proportionnée et conforme au cadre applicable en Côte d'Ivoire, notamment la loi n°2013-450 relative à la protection des données à caractère personnel.",
+      "Compétence s'engage à traiter les données de manière loyale, utile, proportionnée et conforme au cadre applicable en Côte d'Ivoire, notamment la loi n°2013-450 relative à la protection des données à caractère personnel et les règles utiles aux transactions électroniques.",
     ],
   },
   {
@@ -34,10 +34,11 @@ const sections: LegalSection[] = [
       "Données d'identification : nom, prénom ou nom affiché, email, téléphone, commune, quartier, adresse de cours si nécessaire.",
       "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité.",
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
+      "Données de parcours : mini-application choisie, système ivoirien, système français ou professionnel, matières et niveaux compatibles, systèmes enseignés cochés par l'administration pour chaque professeur.",
       "Données de brouillon : contenu du dossier non payé, référence éventuelle du prestataire de paiement, date de création et état de reprise ou de suppression.",
-      "Données de paiement : montant payé, frais liés au moyen de paiement, référence Jèko ou PayDunya historique, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
-      "Données professeur : photo réelle obligatoire, couverture personnalisée ou choisie dans le catalogue, identité, téléphone, email, matières, niveaux, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
-      "Données de communication : notifications, emails, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
+      "Données de paiement : montant payé, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko ou PayDunya historique, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
+      "Données professeur : photo réelle obligatoire, couverture personnalisée, couleur ou couverture choisie dans le catalogue, identité, téléphone, email, matières, niveaux, systèmes enseignés, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
+      "Données de communication : notifications, emails de réinitialisation client, mots de passe temporaires professeurs émis par le service client, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
       "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes et preuves nécessaires à la lutte contre les faux paiements.",
     ],
   },
@@ -49,8 +50,9 @@ const sections: LegalSection[] = [
     bullets: [
       "Créer et sécuriser les comptes clients et accès professeurs.",
       "Afficher des professeurs réels, vérifiés et adaptés à la demande de l'utilisateur.",
+      "Verrouiller les professeurs qui n'enseignent pas dans le système sélectionné et empêcher toute réservation, paiement ou remplacement incompatible.",
       "Calculer les tarifs, frais de déplacement, frais de service, annulations, remboursements et sommes dues.",
-      "Vérifier les paiements du prestataire côté serveur avant toute réservation active ou notification professeur.",
+      "Vérifier les paiements Jèko côté serveur avant toute réservation active, notification professeur ou partage de coordonnées.",
       "Notifier les clients, professeurs et l'équipe Compétence sur les événements importants.",
       "Gérer les litiges, sanctions, remplacements, avis, remboursements, paiements professeurs et journaux d'activité.",
       "Rechercher automatiquement un professeur remplaçant compatible lorsque le professeur initial signale une indisponibilité, puis permettre au client d'accepter ou de refuser la proposition.",
@@ -76,17 +78,17 @@ const sections: LegalSection[] = [
       "Le client reçoit le numéro du professeur uniquement après confirmation serveur du paiement correspondant. Un brouillon, une redirection abandonnée ou une capture d'écran ne débloque aucune coordonnée.",
       "Le professeur reçoit le numéro du client uniquement dans une mission rattachée à un paiement dont le prestataire, la transaction et le montant exact ont été vérifiés côté serveur.",
       "L'équipe Compétence habilitée accède aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
-      "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; PayDunya peut apparaître uniquement dans des dossiers historiques. La saisie financière se fait dans l'environnement sécurisé du prestataire.",
+      "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; la boutique ou le marchand attendu doit correspondre à Compétence.CI ou à la Boutique Compétence. PayDunya peut apparaître uniquement dans des dossiers historiques. La saisie financière se fait dans l'environnement sécurisé du prestataire.",
       "Des prestataires techniques peuvent intervenir pour l'hébergement, la base de données, l'email, les notifications ou la sécurité, dans la limite de leur mission.",
     ],
   },
   {
     title: "Paiements et remboursements",
     body: [
-      "Aucune réservation active n'est créée tant que le paiement n'est pas effectué et confirmé côté serveur par le prestataire. Une réservation non payée reste un brouillon ou une intention de réservation.",
+      "Aucune réservation active n'est créée tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko ou, pour un ancien dossier, par le prestataire historique concerné. Une réservation non payée reste un brouillon ou une intention de réservation.",
       "Le client peut reprendre un brouillon depuis son espace ou le supprimer si aucun paiement vérifié ni workflow protégé n'y est rattaché. La suppression retire le dossier et les notifications liées, tout en conservant une trace d'audit minimale non financière nécessaire à la sécurité.",
       "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions du service client.",
-      "Les demandes de retrait des professeurs sont suivies dans la comptabilité interne de Compétence puis exécutées et rapprochées par Jèko. Le professeur confirme la destination Mobile Money, le numéro et le montant exact. Les frais de transfert pris en charge par Compétence sont conservés séparément pour l'audit financier.",
+      "Les demandes de retrait des professeurs sont suivies dans la comptabilité interne de Compétence puis exécutées et rapprochées par Jèko. Le professeur confirme la destination Mobile Money, le numéro et le montant exact. Les frais de transfert pris en charge par Compétence sont conservés séparément pour l'audit financier et ne sont pas utilisés pour réduire le net professeur validé.",
     ],
   },
   {
@@ -100,7 +102,7 @@ const sections: LegalSection[] = [
   {
     title: "Sécurité",
     body: [
-      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
+      "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, liens de réinitialisation temporaires pour les clients, mots de passe temporaires professeurs à renouveler, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
       "L'utilisateur reste responsable de la confidentialité de ses identifiants. Tout accès suspect, perte de téléphone, erreur de numéro de paiement ou tentative de fraude doit être signalé rapidement au service client.",
       "Aucun système n'étant invulnérable, Compétence peut suspendre temporairement une action, un paiement, une réservation ou un accès lorsqu'un risque de sécurité ou de fraude est détecté.",
     ],
@@ -110,7 +112,16 @@ const sections: LegalSection[] = [
     body: [
       "Les moteurs de tarification, compatibilité professeur, transport, CV, détection de fraude et remplacement peuvent produire un calcul, une suggestion, un blocage préventif ou un classement à partir des informations du dossier.",
       "Aucun moteur CV n'est autorisé à créer un diplôme, une expérience, une ancienneté ou un résultat absent du document source. Les champs sensibles, preuves manquantes et suggestions de catalogue restent contrôlables par l'administration avant publication.",
+      "Les photos de profil, couvertures, couleurs, CV et mini-CV des professeurs peuvent être modérés, optimisés, masqués ou remplacés par un catalogue Compétence lorsque la qualité, la sécurité, les droits de tiers ou la cohérence pédagogique l'exigent.",
       "Une personne peut demander l'examen humain d'une décision opérationnelle importante auprès du service client. Compétence conserve toutefois le droit de maintenir une mesure de sécurité, un gel de fonds ou une suspension pendant l'analyse d'une fraude, d'un litige ou d'un risque pour un apprenant.",
+    ],
+  },
+  {
+    title: "Hébergement, prestataires et transferts techniques",
+    body: [
+      "La plateforme peut s'appuyer sur des prestataires techniques pour l'hébergement, la base de données, l'envoi d'emails, les notifications, la sécurité, les sauvegardes, l'analyse de fichiers et le paiement.",
+      "Ces prestataires reçoivent uniquement les données nécessaires à leur mission. Lorsque certains traitements techniques impliquent un accès ou un hébergement hors de Côte d'Ivoire, Compétence cherche à appliquer des garanties contractuelles et de sécurité adaptées à la nature des données.",
+      "Compétence peut changer de prestataire lorsque cela améliore la sécurité, la disponibilité, le coût, la conformité ou la qualité de service, sous réserve de mettre à jour la présente politique lorsque le changement est significatif.",
     ],
   },
   {
