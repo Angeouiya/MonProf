@@ -75,16 +75,16 @@ const checks = [
     publicTeachers.includes('const journey = parseBookingJourney')
       && publicTeachers.includes('params.set("journey", journey)')
       && publicTeachers.includes('name="journey" value={journey}')
-      && publicTeachers.includes('&journey=${journey}')
-      && publicTeachers.includes('profileHref={journey ?'),
+      && (publicTeachers.includes('&journey=${journey}') || publicTeachers.includes('buildBookingHref(t.id, journey, referralCode)'))
+      && (publicTeachers.includes('profileHref={journey ?') || publicTeachers.includes('profileHref={buildTeacherProfileHref(t.id, journey, referralCode)}')),
   ],
   [
     "Teacher detail keeps the journey in back and booking destinations",
     teacherDetail.includes("teacherCatalogEligibleJourneys")
       && teacherDetail.includes("eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))")
       && teacherDetail.includes("const activeJourney = journey || eligibleJourneys[0]!")
-      && teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`')
-      && teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`')
+      && (teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`') || teacherDetail.includes('const teachersHref = buildTeachersHref(activeJourney, referralCode)'))
+      && (teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`') || teacherDetail.includes('let bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`'))
       && teacherDetail.includes('const tariffsHref = `/tarifs?journey=${activeJourney}`')
       && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref} activeJourney={activeJourney}>')
       && teacherDetail.includes('href={reserveHref}')
@@ -94,7 +94,7 @@ const checks = [
   [
     "Public teacher cards preserve the exact booking destination across authentication",
     teacherCard.includes('`/connexion?from=${encodeURIComponent(directBookingHref)}`')
-      && publicTeachers.includes('`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}')
+      && (publicTeachers.includes('`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}') || publicTeachers.includes('`/connexion?from=${encodeURIComponent(buildBookingHref(t.id, journey, referralCode))}`'))
       && login.includes('router.replace(from ?? "/client")'),
   ],
   [
