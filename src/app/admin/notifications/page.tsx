@@ -3,11 +3,11 @@ import { requireAdmin } from "@/lib/session";
 import { PageHeader, EmptyState } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Bell, ClipboardList, ShieldAlert, UserCog, Wallet } from "lucide-react";
+import { ArrowRight, Bell, ChevronDown, ClipboardList, ShieldAlert, UserCog, Wallet } from "lucide-react";
 import { NotificationsClient } from "./client";
-import { AdminUrgentAlertCard, NotificationHistoryTable, NotificationItem } from "@/components/admin/notification-components";
+import { NotificationHistoryTable, NotificationItem } from "@/components/admin/notification-components";
 import { NotificationQuickActionsClient } from "./quick-actions-client";
 import { RunNotificationRemindersClient } from "./run-reminders-client";
 import { CommunicationCampaignComposer } from "./campaign-composer";
@@ -126,28 +126,77 @@ export default async function AdminNotificationsPage({
         </div>
       </PageHeader>
 
+      <section
+        data-admin-notification-priority
+        className={radarDecision.tone === "red"
+          ? "overflow-hidden rounded-[1.35rem] border border-red-200 bg-red-50/70 p-4 shadow-sm"
+          : radarDecision.tone === "amber"
+            ? "overflow-hidden rounded-[1.35rem] border border-amber-200 bg-amber-50/70 p-4 shadow-sm"
+            : "overflow-hidden rounded-[1.35rem] border border-[#DCE5F2] bg-white p-4 shadow-sm"}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <p className={radarDecision.tone === "red" ? "text-xs font-black uppercase tracking-wide text-red-900/65" : radarDecision.tone === "amber" ? "text-xs font-black uppercase tracking-wide text-amber-900/65" : "text-xs font-black uppercase tracking-wide text-[#64748B]"}>
+              À traiter maintenant
+            </p>
+            <h2 className={radarDecision.tone === "red" ? "mt-1 text-xl font-black leading-tight text-red-950" : radarDecision.tone === "amber" ? "mt-1 text-xl font-black leading-tight text-amber-950" : "mt-1 text-xl font-black leading-tight text-[#111B4D]"}>
+              {radarDecision.title}
+            </h2>
+            <p className={radarDecision.tone === "red" ? "mt-2 line-clamp-2 max-w-3xl text-sm font-medium leading-6 text-red-950/75" : radarDecision.tone === "amber" ? "mt-2 line-clamp-2 max-w-3xl text-sm font-medium leading-6 text-amber-950/75" : "mt-2 line-clamp-2 max-w-3xl text-sm font-medium leading-6 text-[#526070]"}>
+              {radarDecision.description}
+            </p>
+          </div>
+          <Button asChild className="h-12 rounded-xl bg-[#111B4D] px-5 font-black text-white hover:bg-[#17245F]">
+            <Link href={radarDecision.href}>
+              {radarDecision.actionLabel}
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <AdminNotificationMini label="Urgentes" value={urgentCount} href="/admin/notifications?filter=urgent" danger={urgentCount > 0} />
+          <AdminNotificationMini label="Échecs" value={failedCount} href="/admin/notifications?filter=failed" danger={failedCount > 0} />
+          <AdminNotificationMini label="Professeurs" value={teacherPendingCount} href="/admin/notifications?filter=teacher" danger={teacherPendingCount > 0} />
+          <AdminNotificationMini label="Actions" value={actionRequiredCount} href="/admin/notifications?filter=unread" danger={actionRequiredCount > 0} />
+        </div>
+      </section>
+
       {admin.adminPermissions?.includes("COMMUNICATIONS_SEND") && (
-        <CommunicationCampaignComposer
-          clients={clients.map((client) => ({
-            id: client.id,
-            name: client.name,
-            detail: client.email || client.phone || "Client",
-          }))}
-          teachers={campaignTeachers.map((teacher) => ({
-            id: teacher.id,
-            name: teacher.professionalName || teacher.fullName,
-            detail: [teacher.subjects[0]?.subject.name, teacher.phone].filter(Boolean).join(" · ") || "Professeur",
-          }))}
-        />
+        <details data-admin-notification-campaign-composer className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span>
+              <span className="block text-sm font-black text-[#111B4D]">Nouvelle diffusion</span>
+              <span className="block text-xs font-semibold text-[#64748B]">Ouvrir seulement au moment d’envoyer.</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-[#E2E8F0] p-3">
+            <CommunicationCampaignComposer
+              clients={clients.map((client) => ({
+                id: client.id,
+                name: client.name,
+                detail: client.email || client.phone || "Client",
+              }))}
+              teachers={campaignTeachers.map((teacher) => ({
+                id: teacher.id,
+                name: teacher.professionalName || teacher.fullName,
+                detail: [teacher.subjects[0]?.subject.name, teacher.phone].filter(Boolean).join(" · ") || "Professeur",
+              }))}
+            />
+          </div>
+        </details>
       )}
 
       {campaigns.length > 0 && (
-        <Card className="overflow-hidden border-[#E2E8F0] bg-white">
-          <CardHeader className="border-b border-[#E2E8F0] bg-white">
-            <CardTitle className="text-base text-[#111827]">Historique des diffusions</CardTitle>
-            <p className="text-sm text-[#64748B]">Campagnes ciblées et annonces globales, avec leur volume réel de destinataires.</p>
-          </CardHeader>
-          <CardContent className="divide-y divide-[#E2E8F0] p-0">
+        <details data-admin-notification-campaigns className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span>
+              <span className="block text-sm font-black text-[#111B4D]">Diffusions envoyées</span>
+              <span className="block text-xs font-semibold text-[#64748B]">{campaigns.length} campagne(s) historisée(s)</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+          </summary>
+          <div className="divide-y divide-[#E2E8F0] border-t border-[#E2E8F0]">
             {campaigns.map((campaign) => (
               <div key={campaign.id} className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                 <div className="min-w-0">
@@ -166,131 +215,140 @@ export default async function AdminNotificationsPage({
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </details>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <AdminUrgentAlertCard title="Alertes urgentes" description="Critiques ou urgentes non lues." count={urgentCount} />
-        <AdminUrgentAlertCard title="Échecs d'envoi" description="Notifications à réessayer ou traiter manuellement." count={failedCount} />
-        <AdminUrgentAlertCard title="Professeurs à suivre" description="Notifications professeur en attente de confirmation." count={teacherPendingCount} />
-      </div>
-
-      <Card className="overflow-hidden border-[#E3E8F2] bg-white">
-        <CardHeader className="border-b border-[#E3E8F2] bg-white">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base text-[#111827]">
-                <ShieldAlert className="h-4 w-4 text-[#111B4D]" />
-                Radar opérationnel des notifications
-              </CardTitle>
-              <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-[#64748B]">
-                Lecture rapide pour décider quoi traiter en premier : urgences, professeurs à relancer, remplacements, litiges et paiements.
-                Le bouton de relance vérifie aussi les missions expirées, les confirmations en retard et les cours dans moins de 2h.
-              </p>
-            </div>
-            <Badge variant="outline" className="w-fit border-[#CAD7F2] bg-white text-[#111B4D]">
-              {actionRequiredCount} action(s) à suivre
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-5">
-          <div className={radarDecision.tone === "red" ? "rounded-lg border border-red-200 bg-white p-4" : radarDecision.tone === "amber" ? "rounded-lg border border-amber-200 bg-white p-4" : "rounded-lg border border-[#CAD7F2] bg-white p-4"}>
-            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className={radarDecision.tone === "red" ? "text-xs font-bold uppercase tracking-wide text-red-900/65" : radarDecision.tone === "amber" ? "text-xs font-bold uppercase tracking-wide text-amber-900/65" : "text-xs font-bold uppercase tracking-wide text-blue-900/65"}>
-                  Décision recommandée
-                </p>
-                <p className={radarDecision.tone === "red" ? "mt-1 text-sm font-black text-red-950" : radarDecision.tone === "amber" ? "mt-1 text-sm font-black text-amber-950" : "mt-1 text-sm font-black text-blue-950"}>
-                  {radarDecision.title}
-                </p>
-                <p className={radarDecision.tone === "red" ? "mt-1 text-sm text-red-950/72" : radarDecision.tone === "amber" ? "mt-1 text-sm text-amber-950/72" : "mt-1 text-sm text-blue-950/72"}>
-                  {radarDecision.description}
-                </p>
-              </div>
-              <Button asChild variant="outline" className="rounded-lg bg-white">
-                <Link href={radarDecision.href}>
-                  {radarDecision.actionLabel}
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <RadarMetric icon={ShieldAlert} label="Critiques non lues" value={criticalUnreadCount} href="/admin/notifications?filter=urgent" danger={criticalUnreadCount > 0} />
-            <RadarMetric icon={UserCog} label="Professeurs" value={teacherPendingCount} href="/admin/notifications?filter=teacher" danger={teacherPendingCount > 0} />
-            <RadarMetric icon={ClipboardList} label="Remplacements" value={replacementCount} href="/admin/notifications?filter=replacement" danger={replacementCount > 0} />
-            <RadarMetric icon={ShieldAlert} label="Litiges" value={disputeCount} href="/admin/notifications?filter=litige" danger={disputeCount > 0} />
-            <RadarMetric icon={Wallet} label="Paiements" value={paymentActionCount} href="/admin/paiements-a-liberer" danger={paymentActionCount > 0} />
-          </div>
-        </CardContent>
-      </Card>
+      <details data-admin-notification-radar-details className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-black text-[#111B4D]">Radar complet</span>
+            <span className="block text-xs font-semibold text-[#64748B]">Litiges, remplacements et paiements, sans charger l’écran.</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+        </summary>
+        <div className="grid gap-3 border-t border-[#E2E8F0] p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <RadarMetric icon={ShieldAlert} label="Critiques non lues" value={criticalUnreadCount} href="/admin/notifications?filter=urgent" danger={criticalUnreadCount > 0} />
+          <RadarMetric icon={UserCog} label="Professeurs" value={teacherPendingCount} href="/admin/notifications?filter=teacher" danger={teacherPendingCount > 0} />
+          <RadarMetric icon={ClipboardList} label="Remplacements" value={replacementCount} href="/admin/notifications?filter=replacement" danger={replacementCount > 0} />
+          <RadarMetric icon={ShieldAlert} label="Litiges" value={disputeCount} href="/admin/notifications?filter=litige" danger={disputeCount > 0} />
+          <RadarMetric icon={Wallet} label="Paiements" value={paymentActionCount} href="/admin/paiements-a-liberer" danger={paymentActionCount > 0} />
+        </div>
+      </details>
 
       <NotificationsClient mode="filter" filter={filter ?? ""} />
 
       {notifications.length === 0 ? (
         <EmptyState icon={Bell} title="Aucune notification" description="Vous êtes à jour." />
       ) : (
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            <ul className="max-h-[650px] divide-y divide-violet-100/80 overflow-x-hidden overflow-y-auto">
-              {notificationsWithTeachers.map((n) => (
-                <NotificationItem
-                  key={n.id}
-                  notification={n}
-                  action={(
-                    <>
-                      <NotificationQuickActionsClient
-                        notification={{
-                          id: n.id,
-                          status: n.status,
-                          recipientType: n.recipientType,
-                          teacherId: n.teacherId ?? n.booking?.teacher.id ?? null,
-                          bookingId: n.bookingId ?? n.booking?.id ?? null,
-                          type: n.type,
-                          message: n.message,
-                        }}
-                        teacherName={(n.teacher ?? n.booking?.teacher)?.professionalName || (n.teacher ?? n.booking?.teacher)?.fullName || n.recipientName}
-                        teacherPhone={(n.teacher ?? n.booking?.teacher)?.phone ?? null}
-                        hasPrimaryLink={Boolean(n.link)}
-                        booking={n.booking ? {
-                          id: n.booking.id,
-                          reference: n.booking.reference,
-                          subjectName: n.booking.subjectName,
-                          levelName: n.booking.levelName,
-                          courseFormat: n.booking.courseFormat,
-                          scheduledDate: n.booking.scheduledDate?.toISOString() ?? null,
-                          scheduledTime: n.booking.scheduledTime,
-                          preferredTime: n.booking.preferredTime,
-                          clientName: n.booking.client.name,
-                          paymentStatus: n.booking.paymentStatus,
-                          bookingStatus: n.booking.status,
-                        } : null}
-                      />
-                      <NotificationsClient
-                        mode="row"
-                        notification={{
-                          id: n.id,
-                          read: n.read,
-                          status: n.status,
-                          recipientType: n.recipientType,
-                          bookingId: n.bookingId,
-                          teacherId: n.teacherId ?? n.booking?.teacher.id ?? null,
-                          clientId: n.clientId ?? n.booking?.client.id ?? null,
-                        }}
-                      />
-                    </>
-                  )}
-                />
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <details data-admin-notification-live-list open={Boolean(filter)} className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span>
+              <span className="block text-sm font-black text-[#111B4D]">{filter ? "Notifications filtrées" : "Toutes les notifications"}</span>
+              <span className="block text-xs font-semibold text-[#64748B]">{notifications.length} élément(s). Ouvrir pour traiter ligne par ligne.</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+          </summary>
+          <Card className="rounded-none border-x-0 border-b-0 border-t border-[#E2E8F0] shadow-none">
+            <CardContent className="p-0">
+              <ul className="max-h-[650px] divide-y divide-violet-100/80 overflow-x-hidden overflow-y-auto">
+                {notificationsWithTeachers.map((n) => (
+                  <NotificationItem
+                    key={n.id}
+                    notification={n}
+                    action={(
+                      <>
+                        <NotificationQuickActionsClient
+                          notification={{
+                            id: n.id,
+                            status: n.status,
+                            recipientType: n.recipientType,
+                            teacherId: n.teacherId ?? n.booking?.teacher.id ?? null,
+                            bookingId: n.bookingId ?? n.booking?.id ?? null,
+                            type: n.type,
+                            message: n.message,
+                          }}
+                          teacherName={(n.teacher ?? n.booking?.teacher)?.professionalName || (n.teacher ?? n.booking?.teacher)?.fullName || n.recipientName}
+                          teacherPhone={(n.teacher ?? n.booking?.teacher)?.phone ?? null}
+                          hasPrimaryLink={Boolean(n.link)}
+                          booking={n.booking ? {
+                            id: n.booking.id,
+                            reference: n.booking.reference,
+                            subjectName: n.booking.subjectName,
+                            levelName: n.booking.levelName,
+                            courseFormat: n.booking.courseFormat,
+                            scheduledDate: n.booking.scheduledDate?.toISOString() ?? null,
+                            scheduledTime: n.booking.scheduledTime,
+                            preferredTime: n.booking.preferredTime,
+                            clientName: n.booking.client.name,
+                            paymentStatus: n.booking.paymentStatus,
+                            bookingStatus: n.booking.status,
+                          } : null}
+                        />
+                        <NotificationsClient
+                          mode="row"
+                          notification={{
+                            id: n.id,
+                            read: n.read,
+                            status: n.status,
+                            recipientType: n.recipientType,
+                            bookingId: n.bookingId,
+                            teacherId: n.teacherId ?? n.booking?.teacher.id ?? null,
+                            clientId: n.clientId ?? n.booking?.client.id ?? null,
+                          }}
+                        />
+                      </>
+                    )}
+                  />
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </details>
       )}
 
-      <NotificationHistoryTable notifications={notificationsWithTeachers} />
+      <details data-admin-notification-history-table className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-black text-[#111B4D]">Historique complet</span>
+            <span className="block text-xs font-semibold text-[#64748B]">Tableau d’audit disponible sans occuper l’écran principal.</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-[#E2E8F0]">
+          <NotificationHistoryTable notifications={notificationsWithTeachers} />
+        </div>
+      </details>
     </div>
+  );
+}
+
+function AdminNotificationMini({
+  label,
+  value,
+  href,
+  danger = false,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  danger?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={danger
+        ? "rounded-xl border border-red-200 bg-white px-3 py-2 transition hover:border-red-300"
+        : "rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 transition hover:border-[#111B4D]"}
+      data-admin-notification-mini
+    >
+      <span className={danger ? "block text-[11px] font-black uppercase tracking-wide text-red-900/60" : "block text-[11px] font-black uppercase tracking-wide text-[#64748B]"}>
+        {label}
+      </span>
+      <span className={danger ? "mt-0.5 block text-xl font-black text-red-950" : "mt-0.5 block text-xl font-black text-[#111B4D]"}>
+        {value}
+      </span>
+    </Link>
   );
 }
 

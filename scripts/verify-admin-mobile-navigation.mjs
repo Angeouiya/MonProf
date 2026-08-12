@@ -10,6 +10,7 @@ const css = read("src/app/globals.css");
 const dashboard = read("src/app/admin/page.tsx");
 const layout = read("src/components/layouts/admin-layout.tsx");
 const reservations = read("src/app/admin/reservations/page.tsx");
+const notifications = read("src/app/admin/notifications/page.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -121,6 +122,22 @@ record(
     && /data-admin-reservation-compact-actions/.test(reservations)
     && /Calcul à reprendre/.test(reservations)
     && !/space-y-2 rounded-lg border border-blue-100 bg-blue-50\/70 p-3/.test(reservations),
+);
+
+record(
+  "Admin notifications open as one priority screen and fold operational history",
+  /data-admin-notification-priority/.test(notifications)
+    && /À traiter maintenant/.test(notifications)
+    && /data-admin-notification-mini/.test(notifications)
+    && /data-admin-notification-campaign-composer/.test(notifications)
+    && /data-admin-notification-campaigns/.test(notifications)
+    && /data-admin-notification-radar-details/.test(notifications)
+    && /data-admin-notification-live-list/.test(notifications)
+    && /open=\{Boolean\(filter\)\}/.test(notifications)
+    && /data-admin-notification-history-table/.test(notifications)
+    && /Tableau d’audit disponible sans occuper l’écran principal/.test(notifications)
+    && !/AdminUrgentAlertCard/.test(notifications)
+    && !/Radar opérationnel des notifications/.test(notifications),
 );
 
 const failed = checks.filter((check) => !check.passed);
