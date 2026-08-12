@@ -569,6 +569,16 @@ record(
 );
 
 record(
+  "Public home opens as a centered three-system launcher without search clutter",
+  /data-home-centered-entry/.test(publicHome)
+    && /data-home-journey-tabs/.test(publicHome)
+    && /<JourneySwitcher/.test(publicHome)
+    && /size="hero"/.test(publicHome)
+    && countOccurrences(publicHome, "/professeurs?journey=") === 3
+    && !/HomeSearchBar|data-home-search-form|featuredCards|TeacherCard|db\.teacher\.findMany/.test(publicHome),
+);
+
+record(
   "Public navigation preserves the selected mini-application between Profs, Tarifs and Réserver",
   /activeJourney\?: TeacherJourney \| ""/.test(publicLayout)
     && /const professorListHref = buildPublicJourneyHref\("\/professeurs", activeJourney\)/.test(publicLayout)

@@ -2,12 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Check, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
-import { TeacherCard } from "@/components/shared/teacher-card";
-import { db } from "@/lib/db";
 import { formatFCFA } from "@/lib/format";
-import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
-
-export const dynamic = "force-dynamic";
 
 const HOME_JOURNEY_HREFS = {
   ivoirien: "/professeurs?journey=ivoirien",
@@ -22,46 +17,7 @@ const IVORIAN_RATES = [
   ["Terminale", 30_000],
 ] as const;
 
-export default async function HomePage() {
-  const catalog = await getCachedTeacherSearchCatalog().catch(() => ({
-    teacherCount: 0,
-    subjects: [],
-    levels: [],
-    communes: [],
-  }));
-  const featured = catalog.teacherCount > 0
-    ? await db.teacher.findMany({
-        where: { status: "ACTIVE", featured: true, AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }] },
-        take: 3,
-        select: {
-          id: true,
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          coverUrl: true,
-          jobTitle: true,
-          rating: true,
-          ratingCount: true,
-          experienceYears: true,
-          adminRating: true,
-          adminRatingPublic: true,
-          offersHome: true,
-          offersOnline: true,
-          commune: true,
-          badgeVerified: true,
-          subjects: { select: { isPrimary: true, subject: { select: { name: true } } } },
-          _count: { select: { reviews: true } },
-        },
-        orderBy: [{ rating: "desc" }],
-      })
-    : [];
-
-  const featuredCards = featured.map((teacher) => ({
-    ...teacher,
-    primarySubject: teacher.subjects.find((subject) => subject.isPrimary)?.subject.name
-      ?? teacher.subjects[0]?.subject.name,
-  }));
-
+export default function HomePage() {
   return (
     <PublicLayout activeJourney="ivoirien">
       <section
@@ -130,25 +86,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {featuredCards.length > 0 && (
-        <section className="hidden bg-white sm:block">
-          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Professeurs vérifiés</p>
-                <h2 className="mt-3 text-2xl font-semibold text-[#111827] sm:text-3xl">Choisissez en confiance</h2>
-              </div>
-              <Link href="/professeurs" className="hidden min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D] sm:inline-flex">
-                Tout voir <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {featuredCards.map((teacher) => <TeacherCard key={teacher.id} teacher={teacher} />)}
-            </div>
-          </div>
-        </section>
-      )}
 
       <section className="hidden bg-[#111B4D] text-white sm:block">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8">

@@ -38,7 +38,7 @@ const checks = [
       && !home.includes('Réserver une séance'),
   ],
   [
-    "Homepage exposes one premium three-system switcher before secondary content",
+    "Homepage exposes one premium three-system switcher before lightweight desktop guidance",
     home.includes('data-home-centered-entry')
       && home.includes('bg-[radial-gradient(circle_at_top,#F1F5FF_0,#FFFFFF_48%,#F8FAFD_100%)]')
       && home.includes('max-w-5xl px-4 py-8 text-center')
@@ -54,8 +54,10 @@ const checks = [
       && !home.includes('Votre parcours')
       && !home.includes('sm:block sm:min-h-0')
       && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')
-      && home.includes('hidden bg-white sm:block')
-      && home.includes('hidden bg-[#111B4D] text-white sm:block'),
+      && home.includes('hidden bg-[#111B4D] text-white sm:block')
+      && !home.includes('hidden bg-white sm:block')
+      && !home.includes('TeacherCard')
+      && !home.includes('featuredCards'),
   ],
   [
     "Public navigation resolves client, admin and teacher sessions without blocking first render",

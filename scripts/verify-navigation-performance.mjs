@@ -39,7 +39,13 @@ check("Client payments batch transactions and pending bookings on one pooled con
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
 check("Admin dashboard batches operational indicators on one pooled connection", hasDatabaseTransaction(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
-check("Public home uses one consolidated catalog read", /getCachedTeacherSearchCatalog/.test(publicHome) && !/getCachedSubjects|getCachedLevels|getCachedCommunes/.test(publicHome));
+check(
+  "Public home is a lightweight mini-app launcher without database fan-out",
+  !/getCachedTeacherSearchCatalog|from "@\/lib\/db"|db\.teacher\.findMany|TeacherCard|featuredCards/.test(publicHome)
+    && /data-home-centered-entry/.test(publicHome)
+    && /data-home-journey-tabs/.test(publicHome)
+    && /HOME_JOURNEY_HREFS/.test(publicHome),
+);
 check("Public teacher search batches results and uses the consolidated catalog", /getCachedTeacherSearchCatalog/.test(publicTeachers) && hasDatabaseTransaction(publicTeachers) && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers));
 check(
   "Client registration avoids unused catalog reads and booking reuses the consolidated catalog",
