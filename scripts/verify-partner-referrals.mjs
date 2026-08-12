@@ -65,6 +65,7 @@ const checks = [
     patterns: [
       /verify_identity/,
       /mark_paid/,
+      /Vérifiez d'abord le nom officiel/,
       /Commission partenaire payée/,
       /FINANCE_MANAGE/,
     ],

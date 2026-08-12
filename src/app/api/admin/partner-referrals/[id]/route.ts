@@ -61,6 +61,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (referral.status !== "PAYABLE") {
       return NextResponse.json({ error: "Seules les commissions payables peuvent être marquées payées." }, { status: 400 });
     }
+    const verifiedIdentityName = identityName || referral.promoterIdentityName;
+    if (!verifiedIdentityName) {
+      return NextResponse.json({ error: "Vérifiez d'abord le nom officiel sur la pièce de l'apporteur avant le dépôt." }, { status: 400 });
+    }
     if (!payoutMethod || !payoutPhone || !payoutReference) {
       return NextResponse.json({ error: "Moyen, téléphone et référence de dépôt sont requis." }, { status: 400 });
     }
@@ -74,8 +78,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           payoutMethod,
           payoutPhone,
           payoutReference,
-          promoterIdentityName: identityName || referral.promoterIdentityName,
-          promoterIdentityVerifiedAt: identityName ? referral.promoterIdentityVerifiedAt ?? now : referral.promoterIdentityVerifiedAt,
+          promoterIdentityName: verifiedIdentityName,
+          promoterIdentityVerifiedAt: referral.promoterIdentityVerifiedAt ?? now,
           adminNote: appendAdminNote(referral.adminNote, adminNote || `Commission payée. Référence dépôt : ${payoutReference}.`),
         },
       });
