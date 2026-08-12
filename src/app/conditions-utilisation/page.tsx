@@ -14,6 +14,7 @@ const sections: LegalSection[] = [
     body: [
       "Les présentes conditions générales d'utilisation encadrent l'accès et l'utilisation de la plateforme Compétence.CI, service ivoirien de réservation et de suivi de cours à domicile, cours en ligne, accompagnement scolaire, universitaire, professionnel, concours, métiers et formations.",
       "Toute création de compte, réservation, demande de cours, paiement, demande de remboursement, demande de paiement professeur, notification ou utilisation d'un espace Compétence implique l'acceptation pleine et entière des présentes conditions.",
+      "L'acceptation peut être enregistrée par case à cocher, action de réservation, connexion à un espace, validation de paiement ou poursuite d'utilisation après mise à jour importante. Compétence peut conserver la version acceptée, la date, l'adresse IP disponible et les journaux utiles comme preuve.",
       "Compétence peut refuser, suspendre ou limiter l'accès à la plateforme en cas de fraude, usage abusif, paiement non vérifié, contournement, comportement non professionnel, litige grave ou violation des présentes conditions.",
     ],
   },
@@ -24,6 +25,7 @@ const sections: LegalSection[] = [
       "Le service est structuré autour de trois mini-applications principales : Système ivoirien, Système français et Professionnel. Elles servent à afficher uniquement les offres, professeurs, niveaux, prix et règles compatibles avec le parcours choisi.",
       "Les professeurs ne disposent pas d'une inscription publique autonome. Ils sont enrôlés, vérifiés, activés, suspendus ou désactivés par le service client Compétence.",
       "Compétence conserve un pouvoir de contrôle opérationnel sur les professeurs, les missions, les paiements, les sanctions, les remplacements et la visibilité des profils.",
+      "Compétence peut faire évoluer les écrans, boutons, filtres, tableaux de bord, moyens de paiement, règles de contrôle, catalogues, couvertures et automatisations afin d'améliorer la sécurité, la simplicité ou la qualité du service, sans altérer une réservation déjà payée sauf nécessité opérationnelle, légale ou antifraude.",
       "Sauf disposition impérative contraire, le professeur intervient comme prestataire indépendant et reste responsable de ses déclarations, qualifications, méthodes, obligations professionnelles et fiscales. L'accès à la plateforme ne constitue ni une garantie de mission, ni un salaire, ni une relation d'exclusivité.",
     ],
   },
@@ -41,6 +43,8 @@ const sections: LegalSection[] = [
     body: [
       "Le client doit fournir des informations exactes, à jour et suffisantes pour permettre la réservation, le paiement, l'organisation du cours, la communication avec le professeur et le suivi service client.",
       "Le client est responsable de son compte, de son mot de passe, de ses informations de contact, de l'exactitude de l'adresse et des décisions prises depuis son espace.",
+      "La modification autonome du mot de passe client se fait par lien temporaire envoyé à l'adresse email enregistrée sur le compte. Si aucun email fiable n'est associé au compte, le client doit contacter le service client, qui peut vérifier son identité par téléphone avant de proposer une assistance manuelle.",
+      "Une simple demande de mot de passe oublié par un client n'a pas vocation à créer une alerte administrative visible. L'intervention du service client devient nécessaire uniquement en cas d'assistance manuelle, d'absence d'email, de suspicion de fraude ou de blocage de sécurité.",
       "Lorsqu'un apprenant est mineur, le compte doit être utilisé par un parent, tuteur ou représentant autorisé. Le client garantit qu'il est habilité à réserver le cours pour l'apprenant concerné.",
     ],
   },
@@ -51,6 +55,7 @@ const sections: LegalSection[] = [
       "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il peut être retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
       "Le professeur s'engage à fournir une photo réelle, des informations exactes, des disponibilités sincères, un numéro de paiement fiable et à respecter les consignes du service client.",
       "Une couverture de catalogue est décorative et ne remplace jamais la photo réelle. Toute couverture personnalisée, photo, CV ou information trompeuse, illicite ou portant atteinte aux droits d'un tiers peut être retirée immédiatement.",
+      "En cas d'oubli de mot de passe professeur, le professeur doit contacter le service client. Compétence peut créer un mot de passe temporaire après vérification, puis imposer son changement à la connexion afin de protéger l'espace professeur et les données de mission.",
     ],
   },
   {
@@ -60,12 +65,13 @@ const sections: LegalSection[] = [
       "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence à partir d'une réponse API, webhook ou transaction vérifiable.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
       "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
+      "Le retour du navigateur, la fermeture de la fenêtre Jèko, une capture d'écran ou une déclaration orale ne créent aucune réservation active. Le moteur attend une confirmation serveur portant sur la référence, le marchand, le moyen de paiement et le montant exact.",
     ],
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
       "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers PayDunya restent conservés uniquement dans l'historique.",
-      "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
+      "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
       "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Les frais propres au prestataire de paiement sont suivis séparément par la plateforme.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
     ],
@@ -73,8 +79,9 @@ const sections: LegalSection[] = [
   {
     title: "Tarifs officiels et participants",
     body: [
-      "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Le total peut ensuite varier selon le nombre de séances, les participants, le déplacement et les frais de service affichés avant paiement.",
+      "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Les montants visibles pendant la navigation sont indicatifs tant que le dossier n'est pas recalculé par le serveur avec le parcours, le niveau, le format, le nombre de séances, les participants, le déplacement et les frais applicables.",
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
+      "Aucun professeur ne peut remplacer la grille officielle par son propre prix public. Une exception commerciale ou un accord particulier doit être validé par Compétence et apparaître dans le dossier avant paiement.",
       "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
       "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur peut refuser une combinaison incompatible et demander au client de choisir un autre profil.",
     ],
@@ -154,6 +161,7 @@ const sections: LegalSection[] = [
     body: [
       "Les frais de déplacement concernent uniquement les cours à domicile. Aucun frais de déplacement n'est appliqué aux cours en ligne.",
       "Même quartier exact : lorsque le quartier du professeur et celui du client correspondent dans la même commune, les frais de déplacement sont de 0 FCFA. Lorsque la commune est identique mais le quartier différent, le forfait local affiché avant paiement peut s'appliquer.",
+      "La comparaison du quartier dépend des informations saisies, normalisées et disponibles. En cas d'ambiguïté entre quartier, sous-quartier ou libellé proche, Compétence peut corriger manuellement le dossier avant paiement, remboursement ou versement professeur.",
       "Pour les communes proches, éloignées ou les villes hors Grand Abidjan, la plateforme applique automatiquement le palier publié selon les informations disponibles. Le client doit vérifier la commune, le quartier et le montant avant paiement.",
       "Lorsque la réservation comporte plusieurs séances à domicile, le forfait de déplacement affiché est calculé pour chaque déplacement effectivement planifié puis multiplié par le nombre de séances. Le détail unitaire et le total sont présentés avant le paiement.",
     ],
@@ -189,6 +197,7 @@ const sections: LegalSection[] = [
     body: [
       "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique, sous réserve de leur recevabilité légale.",
       "Une page de retour, une capture d'écran, un SMS isolé, un abandon de fenêtre ou une déclaration de paiement ne valent jamais confirmation. Seule la vérification serveur du prestataire et de la transaction exacte active la réservation ou libère des coordonnées.",
+      "Un webhook, une réponse API ou une opération de rapprochement qui ne correspond pas à la boutique Compétence, à la référence attendue, au moyen autorisé, au montant exact ou au statut final peut être ignoré, rejeté, marqué à contrôler ou bloqué sans activer la commande.",
       "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
       "Les coordonnées directes du client et du professeur ne sont partagées entre eux qu'après confirmation serveur d'un paiement exact et rattaché à la réservation concernée.",
     ],
@@ -198,6 +207,7 @@ const sections: LegalSection[] = [
     body: [
       "La marque, l'interface, le catalogue de couvertures, les textes, règles, composants, bases de données et éléments graphiques de Compétence.CI sont protégés. Toute extraction, copie systématique, revente, imitation ou réutilisation non autorisée est interdite.",
       "L'utilisateur reste responsable des contenus qu'il fournit et garantit disposer des droits nécessaires. Il accorde à Compétence une licence non exclusive, gratuite et limitée à l'hébergement, l'optimisation, la modération et l'affichage du contenu pour fournir et promouvoir son profil ou le service.",
+      "Les couvertures proposées par Compétence peuvent être attribuées automatiquement et aléatoirement aux profils professeurs. Un professeur peut proposer une couverture, une couleur ou une photo personnelle, mais Compétence peut la refuser, la remplacer ou la retirer si elle nuit à l'image, à la cohérence pédagogique, aux droits de tiers ou à la sécurité du service.",
       "Cette licence prend fin lorsque le contenu n'est plus nécessaire, sous réserve des sauvegardes, preuves, obligations légales et contenus déjà intégrés à un dossier litigieux ou financier.",
     ],
   },

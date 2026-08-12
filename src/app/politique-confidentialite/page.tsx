@@ -22,6 +22,7 @@ const sections: LegalSection[] = [
     body: [
       "Le responsable du traitement est l'éditeur de la plateforme Compétence. Les demandes relatives aux données personnelles peuvent être adressées au service client de la plateforme.",
       "Contact opérationnel : contact@competence.ci. Adresse de référence : Abidjan, Côte d'Ivoire. Lorsque l'identité juridique complète de l'éditeur est finalisée, elle remplace automatiquement cette mention dans les documents contractuels.",
+      "Pour certaines opérations transitoires, notamment l'envoi de liens de réinitialisation, Compétence peut utiliser l'adresse opérationnelle diplomateimmobilier99@gmail.com avec un nom d'expéditeur Compétence.CI. Cette adresse reste un canal technique de service et ne change pas l'identité de la plateforme.",
       "Compétence peut demander une preuve d'identité avant de traiter une demande sensible afin d'éviter toute divulgation frauduleuse.",
     ],
   },
@@ -33,13 +34,14 @@ const sections: LegalSection[] = [
     bullets: [
       "Données d'identification : nom, prénom ou nom affiché, email, téléphone, commune, quartier, adresse de cours si nécessaire.",
       "Données de compte : mot de passe chiffré, rôle, paramètres, historique de connexion, acceptation des conditions et de la politique de confidentialité.",
+      "Données de consentement : version des CGU et de la politique acceptée, date, heure, adresse IP disponible, navigateur, preuve de case cochée ou action équivalente.",
       "Données de réservation : professeur choisi, matière, niveau, date, heure, format, lieu, tarif, nombre de participants, règles d'annulation, confirmations et statuts.",
       "Données de parcours : mini-application choisie, système ivoirien, système français ou professionnel, matières et niveaux compatibles, systèmes enseignés cochés par l'administration pour chaque professeur.",
       "Données de brouillon : contenu du dossier non payé, référence éventuelle du prestataire de paiement, date de création et état de reprise ou de suppression.",
-      "Données de paiement : montant payé, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko ou PayDunya historique, statut serveur vérifié, montant remboursable, numéro de remboursement si le client le fournit.",
+      "Données de paiement : montant payé, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko ou PayDunya historique, statut serveur vérifié, statut webhook, montant remboursable, numéro de remboursement si le client le fournit.",
       "Données professeur : photo réelle obligatoire, couverture personnalisée, couleur ou couverture choisie dans le catalogue, identité, téléphone, email, matières, niveaux, systèmes enseignés, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
       "Données de communication : notifications, emails de réinitialisation client, mots de passe temporaires professeurs émis par le service client, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
-      "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes et preuves nécessaires à la lutte contre les faux paiements.",
+      "Données techniques : adresse IP, user-agent, journaux de sécurité, horodatage, actions importantes, signatures, empreintes de preuve et traces nécessaires à la lutte contre les faux paiements.",
     ],
   },
   {
@@ -59,6 +61,7 @@ const sections: LegalSection[] = [
       "Prévenir la fraude, les paiements non vérifiés, les abus, les contournements de plateforme et les comportements non professionnels.",
       "Améliorer l'ergonomie, la qualité du service, la sécurité et la performance de la plateforme.",
       "Analyser et structurer un CV professeur, supprimer les répétitions, suggérer des matières ou niveaux et signaler les preuves manquantes sans inventer de diplôme, d'expérience ou de résultat.",
+      "Attribuer automatiquement une couverture, une couleur ou un visuel pédagogique lorsque le professeur n'en choisit pas, puis permettre au service client de modérer les contenus qui nuisent à la présentation professionnelle de la plateforme.",
     ],
   },
   {
@@ -67,6 +70,7 @@ const sections: LegalSection[] = [
       "Selon les situations, le traitement repose sur l'exécution du service demandé, l'acceptation des conditions d'utilisation, le consentement lorsque celui-ci est requis, les obligations légales ou l'intérêt légitime de Compétence à sécuriser son activité.",
       "Le consentement donné lors de l'inscription client est enregistré avec une date, une version juridique, l'adresse IP disponible et le navigateur utilisé. Le client peut demander des informations sur cette preuve d'acceptation auprès du service client.",
       "Le professeur n'a pas d'inscription publique autonome. Ses données sont collectées dans le cadre d'un processus d'enrôlement par le service client, d'entretien, de vérification et d'activation interne par Compétence.",
+      "Lorsque le traitement concerne la sécurité, les faux paiements, les litiges, les retraits professeurs, les remboursements, les sanctions ou la protection d'un apprenant, Compétence peut s'appuyer sur son intérêt légitime et conserver les preuves strictement utiles même si une demande de suppression est formulée.",
     ],
   },
   {
@@ -78,7 +82,8 @@ const sections: LegalSection[] = [
       "Le client reçoit le numéro du professeur uniquement après confirmation serveur du paiement correspondant. Un brouillon, une redirection abandonnée ou une capture d'écran ne débloque aucune coordonnée.",
       "Le professeur reçoit le numéro du client uniquement dans une mission rattachée à un paiement dont le prestataire, la transaction et le montant exact ont été vérifiés côté serveur.",
       "L'équipe Compétence habilitée accède aux données nécessaires au contrôle opérationnel, aux paiements, sanctions, notifications, litiges et remboursements.",
-      "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; la boutique ou le marchand attendu doit correspondre à Compétence.CI ou à la Boutique Compétence. PayDunya peut apparaître uniquement dans des dossiers historiques. La saisie financière se fait dans l'environnement sécurisé du prestataire.",
+      "Jèko traite les informations strictement nécessaires aux nouveaux paiements et aux retraits professeurs ; la boutique ou le marchand attendu doit correspondre à Compétence.CI ou à la Boutique Compétence. Une boutique tierce ou un marchand inattendu ne doit pas être utilisé pour valider un paiement Compétence. PayDunya peut apparaître uniquement dans des dossiers historiques.",
+      "La saisie du numéro de paiement, de l'opérateur mobile money ou des informations financières s'effectue dans l'environnement sécurisé du prestataire lorsque celui-ci l'exige. Compétence conserve seulement les références, statuts, montants et informations nécessaires au rapprochement.",
       "Des prestataires techniques peuvent intervenir pour l'hébergement, la base de données, l'email, les notifications ou la sécurité, dans la limite de leur mission.",
     ],
   },
@@ -89,6 +94,16 @@ const sections: LegalSection[] = [
       "Le client peut reprendre un brouillon depuis son espace ou le supprimer si aucun paiement vérifié ni workflow protégé n'y est rattaché. La suppression retire le dossier et les notifications liées, tout en conservant une trace d'audit minimale non financière nécessaire à la sécurité.",
       "En cas d'annulation remboursable, le client peut être invité à fournir un numéro de remboursement. Ce numéro est utilisé uniquement pour traiter le remboursement selon les règles d'annulation, les frais applicables et les décisions du service client.",
       "Les demandes de retrait des professeurs sont suivies dans la comptabilité interne de Compétence puis exécutées et rapprochées par Jèko. Le professeur confirme la destination Mobile Money, le numéro et le montant exact. Les frais de transfert pris en charge par Compétence sont conservés séparément pour l'audit financier et ne sont pas utilisés pour réduire le net professeur validé.",
+      "Les traces de webhook, réponses API, erreurs de prestataire, références ambiguës et statuts de rapprochement peuvent être conservés afin d'empêcher qu'un faux paiement, un paiement abandonné ou une tentative incomplète génère une vraie commande.",
+    ],
+  },
+  {
+    title: "Réinitialisation des mots de passe",
+    body: [
+      "Pour les clients, la réinitialisation autonome repose sur un lien temporaire envoyé à l'adresse email déclarée lors de la création du compte. Le lien est limité dans le temps et ne révèle jamais l'ancien mot de passe.",
+      "Lorsqu'un client n'a pas d'adresse email exploitable, il peut contacter le service client avec son numéro de téléphone. Compétence peut alors vérifier l'identité du demandeur avant de proposer une assistance manuelle ou un mot de passe temporaire.",
+      "Pour les professeurs, l'oubli de mot de passe passe par le service client. Le mot de passe temporaire éventuellement créé doit être changé à la connexion et peut être désactivé en cas de doute.",
+      "Les demandes ordinaires de mot de passe oublié ne sont pas destinées à exposer inutilement les données du client dans le dashboard administrateur. Une trace technique peut être conservée pour la sécurité, mais l'alerte humaine est réservée aux cas d'assistance, blocage ou risque.",
     ],
   },
   {
@@ -96,6 +111,7 @@ const sections: LegalSection[] = [
     body: [
       "Les données sont conservées pendant la durée nécessaire au service, à la preuve, à la sécurité, à la comptabilité interne, au règlement des litiges et aux obligations légales applicables.",
       "Les données de compte sont conservées tant que le compte est actif. Les réservations, paiements, factures, remboursements, litiges, sanctions, notifications et journaux d'activité peuvent être conservés plus longtemps lorsqu'ils servent de preuve opérationnelle, comptable ou juridique.",
+      "Lorsqu'un brouillon est supprimé avant paiement, Compétence supprime les données opérationnelles inutiles, mais peut conserver une trace minimale d'audit lorsqu'elle est nécessaire pour éviter les doublons, prouver l'absence de paiement ou protéger la plateforme.",
       "Compétence peut anonymiser certaines données pour produire des statistiques internes sans identifier directement les personnes concernées.",
     ],
   },
@@ -103,6 +119,7 @@ const sections: LegalSection[] = [
     title: "Sécurité",
     body: [
       "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, liens de réinitialisation temporaires pour les clients, mots de passe temporaires professeurs à renouveler, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
+      "Les coordonnées entre client et professeur restent masquées tant qu'une réservation n'est pas confirmée par un paiement serveur exact. Cette séparation protège les utilisateurs et réduit le contournement, les faux paiements et les prises de contact non autorisées.",
       "L'utilisateur reste responsable de la confidentialité de ses identifiants. Tout accès suspect, perte de téléphone, erreur de numéro de paiement ou tentative de fraude doit être signalé rapidement au service client.",
       "Aucun système n'étant invulnérable, Compétence peut suspendre temporairement une action, un paiement, une réservation ou un accès lorsqu'un risque de sécurité ou de fraude est détecté.",
     ],
@@ -120,7 +137,7 @@ const sections: LegalSection[] = [
     title: "Hébergement, prestataires et transferts techniques",
     body: [
       "La plateforme peut s'appuyer sur des prestataires techniques pour l'hébergement, la base de données, l'envoi d'emails, les notifications, la sécurité, les sauvegardes, l'analyse de fichiers et le paiement.",
-      "Ces prestataires reçoivent uniquement les données nécessaires à leur mission. Lorsque certains traitements techniques impliquent un accès ou un hébergement hors de Côte d'Ivoire, Compétence cherche à appliquer des garanties contractuelles et de sécurité adaptées à la nature des données.",
+      "Ces prestataires reçoivent uniquement les données nécessaires à leur mission. Lorsque certains traitements techniques impliquent un accès ou un hébergement hors de Côte d'Ivoire, Compétence cherche à appliquer des garanties contractuelles, organisationnelles et de sécurité adaptées à la nature des données.",
       "Compétence peut changer de prestataire lorsque cela améliore la sécurité, la disponibilité, le coût, la conformité ou la qualité de service, sous réserve de mettre à jour la présente politique lorsque le changement est significatif.",
     ],
   },
@@ -129,6 +146,7 @@ const sections: LegalSection[] = [
     body: [
       "Sous réserve des limites légales et de la nécessité de conserver certaines preuves, une personne concernée peut demander l'accès à ses données, leur rectification, leur suppression, la limitation du traitement, l'opposition à certains traitements ou le retrait d'un consentement lorsque celui-ci est la base du traitement.",
       "Une demande peut être adressée à contact@competence.ci. Compétence peut refuser ou différer une demande lorsqu'elle porte atteinte à la sécurité, à la prévention de la fraude, à une obligation légale, à un litige en cours ou aux droits d'une autre personne.",
+      "Une suppression ne peut pas effacer rétroactivement les écritures financières, preuves de paiement, preuves d'acceptation, litiges, sanctions, factures ou journaux nécessaires à la défense des droits de Compétence, d'un client, d'un professeur ou d'un apprenant.",
       "En Côte d'Ivoire, les personnes concernées peuvent également saisir ou consulter l'ARTCI, Autorité de Protection des données à caractère personnel, dans les conditions de la loi n°2013-450 du 19 juin 2013.",
     ],
   },
@@ -136,6 +154,7 @@ const sections: LegalSection[] = [
     title: "Mineurs et apprenants",
     body: [
       "Lorsqu'un cours concerne un mineur, le compte doit être créé ou utilisé par un parent, tuteur ou représentant autorisé. Le client s'engage à fournir des informations exactes et à ne pas exposer inutilement les données personnelles de l'apprenant.",
+      "Les informations concernant l'apprenant mineur sont utilisées pour organiser le cours, adapter le niveau, assurer le suivi pédagogique et protéger la sécurité de l'enfant. Elles ne sont pas vendues et ne doivent pas être utilisées par le professeur pour une relation commerciale hors plateforme.",
       "Compétence peut refuser, suspendre ou annuler une réservation si les informations fournies sont insuffisantes, incohérentes, dangereuses ou contraires à l'intérêt de l'apprenant.",
     ],
   },

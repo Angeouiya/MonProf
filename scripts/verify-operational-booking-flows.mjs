@@ -363,23 +363,33 @@ record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
   /12 août 2026/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
+    && /L'acceptation peut être enregistrée/.test(termsPage)
     && /À moins de 24 heures/.test(termsPage)
     && /Même quartier exact/.test(termsPage)
+    && /Aucun professeur ne peut remplacer la grille officielle/.test(termsPage)
     && /Boutique Compétence/.test(termsPage)
+    && /référence, le marchand, le moyen de paiement et le montant exact/.test(termsPage)
     && /Mini-applications et systèmes enseignés/.test(termsPage)
     && /CP1 à CM1 15 000 FCFA/.test(termsPage)
     && /Professionnel : 40 000 FCFA/.test(termsPage)
     && /net professeur déjà validé/.test(termsPage)
+    && /coordonnées directes du client et du professeur/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
     && /12 août 2026/.test(privacyPage)
+    && /diplomateimmobilier99@gmail.com/.test(privacyPage)
+    && /Données de consentement/.test(privacyPage)
     && /Données de brouillon/.test(privacyPage)
     && /Données de parcours/.test(privacyPage)
     && /systèmes enseignés/.test(privacyPage)
     && /Boutique Compétence/.test(privacyPage)
+    && /boutique tierce ou un marchand inattendu/.test(privacyPage)
     && /destination Mobile Money/.test(privacyPage)
     && /confirmation serveur du paiement/.test(privacyPage)
-    && /liens de réinitialisation temporaires/.test(privacyPage),
+    && /Réinitialisation des mots de passe/.test(privacyPage)
+    && /liens de réinitialisation temporaires/.test(privacyPage)
+    && /trace minimale d'audit/.test(privacyPage)
+    && /coordonnées entre client et professeur restent masquées/.test(privacyPage),
 );
 
 record(
