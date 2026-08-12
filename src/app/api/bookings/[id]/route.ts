@@ -51,6 +51,13 @@ function publicBookingDetailPayload(booking: any) {
   const courseAmount = pricingSnapshot?.courseAmount ?? booking.courseAmount;
   const totalClientPays = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
   const verifiedClientPayment = hasVerifiedPayDunyaClientPayment(booking);
+  const teacher = booking.teacher
+    ? {
+        ...booking.teacher,
+        phone: verifiedClientPayment ? booking.teacher.phone ?? null : null,
+        email: verifiedClientPayment ? booking.teacher.email ?? null : null,
+      }
+    : null;
   return {
     id: booking.id,
     reference: booking.reference,
@@ -114,7 +121,7 @@ function publicBookingDetailPayload(booking: any) {
     courseDoneAt: booking.courseDoneAt,
     clientValidatedAt: booking.clientValidatedAt,
     teacherPaidAt: booking.teacherPaidAt,
-    teacher: booking.teacher,
+    teacher,
     client: booking.client,
     reviews: booking.reviews,
     disputes: booking.disputes,

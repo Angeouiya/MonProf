@@ -235,6 +235,9 @@ record(
   /phone:\s*paymentConfirmed\s*\?\s*bookingTeacher\.phone\s*:\s*null/.test(clientReservationDetail)
     && /paymentConfirmed\s*&&\s*booking\.teacher\.phone/.test(clientReservationDetail)
     && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(clientReservationDetail)
+    && /const verifiedClientPayment = hasVerifiedClientPayment\(b\)/.test(bookingCreateApi)
+    && /phone:\s*verifiedClientPayment\s*\?\s*b\.teacher\.phone\s*\?\?\s*null\s*:\s*null/.test(bookingCreateApi)
+    && /const teacher = booking\.teacher[\s\S]*?phone:\s*verifiedClientPayment\s*\?\s*booking\.teacher\.phone\s*\?\?\s*null\s*:\s*null/.test(bookingApi)
     && /verifiedPayDunyaBookingWhere/.test(professorMissionDetail)
     && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(professorMissionDetail)
     && /bookings\.filter\(hasVerifiedPayDunyaClientPayment\)/.test(professorMissionList),

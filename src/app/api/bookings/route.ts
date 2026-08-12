@@ -50,6 +50,7 @@ import {
   publicAuthoritativePricing,
 } from "@/lib/pricing-confirmation";
 import { bookingDraftMatchesExpected } from "@/lib/booking-draft-consistency";
+import { hasVerifiedClientPayment } from "@/lib/payment-security";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
@@ -153,6 +154,14 @@ function publicBookingPayload(b: any) {
   const unitSessionAmount = pricingSnapshot?.unitSessionAmount ?? b.unitPrice;
   const courseAmount = pricingSnapshot?.courseAmount ?? b.courseAmount;
   const totalClientPays = pricingSnapshot?.totalClientPays ?? b.totalClientPays ?? b.totalPrice;
+  const verifiedClientPayment = hasVerifiedClientPayment(b);
+  const teacher = b.teacher
+    ? {
+        ...b.teacher,
+        phone: verifiedClientPayment ? b.teacher.phone ?? null : null,
+        email: verifiedClientPayment ? b.teacher.email ?? null : null,
+      }
+    : null;
   return {
     id: b.id,
     reference: b.reference,
@@ -209,7 +218,7 @@ function publicBookingPayload(b: any) {
     courseDoneAt: b.courseDoneAt,
     clientValidatedAt: b.clientValidatedAt,
     teacherPaidAt: b.teacherPaidAt,
-    teacher: b.teacher,
+    teacher,
     hasReview: Array.isArray(b.reviews) ? b.reviews.length > 0 : false,
   };
 }
