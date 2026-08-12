@@ -213,11 +213,13 @@ assert.match(envExample, /DIRECT_URL="postgresql:\/\/competence_migrator\.PROJEC
 assert.match(envExample, /PASSWORD_EMAIL_PROVIDER="gmail"/);
 assert.match(envExample, /RESEND_FROM_EMAIL="Compétence <notifications@competence\.ci>"/);
 assert.doesNotMatch(envExample, /DATABASE_URL="postgresql:\/\/competence_app\./);
-assert.match(
+assert.doesNotMatch(
   publicHome,
-  /getCachedTeacherSearchCatalog\(\)\.catch\(\(\) => \(\{[\s\S]*teacherCount:\s*0,[\s\S]*subjects:\s*\[\],[\s\S]*levels:\s*\[\],[\s\S]*communes:\s*\[\]/,
+  /from "@\/lib\/db"|getCachedTeacherSearchCatalog|db\.teacher\.findMany|TeacherCard|featuredCards/,
   "The public home page must remain available in isolated Preview deployments without production database credentials.",
 );
+assert.match(publicHome, /data-home-centered-entry/);
+assert.match(publicHome, /data-home-journey-tabs/);
 
 console.log("Deployment safety verification passed: Vercel isolation, Bearer-only crons and explicit health semantics.");
 
