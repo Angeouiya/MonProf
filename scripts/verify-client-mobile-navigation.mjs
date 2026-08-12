@@ -96,6 +96,8 @@ const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
+const journeyRailCss = css.match(/\.journey-switcher__rail\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+const journeyIndicatorCss = css.match(/\.journey-switcher__indicator\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
 const clientSupportPage = read("src/app/client/service-client/page.tsx");
 const clientSupportHistory = read("src/app/client/support/support-history-client.tsx");
 const clientUiSources = readClientUiSources(clientSourceRoots);
@@ -685,6 +687,17 @@ record(
     && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
     && /teacherJourneyWhere\(journey\)/.test(publicTeachersPage)
     && /params\.set\("commune", commune\)/.test(publicTeachersPage),
+);
+
+record(
+  "Mini-application system tabs stay white and readable without gradients",
+  /background:\s*#ffffff;/.test(journeyRailCss)
+    && /background:\s*#ffffff;/.test(journeyIndicatorCss)
+    && !/linear-gradient|bg-gradient|text-white/.test(journeyRailCss)
+    && !/linear-gradient|bg-gradient|text-white/.test(journeyIndicatorCss)
+    && /\.journey-switcher__link\s*\{[\s\S]*?color:\s*#475569;/.test(css)
+    && /\.journey-switcher__link\[data-active="true"\]\s*\{[\s\S]*?color:\s*#111827;/.test(css)
+    && /\.journey-switcher__link\[data-active="true"\]\s+\.journey-switcher__meta\s*\{[\s\S]*?color:\s*#111b4d;/.test(css),
 );
 
 record(
