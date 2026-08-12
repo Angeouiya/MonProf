@@ -4,32 +4,30 @@ import { BrandLogo } from "@/components/shared/brand-logo";
 
 export function ClientTemporaryPasswordGate({ clientName }: { clientName: string }) {
   return (
-    <main className="min-h-screen bg-[#F5F7FB] px-4 py-8 text-[#111827]">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg flex-col justify-center">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#EEF4FF_0,#F8FAFD_42%,#FFFFFF_100%)] px-4 py-6 text-[#111827]" data-temporary-password-gate="client">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-[30rem] flex-col justify-center">
         <div className="mb-6 flex justify-center">
           <BrandLogo size="lg" priority />
         </div>
-        <section className="rounded-xl border border-[#CAD7F2] bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex items-start gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+        <section className="overflow-hidden rounded-[2rem] border border-[#DDE6F7] bg-white/95 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:p-6">
+          <div className="text-center" data-temporary-password-intro>
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[1.15rem] bg-[#111B4D] text-white shadow-lg shadow-[#111B4D]/15">
               <KeyRound className="h-6 w-6" />
             </span>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Accès temporaire sécurisé</p>
-              <h1 className="mt-1 text-2xl font-semibold">Créez votre mot de passe personnel</h1>
-              <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-                Bonjour {clientName}. Le mot de passe transmis par le service client est temporaire. Saisissez-le comme mot de passe actuel, puis choisissez votre mot de passe personnel.
-              </p>
-            </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.22em] text-[#64748B]">Accès temporaire</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight text-[#111B4D]">Nouveau mot de passe</h1>
+            <p className="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-[#64748B]">
+              {clientName}, saisissez le mot de passe reçu, puis choisissez le vôtre.
+            </p>
           </div>
 
-          <div className="mt-6 rounded-lg border border-[#E3E8F2] bg-white p-4">
+          <div className="mt-5 rounded-[1.35rem] border border-[#E3E8F2] bg-[#F8FAFD] p-3 sm:p-4">
             <ClientPasswordSettingsForm />
           </div>
 
-          <p className="mt-4 flex items-start gap-2 text-xs font-semibold leading-5 text-[#64748B]">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
-            Votre espace, vos réservations et vos données restent bloqués jusqu'à ce remplacement. La session temporaire sera ensuite fermée.
+          <p className="mt-4 flex items-center justify-center gap-2 rounded-full bg-[#F8FAFD] px-3 py-2 text-xs font-black text-[#111B4D]">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Espace débloqué après validation.
           </p>
         </section>
       </div>

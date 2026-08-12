@@ -65,6 +65,8 @@ const professorLogin = read("src/app/professeur/connexion/page.tsx");
 const adminLogin = read("src/app/(public-admin)/admin/connexion/page.tsx");
 const forgotPasswordForm = read("src/app/mot-de-passe-oublie/forgot-password-form.tsx");
 const resetPasswordForm = read("src/app/reinitialiser-mot-de-passe/reset-password-form.tsx");
+const clientTemporaryGate = read("src/components/client/temporary-password-gate.tsx");
+const professorTemporaryGate = read("src/components/professor/temporary-password-gate.tsx");
 
 const checks = [
   [`All ${passwordSurfaces.length} required password surfaces use the same revealable control`, missingSharedControl.length === 0],
@@ -95,6 +97,23 @@ const checks = [
       && /passwordChanged/.test(resetPasswordForm)
       && /setFormError/.test(forgotPasswordForm)
       && /setFormError/.test(resetPasswordForm),
+  ],
+  [
+    "Temporary password gates stay mobile-simple and reuse revealable password forms",
+    /data-temporary-password-gate="client"/.test(clientTemporaryGate)
+      && /data-temporary-password-gate="professor"/.test(professorTemporaryGate)
+      && /data-temporary-password-intro/.test(clientTemporaryGate)
+      && /data-temporary-password-intro/.test(professorTemporaryGate)
+      && /max-w-\[30rem\]/.test(clientTemporaryGate)
+      && /max-w-\[30rem\]/.test(professorTemporaryGate)
+      && /<ClientPasswordSettingsForm \/>/.test(clientTemporaryGate)
+      && /<TeacherPasswordSettingsForm \/>/.test(professorTemporaryGate)
+      && /Nouveau mot de passe/.test(clientTemporaryGate)
+      && /Nouveau mot de passe/.test(professorTemporaryGate)
+      && /Espace débloqué après validation\./.test(clientTemporaryGate)
+      && /Missions et paiements protégés\./.test(professorTemporaryGate)
+      && !/Bonjour/.test(`${clientTemporaryGate}\n${professorTemporaryGate}`)
+      && !/session temporaire sera ensuite fermée|Après validation, votre session temporaire/.test(`${clientTemporaryGate}\n${professorTemporaryGate}`),
   ],
 ];
 
