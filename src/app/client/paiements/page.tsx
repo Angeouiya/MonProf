@@ -6,7 +6,6 @@ import {
   ClientCompactFacts,
   ClientFocusPanel,
   ClientInfoPill,
-  ClientMetricStrip,
   ClientPageHeader,
   ClientProcessTracker,
   ClientRecordStatusLine,
@@ -19,7 +18,7 @@ import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatFCFAShort, formatDate } from "@/lib/format";
 import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
-import { WalletCards, Wallet, ArrowDownCircle, ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
+import { ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { clientPaymentChannelLabel } from "@/lib/client-payment-display";
 import { PaymentHistoryClient, type ClientPaymentHistoryItem } from "./payment-history-client";
@@ -158,18 +157,7 @@ export default async function PaiementsPage() {
       <ClientPageHeader
         eyebrow="Paiements"
         title="Paiements"
-        description="Consultez vos paiements sécurisés, remboursements et dossiers liés aux professeurs choisis."
         showBack={false}
-      />
-
-      <ClientMetricStrip
-        className="max-md:hidden"
-        metrics={[
-          { icon: WalletCards, label: "Dépensé", value: formatFCFA(totalDepense) },
-          { icon: Wallet, label: "Bloqués", value: formatFCFA(fondsBloques), attention: fondsBloques > 0 },
-          { icon: ArrowDownCircle, label: "Remboursé", value: formatFCFA(totalRembourse) },
-          { icon: Clock3, label: "À finaliser", value: `${pendingPaymentBookings.length} dossier(s)`, attention: pendingPaymentBookings.length > 0 },
-        ]}
       />
 
       <PaymentMobilePriorityCard
@@ -193,10 +181,6 @@ export default async function PaiementsPage() {
         />
       </div>
       )}
-
-      <div className="max-md:hidden">
-        <PaymentTrustPanel />
-      </div>
 
       {pendingPaymentBookings.length > 0 && (
         <PendingPaymentsPanel bookings={pendingPaymentBookings} />
@@ -259,50 +243,61 @@ function PaymentMobilePriorityCard({
     : lastSecureTransaction
       ? `/client/reservations/${lastSecureTransaction.booking.id}`
       : "/client/rechercher";
-  const actionLabel = pendingBooking ? "Payer" : lastSecureTransaction ? "Dossier" : "Réserver";
-  const title = pendingBooking
-    ? pendingBooking.reference
+  const amountLabel = pendingBooking
+    ? formatFCFA(getPendingBookingAmount(pendingBooking))
     : lastSecureTransaction
-      ? lastSecureTransaction.booking.reference
-      : "Paiement sécurisé";
+      ? formatFCFA(lastSecureTransaction.amount)
+      : "Aucun paiement en attente";
+  const actionLabel = pendingBooking ? "Payer via Jèko" : lastSecureTransaction ? "Voir le dossier" : "Réserver";
+  const eyebrow = pendingBooking
+    ? "À payer maintenant"
+    : lastSecureTransaction
+      ? "Dernier paiement"
+      : "Caisse Jèko";
   const hint = pendingBooking
-    ? `${pendingBooking.subjectName} · ${pendingBooking.levelName}`
+    ? `${pendingBooking.reference} · Boutique Compétence sur Jèko`
     : lastSecureTransaction
       ? `${formatDate(lastSecureTransaction.createdAt)} · ${paymentProviderLabel(lastSecureTransaction.effectivePaymentProvider)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)}`
       : "Jèko active la réservation uniquement après confirmation serveur.";
 
   return (
-    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-payment-mobile-priority>
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-          {hasPending ? <Clock3 className="h-5 w-5" /> : fondsBloques > 0 ? <LockKeyhole className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">
-            {hasPending ? "Action prioritaire" : "Suivi paiements"}
+    <ClientSurface
+      compact
+      className="overflow-hidden rounded-xl border border-[#111B4D] bg-[#111B4D] p-0 text-white"
+      data-client-payment-mobile-priority
+      data-client-payment-app-hero
+    >
+      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="min-w-0">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#111B4D]">
+            {hasPending ? <Clock3 className="h-5 w-5" /> : fondsBloques > 0 ? <LockKeyhole className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+          </span>
+          <p className="mt-5 text-[11px] font-black uppercase tracking-[0.18em] text-[#C7D2FE]">{eyebrow}</p>
+          <h2 className="mt-2 text-3xl font-black leading-none tracking-[-0.04em] sm:text-5xl" data-client-payment-hero-amount>{amountLabel}</h2>
+          <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-[#E0E7FF]">{hint}</p>
+          <p className="mt-2 text-xs font-bold text-[#C7D2FE]">
+            Aucun professeur n'est notifié avant confirmation serveur.
           </p>
-          <h2 className="mt-0.5 truncate text-base font-semibold leading-6 text-[#111827]">{title}</h2>
-          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
         </div>
-        <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+        <Button asChild className="min-h-12 w-full rounded-xl bg-white px-5 text-[#111B4D] hover:bg-[#EEF2FF] min-[520px]:w-auto">
           <Link href={actionHref}>{actionLabel}</Link>
         </Button>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 border-t border-white/15 bg-white/5 p-4 sm:px-6">
         <ClientInfoPill label="Payé" value={formatFCFAShort(totalDepense)} strong={totalDepense > 0} />
         <ClientInfoPill label="Bloqué" value={formatFCFAShort(fondsBloques)} strong={fondsBloques > 0} />
         <ClientInfoPill label="Attente" value={pendingCount} strong={pendingCount > 0} />
       </div>
 
-      <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-0.5" data-client-payment-method-rail aria-label="Moyens de paiement Jèko disponibles">
+      <div className="flex min-w-0 gap-2 overflow-x-auto border-t border-white/15 bg-white px-4 py-3 sm:px-6" data-client-payment-method-rail aria-label="Moyens de paiement Jèko disponibles">
         {ACTIVE_PAYMENT_METHODS.map((method) => (
           <PaymentMethodLogo key={method} method={method} className="h-10 w-28 shrink-0 rounded-lg" />
         ))}
       </div>
 
       {totalRembourse > 0 && (
-        <p className="mt-2 text-xs font-semibold text-[#111B4D]">
+        <p className="border-t border-white/15 px-4 py-3 text-xs font-semibold text-[#E0E7FF] sm:px-6">
           Remboursé : {formatFCFA(totalRembourse)}
         </p>
       )}
@@ -475,32 +470,6 @@ type PendingPaymentBooking = {
     badgeVerified: boolean;
   };
 };
-
-function PaymentTrustPanel() {
-  return (
-    <ClientSurface compact className="p-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-center">
-        <div className="flex min-w-0 gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-            <LockKeyhole className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#111B4D]">Validation serveur obligatoire</p>
-            <h2 className="mt-1 text-lg font-semibold leading-6 text-[#111827]">Aucune réservation active sans paiement vérifié.</h2>
-            <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-[#52627A]">
-              Vous ne saisissez aucun numéro ici. Le paiement se fait sur Jèko, puis Compétence active le dossier uniquement après confirmation serveur. Les anciens paiements PayDunya restent visibles dans l'historique.
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-          {ACTIVE_PAYMENT_METHODS.map((method) => (
-            <PaymentMethodLogo key={method} method={method} className="h-12 w-full min-w-0 rounded-lg" />
-          ))}
-        </div>
-      </div>
-    </ClientSurface>
-  );
-}
 
 function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] }) {
   return (

@@ -88,6 +88,7 @@ const bookingSessionLedger = read(bookingSessionLedgerPath);
 const alertDialog = read(alertDialogPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
+const clientPaymentsPage = read("src/app/client/paiements/page.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
 const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
 const clientPricingCopySources = clientPricingCopyPaths.map(read).join("\n");
@@ -456,6 +457,19 @@ record(
     && /RESCHEDULE_PROPOSED/.test(bookingSessionLedger)
     && /REPLACEMENT_PROPOSED/.test(bookingSessionLedger)
     && /defaultOpen=\{hasClientSessionAction\}/.test(bookingSessionLedger),
+);
+
+record(
+  "Client payments open as one Jèko cashier before history and audit details",
+  /data-client-payment-app-hero/.test(clientPaymentsPage)
+    && /data-client-payment-hero-amount/.test(clientPaymentsPage)
+    && /Boutique Compétence sur Jèko/.test(clientPaymentsPage)
+    && /Aucun professeur n'est notifié avant confirmation serveur\./.test(clientPaymentsPage)
+    && /data-client-payment-method-rail/.test(clientPaymentsPage)
+    && /merchantName="Boutique Compétence"/.test(clientPaymentsPage)
+    && /Payer via Jèko/.test(clientPaymentsPage)
+    && !/ClientMetricStrip/.test(clientPaymentsPage)
+    && !/PaymentTrustPanel/.test(clientPaymentsPage),
 );
 
 record(
