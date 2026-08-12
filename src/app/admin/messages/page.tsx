@@ -95,10 +95,13 @@ export default async function AdminMessagesPage({
     }),
   ]);
   const unreadTeacherMessages = teacherAdminMessages.filter((message) => message.sender === "TEACHER" && !message.readByAdminAt).length;
+  const primaryTeacherMessage = teacherAdminMessages.find((message) => message.sender === "TEACHER" && !message.readByAdminAt);
+  const primaryContactMessage = messages.find((message) => !message.handled);
+  const hasPriorityMessage = Boolean(primaryTeacherMessage || primaryContactMessage);
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Messages & communications" description={`${messages.length} contact(s), ${clientCommunications.length} message(s) client, ${teacherAdminMessages.length} échange(s) professeur`} rootPage>
+      <PageHeader title="Messages" description="Une priorité visible, puis les historiques repliés." rootPage>
         <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
           Service client
@@ -110,56 +113,151 @@ export default async function AdminMessagesPage({
         )}
       </PageHeader>
       <MessagesClient filter={filter ?? ""} />
-      {messages.length === 0 ? (
-        <EmptyState icon={MessageSquare} title="Aucun message" description="Aucun message de contact." />
-      ) : (
-        <div className="space-y-3">
-          {messages.map((m) => (
-            <Card key={m.id} className={m.handled ? "opacity-75" : "border-[#E3E8F2] bg-white"}>
-              <CardContent className="p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-                      <MessageSquare className="h-5 w-5" />
-                    </div>
+
+      <Card className="overflow-hidden border-[#DDE3EE] bg-white shadow-[0_18px_45px_rgba(17,24,39,0.06)]" data-admin-message-priority>
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#111B4D]/60">
+                À traiter maintenant
+              </p>
+              {primaryTeacherMessage ? (() => {
+                const teacherName = primaryTeacherMessage.teacher.professionalName || primaryTeacherMessage.teacher.fullName;
+                return (
+                  <div className="mt-3 flex min-w-0 items-start gap-3">
+                    <ProfessorImage
+                      photoUrl={primaryTeacherMessage.teacher.photoUrl}
+                      name={teacherName}
+                      size="sm"
+                      shape="circle"
+                      verified={primaryTeacherMessage.teacher.badgeVerified}
+                    />
                     <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-foreground">{m.name}</p>
-                      {!m.handled && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Nouveau</Badge>}
-                      {m.handled && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Traité</Badge>}
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      <Mail className="mr-1 inline h-3.5 w-3.5" /> {m.email}
-                      {m.phone && <><Phone className="ml-3 mr-1 inline h-3.5 w-3.5" /> {m.phone}</>}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground" title={formatDateTime(m.createdAt)}>{formatDateTime(m.createdAt)} • {timeAgo(m.createdAt)}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base font-black text-[#111827]">{primaryTeacherMessage.subject}</h2>
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Professeur</Badge>
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-[#475569]">
+                        {teacherName} · {timeAgo(primaryTeacherMessage.createdAt)}
+                        {primaryTeacherMessage.booking ? ` · ${primaryTeacherMessage.booking.reference}` : ""}
+                      </p>
+                      <p className="mt-2 max-h-16 overflow-hidden whitespace-pre-line text-sm font-medium leading-6 text-[#111827]">
+                        {primaryTeacherMessage.message}
+                      </p>
                     </div>
                   </div>
-                  <MessagesClient message={{ id: m.id, handled: m.handled }} />
+                );
+              })() : primaryContactMessage ? (
+                <div className="mt-3 flex min-w-0 items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+                    <MessageSquare className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-black text-[#111827]">{primaryContactMessage.subject}</h2>
+                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Contact</Badge>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-[#475569]">
+                      {primaryContactMessage.name} · {timeAgo(primaryContactMessage.createdAt)}
+                    </p>
+                    <p className="mt-2 max-h-16 overflow-hidden whitespace-pre-line text-sm font-medium leading-6 text-[#111827]">
+                      {primaryContactMessage.message}
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-3 rounded-lg border border-violet-100 bg-white p-3">
-                  <p className="text-xs font-medium text-muted-foreground">Sujet: {m.subject}</p>
-                  <p className="mt-1 text-sm">{m.message}</p>
+              ) : (
+                <div className="mt-3 rounded-[1.2rem] border border-[#E3E8F2] bg-[#F8FAFD] p-4">
+                  <h2 className="text-base font-black text-[#111827]">Tout est calme.</h2>
+                  <p className="mt-1 text-sm font-semibold text-[#64748B]">
+                    Aucun nouveau message professeur ou contact client à traiter en priorité.
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-foreground">Messages professeurs</h2>
-            <p className="text-sm text-muted-foreground">
-              Tous les échanges issus de l'espace professeur sont centralisés ici, puis traités dans la fiche interne du professeur.
+              )}
+            </div>
+            {primaryTeacherMessage ? (
+              <Button asChild className="min-h-11 rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                <Link href={`/admin/professeurs/${primaryTeacherMessage.teacher.id}?tab=messages&messageId=${primaryTeacherMessage.id}`}>
+                  Répondre <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            ) : primaryContactMessage ? (
+              <MessagesClient message={{ id: primaryContactMessage.id, handled: primaryContactMessage.handled }} />
+            ) : (
+              <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-700">
+                À jour
+              </Badge>
+            )}
+          </div>
+          {hasPriorityMessage && (
+            <p className="mt-4 text-xs font-semibold text-[#64748B]">
+              Les autres échanges restent accessibles dans les historiques ci-dessous.
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <details className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white" data-admin-message-contact-history open={filter === "unhandled"}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <h2 className="text-base font-black text-[#111827]">Contacts</h2>
+            <p className="text-sm font-medium text-[#64748B]">Messages du formulaire public.</p>
           </div>
           <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
-            {unreadTeacherMessages} non lu(s) admin
+            {messages.length}
           </Badge>
+        </summary>
+        <div className="border-t border-[#E3E8F2] p-4">
+          {messages.length === 0 ? (
+            <EmptyState icon={MessageSquare} title="Aucun message" description="Aucun message de contact." />
+          ) : (
+            <div className="space-y-3">
+              {messages.map((m) => (
+                <Card key={m.id} className={m.handled ? "opacity-75" : "border-[#E3E8F2] bg-white"}>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                          <MessageSquare className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{m.name}</p>
+                          {!m.handled && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Nouveau</Badge>}
+                          {m.handled && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Traité</Badge>}
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          <Mail className="mr-1 inline h-3.5 w-3.5" /> {m.email}
+                          {m.phone && <><Phone className="ml-3 mr-1 inline h-3.5 w-3.5" /> {m.phone}</>}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground" title={formatDateTime(m.createdAt)}>{formatDateTime(m.createdAt)} • {timeAgo(m.createdAt)}</p>
+                        </div>
+                      </div>
+                      <MessagesClient message={{ id: m.id, handled: m.handled }} />
+                    </div>
+                    <div className="mt-3 rounded-lg border border-violet-100 bg-white p-3">
+                      <p className="text-xs font-medium text-muted-foreground">Sujet: {m.subject}</p>
+                      <p className="mt-1 text-sm">{m.message}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
+      </details>
 
+      <details className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white" data-admin-message-teacher-history>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <h2 className="text-base font-black text-[#111827]">Professeurs</h2>
+            <p className="text-sm font-medium text-[#64748B]">Échanges issus de l'espace professeur.</p>
+          </div>
+          <Badge variant="outline" className="border-[#D7DEE9] bg-white text-[#111B4D]">
+            {unreadTeacherMessages} non lu(s)
+          </Badge>
+        </summary>
+
+        <div className="border-t border-[#E3E8F2] p-4">
         {teacherAdminMessages.length === 0 ? (
           <EmptyState icon={MessageSquare} title="Aucun message professeur" description="Les messages envoyés depuis l'espace professeur apparaîtront ici." />
         ) : (
@@ -237,22 +335,22 @@ export default async function AdminMessagesPage({
             })}
           </div>
         )}
-      </div>
+        </div>
+      </details>
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <details className="group rounded-[1.35rem] border border-[#E3E8F2] bg-white" data-admin-message-client-history>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4">
           <div>
-            <h2 className="text-base font-bold text-foreground">Messages envoyés aux clients</h2>
-            <p className="text-sm text-muted-foreground">
-              Historique opérationnel des communications reliées aux réservations, professeurs et dossiers client.
-            </p>
+            <h2 className="text-base font-black text-[#111827]">Clients</h2>
+            <p className="text-sm font-medium text-[#64748B]">Communications envoyées depuis les dossiers.</p>
           </div>
           <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
             <Bell className="mr-1.5 h-3.5 w-3.5" />
-            {clientCommunications.length} communication(s)
+            {clientCommunications.length}
           </Badge>
-        </div>
+        </summary>
 
+        <div className="border-t border-[#E3E8F2] p-4">
         {clientCommunications.length === 0 ? (
           <EmptyState icon={Bell} title="Aucune communication client" description="Les messages envoyés depuis les réservations apparaîtront ici." />
         ) : (
@@ -328,7 +426,8 @@ export default async function AdminMessagesPage({
             })}
           </div>
         )}
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

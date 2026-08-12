@@ -11,6 +11,8 @@ const dashboard = read("src/app/admin/page.tsx");
 const layout = read("src/components/layouts/admin-layout.tsx");
 const reservations = read("src/app/admin/reservations/page.tsx");
 const notifications = read("src/app/admin/notifications/page.tsx");
+const messages = read("src/app/admin/messages/page.tsx");
+const messagesClient = read("src/app/admin/messages/client.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -138,6 +140,21 @@ record(
     && /Tableau d’audit disponible sans occuper l’écran principal/.test(notifications)
     && !/AdminUrgentAlertCard/.test(notifications)
     && !/Radar opérationnel des notifications/.test(notifications),
+);
+
+record(
+  "Admin messages open on one support priority and fold every history stream",
+  /data-admin-message-priority/.test(messages)
+    && /const primaryTeacherMessage = teacherAdminMessages\.find/.test(messages)
+    && /const primaryContactMessage = messages\.find/.test(messages)
+    && /À traiter maintenant/.test(messages)
+    && /data-admin-message-contact-history/.test(messages)
+    && /data-admin-message-teacher-history/.test(messages)
+    && /data-admin-message-client-history/.test(messages)
+    && /Les autres échanges restent accessibles dans les historiques ci-dessous\./.test(messages)
+    && /data-admin-message-filter/.test(messagesClient)
+    && /À traiter/.test(messagesClient)
+    && !/toast\.success/.test(messagesClient),
 );
 
 const failed = checks.filter((check) => !check.passed);

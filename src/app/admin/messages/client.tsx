@@ -6,10 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -31,19 +27,25 @@ export function MessagesClient({ filter, message }: { filter?: string; message?:
       router.push(`/admin/messages?${params.toString()}`);
     };
     return (
-      <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label className="text-xs">Filtre</Label>
-              <Select value={filter || "all"} onValueChange={(v) => apply(v === "all" ? "" : v)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous messages</SelectItem>
-                  <SelectItem value="unhandled">Non traités</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <Card className="overflow-hidden border-[#DDE3EE] bg-white" data-admin-message-filter>
+        <CardContent className="p-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:w-fit">
+            <Button
+              type="button"
+              variant={filter ? "outline" : "default"}
+              className={!filter ? "rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" : "rounded-xl"}
+              onClick={() => apply("")}
+            >
+              Tous
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "unhandled" ? "default" : "outline"}
+              className={filter === "unhandled" ? "rounded-xl bg-[#111B4D] text-white hover:bg-[#1E2A78]" : "rounded-xl"}
+              onClick={() => apply("unhandled")}
+            >
+              À traiter
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -62,7 +64,6 @@ export function MessagesClient({ filter, message }: { filter?: string; message?:
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success(handled ? "Marqué comme traité" : "Marqué comme non traité");
       router.refresh();
     } catch (e: any) {
       toast.error(e.message);
@@ -76,7 +77,6 @@ export function MessagesClient({ filter, message }: { filter?: string; message?:
       const res = await fetch(`/api/admin/contact-messages/${message.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success("Message supprimé");
       router.refresh();
     } catch (e: any) {
       toast.error(e.message);
