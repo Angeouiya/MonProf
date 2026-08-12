@@ -81,8 +81,13 @@ record(
 );
 
 record(
-  "Admin dashboard shows one operational priority without its former card wall",
+  "Admin dashboard opens with one app hero and no card wall",
   /data-admin-dashboard-priority/.test(dashboard)
+    && /data-admin-dashboard-app-hero/.test(dashboard)
+    && /rounded-\[1\.35rem\]/.test(dashboard)
+    && /text-2xl font-black leading-\[1\.05\]/.test(dashboard)
+    && !/description="Une priorité\. Tous les montants\."/.test(dashboard)
+    && !/Tout voir|Une seule réservation à la fois/.test(dashboard)
     && !/RevenueAreaChart|StatCard|ControlSpaceCard|FinancialOverview/.test(dashboard)
     && /db\.booking\.findFirst/.test(dashboard)
     && !/Dernières réservations payées|Notifications non lues|Espace professeur opérationnel complet/.test(dashboard),

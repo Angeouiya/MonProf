@@ -246,21 +246,24 @@ export default async function AdminDashboard() {
     <div className="space-y-5 sm:space-y-6">
       <PageHeader
         title={`Bonjour ${user.name.split(" ")[0]}`}
-        description="Une priorité. Tous les montants."
         rootPage
       />
 
-      <Card className="overflow-hidden border-[#111B4D] bg-[#111B4D] text-white shadow-sm" data-admin-dashboard-priority>
-        <CardContent className="grid gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-6">
-          <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-white">
-            <PriorityIcon className="h-5 w-5" aria-hidden />
-          </span>
+      <Card
+        className="overflow-hidden rounded-[1.35rem] border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
+        data-admin-dashboard-priority
+        data-admin-dashboard-app-hero
+      >
+        <CardContent className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#C7D2FE]">{priority.eyebrow}</p>
-            <h2 className="mt-1 text-xl font-black leading-7">{priority.title}</h2>
-            <p className="mt-1 text-sm font-semibold leading-6 text-[#E0E7FF]">{priority.detail}</p>
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#111B4D]">
+              <PriorityIcon className="h-5 w-5" aria-hidden />
+            </span>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.18em] text-[#C7D2FE]">{priority.eyebrow}</p>
+            <h2 className="mt-2 max-w-2xl text-2xl font-black leading-[1.05] tracking-tight sm:text-4xl">{priority.title}</h2>
+            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-[#E0E7FF]">{priority.detail}</p>
           </div>
-          <Button asChild className="min-h-11 w-full rounded-lg bg-white text-[#111B4D] hover:bg-[#EEF2FF] sm:w-auto">
+          <Button asChild className="min-h-12 w-full rounded-2xl bg-white text-[#111B4D] hover:bg-[#EEF2FF] min-[520px]:w-auto">
             <Link href={priority.href}>
               {priority.action}
               <ArrowRight className="h-4 w-4" aria-hidden />
@@ -306,14 +309,8 @@ export default async function AdminDashboard() {
 
       <Card className="border-[#E3E8F2] bg-white shadow-sm">
         <CardContent className="p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-base font-black text-[#111827]">Dernier paiement confirmé</p>
-              <p className="text-sm font-semibold text-[#64748B]">Une seule réservation à la fois.</p>
-            </div>
-            <Button asChild variant="ghost" className="rounded-lg text-[#111B4D]">
-              <Link href="/admin/reservations">Tout voir</Link>
-            </Button>
+          <div className="mb-4">
+            <p className="text-base font-black text-[#111827]">Dernier paiement</p>
           </div>
           {!recentPaidBooking ? (
             <div className="rounded-lg border border-dashed border-[#D7DEE9] px-4 py-6 text-center text-sm font-semibold text-[#64748B]">
@@ -322,7 +319,7 @@ export default async function AdminDashboard() {
           ) : (
             <Link
               href={`/admin/reservations/${recentPaidBooking.id}`}
-              className="grid gap-3 rounded-lg border border-[#E6EAF3] bg-white p-4 transition hover:border-[#111B4D] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+              className="grid gap-3 rounded-2xl border border-[#E6EAF3] bg-[#F8FAFD] p-4 transition hover:border-[#111B4D] sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
             >
               <ProfessorImage
                 photoUrl={recentPaidBooking.teacher.photoUrl}
