@@ -4,7 +4,6 @@ import { requireAdmin } from "@/lib/session";
 import { PageHeader, EmptyState } from "@/components/shared/page-header";
 import { Money } from "@/components/shared/money";
 import { PaymentStatusBadge } from "@/components/shared/status-badge";
-import { StatCard } from "@/components/shared/stat-card";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { AlertTriangle, Banknote, ExternalLink, FileText, Lock, ReceiptText, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Lock, ReceiptText, Wallet } from "lucide-react";
 import { formatFCFA, formatDate, formatDateTime } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/platform-labels";
 import { PaiementsFiltersClient } from "./filters-client";
@@ -230,6 +229,9 @@ export default async function AdminPaiementsPage({
   const financialAttentionCount = filteredStatusTotals
     .filter((row) => attentionStatuses.has(row.status))
     .reduce((sum, row) => sum + row._count._all, 0);
+  const financialAttentionAmount = filteredStatusTotals
+    .filter((row) => attentionStatuses.has(row.status))
+    .reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
   const averageAmount = transactionCount > 0 ? Math.round(receivedAmount / transactionCount) : 0;
   const hasTruncatedTransactions = transactionCount > txs.length;
   const financialSummary = buildPlatformFinancialSummary(
@@ -253,10 +255,62 @@ export default async function AdminPaiementsPage({
     financialPayouts,
     appliedTeacherAdjustments,
   );
+  const providerFeesTotal = financialSummary.providerCollectionFees + financialSummary.rescheduleProviderFees;
+  const heroHasAttention = financialAttentionCount > 0;
+  const heroAmount = heroHasAttention ? financialAttentionAmount : financialSummary.teacherRemaining;
+  const heroEyebrow = heroHasAttention ? "À traiter" : "Reste professeurs";
+  const heroTitle = heroHasAttention
+    ? `${financialAttentionCount} ligne${financialAttentionCount > 1 ? "s" : ""} à vérifier`
+    : "Finance sous contrôle";
+  const heroDescription = heroHasAttention
+    ? "On contrôle les blocages, litiges, remboursements et libérations avant tout mouvement d'argent."
+    : "Le net professeur, les frais et les commissions restent séparés, lisibles et rapprochés.";
+  const heroActionHref = heroHasAttention ? "/admin/paiements?status=BLOCKED" : "/admin/professeurs-a-payer";
+  const heroActionLabel = heroHasAttention ? "Contrôler" : "Payer les profs";
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Paiements" description="Paiements clients reçus et versements internes enregistrés aux professeurs" rootPage />
+      <PageHeader title="Paiements" rootPage />
+
+      <section
+        aria-labelledby="admin-payment-hero-title"
+        data-admin-payment-app-hero
+        className="overflow-hidden rounded-[1.35rem] border border-[#111B4D] bg-[#111B4D] text-white shadow-sm"
+      >
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 text-white ring-1 ring-white/15">
+              <Wallet className="h-5 w-5" />
+            </span>
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-white/65">
+              {heroEyebrow}
+            </p>
+            <h2 id="admin-payment-hero-title" className="mt-2 text-2xl font-black leading-[1.05] tracking-tight sm:text-4xl">
+              {heroTitle}
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/72">
+              {heroDescription}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 lg:min-w-72">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/60">
+              Montant prioritaire
+            </p>
+            <Money amount={heroAmount} className="mt-2 block text-3xl font-black leading-none text-white sm:text-4xl" />
+            <Button asChild className="mt-4 h-11 w-full rounded-xl bg-white text-[#111B4D] hover:bg-white/90">
+              <Link href={heroActionHref}>{heroActionLabel}</Link>
+            </Button>
+          </div>
+        </div>
+
+        <div data-admin-payment-amount-strip className="grid grid-cols-2 gap-2 border-t border-white/15 bg-white/[0.06] p-4 sm:grid-cols-4 sm:px-6">
+          <PaymentHeroMetric label="Commission" value={commissionAmount} detail="Filtrée" />
+          <PaymentHeroMetric label="Service restant" value={financialSummary.serviceFeesRemaining} detail="Après frais" />
+          <PaymentHeroMetric label="Frais Jèko" value={providerFeesTotal} detail="Encaissement" />
+          <PaymentHeroMetric label="Reste profs" value={financialSummary.teacherRemaining} detail="Net à libérer" />
+        </div>
+      </section>
 
       <FinancialOverview summary={financialSummary} />
 
@@ -269,18 +323,16 @@ export default async function AdminPaiementsPage({
               Les totaux ci-dessous portent sur toutes les transactions correspondantes ; la table affiche au maximum les 300 plus récentes.
             </p>
           </div>
-          <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-800">
-            {transactionCount} transaction{transactionCount > 1 ? "s" : ""}
-          </Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-800">
+              {transactionCount} transaction{transactionCount > 1 ? "s" : ""}
+            </Badge>
+            <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
+              Moy. {formatFCFA(averageAmount)}
+            </Badge>
+          </div>
         </div>
         <PaiementsFiltersClient filters={{ method: method ?? "", status: status ?? "", from: sp.from ?? "", to: sp.to ?? "" }} />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Montant filtré" value={formatFCFA(receivedAmount)} icon={Wallet} tone="primary" />
-        <StatCard label="Commission réelle filtrée" value={formatFCFA(commissionAmount)} icon={TrendingUp} tone="success" />
-        <StatCard label="Transactions filtrées" value={transactionCount} icon={Banknote} />
-        <StatCard label="Montant moyen" value={formatFCFA(averageAmount)} icon={Banknote} tone="warning" />
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -688,6 +740,24 @@ export default async function AdminPaiementsPage({
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function PaymentHeroMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/12 bg-white/10 px-3 py-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/55">{label}</p>
+      <Money amount={value} className="mt-1 block text-sm font-black text-white sm:text-base" />
+      <p className="mt-0.5 text-[11px] font-semibold text-white/55">{detail}</p>
     </div>
   );
 }

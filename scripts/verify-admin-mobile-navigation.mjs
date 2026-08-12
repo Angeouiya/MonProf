@@ -8,6 +8,7 @@ const header = read("src/components/shared/page-header.tsx");
 const statCard = read("src/components/shared/stat-card.tsx");
 const css = read("src/app/globals.css");
 const dashboard = read("src/app/admin/page.tsx");
+const adminPayments = read("src/app/admin/paiements/page.tsx");
 const layout = read("src/components/layouts/admin-layout.tsx");
 const reservations = read("src/app/admin/reservations/page.tsx");
 const notifications = read("src/app/admin/notifications/page.tsx");
@@ -99,6 +100,21 @@ record(
     && (dashboard.match(/<AdminAmount /g) ?? []).length === 4
     && (dashboard.match(/<FinanceRow /g) ?? []).length === 8
     && /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
+);
+
+record(
+  "Admin payments open as one finance cashier before the audit details",
+  /data-admin-payment-app-hero/.test(adminPayments)
+    && /data-admin-payment-amount-strip/.test(adminPayments)
+    && /<FinancialOverview summary=\{financialSummary\}/.test(adminPayments)
+    && /PaymentHeroMetric label="Commission"/.test(adminPayments)
+    && /PaymentHeroMetric label="Service restant"/.test(adminPayments)
+    && /PaymentHeroMetric label="Frais Jèko"/.test(adminPayments)
+    && /PaymentHeroMetric label="Reste profs"/.test(adminPayments)
+    && /providerFeesTotal = financialSummary\.providerCollectionFees \+ financialSummary\.rescheduleProviderFees/.test(adminPayments)
+    && /Moy\. \{formatFCFA\(averageAmount\)\}/.test(adminPayments)
+    && !/<StatCard/.test(adminPayments)
+    && !/Commission réelle filtrée/.test(adminPayments),
 );
 
 record(
