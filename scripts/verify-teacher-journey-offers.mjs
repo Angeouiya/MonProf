@@ -18,6 +18,7 @@ const replacement = read("src/lib/teacher-replacement-matching.ts");
 const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
 const adminBookingApi = read("src/app/api/admin/bookings/[id]/route.ts");
 const teacherForm = read("src/components/admin/teacher-form.tsx");
+const adminTeacherList = read("src/app/admin/professeurs/page.tsx");
 const createTeacher = read("src/app/api/admin/teachers/route.ts");
 const updateTeacher = read("src/app/api/admin/teachers/[id]/route.ts");
 const journeyValidation = read("src/lib/teacher-journey-validation.ts");
@@ -139,6 +140,14 @@ check(
     && /Le professeur remplaçant n'enseigne pas dans le système/.test(adminBookingApi)
     && /Systèmes enseignés et autorisés/.test(teacherForm)
     && /liste client, profil, réservation, paiement et remplacement/.test(teacherForm),
+);
+check(
+  "Admin teacher list shows the exact authorized and locked mini-apps",
+  /TeacherJourneyPills/.test(adminTeacherList)
+    && /data-admin-teacher-row-journeys/.test(adminTeacherList)
+    && /data-admin-teacher-row-journey=\{journey\}/.test(adminTeacherList)
+    && /teacherSupportsJourney\(teacher, journey\)/.test(adminTeacherList)
+    && /\$\{config\.shortLabel\} verrouillé/.test(adminTeacherList),
 );
 check(
   "Booking choices and server validation stay inside the selected mini-app",

@@ -20,6 +20,12 @@ import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
 import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import {
+  TEACHER_JOURNEYS,
+  TEACHER_JOURNEY_CONFIG,
+  teacherSupportsJourney,
+  type TeacherJourneyEligibility,
+} from "@/lib/teacher-journeys";
 
 export const dynamic = "force-dynamic";
 
@@ -323,6 +329,8 @@ export default async function AdminProfesseursPage({
                       )}
                     </div>
 
+                    <TeacherJourneyPills teacher={t} />
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Cours réalisés</p>
@@ -416,6 +424,7 @@ export default async function AdminProfesseursPage({
                               {t.professionalName || t.fullName}
                             </Link>
                             <p className="text-xs text-muted-foreground truncate">{t.jobTitle}</p>
+                            <TeacherJourneyPills teacher={t} compact />
                             <ProfessorTrustBadges
                               verified={t.badgeVerified}
                               recommended={t.badgeRecommended}
@@ -498,6 +507,53 @@ export default async function AdminProfesseursPage({
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+function TeacherJourneyPills({
+  teacher,
+  compact = false,
+}: {
+  teacher: TeacherJourneyEligibility;
+  compact?: boolean;
+}) {
+  const authorizedCount = TEACHER_JOURNEYS.filter((journey) => teacherSupportsJourney(teacher, journey)).length;
+
+  return (
+    <div
+      className={compact ? "mt-1 flex flex-wrap gap-1.5" : "rounded-xl border border-slate-100 bg-slate-50/70 p-3"}
+      data-admin-teacher-row-journeys
+      data-authorized-count={authorizedCount}
+      aria-label="Systèmes autorisés du professeur"
+    >
+      {!compact && (
+        <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
+          Systèmes autorisés
+        </p>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {TEACHER_JOURNEYS.map((journey) => {
+          const active = teacherSupportsJourney(teacher, journey);
+          const config = TEACHER_JOURNEY_CONFIG[journey];
+
+          return (
+            <Badge
+              key={journey}
+              variant="outline"
+              className={
+                active
+                  ? "border-[#111B4D]/15 bg-white text-[#111B4D]"
+                  : "border-slate-200 bg-slate-100 text-slate-500"
+              }
+              data-admin-teacher-row-journey={journey}
+              data-state={active ? "authorized" : "locked"}
+            >
+              {active ? config.shortLabel : `${config.shortLabel} verrouillé`}
+            </Badge>
+          );
+        })}
+      </div>
     </div>
   );
 }
