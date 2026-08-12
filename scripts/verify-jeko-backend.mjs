@@ -217,6 +217,10 @@ const clientPaymentsPage = readFileSync(
   new URL("../src/app/client/paiements/page.tsx", import.meta.url),
   "utf8",
 );
+const seedSource = readFileSync(
+  new URL("../prisma/seed.ts", import.meta.url),
+  "utf8",
+);
 assert.match(
   jekoClient,
   /paymentMethod:\s*z\.string\(\)\.trim\(\)\.min\(1\)\.nullable\(\)\.optional\(\)/,
@@ -254,6 +258,8 @@ assert.match(clientPaymentsPage, /merchantName="Boutique Compétence"/);
 for (const source of [jekoCheckoutPreview, clientBookingForm, clientPaymentsPage]) {
   assert.doesNotMatch(source, /Buildify|Bluidify/i, "la boutique visible côté client doit rester Compétence");
 }
+assert.doesNotMatch(seedSource, /MonProf|monprof|Buildify|Bluidify/i, "les données de seed ne doivent plus réintroduire l'ancienne marque");
+assert.match(seedSource, /admin@competence\.ci/);
 
 const recovery = readFileSync(
   new URL("../src/lib/jeko-payment-request-recovery.ts", import.meta.url),

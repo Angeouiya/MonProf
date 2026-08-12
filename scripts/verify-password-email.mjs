@@ -19,6 +19,8 @@ assert.match(reset.text, /secret-token/);
 assert.match(reset.html, /Modifier mon mot de passe/);
 assert.match(reset.html, /Professeur &lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 assert.doesNotMatch(reset.html, /<script>alert\(1\)<\/script>/);
+assert.match(`${reset.text}\n${reset.html}`, /Compétence\.CI/);
+assert.doesNotMatch(`${reset.text}\n${reset.html}`, /MonProf|Buildify|Bluidify/i);
 
 const changed = passwordChangedEmailTemplate({
   name: "Awa",
@@ -28,6 +30,8 @@ const changed = passwordChangedEmailTemplate({
 });
 assert.match(changed.text, /espace professeur Compétence/);
 assert.match(changed.html, /Votre mot de passe a été modifié/);
+assert.match(`${changed.text}\n${changed.html}`, /Compétence\.CI/);
+assert.doesNotMatch(`${changed.text}\n${changed.html}`, /MonProf|Buildify|Bluidify/i);
 
 const gmailSource = fs.readFileSync(new URL("../src/lib/gmail-email.ts", import.meta.url), "utf8");
 const resendSource = fs.readFileSync(new URL("../src/lib/resend-email.ts", import.meta.url), "utf8");

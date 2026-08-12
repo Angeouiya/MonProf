@@ -229,7 +229,7 @@ const TEACHERS = [
     jobTitle: "Professeur de Mathématiques",
     bio: "Professeur de mathématiques certifié, 12 ans d'expérience dans l'enseignement secondaire et supérieur. Spécialiste de la préparation au BAC séries C et D. Méthode pédagogique interactive orientée pratique et exercices types du programme ivoirien.",
     phone: "+225 07 01 02 03 04",
-    email: "kouame.jean@monprof.ci",
+    email: "kouame.jean@competence.ci",
     commune: "Cocody",
     quartier: "Riviera Palmeraie",
     experienceYears: 12,
@@ -265,7 +265,7 @@ const TEACHERS = [
     jobTitle: "Professeure de Français",
     bio: "Agrégée de lettres modernes, j'accompagne les élèves du collège au lycée en français, expression écrite et orale. Spécialiste de la préparation au BEPC et au BAC série A. Pédagogie bienveillante et structurée.",
     phone: "+225 05 11 22 33 44",
-    email: "traore.aicha@monprof.ci",
+    email: "traore.aicha@competence.ci",
     commune: "Yopougon",
     quartier: "Selmer",
     experienceYears: 8,
@@ -299,7 +299,7 @@ const TEACHERS = [
     jobTitle: "Professeur de Physique-Chimie",
     bio: "Docteur en chimie, j'enseigne la physique-chimie du lycée à l'université. Préparation BAC séries C, D, E et concours d'entrée en école d'ingénieur. Approche méthodique avec focus sur les exercices type et la compréhension des concepts.",
     phone: "+225 01 23 45 67 89",
-    email: "kone.ibrahim@monprof.ci",
+    email: "kone.ibrahim@competence.ci",
     commune: "Angré",
     quartier: "8e Tranche",
     experienceYears: 10,
@@ -331,7 +331,7 @@ const TEACHERS = [
     jobTitle: "Professeure d'Anglais",
     bio: "Bilingue anglais-français, j'enseigne l'anglais du primaire à l'université. Spécialiste de l'anglais scolaire, de la conversation et de la préparation aux examens. Cours à domicile et en ligne, pédagogie ludique pour les plus jeunes.",
     phone: "+225 07 88 99 00 11",
-    email: "diabate.sarah@monprof.ci",
+    email: "diabate.sarah@competence.ci",
     commune: "Marcory",
     quartier: "Zone 4",
     experienceYears: 6,
@@ -363,7 +363,7 @@ const TEACHERS = [
     jobTitle: "Professeur d'Informatique",
     bio: "Ingénieur informatique senior, j'enseigne la programmation (Python, JavaScript, Java), la bureautique, les bases de données et prépare aux concours d'écoles informatiques. J'accompagne aussi les adultes en reconversion professionnelle.",
     phone: "+225 05 66 77 88 99",
-    email: "nguessan.paul@monprof.ci",
+    email: "nguessan.paul@competence.ci",
     commune: "Cocody",
     quartier: "Deux Plateaux",
     experienceYears: 9,
@@ -403,7 +403,7 @@ const TEACHERS = [
     jobTitle: "Professeure de SVT",
     bio: "Professeure de SVT, je prépare les élèves aux épreuves de SVT du BEPC et du BAC séries D et C. Approche pédagogique basée sur la compréhension et la mémorisation active avec schémas et fiches.",
     phone: "+225 01 44 55 66 77",
-    email: "bamba.mariam@monprof.ci",
+    email: "bamba.mariam@competence.ci",
     commune: "Bingerville",
     quartier: "Centre",
     experienceYears: 7,
@@ -432,7 +432,7 @@ const TEACHERS = [
     jobTitle: "Professeur de Philosophie",
     bio: "Professeur de philosophie, j'aide les élèves de Terminale à structurer dissertation, commentaire de texte et culture générale. Travail méthodique sur les sujets du BAC ivoirien et la prise de parole.",
     phone: "+225 07 22 33 44 55",
-    email: "yao.stephane@monprof.ci",
+    email: "yao.stephane@competence.ci",
     commune: "Abobo",
     quartier: "Avocatier",
     experienceYears: 11,
@@ -465,7 +465,7 @@ const TEACHERS = [
     jobTitle: "Professeure de Primaire",
     bio: "Institutrice diplômée, j'accompagne les enfants du CP au CM2 en français, mathématiques et éveil. Préparation au CEPE. Pédagogie bienveillante et patiente, idéale pour les jeunes élèves.",
     phone: "+225 05 99 88 77 66",
-    email: "yeo.fatim@monprof.ci",
+    email: "yeo.fatim@competence.ci",
     commune: "Bingerville",
     quartier: "Centre",
     experienceYears: 4,
@@ -581,7 +581,7 @@ async function main() {
   const teacherPass = await bcrypt.hash("ProfDemo123", 10);
   const admin = await prisma.user.create({
     data: {
-      email: "admin@monprof.ci",
+      email: "admin@competence.ci",
       name: "Admin Compétence",
       phone: "+225 07 00 00 00 00",
       passwordHash: adminPass,
@@ -916,7 +916,7 @@ async function main() {
       courseFormat: "ONLINE",
       groupType: "SMALL_GROUP",
       participantsCount: 2,
-      onlineLink: "https://meet.google.com/monprof-demo",
+      onlineLink: "https://meet.google.com/competence-demo",
       preferredDays: JSON.stringify(["lundi", "mercredi"]),
       preferredTime: "19h-21h",
       scheduledDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
@@ -1020,7 +1020,7 @@ async function main() {
 
   console.log("\n✅ Seed terminé!");
   console.log("─".repeat(50));
-  console.log("👤 Admin: admin@monprof.ci / AdminDemo123");
+  console.log("👤 Admin: admin@competence.ci / AdminDemo123");
   console.log("👤 Client (Mme Amon): amon@demo.ci / ClientDemo123");
   console.log("👤 Client (M. Kouassi): kouassi@demo.ci / ClientDemo123");
   console.log("─".repeat(50));
