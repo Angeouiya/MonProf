@@ -28,6 +28,8 @@ export function ClientTemporaryPasswordForm({
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [issued, setIssued] = useState(false);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
   const [identityVerified, setIdentityVerified] = useState(false);
   const [verificationMethod, setVerificationMethod] = useState("");
   const [verificationReference, setVerificationReference] = useState("");
@@ -35,8 +37,12 @@ export function ClientTemporaryPasswordForm({
 
   async function copyPassword() {
     if (!password) return;
-    await navigator.clipboard.writeText(password);
-    toast.success("Mot de passe temporaire copié. Transmettez-le uniquement au client vérifié.");
+    try {
+      await navigator.clipboard.writeText(password);
+      setCopyMessage("Copié. Transmettez-le uniquement au client vérifié.");
+    } catch {
+      toast.error("Copie impossible. Sélectionnez le mot de passe et copiez-le manuellement.");
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -65,7 +71,8 @@ export function ClientTemporaryPasswordForm({
       }
       setPassword(data.temporaryPassword);
       setIssued(true);
-      toast.success("Accès temporaire créé. Le client devra remplacer ce mot de passe à la connexion.");
+      setIssueMessage("Accès temporaire créé. Le client devra le remplacer à la connexion.");
+      setCopyMessage("");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Création impossible.");
     } finally {
@@ -90,7 +97,18 @@ export function ClientTemporaryPasswordForm({
       </div>
 
       {issued ? (
-        <div>
+        <div data-client-temporary-password-issued-state>
+          {issueMessage && (
+            <div
+              className="mb-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold leading-5 text-emerald-900"
+              role="status"
+              aria-live="polite"
+              data-client-temporary-password-inline-state
+            >
+              <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{issueMessage}</span>
+            </div>
+          )}
           <Label htmlFor="client-temporary-password">Mot de passe temporaire</Label>
           <PasswordInput
             id="client-temporary-password"
@@ -192,6 +210,16 @@ export function ClientTemporaryPasswordForm({
           <Copy className="mr-2 h-4 w-4" /> Copier pour transmission sécurisée
         </Button>
       </div>
+      {copyMessage && (
+        <p
+          className="rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-xs font-semibold text-[#111B4D]"
+          role="status"
+          aria-live="polite"
+          data-client-temporary-password-copy-state
+        >
+          {copyMessage}
+        </p>
+      )}
     </form>
   );
 }

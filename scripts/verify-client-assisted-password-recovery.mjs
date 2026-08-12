@@ -129,7 +129,11 @@ assert.match(adminTemporaryPasswordForm, /verificationReference/);
 assert.match(adminTemporaryPasswordForm, /body: JSON\.stringify\(\{/);
 assert.match(adminTemporaryPasswordForm, /CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS\.map/);
 assert.match(adminTemporaryPasswordForm, /isSafeIdentityVerificationReference/);
+assert.match(adminTemporaryPasswordForm, /data-client-temporary-password-inline-state/);
+assert.match(adminTemporaryPasswordForm, /data-client-temporary-password-copy-state/);
+assert.match(adminTemporaryPasswordForm, /data-client-temporary-password-issued-state/);
 assert.doesNotMatch(adminTemporaryPasswordForm, /createTemporaryPassword|JSON\.stringify\(\{ password/);
+assert.doesNotMatch(adminTemporaryPasswordForm, /toast\.(?:success|warning)/);
 
 const proxy = read("../src/proxy.ts");
 assert.match(proxy, /token\?\.role !== "CLIENT" \|\| token\.passwordMustChange !== true/);
