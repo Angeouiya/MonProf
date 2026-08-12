@@ -21,7 +21,7 @@ export default function PartenariatPage() {
               Apportez un client. Gagnez {PARTNER_REFERRAL_RATE_PERCENT} %.
             </h1>
             <p className="mt-4 max-w-xl text-base font-medium leading-7 text-[#64748B]">
-              Pendant la période de promotion, toute personne déclarée par un client au moment de la réservation peut recevoir une commission sur le montant du cours réellement confirmé.
+              Pendant la période de promotion, toute personne déclarée par un client au moment de la réservation peut recevoir une commission sur le montant du cours réellement confirmé. La déclaration reste valable jusqu’à la fin officielle de la campagne.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="min-h-12 rounded-2xl">
@@ -36,7 +36,7 @@ export default function PartenariatPage() {
           <div className="grid gap-3">
             <RuleCard icon={WalletCards} title="Commission nette et lisible" text={`${PARTNER_REFERRAL_RATE_PERCENT} % du montant cours. Transport, frais de service et frais Jèko sont exclus.`} />
             <RuleCard icon={CheckCircle2} title="Paiement uniquement après confirmation" text="La commission devient payable seulement si Jèko confirme le paiement et si la réservation est validée." />
-            <RuleCard icon={TimerReset} title="Fenêtre promotionnelle" text={`Déclarations valables du ${formatDate(startsAt)} au ${formatDate(endsAt)}. Après la fin, aucune déclaration oubliée ne peut être ajoutée.`} />
+            <RuleCard icon={TimerReset} title="Fenêtre promotionnelle" text={`Déclarations valables du ${formatDate(startsAt)} au ${formatDate(endsAt)}, que la campagne dure 6 mois ou 1 an. Après la fin, aucune déclaration oubliée ne peut être ajoutée.`} />
           </div>
         </div>
       </section>
@@ -64,7 +64,7 @@ export default function PartenariatPage() {
           <div id="contact-partenaire" className="scroll-mt-24">
             <PartnerInterestForm />
             <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-              Ce formulaire ne crée pas une commission à lui seul. La preuve principale reste la déclaration faite par le client pendant sa réservation.
+              Ce formulaire ne crée pas une commission à lui seul. La preuve principale reste la déclaration faite par le client pendant sa réservation, avant la fin de la promotion.
             </p>
           </div>
         </div>

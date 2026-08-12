@@ -76,6 +76,7 @@ const checks = [
       /Apportez un client\. Gagnez/,
       /du montant cours/,
       /déclaration faite par le client/,
+      /6 mois ou 1 an/,
     ],
   },
   {
@@ -96,6 +97,7 @@ const checks = [
     patterns: [
       /Programme partenariat et apporteurs d'affaires/,
       /pendant la réservation/,
+      /six mois ou un an/,
       /frais techniques Jèko.*exclus/s,
     ],
   },

@@ -130,12 +130,12 @@ const sections: LegalSection[] = [
   {
     title: "Programme partenariat et apporteurs d'affaires",
     body: [
-      "Compétence peut organiser une promotion temporaire permettant à une personne ayant apporté un client de recevoir une commission commerciale. Cette promotion est limitée dans le temps, par défaut sur la période officielle affichée par la plateforme ou validée par Compétence.",
+      "Compétence peut organiser une promotion temporaire permettant à une personne ayant apporté un client de recevoir une commission commerciale. Cette promotion est limitée dans le temps, par défaut sur la période officielle affichée par la plateforme ou validée par Compétence, généralement six mois ou un an selon la campagne.",
       "Pour qu'une déclaration soit valable, le client doit indiquer le nom de l'apporteur pendant la réservation, avant le paiement. Une personne qui n'a pas été déclarée pendant la période promotionnelle ne peut pas réclamer une commission après la fin de la promotion.",
       "La commission de lancement est fixée à 10 % du montant du cours ou de la formation effectivement confirmé. Les frais de transport, les frais de service Compétence, les frais techniques Jèko, les remboursements, pénalités et montants non liés au cours sont exclus de cette base.",
       "La déclaration ne devient pas automatiquement payable. Elle devient payable uniquement lorsque le paiement a été confirmé côté serveur par Jèko et lorsque la réservation a été validée par Compétence. Un brouillon, une promesse de paiement, une capture d'écran ou une réclamation verbale ne crée aucun droit au paiement.",
       "L'apporteur peut être invité à fournir son identité, une pièce justificative, une photo ou un numéro de dépôt afin que Compétence vérifie la cohérence de la déclaration avant tout versement. Compétence peut refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
-      "Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période peuvent être expirées automatiquement à la fin de la promotion.",
+      "La déclaration valable reste active jusqu'à la fin officielle de la période promotionnelle. Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période peuvent être expirées automatiquement à la fin de la promotion.",
       "Le suivi des partenariats est effectué dans le dashboard administrateur. Les paiements aux apporteurs sont des dépôts manuels ou contrôlés par Compétence et ne constituent ni un salaire, ni un emploi, ni une relation d'agence permanente.",
     ],
   },
