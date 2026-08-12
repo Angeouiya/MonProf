@@ -15,6 +15,7 @@ const messages = read("src/app/admin/messages/page.tsx");
 const messagesClient = read("src/app/admin/messages/client.tsx");
 const subjectsClient = read("src/app/admin/matieres/client.tsx");
 const levelsClient = read("src/app/admin/niveaux/client.tsx");
+const teamClient = read("src/app/admin/equipe/team-client.tsx");
 const rootPagePaths = [
   "src/app/admin/page.tsx",
   "src/app/admin/avis/page.tsx",
@@ -173,6 +174,19 @@ record(
     && !/toast\.success\(subject \?/.test(subjectsClient)
     && !/toast\.success\(`\$\{data\.imported\}/.test(subjectsClient)
     && !/toast\.success\(level \?/.test(levelsClient),
+);
+
+record(
+  "Admin team confirms routine access changes inline instead of floating toasts",
+  /const \[createStatus, setCreateStatus\] = useState<TeamInlineStatus>\(null\)/.test(teamClient)
+    && /const \[statusMessage, setStatusMessage\] = useState<TeamInlineStatus>\(null\)/.test(teamClient)
+    && /function TeamInlineStatusBanner/.test(teamClient)
+    && /data-admin-team-inline-status=\{status\.tone\}/.test(teamClient)
+    && /role=\{status\.tone === "error" \? "alert" : "status"\}/.test(teamClient)
+    && /Administrateur ajouté\. Transmettez le mot de passe par canal sécurisé\./.test(teamClient)
+    && /Mot de passe remplacé\. Email Compétence pris en charge automatiquement\./.test(teamClient)
+    && /Accès retiré\. Historique conservé\./.test(teamClient)
+    && !/toast\./.test(teamClient),
 );
 
 const failed = checks.filter((check) => !check.passed);

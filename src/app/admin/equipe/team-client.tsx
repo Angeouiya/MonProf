@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { KeyRound, Loader2, Save, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,17 +39,27 @@ type TeamAdmin = {
   createdAt: string;
 };
 
+type TeamInlineStatus = {
+  tone: "success" | "warning" | "error";
+  message: string;
+} | null;
+
 export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: string; admins: TeamAdmin[] }) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", role: "SUPPORT" });
+  const [createStatus, setCreateStatus] = useState<TeamInlineStatus>(null);
 
   const createAdmin = async () => {
     if (!isPasswordCompliant(form.password)) {
-      toast.error(`Le mot de passe temporaire doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
+      setCreateStatus({
+        tone: "error",
+        message: `Mot de passe requis : ${PASSWORD_MIN_LENGTH} caractères minimum, une lettre et un chiffre.`,
+      });
       return;
     }
     setCreating(true);
+    setCreateStatus(null);
     try {
       const res = await fetch("/api/admin/team", {
         method: "POST",
@@ -59,11 +68,17 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Création impossible.");
-      toast.success("Administrateur ajouté. Transmettez son mot de passe temporaire par un canal sécurisé.");
+      setCreateStatus({
+        tone: "success",
+        message: "Administrateur ajouté. Transmettez le mot de passe par canal sécurisé.",
+      });
       setForm({ name: "", email: "", phone: "", password: "", role: "SUPPORT" });
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Création impossible.");
+      setCreateStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Création impossible.",
+      });
     } finally {
       setCreating(false);
     }
@@ -92,6 +107,11 @@ export function AdminTeamClient({ currentAdminId, admins }: { currentAdminId: st
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />} Créer l'accès
             </Button>
           </div>
+          {createStatus && (
+            <div className="sm:col-span-2 lg:col-span-5">
+              <TeamInlineStatusBanner status={createStatus} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -112,6 +132,7 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
   const [reason, setReason] = useState(admin.adminSuspensionReason || "");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<TeamInlineStatus>(null);
 
   const chooseRole = (value: string) => {
     const nextRole = value as AdminTeamRoleValue;
@@ -124,6 +145,7 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
   };
   const save = async () => {
     setLoading(true);
+    setStatusMessage(null);
     try {
       const res = await fetch(`/api/admin/team/${admin.id}`, {
         method: "PATCH",
@@ -132,35 +154,52 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Mise à jour impossible.");
-      toast.success("Rôle et accès mis à jour.");
+      setStatusMessage({ tone: "success", message: "Rôle et accès mis à jour." });
       router.refresh();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Mise à jour impossible."); }
+    } catch (error) {
+      setStatusMessage({ tone: "error", message: error instanceof Error ? error.message : "Mise à jour impossible." });
+    }
     finally { setLoading(false); }
   };
   const resetPassword = async () => {
-    if (!isPasswordCompliant(password)) return toast.error(`Le nouveau mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères, une lettre et un chiffre.`);
+    if (!isPasswordCompliant(password)) {
+      setStatusMessage({
+        tone: "error",
+        message: `Nouveau mot de passe requis : ${PASSWORD_MIN_LENGTH} caractères minimum, une lettre et un chiffre.`,
+      });
+      return;
+    }
     setLoading(true);
+    setStatusMessage(null);
     try {
       const res = await fetch(`/api/admin/team/${admin.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reset_password", password }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Réinitialisation impossible.");
       setPassword("");
-      toast.success("Mot de passe temporaire remplacé.");
-      if (data.email?.queued) toast.success("L'email Compétence de confirmation est pris en charge automatiquement.");
-      else toast.warning(data.email?.message || "L'email de confirmation est en attente.");
+      setStatusMessage({
+        tone: data.email?.queued ? "success" : "warning",
+        message: data.email?.queued
+          ? "Mot de passe remplacé. Email Compétence pris en charge automatiquement."
+          : data.email?.message || "Mot de passe remplacé. Email de confirmation en attente.",
+      });
       router.refresh();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Réinitialisation impossible."); }
+    } catch (error) {
+      setStatusMessage({ tone: "error", message: error instanceof Error ? error.message : "Réinitialisation impossible." });
+    }
     finally { setLoading(false); }
   };
   const remove = async () => {
     setLoading(true);
+    setStatusMessage(null);
     try {
       const res = await fetch(`/api/admin/team/${admin.id}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Retrait impossible.");
-      toast.success("Accès retiré et historique conservé.");
+      setStatusMessage({ tone: "success", message: "Accès retiré. Historique conservé." });
       router.refresh();
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Retrait impossible."); }
+    } catch (error) {
+      setStatusMessage({ tone: "error", message: error instanceof Error ? error.message : "Retrait impossible." });
+    }
     finally { setLoading(false); }
   };
 
@@ -228,9 +267,27 @@ function AdminAccessEditor({ admin, currentAdminId }: { admin: TeamAdmin; curren
           <Button variant="outline" onClick={resetPassword} disabled={loading || !password}><KeyRound className="mr-2 h-4 w-4" /> Réinitialiser</Button>
           <Button onClick={save} disabled={loading || owner} className="bg-[#111B4D] text-white hover:bg-[#1E2A78]"><Save className="mr-2 h-4 w-4" /> Enregistrer les accès</Button>
         </div>
+        {statusMessage && <TeamInlineStatusBanner status={statusMessage} />}
         {owner && <p className="flex items-center gap-2 text-xs font-semibold text-[#111B4D]"><ShieldCheck className="h-4 w-4" /> Le propriétaire conserve tous les droits et modifie son mot de passe depuis Mon compte.</p>}
       </CardContent>
     </Card>
+  );
+}
+
+function TeamInlineStatusBanner({ status }: { status: NonNullable<TeamInlineStatus> }) {
+  const toneClass = status.tone === "success"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+    : status.tone === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-900"
+      : "border-red-200 bg-red-50 text-red-800";
+  return (
+    <p
+      className={`rounded-xl border px-3 py-2 text-sm font-semibold leading-6 ${toneClass}`}
+      data-admin-team-inline-status={status.tone}
+      role={status.tone === "error" ? "alert" : "status"}
+    >
+      {status.message}
+    </p>
   );
 }
 
