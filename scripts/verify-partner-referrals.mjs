@@ -132,11 +132,23 @@ const checks = [
     file: "src/components/layouts/client-layout.tsx",
     patterns: [
       /data-client-partnership-link/,
-      /href: "\/partenariat"/,
+      /href: "\/client\/partenariat"/,
       /label: "Partenariat"/,
       /detail: "Gagnez 10 %"/,
+      /const mobileNavItems:[\s\S]*?href: "\/client\/partenariat"[\s\S]*?label: "Partenariat"/,
       /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
       /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+    ],
+  },
+  {
+    file: "src/app/client/partenariat/page.tsx",
+    patterns: [
+      /data-client-partnership-page/,
+      /ClientPageHeader/,
+      /PartnerInterestForm/,
+      /Recommandez Compétence\.CI/,
+      /Jèko confirme le paiement/,
+      /frais techniques Jèko sont exclus/,
     ],
   },
   {
