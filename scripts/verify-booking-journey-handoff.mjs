@@ -40,7 +40,8 @@ const checks = [
   [
     "Homepage exposes one premium three-system switcher before lightweight desktop guidance",
     home.includes('data-home-centered-entry')
-      && home.includes('bg-[radial-gradient(circle_at_top,#F1F5FF_0,#FFFFFF_48%,#F8FAFD_100%)]')
+      && home.includes('className="flex items-center border-b border-[#E3E8F2] bg-white"')
+      && !home.includes('bg-[radial-gradient')
       && home.includes('max-w-5xl px-4 py-8 text-center')
       && home.includes('Choisissez. Payez. Commencez.')
       && home.includes('Un parcours. Un prix clair. Un professeur vérifié.')

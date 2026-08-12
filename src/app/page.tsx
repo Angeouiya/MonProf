@@ -21,7 +21,7 @@ export default function HomePage() {
   return (
     <PublicLayout activeJourney="ivoirien">
       <section
-        className="flex items-center border-b border-[#E3E8F2] bg-[radial-gradient(circle_at_top,#F1F5FF_0,#FFFFFF_48%,#F8FAFD_100%)]"
+        className="flex items-center border-b border-[#E3E8F2] bg-white"
         style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 7.25rem)" }}
         data-home-centered-entry
       >
