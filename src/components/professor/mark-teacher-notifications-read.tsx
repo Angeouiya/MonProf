@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 export function MarkTeacherNotificationsReadButton({ disabled }: { disabled?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function markRead() {
     setLoading(true);
@@ -16,7 +17,7 @@ export function MarkTeacherNotificationsReadButton({ disabled }: { disabled?: bo
       const res = await fetch("/api/professor/notifications/read", { method: "PATCH" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action impossible");
-      toast.success("Notifications marquées comme lues.");
+      setDone(true);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erreur réseau");
@@ -30,11 +31,12 @@ export function MarkTeacherNotificationsReadButton({ disabled }: { disabled?: bo
       type="button"
       variant="outline"
       onClick={markRead}
-      disabled={disabled || loading}
+      disabled={disabled || loading || done}
+      data-professor-notification-read-state={done ? "done" : "idle"}
       className="rounded-lg bg-white"
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
-      Marquer comme lues
+      {done ? "C'est lu" : "Marquer comme lues"}
     </Button>
   );
 }

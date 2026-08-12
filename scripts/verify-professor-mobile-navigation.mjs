@@ -9,6 +9,8 @@ const layout = read("src/components/layouts/professor-layout.tsx");
 const dashboard = read("src/app/professeur/(espace)/page.tsx");
 const missions = read("src/app/professeur/(espace)/missions/page.tsx");
 const payments = read("src/app/professeur/(espace)/paiements/page.tsx");
+const notifications = read("src/app/professeur/(espace)/notifications/page.tsx");
+const markNotificationsRead = read("src/components/professor/mark-teacher-notifications-read.tsx");
 const payoutRequestForm = read("src/components/professor/teacher-payout-request-form.tsx");
 const css = read("src/app/globals.css");
 const availability = read("src/components/professor/teacher-availability-editor.tsx");
@@ -117,6 +119,19 @@ record(
     && /Infos mission/.test(missions)
     && !/Détail complet/.test(missions)
     && /group-open:rotate-180/.test(missions),
+);
+
+record(
+  "Professor notifications show one priority card and fold the history",
+  /data-professor-notification-priority/.test(notifications)
+    && /const priorityNotification = notifications\.find/.test(notifications)
+    && /const historyNotifications = priorityNotification/.test(notifications)
+    && /data-professor-notification-history/.test(notifications)
+    && /data-professor-notification-message-details/.test(notifications)
+    && /Lire le message complet/.test(notifications)
+    && /group-open:rotate-180/.test(notifications)
+    && !/toast\.success/.test(markNotificationsRead)
+    && /data-professor-notification-read-state/.test(markNotificationsRead),
 );
 
 record(
