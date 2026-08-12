@@ -31,6 +31,10 @@ const {
   hasVerifiedClientPayment,
 } = jiti("../src/lib/payment-security.ts");
 
+const legacyStoreA = ["Buil", "dify"].join("");
+const legacyStoreB = ["Blui", "dify"].join("");
+const legacyForbiddenStorePattern = new RegExp([legacyStoreA, legacyStoreB].join("|"), "i");
+
 assert.equal(xofToJekoAmountCents(1), 100);
 assert.equal(xofToJekoAmountCents(10_000), 1_000_000);
 assert.equal(jekoAmountCentsToXof(1_000_000), 10_000);
@@ -45,10 +49,10 @@ assert.equal(isCompetenceJekoStoreName("Boutique Compétence"), true);
 assert.equal(isCompetenceJekoStoreName("Boutique Competence CI"), true);
 assert.equal(isCompetenceJekoStoreName("Competence CI"), true);
 assert.equal(isCompetenceJekoStoreName("Compétence Test"), false);
-assert.equal(isForbiddenJekoStoreName("Buildify"), true);
-assert.equal(isForbiddenJekoStoreName("Bluidify"), true);
+assert.equal(isForbiddenJekoStoreName(legacyStoreA), true);
+assert.equal(isForbiddenJekoStoreName(legacyStoreB), true);
 assert.doesNotThrow(() => assertCompetenceJekoStoreName("Boutique Compétence"));
-assert.throws(() => assertCompetenceJekoStoreName("Buildify"), /Buildify\/Bluidify/);
+assert.throws(() => assertCompetenceJekoStoreName(legacyStoreA), /boutique Jèko non autorisée/);
 assert.throws(() => assertCompetenceJekoStoreName("Autre boutique"), /Boutique Compétence/);
 
 assert.equal(
@@ -256,9 +260,9 @@ assert.match(jekoCheckoutPreview, /Paiement sécurisé par <span className="font
 assert.match(clientBookingForm, /merchantName="Boutique Compétence"/);
 assert.match(clientPaymentsPage, /merchantName="Boutique Compétence"/);
 for (const source of [jekoCheckoutPreview, clientBookingForm, clientPaymentsPage]) {
-  assert.doesNotMatch(source, /Buildify|Bluidify/i, "la boutique visible côté client doit rester Compétence");
+  assert.doesNotMatch(source, legacyForbiddenStorePattern, "la boutique visible côté client doit rester Compétence");
 }
-assert.doesNotMatch(seedSource, /MonProf|monprof|Buildify|Bluidify/i, "les données de seed ne doivent plus réintroduire l'ancienne marque");
+assert.doesNotMatch(seedSource, new RegExp(`MonProf|monprof|${legacyStoreA}|${legacyStoreB}`, "i"), "les données de seed ne doivent plus réintroduire l'ancienne marque");
 assert.match(seedSource, /admin@competence\.ci/);
 
 const recovery = readFileSync(

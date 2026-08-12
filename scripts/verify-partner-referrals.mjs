@@ -180,7 +180,7 @@ const checks = [
       /Données partenariat/,
       /code ou lien de recommandation/,
       /commission calculée/,
-      /déclarations partenariat non confirmées peuvent expirer/,
+      /déclarations partenariat non confirmées expirent/,
     ],
   },
   {

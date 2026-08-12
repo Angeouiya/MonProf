@@ -22,7 +22,7 @@ Variables obligatoires dans la portée **Production** de Vercel :
 - `WEB_PUSH_SUBJECT` avec la valeur `mailto:contact@competence.ci`
 - `JEKO_API_KEY`
 - `JEKO_API_KEY_ID`
-- `JEKO_STORE_ID` de la boutique Jèko **Boutique Compétence** uniquement ; ne jamais utiliser une boutique historique comme Buildify/Bluidify
+- `JEKO_STORE_ID` de la boutique Jèko **Boutique Compétence** uniquement ; ne jamais utiliser une boutique historique ou non autorisée
 - `JEKO_WEBHOOK_SECRET`
 - `PASSWORD_EMAIL_PROVIDER` avec exactement `gmail` ou `resend`
 
@@ -72,7 +72,7 @@ L'audit des reports doit ensuite lister les anciennes demandes. Si les candidats
 
 Configurer ensuite le webhook Jèko vers `/api/webhooks/jeko` sur le domaine public HTTPS. Les retours navigateur ne valident jamais un paiement seuls : la plateforme confirme toujours le paiement auprès de Jèko.
 
-La page hébergée Jèko affiche le nom du magasin lié au `storeId`. Si l'écran de paiement affiche Buildify/Bluidify, ce n'est pas un simple texte de Compétence : le `JEKO_STORE_ID` Production pointe vers la mauvaise boutique et doit être remplacé par l'identifiant de **Boutique Compétence** dans Vercel.
+La page hébergée Jèko affiche le nom du magasin lié au `storeId`. Si l'écran de paiement affiche une boutique historique, tierce ou non autorisée, ce n'est pas un simple texte de Compétence : le `JEKO_STORE_ID` Production pointe vers la mauvaise boutique et doit être remplacé par l'identifiant de **Boutique Compétence** dans Vercel.
 
 Après installation des quatre secrets Jèko dans Vercel Production, le pipeline `build:production` lance automatiquement la lecture non débitrice suivante dans l'environnement Vercel, où les variables `Sensitive` restent accessibles sans être révélées :
 

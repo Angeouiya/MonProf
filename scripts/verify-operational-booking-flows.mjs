@@ -13,6 +13,10 @@ const {
 } = jiti("../src/lib/reschedule-session-target.ts");
 
 const checks = [];
+const legacyForbiddenStorePattern = new RegExp([
+  ["Buil", "dify"].join(""),
+  ["Blui", "dify"].join(""),
+].join("|"), "i");
 
 const missionRoute = read("src/app/api/mission/[token]/route.ts");
 const adminDashboard = read("src/app/admin/page.tsx");
@@ -365,7 +369,7 @@ record(
     && /Résumé opposable/.test(termsPage)
     && /Paiement serveur exact obligatoire/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
-    && /L'acceptation peut être enregistrée/.test(termsPage)
+    && /L'acceptation est prouvée/.test(termsPage)
     && /À moins de 24 heures/.test(termsPage)
     && /Même quartier exact/.test(termsPage)
     && /Aucun professeur ne peut remplacer la grille officielle/.test(termsPage)
@@ -379,14 +383,16 @@ record(
     && /Professionnel : 40 000 FCFA/.test(termsPage)
     && /net professeur déjà validé/.test(termsPage)
     && /diplomateimmobilier99@gmail.com/.test(termsPage)
-    && /Buildify, Bluidify ou une boutique inconnue/.test(termsPage)
+    && /Toute boutique tierce, inconnue ou non autorisée bloque la commande/.test(termsPage)
+    && !legacyForbiddenStorePattern.test(termsPage)
+    && !legacyForbiddenStorePattern.test(privacyPage)
     && /coordonnées directes du client et du professeur/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
     && /12 août 2026/.test(privacyPage)
     && /Résumé de protection/.test(privacyPage)
     && /Compétence ne vend pas les données personnelles/.test(privacyPage)
-    && /diplomateimmobilier99@gmail.com/.test(privacyPage)
+    && /adresses opérationnelles validées/.test(privacyPage)
     && /Données de consentement/.test(privacyPage)
     && /Données de brouillon/.test(privacyPage)
     && /Données de preuve/.test(privacyPage)

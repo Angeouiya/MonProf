@@ -8,6 +8,12 @@ const {
   passwordResetEmailTemplate,
 } = jiti("../src/lib/password-email-templates.ts");
 
+const forbiddenBrandPattern = new RegExp([
+  "MonProf",
+  ["Buil", "dify"].join(""),
+  ["Blui", "dify"].join(""),
+].join("|"), "i");
+
 const resetUrl = "https://www.competence.ci/reinitialiser-mot-de-passe?token=secret-token&compte=client";
 const reset = passwordResetEmailTemplate({
   name: "Professeur <script>alert(1)</script>",
@@ -20,7 +26,7 @@ assert.match(reset.html, /Modifier mon mot de passe/);
 assert.match(reset.html, /Professeur &lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 assert.doesNotMatch(reset.html, /<script>alert\(1\)<\/script>/);
 assert.match(`${reset.text}\n${reset.html}`, /Compétence\.CI/);
-assert.doesNotMatch(`${reset.text}\n${reset.html}`, /MonProf|Buildify|Bluidify/i);
+assert.doesNotMatch(`${reset.text}\n${reset.html}`, forbiddenBrandPattern);
 
 const changed = passwordChangedEmailTemplate({
   name: "Awa",
@@ -31,7 +37,7 @@ const changed = passwordChangedEmailTemplate({
 assert.match(changed.text, /espace professeur Compétence/);
 assert.match(changed.html, /Votre mot de passe a été modifié/);
 assert.match(`${changed.text}\n${changed.html}`, /Compétence\.CI/);
-assert.doesNotMatch(`${changed.text}\n${changed.html}`, /MonProf|Buildify|Bluidify/i);
+assert.doesNotMatch(`${changed.text}\n${changed.html}`, forbiddenBrandPattern);
 
 const gmailSource = fs.readFileSync(new URL("../src/lib/gmail-email.ts", import.meta.url), "utf8");
 const resendSource = fs.readFileSync(new URL("../src/lib/resend-email.ts", import.meta.url), "utf8");

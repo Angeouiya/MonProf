@@ -10,12 +10,12 @@ const version = "12 août 2026";
 
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
-  "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence, jamais Buildify, Bluidify ou une boutique inconnue.",
+  "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
   "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
-  "Programme partenariat : une commission de lancement peut être versée uniquement si l'apporteur est déclaré pendant la réservation, pendant la période promotionnelle, puis si le paiement et la réservation sont confirmés.",
-  "Un brouillon non payé peut être supprimé par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
+  "Programme partenariat : aucune commission n'est acquise sans déclaration dans les délais, paiement Jèko confirmé par le serveur et réservation validée par Compétence.",
+  "Un brouillon non payé reste supprimable par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
 ];
 
 const sections: LegalSection[] = [
@@ -32,8 +32,8 @@ const sections: LegalSection[] = [
     body: [
       "Les présentes conditions générales d'utilisation encadrent l'accès et l'utilisation de la plateforme Compétence.CI, service ivoirien de réservation et de suivi de cours à domicile, cours en ligne, accompagnement scolaire, universitaire, professionnel, concours, métiers et formations.",
       "Toute création de compte, réservation, demande de cours, paiement, demande de remboursement, demande de paiement professeur, notification ou utilisation d'un espace Compétence implique l'acceptation pleine et entière des présentes conditions.",
-      "L'acceptation peut être enregistrée par case à cocher, action de réservation, connexion à un espace, validation de paiement ou poursuite d'utilisation après mise à jour importante. Compétence peut conserver la version acceptée, la date, l'adresse IP disponible et les journaux utiles comme preuve.",
-      "Compétence peut refuser, suspendre ou limiter l'accès à la plateforme en cas de fraude, usage abusif, paiement non vérifié, contournement, comportement non professionnel, litige grave ou violation des présentes conditions.",
+      "L'acceptation est prouvée par case à cocher, action de réservation, connexion à un espace, validation de paiement ou poursuite d'utilisation après mise à jour importante. Compétence conserve la version acceptée, la date, l'adresse IP disponible et les journaux utiles comme preuve.",
+      "Compétence se réserve le droit de refuser, suspendre ou limiter l'accès à la plateforme en cas de fraude, usage abusif, paiement non vérifié, contournement, comportement non professionnel, litige grave ou violation des présentes conditions.",
     ],
   },
   {
@@ -50,13 +50,13 @@ const sections: LegalSection[] = [
   {
     title: "Mini-applications et systèmes enseignés",
     body: [
-      "Un professeur peut être autorisé dans un seul système, dans deux systèmes ou dans les trois systèmes, uniquement si l'administration Compétence a coché les systèmes concernés sur sa fiche.",
-      "L'autorisation d'un système suppose également un catalogue cohérent : matières, compétences, classes, niveaux ou profils compatibles avec ce système. Une autorisation sans catalogue suffisant peut être refusée ou désactivée.",
+      "Un professeur est autorisé dans un seul système, dans deux systèmes ou dans les trois systèmes uniquement lorsque l'administration Compétence a coché les systèmes concernés sur sa fiche.",
+      "L'autorisation d'un système suppose également un catalogue cohérent : matières, compétences, classes, niveaux ou profils compatibles avec ce système. Une autorisation sans catalogue suffisant est refusée, suspendue ou désactivée.",
       "La fiche professeur administrée par Compétence est la source de vérité opérationnelle. Les cases système contrôlent l'affichage public, les filtres, la page profil, la réservation, le lancement du paiement, les remplacements automatiques et les remplacements forcés par l'administration.",
-      "Lorsqu'un professeur n'enseigne pas dans un système, l'action est verrouillée : le profil peut être masqué du parcours, la réservation est impossible, le paiement ne doit pas être lancé et le remplacement ne peut pas sélectionner ce professeur pour ce système.",
+      "Lorsqu'un professeur n'enseigne pas dans un système, l'action est verrouillée : le profil est masqué du parcours concerné, la réservation est impossible, le paiement ne doit pas être lancé et le remplacement ne sélectionne pas ce professeur pour ce système.",
       "Un système décoché ne supprime pas automatiquement les réservations historiques, les preuves, les paiements, les litiges ou les obligations déjà nés. Il bloque les nouvelles actions incompatibles et peut exiger la fin, l'annulation ou le remplacement des missions actives avant retrait complet de l'autorisation.",
       "Le client doit choisir un professeur compatible avec le système sélectionné. Lorsqu'il change de mini-application, la plateforme doit présenter uniquement les professeurs, cours, niveaux, formations, prix et filtres rattachés à ce système.",
-      "Si une incohérence apparaît entre le système choisi, le niveau, la matière, le CV, le catalogue ou les cases d'autorisation, Compétence peut refuser la réservation, demander un autre profil, corriger la fiche ou suspendre l'affichage jusqu'à clarification.",
+      "Si une incohérence apparaît entre le système choisi, le niveau, la matière, le CV, le catalogue ou les cases d'autorisation, Compétence se réserve le droit de refuser la réservation, demander un autre profil, corriger la fiche ou suspendre l'affichage jusqu'à clarification.",
     ],
   },
   {
@@ -74,10 +74,10 @@ const sections: LegalSection[] = [
     title: "Compte et accès professeur",
     body: [
       "L'accès professeur est un espace léger, interne et contrôlé. Il permet au professeur de consulter ses missions, confirmer sa disponibilité, signaler une indisponibilité selon la règle des 24 heures, proposer un créneau, suivre ses paiements, envoyer un message au service client et gérer certaines informations utiles.",
-      "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il peut être retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
+      "L'accès professeur est accordé uniquement par le service client après entretien, vérification et acceptation des règles Compétence. Il est retiré à tout moment en cas de risque, faute, indisponibilité, litige, refus répété, suspicion de contournement ou besoin opérationnel.",
       "Le professeur s'engage à fournir une photo réelle, des informations exactes, des disponibilités sincères, un numéro de paiement fiable et à respecter les consignes du service client.",
       "Le professeur accepte que Compétence qualifie, limite ou étende ses systèmes enseignés selon les preuves fournies, son CV, ses matières, ses niveaux, ses résultats, son expérience et les besoins de qualité de la plateforme. La présence dans un système n'est jamais automatique ni définitive.",
-      "Une couverture de catalogue est décorative et ne remplace jamais la photo réelle. Toute couverture personnalisée, photo, CV ou information trompeuse, illicite ou portant atteinte aux droits d'un tiers peut être retirée immédiatement.",
+      "Une couverture de catalogue est décorative et ne remplace jamais la photo réelle. Toute couverture personnalisée, photo, CV ou information trompeuse, illicite ou portant atteinte aux droits d'un tiers est retirée immédiatement.",
       "En cas d'oubli de mot de passe professeur, le professeur doit contacter le service client. Compétence peut créer un mot de passe temporaire après vérification, puis imposer son changement à la connexion afin de protéger l'espace professeur et les données de mission.",
     ],
   },
@@ -108,34 +108,34 @@ const sections: LegalSection[] = [
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Aucun professeur ne peut remplacer la grille officielle par son propre prix public. Une exception commerciale ou un accord particulier doit être validé par Compétence et apparaître dans le dossier avant paiement.",
       "L'affichage “dès” sur un profil professeur dépend du système actif et des niveaux réellement couverts. Un profil professionnel doit afficher la base professionnelle lorsqu'il est consulté dans la mini-application Pro, tandis qu'un profil scolaire affiche la base du système ivoirien ou français concerné.",
-      "Lorsque le cours se fait en groupe, chaque participant supplémentaire peut entraîner une majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
-      "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur peut refuser une combinaison incompatible et demander au client de choisir un autre profil.",
+      "Lorsque le cours se fait en groupe, chaque participant supplémentaire entraîne la majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
+      "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur refuse une combinaison incompatible et demande au client de choisir un autre profil.",
     ],
     bullets: [
       "Système ivoirien : CP1 à CM1 15 000 FCFA, CM2 à 4e 20 000 FCFA, 3e à 1ère 25 000 FCFA, Terminale 30 000 FCFA par séance de 2 heures.",
       "Système français : CP1 à CM1 37 500 FCFA, CM2 à 4e 50 000 FCFA, 3e à 1ère 62 500 FCFA, Terminale 75 000 FCFA par séance de 2 heures.",
       "Professionnel : 40 000 FCFA par séance de 2 heures, sauf accord écrit spécifique validé par Compétence.",
-      "Les frais de déplacement, frais de service et frais techniques éventuels sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
+      "Les frais de déplacement, frais de service et frais techniques applicables sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
     ],
   },
   {
     title: "Disponibilités, horaires et modification de créneau",
     body: [
-      "Les disponibilités affichées ou proposées doivent être interprétées comme des créneaux opérationnels soumis à confirmation. Un professeur peut confirmer, signaler une indisponibilité ou proposer un autre créneau selon le délai restant avant le cours.",
-      "Si le professeur propose un nouveau créneau, le client peut accepter ou refuser depuis son espace. Une absence de réponse peut entraîner une relance, un remplacement ou une décision du service client.",
+      "Les disponibilités affichées ou proposées sont des créneaux opérationnels soumis à confirmation. Le professeur confirme, signale une indisponibilité ou propose un autre créneau selon le délai restant avant le cours.",
+      "Si le professeur propose un nouveau créneau, le client accepte ou refuse depuis son espace. Une absence de réponse entraîne une relance, un remplacement ou une décision du service client.",
       "À moins de 24 heures du cours, le professeur ne peut pas annuler directement la réservation. Il doit prioritairement proposer un nouveau créneau. En cas d'empêchement absolu signalé comme urgence, la réservation reste active pendant que Compétence recherche automatiquement un remplaçant compatible et soumet la proposition au client.",
-      "Compétence peut modifier, remplacer ou annuler une attribution si la qualité du service, la sécurité, le paiement, l'adresse, la disponibilité ou la satisfaction client l'exige.",
+      "Compétence se réserve le droit de modifier, remplacer ou annuler une attribution si la qualité du service, la sécurité, le paiement, l'adresse, la disponibilité ou la satisfaction client l'exige.",
     ],
   },
   {
     title: "Programme partenariat et apporteurs d'affaires",
     body: [
-      "Compétence peut organiser une promotion temporaire permettant à une personne ayant apporté un client de recevoir une commission commerciale. Cette promotion est limitée dans le temps, par défaut sur la période officielle affichée par la plateforme ou validée par Compétence, généralement six mois ou un an selon la campagne.",
+      "Compétence organise ou active des promotions temporaires permettant à une personne ayant apporté un client de recevoir une commission commerciale. Chaque promotion est limitée à la période officielle affichée par la plateforme ou validée par Compétence, généralement six mois ou un an selon la campagne.",
       "Pour qu'une déclaration soit valable, le client doit indiquer le nom de l'apporteur pendant la réservation, avant le paiement, ou réserver à partir d'un lien apporteur généré pendant la période promotionnelle. Une personne qui n'a pas été déclarée pendant la période promotionnelle ne peut pas réclamer une commission après la fin de la promotion.",
       "La commission de lancement est fixée à 10 % du montant du cours ou de la formation effectivement confirmé. Les frais de transport, les frais de service Compétence, les frais techniques Jèko, les remboursements, pénalités et montants non liés au cours sont exclus de cette base.",
       "La déclaration ne devient pas automatiquement payable. Elle devient payable uniquement lorsque le paiement a été confirmé côté serveur par Jèko et lorsque la réservation a été validée par Compétence. Un brouillon, une promesse de paiement, une capture d'écran ou une réclamation verbale ne crée aucun droit au paiement.",
-      "L'apporteur peut être invité à fournir son identité, une pièce justificative, une photo ou un numéro de dépôt afin que Compétence vérifie la cohérence de la déclaration avant tout versement. Compétence peut refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
-      "Une pré-déclaration apporteur ou un lien de recommandation ne constitue pas à lui seul une commission acquise. La déclaration valable reste active jusqu'à la fin officielle de la période promotionnelle. Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période peuvent être expirées automatiquement à la fin de la promotion.",
+      "L'apporteur fournit son identité, une pièce justificative, une photo ou un numéro de dépôt lorsque Compétence les demande afin de vérifier la cohérence de la déclaration avant tout versement. Compétence se réserve le droit de refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
+      "Une pré-déclaration apporteur ou un lien de recommandation ne constitue pas à lui seul une commission acquise. La déclaration valable reste active jusqu'à la fin officielle de la période promotionnelle. Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période expirent automatiquement à la fin de la promotion.",
       "Le suivi des partenariats est effectué dans le dashboard administrateur. Les paiements aux apporteurs sont des dépôts manuels ou contrôlés par Compétence et ne constituent ni un salaire, ni un emploi, ni une relation d'agence permanente.",
     ],
   },
@@ -143,7 +143,7 @@ const sections: LegalSection[] = [
     title: "Annulation, remboursement et pénalités",
     body: [
       "Toute annulation doit être demandée depuis l'espace prévu ou par le service client, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
-      "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais du moyen de paiement, de la préparation déjà engagée, du comportement des parties, du litige éventuel et de la politique d'annulation en vigueur.",
+      "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais du moyen de paiement, de la préparation déjà engagée, du comportement des parties, du litige déclaré et de la politique d'annulation en vigueur.",
       "Lorsque l'annulation est imputable au professeur ou à Compétence, le client peut se voir proposer un remplacement, un report, un autre créneau ou un remboursement selon la situation.",
       "Des annulations répétées, tardives ou abusives peuvent entraîner des pénalités, une limitation du compte ou un contrôle renforcé par le service client.",
     ],
@@ -154,7 +154,7 @@ const sections: LegalSection[] = [
       "Compétence peut remplacer un professeur en cas d'indisponibilité, retard, absence, litige, mauvaise qualité, suspension, erreur d'affectation ou meilleure solution disponible.",
       "Lorsqu'un professeur se déclare indisponible, le moteur de remplacement peut sélectionner automatiquement un professeur actif possédant une photo réelle, la même matière, le même niveau, un format et un créneau compatibles, sans conflit actif ni litige récent. Le client reste libre d'accepter ou de refuser cette proposition.",
       "Le client est informé du remplacement lorsque celui-ci impacte la réservation. L'ancien professeur et le nouveau professeur peuvent être notifiés par le service client.",
-      "Le remplacement est enregistré dans l'historique de la réservation et peut entraîner un recalcul opérationnel ou financier lorsque la différence est justifiée.",
+      "Le remplacement est enregistré dans l'historique de la réservation et entraîne un recalcul opérationnel ou financier lorsque la différence est justifiée.",
     ],
   },
   {
@@ -182,7 +182,7 @@ const sections: LegalSection[] = [
       "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
       "Le professeur retire le montant net libérable validé dans son espace. Lorsque Compétence décide de prendre en charge des frais techniques de transfert, ces frais sont comptabilisés séparément et ne diminuent pas le net professeur déjà validé.",
       "Lorsqu'un professeur fait une demande de retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Une demande correctement envoyée est normalement traitée entre 1 heure et 72 heures ouvrées après contrôle.",
-      "Ce délai peut être prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
+      "Ce délai est prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
       "Compétence peut payer partiellement, suspendre, différer, refuser ou ajuster un paiement professeur lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient.",
     ],
   },
@@ -224,18 +224,18 @@ const sections: LegalSection[] = [
     title: "Responsabilité de Compétence",
     body: [
       "Compétence met en œuvre des moyens sérieux pour vérifier les professeurs, sécuriser les paiements, organiser les cours et suivre la qualité, mais ne garantit pas un résultat scolaire, professionnel, concours ou financier déterminé.",
-      "La responsabilité de Compétence ne peut être engagée pour une information fausse fournie par un utilisateur, un cas de force majeure, une indisponibilité technique externe, un incident du prestataire de paiement, une erreur de numéro fournie par le professeur ou le client, ou un comportement fautif d'une partie.",
-      "Compétence peut suspendre temporairement un service ou une action lorsque cela est nécessaire pour la maintenance, la sécurité, la fraude, le contrôle de qualité, le litige ou la conformité.",
+      "La responsabilité de Compétence n'est pas engagée pour une information fausse fournie par un utilisateur, un cas de force majeure, une indisponibilité technique externe, un incident du prestataire de paiement, une erreur de numéro fournie par le professeur ou le client, ou un comportement fautif d'une partie.",
+      "Compétence se réserve le droit de suspendre temporairement un service ou une action lorsque cela est nécessaire pour la maintenance, la sécurité, la fraude, le contrôle de qualité, le litige ou la conformité.",
       "Dans la mesure autorisée par la loi, Compétence n'indemnise pas les pertes indirectes, pertes d'opportunité, pertes de revenus, dommages résultant d'un usage hors plateforme ou conséquences d'informations inexactes fournies par une partie. Pour un dommage direct prouvé relatif à une réservation, la responsabilité totale de Compétence est limitée au montant effectivement payé à Compétence pour la réservation concernée.",
-      "Aucune limitation ne s'applique lorsqu'elle serait interdite par une disposition impérative, notamment en cas de faute lourde ou intentionnelle établie, d'atteinte corporelle imputable ou de droit légal du consommateur auquel il ne peut être renoncé.",
+      "Aucune limitation ne s'applique lorsque la loi l'interdit, notamment en cas de faute lourde ou intentionnelle établie, d'atteinte corporelle imputable ou de droit légal du consommateur non renonçable.",
     ],
   },
   {
     title: "Preuve électronique et lutte contre la fraude",
     body: [
-      "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique, sous réserve de leur recevabilité légale.",
+      "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique dans les conditions prévues par la loi.",
       "Une page de retour, une capture d'écran, un SMS isolé, un abandon de fenêtre ou une déclaration de paiement ne valent jamais confirmation. Seule la vérification serveur du prestataire et de la transaction exacte active la réservation ou libère des coordonnées.",
-      "Un webhook, une réponse API ou une opération de rapprochement qui ne correspond pas à la boutique Compétence, à la référence attendue, au moyen autorisé, au montant exact ou au statut final peut être ignoré, rejeté, marqué à contrôler ou bloqué sans activer la commande.",
+      "Un webhook, une réponse API ou une opération de rapprochement qui ne correspond pas à la boutique Compétence, à la référence attendue, au moyen autorisé, au montant exact ou au statut final est ignoré, rejeté, marqué à contrôler ou bloqué sans activer la commande.",
       "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
       "Les coordonnées directes du client et du professeur ne sont partagées entre eux qu'après confirmation serveur d'un paiement exact et rattaché à la réservation concernée.",
     ],
@@ -245,8 +245,8 @@ const sections: LegalSection[] = [
     body: [
       "La marque, l'interface, le catalogue de couvertures, les textes, règles, composants, bases de données et éléments graphiques de Compétence.CI sont protégés. Toute extraction, copie systématique, revente, imitation ou réutilisation non autorisée est interdite.",
       "L'utilisateur reste responsable des contenus qu'il fournit et garantit disposer des droits nécessaires. Il accorde à Compétence une licence non exclusive, gratuite et limitée à l'hébergement, l'optimisation, la modération et l'affichage du contenu pour fournir et promouvoir son profil ou le service.",
-      "Les couvertures proposées par Compétence peuvent être attribuées automatiquement et aléatoirement aux profils professeurs. Un professeur peut proposer une couverture, une couleur ou une photo personnelle, mais Compétence peut la refuser, la remplacer ou la retirer si elle nuit à l'image, à la cohérence pédagogique, aux droits de tiers ou à la sécurité du service.",
-      "Cette licence prend fin lorsque le contenu n'est plus nécessaire, sous réserve des sauvegardes, preuves, obligations légales et contenus déjà intégrés à un dossier litigieux ou financier.",
+      "Les couvertures proposées par Compétence sont attribuées automatiquement et aléatoirement aux profils professeurs. Un professeur dispose d'outils pour proposer une couverture, une couleur ou une photo personnelle, et Compétence se réserve le droit de la refuser, la remplacer ou la retirer si elle nuit à l'image, à la cohérence pédagogique, aux droits de tiers ou à la sécurité du service.",
+      "Cette licence prend fin lorsque le contenu n'est plus nécessaire, après conservation des sauvegardes, preuves, obligations légales et contenus déjà intégrés à un dossier litigieux ou financier.",
     ],
   },
   {
@@ -290,15 +290,15 @@ const sections: LegalSection[] = [
   {
     title: "Modification des conditions",
     body: [
-      "Compétence peut modifier les présentes conditions pour tenir compte de l'évolution du service, des tarifs, des paiements, des règles d'annulation, des obligations légales ou de la sécurité.",
-      "La version publiée sur la plateforme est applicable. Une modification importante peut entraîner une notification, une demande de nouvelle acceptation ou une limitation temporaire de certaines actions jusqu'à acceptation.",
+      "Compétence se réserve le droit de modifier les présentes conditions pour tenir compte de l'évolution du service, des tarifs, des paiements, des règles d'annulation, des obligations légales ou de la sécurité.",
+      "La version publiée sur la plateforme est applicable. Une modification importante entraîne, selon son impact, une notification, une demande de nouvelle acceptation ou une limitation temporaire de certaines actions jusqu'à acceptation.",
     ],
   },
   {
     title: "Droit applicable et règlement des différends",
     body: [
       "Les présentes conditions sont soumises au droit applicable en Côte d'Ivoire.",
-      "En cas de différend, les parties doivent d'abord rechercher une solution amiable via le service client Compétence. À défaut, le litige peut être porté devant les juridictions compétentes d'Abidjan, sauf disposition impérative contraire.",
+      "En cas de différend, les parties doivent d'abord rechercher une solution amiable via le service client Compétence. À défaut, le litige relève des juridictions compétentes d'Abidjan, sauf disposition impérative contraire.",
     ],
   },
 ];

@@ -363,7 +363,7 @@ export async function getJekoStoreBalance(
  * Lecture sûre des boutiques disponibles. Cette opération n'ouvre aucun
  * paiement et ne déclenche aucun transfert ; elle sert à contrôler que
  * Production pointe vers la boutique Compétence, pas vers une boutique
- * historique comme Buildify/Bluidify.
+ * historique ou non autorisée.
  */
 export async function getJekoStores(
   options: JekoPayoutRequestOptions = {},
@@ -392,7 +392,7 @@ export async function resolveJekoCompetenceStoreConfig(
   const config = options.config ?? requireJekoServerConfig();
   // Les tests injectent un fetch mocké avec une config artificielle. En
   // Production, aucun fetchImpl n'est injecté : on résout alors l'unique
-  // boutique officielle pour éviter tout retour vers Buildify/Bluidify.
+  // boutique officielle pour éviter tout retour vers une boutique historique ou non autorisée.
   if (options.fetchImpl) return config;
 
   const cacheKey = `${config.apiBaseUrl}:${config.apiKeyId}:${config.storeId}`;

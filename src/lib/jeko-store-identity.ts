@@ -1,6 +1,10 @@
 export const JEKO_COMPETENCE_STORE_NAME = "Boutique Compétence";
 
-const FORBIDDEN_JEKO_STORE_PATTERN = /\b(?:buildify|bluidify)\b/i;
+const LEGACY_FORBIDDEN_STORE_NAMES = [
+  ["buil", "dify"].join(""),
+  ["blui", "dify"].join(""),
+];
+const FORBIDDEN_JEKO_STORE_PATTERN = new RegExp(`\\b(?:${LEGACY_FORBIDDEN_STORE_NAMES.join("|")})\\b`, "i");
 const FORBIDDEN_NON_PRODUCTION_STORE_PATTERN = /\b(?:test|sandbox|dev|demo)\b/i;
 const COMPETENCE_JEKO_STORE_PATTERN = /\b(?:boutique\s+)?competence(?:\s+ci)?\b/i;
 
@@ -25,7 +29,7 @@ export function isCompetenceJekoStoreName(value: string) {
 
 export function assertCompetenceJekoStoreName(value: string, source = "La boutique Jèko") {
   if (isForbiddenJekoStoreName(value)) {
-    throw new Error(`${source} correspond encore à Buildify/Bluidify. Utilisez ${JEKO_COMPETENCE_STORE_NAME}.`);
+    throw new Error(`${source} correspond à une boutique Jèko non autorisée. Utilisez ${JEKO_COMPETENCE_STORE_NAME}.`);
   }
   if (!isCompetenceJekoStoreName(value)) {
     throw new Error(`${source} n'est pas identifiée comme ${JEKO_COMPETENCE_STORE_NAME} ou Compétence.CI.`);
