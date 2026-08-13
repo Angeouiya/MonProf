@@ -15,6 +15,12 @@ export const PLATFORM_SETTING_DEFAULTS = {
   transport_near_commune_fee: "2500",
   transport_far_commune_fee: "4500",
   transport_interior_fee: "8000",
+  schedule_same_neighborhood_buffer_minutes: "30",
+  schedule_same_commune_buffer_minutes: "30",
+  schedule_near_commune_buffer_minutes: "60",
+  schedule_far_commune_buffer_minutes: "90",
+  schedule_outside_grand_abidjan_buffer_minutes: "90",
+  schedule_home_online_buffer_minutes: "30",
   notification_cron_enabled: "true",
   notification_delivery_enabled: "true",
   notification_from_name: "Compétence",
@@ -36,6 +42,12 @@ export const platformSettingsInputSchema = z.object({
   transport_near_commune_fee: numericSetting(0, 50_000),
   transport_far_commune_fee: numericSetting(0, 50_000),
   transport_interior_fee: numericSetting(0, 100_000),
+  schedule_same_neighborhood_buffer_minutes: numericSetting(0, 180),
+  schedule_same_commune_buffer_minutes: numericSetting(0, 180),
+  schedule_near_commune_buffer_minutes: numericSetting(0, 180),
+  schedule_far_commune_buffer_minutes: numericSetting(0, 180),
+  schedule_outside_grand_abidjan_buffer_minutes: numericSetting(0, 180),
+  schedule_home_online_buffer_minutes: numericSetting(0, 180),
   notification_cron_enabled: z.enum(["true", "false"]),
   notification_delivery_enabled: z.enum(["true", "false"]),
   notification_from_name: text(2, 80),
@@ -55,6 +67,18 @@ export const platformSettingsInputSchema = z.object({
   }
   if (value.transport_interior_fee < value.transport_far_commune_fee) {
     context.addIssue({ code: "custom", path: ["transport_interior_fee"], message: "Le forfait intérieur ne peut pas être inférieur au forfait éloigné." });
+  }
+  if (value.schedule_same_commune_buffer_minutes < value.schedule_same_neighborhood_buffer_minutes) {
+    context.addIssue({ code: "custom", path: ["schedule_same_commune_buffer_minutes"], message: "Le temps même commune ne peut pas être inférieur au même quartier." });
+  }
+  if (value.schedule_near_commune_buffer_minutes < value.schedule_same_commune_buffer_minutes) {
+    context.addIssue({ code: "custom", path: ["schedule_near_commune_buffer_minutes"], message: "Le temps commune proche ne peut pas être inférieur au même commune." });
+  }
+  if (value.schedule_far_commune_buffer_minutes < value.schedule_near_commune_buffer_minutes) {
+    context.addIssue({ code: "custom", path: ["schedule_far_commune_buffer_minutes"], message: "Le temps commune éloignée ne peut pas être inférieur au proche." });
+  }
+  if (value.schedule_outside_grand_abidjan_buffer_minutes < value.schedule_far_commune_buffer_minutes) {
+    context.addIssue({ code: "custom", path: ["schedule_outside_grand_abidjan_buffer_minutes"], message: "Le temps hors Grand Abidjan ne peut pas être inférieur à une commune éloignée." });
   }
 });
 
@@ -96,9 +120,18 @@ export const getPlatformRuntimeSettings = unstable_cache(
         farCommune: integer(values.transport_far_commune_fee, 4500, 0, 50_000),
         interior: integer(values.transport_interior_fee, 8000, 0, 100_000),
       },
+      scheduleBuffers: {
+        sameNeighborhood: integer(values.schedule_same_neighborhood_buffer_minutes, 30, 0, 180),
+        sameCommune: integer(values.schedule_same_commune_buffer_minutes, 30, 0, 180),
+        nearCommune: integer(values.schedule_near_commune_buffer_minutes, 60, 0, 180),
+        farCommune: integer(values.schedule_far_commune_buffer_minutes, 90, 0, 180),
+        outsideGrandAbidjan: integer(values.schedule_outside_grand_abidjan_buffer_minutes, 90, 0, 180),
+        homeOnline: integer(values.schedule_home_online_buffer_minutes, 30, 0, 180),
+        onlineOnline: 0,
+      },
     };
   },
-  ["platform-runtime-settings-v1"],
+  ["platform-runtime-settings-v2"],
   { revalidate: 60, tags: ["platform-settings"] },
 );
 

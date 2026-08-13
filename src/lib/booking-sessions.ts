@@ -1,4 +1,8 @@
 import type { Booking, BookingSession, BookingSessionStatus, Prisma } from "@prisma/client";
+import {
+  normalizeCustomDurationMinutes,
+  STANDARD_SESSION_DURATION_MINUTES,
+} from "@/lib/schedule-conflict-core";
 import { TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
 
@@ -49,7 +53,13 @@ function slotStartLabel(selection?: string | null) {
   return slot?.label ?? selection;
 }
 
-function buildSchedule(startDate: Date, selectedTimeSlots: string[], count: number, fallbackTime?: string | null) {
+function buildSchedule(
+  startDate: Date,
+  selectedTimeSlots: string[],
+  count: number,
+  fallbackTime?: string | null,
+  fallbackDurationMinutes?: number | null,
+) {
   const validSelections = selectedTimeSlots
     .map((selection) => {
       const [dayKey, slotKey] = selection.split("|");
@@ -60,14 +70,19 @@ function buildSchedule(startDate: Date, selectedTimeSlots: string[], count: numb
     .filter((selection): selection is NonNullable<typeof selection> => Boolean(selection));
 
   if (validSelections.length === 0) {
+    const fallbackDuration = normalizeCustomDurationMinutes(fallbackDurationMinutes);
     return Array.from({ length: count }, (_, index) => {
       const date = new Date(startDate);
       date.setDate(date.getDate() + index * 7);
-      return { scheduledDate: date, scheduledTime: fallbackTime ?? null };
+      return {
+        scheduledDate: date,
+        scheduledTime: fallbackTime ?? null,
+        durationMinutes: fallbackDuration,
+      };
     });
   }
 
-  const schedule: { scheduledDate: Date; scheduledTime: string | null }[] = [];
+  const schedule: { scheduledDate: Date; scheduledTime: string | null; durationMinutes: number }[] = [];
   for (let dayOffset = 0; schedule.length < count && dayOffset < count * 14 + 14; dayOffset += 1) {
     const date = new Date(startDate);
     date.setDate(date.getDate() + dayOffset);
@@ -76,7 +91,11 @@ function buildSchedule(startDate: Date, selectedTimeSlots: string[], count: numb
       .sort((a, b) => a.slotIndex - b.slotIndex);
     for (const match of matches) {
       if (schedule.length >= count) break;
-      schedule.push({ scheduledDate: new Date(date), scheduledTime: slotStartLabel(match.selection) });
+      schedule.push({
+        scheduledDate: new Date(date),
+        scheduledTime: slotStartLabel(match.selection),
+        durationMinutes: STANDARD_SESSION_DURATION_MINUTES,
+      });
     }
   }
   return schedule;
@@ -89,6 +108,7 @@ export function buildBookingSessionRows({
   startDate,
   selectedTimeSlots,
   fallbackTime,
+  fallbackDurationMinutes,
   courseAmount,
   commissionAmount,
   teacherPayoutAmount,
@@ -100,13 +120,14 @@ export function buildBookingSessionRows({
   startDate: Date;
   selectedTimeSlots: string[];
   fallbackTime?: string | null;
+  fallbackDurationMinutes?: number | null;
   courseAmount: number;
   commissionAmount: number;
   teacherPayoutAmount: number;
   transportFee: number;
 }): Prisma.BookingSessionCreateManyInput[] {
   const count = Math.max(1, Math.round(sessionsCount));
-  const schedule = buildSchedule(startDate, selectedTimeSlots, count, fallbackTime);
+  const schedule = buildSchedule(startDate, selectedTimeSlots, count, fallbackTime, fallbackDurationMinutes);
   const courseAmounts = distributeAmount(courseAmount, count);
   const commissionAmounts = distributeAmount(commissionAmount, count);
   const teacherCourseAmounts = distributeAmount(teacherPayoutAmount, count);
@@ -118,6 +139,7 @@ export function buildBookingSessionRows({
     teacherId,
     scheduledDate: schedule[index]?.scheduledDate ?? null,
     scheduledTime: schedule[index]?.scheduledTime ?? fallbackTime ?? null,
+    durationMinutes: schedule[index]?.durationMinutes ?? STANDARD_SESSION_DURATION_MINUTES,
     courseAmount: courseAmounts[index],
     commissionAmount: commissionAmounts[index],
     teacherCourseAmount: teacherCourseAmounts[index],

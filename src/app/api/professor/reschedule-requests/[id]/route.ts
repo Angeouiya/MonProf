@@ -14,6 +14,7 @@ import {
   lockTeacherSchedule,
   TEACHER_SCHEDULE_CONFLICT_CODE,
 } from "@/lib/teacher-schedule-conflicts";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 
 const MAX_RESPONSE_LENGTH = 700;
 
@@ -59,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const clientName = request.booking.client.name;
   const oldSlot = `${formatDateFr(request.oldScheduledDate)} · ${request.oldScheduledTime || "horaire non renseigné"}`;
   const newSlot = `${formatDateFr(request.proposedDate)} · ${request.proposedTime}`;
+  const platformSettings = await getPlatformRuntimeSettings();
 
   if (action === "accept") {
     let applied: boolean;
@@ -127,7 +129,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               scheduledDate: request.proposedDate,
               scheduledTime: request.proposedTime,
               durationMinutes: targetSession.durationMinutes,
+              courseFormat: request.booking.courseFormat,
+              commune: request.booking.commune,
+              quartier: request.booking.quartier,
+              transportFeeKey: request.booking.transportFeeKey,
             }],
+            scheduleBuffers: platformSettings.scheduleBuffers,
           });
           const released = Boolean(targetSession.releasedAt)
             || ["RELEASED", "PARTIALLY_PAID", "PAID"].includes(targetSession.status);

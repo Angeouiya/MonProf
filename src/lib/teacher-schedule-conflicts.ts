@@ -1,4 +1,16 @@
 import { Prisma, type BookingSessionStatus, type BookingStatus, type PaymentStatus, type PrismaClient } from "@prisma/client";
+import {
+  normalizeScheduleSlot,
+  scheduleSlotsConflict,
+  scheduleSlotsOverlap,
+  type NormalizedScheduleSlot,
+  type ScheduleBufferMinutes,
+  type ScheduleConflictContext,
+  type ScheduleConflictKind,
+  type ScheduleSlotLike,
+} from "@/lib/schedule-conflict-core";
+
+export { scheduleSlotsOverlap };
 
 export const TEACHER_SCHEDULE_CONFLICT_CODE = "TEACHER_SLOT_ALREADY_RESERVED";
 
@@ -41,7 +53,11 @@ export type ScheduleSlotInput = {
   scheduledDate?: Date | string | null;
   scheduledTime?: string | null;
   durationMinutes?: number | null;
-};
+  courseFormat?: string | null;
+  commune?: string | null;
+  quartier?: string | null;
+  transportFeeKey?: string | null;
+} & ScheduleSlotLike;
 
 export type TeacherScheduleConflict = {
   teacherId: string;
@@ -53,15 +69,9 @@ export type TeacherScheduleConflict = {
   scheduledTime: string;
   status: string;
   paymentStatus: string;
-};
-
-type NormalizedScheduleSlot = {
-  scheduledDate: Date;
-  dateKey: string;
-  scheduledTime: string;
-  normalizedTimeLabel: string;
-  durationMinutes: number;
-  range: { startMinutes: number; endMinutes: number } | null;
+  kind: ScheduleConflictKind;
+  requiredBufferMinutes: number | null;
+  gapMinutes: number | null;
 };
 
 export class TeacherScheduleConflictError extends Error {
@@ -107,6 +117,9 @@ export async function assertTeacherScheduleAvailable(
     bookingId?: string | null;
     excludeBookingId?: string | null;
     excludeSessionId?: string | null;
+    scheduleBuffers?: Partial<ScheduleBufferMinutes> | null;
+    grandAbidjanCommuneNames?: string[];
+    neighborhoodAliases?: ScheduleConflictContext["neighborhoodAliases"];
   },
 ) {
   const conflict = input.bookingId
@@ -114,12 +127,18 @@ export async function assertTeacherScheduleAvailable(
         teacherId: input.teacherId,
         excludeBookingId: input.excludeBookingId,
         excludeSessionId: input.excludeSessionId,
+        scheduleBuffers: input.scheduleBuffers,
+        grandAbidjanCommuneNames: input.grandAbidjanCommuneNames,
+        neighborhoodAliases: input.neighborhoodAliases,
       })
     : await findTeacherScheduleConflict(client, {
         teacherId: input.teacherId,
         slots: input.slots ?? [],
         excludeBookingId: input.excludeBookingId,
         excludeSessionId: input.excludeSessionId,
+        scheduleBuffers: input.scheduleBuffers,
+        grandAbidjanCommuneNames: input.grandAbidjanCommuneNames,
+        neighborhoodAliases: input.neighborhoodAliases,
       });
   if (conflict) throw new TeacherScheduleConflictError(conflict);
 }
@@ -131,11 +150,24 @@ export async function findTeacherScheduleConflictForBooking(
     teacherId?: string | null;
     excludeBookingId?: string | null;
     excludeSessionId?: string | null;
+    scheduleBuffers?: Partial<ScheduleBufferMinutes> | null;
+    grandAbidjanCommuneNames?: string[];
+    neighborhoodAliases?: ScheduleConflictContext["neighborhoodAliases"];
   } = {},
 ) {
   const booking = await client.booking.findUnique({
     where: { id: bookingId },
-    include: {
+    select: {
+      id: true,
+      teacherId: true,
+      scheduledDate: true,
+      scheduledTime: true,
+      startDate: true,
+      preferredTime: true,
+      courseFormat: true,
+      commune: true,
+      quartier: true,
+      transportFeeKey: true,
       sessions: {
         orderBy: { sequence: "asc" },
         select: {
@@ -156,6 +188,10 @@ export async function findTeacherScheduleConflictForBooking(
       scheduledDate: session.scheduledDate,
       scheduledTime: session.scheduledTime,
       durationMinutes: session.durationMinutes,
+      courseFormat: booking.courseFormat,
+      commune: booking.commune,
+      quartier: booking.quartier,
+      transportFeeKey: booking.transportFeeKey,
     }));
   const slots = sessionSlots.length > 0
     ? sessionSlots
@@ -163,6 +199,10 @@ export async function findTeacherScheduleConflictForBooking(
         scheduledDate: booking.scheduledDate ?? booking.startDate,
         scheduledTime: booking.scheduledTime || booking.preferredTime,
         durationMinutes: 120,
+        courseFormat: booking.courseFormat,
+        commune: booking.commune,
+        quartier: booking.quartier,
+        transportFeeKey: booking.transportFeeKey,
       }];
 
   return findTeacherScheduleConflict(client, {
@@ -170,6 +210,9 @@ export async function findTeacherScheduleConflictForBooking(
     slots,
     excludeBookingId: options.excludeBookingId ?? bookingId,
     excludeSessionId: options.excludeSessionId,
+    scheduleBuffers: options.scheduleBuffers,
+    grandAbidjanCommuneNames: options.grandAbidjanCommuneNames,
+    neighborhoodAliases: options.neighborhoodAliases,
   });
 }
 
@@ -180,6 +223,9 @@ export async function findTeacherScheduleConflict(
     slots: ScheduleSlotInput[];
     excludeBookingId?: string | null;
     excludeSessionId?: string | null;
+    scheduleBuffers?: Partial<ScheduleBufferMinutes> | null;
+    grandAbidjanCommuneNames?: string[];
+    neighborhoodAliases?: ScheduleConflictContext["neighborhoodAliases"];
   },
 ): Promise<TeacherScheduleConflict | null> {
   const teacherId = input.teacherId.trim();
@@ -191,6 +237,10 @@ export async function findTeacherScheduleConflict(
 
   const dateFilters = buildDateFilters(requestedSlots);
   if (dateFilters.length === 0) return null;
+  const conflictContext: ScheduleConflictContext = {
+    grandAbidjanCommuneNames: input.grandAbidjanCommuneNames,
+    neighborhoodAliases: input.neighborhoodAliases,
+  };
 
   const activeSessionRows = await client.bookingSession.findMany({
     where: {
@@ -216,6 +266,10 @@ export async function findTeacherScheduleConflict(
           reference: true,
           status: true,
           paymentStatus: true,
+          courseFormat: true,
+          commune: true,
+          quartier: true,
+          transportFeeKey: true,
         },
       },
     },
@@ -229,9 +283,16 @@ export async function findTeacherScheduleConflict(
       scheduledDate: session.scheduledDate,
       scheduledTime: session.scheduledTime,
       durationMinutes: session.durationMinutes,
+      courseFormat: session.booking.courseFormat,
+      commune: session.booking.commune,
+      quartier: session.booking.quartier,
+      transportFeeKey: session.booking.transportFeeKey,
     });
     if (!existingSlot) continue;
-    if (requestedSlots.some((slot) => scheduleSlotsOverlap(slot, existingSlot))) {
+    const conflict = requestedSlots
+      .map((slot) => scheduleSlotsConflict(slot, existingSlot, input.scheduleBuffers, conflictContext))
+      .find((item): item is NonNullable<typeof item> => Boolean(item));
+    if (conflict) {
       return {
         teacherId,
         bookingId: session.bookingId,
@@ -242,6 +303,9 @@ export async function findTeacherScheduleConflict(
         scheduledTime: session.scheduledTime,
         status: session.booking.status,
         paymentStatus: session.booking.paymentStatus,
+        kind: conflict.kind,
+        requiredBufferMinutes: conflict.requiredBufferMinutes,
+        gapMinutes: conflict.gapMinutes,
       };
     }
   }
@@ -261,6 +325,10 @@ export async function findTeacherScheduleConflict(
       scheduledDate: true,
       scheduledTime: true,
       preferredTime: true,
+      courseFormat: true,
+      commune: true,
+      quartier: true,
+      transportFeeKey: true,
       status: true,
       paymentStatus: true,
     },
@@ -275,9 +343,16 @@ export async function findTeacherScheduleConflict(
       scheduledDate: booking.scheduledDate,
       scheduledTime,
       durationMinutes: 120,
+      courseFormat: booking.courseFormat,
+      commune: booking.commune,
+      quartier: booking.quartier,
+      transportFeeKey: booking.transportFeeKey,
     });
     if (!existingSlot) continue;
-    if (requestedSlots.some((slot) => scheduleSlotsOverlap(slot, existingSlot))) {
+    const conflict = requestedSlots
+      .map((slot) => scheduleSlotsConflict(slot, existingSlot, input.scheduleBuffers, conflictContext))
+      .find((item): item is NonNullable<typeof item> => Boolean(item));
+    if (conflict) {
       return {
         teacherId,
         bookingId: booking.id,
@@ -288,6 +363,9 @@ export async function findTeacherScheduleConflict(
         scheduledTime,
         status: booking.status,
         paymentStatus: booking.paymentStatus,
+        kind: conflict.kind,
+        requiredBufferMinutes: conflict.requiredBufferMinutes,
+        gapMinutes: conflict.gapMinutes,
       };
     }
   }
@@ -295,20 +373,15 @@ export async function findTeacherScheduleConflict(
   return null;
 }
 
-export function scheduleSlotsOverlap(first: ScheduleSlotInput, second: ScheduleSlotInput) {
-  const a = normalizeScheduleSlot(first);
-  const b = normalizeScheduleSlot(second);
-  if (!a || !b || a.dateKey !== b.dateKey) return false;
-  if (a.range && b.range) {
-    return a.range.startMinutes < b.range.endMinutes
-      && b.range.startMinutes < a.range.endMinutes;
-  }
-  return Boolean(a.normalizedTimeLabel && a.normalizedTimeLabel === b.normalizedTimeLabel);
-}
-
 export function formatTeacherScheduleConflictMessage(conflict: TeacherScheduleConflict) {
   const dateLabel = formatDateFr(conflict.scheduledDate);
   const sessionLabel = conflict.sequence ? `, séance ${conflict.sequence}` : "";
+  if (conflict.kind === "TRAVEL_BUFFER") {
+    const bufferLabel = conflict.requiredBufferMinutes
+      ? `${conflict.requiredBufferMinutes} min`
+      : "le temps de déplacement configuré";
+    return `Déplacement insuffisant : ce professeur a déjà un cours payé (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Il faut au moins ${bufferLabel} entre les deux cours. Choisissez une autre heure ou un autre professeur.`;
+  }
   return `Ce créneau est déjà réservé et payé pour ce professeur (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Choisissez un autre créneau ou un autre professeur.`;
 }
 
@@ -337,73 +410,6 @@ function buildDateFilters(slots: NormalizedScheduleSlot[]) {
     end.setUTCDate(end.getUTCDate() + 1);
     return { scheduledDate: { gte: start, lt: end } };
   });
-}
-
-function normalizeScheduleSlot(slot: ScheduleSlotInput): NormalizedScheduleSlot | null {
-  const scheduledDate = parseScheduleDate(slot.scheduledDate);
-  const scheduledTime = typeof slot.scheduledTime === "string" ? slot.scheduledTime.trim() : "";
-  if (!scheduledDate || !scheduledTime) return null;
-  const durationMinutes = normalizeDuration(slot.durationMinutes);
-  return {
-    scheduledDate,
-    dateKey: dateKey(scheduledDate),
-    scheduledTime,
-    normalizedTimeLabel: normalizeTimeLabel(scheduledTime),
-    durationMinutes,
-    range: parseTimeRange(scheduledTime, durationMinutes),
-  };
-}
-
-function parseScheduleDate(value?: Date | string | null) {
-  if (!value) return null;
-  const parsed = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function normalizeDuration(value?: number | null) {
-  if (!Number.isFinite(value ?? NaN)) return 120;
-  const duration = Math.round(Number(value));
-  return duration >= 30 && duration <= 480 ? duration : 120;
-}
-
-function parseTimeRange(value: string, durationMinutes: number) {
-  const label = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const compactRange = label.match(/\b([01]?\d|2[0-3])\s*-\s*([01]?\d|2[0-3])\b/);
-  if (compactRange) {
-    const startHour = Number(compactRange[1]);
-    const endHour = Number(compactRange[2]);
-    if (endHour > startHour) {
-      return { startMinutes: startHour * 60, endMinutes: endHour * 60 };
-    }
-  }
-
-  const times = Array.from(label.matchAll(/(?:^|[^\d])([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?/g))
-    .map((match) => ({
-      hour: Number(match[1]),
-      minute: match[2] ? Number(match[2]) : 0,
-    }))
-    .filter((time) => Number.isFinite(time.hour) && Number.isFinite(time.minute));
-  if (times.length === 0) return null;
-  const start = times[0].hour * 60 + times[0].minute;
-  const explicitEnd = times.length > 1 ? times[1].hour * 60 + times[1].minute : null;
-  const end = explicitEnd && explicitEnd > start ? explicitEnd : start + durationMinutes;
-  return { startMinutes: start, endMinutes: end };
-}
-
-function normalizeTimeLabel(value: string) {
-  return value
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .toLocaleLowerCase("fr-FR");
-}
-
-function dateKey(value: Date) {
-  return value.toISOString().slice(0, 10);
 }
 
 function formatDateFr(date: Date) {

@@ -103,6 +103,7 @@ export default async function ReserverPage({
         pricingConfig={{
           commissionPercent: teacher.commissionRate,
           transportFees: platformSettings.transportFees,
+          scheduleBuffers: platformSettings.scheduleBuffers,
         }}
         initialPartnerReferral={partnerReferral ? {
           code: partnerReferral.code,
@@ -139,7 +140,15 @@ async function getTeacherOccupiedSlots(teacherId: string) {
         scheduledDate: true,
         scheduledTime: true,
         durationMinutes: true,
-        booking: { select: { reference: true } },
+        booking: {
+          select: {
+            reference: true,
+            courseFormat: true,
+            commune: true,
+            quartier: true,
+            transportFeeKey: true,
+          },
+        },
       },
       orderBy: [{ scheduledDate: "asc" }, { sequence: "asc" }],
       take: 500,
@@ -156,6 +165,10 @@ async function getTeacherOccupiedSlots(teacherId: string) {
         scheduledDate: true,
         scheduledTime: true,
         preferredTime: true,
+        courseFormat: true,
+        commune: true,
+        quartier: true,
+        transportFeeKey: true,
       },
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
       take: 250,
@@ -171,6 +184,10 @@ async function getTeacherOccupiedSlots(teacherId: string) {
         durationMinutes: session.durationMinutes,
         bookingReference: session.booking.reference,
         sequence: session.sequence,
+        courseFormat: session.booking.courseFormat,
+        commune: session.booking.commune,
+        quartier: session.booking.quartier,
+        transportFeeKey: session.booking.transportFeeKey,
       })),
     ...legacyBookings
       .filter((booking) => booking.scheduledDate && (booking.scheduledTime || booking.preferredTime))
@@ -180,6 +197,10 @@ async function getTeacherOccupiedSlots(teacherId: string) {
         durationMinutes: 120,
         bookingReference: booking.reference,
         sequence: null,
+        courseFormat: booking.courseFormat,
+        commune: booking.commune,
+        quartier: booking.quartier,
+        transportFeeKey: booking.transportFeeKey,
       })),
   ];
 }

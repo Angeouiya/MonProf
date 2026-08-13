@@ -9,6 +9,7 @@ import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
 import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
 import {
   assertTeacherScheduleAvailable,
@@ -233,6 +234,7 @@ export async function PATCH(
   const now = new Date();
   const teacherName = courseSession.teacher.professionalName || courseSession.teacher.fullName;
   const sessionLabel = "séance " + courseSession.sequence + "/" + courseSession.booking.sessionsCount;
+  const platformSettings = await getPlatformRuntimeSettings();
 
   try {
   if (action === "mark_done") {
@@ -359,7 +361,12 @@ export async function PATCH(
           scheduledDate: proposedDate,
           scheduledTime: proposedTime,
           durationMinutes: current.durationMinutes,
+          courseFormat: current.booking.courseFormat,
+          commune: current.booking.commune,
+          quartier: current.booking.quartier,
+          transportFeeKey: current.booking.transportFeeKey,
         }],
+        scheduleBuffers: platformSettings.scheduleBuffers,
       });
       await updateSessionWithCas(tx, current, {
         status: "RESCHEDULE_PROPOSED",
@@ -432,7 +439,12 @@ export async function PATCH(
             scheduledDate: courseSession.proposedDate,
             scheduledTime: courseSession.proposedTime,
             durationMinutes: current.durationMinutes,
+            courseFormat: current.booking.courseFormat,
+            commune: current.booking.commune,
+            quartier: current.booking.quartier,
+            transportFeeKey: current.booking.transportFeeKey,
           }],
+          scheduleBuffers: platformSettings.scheduleBuffers,
         });
       }
       await updateSessionWithCas(
@@ -594,7 +606,12 @@ export async function PATCH(
             scheduledDate: current.scheduledDate,
             scheduledTime: current.scheduledTime,
             durationMinutes: current.durationMinutes,
+            courseFormat: current.booking.courseFormat,
+            commune: current.booking.commune,
+            quartier: current.booking.quartier,
+            transportFeeKey: current.booking.transportFeeKey,
           }],
+          scheduleBuffers: platformSettings.scheduleBuffers,
         });
       }
       await updateSessionWithCas(

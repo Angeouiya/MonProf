@@ -7,6 +7,7 @@ import { createJekoPaymentRequest, JekoApiError } from "@/lib/jeko";
 import { validateJekoRescheduleFinancialSnapshot } from "@/lib/jeko-client-payment";
 import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-recovery";
 import { isAllowedJekoRedirectUrl, xofToJekoAmountCents, type JekoPaymentMethod } from "@/lib/jeko-utils";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { assertTeacherScheduleAvailable, lockTeacherSchedule } from "@/lib/teacher-schedule-conflicts";
 
 const SECURED_PAYMENT_STATUSES = new Set([
@@ -63,6 +64,7 @@ export async function createJekoBookingCheckout(
   const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
   const bookingId = input.bookingId.trim();
   if (!bookingId) throw new Error("Réservation manquante.");
+  const platformSettings = await getPlatformRuntimeSettings();
 
   const prepared = await db.$transaction(async (tx) => {
     const lockedBooking = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -142,6 +144,7 @@ export async function createJekoBookingCheckout(
       teacherId: booking.teacherId,
       bookingId: booking.id,
       excludeBookingId: booking.id,
+      scheduleBuffers: platformSettings.scheduleBuffers,
     });
 
     // Verrou inter-fournisseurs posé en base avant tout appel externe. Les

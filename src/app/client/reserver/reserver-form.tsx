@@ -59,6 +59,14 @@ import {
   packSessionCount,
 } from "@/lib/pricing";
 import {
+  formatTimeRangeFromStart,
+  normalizeCustomDurationMinutes,
+  scheduleSlotsConflict,
+  validateCustomScheduleTime,
+  type ScheduleBufferMinutes,
+  type ScheduleSlotsConflictResult,
+} from "@/lib/schedule-conflict-core";
+import {
   buildAbidjanCommuneOptions,
   buildCityOptions,
   buildQuartierOptions,
@@ -108,6 +116,7 @@ type CommuneOption = {
 type PricingConfig = {
   commissionPercent: number;
   transportFees: { sameCommune: number; nearCommune: number; farCommune: number; interior: number };
+  scheduleBuffers: ScheduleBufferMinutes;
 };
 
 type InitialPartnerReferral = {
@@ -122,17 +131,23 @@ type OccupiedTeacherSlot = {
   durationMinutes: number;
   bookingReference?: string | null;
   sequence?: number | null;
+  courseFormat?: string | null;
+  commune?: string | null;
+  quartier?: string | null;
+  transportFeeKey?: string | null;
 };
 
 type ScheduleOccurrence = {
   date: string;
   time: string;
   sequence: number;
+  durationMinutes: number;
 };
 
 type OccupiedScheduleConflict = {
   occurrence: ScheduleOccurrence;
   occupied: OccupiedTeacherSlot;
+  conflict: ScheduleSlotsConflictResult;
 };
 
 type BookingJourney = "ivoirien" | "francais" | "professionnel";
@@ -181,7 +196,7 @@ const STEP_DETAILS = [
   },
   {
     title: "Date et horaires",
-    description: "Sélectionnez une date, un créneau de 2h ou une demande horaire précise.",
+    description: "Sélectionnez une date, un créneau de 2h ou un autre horaire précis.",
   },
   {
     title: "Récapitulatif",
@@ -331,21 +346,8 @@ function clampGroupParticipants(value: unknown): number {
   return Math.max(2, Math.min(12, Math.round(parsed)));
 }
 
-function formatTimeRange(startTime: string) {
-  const [hourValue, minuteValue = "0"] = startTime.split(":");
-  const hour = Number(hourValue);
-  const minute = Number(minuteValue);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return startTime;
-
-  const start = new Date(2026, 0, 1, hour, minute, 0, 0);
-  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-  return `${formatTime(start)} - ${formatTime(end)}`;
-}
-
-function formatTime(date: Date) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}h${minutes}`;
+function formatTimeRange(startTime: string, durationMinutes = 120) {
+  return formatTimeRangeFromStart(startTime, durationMinutes) || startTime;
 }
 
 function toDateInputValue(date: Date) {
@@ -416,11 +418,13 @@ function buildScheduleOccurrences({
   selectedTimeSlots,
   sessionsCount,
   fallbackTime,
+  fallbackDurationMinutes,
 }: {
   startDate: string;
   selectedTimeSlots: string[];
   sessionsCount: number;
   fallbackTime?: string | null;
+  fallbackDurationMinutes?: number | null;
 }): ScheduleOccurrence[] {
   const count = Math.max(1, Math.round(sessionsCount));
   if (!dateFromInput(startDate)) return [];
@@ -439,6 +443,7 @@ function buildScheduleOccurrences({
       date: addDaysToDateInput(startDate, index * 7),
       time: fallbackTime,
       sequence: index + 1,
+      durationMinutes: normalizeCustomDurationMinutes(fallbackDurationMinutes),
     })).filter((item) => Boolean(item.date));
   }
 
@@ -458,41 +463,11 @@ function buildScheduleOccurrences({
         date: toDateInputValue(date),
         time,
         sequence: schedule.length + 1,
+        durationMinutes: 120,
       });
     }
   }
   return schedule;
-}
-
-function parseTimeRange(value: string, durationMinutes = 120) {
-  const label = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const compactRange = label.match(/\b([01]?\d|2[0-3])\s*-\s*([01]?\d|2[0-3])\b/);
-  if (compactRange) {
-    const startHour = Number(compactRange[1]);
-    const endHour = Number(compactRange[2]);
-    if (endHour > startHour) return { startMinutes: startHour * 60, endMinutes: endHour * 60 };
-  }
-  const times = Array.from(label.matchAll(/(?:^|[^\d])([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?/g))
-    .map((match) => ({
-      hour: Number(match[1]),
-      minute: match[2] ? Number(match[2]) : 0,
-    }))
-    .filter((time) => Number.isFinite(time.hour) && Number.isFinite(time.minute));
-  if (times.length === 0) return null;
-  const start = times[0].hour * 60 + times[0].minute;
-  const explicitEnd = times.length > 1 ? times[1].hour * 60 + times[1].minute : null;
-  const end = explicitEnd && explicitEnd > start ? explicitEnd : start + Math.max(30, durationMinutes);
-  return { startMinutes: start, endMinutes: end };
-}
-
-function rangesOverlap(
-  first: { startMinutes: number; endMinutes: number } | null,
-  second: { startMinutes: number; endMinutes: number } | null,
-) {
-  return Boolean(first && second && first.startMinutes < second.endMinutes && second.startMinutes < first.endMinutes);
 }
 
 function findOccupiedConflictForTime(
@@ -500,26 +475,64 @@ function findOccupiedConflictForTime(
   date: string,
   time: string,
   durationMinutes = 120,
+  requestContext: {
+    courseFormat?: string | null;
+    commune?: string | null;
+    quartier?: string | null;
+    transportFeeKey?: string | null;
+  },
+  scheduleBuffers: ScheduleBufferMinutes,
 ) {
-  const requestedRange = parseTimeRange(time, durationMinutes);
-  return occupiedSlots.find((occupied) => (
-    occupied.date === date
-    && rangesOverlap(requestedRange, parseTimeRange(occupied.time, occupied.durationMinutes))
-  )) ?? null;
+  for (const occupied of occupiedSlots) {
+    if (occupied.date !== date) continue;
+    const conflict = scheduleSlotsConflict(
+      {
+        scheduledDate: date,
+        scheduledTime: time,
+        durationMinutes,
+        courseFormat: requestContext.courseFormat,
+        commune: requestContext.commune,
+        quartier: requestContext.quartier,
+        transportFeeKey: requestContext.transportFeeKey,
+      },
+      {
+        scheduledDate: occupied.date,
+        scheduledTime: occupied.time,
+        durationMinutes: occupied.durationMinutes,
+        courseFormat: occupied.courseFormat,
+        commune: occupied.commune,
+        quartier: occupied.quartier,
+        transportFeeKey: occupied.transportFeeKey,
+      },
+      scheduleBuffers,
+    );
+    if (conflict) return { occupied, conflict };
+  }
+  return null;
 }
 
 function findOccupiedConflictForSelection(
   occupiedSlots: OccupiedTeacherSlot[],
   date: string,
   selection: string,
+  requestContext: {
+    courseFormat?: string | null;
+    commune?: string | null;
+    quartier?: string | null;
+    transportFeeKey?: string | null;
+  },
+  scheduleBuffers: ScheduleBufferMinutes,
 ) {
   const time = slotLabelFromSelection(selection);
-  return time ? findOccupiedConflictForTime(occupiedSlots, date, time, 120) : null;
+  return time ? findOccupiedConflictForTime(occupiedSlots, date, time, 120, requestContext, scheduleBuffers) : null;
 }
 
 function formatOccupiedConflictMessage(conflict: OccupiedScheduleConflict) {
   const sequenceLabel = conflict.occurrence.sequence > 1 ? `, séance ${conflict.occurrence.sequence}` : "";
   const referenceLabel = conflict.occupied.bookingReference ? `, dossier ${conflict.occupied.bookingReference}` : "";
+  if (conflict.conflict.kind === "TRAVEL_BUFFER") {
+    return `Déplacement insuffisant pour ce professeur (${formatDateInputLabel(conflict.occurrence.date)} · ${conflict.occurrence.time}${sequenceLabel}${referenceLabel}). Il faut au moins ${conflict.conflict.requiredBufferMinutes} min entre deux cours. Choisissez une autre heure ou un autre professeur.`;
+  }
   return `Ce créneau est déjà payé pour ce professeur (${formatDateInputLabel(conflict.occurrence.date)} · ${conflict.occurrence.time}${sequenceLabel}${referenceLabel}). Choisissez un autre créneau ou un autre professeur.`;
 }
 
@@ -622,6 +635,7 @@ export function ReserverForm({
     selectedTimeSlots: [] as string[],
     customDay: "",
     customStartTime: "",
+    customDurationMinutes: 120,
     customTimeRequest: "",
     startDate: "",
     packType: "SINGLE" as PackType,
@@ -635,18 +649,32 @@ export function ReserverForm({
 
   function handleStartDateChange(value: string) {
     const dayKey = dayKeyFromDateInput(value);
-    setForm((current) => ({
-      ...current,
-      startDate: value,
-      selectedTimeSlots: dayKey
-        ? current.selectedTimeSlots.filter((slot) => (
-            slot.startsWith(`${dayKey}|`)
-            && !findOccupiedConflictForSelection(occupiedSlots, value, slot)
-          ))
-        : current.selectedTimeSlots,
-      customDay: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customDay,
-      customStartTime: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customStartTime,
-    }));
+    setForm((current) => {
+      const requestContext = {
+        courseFormat: current.courseFormat,
+        commune: current.courseFormat === "HOME" ? current.commune : null,
+        quartier: current.courseFormat === "HOME" ? current.quartier : null,
+        transportFeeKey: null,
+      };
+      return {
+        ...current,
+        startDate: value,
+        selectedTimeSlots: dayKey
+          ? current.selectedTimeSlots.filter((slot) => (
+              slot.startsWith(`${dayKey}|`)
+              && !findOccupiedConflictForSelection(
+                occupiedSlots,
+                value,
+                slot,
+                requestContext,
+                pricingConfig.scheduleBuffers,
+              )
+            ))
+          : current.selectedTimeSlots,
+        customDay: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customDay,
+        customStartTime: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customStartTime,
+      };
+    });
   }
 
   function handleCityChange(value: string) {
@@ -833,6 +861,12 @@ export function ReserverForm({
     clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
     neighborhoodAliases,
   });
+  const scheduleRequestContext = {
+    courseFormat: form.courseFormat,
+    commune: form.courseFormat === "HOME" ? form.commune : null,
+    quartier: form.courseFormat === "HOME" ? form.quartier : null,
+    transportFeeKey: pricing.transportFeeKey,
+  };
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const selectedPackLabel = PACK_OPTIONS.find((pack) => pack.value === form.packType)?.label ?? form.packType;
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
@@ -840,7 +874,11 @@ export function ReserverForm({
   const totalPrice = pricing.totalClientPays;
   const hasResolvedPricing = bookingJourney !== "";
   const averageSessionPrice = selectedPackSessions > 0 ? Math.round(pricing.courseAmount / selectedPackSessions) : 0;
-  const totalHours = selectedPackSessions * 2;
+  const normalizedCustomDurationMinutes = normalizeCustomDurationMinutes(form.customDurationMinutes);
+  const usesCustomSchedule = form.selectedTimeSlots.length === 0 && Boolean(form.customDay && form.customStartTime);
+  const selectedSessionDurationMinutes = usesCustomSchedule ? normalizedCustomDurationMinutes : 120;
+  const selectedSessionDurationLabel = selectedSessionDurationMinutes === 60 ? "1h" : "2h";
+  const totalHours = selectedPackSessions * selectedSessionDurationMinutes / 60;
   const extraParticipantCount = Math.max(0, participantsCount - 1);
   const surchargePerExtraParticipant = Math.round(basePrice * 0.5);
   const selectedDays = Array.from(new Set([
@@ -848,7 +886,10 @@ export function ReserverForm({
     ...(form.customDay ? [form.customDay] : []),
   ]));
   const selectedTimeLabels = form.selectedTimeSlots.map(availabilitySelectionLabel);
-  const customTimeRange = form.customStartTime ? formatTimeRange(form.customStartTime) : "";
+  const customTimeRange = form.customStartTime ? formatTimeRange(form.customStartTime, normalizedCustomDurationMinutes) : "";
+  const customTimeValidation = form.customStartTime
+    ? validateCustomScheduleTime(form.customStartTime, normalizedCustomDurationMinutes)
+    : { valid: true, reason: "" };
   const customTimeParts = [
     form.customDay && customTimeRange ? `${dayLabel(form.customDay)} ${customTimeRange}` : "",
     form.customTimeRequest.trim(),
@@ -885,12 +926,22 @@ export function ReserverForm({
     selectedTimeSlots: form.selectedTimeSlots,
     sessionsCount: selectedPackSessions,
     fallbackTime: customTimeRange || null,
+    fallbackDurationMinutes: normalizedCustomDurationMinutes,
   })
-    .map((occurrence) => ({
-      occurrence,
-      occupied: findOccupiedConflictForTime(occupiedSlots, occurrence.date, occurrence.time, 120),
-    }))
-    .filter((item): item is OccupiedScheduleConflict => Boolean(item.occupied));
+    .map((occurrence) => {
+      const conflict = findOccupiedConflictForTime(
+        occupiedSlots,
+        occurrence.date,
+        occurrence.time,
+        occurrence.durationMinutes,
+        scheduleRequestContext,
+        pricingConfig.scheduleBuffers,
+      );
+      return conflict
+        ? { occurrence, occupied: conflict.occupied, conflict: conflict.conflict }
+        : null;
+    })
+    .filter((item): item is OccupiedScheduleConflict => Boolean(item));
   const firstScheduleConflict = selectedScheduleConflicts[0] ?? null;
   const hasValidStartDate = Boolean(form.startDate && form.startDate >= todayIso);
   const hasValidTimeRequest = form.selectedTimeSlots.length > 0 || Boolean(form.customDay && form.customStartTime);
@@ -898,23 +949,30 @@ export function ReserverForm({
     ? getEarliestCourseStartDateTime({
         dateInput: form.startDate,
         selectedTimeSlots: form.selectedTimeSlots,
-        customStartTime: form.customStartTime,
+        customStartTime: usesCustomSchedule ? form.customStartTime : null,
       })
     : null;
   const minimumBookingDeadline = new Date(Date.now() + MIN_BOOKING_NOTICE_HOURS * 60 * 60 * 1000);
   const hasMinimumBookingNotice = hasValidTimeRequest && respectsMinimumBookingNotice(earliestCourseStartAt);
-  const isScheduleReadyForPayment = hasValidStartDate && hasValidTimeRequest && !hasScheduleDayMismatch && hasMinimumBookingNotice;
+  const hasMixedScheduleRequest = form.selectedTimeSlots.length > 0 && Boolean(form.customDay || form.customStartTime || form.customTimeRequest.trim());
+  const isScheduleReadyForPayment = hasValidStartDate && hasValidTimeRequest && !hasMixedScheduleRequest && customTimeValidation.valid && !hasScheduleDayMismatch && !firstScheduleConflict && hasMinimumBookingNotice;
   const paymentScheduleWarning = !form.startDate
     ? "Sélectionnez une date de première séance avant de passer au paiement."
     : form.startDate < todayIso
       ? "La date sélectionnée est passée. Choisissez aujourd'hui ou une date ultérieure."
-      : hasScheduleDayMismatch
-        ? `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}, mais le créneau choisi correspond à un autre jour.`
-        : !hasValidTimeRequest
-          ? "Sélectionnez un créneau de 2h ou indiquez une préférence horaire complète."
-          : !hasMinimumBookingNotice
-            ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
-          : "";
+      : hasMixedScheduleRequest
+        ? "Choisissez soit un créneau disponible, soit un autre horaire personnalisé, pas les deux."
+        : !customTimeValidation.valid
+          ? customTimeValidation.reason
+          : hasScheduleDayMismatch
+            ? `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}, mais le créneau choisi correspond à un autre jour.`
+            : firstScheduleConflict
+              ? formatOccupiedConflictMessage(firstScheduleConflict)
+              : !hasValidTimeRequest
+                ? "Sélectionnez un créneau de 2h ou indiquez une préférence horaire complète."
+                : !hasMinimumBookingNotice
+                  ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
+                  : "";
   function handleJourneyChange(journey: "ivoirien" | "francais" | "professionnel") {
     if (!eligibleJourneys.includes(journey)) {
       toast.error("Ce professeur n'enseigne pas dans ce système. Choisissez un parcours autorisé.");
@@ -1011,6 +1069,9 @@ export function ReserverForm({
       if (form.startDate < todayIso) {
         return "La date souhaitée ne peut pas être dans le passé. Choisissez aujourd'hui ou une date ultérieure.";
       }
+      if (hasMixedScheduleRequest) {
+        return "Choisissez soit un créneau disponible, soit un autre horaire personnalisé, pas les deux.";
+      }
       if (form.selectedTimeSlots.length === 0 && !customTimeRequest) {
         return "Sélectionnez un créneau disponible ou indiquez votre horaire souhaité.";
       }
@@ -1019,6 +1080,9 @@ export function ReserverForm({
       }
       if ((form.customDay && !form.customStartTime) || (!form.customDay && form.customStartTime)) {
         return "Pour une demande personnalisée, indiquez le jour et l'heure souhaités.";
+      }
+      if (!customTimeValidation.valid) {
+        return customTimeValidation.reason;
       }
       if (hasScheduleDayMismatch) {
         return `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}. Sélectionnez un créneau du ${selectedStartDayLabel.toLowerCase()} ou modifiez la date.`;
@@ -1091,6 +1155,7 @@ export function ReserverForm({
           selectedTimeSlots: form.selectedTimeSlots,
           preferredTime: preferredTimeSummary.join(" ; "),
           customStartTime: form.customStartTime || undefined,
+          customDurationMinutes: usesCustomSchedule ? normalizedCustomDurationMinutes : undefined,
           startDate: form.startDate || undefined,
           sessionsCount: PACK_OPTIONS.find((p) => p.value === form.packType)?.count ?? 1,
           packType: form.packType,
@@ -1589,7 +1654,7 @@ export function ReserverForm({
           {/* Step 3 — Lieu & dispo */}
           {step === 2 && (
             <div className="space-y-5">
-              <StepIntro step="Étape 3" title="Lieu et disponibilité" description="Choisissez une date, un lieu et un créneau de 2h compatible avec le professeur." />
+              <StepIntro step="Étape 3" title="Lieu et disponibilité" description="Choisissez une date, un lieu et un horaire compatible avec le professeur." />
 
               {form.courseFormat === "HOME" ? (
                 <div className="grid gap-4 min-[720px]:grid-cols-2">
@@ -1752,7 +1817,13 @@ export function ReserverForm({
                   {selectedAvailabilityDays.map((day) => {
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
-                    const freeSlotsCount = availableSlots.filter((slot) => !findOccupiedConflictForSelection(occupiedSlots, form.startDate, `${day.key}|${slot.key}`)).length;
+                    const freeSlotsCount = availableSlots.filter((slot) => !findOccupiedConflictForSelection(
+                      occupiedSlots,
+                      form.startDate,
+                      `${day.key}|${slot.key}`,
+                      scheduleRequestContext,
+                      pricingConfig.scheduleBuffers,
+                    )).length;
                     return (
                       <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                         <div className="flex items-center justify-between gap-3">
@@ -1770,8 +1841,17 @@ export function ReserverForm({
                             {availableSlots.map((slot) => {
                               const key = `${day.key}|${slot.key}`;
                               const checked = form.selectedTimeSlots.includes(key);
-                              const occupiedConflict = findOccupiedConflictForSelection(occupiedSlots, form.startDate, key);
+                              const occupiedConflict = findOccupiedConflictForSelection(
+                                occupiedSlots,
+                                form.startDate,
+                                key,
+                                scheduleRequestContext,
+                                pricingConfig.scheduleBuffers,
+                              );
                               const locked = Boolean(occupiedConflict);
+                              const lockedLabel = occupiedConflict?.conflict.kind === "TRAVEL_BUFFER"
+                                ? "Déplacement insuffisant"
+                                : "Déjà payé";
                               return (
                                 <button
                                   key={key}
@@ -1793,10 +1873,10 @@ export function ReserverForm({
                                         ? "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8]"
                                       : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
                                   }`}
-                                  title={locked ? "Créneau déjà payé par un autre client" : undefined}
+                                  title={locked ? lockedLabel : undefined}
                                 >
                                   <span className="block">{slot.label}</span>
-                                  {locked && <span className="mt-1 block text-[10px] font-black uppercase tracking-wide text-[#64748B]">Déjà payé</span>}
+                                  {locked && <span className="mt-1 block text-[10px] font-black uppercase tracking-wide text-[#64748B]">{lockedLabel}</span>}
                                 </button>
                               );
                             })}
@@ -1824,7 +1904,7 @@ export function ReserverForm({
                   <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="flex flex-col gap-1 min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de 2h</p>
+                        <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de {selectedSessionDurationLabel}</p>
                         <p className="text-xs leading-5 text-[#6B7280]">
                           Le service client confirmera les dates exactes avec {displayName}. Les créneaux répétés suivent la disponibilité du professeur.
                         </p>
@@ -1851,9 +1931,9 @@ export function ReserverForm({
                 </summary>
                 <div className="mt-3 border-t border-[#E5E7EB] pt-4">
                   <p className="text-sm text-[#64748B]">
-                    Indiquez votre préférence. Le service client la vérifiera avec le professeur avant confirmation.
+                    Indiquez une plage précise. La plateforme vérifie déjà les créneaux payés et le temps de déplacement avant paiement.
                   </p>
-                  <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px]">
+                  <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px_180px]">
                   <div>
                     <Label htmlFor="customDay" className="text-xs font-semibold text-[#64748B]">Jour souhaité</Label>
                     <select
@@ -1875,12 +1955,27 @@ export function ReserverForm({
                     <Input
                       id="customStartTime"
                       type="time"
+                      min="08:00"
+                      max={normalizedCustomDurationMinutes === 60 ? "21:00" : "20:00"}
+                      step={1800}
                       value={form.customStartTime}
                       onChange={(event) => update("customStartTime", event.target.value)}
                       className="mt-1.5 h-11 rounded-lg"
                     />
                   </div>
-                  <div className="min-[720px]:col-span-2">
+                  <div>
+                    <Label htmlFor="customDurationMinutes" className="text-xs font-semibold text-[#64748B]">Durée</Label>
+                    <select
+                      id="customDurationMinutes"
+                      value={String(normalizedCustomDurationMinutes)}
+                      onChange={(event) => update("customDurationMinutes", Number(event.target.value))}
+                      className={FIELD_CLASS_TALL}
+                    >
+                      <option value="60">1h · prix identique</option>
+                      <option value="120">2h standard</option>
+                    </select>
+                  </div>
+                  <div className="min-[720px]:col-span-3">
                     <Label htmlFor="customTimeRequest" className="text-xs font-semibold text-[#64748B]">Précision optionnelle</Label>
                     <Textarea
                       id="customTimeRequest"
@@ -1892,13 +1987,23 @@ export function ReserverForm({
                     />
                   </div>
                   </div>
+                  {!customTimeValidation.valid && form.customStartTime && (
+                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                      {customTimeValidation.reason}
+                    </div>
+                  )}
+                  {usesCustomSchedule && firstScheduleConflict && (
+                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                      {formatOccupiedConflictMessage(firstScheduleConflict)}
+                    </div>
+                  )}
                   {form.customDay && customTimeRange && (
                     <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
                     <div className="grid gap-3 min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center">
                       <div>
                         <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
                         <p className="mt-1 text-sm leading-6 text-[#6B7280]">
-                          {dayLabel(form.customDay)} {customTimeRange}. Cette demande représente une séance de 2h à confirmer avec {displayName}.
+                          {dayLabel(form.customDay)} {customTimeRange}. Cette demande représente une séance de {selectedSessionDurationLabel}; le prix reste identique.
                         </p>
                       </div>
                       <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-right">
@@ -1909,7 +2014,7 @@ export function ReserverForm({
                     </div>
                   )}
                   <p className="mt-2 text-xs text-[#64748B]">
-                    Le prix affiché reste celui de la formule choisie pour des séances de 2h. Si une demande sort du cadre normal, le service client valide l'ajustement avant confirmation.
+                    Les créneaux standards restent des blocs de 2h. Dans “Autre horaire”, 1h ou 2h verrouillent l'agenda, mais ne changent pas le prix officiel affiché.
                   </p>
                 </div>
               </details>
@@ -1920,7 +2025,7 @@ export function ReserverForm({
                   <div>
                     <p className="text-sm font-semibold text-[#111827]">{selectedPackLabel}</p>
                     <p className="mt-0.5 text-xs font-medium text-[#64748B]">
-                      {formatCount(selectedPackSessions, "séance")} de 2h · env. {formatFCFA(averageSessionPrice)} / séance
+                      {formatCount(selectedPackSessions, "séance")} de {selectedSessionDurationLabel} · env. {formatFCFA(averageSessionPrice)} / séance
                     </p>
                   </div>
                   <p className="shrink-0 text-base font-semibold text-[#111B4D]">{formatFCFA(pricing.totalClientPays)}</p>
@@ -2136,7 +2241,7 @@ export function ReserverForm({
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Séances prévues</p>
                         <p className="mt-0.5 text-xs font-medium leading-5 text-[#64748B]">
-                          Une séance dure 2h. La première date est celle choisie par le client.
+                          Une séance dure {selectedSessionDurationLabel}. La première date est celle choisie par le client.
                         </p>
                       </div>
                       <span className="w-fit rounded-lg border border-[#DDE6F7] bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">

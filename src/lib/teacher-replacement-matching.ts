@@ -7,11 +7,11 @@ import {
 } from "@/lib/pricing";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import { scheduleSlotsConflict, type ScheduleBufferMinutes } from "@/lib/schedule-conflict-core";
 import {
   SCHEDULE_BLOCKING_BOOKING_STATUSES,
   SCHEDULE_BLOCKING_PAYMENT_STATUSES,
   SCHEDULE_BLOCKING_SESSION_STATUSES,
-  scheduleSlotsOverlap,
 } from "@/lib/teacher-schedule-conflicts";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
@@ -76,17 +76,53 @@ function dateKey(value?: Date | string | null) {
 }
 
 function hasActiveConflict(
-  teacherBookings: { status: string; scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string | null }[],
-  booking: { scheduledDate: Date | null; scheduledTime: string | null; preferredTime: string },
+  teacherBookings: {
+    status: string;
+    scheduledDate: Date | null;
+    scheduledTime: string | null;
+    preferredTime: string | null;
+    courseFormat?: string | null;
+    commune?: string | null;
+    quartier?: string | null;
+    transportFeeKey?: string | null;
+  }[],
+  booking: {
+    scheduledDate: Date | null;
+    scheduledTime: string | null;
+    preferredTime: string;
+    courseFormat?: string | null;
+    commune?: string | null;
+    quartier?: string | null;
+    transportFeeKey?: string | null;
+  },
+  scheduleBuffers: Partial<ScheduleBufferMinutes>,
 ) {
-  const bookingDate = dateKey(booking.scheduledDate);
   const bookingTime = booking.scheduledTime || booking.preferredTime;
-  if (!bookingDate || !bookingTime) return false;
+  if (!booking.scheduledDate || !bookingTime) return false;
   return teacherBookings.some((item) => (
     ACTIVE_BOOKING_STATUSES.includes(item.status as (typeof ACTIVE_BOOKING_STATUSES)[number])
-    && dateKey(item.scheduledDate) === bookingDate
     && Boolean((item.scheduledTime || item.preferredTime || "").trim())
-    && (item.scheduledTime || item.preferredTime) === bookingTime
+    && Boolean(scheduleSlotsConflict(
+      {
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: bookingTime,
+        durationMinutes: 120,
+        courseFormat: booking.courseFormat,
+        commune: booking.commune,
+        quartier: booking.quartier,
+        transportFeeKey: booking.transportFeeKey,
+      },
+      {
+        scheduledDate: item.scheduledDate,
+        scheduledTime: item.scheduledTime || item.preferredTime,
+        durationMinutes: 120,
+        courseFormat: item.courseFormat,
+        commune: item.commune,
+        quartier: item.quartier,
+        transportFeeKey: item.transportFeeKey,
+      },
+      scheduleBuffers,
+    ))
   ));
 }
 
@@ -169,6 +205,10 @@ export async function findReplacementCandidatesForBooking(
           scheduledDate: true,
           scheduledTime: true,
           preferredTime: true,
+          courseFormat: true,
+          commune: true,
+          quartier: true,
+          transportFeeKey: true,
           disputes: {
             where: { createdAt: { gte: new Date(Date.now() - RECENT_ISSUE_DAYS * 24 * 60 * 60 * 1000) } },
             select: { id: true },
@@ -200,6 +240,14 @@ export async function findReplacementCandidatesForBooking(
           scheduledDate: true,
           scheduledTime: true,
           durationMinutes: true,
+          booking: {
+            select: {
+              courseFormat: true,
+              commune: true,
+              quartier: true,
+              transportFeeKey: true,
+            },
+          },
         },
         take: 50,
       },
@@ -266,17 +314,30 @@ export async function findReplacementCandidatesForBooking(
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, matchingBooking);
-      const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking)
-        || teacher.bookingSessions.some((session) => scheduleSlotsOverlap(
+      const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking, platformSettings.scheduleBuffers)
+        || teacher.bookingSessions.some((session) => scheduleSlotsConflict(
           {
             scheduledDate: matchingBooking.scheduledDate,
             scheduledTime: matchingBooking.scheduledTime || matchingBooking.preferredTime,
             durationMinutes: 120,
+            courseFormat: booking.courseFormat,
+            commune: booking.commune,
+            quartier: booking.quartier,
+            transportFeeKey: booking.transportFeeKey,
           },
           {
             scheduledDate: session.scheduledDate,
             scheduledTime: session.scheduledTime,
             durationMinutes: session.durationMinutes,
+            courseFormat: session.booking.courseFormat,
+            commune: session.booking.commune,
+            quartier: session.booking.quartier,
+            transportFeeKey: session.booking.transportFeeKey,
+          },
+          platformSettings.scheduleBuffers,
+          {
+            grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
+            neighborhoodAliases,
           },
         ));
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);

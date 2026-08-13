@@ -112,7 +112,7 @@ export function ParametresClient({
       <SettingSection icon={CalendarClock} title="Règles de réservation" description="Règles métier obligatoires appliquées de la simulation client jusqu'à la validation serveur.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <RuleMetric icon={Clock3} label="Anticipation" value="24 heures" detail="Réservation impossible sous ce délai" />
-          <RuleMetric icon={CalendarClock} label="Durée séance" value="2 heures" detail="Créneaux détaillés de 08h à 22h" />
+          <RuleMetric icon={CalendarClock} label="Durée séance" value="2h standard" detail="Autre horaire possible en 1h ou 2h, prix identique" />
           <RuleMetric icon={UsersRound} label="Groupe" value="+50 %" detail="Par participant supplémentaire" />
           <RuleMetric icon={ShieldCheck} label="Paiement" value="Jèko vérifié" detail="Aucune réservation avant confirmation serveur" />
         </div>
@@ -134,6 +134,26 @@ export function ParametresClient({
           <MoneyField label="Commune proche" value={values.transport_near_commune_fee} onChange={(value) => set("transport_near_commune_fee", value)} />
           <MoneyField label="Commune éloignée" value={values.transport_far_commune_fee} onChange={(value) => set("transport_far_commune_fee", value)} />
           <MoneyField label="Ville intérieure" value={values.transport_interior_fee} onChange={(value) => set("transport_interior_fee", value)} />
+        </div>
+        <div className="mt-5 rounded-xl border border-[#DDE6F7] bg-[#F8FAFF] p-4">
+          <div className="mb-4 flex items-start gap-3">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#111B4D]" />
+            <div>
+              <p className="text-xs font-semibold uppercase text-[#111B4D]">Temps de déplacement planning</p>
+              <p className="mt-1 text-xs leading-5 text-[#64748B]">
+                Ces minutes verrouillent l'agenda du professeur entre deux cours payés. Elles ne modifient pas le prix du transport.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <MinuteField label="Même quartier" value={values.schedule_same_neighborhood_buffer_minutes} onChange={(value) => set("schedule_same_neighborhood_buffer_minutes", value)} />
+            <MinuteField label="Même commune, quartier différent" value={values.schedule_same_commune_buffer_minutes} onChange={(value) => set("schedule_same_commune_buffer_minutes", value)} />
+            <MinuteField label="Commune proche" value={values.schedule_near_commune_buffer_minutes} onChange={(value) => set("schedule_near_commune_buffer_minutes", value)} />
+            <MinuteField label="Commune éloignée" value={values.schedule_far_commune_buffer_minutes} onChange={(value) => set("schedule_far_commune_buffer_minutes", value)} />
+            <MinuteField label="Hors Grand Abidjan" value={values.schedule_outside_grand_abidjan_buffer_minutes} onChange={(value) => set("schedule_outside_grand_abidjan_buffer_minutes", value)} />
+            <MinuteField label="Domicile ↔ en ligne" value={values.schedule_home_online_buffer_minutes} onChange={(value) => set("schedule_home_online_buffer_minutes", value)} />
+          </div>
+          <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">En ligne ↔ en ligne reste verrouillé à 0 minute.</p>
         </div>
         <div className="mt-4 flex flex-col gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4 text-sm text-[#475569] sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
@@ -208,6 +228,10 @@ function SettingField({ icon: Icon, label, children }: { icon: ComponentType<{ c
 
 function MoneyField({ label, value, onChange }: { label: string; value?: string; onChange: (value: string) => void }) {
   return <SettingField icon={MapPinned} label={label}><div className="relative"><Input type="number" min={0} max={100000} step={500} value={value ?? "0"} onChange={(event) => onChange(event.target.value)} className="pr-16" /><span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#64748B]">FCFA</span></div></SettingField>;
+}
+
+function MinuteField({ label, value, onChange }: { label: string; value?: string; onChange: (value: string) => void }) {
+  return <SettingField icon={Clock3} label={label}><div className="relative"><Input type="number" min={0} max={180} step={5} value={value ?? "0"} onChange={(event) => onChange(event.target.value)} className="pr-14" /><span className="absolute inset-y-0 right-3 flex items-center text-xs font-semibold text-[#64748B]">min</span></div></SettingField>;
 }
 
 function SelectField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

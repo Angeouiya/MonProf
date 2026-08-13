@@ -338,21 +338,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (!isAvailabilityCompatible(newTeacher.availability, booking)) {
           return NextResponse.json({ error: "La disponibilité du professeur remplaçant ne correspond pas au jour ou au créneau de cette réservation." }, { status: 400 });
         }
+        const platformSettings = await getPlatformRuntimeSettings();
         const replacementScheduleSlots = booking.sessions.length > 0
           ? booking.sessions.map((session) => ({
               scheduledDate: session.scheduledDate,
               scheduledTime: session.scheduledTime,
               durationMinutes: session.durationMinutes,
+              courseFormat: booking.courseFormat,
+              commune: booking.commune,
+              quartier: booking.quartier,
+              transportFeeKey: booking.transportFeeKey,
             }))
           : [{
               scheduledDate: booking.scheduledDate ?? booking.startDate,
               scheduledTime: booking.scheduledTime || booking.preferredTime,
               durationMinutes: 120,
+              courseFormat: booking.courseFormat,
+              commune: booking.commune,
+              quartier: booking.quartier,
+              transportFeeKey: booking.transportFeeKey,
             }];
         const replacementScheduleConflict = await findTeacherScheduleConflict(db, {
           teacherId: newTeacherId,
           excludeBookingId: booking.id,
           slots: replacementScheduleSlots,
+          scheduleBuffers: platformSettings.scheduleBuffers,
         });
         if (replacementScheduleConflict || hasActiveConflict(newTeacher.bookings, booking)) {
           return NextResponse.json({
@@ -378,8 +388,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             .map((value) => value?.trim())
             .filter((value): value is string => Boolean(value)),
         ));
-        const [platformSettings, grandAbidjanCommunes, destination, neighborhoodAliasRows] = await Promise.all([
-          getPlatformRuntimeSettings(),
+        const [grandAbidjanCommunes, destination, neighborhoodAliasRows] = await Promise.all([
           db.commune.findMany({ where: { transportClass: "GRAND_ABIDJAN", isActive: true }, select: { name: true } }),
           booking.commune
             ? db.commune.findFirst({ where: { name: { equals: booking.commune, mode: "insensitive" }, isActive: true }, select: { transportFeeOverride: true } })
@@ -523,6 +532,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             select: {
               teacherId: true,
               teacherPaidAmount: true,
+              courseFormat: true,
+              commune: true,
+              quartier: true,
+              transportFeeKey: true,
               status: true,
               paymentStatus: true,
               updatedAt: true,
@@ -570,8 +583,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                   scheduledDate: session.scheduledDate,
                   scheduledTime: session.scheduledTime,
                   durationMinutes: session.durationMinutes,
+                  courseFormat: currentBooking.courseFormat,
+                  commune: currentBooking.commune,
+                  quartier: currentBooking.quartier,
+                  transportFeeKey: currentBooking.transportFeeKey,
                 }))
               : replacementScheduleSlots,
+            scheduleBuffers: platformSettings.scheduleBuffers,
           });
           const sessionSnapshots = buildTeacherReplacementSessionSnapshots({
             sessions: currentSessions.map((session) => ({

@@ -1,7 +1,8 @@
 import fs from "node:fs";
+import path from "node:path";
 import { createJiti } from "jiti";
 
-const jiti = createJiti(import.meta.url);
+const jiti = createJiti(import.meta.url, { alias: { "@": path.resolve("src") } });
 const {
   hasVerifiedClientPayment,
   isOperationalBookingStatus,
@@ -15,6 +16,9 @@ const {
   scheduleSlotsOverlap,
   TEACHER_SCHEDULE_CONFLICT_CODE,
 } = jiti("../src/lib/teacher-schedule-conflicts.ts");
+const {
+  scheduleSlotsConflict,
+} = jiti("../src/lib/schedule-conflict-core.ts");
 
 const checks = [];
 const legacyForbiddenStorePattern = new RegExp([
@@ -73,6 +77,8 @@ const professorMissionList = read("src/app/professeur/(espace)/missions/page.tsx
 const paymentProvider = read("src/lib/payment-provider.ts");
 const jekoBookingPaymentRoute = read("src/app/api/bookings/[id]/jeko-payment/route.ts");
 const scheduleConflicts = read("src/lib/teacher-schedule-conflicts.ts");
+const platformSettings = read("src/lib/platform-settings.ts");
+const adminSettingsClient = read("src/app/admin/parametres/client.tsx");
 const adminBookingRoute = read("src/app/api/admin/bookings/[id]/route.ts");
 const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
 
@@ -195,18 +201,26 @@ record(
     && /getTeacherOccupiedSlots\(teacher\.id\)/.test(bookingPage)
     && /verifiedClientPaymentBookingWhere\(\{[\s\S]*?SCHEDULE_BLOCKING_BOOKING_STATUSES[\s\S]*?SCHEDULE_BLOCKING_PAYMENT_STATUSES/.test(bookingPage)
     && /occupiedSlots=\{occupiedSlots\}/.test(bookingPage)
-    && /findOccupiedConflictForSelection\(occupiedSlots,\s*form\.startDate/.test(bookingForm)
+    && /scheduleBuffers:\s*platformSettings\.scheduleBuffers/.test(bookingPage)
+    && /findOccupiedConflictForSelection\([\s\S]*?pricingConfig\.scheduleBuffers/.test(bookingForm)
+    && /customDurationMinutes/.test(bookingForm)
+    && /validateCustomScheduleTime/.test(bookingForm)
     && /disabled=\{locked\}/.test(bookingForm)
     && /Déjà payé/.test(bookingForm)
-    && /buildScheduleOccurrences\([\s\S]*?selectedTimeSlots:\s*form\.selectedTimeSlots[\s\S]*?selectedScheduleConflicts/.test(bookingForm)
+    && /Déplacement insuffisant/.test(bookingForm)
+    && /buildScheduleOccurrences\(\{[\s\S]*?fallbackDurationMinutes:\s*normalizedCustomDurationMinutes[\s\S]*?selectedScheduleConflicts/.test(bookingForm)
     && /firstScheduleConflict[\s\S]*?formatOccupiedConflictMessage/.test(bookingForm)
+    && /customDurationMinutes/.test(bookingCreateApi)
+    && /validateCustomScheduleTime/.test(bookingCreateApi)
+    && /fallbackDurationMinutes:\s*hasCustomScheduleRequest\s*\?\s*normalizedCustomDurationMinutes/.test(bookingCreateApi)
     && /SCHEDULE_BLOCKING_BOOKING_STATUSES[\s\S]*?"PAID"[\s\S]*?"PENDING_CLIENT_VALIDATION"/.test(scheduleConflicts)
+    && /scheduleSlotsConflict/.test(scheduleConflicts)
     && /paymentProvider:\s*"JEKO"[\s\S]*?providerPaymentStatus:\s*"SUCCESS"[\s\S]*?paymentVerifiedAt:\s*\{\s*not:\s*null\s*\}/.test(scheduleConflicts)
     && /transactions:\s*\{\s*some:\s*\{[\s\S]*?type:\s*"CLIENT_PAYMENT"[\s\S]*?amount:\s*\{\s*gt:\s*0\s*\}/.test(scheduleConflicts)
-    && /findTeacherScheduleConflict\(db,\s*\{[\s\S]*?TEACHER_SCHEDULE_CONFLICT_CODE/.test(bookingCreateApi)
-    && /lockTeacherSchedule\(tx,\s*booking\.teacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?bookingId:\s*booking\.id/.test(paymentProvider)
+    && /findTeacherScheduleConflict\(db,\s*\{[\s\S]*?scheduleBuffers:\s*platformSettings\.scheduleBuffers[\s\S]*?TEACHER_SCHEDULE_CONFLICT_CODE/.test(bookingCreateApi)
+    && /lockTeacherSchedule\(tx,\s*booking\.teacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?bookingId:\s*booking\.id[\s\S]*?scheduleBuffers:\s*platformSettings\.scheduleBuffers/.test(paymentProvider)
     && /isTeacherScheduleConflictError\(error\)[\s\S]*?TEACHER_SCHEDULE_CONFLICT_CODE/.test(jekoBookingPaymentRoute)
-    && /findTeacherScheduleConflictForBooking\(tx,\s*current\.booking\.id[\s\S]*?REFUND_PENDING[\s\S]*?Créneau déjà réservé/.test(jekoReconciliation)
+    && /findTeacherScheduleConflictForBooking\(tx,\s*current\.booking\.id[\s\S]*?scheduleBuffers:\s*platformSettings\.scheduleBuffers[\s\S]*?REFUND_PENDING/.test(jekoReconciliation)
     && /Paiement Jèko reçu sur créneau déjà réservé/.test(jekoReconciliation),
 );
 
@@ -216,8 +230,21 @@ record(
     && /lockTeacherSchedule\(tx,\s*current\.teacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?courseSession\.proposedTime/.test(bookingSessionRoute)
     && /lockTeacherSchedule\(tx,\s*teacher\.id\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?request\.proposedTime/.test(professorRescheduleRoute)
     && /assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?teacherId:\s*newTeacherId[\s\S]*?currentSessions\.map/.test(adminBookingRoute)
-    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsOverlap/.test(replacementEngine)
-    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsOverlap/.test(adminReplacementSuggestions),
+    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsConflict/.test(replacementEngine)
+    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsConflict/.test(adminReplacementSuggestions),
+);
+
+record(
+  "Admin schedule travel buffers are configurable independently from transport prices",
+  /schedule_same_neighborhood_buffer_minutes:\s*"30"/.test(platformSettings)
+    && /schedule_same_commune_buffer_minutes:\s*"30"/.test(platformSettings)
+    && /schedule_near_commune_buffer_minutes:\s*"60"/.test(platformSettings)
+    && /schedule_far_commune_buffer_minutes:\s*"90"/.test(platformSettings)
+    && /schedule_outside_grand_abidjan_buffer_minutes:\s*"90"/.test(platformSettings)
+    && /schedule_home_online_buffer_minutes:\s*"30"/.test(platformSettings)
+    && /scheduleBuffers:\s*\{[\s\S]*?onlineOnline:\s*0/.test(platformSettings)
+    && /Temps de déplacement planning/.test(adminSettingsClient)
+    && /Ces minutes verrouillent l'agenda/.test(adminSettingsClient),
 );
 
 record(
@@ -787,7 +814,24 @@ function verifyRescheduleSessionTargetScenarios() {
 function verifyTeacherScheduleConflictScenarios() {
   const date = new Date("2026-08-20T00:00:00.000Z");
   const nextDay = new Date("2026-08-21T00:00:00.000Z");
-  return scheduleSlotsOverlap(
+  const occupied = {
+    scheduledDate: date,
+    scheduledTime: "18h00 - 20h00",
+    durationMinutes: 120,
+    courseFormat: "HOME",
+    commune: "Cocody",
+    quartier: "Angré",
+  };
+  const sameAreaBuffers = {
+    sameNeighborhood: 30,
+    sameCommune: 30,
+    nearCommune: 60,
+    farCommune: 90,
+    outsideGrandAbidjan: 90,
+    homeOnline: 30,
+    onlineOnline: 0,
+  };
+  const directOverlapWorks = scheduleSlotsOverlap(
     { scheduledDate: date, scheduledTime: "Lundi 08h00 - 10h00", durationMinutes: 120 },
     { scheduledDate: date, scheduledTime: "08h-10h", durationMinutes: 120 },
   )
@@ -803,6 +847,41 @@ function verifyTeacherScheduleConflictScenarios() {
       { scheduledDate: date, scheduledTime: "08h-10h", durationMinutes: 120 },
       { scheduledDate: nextDay, scheduledTime: "08h-10h", durationMinutes: 120 },
     );
+  const overlapInsidePaidSlot = scheduleSlotsConflict(
+    { scheduledDate: date, scheduledTime: "18h00 - 19h00", durationMinutes: 60, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+    occupied,
+    sameAreaBuffers,
+  )?.kind === "OVERLAP"
+    && scheduleSlotsConflict(
+      { scheduledDate: date, scheduledTime: "19h00 - 20h00", durationMinutes: 60, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+      occupied,
+      sameAreaBuffers,
+    )?.kind === "OVERLAP"
+    && scheduleSlotsConflict(
+      { scheduledDate: date, scheduledTime: "17h00 - 19h00", durationMinutes: 120, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+      occupied,
+      sameAreaBuffers,
+    )?.kind === "OVERLAP";
+  const bufferBeforePaidSlot = scheduleSlotsConflict(
+    { scheduledDate: date, scheduledTime: "17h00 - 18h00", durationMinutes: 60, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+    occupied,
+    sameAreaBuffers,
+  )?.kind === "TRAVEL_BUFFER"
+    && !scheduleSlotsConflict(
+      { scheduledDate: date, scheduledTime: "16h00 - 17h00", durationMinutes: 60, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+      occupied,
+      sameAreaBuffers,
+    );
+  const crossCommuneTravelBuffer = scheduleSlotsConflict(
+    { scheduledDate: date, scheduledTime: "16h00 - 18h00", durationMinutes: 120, courseFormat: "HOME", commune: "Cocody", quartier: "Angré" },
+    { ...occupied, scheduledTime: "18h00 - 20h00", commune: "Marcory", quartier: "Zone 4" },
+    sameAreaBuffers,
+  )?.kind === "TRAVEL_BUFFER";
+
+  return directOverlapWorks
+    && overlapInsidePaidSlot
+    && bufferBeforePaidSlot
+    && crossCommuneTravelBuffer;
 }
 
 function verifyBookingScheduleSummaryScenarios() {

@@ -13,6 +13,7 @@ import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-re
 import { reconcileJekoRescheduleWebhook } from "@/lib/jeko-reschedule-reconciliation";
 import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 import { resolveJekoPaymentStatusConsensus } from "@/lib/jeko-client-payment";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { markPartnerReferralPaymentConfirmedInTransaction } from "@/lib/partner-referrals";
 import {
   findTeacherScheduleConflictForBooking,
@@ -308,6 +309,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
   const now = new Date();
   let action: ReconcileJekoResult["action"] = "paid";
   let postPaymentScheduleConflictMessage: string | null = null;
+  const platformSettings = await getPlatformRuntimeSettings();
 
   await db.$transaction(async (tx) => {
     const current = await tx.paymentAttempt.findUnique({
@@ -434,6 +436,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
         scheduleConflict = await findTeacherScheduleConflictForBooking(tx, current.booking.id, {
           teacherId: current.booking.teacherId,
           excludeBookingId: current.booking.id,
+          scheduleBuffers: platformSettings.scheduleBuffers,
         });
         if (scheduleConflict) {
           scheduleConflictMessage = formatTeacherScheduleConflictMessage(scheduleConflict);

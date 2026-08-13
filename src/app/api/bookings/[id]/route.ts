@@ -25,6 +25,7 @@ import { isActivePaymentMethod, paymentMethodLabel } from "@/lib/payment-methods
 import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-matching";
 import { absoluteAppUrl } from "@/lib/public-url";
 import { getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
@@ -2113,6 +2114,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Expliquez brièvement pourquoi vous souhaitez déplacer le créneau." }, { status: 400 });
       }
 
+      const platformSettings = await getPlatformRuntimeSettings();
       let creationResult;
       try {
         creationResult = await db.$transaction(async (tx) => {
@@ -2189,7 +2191,12 @@ export async function PATCH(
               scheduledDate: parsedReschedule.date,
               scheduledTime: parsedReschedule.slotLabel,
               durationMinutes: lockedSession?.durationMinutes ?? 120,
+              courseFormat: lockedBooking.courseFormat,
+              commune: lockedBooking.commune,
+              quartier: lockedBooking.quartier,
+              transportFeeKey: lockedBooking.transportFeeKey,
             }],
+            scheduleBuffers: platformSettings.scheduleBuffers,
           });
 
           const existingAwaiting = await tx.bookingRescheduleRequest.findFirst({
