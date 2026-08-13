@@ -116,6 +116,25 @@ type InitialPartnerReferral = {
   promoterPhone: string;
 };
 
+type OccupiedTeacherSlot = {
+  date: string;
+  time: string;
+  durationMinutes: number;
+  bookingReference?: string | null;
+  sequence?: number | null;
+};
+
+type ScheduleOccurrence = {
+  date: string;
+  time: string;
+  sequence: number;
+};
+
+type OccupiedScheduleConflict = {
+  occurrence: ScheduleOccurrence;
+  occupied: OccupiedTeacherSlot;
+};
+
 type BookingJourney = "ivoirien" | "francais" | "professionnel";
 
 const BOOKING_JOURNEY_CHOICES = [
@@ -360,12 +379,148 @@ function formatDateTimeLabel(date: Date) {
 }
 
 const DATE_DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const CLIENT_DAY_INDEX = new Map<string, number>(WEEK_DAYS.map((day, index) => [day.key, index === 6 ? 0 : index + 1]));
 
 function dayKeyFromDateInput(value: string) {
   if (!value) return "";
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return "";
   return DATE_DAY_KEYS[new Date(year, month - 1, day).getDay()];
+}
+
+function dateFromInput(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
+function addDaysToDateInput(value: string, days: number) {
+  const date = dateFromInput(value);
+  if (!date) return "";
+  date.setDate(date.getDate() + days);
+  return toDateInputValue(date);
+}
+
+function slotLabelFromSelection(selection?: string | null) {
+  if (!selection) return null;
+  const [, slotKey] = selection.split("|");
+  const slot = TWO_HOUR_SLOTS.find((item) => item.key === slotKey);
+  return slot?.label ?? selection;
+}
+
+function buildScheduleOccurrences({
+  startDate,
+  selectedTimeSlots,
+  sessionsCount,
+  fallbackTime,
+}: {
+  startDate: string;
+  selectedTimeSlots: string[];
+  sessionsCount: number;
+  fallbackTime?: string | null;
+}): ScheduleOccurrence[] {
+  const count = Math.max(1, Math.round(sessionsCount));
+  if (!dateFromInput(startDate)) return [];
+  const validSelections = selectedTimeSlots
+    .map((selection) => {
+      const [dayKey, slotKey] = selection.split("|");
+      const dayIndex = CLIENT_DAY_INDEX.get(dayKey);
+      const slotIndex = TWO_HOUR_SLOTS.findIndex((slot) => slot.key === slotKey);
+      return dayIndex === undefined || slotIndex < 0 ? null : { selection, dayIndex, slotIndex };
+    })
+    .filter((selection): selection is NonNullable<typeof selection> => Boolean(selection));
+
+  if (validSelections.length === 0) {
+    if (!fallbackTime) return [];
+    return Array.from({ length: count }, (_, index) => ({
+      date: addDaysToDateInput(startDate, index * 7),
+      time: fallbackTime,
+      sequence: index + 1,
+    })).filter((item) => Boolean(item.date));
+  }
+
+  const schedule: ScheduleOccurrence[] = [];
+  for (let dayOffset = 0; schedule.length < count && dayOffset < count * 14 + 14; dayOffset += 1) {
+    const date = dateFromInput(startDate);
+    if (!date) break;
+    date.setDate(date.getDate() + dayOffset);
+    const matches = validSelections
+      .filter((selection) => selection.dayIndex === date.getDay())
+      .sort((a, b) => a.slotIndex - b.slotIndex);
+    for (const match of matches) {
+      const time = slotLabelFromSelection(match.selection);
+      if (!time) continue;
+      if (schedule.length >= count) break;
+      schedule.push({
+        date: toDateInputValue(date),
+        time,
+        sequence: schedule.length + 1,
+      });
+    }
+  }
+  return schedule;
+}
+
+function parseTimeRange(value: string, durationMinutes = 120) {
+  const label = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const compactRange = label.match(/\b([01]?\d|2[0-3])\s*-\s*([01]?\d|2[0-3])\b/);
+  if (compactRange) {
+    const startHour = Number(compactRange[1]);
+    const endHour = Number(compactRange[2]);
+    if (endHour > startHour) return { startMinutes: startHour * 60, endMinutes: endHour * 60 };
+  }
+  const times = Array.from(label.matchAll(/(?:^|[^\d])([01]?\d|2[0-3])\s*(?:h|:)\s*([0-5]\d)?/g))
+    .map((match) => ({
+      hour: Number(match[1]),
+      minute: match[2] ? Number(match[2]) : 0,
+    }))
+    .filter((time) => Number.isFinite(time.hour) && Number.isFinite(time.minute));
+  if (times.length === 0) return null;
+  const start = times[0].hour * 60 + times[0].minute;
+  const explicitEnd = times.length > 1 ? times[1].hour * 60 + times[1].minute : null;
+  const end = explicitEnd && explicitEnd > start ? explicitEnd : start + Math.max(30, durationMinutes);
+  return { startMinutes: start, endMinutes: end };
+}
+
+function rangesOverlap(
+  first: { startMinutes: number; endMinutes: number } | null,
+  second: { startMinutes: number; endMinutes: number } | null,
+) {
+  return Boolean(first && second && first.startMinutes < second.endMinutes && second.startMinutes < first.endMinutes);
+}
+
+function findOccupiedConflictForTime(
+  occupiedSlots: OccupiedTeacherSlot[],
+  date: string,
+  time: string,
+  durationMinutes = 120,
+) {
+  const requestedRange = parseTimeRange(time, durationMinutes);
+  return occupiedSlots.find((occupied) => (
+    occupied.date === date
+    && rangesOverlap(requestedRange, parseTimeRange(occupied.time, occupied.durationMinutes))
+  )) ?? null;
+}
+
+function findOccupiedConflictForSelection(
+  occupiedSlots: OccupiedTeacherSlot[],
+  date: string,
+  selection: string,
+) {
+  const time = slotLabelFromSelection(selection);
+  return time ? findOccupiedConflictForTime(occupiedSlots, date, time, 120) : null;
+}
+
+function formatOccupiedConflictMessage(conflict: OccupiedScheduleConflict) {
+  const sequenceLabel = conflict.occurrence.sequence > 1 ? `, séance ${conflict.occurrence.sequence}` : "";
+  const referenceLabel = conflict.occupied.bookingReference ? `, dossier ${conflict.occupied.bookingReference}` : "";
+  return `Ce créneau est déjà payé pour ce professeur (${formatDateInputLabel(conflict.occurrence.date)} · ${conflict.occurrence.time}${sequenceLabel}${referenceLabel}). Choisissez un autre créneau ou un autre professeur.`;
 }
 
 function buildSessionPreview(timeLabels: string[], customTimeRequest: string, sessionsCount: number, startDateLabel: string) {
@@ -409,7 +564,7 @@ function toJekoPaymentMethod(method: string) {
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys, initialPartnerReferral,
+  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys, initialPartnerReferral, occupiedSlots,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
@@ -419,6 +574,7 @@ export function ReserverForm({
   initialJourney?: BookingJourney;
   eligibleJourneys: BookingJourney[];
   initialPartnerReferral?: InitialPartnerReferral;
+  occupiedSlots: OccupiedTeacherSlot[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -483,7 +639,10 @@ export function ReserverForm({
       ...current,
       startDate: value,
       selectedTimeSlots: dayKey
-        ? current.selectedTimeSlots.filter((slot) => slot.startsWith(`${dayKey}|`))
+        ? current.selectedTimeSlots.filter((slot) => (
+            slot.startsWith(`${dayKey}|`)
+            && !findOccupiedConflictForSelection(occupiedSlots, value, slot)
+          ))
         : current.selectedTimeSlots,
       customDay: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customDay,
       customStartTime: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customStartTime,
@@ -721,6 +880,18 @@ export function ReserverForm({
     && !selectedDays.includes(selectedStartDayKey),
   );
   const sessionPreview = buildSessionPreview(selectedTimeLabels, customTimeRequest, selectedPackSessions, selectedStartDateLabel);
+  const selectedScheduleConflicts: OccupiedScheduleConflict[] = buildScheduleOccurrences({
+    startDate: form.startDate,
+    selectedTimeSlots: form.selectedTimeSlots,
+    sessionsCount: selectedPackSessions,
+    fallbackTime: customTimeRange || null,
+  })
+    .map((occurrence) => ({
+      occurrence,
+      occupied: findOccupiedConflictForTime(occupiedSlots, occurrence.date, occurrence.time, 120),
+    }))
+    .filter((item): item is OccupiedScheduleConflict => Boolean(item.occupied));
+  const firstScheduleConflict = selectedScheduleConflicts[0] ?? null;
   const hasValidStartDate = Boolean(form.startDate && form.startDate >= todayIso);
   const hasValidTimeRequest = form.selectedTimeSlots.length > 0 || Boolean(form.customDay && form.customStartTime);
   const earliestCourseStartAt = form.startDate
@@ -852,11 +1023,15 @@ export function ReserverForm({
       if (hasScheduleDayMismatch) {
         return `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}. Sélectionnez un créneau du ${selectedStartDayLabel.toLowerCase()} ou modifiez la date.`;
       }
+      if (firstScheduleConflict) {
+        return formatOccupiedConflictMessage(firstScheduleConflict);
+      }
       if (!hasMinimumBookingNotice) {
         return paymentScheduleWarning;
       }
     }
     if (s === 4) {
+      if (firstScheduleConflict) return formatOccupiedConflictMessage(firstScheduleConflict);
       if (!isScheduleReadyForPayment) return paymentScheduleWarning || "Veuillez compléter le planning avant paiement.";
     }
     return null;
@@ -1577,12 +1752,13 @@ export function ReserverForm({
                   {selectedAvailabilityDays.map((day) => {
                     const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
                     const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
+                    const freeSlotsCount = availableSlots.filter((slot) => !findOccupiedConflictForSelection(occupiedSlots, form.startDate, `${day.key}|${slot.key}`)).length;
                     return (
                       <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="font-semibold text-[#111B4D]">{day.label}</p>
                           <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
-                            {availableSlots.length} créneau{availableSlots.length > 1 ? "x" : ""}
+                            {freeSlotsCount} libre{freeSlotsCount > 1 ? "s" : ""}
                           </span>
                         </div>
                         {availableSlots.length === 0 ? (
@@ -1594,11 +1770,15 @@ export function ReserverForm({
                             {availableSlots.map((slot) => {
                               const key = `${day.key}|${slot.key}`;
                               const checked = form.selectedTimeSlots.includes(key);
+                              const occupiedConflict = findOccupiedConflictForSelection(occupiedSlots, form.startDate, key);
+                              const locked = Boolean(occupiedConflict);
                               return (
                                 <button
                                   key={key}
                                   type="button"
+                                  disabled={locked}
                                   onClick={() => {
+                                    if (locked) return;
                                     update(
                                       "selectedTimeSlots",
                                       checked
@@ -1609,10 +1789,14 @@ export function ReserverForm({
                                   className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${
                                     checked
                                       ? "border-[#111B4D] bg-[#111B4D] text-white"
+                                      : locked
+                                        ? "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8]"
                                       : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
                                   }`}
+                                  title={locked ? "Créneau déjà payé par un autre client" : undefined}
                                 >
-                                  {slot.label}
+                                  <span className="block">{slot.label}</span>
+                                  {locked && <span className="mt-1 block text-[10px] font-black uppercase tracking-wide text-[#64748B]">Déjà payé</span>}
                                 </button>
                               );
                             })}
@@ -1629,6 +1813,11 @@ export function ReserverForm({
                         {label}
                       </span>
                     ))}
+                  </div>
+                )}
+                {firstScheduleConflict && (
+                  <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                    {formatOccupiedConflictMessage(firstScheduleConflict)}
                   </div>
                 )}
                 {sessionPreview.length > 0 && (

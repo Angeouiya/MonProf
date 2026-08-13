@@ -38,6 +38,7 @@ const adminTeacherPayoutClient = read("src/app/admin/professeurs/[id]/teacher-pa
 const professorPaymentsPage = read("src/app/professeur/(espace)/paiements/page.tsx");
 const professorProtectedLayout = read("src/app/professeur/(espace)/layout.tsx");
 const bookingCreateApi = read("src/app/api/bookings/route.ts");
+const bookingPage = read("src/app/client/reserver/page.tsx");
 const bookingForm = read("src/app/client/reserver/reserver-form.tsx");
 const pricingEngine = read("src/lib/pricing.ts");
 const courseCatalog = read("src/lib/course-catalog.ts");
@@ -191,6 +192,14 @@ record(
   "Paid Jèko teacher slots are locked before checkout and at webhook confirmation",
   TEACHER_SCHEDULE_CONFLICT_CODE === "TEACHER_SLOT_ALREADY_RESERVED"
     && verifyTeacherScheduleConflictScenarios()
+    && /getTeacherOccupiedSlots\(teacher\.id\)/.test(bookingPage)
+    && /verifiedClientPaymentBookingWhere\(\{[\s\S]*?SCHEDULE_BLOCKING_BOOKING_STATUSES[\s\S]*?SCHEDULE_BLOCKING_PAYMENT_STATUSES/.test(bookingPage)
+    && /occupiedSlots=\{occupiedSlots\}/.test(bookingPage)
+    && /findOccupiedConflictForSelection\(occupiedSlots,\s*form\.startDate/.test(bookingForm)
+    && /disabled=\{locked\}/.test(bookingForm)
+    && /Déjà payé/.test(bookingForm)
+    && /buildScheduleOccurrences\([\s\S]*?selectedTimeSlots:\s*form\.selectedTimeSlots[\s\S]*?selectedScheduleConflicts/.test(bookingForm)
+    && /firstScheduleConflict[\s\S]*?formatOccupiedConflictMessage/.test(bookingForm)
     && /SCHEDULE_BLOCKING_BOOKING_STATUSES[\s\S]*?"PAID"[\s\S]*?"PENDING_CLIENT_VALIDATION"/.test(scheduleConflicts)
     && /paymentProvider:\s*"JEKO"[\s\S]*?providerPaymentStatus:\s*"SUCCESS"[\s\S]*?paymentVerifiedAt:\s*\{\s*not:\s*null\s*\}/.test(scheduleConflicts)
     && /transactions:\s*\{\s*some:\s*\{[\s\S]*?type:\s*"CLIENT_PAYMENT"[\s\S]*?amount:\s*\{\s*gt:\s*0\s*\}/.test(scheduleConflicts)

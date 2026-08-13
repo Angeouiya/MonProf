@@ -8,6 +8,12 @@ import {
 } from "@/lib/teacher-journeys";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 import { getActivePartnerReferralLeadSource } from "@/lib/partner-referrals";
+import { verifiedClientPaymentBookingWhere } from "@/lib/payment-security";
+import {
+  SCHEDULE_BLOCKING_BOOKING_STATUSES,
+  SCHEDULE_BLOCKING_PAYMENT_STATUSES,
+  SCHEDULE_BLOCKING_SESSION_STATUSES,
+} from "@/lib/teacher-schedule-conflicts";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +51,11 @@ export default async function ReserverPage({
   if (eligibleJourneys.length === 0) notFound();
   if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 
-  const [{ communes }, platformSettings, partnerReferral] = await Promise.all([
+  const [{ communes }, platformSettings, partnerReferral, occupiedSlots] = await Promise.all([
     getCachedTeacherSearchCatalog(),
     getPlatformRuntimeSettings(),
     getActivePartnerReferralLeadSource(ref || partnerRef),
+    getTeacherOccupiedSlots(teacher.id),
   ]);
 
   const teacherSubjects = teacher.subjects.map((s) => ({
@@ -102,7 +109,81 @@ export default async function ReserverPage({
           promoterName: partnerReferral.promoterName,
           promoterPhone: partnerReferral.promoterPhone ?? "",
         } : undefined}
+        occupiedSlots={occupiedSlots}
       />
     </div>
   );
+}
+
+async function getTeacherOccupiedSlots(teacherId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + 370);
+  const blockingBookingWhere = verifiedClientPaymentBookingWhere({
+    status: { in: [...SCHEDULE_BLOCKING_BOOKING_STATUSES] },
+    paymentStatus: { in: [...SCHEDULE_BLOCKING_PAYMENT_STATUSES] },
+  });
+
+  const [sessions, legacyBookings] = await Promise.all([
+    db.bookingSession.findMany({
+      where: {
+        teacherId,
+        scheduledDate: { gte: today, lt: horizon },
+        scheduledTime: { not: null },
+        status: { in: [...SCHEDULE_BLOCKING_SESSION_STATUSES] },
+        booking: blockingBookingWhere,
+      },
+      select: {
+        sequence: true,
+        scheduledDate: true,
+        scheduledTime: true,
+        durationMinutes: true,
+        booking: { select: { reference: true } },
+      },
+      orderBy: [{ scheduledDate: "asc" }, { sequence: "asc" }],
+      take: 500,
+    }),
+    db.booking.findMany({
+      where: {
+        teacherId,
+        sessions: { none: {} },
+        scheduledDate: { gte: today, lt: horizon },
+        ...blockingBookingWhere,
+      },
+      select: {
+        reference: true,
+        scheduledDate: true,
+        scheduledTime: true,
+        preferredTime: true,
+      },
+      orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
+      take: 250,
+    }),
+  ]);
+
+  return [
+    ...sessions
+      .filter((session) => session.scheduledDate && session.scheduledTime)
+      .map((session) => ({
+        date: toIsoDateKey(session.scheduledDate!),
+        time: session.scheduledTime!,
+        durationMinutes: session.durationMinutes,
+        bookingReference: session.booking.reference,
+        sequence: session.sequence,
+      })),
+    ...legacyBookings
+      .filter((booking) => booking.scheduledDate && (booking.scheduledTime || booking.preferredTime))
+      .map((booking) => ({
+        date: toIsoDateKey(booking.scheduledDate!),
+        time: (booking.scheduledTime || booking.preferredTime)!,
+        durationMinutes: 120,
+        bookingReference: booking.reference,
+        sequence: null,
+      })),
+  ];
+}
+
+function toIsoDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
 }
