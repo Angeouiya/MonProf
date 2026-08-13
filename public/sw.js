@@ -4,7 +4,7 @@ self.addEventListener("push", (event) => {
     title: "Compétence",
     body: "Une nouvelle information est disponible.",
     icon: "/images/brand/competence-icon-512-safe.png",
-    badge: "/images/brand/competence-notification-badge.svg",
+    badge: "/images/brand/competence-notification-badge.svg?v=2",
     url: "/",
     tag: "competence-notification",
     priority: "NORMAL",

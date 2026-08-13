@@ -63,7 +63,8 @@ record("API abonnement reçoit le suivi appareil", [
   "supportsBadging",
 ].every((field) => subscriptionRoute.includes(field)));
 record("Polling global fréquent supprimé", realtime.includes("5 * 60_000") && !realtime.includes("45_000"));
-record("Carte installation PWA visible", control.includes("data-pwa-install-guide") && control.includes("Installer l’application Compétence"));
+record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
+record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
 record("Service Worker icône Compétence + badge + vibration", [
   "competence-icon-512-safe.png",
