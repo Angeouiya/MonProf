@@ -46,6 +46,8 @@ const STATUS_LABELS: Record<string, string> = {
   TEACHERS_NOTIFIED: "Professeurs notifiés",
 };
 
+const NO_PENALTY_REASONS = new Set(["UNAVAILABLE", "QUALITY_ISSUE", "ASSIGNMENT_ERROR", "TEACHER_SUSPENDED"]);
+
 export function ReplacementProposalActions({
   bookingId,
   proposals,
@@ -81,7 +83,9 @@ export function ReplacementProposalActions({
           ? "Nouveau professeur accepté. La mission lui est transmise."
           : action === "cancel_after_teacher_unavailable"
             ? "Réservation annulée sans pénalité."
-            : "Refus transmis au service client.",
+            : data.replacementProposed
+              ? "Nouvelle proposition automatique envoyée."
+              : "Aucun autre profil immédiat. Le service client reprend le dossier.",
       );
       setResponse("");
       router.refresh();
@@ -98,6 +102,7 @@ export function ReplacementProposalActions({
   const mainProposal = pendingProposal ?? proposals[0];
   const oldTeacherName = mainProposal.oldTeacher.professionalName || mainProposal.oldTeacher.fullName;
   const newTeacherName = mainProposal.newTeacher.professionalName || mainProposal.newTeacher.fullName;
+  const canCancelWithoutPenalty = NO_PENALTY_REASONS.has(mainProposal.reason);
 
   return (
     <section className="overflow-hidden rounded-lg border border-[#111B4D] bg-white p-4">
@@ -161,7 +166,7 @@ export function ReplacementProposalActions({
               placeholder="Message optionnel pour le service client."
               className="rounded-lg border-[#DDE6F7] bg-white"
             />
-            <div className="grid gap-2 min-[460px]:grid-cols-2">
+            <div className="grid gap-2 min-[560px]:grid-cols-3">
               <Button
                 disabled={!!loading}
                 onClick={() => respond("accept_replacement_proposal")}
@@ -170,31 +175,42 @@ export function ReplacementProposalActions({
                 {loading === "accept_replacement_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Accepter ce professeur
               </Button>
-              <ImportantActionConfirm
-                trigger={(
-                  <Button
-                    variant="outline"
-                    disabled={!!loading}
-                    className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
-                  >
-                    {loading === "cancel_after_teacher_unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                    Annuler sans pénalité
-                  </Button>
-                )}
-                title="Annuler cette réservation ?"
-                description="Le professeur initial a déclaré son indisponibilité. Vous pouvez donc annuler sans aucune pénalité d'annulation."
-                badge="Indisponibilité professeur"
-                notices={[
-                  "Le professeur proposé ne sera pas affecté.",
-                  "Aucune pénalité client ne sera appliquée.",
-                  "Les éventuels frais techniques du prestataire de paiement ne constituent pas une pénalité et restent traités selon les conditions de paiement affichées.",
-                  "Le montant remboursable sera enregistré et vos coordonnées de remboursement pourront être renseignées dans la réservation.",
-                ]}
-                confirmLabel="Confirmer l'annulation"
-                cancelLabel="Garder la réservation"
-                danger
-                onConfirm={() => respond("cancel_after_teacher_unavailable")}
-              />
+              <Button
+                variant="outline"
+                disabled={!!loading}
+                onClick={() => respond("reject_replacement_proposal")}
+                className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
+              >
+                {loading === "reject_replacement_proposal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Demander un autre
+              </Button>
+              {canCancelWithoutPenalty && (
+                <ImportantActionConfirm
+                  trigger={(
+                    <Button
+                      variant="outline"
+                      disabled={!!loading}
+                      className="min-h-11 rounded-lg border-[#D7DEE9] bg-white text-[#111B4D]"
+                    >
+                      {loading === "cancel_after_teacher_unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                      Annuler sans pénalité
+                    </Button>
+                  )}
+                  title="Annuler cette réservation ?"
+                  description="L'indisponibilité ou l'incident vient du professeur. Vous pouvez donc annuler sans pénalité d'annulation client."
+                  badge="Incident côté professeur"
+                  notices={[
+                    "Le professeur proposé ne sera pas affecté.",
+                    "Aucune pénalité client ne sera appliquée.",
+                    "Les éventuels frais techniques du prestataire de paiement ne constituent pas une pénalité et restent traités selon les conditions de paiement affichées.",
+                    "Le montant remboursable sera enregistré et vos coordonnées de remboursement pourront être renseignées dans la réservation.",
+                  ]}
+                  confirmLabel="Confirmer l'annulation"
+                  cancelLabel="Garder la réservation"
+                  danger
+                  onConfirm={() => respond("cancel_after_teacher_unavailable")}
+                />
+              )}
             </div>
           </>
         )}

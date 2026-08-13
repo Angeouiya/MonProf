@@ -18,12 +18,14 @@ export function MissionResponseActions({
   compact = false,
   within24Hours = false,
   courseStarted = false,
+  sessionsCount = 1,
 }: {
   token: string;
   disabled?: boolean;
   compact?: boolean;
   within24Hours?: boolean;
   courseStarted?: boolean;
+  sessionsCount?: number;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export function MissionResponseActions({
   const [done, setDone] = useState(false);
   const cleanResponse = response.trim();
   const responseTooLong = cleanResponse.length > MAX_RESPONSE_LENGTH;
+  const isPackMission = sessionsCount > 1;
 
   async function send(action: "confirm" | "unavailable" | "problem" | "reschedule") {
     if (responseTooLong) {
@@ -112,6 +115,11 @@ export function MissionResponseActions({
           À moins de 24h, la réservation ne peut pas être annulée directement par le professeur. Proposez un nouveau créneau. En cas d'empêchement absolu, signalez une urgence : la réservation reste active et un remplaçant compatible est proposé automatiquement au client.
         </div>
       )}
+      {isPackMission && (
+        <div className="rounded-lg border border-[#D7DEE9] bg-white p-3 text-xs font-semibold leading-5 text-[#475569]">
+          Cette mission contient {sessionsCount} séances. Le bouton d'indisponibilité ci-dessous concerne toute la mission. Si une seule séance est concernée, utilisez le suivi des séances dans votre espace professeur : seule cette séance sera proposée en remplacement et les autres séances resteront inchangées.
+        </div>
+      )}
       <div className="grid gap-2 min-[760px]:grid-cols-3">
         <Button disabled={disabled || !!loading} onClick={() => send("confirm")} className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
           {loading === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -124,7 +132,7 @@ export function MissionResponseActions({
           className={`min-h-11 rounded-lg bg-white ${within24Hours ? "border-red-300 text-red-700" : "border-[#D7DEE9] text-[#111B4D]"}`}
         >
           {loading === "unavailable" ? <Loader2 className="h-4 w-4 animate-spin" /> : within24Hours ? <ShieldAlert className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-          {within24Hours ? "Signaler une urgence" : "Indisponible"}
+          {within24Hours ? "Signaler une urgence" : isPackMission ? "Indisponible mission entière" : "Indisponible"}
         </Button>
         <Button variant="outline" disabled={disabled || !!loading} onClick={() => send("problem")} className="min-h-11 rounded-lg border-red-300 bg-white text-red-700">
           {loading === "problem" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}

@@ -249,7 +249,13 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
               </div>
             )}
             <p className="text-xs font-medium text-[#64748B]">Lien valide jusqu'au {formatDateTime(mission.expiresAt)}. Vous ne pouvez accéder qu'à cette mission.</p>
-            <MissionActions token={token} disabled={locked} within24Hours={missionTiming.within24Hours} courseStarted={missionTiming.courseStarted} />
+            <MissionActions
+              token={token}
+              disabled={locked}
+              within24Hours={missionTiming.within24Hours}
+              courseStarted={missionTiming.courseStarted}
+              sessionsCount={booking.sessionsCount}
+            />
           </CardContent>
         </Card>
 

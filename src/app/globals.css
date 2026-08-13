@@ -5736,3 +5736,52 @@ b {
     transition: none;
   }
 }
+
+/* Payment/withdrawal contrast hardening: keep the premium navy cards readable
+   even after the global "solid white surfaces" pass. */
+.professor-shell [data-professor-dashboard-app-hero],
+.professor-shell [data-professor-payment-app-hero],
+.client-shell [data-client-payment-mobile-priority] {
+  background-color: #111B4D !important;
+  border-color: #111B4D !important;
+  color: #FFFFFF !important;
+}
+
+.professor-shell [data-professor-dashboard-app-hero] > div:first-child h2,
+.professor-shell [data-professor-payment-app-hero] h2,
+.client-shell [data-client-payment-mobile-priority] [data-client-payment-hero-amount],
+.client-shell [data-client-payment-mobile-priority] [data-client-payment-hero-amount] [data-slot="money"] {
+  color: #FFFFFF !important;
+}
+
+.professor-shell [data-professor-dashboard-app-hero] > div:first-child p,
+.professor-shell [data-professor-payment-app-hero] > div:first-child p,
+.client-shell [data-client-payment-mobile-priority] > div:first-child p {
+  color: #F8FAFC !important;
+}
+
+.professor-shell [data-professor-dashboard-app-hero] > div:first-child svg,
+.professor-shell [data-professor-payment-app-hero] > div:first-child svg,
+.client-shell [data-client-payment-mobile-priority] > div:first-child svg {
+  color: #111B4D !important;
+}
+
+.professor-shell [data-professor-dashboard-net-exact],
+.professor-shell [data-professor-dashboard-balance-strip] > div:last-child > div,
+.professor-shell [data-professor-payment-app-hero] > div:nth-child(2) > div {
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  color: #FFFFFF !important;
+}
+
+.professor-shell [data-professor-dashboard-net-exact] :where(p, svg),
+.professor-shell [data-professor-dashboard-balance-strip] > div:last-child > div :where(p, svg),
+.professor-shell [data-professor-payment-app-hero] > div:nth-child(2) > div :where(p, svg) {
+  color: #FFFFFF !important;
+}
+
+.professor-shell [data-professor-dashboard-balance-strip] > div:last-child > div:first-child,
+.professor-shell [data-professor-payment-app-hero] > div:nth-child(2) > div:first-child {
+  background-color: rgba(16, 185, 129, 0.24) !important;
+  border-color: rgba(110, 231, 183, 0.72) !important;
+}

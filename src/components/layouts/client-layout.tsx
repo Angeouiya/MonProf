@@ -694,6 +694,30 @@ function SidebarContent({
               <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
               <p className="truncate text-xs font-medium text-[#64748B]">Compte client</p>
             </div>
+            <ImportantActionConfirm
+              title="Quitter l'espace client ?"
+              description="Avant de vous déconnecter, vérifiez que vos paiements, confirmations de cours, demandes de report, litiges ou remboursements sont bien terminés."
+              badge="Déconnexion"
+              notices={[
+                notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
+                "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
+                "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
+              ]}
+              confirmLabel="Me déconnecter"
+              cancelLabel="Continuer"
+              onConfirm={() => secureSignOut("/")}
+              trigger={
+                <button
+                  type="button"
+                  data-client-sidebar-logout
+                  title="Déconnexion"
+                  aria-label="Se déconnecter de l'espace client"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#E3E8F2] bg-white text-[#111B4D] transition hover:border-[#111B4D] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111B4D] focus-visible:ring-offset-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              }
+            />
           </div>
           <div
             data-client-connected-legal-links
@@ -712,31 +736,6 @@ function SidebarContent({
               </Link>
             ))}
           </div>
-          <ImportantActionConfirm
-            title="Quitter l'espace client ?"
-            description="Avant de vous déconnecter, vérifiez que vos paiements, confirmations de cours, demandes de report, litiges ou remboursements sont bien terminés."
-            badge="Déconnexion"
-            notices={[
-              notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
-              "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
-              "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
-            ]}
-            confirmLabel="Me déconnecter"
-            cancelLabel="Continuer"
-            onConfirm={() => secureSignOut("/")}
-            trigger={
-              <button
-                type="button"
-                className={cn(
-                  "mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-3 text-xs font-semibold text-[#111B4D] transition hover:border-[#111B4D]",
-                  compactAccount && "min-h-10",
-                )}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Déconnexion
-              </button>
-            }
-          />
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ const highlights = [
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
+  "Avant d'annuler, le client peut demander une alternative professeur : la réservation reste active pendant que le moteur propose un profil compatible ou signale le dossier au service client.",
   "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
   "Programme partenariat : aucune commission n'est acquise sans déclaration dans les délais, paiement Jèko confirmé par le serveur et réservation validée par Compétence.",
   "Un brouillon non payé reste supprimable par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
@@ -143,6 +144,7 @@ const sections: LegalSection[] = [
     title: "Annulation, remboursement et pénalités",
     body: [
       "Toute annulation doit être demandée depuis l'espace prévu ou par le service client, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
+      "Avant de confirmer une annulation, le client peut demander un autre professeur. Cette demande ne constitue pas une annulation : le paiement reste sécurisé, la réservation reste active et Compétence recherche automatiquement un professeur compatible avant tout traitement manuel.",
       "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais du moyen de paiement, de la préparation déjà engagée, du comportement des parties, du litige déclaré et de la politique d'annulation en vigueur.",
       "Lorsque l'annulation est imputable au professeur ou à Compétence, le client peut se voir proposer un remplacement, un report, un autre créneau ou un remboursement selon la situation.",
       "Des annulations répétées, tardives ou abusives peuvent entraîner des pénalités, une limitation du compte ou un contrôle renforcé par le service client.",
@@ -153,6 +155,9 @@ const sections: LegalSection[] = [
     body: [
       "Compétence peut remplacer un professeur en cas d'indisponibilité, retard, absence, litige, mauvaise qualité, suspension, erreur d'affectation ou meilleure solution disponible.",
       "Lorsqu'un professeur se déclare indisponible, le moteur de remplacement peut sélectionner automatiquement un professeur actif possédant une photo réelle, la même matière, le même niveau, un format et un créneau compatibles, sans conflit actif ni litige récent. Le client reste libre d'accepter ou de refuser cette proposition.",
+      "Si le client refuse un remplaçant proposé, Compétence peut rechercher automatiquement un autre professeur compatible. Lorsque le moteur ne trouve plus de profil immédiatement disponible, le dossier est transmis au service client pour arbitrage, nouveau créneau, remplacement manuel ou remboursement selon la situation.",
+      "Pour les packs, le remplacement peut porter sur une séance précise sans modifier les autres séances. Une indisponibilité signalée sur une seule séance n'emporte pas automatiquement remplacement de toute la réservation.",
+      "Lorsqu'un professeur signale une indisponibilité globale sur une mission comportant plusieurs séances, Compétence peut traiter le dossier comme une indisponibilité de mission entière, sauf correction ou précision du service client.",
       "Le client est informé du remplacement lorsque celui-ci impacte la réservation. L'ancien professeur et le nouveau professeur peuvent être notifiés par le service client.",
       "Le remplacement est enregistré dans l'historique de la réservation et entraîne un recalcul opérationnel ou financier lorsque la différence est justifiée.",
     ],

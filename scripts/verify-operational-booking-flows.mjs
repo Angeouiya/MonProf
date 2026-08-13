@@ -252,17 +252,23 @@ record(
   /case\s+"accept_replacement_proposal"/.test(bookingApi)
     && /case\s+"reject_replacement_proposal"/.test(bookingApi)
     && /case\s+"cancel_after_teacher_unavailable"/.test(bookingApi)
+    && /case\s+"request_replacement_instead_of_cancel"/.test(bookingApi)
     && /teacherId:\s*replacement\.newTeacherId/.test(bookingApi)
     && /teacherMissionLink\.create/.test(bookingApi)
     && /AUTO_REPLACEMENT_ACCEPTED/.test(bookingApi)
+    && /nextCandidateResult/.test(bookingApi)
+    && /CLIENT_REPLACEMENT_PROPOSED/.test(bookingApi)
     && /accept_replacement_proposal/.test(replacementActions)
+    && /reject_replacement_proposal/.test(replacementActions)
     && /cancel_after_teacher_unavailable/.test(replacementActions)
+    && /Demander un autre/.test(replacementActions)
+    && /Changer de professeur/.test(bookingActions)
     && /Annuler sans pénalité/.test(replacementActions),
 );
 
 record(
   "Teacher-caused cancellation never charges a client penalty",
-  /replacement\.reason\s*!==\s*"UNAVAILABLE"/.test(bookingApi)
+  /TEACHER_CAUSED_NO_PENALTY_REASONS\.has\(replacement\.reason\)/.test(bookingApi)
     && /getCancellationPolicy\([\s\S]*?now,\s*"TEACHER"\)/.test(bookingApi)
     && /cancellationFeeRate:\s*0/.test(bookingApi)
     && /cancellationFeeAmount:\s*0/.test(bookingApi)
@@ -373,6 +379,9 @@ record(
     && /À moins de 24 heures/.test(termsPage)
     && /Même quartier exact/.test(termsPage)
     && /Aucun professeur ne peut remplacer la grille officielle/.test(termsPage)
+    && /Avant d'annuler, le client peut demander une alternative professeur/.test(termsPage)
+    && /Si le client refuse un remplaçant proposé/.test(termsPage)
+    && /Pour les packs, le remplacement peut porter sur une séance précise/.test(termsPage)
     && /Boutique Compétence/.test(termsPage)
     && /référence, le marchand, le moyen de paiement et le montant exact/.test(termsPage)
     && /Mini-applications et systèmes enseignés/.test(termsPage)
@@ -397,6 +406,8 @@ record(
     && /Données de brouillon/.test(privacyPage)
     && /Données de preuve/.test(privacyPage)
     && /Données de parcours/.test(privacyPage)
+    && /demandes d'alternative professeur/.test(privacyPage)
+    && /historique des propositions refusées/.test(privacyPage)
     && /systèmes enseignés/.test(privacyPage)
     && /règle minimale est de 6 caractères/.test(privacyPage)
     && /mot de passe en clair/.test(privacyPage)

@@ -453,6 +453,28 @@ export function BookingActions({ booking }: BookingActionsProps) {
     }
   }
 
+  async function onRequestReplacementInsteadOfCancel() {
+    if (!cancelReason) {
+      toast.error("Sélectionnez un motif pour aider le moteur de remplacement.");
+      return;
+    }
+    const data = await callAction("request_replacement_instead_of_cancel", {
+      reason: cancelReason,
+      description: cancelDesc,
+    });
+    if (data) {
+      toast.success(
+        typeof data === "object" && data.replacementProposed
+          ? "Un autre professeur compatible vous est proposé."
+          : "Votre demande est enregistrée. Le service client reprend la recherche.",
+      );
+      setCancelOpen(false);
+      setCancelDesc("");
+      setCancelAcknowledged(false);
+      router.refresh();
+    }
+  }
+
   async function onSubmitRefundDetails() {
     if (!refundPhone.trim() || !refundPhoneConfirm.trim()) {
       toast.error("Saisissez et confirmez le numéro de remboursement.");
@@ -1029,6 +1051,27 @@ export function BookingActions({ booking }: BookingActionsProps) {
                       <p className="text-[#64748B]">Remboursement estimé</p>
                       <p className="font-semibold text-[#111827]">{formatFCFA(cancellationPolicy.refundAmount)}</p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-[#111B4D] bg-white p-3 text-sm">
+                  <div className="flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
+                    <div>
+                      <p className="font-semibold text-[#111827]">Vous voulez surtout changer de professeur ?</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                        Gardez la réservation active : Compétence cherche automatiquement un autre professeur compatible avant de passer en annulation.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onRequestReplacementInsteadOfCancel}
+                      disabled={loading === "request_replacement_instead_of_cancel"}
+                      className="min-h-11 shrink-0 rounded-lg border-[#111B4D] bg-white text-[#111B4D] hover:bg-white"
+                    >
+                      {loading === "request_replacement_instead_of_cancel" ? "Recherche..." : "Changer de professeur"}
+                      <RefreshCw className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
