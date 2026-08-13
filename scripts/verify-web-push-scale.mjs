@@ -66,10 +66,10 @@ record("Polling global fréquent supprimé", realtime.includes("5 * 60_000") && 
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
-record("Icône notification transparente disponible", exists("public/images/brand/competence-notification-icon-512.png"));
+record("Icône notification transparente disponible", exists("public/images/brand/competence-notification-icon-outline-512.png"));
+record("Icône et badge notification utilisent le logo officiel évidé", (serviceWorker.match(/competence-notification-icon-outline-512\.png\?v=6/g) || []).length >= 2);
 record("Service Worker icône Compétence + badge + vibration", [
-  "competence-notification-icon-512.png?v=3",
-  "competence-notification-badge.svg?v=3",
+  "competence-notification-icon-outline-512.png?v=6",
   "setAppBadge",
   "vibrate",
   "renotify",
