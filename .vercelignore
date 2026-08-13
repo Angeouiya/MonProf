@@ -3,3 +3,31 @@
 !.env.example
 .env.production-admin.local
 .env.local
+
+# Dependencies and build artifacts
+node_modules
+.next
+.next-*
+out
+build
+dist
+coverage
+*.tsbuildinfo
+
+# Local QA/browser outputs
+output
+artifacts
+.playwright-cli
+.zscripts
+agent-ctx
+
+# Local databases and uploads not required by the deployed app bundle
+db
+db/*.db
+db/*.db-*
+db/*.sqlite
+db/*.sqlite-*
+upload
+
+# Local provider state
+supabase/.temp
