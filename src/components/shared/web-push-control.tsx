@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellOff, BellRing, LoaderCircle, ShieldCheck, Smartphone } from "lucide-react";
+import { BellOff, BellRing, LoaderCircle, RadioTower, ShieldCheck, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { buildSubscriptionPayload, urlBase64ToUint8Array } from "@/lib/web-push-client";
 
 type PushStatus = "loading" | "unsupported" | "unconfigured" | "denied" | "available" | "enabled" | "saving" | "error";
 
@@ -11,6 +12,8 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
   const [message, setMessage] = useState("Vérification de cet appareil...");
   const [publicKey, setPublicKey] = useState("");
   const [activeDevices, setActiveDevices] = useState(0);
+  const [testing, setTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +28,7 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
   }, []);
 
   async function enable() {
+    setTestMessage("");
     setStatus("saving");
     setMessage("Activation sécurisée en cours...");
     try {
@@ -60,6 +64,7 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
   }
 
   async function disable() {
+    setTestMessage("");
     setStatus("saving");
     setMessage("Désactivation en cours...");
     try {
@@ -83,6 +88,30 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
     }
   }
 
+  async function testThisDevice() {
+    setTestMessage("");
+    if (status !== "enabled") {
+      setTestMessage("Activez d'abord les notifications sur cet appareil, puis relancez le test.");
+      return;
+    }
+    setTesting(true);
+    try {
+      const response = await fetch("/api/push/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ reason: `test_${audienceLabel}` }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Test push impossible.");
+      setTestMessage(data.message || "Notification test envoyée. Si elle n'apparaît pas, vérifiez les réglages du téléphone.");
+    } catch (error) {
+      setTestMessage(error instanceof Error ? error.message : "Test push impossible sur cet appareil.");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   const enabled = status === "enabled";
   const busy = status === "loading" || status === "saving";
   const actionable = !["unsupported", "unconfigured", "denied"].includes(status);
@@ -101,17 +130,41 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
           </div>
         </div>
         {actionable && (
-          <Button
-            type="button"
-            onClick={enabled ? disable : enable}
-            disabled={busy}
-            className="min-h-11 w-full shrink-0 rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78] sm:w-auto"
-          >
-            {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : enabled ? <BellOff className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
-            {busy ? "Patientez" : enabled ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}
-          </Button>
+          <div className="grid w-full shrink-0 gap-2 sm:w-auto sm:min-w-64">
+            <Button
+              type="button"
+              onClick={enabled ? disable : enable}
+              disabled={busy || testing}
+              className="min-h-11 w-full rounded-lg bg-[#111B4D] px-4 text-white hover:bg-[#1E2A78]"
+            >
+              {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : enabled ? <BellOff className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}
+              {busy ? "Patientez" : enabled ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}
+            </Button>
+            {enabled && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={testThisDevice}
+                disabled={busy || testing}
+                className="min-h-11 w-full rounded-lg border-[#D9E1EF] bg-white text-[#111B4D]"
+              >
+                {testing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RadioTower className="h-4 w-4" />}
+                Tester sur cet appareil
+              </Button>
+            )}
+          </div>
         )}
       </div>
+      {testMessage && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-4 rounded-lg border border-[#D9E1EF] bg-white px-3 py-2 text-sm font-semibold leading-6 text-[#111B4D]"
+          data-web-push-test-result
+        >
+          {testMessage}
+        </p>
+      )}
       <div className="mt-4 grid gap-2 border-t border-[#E6EAF3] pt-4 text-xs font-semibold text-[#475569] sm:grid-cols-3">
         <p className="flex items-center gap-2"><Smartphone className="h-4 w-4 text-[#111B4D]" /> {activeDevices} appareil(s) actif(s)</p>
         <p className="flex items-center gap-2"><BellRing className="h-4 w-4 text-[#111B4D]" /> Badges mis à jour automatiquement</p>
@@ -154,82 +207,4 @@ async function inspect() {
     return { status: "enabled" as const, message: "Cet appareil reçoit les alertes en temps réel.", publicKey: data.publicKey, activeDevices: Math.max(1, Number(data.activeDevices || 0)) };
   }
   return { status: "available" as const, message: "Activez les alertes pour ne manquer aucune action importante.", publicKey: data.publicKey, activeDevices: Number(data.activeDevices || 0) };
-}
-
-function urlBase64ToUint8Array(value: string) {
-  const padding = "=".repeat((4 - value.length % 4) % 4);
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = window.atob(base64);
-  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
-}
-
-function buildSubscriptionPayload(subscription: PushSubscription) {
-  return {
-    ...subscription.toJSON(),
-    deviceId: getStableDeviceId(),
-    ...detectDeviceCapabilities(),
-  };
-}
-
-function getStableDeviceId() {
-  const key = "competence_web_push_device_id";
-  try {
-    const existing = window.localStorage.getItem(key);
-    if (existing) return existing;
-    const next = typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    window.localStorage.setItem(key, next);
-    return next;
-  } catch {
-    return `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
-}
-
-function detectDeviceCapabilities() {
-  const navigatorWithHints = navigator as Navigator & {
-    userAgentData?: { platform?: string; brands?: Array<{ brand: string; version: string }> };
-    standalone?: boolean;
-  };
-  const userAgent = navigator.userAgent || "";
-  const brands = navigatorWithHints.userAgentData?.brands?.map((item) => item.brand).join(", ") || "";
-  const pwaInstalled = window.matchMedia?.("(display-mode: standalone)").matches || navigatorWithHints.standalone === true;
-
-  return {
-    platform: normalizeMeta(navigatorWithHints.userAgentData?.platform || detectPlatform(userAgent)),
-    browser: normalizeMeta(brands || detectBrowser(userAgent)),
-    os: normalizeMeta(detectOs(userAgent)),
-    pwaInstalled,
-    supportsVibration: "vibrate" in navigator,
-    supportsBadging: "setAppBadge" in navigator || "clearAppBadge" in navigator,
-  };
-}
-
-function detectPlatform(userAgent: string) {
-  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
-  if (/android/i.test(userAgent)) return "Android";
-  if (/windows/i.test(userAgent)) return "Windows";
-  if (/mac os/i.test(userAgent)) return "macOS";
-  return "Web";
-}
-
-function detectOs(userAgent: string) {
-  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
-  if (/android/i.test(userAgent)) return "Android";
-  if (/windows nt/i.test(userAgent)) return "Windows";
-  if (/mac os x/i.test(userAgent)) return "macOS";
-  if (/linux/i.test(userAgent)) return "Linux";
-  return "Navigateur web";
-}
-
-function detectBrowser(userAgent: string) {
-  if (/edg/i.test(userAgent)) return "Edge";
-  if (/chrome|crios/i.test(userAgent)) return "Chrome";
-  if (/safari/i.test(userAgent)) return "Safari";
-  if (/firefox|fxios/i.test(userAgent)) return "Firefox";
-  return "Navigateur";
-}
-
-function normalizeMeta(value: string) {
-  return value.trim().slice(0, 80);
 }

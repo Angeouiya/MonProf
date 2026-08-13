@@ -172,13 +172,14 @@ async function deliverOutboxItem(item: OutboxRow) {
     title: item.title,
     body: item.message.slice(0, 420),
     icon: "/images/brand/competence-icon-512-safe.png",
-    badge: "/images/brand/competence-icon-192-safe.png",
+    badge: "/images/brand/competence-notification-badge.svg",
     url: safeDestination(item.link, item.recipientType),
     tag: `competence-${item.id}`,
     priority: item.priority,
     outboxId: item.id,
     badgeCount: await getBadgeCount(item),
     silent: !["URGENT", "CRITICAL"].includes(item.priority),
+    actions: [{ action: "open", title: item.priority === "CRITICAL" ? "Traiter" : "Ouvrir" }],
   });
 
   let sent = 0;
@@ -384,7 +385,7 @@ function safeDestination(link: string | null, recipientType: OutboxRow["recipien
     ? "/client/notifications"
     : recipientType === "TEACHER"
       ? "/professeur/notifications"
-      : "/admin/notifications";
+      : "/admin/communication";
   if (!link || !link.startsWith("/") || link.startsWith("//")) return fallback;
   return link;
 }
@@ -399,6 +400,8 @@ async function getBadgeCount(item: OutboxRow) {
       where: {
         teacherId: item.targetTeacherId,
         status: { in: ["DRAFT", "PENDING", "SENT", "FAILED"] },
+        deletedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     }).catch(() => undefined);
   }
@@ -408,7 +411,11 @@ async function getBadgeCount(item: OutboxRow) {
       where: {
         recipientType: "CLIENT",
         read: false,
-        OR: [{ userId: item.targetUserId }, { clientId: item.targetUserId }],
+        deletedAt: null,
+        AND: [
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+          { OR: [{ userId: item.targetUserId }, { clientId: item.targetUserId }] },
+        ],
       },
     }).catch(() => undefined);
   }
@@ -419,6 +426,8 @@ async function getBadgeCount(item: OutboxRow) {
         recipientType: "ADMIN",
         read: false,
         priority: { in: ["IMPORTANT", "URGENT", "CRITICAL"] },
+        deletedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     }).catch(() => undefined);
   }

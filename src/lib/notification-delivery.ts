@@ -180,6 +180,15 @@ export async function deliverTeacherNotification(id: string) {
       message: "Notification professeur introuvable.",
     } satisfies DeliveryResult;
   }
+  if (notification.deletedAt || (notification.expiresAt && notification.expiresAt <= new Date())) {
+    return {
+      ok: true,
+      provider: "internal",
+      configured: true,
+      skipped: true,
+      message: "Notification professeur expirée ou masquée.",
+    } satisfies DeliveryResult;
+  }
 
   const channel = notification.channel.toUpperCase();
   const teacherName = notification.teacher.professionalName || notification.teacher.fullName;
@@ -221,6 +230,8 @@ export async function dispatchPendingTeacherNotifications(limit = 50) {
   const pending = await db.teacherNotification.findMany({
     where: {
       channel: { in: ["SMS", "WHATSAPP", "EMAIL"] },
+      deletedAt: null,
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }],
       OR: [
         { sent: false },
         { status: { in: ["DRAFT", "PENDING"] } },

@@ -7,13 +7,19 @@ import { requireTeacher } from "@/lib/teacher-auth";
 import { Badge } from "@/components/ui/badge";
 import { EmptyProfessorState, PortalCard, ProfessorPageHeader } from "@/components/professor/professor-ui";
 import { MarkTeacherNotificationsReadButton } from "@/components/professor/mark-teacher-notifications-read";
+import { DeleteTeacherNotificationButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurNotificationsPage() {
   const { teacher } = await requireTeacher();
+  const now = new Date();
   const notifications = await db.teacherNotification.findMany({
-    where: { teacherId: teacher.id },
+    where: {
+      teacherId: teacher.id,
+      deletedAt: null,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
@@ -87,6 +93,7 @@ export default async function ProfesseurNotificationsPage() {
                       Voir la mission
                     </Link>
                   )}
+                  <DeleteTeacherNotificationButton id={priorityNotification.id} />
                 </div>
               </div>
             </article>
@@ -136,6 +143,9 @@ export default async function ProfesseurNotificationsPage() {
                         Voir la mission liée
                       </Link>
                     )}
+                    <div className="mt-3">
+                      <DeleteTeacherNotificationButton id={notification.id} />
+                    </div>
                   </div>
                 </details>
               </article>

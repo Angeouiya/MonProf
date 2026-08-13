@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const MAX_DELIVERY_COUNT = 6;
-const queueClient = new QueueClient({ region: (process.env.VERCEL_REGION || "iad1") as VercelRegion });
+const queueClient = new QueueClient({ region: (process.env.VERCEL_QUEUE_REGION || process.env.VERCEL_REGION || "lhr1") as VercelRegion });
 
 export const POST = queueClient.handleCallback<WebPushQueueMessage>(
   async (message, metadata) => {

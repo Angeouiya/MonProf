@@ -19,6 +19,7 @@ import { PaymentStatusBadge } from "@/components/shared/status-badge";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { WebPushControl } from "@/components/shared/web-push-control";
 import { formatFCFA, timeAgo } from "@/lib/format";
 import { hasVerifiedClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { buildPlatformFinancialSummary, providerFeeFinancialFields } from "@/lib/financial-summary";
@@ -301,7 +302,7 @@ export default async function AdminDashboard() {
                 eyebrow: "Mission professeur",
                 title: `${pendingTeacherConfirmations} réponse${pendingTeacherConfirmations > 1 ? "s" : ""} attendue${pendingTeacherConfirmations > 1 ? "s" : ""}`,
                 detail: "Relancez ou remplacez le professeur si nécessaire.",
-                href: "/admin/notifications",
+                href: "/admin/communication",
                 action: "Suivre",
                 icon: GraduationCap,
               }
@@ -339,6 +340,8 @@ export default async function AdminDashboard() {
         title={`Bonjour ${user.name.split(" ")[0]}`}
         rootPage
       />
+
+      <WebPushControl audienceLabel="admin" />
 
       <Card
         className="overflow-hidden rounded-[1.35rem] border-[#111B4D] bg-[#111B4D] text-white shadow-sm"

@@ -16,6 +16,7 @@ const cronRoute = read("src/app/api/cron/web-push/route.ts");
 const subscriptionRoute = read("src/app/api/push/subscriptions/route.ts");
 const realtime = read("src/components/shared/web-push-realtime.tsx");
 const control = read("src/components/shared/web-push-control.tsx");
+const webPushClient = read("src/lib/web-push-client.ts");
 const serviceWorker = read("public/sw.js");
 const vercelJson = JSON.parse(read("vercel.json"));
 
@@ -46,7 +47,7 @@ record("Retry PARTIAL sans redoubler ACCEPTED/REVOKED", webPush.includes("'PARTI
 
 record("Topic queue web-push-events défini", queueLib.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
 record("Publication queue avec idempotence", queueLib.includes("idempotencyKey") && queueLib.includes("DuplicateMessageError"));
-record("Région Vercel Queue explicite hors Vercel", queueLib.includes('process.env.VERCEL_REGION || "iad1"') && queueRoute.includes('process.env.VERCEL_REGION || "iad1"'));
+record("Région Vercel Queue explicite hors Vercel", queueLib.includes('process.env.VERCEL_REGION || "lhr1"') && queueRoute.includes('process.env.VERCEL_REGION || "lhr1"'));
 record("Worker queue privé avec retry", queueRoute.includes("handleCallback<WebPushQueueMessage>") && queueRoute.includes("visibilityTimeoutSeconds: 600") && queueRoute.includes("retry:"));
 record("Cron secours chaque minute côté route", cronRoute.includes("publishWebPushFlushEvent(\"cron_recovery\"") && cronRoute.includes("flushWebPushOutbox(500)"));
 record("Vercel Queues configuré dans vercel.json", JSON.stringify(vercelJson.functions || {}).includes("web-push-events"));
@@ -63,10 +64,10 @@ record("API abonnement reçoit le suivi appareil", [
 ].every((field) => subscriptionRoute.includes(field)));
 record("Polling global fréquent supprimé", realtime.includes("5 * 60_000") && !realtime.includes("45_000"));
 record("Carte installation PWA visible", control.includes("data-pwa-install-guide") && control.includes("Installer l’application Compétence"));
-record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && control.includes("supportsVibration") && control.includes("supportsBadging"));
+record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
 record("Service Worker icône Compétence + badge + vibration", [
   "competence-icon-512-safe.png",
-  "competence-icon-192-safe.png",
+  "competence-notification-badge.svg",
   "setAppBadge",
   "vibrate",
   "renotify",

@@ -15,21 +15,29 @@ export default async function AdminRootLayout({ children }: { children: React.Re
     SELECT
       COUNT(*) FILTER (
         WHERE "userId" IS NULL
+          AND "deletedAt" IS NULL
+          AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
           AND "read" = false
           AND "priority" IN ('IMPORTANT', 'URGENT', 'CRITICAL')
       )::int AS "notificationCount",
       COUNT(*) FILTER (
         WHERE "userId" IS NULL
+          AND "deletedAt" IS NULL
+          AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
           AND "read" = false
           AND "priority" IN ('URGENT', 'CRITICAL')
       )::int AS "urgentCount",
       COUNT(*) FILTER (
         WHERE "userId" IS NULL
+          AND "deletedAt" IS NULL
+          AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
           AND "status" IN ('CREATED', 'SENT', 'RELAUNCHED', 'EXPIRED')
           AND ("recipientType" = 'TEACHER' OR "teacherId" IS NOT NULL)
       )::int AS "teacherCount",
       COUNT(*) FILTER (
         WHERE "userId" IS NULL
+          AND "deletedAt" IS NULL
+          AND ("expiresAt" IS NULL OR "expiresAt" > NOW())
           AND "read" = false
           AND ("type" ILIKE '%PAY%' OR "type" ILIKE '%PAYMENT%' OR "type" ILIKE '%FUNDS%')
       )::int AS "paymentCount"

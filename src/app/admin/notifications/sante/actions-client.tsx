@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Download, LoaderCircle, RefreshCw, RotateCcw, ShieldOff } from "lucide-react";
+import { BellRing, Download, LoaderCircle, RefreshCw, RotateCcw, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type HealthAction = "flush_now" | "retry_failed" | "disable_dead_subscriptions";
+type HealthAction = "flush_now" | "retry_failed" | "disable_dead_subscriptions" | "test_current_admin";
 
 export function WebPushHealthActions() {
   const [loading, setLoading] = useState<HealthAction | null>(null);
@@ -14,22 +14,28 @@ export function WebPushHealthActions() {
     setLoading(action);
     setNotice("");
     try {
-      const response = await fetch("/api/admin/web-push-health", {
+      const response = await fetch(action === "test_current_admin" ? "/api/admin/web-push-test" : "/api/admin/web-push-health", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(action === "test_current_admin" ? { reason: "admin_health_test" } : { action }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Action impossible.");
-      if (action === "flush_now") {
+      if (action === "test_current_admin") {
+        setNotice(data.ok
+          ? `Test envoyé sur cet appareil : ${data.activeDevices ?? 0} appareil(s) actif(s), ${data.flush?.sent ?? 0} push accepté(s).`
+          : data.message || "Test créé, mais aucun appareil actif n'a reçu le push.");
+      } else if (action === "flush_now") {
         setNotice(`Relance lancée : ${data.directFlush?.claimed ?? 0} élément(s) traités immédiatement.`);
       } else if (action === "retry_failed") {
         setNotice(`${data.retry?.count ?? 0} notification(s) remises en attente.`);
       } else {
         setNotice(`${data.disabled?.count ?? 0} appareil(s) obsolète(s) désactivé(s).`);
       }
-      window.setTimeout(() => window.location.reload(), 900);
+      if (action !== "test_current_admin") {
+        window.setTimeout(() => window.location.reload(), 900);
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Action impossible.");
     } finally {
@@ -43,6 +49,10 @@ export function WebPushHealthActions() {
         <Button type="button" onClick={() => run("flush_now")} disabled={!!loading} className="rounded-xl bg-[#111B4D] text-white hover:bg-[#17245F]">
           {loading === "flush_now" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Relancer maintenant
+        </Button>
+        <Button type="button" variant="outline" onClick={() => run("test_current_admin")} disabled={!!loading} className="rounded-xl border-[#CAD7F2] text-[#111B4D]">
+          {loading === "test_current_admin" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}
+          Tester mon appareil
         </Button>
         <Button type="button" variant="outline" onClick={() => run("retry_failed")} disabled={!!loading} className="rounded-xl border-[#D9E1EF] text-[#111B4D]">
           {loading === "retry_failed" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}

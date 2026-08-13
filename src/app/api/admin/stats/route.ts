@@ -104,7 +104,16 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
-    db.notification.findMany({ where: { userId: null, read: false }, orderBy: { createdAt: "desc" }, take: 5 }),
+    db.notification.findMany({
+      where: {
+        userId: null,
+        read: false,
+        deletedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
   ]);
   const todayBookings = todayBookingRows.filter(hasVerifiedClientPayment).length;
   const paidBookings = paidBookingRows.filter(hasVerifiedPayDunyaClientPayment).length;

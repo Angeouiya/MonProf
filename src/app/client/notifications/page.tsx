@@ -90,6 +90,8 @@ export default async function ClientNotificationsPage() {
     LEFT JOIN competence."Teacher" t ON t."id" = b."teacherId"
     WHERE n."recipientType" = 'CLIENT'
       AND (n."userId" = ${user.id} OR n."clientId" = ${user.id})
+      AND n."deletedAt" IS NULL
+      AND (n."expiresAt" IS NULL OR n."expiresAt" > NOW())
     ORDER BY n."createdAt" DESC
     LIMIT 100
   `;

@@ -11,6 +11,7 @@ import {
 import { courseFormatLabel } from "@/lib/platform-labels";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { Button } from "@/components/ui/button";
+import { WebPushControl } from "@/components/shared/web-push-control";
 import {
   EmptyProfessorState,
   PortalCard,
@@ -273,6 +274,8 @@ export default async function ProfesseurDashboardPage() {
         title={`Bonjour ${teacherName}`}
         rootTab
       />
+
+      <WebPushControl audienceLabel="professeur" />
 
       <section
         aria-label="Accueil professeur"

@@ -12,6 +12,8 @@ export async function PATCH() {
     where: {
       teacherId: teacher.id,
       status: { in: ["DRAFT", "PENDING", "SENT", "FAILED"] },
+      deletedAt: null,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     data: {
       status: "READ",

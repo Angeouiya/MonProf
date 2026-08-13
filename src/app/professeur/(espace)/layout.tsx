@@ -63,6 +63,8 @@ export default async function ProfesseurProtectedLayout({ children }: { children
         FROM competence."TeacherNotification" tn
         WHERE tn."teacherId" = ${teacher.id}
           AND tn."status" IN ('DRAFT', 'PENDING', 'SENT', 'FAILED')
+          AND tn."deletedAt" IS NULL
+          AND (tn."expiresAt" IS NULL OR tn."expiresAt" > NOW())
       ) AS "notificationCount",
       (
         SELECT COUNT(*)::int

@@ -42,11 +42,17 @@ export default async function ClientParametresPage() {
       ? {
           recipientType: "ADMIN",
           read: false,
+          deletedAt: null,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         }
       : {
           recipientType: "CLIENT",
           read: false,
-          OR: [{ userId: sessionUser.id }, { clientId: sessionUser.id }],
+          deletedAt: null,
+          AND: [
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            { OR: [{ userId: sessionUser.id }, { clientId: sessionUser.id }] },
+          ],
         },
   }),
   db.booking.count({

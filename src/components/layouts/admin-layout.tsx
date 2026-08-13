@@ -58,6 +58,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
       { href: "/admin/paiements", label: "Finances", icon: Wallet, permission: "FINANCE_VIEW" },
       { href: "/admin/partenariats", label: "Partenariats", icon: Handshake, permission: "FINANCE_VIEW" },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare, permission: "COMMUNICATIONS_VIEW" },
+      { href: "/admin/communication", label: "Communication", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
       { href: "/admin/parametres", label: "Réglages", icon: Settings, permission: "SETTINGS_MANAGE" },
       { href: "/admin/mon-compte", label: "Mon compte", icon: UserRoundCog, permission: "DASHBOARD_VIEW" },
     ],
@@ -75,7 +76,6 @@ const secondaryNavItems: NavItem[] = [
   { href: "/admin/matieres", label: "Matières", icon: Tag, permission: "CATALOG_MANAGE" },
   { href: "/admin/niveaux", label: "Niveaux", icon: BookOpen, permission: "CATALOG_MANAGE" },
   { href: "/admin/communes", label: "Communes & quartiers", icon: MapPin, permission: "CATALOG_MANAGE" },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
   { href: "/admin/equipe", label: "Équipe admin", icon: UserRoundCog, permission: "TEAM_MANAGE" },
 ];
 
@@ -90,6 +90,7 @@ const mobileNavPriorityHrefs = [
   "/admin/reservations",
   "/admin/paiements",
   "/admin/partenariats",
+  "/admin/communication",
   "/admin/professeurs",
   "/admin/clients",
 ] as const;
@@ -125,8 +126,12 @@ export function AdminLayout({
   const summary = notificationSummary ?? { total: notificationCount, urgent: 0, teacher: 0, payment: 0 };
   const mobileNavItems = buildAdminMobileNavItems(permissions);
 
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname?.startsWith(href);
+  const isActive = (href: string, exact?: boolean) => {
+    if (href === "/admin/communication") {
+      return pathname?.startsWith("/admin/communication") || pathname?.startsWith("/admin/notifications");
+    }
+    return exact ? pathname === href : pathname?.startsWith(href);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setOpen(false), 0);
@@ -309,8 +314,8 @@ function SidebarContent({
               </span>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-1.5 text-center text-[10px]">
-              <RadarPill href="/admin/notifications?filter=urgent" label="Urgent" value={summary.urgent} danger={summary.urgent > 0} onNavigate={onNavigate} />
-              <RadarPill href="/admin/notifications?filter=teacher" label="Profs" value={summary.teacher} danger={summary.teacher > 0} onNavigate={onNavigate} />
+              <RadarPill href="/admin/communication?filter=urgent" label="Urgent" value={summary.urgent} danger={summary.urgent > 0} onNavigate={onNavigate} />
+              <RadarPill href="/admin/communication?filter=teacher" label="Profs" value={summary.teacher} danger={summary.teacher > 0} onNavigate={onNavigate} />
               <RadarPill href="/admin/paiements-a-liberer" label="Paiements" value={summary.payment} danger={summary.payment > 0} onNavigate={onNavigate} />
             </div>
           </div>
@@ -338,12 +343,12 @@ function SidebarContent({
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{item.label}</span>
-                      {item.href === "/admin/notifications" && !!notificationCount && (
+                      {item.href === "/admin/communication" && !!notificationCount && (
                         <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-100">
                           {notificationCount > 99 ? "99+" : notificationCount}
                         </span>
                       )}
-                      {active && <ChevronRight className={cn("h-4 w-4", item.href === "/admin/notifications" && notificationCount ? "" : "ml-auto")} />}
+                      {active && <ChevronRight className={cn("h-4 w-4", item.href === "/admin/communication" && notificationCount ? "" : "ml-auto")} />}
                     </Link>
                   );
                 })}
@@ -417,9 +422,9 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
   if (summary.total === 0 && summary.urgent === 0 && summary.teacher === 0 && summary.payment === 0) {
     return (
       <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-        <Link href="/admin/notifications" prefetch={false}>
+        <Link href="/admin/communication" prefetch={false}>
           <Bell className="mr-1.5 h-4 w-4" />
-          Notifications
+          Communication
         </Link>
       </Button>
     );
@@ -435,7 +440,7 @@ function NotificationHeaderRadar({ summary }: { summary: AdminNotificationSummar
         summary.urgent > 0 ? "border-red-200 text-red-700 hover:bg-white" : "border-[#CAD7F2] text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
       )}
     >
-      <Link href={summary.urgent > 0 ? "/admin/notifications?filter=urgent" : "/admin/notifications"} prefetch={false}>
+      <Link href={summary.urgent > 0 ? "/admin/communication?filter=urgent" : "/admin/communication"} prefetch={false}>
         {summary.urgent > 0 ? <AlertTriangle className="mr-1.5 h-4 w-4" /> : <Bell className="mr-1.5 h-4 w-4" />}
         {summary.urgent > 0 ? `${summary.urgent} urgente(s)` : `${summary.total} notification(s)`}
       </Link>

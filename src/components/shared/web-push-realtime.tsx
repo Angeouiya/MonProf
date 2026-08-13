@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { buildSubscriptionPayload, urlBase64ToUint8Array } from "@/lib/web-push-client";
 
 const FALLBACK_CHECK_INTERVAL_MS = 5 * 60_000;
 
@@ -33,17 +34,23 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   }, [router]);
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
+    if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
     let cancelled = false;
     void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async (registration) => {
       if (cancelled || Notification.permission !== "granted" || !("PushManager" in window)) return;
-      const subscription = await registration.pushManager.getSubscription();
-      if (!subscription) return;
+      const stateResponse = await fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" });
+      const state = await stateResponse.json().catch(() => null);
+      if (!stateResponse.ok || !state?.configured || !state?.publicKey) return;
+      const current = await registration.pushManager.getSubscription();
+      const subscription = current || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(state.publicKey),
+      });
       await fetch("/api/push/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify(subscription.toJSON()),
+        body: JSON.stringify(buildSubscriptionPayload(subscription)),
       });
     }).catch(() => undefined);
 

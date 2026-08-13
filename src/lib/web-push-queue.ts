@@ -7,7 +7,7 @@ const queueClient = new QueueClient({ region: getQueueRegion() });
 
 export type WebPushQueueMessage = {
   kind: "FLUSH_OUTBOX";
-  reason: "outbox_created" | "cron_recovery" | "manual" | "health_retry";
+  reason: "outbox_created" | "communication_campaign" | "cron_recovery" | "manual" | "health_retry";
   limit?: number;
   createdAt: string;
 };
@@ -85,5 +85,5 @@ function logQueue(message: string, extra: Record<string, unknown>) {
 }
 
 function getQueueRegion(): VercelRegion {
-  return (process.env.VERCEL_REGION || "iad1") as VercelRegion;
+  return (process.env.VERCEL_QUEUE_REGION || process.env.VERCEL_REGION || "lhr1") as VercelRegion;
 }

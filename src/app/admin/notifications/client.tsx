@@ -72,7 +72,7 @@ export function NotificationsClient({
       const params = new URLSearchParams(sp.toString());
       if (!next) params.delete("filter");
       else params.set("filter", next);
-      router.push(`/admin/notifications?${params.toString()}`);
+      router.push(`/admin/communication?${params.toString()}`);
     };
     return (
       <Card>

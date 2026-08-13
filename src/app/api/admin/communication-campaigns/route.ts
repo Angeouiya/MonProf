@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
 import { generateReference } from "@/lib/format";
+import { defaultCommunicationExpiresAt, processCommunicationCampaignBatch } from "@/lib/communication-campaigns";
+import { publishCommunicationCampaignEvent } from "@/lib/communication-queue";
 
 const AUDIENCES = ["ONE_CLIENT", "ONE_TEACHER", "ALL_CLIENTS", "ALL_TEACHERS", "ALL_USERS"] as const;
 const PRIORITIES = ["NORMAL", "IMPORTANT", "URGENT", "CRITICAL"] as const;
@@ -23,7 +25,7 @@ export async function POST(req: NextRequest) {
   const targetTeacherId = typeof body.targetTeacherId === "string" && body.targetTeacherId.trim() ? body.targetTeacherId.trim() : null;
   const link = typeof body.link === "string" && body.link.trim() ? body.link.trim().slice(0, 500) : null;
   const actionLabel = typeof body.actionLabel === "string" && body.actionLabel.trim() ? body.actionLabel.trim().slice(0, 80) : null;
-  const expiresAt = typeof body.expiresAt === "string" && body.expiresAt ? new Date(body.expiresAt) : null;
+  const expiresAt = typeof body.expiresAt === "string" && body.expiresAt ? new Date(body.expiresAt) : defaultCommunicationExpiresAt();
 
   if (!audience || !title || !message) {
     return NextResponse.json({ error: "Audience, titre et message sont requis." }, { status: 400 });
@@ -43,28 +45,24 @@ export async function POST(req: NextRequest) {
 
   const includeClients = ["ONE_CLIENT", "ALL_CLIENTS", "ALL_USERS"].includes(audience);
   const includeTeachers = ["ONE_TEACHER", "ALL_TEACHERS", "ALL_USERS"].includes(audience);
-  const [clients, teachers] = await Promise.all([
+  const [clientCount, teacherCount] = await Promise.all([
     includeClients
-      ? db.user.findMany({
+      ? db.user.count({
           where: audience === "ONE_CLIENT"
             ? { id: targetUserId!, role: "CLIENT" }
             : { role: "CLIENT" },
-          select: { id: true, name: true },
-          orderBy: { createdAt: "asc" },
         })
-      : [],
+      : 0,
     includeTeachers
-      ? db.teacher.findMany({
+      ? db.teacher.count({
           where: audience === "ONE_TEACHER"
             ? { id: targetTeacherId! }
             : { status: { notIn: ["BLACKLISTED", "PERMANENTLY_SUSPENDED"] } },
-          select: { id: true, fullName: true, professionalName: true },
-          orderBy: { createdAt: "asc" },
         })
-      : [],
+      : 0,
   ]);
 
-  const recipientCount = clients.length + teachers.length;
+  const recipientCount = clientCount + teacherCount;
   if (recipientCount === 0) {
     return NextResponse.json({ error: "Aucun destinataire valide pour cette diffusion." }, { status: 400 });
   }
@@ -80,77 +78,52 @@ export async function POST(req: NextRequest) {
         audience,
         targetUserId: audience === "ONE_CLIENT" ? targetUserId : null,
         targetTeacherId: audience === "ONE_TEACHER" ? targetTeacherId : null,
-        channel: "INTERNAL",
+        channel: "PWA",
         priority,
         status: "SENDING",
         recipientCount,
+        deliveredCount: 0,
+        failedCount: 0,
         link,
         actionLabel,
         expiresAt,
+        dispatchPhase: includeClients ? "CLIENTS" : "TEACHERS",
+        dispatchCursor: null,
+        lastDispatchAt: now,
         createdById: admin.id,
       },
     });
 
-    if (clients.length) {
-      await tx.notification.createMany({
-        data: clients.map((client) => ({
-          userId: client.id,
-          title,
-          message,
-          type: "PLATFORM_COMMUNICATION",
-          recipientType: "CLIENT" as const,
-          recipientName: client.name,
-          channel: "INTERNAL" as const,
-          status: "SENT" as const,
-          priority,
-          clientId: client.id,
-          adminId: admin.id,
-          campaignId: created.id,
-          sentAt: now,
-          expiresAt,
-          link: link || "/client/notifications",
-          actionLabel: actionLabel || "Voir l'information",
-        })),
-      });
-    }
-
-    if (teachers.length) {
-      await tx.teacherNotification.createMany({
-        data: teachers.map((teacher) => ({
-          teacherId: teacher.id,
-          campaignId: created.id,
-          title,
-          message,
-          channel: "INTERNAL",
-          sent: true,
-          status: "SENT" as const,
-          sentById: admin.id,
-        })),
-      });
-    }
-
     await tx.adminActionLog.create({
       data: {
         adminId: admin.id,
-        action: "Communication plateforme diffusée",
+        action: "Communication plateforme programmée",
         entityType: "CommunicationCampaign",
         entityId: created.id,
-        detail: `${admin.name} a diffusé "${title}" à ${recipientCount} destinataire(s). Audience: ${audience}. Priorité: ${priority}.`,
+        detail: `${admin.name} a lancé "${title}" vers ${recipientCount} destinataire(s). Audience: ${audience}. Priorité: ${priority}. Envoi par lots asynchrones.`,
         oldStatus: "DRAFT",
-        newStatus: "SENT",
+        newStatus: "SENDING",
       },
     });
 
-    return tx.communicationCampaign.update({
-      where: { id: created.id },
-      data: {
-        status: "SENT",
-        deliveredCount: recipientCount,
-        failedCount: 0,
-        sentAt: now,
-      },
-    });
+    return created;
   });
 
-  return NextResponse.json({ ok: true, campaign });
+  const queued = await publishCommunicationCampaignEvent({
+    campaignId: campaign.id,
+    phase: includeClients ? "CLIENTS" : "TEACHERS",
+    cursor: null,
+  }, { idempotencyKey: `communication-${campaign.id}-start` });
+
+  if (!queued.queued) {
+    await processCommunicationCampaignBatch({
+      kind: "DISPATCH_CAMPAIGN",
+      campaignId: campaign.id,
+      phase: includeClients ? "CLIENTS" : "TEACHERS",
+      cursor: null,
+      createdAt: now.toISOString(),
+    });
+  }
+
+  return NextResponse.json({ ok: true, campaign, queued });
 }

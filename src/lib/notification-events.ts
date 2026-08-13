@@ -21,6 +21,7 @@ export type EnqueueNotificationEventInput = {
   bookingId?: string | null;
   adminId?: string | null;
   campaignId?: string | null;
+  expiresAt?: Date | null;
 };
 
 export async function enqueueNotificationEvent(
@@ -41,6 +42,7 @@ export async function enqueueNotificationEvent(
           sent: channel !== "INTERNAL",
           status: "SENT",
           sentById: event.adminId || undefined,
+          expiresAt: event.expiresAt || undefined,
         },
       })
     : await client.notification.create({
@@ -61,6 +63,7 @@ export async function enqueueNotificationEvent(
           clientId: event.clientId || undefined,
           adminId: event.adminId || undefined,
           campaignId: event.campaignId || undefined,
+          expiresAt: event.expiresAt || undefined,
           status: "CREATED",
         },
       });

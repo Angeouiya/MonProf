@@ -22,6 +22,8 @@ export default async function AdminWebPushHealthPage() {
     oldestOpen,
     recentDead,
     latencyRows,
+    activeByRole,
+    noSubscriptionCount,
   ] = await Promise.all([
     db.webPushSubscription.groupBy({ by: ["enabled"], _count: { _all: true } }),
     db.webPushSubscription.groupBy({
@@ -61,6 +63,17 @@ export default async function AdminWebPushHealthPage() {
         AND "acceptedAt" IS NOT NULL
         AND "createdAt" >= NOW() - INTERVAL '24 hours'
     `,
+    Promise.all([
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, user: { is: { role: "CLIENT" } } } }),
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, user: { is: { role: "ADMIN" } } } }),
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, teacherId: { not: null } } }),
+    ]),
+    db.webPushOutbox.count({
+      where: {
+        status: "NO_SUBSCRIPTION",
+        updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) },
+      },
+    }),
   ]);
 
   const activeDevices = countGroup(subscriptionGroups, true);
@@ -79,9 +92,9 @@ export default async function AdminWebPushHealthPage() {
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button asChild variant="outline" className="rounded-xl border-[#D9E1EF] text-[#111B4D]">
-            <Link href="/admin/notifications">
+            <Link href="/admin/communication">
               <ArrowLeft className="h-4 w-4" />
-              Notifications
+              Communication
             </Link>
           </Button>
           <WebPushHealthActions />
@@ -92,7 +105,7 @@ export default async function AdminWebPushHealthPage() {
         <HealthMetric icon={Smartphone} label="Appareils actifs" value={activeDevices} hint={`${inactiveDevices} désactivé(s) ou révoqué(s)`} />
         <HealthMetric icon={RadioTower} label="Outbox ouverte" value={openOutboxCount} hint={`Lag le plus ancien : ${formatDuration(queueLagSeconds)}`} danger={queueLagSeconds > 120} />
         <HealthMetric icon={BellRing} label="Acceptées 24h" value={Number(latency.accepted_count ?? 0)} hint={`Moyenne ${Math.round(Number(latency.avg_ms ?? 0))} ms`} />
-        <HealthMetric icon={TimerReset} label="P95 acceptation" value={`${Math.round(Number(latency.p95_ms ?? 0))} ms`} hint="Objectif critique : 30–60 s max" danger={Number(latency.p95_ms ?? 0) > 60_000} />
+        <HealthMetric icon={TimerReset} label="Sans appareil 24h" value={noSubscriptionCount} hint="Destinataires non activés push" danger={noSubscriptionCount > 0} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -116,6 +129,14 @@ export default async function AdminWebPushHealthPage() {
               <h2 className="text-base font-black text-[#111B4D]">Plateformes</h2>
             </div>
             <div className="mt-4 space-y-2">
+              <div className="grid grid-cols-3 gap-2 text-center text-xs font-black text-[#111B4D]">
+                <div className="rounded-xl border border-[#E6EAF3] bg-white px-2 py-3"><span className="block text-lg">{activeByRole[0]}</span>Clients</div>
+                <div className="rounded-xl border border-[#E6EAF3] bg-white px-2 py-3"><span className="block text-lg">{activeByRole[2]}</span>Profs</div>
+                <div className="rounded-xl border border-[#E6EAF3] bg-white px-2 py-3"><span className="block text-lg">{activeByRole[1]}</span>Admins</div>
+              </div>
+              <div className="rounded-xl border border-[#E6EAF3] bg-[#F8FAFC] px-3 py-3 text-xs font-semibold leading-5 text-[#475569]">
+                P95 acceptation provider : <strong className="text-[#111B4D]">{Math.round(Number(latency.p95_ms ?? 0))} ms</strong>. Une notification “acceptée” n’est pas considérée comme lue tant que l’utilisateur ne l’ouvre pas.
+              </div>
               {platformGroups.length === 0 ? (
                 <p className="rounded-xl bg-[#F8FAFC] px-3 py-4 text-sm font-semibold text-[#64748B]">Aucun appareil push enregistré.</p>
               ) : platformGroups.map((item) => (

@@ -96,6 +96,8 @@ async function getWebPushHealthSummary() {
     oldestOpen,
     recentDead,
     latencyRows,
+    activeByRole,
+    noSubscriptionCount,
   ] = await Promise.all([
     db.webPushSubscription.groupBy({
       by: ["enabled"],
@@ -136,6 +138,17 @@ async function getWebPushHealthSummary() {
         AND "acceptedAt" IS NOT NULL
         AND "createdAt" >= NOW() - INTERVAL '24 hours'
     `,
+    Promise.all([
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, user: { is: { role: "CLIENT" } } } }),
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, user: { is: { role: "ADMIN" } } } }),
+      db.webPushSubscription.count({ where: { enabled: true, revokedAt: null, teacherId: { not: null } } }),
+    ]),
+    db.webPushOutbox.count({
+      where: {
+        status: "NO_SUBSCRIPTION",
+        updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) },
+      },
+    }),
   ]);
 
   const activeDevices = countGroup(subscriptionGroups, true);
@@ -157,8 +170,14 @@ async function getWebPushHealthSummary() {
         ? Math.round((activeDevices / (activeDevices + inactiveDevices)) * 100)
         : 0,
     },
+    activeByRole: {
+      clients: activeByRole[0],
+      admins: activeByRole[1],
+      teachers: activeByRole[2],
+    },
     queue: {
       openOutboxCount,
+      noSubscription24h: noSubscriptionCount,
       queueLagSeconds,
       oldestOpen,
     },

@@ -13,6 +13,7 @@ import { Money } from "@/components/shared/money";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { Button } from "@/components/ui/button";
+import { WebPushControl } from "@/components/shared/web-push-control";
 import { formatDate } from "@/lib/format";
 import { hasVerifiedClientPayment } from "@/lib/payment-security";
 import {
@@ -124,6 +125,8 @@ export default async function ClientDashboardPage() {
             : "Réservez, payez via Jèko et suivez chaque cours depuis un espace clair."
         }
       />
+
+      <WebPushControl audienceLabel="client" />
 
       <nav
         aria-label="Choisir une mini-application"

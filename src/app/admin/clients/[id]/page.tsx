@@ -47,6 +47,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       recipientType: "ADMIN",
       type: CLIENT_PASSWORD_ASSISTANCE_NOTIFICATION_TYPE,
       read: false,
+      deletedAt: null,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
   });
   const canManageClients = hasAdminPermission(admin.adminPermissions, "CLIENTS_MANAGE");

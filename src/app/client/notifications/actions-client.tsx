@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Bell, Check, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, Check, CheckCheck, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ClientNotificationActions({
@@ -53,6 +53,26 @@ export function ClientNotificationActions({
     );
   }
 
+  async function deleteNotification() {
+    if (!id) return;
+    setNotice("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/client/notifications/${id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Suppression impossible.");
+      setNotice("Notification supprimée de votre centre.");
+      router.refresh();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Suppression impossible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!id) return null;
   const confirmed = status === "CONFIRMED";
 
@@ -80,6 +100,16 @@ export function ClientNotificationActions({
         >
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : read ? <Bell className="mr-1.5 h-4 w-4" /> : <Check className="mr-1.5 h-4 w-4" />}
           {read ? "Remettre non lue" : "Marquer lue"}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={deleteNotification}
+          disabled={loading}
+          className="min-h-11 w-full rounded-lg border-red-100 text-red-700 hover:border-red-200"
+        >
+          {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+          Supprimer
         </Button>
       </div>
       <InlineNotificationStatus message={notice} />

@@ -4,9 +4,12 @@ self.addEventListener("push", (event) => {
     title: "Compétence",
     body: "Une nouvelle information est disponible.",
     icon: "/images/brand/competence-icon-512-safe.png",
-    badge: "/images/brand/competence-icon-192-safe.png",
+    badge: "/images/brand/competence-notification-badge.svg",
     url: "/",
     tag: "competence-notification",
+    priority: "NORMAL",
+    silent: false,
+    actions: [],
   };
   let data = fallback;
   try {
@@ -18,16 +21,23 @@ self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     windows.forEach((client) => client.postMessage({ type: "COMPETENCE_PUSH_RECEIVED", payload: data }));
-    await self.registration.showNotification(data.title, {
+    await self.registration.showNotification(data.title || fallback.title, {
       body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      tag: data.tag,
-      data: { url: data.url },
+      icon: data.icon || fallback.icon,
+      badge: data.badge || fallback.badge,
+      image: data.image,
+      tag: data.tag || fallback.tag,
+      timestamp: Date.now(),
+      data: {
+        url: data.url,
+        outboxId: data.outboxId,
+        priority: data.priority,
+      },
       renotify: true,
       silent: data.silent === true,
-      requireInteraction: data.priority === "CRITICAL",
+      requireInteraction: data.priority === "CRITICAL" || data.priority === "URGENT",
       vibrate: data.priority === "CRITICAL" || data.priority === "URGENT" ? [180, 80, 180] : [120],
+      actions: Array.isArray(data.actions) ? data.actions.slice(0, 2) : [],
     });
     const badgeCount = Number(data.badgeCount);
     if (Number.isFinite(badgeCount) && badgeCount >= 0 && self.navigator && "setAppBadge" in self.navigator) {

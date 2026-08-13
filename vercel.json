@@ -18,12 +18,40 @@
     "src/app/api/cron/web-push/route.ts": {
       "maxDuration": 300,
       "memory": 1024
+    },
+    "src/app/api/queues/communication-campaigns/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024,
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "communication-campaigns",
+          "retryAfterSeconds": 60,
+          "initialDelaySeconds": 0
+        }
+      ]
+    },
+    "src/app/api/cron/communication-campaigns/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "src/app/api/cron/notification-retention/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
     }
   },
   "crons": [
     {
       "path": "/api/cron/web-push",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/communication-campaigns",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/notification-retention",
+      "schedule": "35 2 * * *"
     },
     {
       "path": "/api/cron/notification-reminders",

@@ -8,7 +8,11 @@ export async function GET(req: NextRequest) {
   }
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter"); // unread | all
-  const where: any = { userId: null };
+  const where: any = {
+    userId: null,
+    deletedAt: null,
+    AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }],
+  };
   if (filter === "unread") where.read = false;
   const items = await db.notification.findMany({
     where,
@@ -28,13 +32,18 @@ export async function PATCH(req: NextRequest) {
   // body: { markAllRead?: true } ou { id, read: true }
   if (body.markAllRead) {
     await db.notification.updateMany({
-      where: { userId: null, read: false },
+      where: {
+        userId: null,
+        deletedAt: null,
+        read: false,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
       data: { read: true, readAt: new Date(), status: "SEEN" },
     });
     return NextResponse.json({ ok: true });
   }
   if (body.id && action) {
-    const notification = await db.notification.findUnique({ where: { id: body.id } });
+    const notification = await db.notification.findFirst({ where: { id: body.id, deletedAt: null } });
     if (!notification) return NextResponse.json({ error: "Notification introuvable" }, { status: 404 });
 
     if (action === "mark_treated") {
@@ -99,6 +108,8 @@ export async function PATCH(req: NextRequest) {
     }
   }
   if (body.id) {
+    const notification = await db.notification.findFirst({ where: { id: body.id, deletedAt: null }, select: { id: true } });
+    if (!notification) return NextResponse.json({ error: "Notification introuvable" }, { status: 404 });
     await db.notification.update({
       where: { id: body.id },
       data: { read: !!body.read, readAt: body.read ? new Date() : null, status: body.read ? "SEEN" : "CREATED" },

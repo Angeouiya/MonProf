@@ -8,12 +8,15 @@ export async function GET() {
   const actor = await getWebPushActor();
   if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const now = new Date();
   let notificationCount = 0;
   if (actor.kind === "TEACHER") {
     notificationCount = await db.teacherNotification.count({
       where: {
         teacherId: actor.teacherId,
         status: { in: ["DRAFT", "PENDING", "SENT", "FAILED"] },
+        deletedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
     });
   } else if (actor.kind === "ADMIN") {
@@ -22,7 +25,11 @@ export async function GET() {
         recipientType: "ADMIN",
         read: false,
         priority: { in: ["IMPORTANT", "URGENT", "CRITICAL"] },
-        OR: [{ userId: null }, { userId: actor.userId }],
+        deletedAt: null,
+        AND: [
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          { OR: [{ userId: null }, { userId: actor.userId }] },
+        ],
       },
     });
   } else {
@@ -30,7 +37,11 @@ export async function GET() {
       where: {
         recipientType: "CLIENT",
         read: false,
-        OR: [{ userId: actor.userId }, { clientId: actor.userId }],
+        deletedAt: null,
+        AND: [
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          { OR: [{ userId: actor.userId }, { clientId: actor.userId }] },
+        ],
       },
     });
   }

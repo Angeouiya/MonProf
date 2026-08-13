@@ -8,13 +8,21 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
+  const activeWhere = {
+    deletedAt: null,
+    OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+  };
   const unreadCount = await db.notification.count({
     where: user.role === "ADMIN"
-      ? { recipientType: "ADMIN", read: false }
+      ? { recipientType: "ADMIN", read: false, ...activeWhere }
       : {
           recipientType: "CLIENT",
           read: false,
-          OR: [{ userId: user.id }, { clientId: user.id }],
+          deletedAt: null,
+          AND: [
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            { OR: [{ userId: user.id }, { clientId: user.id }] },
+          ],
         },
   });
 
@@ -34,7 +42,11 @@ export async function PATCH(req: NextRequest) {
   const now = new Date();
   const ownershipWhere = {
     recipientType: "CLIENT" as const,
-    OR: [{ userId: user.id }, { clientId: user.id }],
+    deletedAt: null,
+    AND: [
+      { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      { OR: [{ userId: user.id }, { clientId: user.id }] },
+    ],
   };
 
   if (body.markAllRead) {

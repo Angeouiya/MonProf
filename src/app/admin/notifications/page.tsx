@@ -11,6 +11,7 @@ import { NotificationHistoryTable, NotificationItem } from "@/components/admin/n
 import { NotificationQuickActionsClient } from "./quick-actions-client";
 import { RunNotificationRemindersClient } from "./run-reminders-client";
 import { CommunicationCampaignComposer } from "./campaign-composer";
+import { DeleteCommunicationCampaignButton } from "./campaign-actions-client";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,12 @@ export default async function AdminNotificationsPage({
   const admin = await requireAdmin("COMMUNICATIONS_VIEW");
   const sp = await searchParams;
   const filter = sp.filter;
-  const where: any = { userId: null };
+  const now = new Date();
+  const where: any = {
+    userId: null,
+    deletedAt: null,
+    AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }],
+  };
   if (filter === "unread") where.read = false;
   if (filter === "urgent") where.priority = { in: ["URGENT", "CRITICAL"] };
   if (filter === "teacher") where.OR = [{ recipientType: "TEACHER" }, { teacherId: { not: null } }];
@@ -38,30 +44,13 @@ export default async function AdminNotificationsPage({
     orderBy: { createdAt: "desc" },
     take: 200,
   });
-  const [campaigns, clients, campaignTeachers] = await Promise.all([
+  const [campaigns] = await Promise.all([
     db.communicationCampaign.findMany({
+      where: { deletedAt: null },
       include: { createdBy: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
-    admin.adminPermissions?.includes("COMMUNICATIONS_SEND")
-      ? db.user.findMany({
-          where: { role: "CLIENT" },
-          select: { id: true, name: true, email: true, phone: true },
-          orderBy: { name: "asc" },
-          take: 1000,
-        })
-      : [],
-    admin.adminPermissions?.includes("COMMUNICATIONS_SEND")
-      ? db.teacher.findMany({
-          select: {
-            id: true, fullName: true, professionalName: true, phone: true,
-            subjects: { where: { isPrimary: true }, select: { subject: { select: { name: true } } }, take: 1 },
-          },
-          orderBy: { fullName: "asc" },
-          take: 1000,
-        })
-      : [],
   ]);
   const teacherIds = Array.from(new Set(notifications.map((n) => n.teacherId).filter((id): id is string => Boolean(id))));
   const bookingIds = Array.from(new Set(notifications.map((n) => n.bookingId).filter((id): id is string => Boolean(id))));
@@ -119,7 +108,7 @@ export default async function AdminNotificationsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Notifications" description={`${notifications.length} notification(s) • ${unreadCount} non lue(s)`} rootPage>
+      <PageHeader title="Communication" description={`${notifications.length} notification(s) actives • ${unreadCount} non lue(s)`} rootPage>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
           <Button asChild variant="outline" className="rounded-xl border-[#D9E1EF] text-[#111B4D]">
             <Link href="/admin/notifications/sante">
@@ -160,10 +149,10 @@ export default async function AdminNotificationsPage({
           </Button>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <AdminNotificationMini label="Urgentes" value={urgentCount} href="/admin/notifications?filter=urgent" danger={urgentCount > 0} />
-          <AdminNotificationMini label="Échecs" value={failedCount} href="/admin/notifications?filter=failed" danger={failedCount > 0} />
-          <AdminNotificationMini label="Professeurs" value={teacherPendingCount} href="/admin/notifications?filter=teacher" danger={teacherPendingCount > 0} />
-          <AdminNotificationMini label="Actions" value={actionRequiredCount} href="/admin/notifications?filter=unread" danger={actionRequiredCount > 0} />
+          <AdminNotificationMini label="Urgentes" value={urgentCount} href="/admin/communication?filter=urgent" danger={urgentCount > 0} />
+          <AdminNotificationMini label="Échecs" value={failedCount} href="/admin/communication?filter=failed" danger={failedCount > 0} />
+          <AdminNotificationMini label="Professeurs" value={teacherPendingCount} href="/admin/communication?filter=teacher" danger={teacherPendingCount > 0} />
+          <AdminNotificationMini label="Actions" value={actionRequiredCount} href="/admin/communication?filter=unread" danger={actionRequiredCount > 0} />
         </div>
       </section>
 
@@ -171,24 +160,13 @@ export default async function AdminNotificationsPage({
         <details data-admin-notification-campaign-composer className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <span>
-              <span className="block text-sm font-black text-[#111B4D]">Nouvelle diffusion</span>
+              <span className="block text-sm font-black text-[#111B4D]">Nouvelle communication</span>
               <span className="block text-xs font-semibold text-[#64748B]">Ouvrir seulement au moment d’envoyer.</span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
           </summary>
           <div className="border-t border-[#E2E8F0] p-3">
-            <CommunicationCampaignComposer
-              clients={clients.map((client) => ({
-                id: client.id,
-                name: client.name,
-                detail: client.email || client.phone || "Client",
-              }))}
-              teachers={campaignTeachers.map((teacher) => ({
-                id: teacher.id,
-                name: teacher.professionalName || teacher.fullName,
-                detail: [teacher.subjects[0]?.subject.name, teacher.phone].filter(Boolean).join(" · ") || "Professeur",
-              }))}
-            />
+            <CommunicationCampaignComposer />
           </div>
         </details>
       )}
@@ -197,7 +175,7 @@ export default async function AdminNotificationsPage({
         <details data-admin-notification-campaigns className="group overflow-hidden rounded-[1.15rem] border border-[#E2E8F0] bg-white shadow-sm">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
             <span>
-              <span className="block text-sm font-black text-[#111B4D]">Diffusions envoyées</span>
+              <span className="block text-sm font-black text-[#111B4D]">Campagnes de communication</span>
               <span className="block text-xs font-semibold text-[#64748B]">{campaigns.length} campagne(s) historisée(s)</span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
@@ -214,10 +192,16 @@ export default async function AdminNotificationsPage({
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#64748B]">{campaign.message}</p>
                   <p className="mt-1 text-xs text-[#64748B]">{campaign.reference} · {campaign.createdBy?.name || "Compte retiré"} · {formatDateTime(campaign.createdAt)}</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.recipientCount}</strong>Ciblés</div>
-                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.deliveredCount}</strong>Envoyés</div>
-                  <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.failedCount}</strong>Échecs</div>
+                <div className="grid gap-2">
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.recipientCount}</strong>Ciblés</div>
+                    <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.deliveredCount}</strong>Créés</div>
+                    <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.failedCount}</strong>Sans cible</div>
+                    <div className="rounded-lg border border-[#E2E8F0] px-3 py-2"><strong className="block text-base text-[#111827]">{campaign.status}</strong>Statut</div>
+                  </div>
+                  {admin.adminPermissions?.includes("COMMUNICATIONS_SEND") && (
+                    <DeleteCommunicationCampaignButton id={campaign.id} title={campaign.title} />
+                  )}
                 </div>
               </div>
             ))}
@@ -234,10 +218,10 @@ export default async function AdminNotificationsPage({
           <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B] transition group-open:rotate-180" />
         </summary>
         <div className="grid gap-3 border-t border-[#E2E8F0] p-4 sm:grid-cols-2 xl:grid-cols-5">
-          <RadarMetric icon={ShieldAlert} label="Critiques non lues" value={criticalUnreadCount} href="/admin/notifications?filter=urgent" danger={criticalUnreadCount > 0} />
-          <RadarMetric icon={UserCog} label="Professeurs" value={teacherPendingCount} href="/admin/notifications?filter=teacher" danger={teacherPendingCount > 0} />
-          <RadarMetric icon={ClipboardList} label="Remplacements" value={replacementCount} href="/admin/notifications?filter=replacement" danger={replacementCount > 0} />
-          <RadarMetric icon={ShieldAlert} label="Litiges" value={disputeCount} href="/admin/notifications?filter=litige" danger={disputeCount > 0} />
+          <RadarMetric icon={ShieldAlert} label="Critiques non lues" value={criticalUnreadCount} href="/admin/communication?filter=urgent" danger={criticalUnreadCount > 0} />
+          <RadarMetric icon={UserCog} label="Professeurs" value={teacherPendingCount} href="/admin/communication?filter=teacher" danger={teacherPendingCount > 0} />
+          <RadarMetric icon={ClipboardList} label="Remplacements" value={replacementCount} href="/admin/communication?filter=replacement" danger={replacementCount > 0} />
+          <RadarMetric icon={ShieldAlert} label="Litiges" value={disputeCount} href="/admin/communication?filter=litige" danger={disputeCount > 0} />
           <RadarMetric icon={Wallet} label="Paiements" value={paymentActionCount} href="/admin/paiements-a-liberer" danger={paymentActionCount > 0} />
         </div>
       </details>
@@ -380,7 +364,7 @@ function getNotificationRadarDecision({
       tone: "red" as const,
       title: "Traiter les alertes critiques avant le reste",
       description: "Des notifications critiques ou litiges sont ouverts. Vérifiez les réservations concernées, sécurisez le client et historisez la décision admin.",
-      href: "/admin/notifications?filter=urgent",
+      href: "/admin/communication?filter=urgent",
       actionLabel: "Voir urgences",
     };
   }
@@ -389,7 +373,7 @@ function getNotificationRadarDecision({
       tone: "red" as const,
       title: "Préparer les remplacements professeur",
       description: "Un professeur peut être indisponible, non confirmé ou soumis à un statut bloquant. Ouvrez la réservation et lancez le workflow de remplacement.",
-      href: "/admin/notifications?filter=replacement",
+      href: "/admin/communication?filter=replacement",
       actionLabel: "Voir remplacements",
     };
   }
@@ -398,7 +382,7 @@ function getNotificationRadarDecision({
       tone: "amber" as const,
       title: "Relancer les professeurs et corriger les échecs",
       description: "Des confirmations ou notifications professeur nécessitent une relance WhatsApp, un appel manuel ou un lien mission sécurisé.",
-      href: "/admin/notifications?filter=teacher",
+      href: "/admin/communication?filter=teacher",
       actionLabel: "Suivre professeurs",
     };
   }
@@ -416,7 +400,7 @@ function getNotificationRadarDecision({
       tone: "blue" as const,
       title: "Nettoyer les notifications ouvertes",
       description: "Aucune urgence critique, mais certaines notifications doivent être marquées comme traitées après vérification.",
-      href: "/admin/notifications?filter=unread",
+      href: "/admin/communication?filter=unread",
       actionLabel: "Voir non lues",
     };
   }

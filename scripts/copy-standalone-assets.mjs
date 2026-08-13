@@ -3,13 +3,15 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const standaloneNext = path.join(root, ".next", "standalone", ".next");
+const distDir = process.env.NEXT_DIST_DIR?.trim() || ".next";
+const nextOutput = path.join(root, distDir);
+const standaloneNext = path.join(nextOutput, "standalone", ".next");
 
 await mkdir(standaloneNext, { recursive: true });
 
 const copies = [
-  [path.join(root, ".next", "static"), path.join(standaloneNext, "static")],
-  [path.join(root, "public"), path.join(root, ".next", "standalone", "public")],
+  [path.join(nextOutput, "static"), path.join(standaloneNext, "static")],
+  [path.join(root, "public"), path.join(nextOutput, "standalone", "public")],
 ];
 
 for (const [from, to] of copies) {

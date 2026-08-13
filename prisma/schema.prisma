@@ -952,6 +952,7 @@ model Notification {
   readAt        DateTime?
   confirmedAt   DateTime?
   expiresAt     DateTime?
+  deletedAt     DateTime?
   response      String?
   createdAt     DateTime                  @default(now())
 
@@ -965,6 +966,8 @@ model Notification {
   @@index([teacherId])
   @@index([clientId])
   @@index([campaignId])
+  @@index([expiresAt])
+  @@index([deletedAt])
 }
 
 model CommunicationCampaign {
@@ -986,6 +989,10 @@ model CommunicationCampaign {
   startsAt        DateTime?
   expiresAt       DateTime?
   sentAt          DateTime?
+  deletedAt       DateTime?
+  dispatchPhase   String?
+  dispatchCursor  String?
+  lastDispatchAt  DateTime?
   createdById     String?
   createdAt       DateTime                    @default(now())
   updatedAt       DateTime                    @updatedAt
@@ -997,6 +1004,9 @@ model CommunicationCampaign {
   @@index([status, createdAt])
   @@index([audience, createdAt])
   @@index([createdById])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@index([status, lastDispatchAt])
 }
 
 enum CommunicationAudience {
@@ -1170,6 +1180,8 @@ model TeacherNotification {
   status     NotificationDeliveryStatus @default(SENT)
   sentById   String?
   readAt     DateTime?
+  expiresAt  DateTime?
+  deletedAt  DateTime?
   createdAt  DateTime                   @default(now())
 
   teacher  Teacher                @relation(fields: [teacherId], references: [id])
@@ -1178,6 +1190,8 @@ model TeacherNotification {
   @@index([teacherId, createdAt])
   @@index([bookingId])
   @@index([campaignId])
+  @@index([expiresAt])
+  @@index([deletedAt])
 }
 
 enum NotificationDeliveryStatus {
