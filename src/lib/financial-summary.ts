@@ -2,6 +2,7 @@ export type FinancialRescheduleLine = {
   totalToPay?: number | null;
   feeAmount?: number | null;
   paymentServiceFeeAmount?: number | null;
+  paymentProviderFeeAmount?: number | null;
   feePlatformAmount?: number | null;
   feeTeacherAmount?: number | null;
   providerFeeAmountXof?: number | null;
@@ -18,6 +19,7 @@ export type FinancialBookingLine = {
   courseAmount?: number | null;
   transportFee?: number | null;
   paymentServiceFeeAmount?: number | null;
+  paymentProviderFeeAmount?: number | null;
   commissionAmount?: number | null;
   teacherNetAmount?: number | null;
   teacherPaidAmount?: number | null;
@@ -64,8 +66,10 @@ export type PlatformFinancialSummary = {
   rescheduleFeesCollected: number;
   serviceFeesCollected: number;
   rescheduleServiceFees: number;
+  clientProviderFeesCollected: number;
   providerCollectionFees: number;
   rescheduleProviderFees: number;
+  providerFeeCoverageBalance: number;
   commissionRevenue: number;
   rescheduleCommissionRevenue: number;
   teacherNetGenerated: number;
@@ -217,6 +221,10 @@ export function buildPlatformFinancialSummary(
       (sum, line) => sum + money(line.paymentServiceFeeAmount),
       0,
     );
+    const rescheduleClientProviderFees = serviceFeeBearingReschedules.reduce(
+      (sum, line) => sum + money(line.paymentProviderFeeAmount),
+      0,
+    );
     const rescheduleProviderFees = paidReschedules.reduce((sum, line) => {
       const fees = financialProviderFeeAggregate(line);
       sum.minor += fees.providerFeeAmountMinor;
@@ -256,6 +264,8 @@ export function buildPlatformFinancialSummary(
     summary.transportCollected += money(booking.transportFee);
     summary.rescheduleFeesCollected += rescheduleFees;
     summary.baseServiceFees += money(booking.paymentServiceFeeAmount);
+    summary.baseClientProviderFees += money(booking.paymentProviderFeeAmount);
+    summary.rescheduleClientProviderFees += rescheduleClientProviderFees;
     summary.rescheduleServiceFees += rescheduleServiceFees;
     const baseProviderFees = financialProviderFeeAggregate(booking);
     summary.baseProviderFeeMinor += baseProviderFees.providerFeeAmountMinor;
@@ -287,6 +297,8 @@ export function buildPlatformFinancialSummary(
     rescheduleFeesCollected: 0,
     baseServiceFees: 0,
     rescheduleServiceFees: 0,
+    baseClientProviderFees: 0,
+    rescheduleClientProviderFees: 0,
     baseProviderFeeMinor: 0,
     baseProviderFeeLegacyXof: 0,
     rescheduleProviderFeeMinor: 0,
@@ -330,6 +342,8 @@ export function buildPlatformFinancialSummary(
   const clientGross = bookingTotals.baseClientGross + bookingTotals.rescheduleGross;
   const clientNetCollected = clientGross - bookingTotals.refundsPaid;
   const serviceFeesCollected = bookingTotals.baseServiceFees + bookingTotals.rescheduleServiceFees;
+  const clientProviderFeesCollected = bookingTotals.baseClientProviderFees
+    + bookingTotals.rescheduleClientProviderFees;
   const providerCollectionFees = bookingTotals.baseProviderFeeLegacyXof
     + bookingTotals.rescheduleProviderFeeLegacyXof
     + minorUnitsToCoveredXof(
@@ -337,6 +351,7 @@ export function buildPlatformFinancialSummary(
     );
   const rescheduleProviderFees = bookingTotals.rescheduleProviderFeeLegacyXof
     + minorUnitsToCoveredXof(bookingTotals.rescheduleProviderFeeMinor);
+  const providerFeeCoverageBalance = clientProviderFeesCollected - providerCollectionFees;
   const commissionRevenue = bookingTotals.baseCommissionRevenue + bookingTotals.rescheduleCommissionRevenue;
   const teacherNetGenerated = bookingTotals.baseTeacherNetGenerated + bookingTotals.rescheduleTeacherNetGenerated;
   const teacherBalance = teacherNetGenerated - payoutTotals.teacherPaid - teacherRetained;
@@ -352,8 +367,10 @@ export function buildPlatformFinancialSummary(
     rescheduleFeesCollected: bookingTotals.rescheduleFeesCollected,
     serviceFeesCollected,
     rescheduleServiceFees: bookingTotals.rescheduleServiceFees,
+    clientProviderFeesCollected,
     providerCollectionFees,
     rescheduleProviderFees,
+    providerFeeCoverageBalance,
     commissionRevenue,
     rescheduleCommissionRevenue: bookingTotals.rescheduleCommissionRevenue,
     teacherNetGenerated,
@@ -364,8 +381,6 @@ export function buildPlatformFinancialSummary(
     teacherRetained,
     teacherRemaining: Math.max(0, teacherBalance),
     teacherOverpaid: Math.max(0, -teacherBalance),
-    serviceFeesRemaining: serviceFeesCollected
-      - providerCollectionFees
-      - transferFeesCovered,
+    serviceFeesRemaining: serviceFeesCollected - transferFeesCovered,
   };
 }

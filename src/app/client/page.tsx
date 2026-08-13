@@ -14,7 +14,7 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
-import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { hasVerifiedClientPayment } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
   ShieldCheck, BookOpen, Bell,
@@ -80,14 +80,16 @@ export default async function ClientDashboardPage() {
     },
   });
   const totalBookings = allClientBookings.length;
-  const upcomingBookings = allClientBookings.filter((booking) => ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
-  const completedBookings = allClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;
+  const verifiedClientBookings = allClientBookings.filter(hasVerifiedClientPayment);
+  const upcomingBookings = verifiedClientBookings.filter((booking) => ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
+  const completedBookings = verifiedClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;
   const pendingValidation = allClientBookings
     .filter((booking) => booking.status === "PENDING_CLIENT_VALIDATION")
     .sort((a, b) => compareDateDesc(a.courseDoneAt ?? a.updatedAt ?? a.createdAt, b.courseDoneAt ?? b.updatedAt ?? b.createdAt))
     .slice(0, 5);
   const nextCourse = allClientBookings
     .filter((booking) => {
+      if (!hasVerifiedClientPayment(booking)) return false;
       if (!["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"].includes(booking.status)) return false;
       const nextDate = booking.scheduledDate ?? booking.startDate;
       return Boolean(nextDate && nextDate >= now);
@@ -102,7 +104,7 @@ export default async function ClientDashboardPage() {
         : "Date à confirmer"
     : null;
   const blockedFundsAmount = allClientBookings
-    .filter(hasVerifiedPayDunyaClientPayment)
+    .filter(hasVerifiedClientPayment)
     .flatMap((booking) => booking.transactions)
     .filter((transaction) => transaction.status === "BLOCKED")
     .reduce((sum, transaction) => sum + transaction.amount, 0);

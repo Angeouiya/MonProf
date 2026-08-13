@@ -8,6 +8,12 @@ import {
   resolveRescheduleSessionTarget,
   sessionMatchesRescheduleOrigin,
 } from "@/lib/reschedule-session-target";
+import {
+  assertTeacherScheduleAvailable,
+  isTeacherScheduleConflictError,
+  lockTeacherSchedule,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} from "@/lib/teacher-schedule-conflicts";
 
 const MAX_RESPONSE_LENGTH = 700;
 
@@ -113,6 +119,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
 
         if (targetSession) {
+          await lockTeacherSchedule(tx, teacher.id);
+          await assertTeacherScheduleAvailable(tx, {
+            teacherId: teacher.id,
+            excludeSessionId: targetSession.id,
+            slots: [{
+              scheduledDate: request.proposedDate,
+              scheduledTime: request.proposedTime,
+              durationMinutes: targetSession.durationMinutes,
+            }],
+          });
           const released = Boolean(targetSession.releasedAt)
             || ["RELEASED", "PARTIALLY_PAID", "PAID"].includes(targetSession.status);
           const nextStatus = targetSession.status === "PAID" && request.feeTeacherAmount > 0
@@ -253,6 +269,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return true;
       }, { isolationLevel: "Serializable" });
     } catch (error) {
+      if (isTeacherScheduleConflictError(error)) {
+        return NextResponse.json({
+          error: error.message,
+          code: TEACHER_SCHEDULE_CONFLICT_CODE,
+        }, { status: 409 });
+      }
       const code = errorCode(error);
       if (code === "JEKO_PAYOUT_DRAFT_ACTIVE") {
         return NextResponse.json({

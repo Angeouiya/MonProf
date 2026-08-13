@@ -12,6 +12,241 @@ export function FinancialOverview({
 }) {
   const serviceBalanceNegative = summary.serviceFeesRemaining < 0;
   const clientNetNegative = summary.clientNetCollected < 0;
+  const providerFeeBalanceNegative = summary.providerFeeCoverageBalance < 0;
+  const hasFinancialActivity = hasAnyAmount([
+    summary.clientGross,
+    summary.refundsPaid,
+    summary.courseRevenue,
+    summary.transportCollected,
+    summary.rescheduleFeesCollected,
+    summary.serviceFeesCollected,
+    summary.clientProviderFeesCollected,
+    summary.providerCollectionFees,
+    summary.commissionRevenue,
+    summary.teacherNetGenerated,
+    summary.teacherPaid,
+    summary.teacherRetained,
+    summary.teacherOverpaid,
+    summary.transferFeesCovered,
+  ]);
+  const providerFeeActivity = hasAnyAmount([
+    summary.clientProviderFeesCollected,
+    summary.providerCollectionFees,
+    summary.providerFeeCoverageBalance,
+  ]);
+  const providerFeeMetricValue = summary.clientProviderFeesCollected > 0
+    ? summary.clientProviderFeesCollected
+    : summary.providerCollectionFees;
+  const providerFeeMetricLabel = summary.clientProviderFeesCollected > 0
+    ? "Frais paiement Jèko"
+    : "Frais Jèko réels";
+  const providerFeeMetricDetail = summary.clientProviderFeesCollected > 0
+    ? "Payés séparément par le client"
+    : "Frais prestataire à rapprocher";
+  const serviceFeeActivity = hasAnyAmount([
+    summary.serviceFeesCollected,
+    summary.transferFeesCovered,
+    summary.serviceFeesRemaining,
+  ]);
+  const rescheduleActivity = hasAnyAmount([
+    summary.rescheduleGross,
+    summary.rescheduleFeesCollected,
+    summary.rescheduleServiceFees,
+    summary.rescheduleProviderFees,
+    summary.rescheduleCommissionRevenue,
+    summary.rescheduleTeacherNetGenerated,
+  ]);
+  const teacherSettlementActivity = hasAnyAmount([
+    summary.teacherNetGenerated,
+    summary.teacherPaid,
+    summary.teacherRetained,
+    summary.teacherRemaining,
+    summary.teacherOverpaid,
+  ]);
+  const primaryMetrics = [
+    {
+      key: "course",
+      show: summary.courseRevenue > 0,
+      icon: Banknote,
+      label: "Cours",
+      value: summary.courseRevenue,
+      detail: "Prestations hors suppléments",
+      tone: "navy" as const,
+    },
+    {
+      key: "transport",
+      show: summary.transportCollected > 0,
+      icon: Car,
+      label: "Transport",
+      value: summary.transportCollected,
+      detail: "Collecté selon chaque trajet",
+      tone: "blue" as const,
+    },
+    {
+      key: "commission",
+      show: summary.commissionRevenue > 0,
+      icon: BadgePercent,
+      label: "Commission",
+      value: summary.commissionRevenue,
+      detail: "Cours et reports, comptés une fois",
+      tone: "green" as const,
+    },
+    {
+      key: "service",
+      show: summary.serviceFeesCollected > 0,
+      icon: WalletCards,
+      label: "Frais de service (3 %)",
+      value: summary.serviceFeesCollected,
+      detail: "Distincts des frais Jèko",
+      tone: "violet" as const,
+    },
+    {
+      key: "jeko-client",
+      show: providerFeeMetricValue > 0,
+      icon: WalletCards,
+      label: providerFeeMetricLabel,
+      value: providerFeeMetricValue,
+      detail: providerFeeMetricDetail,
+      tone: "blue" as const,
+    },
+  ].filter((metric) => metric.show);
+  const teacherAmounts: TeacherAmountItem[] = [
+    { key: "generated", label: "Net généré", value: summary.teacherNetGenerated, show: summary.teacherNetGenerated > 0 },
+    { key: "paid", label: "Déjà versé", value: summary.teacherPaid, show: summary.teacherPaid > 0 },
+    {
+      key: "retained",
+      label: "Retenues appliquées",
+      value: summary.teacherRetained,
+      show: summary.teacherRetained > 0,
+      retained: true,
+    },
+    {
+      key: "remaining",
+      label: "Reste à verser",
+      value: summary.teacherRemaining,
+      show: summary.teacherRemaining > 0,
+      emphasized: true,
+    },
+    {
+      key: "overpaid",
+      label: "Surpaiement à régulariser",
+      value: summary.teacherOverpaid,
+      show: summary.teacherOverpaid > 0,
+      retained: true,
+    },
+  ].filter((item) => item.show);
+  const controlRows: FinancialControlRowItem[] = [
+    {
+      label: "Encaissement brut clients",
+      kind: "Encaissement",
+      detail: "Réservations + suppléments de report confirmés",
+      value: summary.clientGross,
+      required: hasFinancialActivity,
+    },
+    {
+      label: "Remboursements exécutés",
+      kind: "Sortie client",
+      detail: "Transactions REFUND réellement finalisées",
+      value: summary.refundsPaid,
+      tone: "cost",
+    },
+    {
+      label: "Encaissement net clients",
+      kind: "Trésorerie nette",
+      detail: "Encaissement brut moins remboursements exécutés",
+      value: summary.clientNetCollected,
+      tone: clientNetNegative ? "warning" : "primary",
+      strong: true,
+      required: hasFinancialActivity,
+    },
+    { label: "Prestations de cours", kind: "Activité", detail: "Valeur des cours confirmés", value: summary.courseRevenue },
+    { label: "Transport collecté", kind: "Transit professeur", detail: "Déplacements calculés par trajet", value: summary.transportCollected },
+    { label: "Frais de service collectés", kind: "Couverture technique", detail: "3 % facturés au client", value: summary.serviceFeesCollected, tone: "positive" },
+    {
+      label: "Frais paiement Jèko facturés",
+      kind: "Pass-through client",
+      detail: "Frais du moyen choisi, séparés du service 3 %",
+      value: summary.clientProviderFeesCollected,
+      tone: "positive",
+      showWhen: providerFeeActivity,
+    },
+    {
+      label: "Frais d'encaissement Jèko réels",
+      kind: "Rapprochement Jèko",
+      detail: "Frais réels retournés par Jèko",
+      value: summary.providerCollectionFees,
+      tone: "cost",
+      showWhen: providerFeeActivity,
+    },
+    {
+      label: "Solde frais paiement Jèko",
+      kind: "Solde Jèko",
+      detail: "Facturé client moins frais réel Jèko",
+      value: summary.providerFeeCoverageBalance,
+      tone: providerFeeBalanceNegative ? "warning" : "positive",
+      strong: true,
+      showWhen: providerFeeActivity,
+    },
+    { label: "Frais de retrait couverts", kind: "Coût Compétence", detail: "Jamais déduits du retrait professeur", value: summary.transferFeesCovered, tone: "cost" },
+    {
+      label: "Solde frais de service",
+      kind: "Solde",
+      detail: "Service 3 % moins frais de retrait couverts",
+      value: summary.serviceFeesRemaining,
+      tone: serviceBalanceNegative ? "warning" : "positive",
+      strong: true,
+      showWhen: serviceFeeActivity,
+    },
+    { label: "Commission Compétence", kind: "Revenu plateforme", detail: "Commission distincte des frais de service", value: summary.commissionRevenue, tone: "positive", strong: true },
+    { label: "Net professeur généré", kind: "Dette professeur", detail: "Cours, transport et suppléments acquis", value: summary.teacherNetGenerated },
+    { label: "Net professeur versé", kind: "Décaissé", detail: "Retraits Jèko confirmés", value: summary.teacherPaid },
+    { label: "Retenues professeur appliquées", kind: "Retenue validée", detail: "Ajustements APPLIED, distincts des versements", value: summary.teacherRetained, tone: "cost" },
+    {
+      label: "Net professeur restant",
+      kind: "À verser",
+      detail: "Net généré moins versements et retenues",
+      value: summary.teacherRemaining,
+      tone: "primary",
+      strong: true,
+    },
+    {
+      label: "Surpaiement professeur",
+      kind: "Anomalie",
+      detail: "Versements et retenues au-delà du net généré",
+      value: summary.teacherOverpaid,
+      tone: "warning",
+      strong: true,
+    },
+  ];
+  const visibleControlRows = controlRows.filter((row) => row.required || row.showWhen || row.value !== 0);
+  const headerAmounts: HeaderAmountItem[] = [
+    {
+      key: "gross",
+      show: hasFinancialActivity,
+      label: "Brut encaissé",
+      value: summary.clientGross,
+      detail: summary.rescheduleGross > 0
+        ? `Base ${formatFCFA(summary.baseClientGross)} · reports ${formatFCFA(summary.rescheduleGross)}`
+        : `Base ${formatFCFA(summary.baseClientGross)}`,
+    },
+    {
+      key: "refunds",
+      show: summary.refundsPaid > 0,
+      label: "Remboursé",
+      value: summary.refundsPaid,
+      detail: "Remboursements exécutés",
+      tone: "refund" as const,
+    },
+    {
+      key: "net",
+      show: hasFinancialActivity,
+      label: "Net encaissé",
+      value: summary.clientNetCollected,
+      detail: "Brut moins remboursements",
+      tone: clientNetNegative ? "warning" as const : "net" as const,
+      emphasized: true,
+    },
+  ].filter((amount) => amount.show);
 
   return (
     <section aria-labelledby="financial-overview-title" className="overflow-hidden rounded-xl border border-[#C7D2FE] bg-white shadow-sm">
@@ -25,47 +260,70 @@ export function FinancialOverview({
           <p className="mt-2 text-xs font-bold uppercase tracking-wide text-[#A5B4FC]">Périmètre : toutes les opérations vérifiées, toutes périodes</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <HeaderAmount label="Brut encaissé" value={summary.clientGross} detail={`Base ${formatFCFA(summary.baseClientGross)} · reports ${formatFCFA(summary.rescheduleGross)}`} />
-          <HeaderAmount label="Remboursé" value={summary.refundsPaid} detail="Remboursements exécutés" tone="refund" />
-          <HeaderAmount
-            label="Net encaissé"
-            value={summary.clientNetCollected}
-            detail="Brut moins remboursements"
-            tone={clientNetNegative ? "warning" : "net"}
-            emphasized
-          />
+          {headerAmounts.length > 0 ? (
+            headerAmounts.map((amount) => (
+              <HeaderAmount
+                key={amount.key}
+                label={amount.label}
+                value={amount.value}
+                detail={amount.detail}
+                tone={amount.tone}
+                emphasized={amount.emphasized}
+              />
+            ))
+          ) : (
+            <div className="col-span-2 rounded-xl border border-white/20 bg-white/10 px-3 py-3 text-sm font-semibold leading-5 text-white/75 sm:col-span-3">
+              Aucun paiement vérifié côté serveur pour le moment.
+            </div>
+          )}
         </div>
       </div>
 
-      <div className={cn("grid gap-3 p-4 sm:p-5", compact ? "md:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-4")}>
-        <FinancialMetric icon={Banknote} label="Cours" value={summary.courseRevenue} detail="Prestations hors suppléments" tone="navy" />
-        <FinancialMetric icon={Car} label="Transport" value={summary.transportCollected} detail="Collecté selon chaque trajet" tone="blue" />
-        <FinancialMetric icon={BadgePercent} label="Commission" value={summary.commissionRevenue} detail="Cours et reports, comptés une fois" tone="green" />
-        <FinancialMetric icon={WalletCards} label="Frais de service (3 %)" value={summary.serviceFeesCollected} detail="Distincts des frais Jèko" tone="violet" />
-      </div>
-
-      <div className="border-t border-[#E0E7FF] bg-[#EEF2FF] p-4 sm:p-5">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#3730A3]">Suppléments de report confirmés</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
-              Les encaissements, frais, commissions et parts professeurs des changements de créneau sont isolés puis inclus une seule fois dans les totaux ci-dessus.
-            </p>
+      <div className={cn("grid gap-3 p-4 sm:p-5", compact ? "md:grid-cols-3" : "sm:grid-cols-2 xl:grid-cols-5")}>
+        {primaryMetrics.length > 0 ? (
+          primaryMetrics.map((metric) => (
+            <FinancialMetric
+              key={metric.key}
+              icon={metric.icon}
+              label={metric.label}
+              value={metric.value}
+              detail={metric.detail}
+              tone={metric.tone}
+            />
+          ))
+        ) : (
+          <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 text-sm font-semibold leading-6 text-[#475569] sm:col-span-2 xl:col-span-5">
+            Aucune opération financière confirmée pour le moment. Les cartes chiffrées apparaîtront dès qu'un paiement vérifié existe.
           </div>
-          <p className="text-lg font-black tabular-nums text-[#111B4D]">{formatFCFA(summary.rescheduleGross)}</p>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          <ReportAmount label="Total encaissé" value={summary.rescheduleGross} strong />
-          <ReportAmount label="Frais de report" value={summary.rescheduleFeesCollected} />
-          <ReportAmount label="Service 3 %" value={summary.rescheduleServiceFees} />
-          <ReportAmount label="Frais Jèko" value={summary.rescheduleProviderFees} muted />
-          <ReportAmount label="Commission" value={summary.rescheduleCommissionRevenue} />
-          <ReportAmount label="Net professeur" value={summary.rescheduleTeacherNetGenerated} strong />
-        </div>
+        )}
       </div>
 
-      <div className="grid gap-4 border-t border-[#E0E7FF] bg-[#F8FAFF] p-4 sm:p-5 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="rounded-xl border border-[#C7D2FE] bg-white p-4">
+      {rescheduleActivity && (
+        <div className="border-t border-[#E0E7FF] bg-[#EEF2FF] p-4 sm:p-5">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#3730A3]">Suppléments de report confirmés</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                Les encaissements, frais, commissions et parts professeurs des changements de créneau sont isolés puis inclus une seule fois dans les totaux ci-dessus.
+              </p>
+            </div>
+            <p className="text-lg font-black tabular-nums text-[#111B4D]">{formatFCFA(summary.rescheduleGross)}</p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            <ReportAmount label="Total encaissé" value={summary.rescheduleGross} strong />
+            {summary.rescheduleFeesCollected > 0 && <ReportAmount label="Frais de report" value={summary.rescheduleFeesCollected} />}
+            {summary.rescheduleServiceFees > 0 && <ReportAmount label="Service 3 %" value={summary.rescheduleServiceFees} />}
+            {summary.rescheduleProviderFees > 0 && <ReportAmount label="Frais Jèko" value={summary.rescheduleProviderFees} muted />}
+            {summary.rescheduleCommissionRevenue > 0 && <ReportAmount label="Commission" value={summary.rescheduleCommissionRevenue} />}
+            {summary.rescheduleTeacherNetGenerated > 0 && <ReportAmount label="Net professeur" value={summary.rescheduleTeacherNetGenerated} strong />}
+          </div>
+        </div>
+      )}
+
+      {(serviceFeeActivity || providerFeeActivity || teacherSettlementActivity) && (
+        <div className="grid gap-4 border-t border-[#E0E7FF] bg-[#F8FAFF] p-4 sm:p-5 xl:grid-cols-[1fr_1fr]">
+          {serviceFeeActivity && (
+            <div className="rounded-xl border border-[#C7D2FE] bg-white p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Solde des frais de service</p>
@@ -82,22 +340,53 @@ export function FinancialOverview({
               {serviceBalanceNegative ? "Coût absorbé par Compétence" : "Reste après frais techniques"}
             </span>
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] sm:items-center">
+          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
             <FormulaAmount label="Service 3 %" value={summary.serviceFeesCollected} positive />
             <ArrowRight aria-hidden className="hidden h-4 w-4 text-[#94A3B8] sm:block" />
-            <FormulaAmount label="Encaissement Jèko" value={summary.providerCollectionFees} />
-            <ArrowRight aria-hidden className="hidden h-4 w-4 text-[#94A3B8] sm:block" />
-            <FormulaAmount label="Retraits couverts" value={summary.transferFeesCovered} />
+            <FormulaAmount label="Retraits couverts" value={summary.transferFeesCovered} zeroLabel="—" />
             <ArrowRight aria-hidden className="hidden h-4 w-4 text-[#94A3B8] sm:block" />
             <FormulaAmount label="Solde" value={summary.serviceFeesRemaining} result />
           </div>
           <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-            Formule : frais de service collectés − frais d'encaissement Jèko − frais de transfert professeur pris en charge par Compétence.
+            Formule : frais de service collectés − frais de transfert professeur pris en charge par Compétence.
             Les frais de transfert confirmés par Jèko restent comptés même lorsqu'une tentative échoue, sans débiter le professeur.
           </p>
-        </div>
+            </div>
+          )}
 
-        <div className="rounded-xl border border-[#C7D2FE] bg-white p-4">
+          {providerFeeActivity && (
+            <div className="rounded-xl border border-[#C7D2FE] bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Couverture frais paiement Jèko</p>
+              <p className={cn("mt-1 text-2xl font-black tabular-nums", providerFeeBalanceNegative ? "text-red-700" : "text-emerald-700")}>
+                {formatFCFA(summary.providerFeeCoverageBalance)}
+              </p>
+            </div>
+            <span className={cn(
+              "rounded-full border px-3 py-1 text-xs font-bold",
+              providerFeeBalanceNegative
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700",
+            )}>
+              {providerFeeBalanceNegative ? "Écart à absorber" : "Frais Jèko couverts"}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+            <FormulaAmount label="Facturé client" value={summary.clientProviderFeesCollected} positive zeroLabel="Non isolé" />
+            <ArrowRight aria-hidden className="hidden h-4 w-4 text-[#94A3B8] sm:block" />
+            <FormulaAmount label="Réel Jèko" value={summary.providerCollectionFees} zeroLabel="—" />
+            <ArrowRight aria-hidden className="hidden h-4 w-4 text-[#94A3B8] sm:block" />
+            <FormulaAmount label="Solde" value={summary.providerFeeCoverageBalance} result />
+          </div>
+          <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
+            Les frais de paiement Jèko sont facturés au client selon le moyen choisi. Ils ne remplacent jamais les 3 % de service Compétence.
+          </p>
+            </div>
+          )}
+
+          {teacherSettlementActivity && (
+            <div className="rounded-xl border border-[#C7D2FE] bg-white p-4">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EEF2FF] text-[#3730A3]">
               <Landmark className="h-5 w-5" />
@@ -108,17 +397,23 @@ export function FinancialOverview({
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 xl:grid-cols-5">
-            <TeacherAmount label="Net généré" value={summary.teacherNetGenerated} />
-            <TeacherAmount label="Déjà versé" value={summary.teacherPaid} />
-            <TeacherAmount label="Retenues appliquées" value={summary.teacherRetained} retained />
-            <TeacherAmount label="Reste à verser" value={summary.teacherRemaining} emphasized />
-            <TeacherAmount label="Surpaiement à régulariser" value={summary.teacherOverpaid} retained={summary.teacherOverpaid > 0} />
+            {teacherAmounts.map((item) => (
+              <TeacherAmount
+                key={item.key}
+                label={item.label}
+                value={item.value}
+                emphasized={item.emphasized}
+                retained={item.retained}
+              />
+            ))}
           </div>
           <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">
             Calcul : net généré − versements confirmés − retenues validées. Dont pénalités réelles dues après annulation : {formatFCFA(summary.cancellationTeacherNetGenerated)}.
           </p>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       <div className="border-t border-[#C7D2FE] bg-white p-4 sm:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -142,27 +437,57 @@ export function FinancialOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E6EAF3] bg-white">
-              <FinancialControlRow label="Encaissement brut clients" kind="Encaissement" detail="Réservations + suppléments de report confirmés" value={summary.clientGross} />
-              <FinancialControlRow label="Remboursements exécutés" kind="Sortie client" detail="Transactions REFUND réellement finalisées" value={summary.refundsPaid} tone="cost" />
-              <FinancialControlRow label="Encaissement net clients" kind="Trésorerie nette" detail="Encaissement brut moins remboursements exécutés" value={summary.clientNetCollected} tone={clientNetNegative ? "warning" : "primary"} strong />
-              <FinancialControlRow label="Prestations de cours" kind="Activité" detail="Valeur des cours confirmés" value={summary.courseRevenue} />
-              <FinancialControlRow label="Transport collecté" kind="Transit professeur" detail="Déplacements calculés par trajet" value={summary.transportCollected} />
-              <FinancialControlRow label="Frais de service collectés" kind="Couverture technique" detail="3 % facturés au client" value={summary.serviceFeesCollected} tone="positive" />
-              <FinancialControlRow label="Frais d'encaissement Jèko" kind="Coût Compétence" detail="Frais réels retournés par Jèko" value={summary.providerCollectionFees} tone="cost" />
-              <FinancialControlRow label="Frais de retrait couverts" kind="Coût Compétence" detail="Jamais déduits du retrait professeur" value={summary.transferFeesCovered} tone="cost" />
-              <FinancialControlRow label="Solde frais de service" kind="Solde" detail="Service 3 % moins les deux coûts Jèko" value={summary.serviceFeesRemaining} tone={serviceBalanceNegative ? "warning" : "positive"} strong />
-              <FinancialControlRow label="Commission Compétence" kind="Revenu plateforme" detail="Commission distincte des frais de service" value={summary.commissionRevenue} tone="positive" strong />
-              <FinancialControlRow label="Net professeur généré" kind="Dette professeur" detail="Cours, transport et suppléments acquis" value={summary.teacherNetGenerated} />
-              <FinancialControlRow label="Net professeur versé" kind="Décaissé" detail="Retraits Jèko confirmés" value={summary.teacherPaid} />
-              <FinancialControlRow label="Retenues professeur appliquées" kind="Retenue validée" detail="Ajustements APPLIED, distincts des versements" value={summary.teacherRetained} tone="cost" />
-              <FinancialControlRow label="Net professeur restant" kind="À verser" detail="Net généré moins versements et retenues" value={summary.teacherRemaining} tone="primary" strong />
-              <FinancialControlRow label="Surpaiement professeur" kind="Anomalie" detail="Versements et retenues au-delà du net généré" value={summary.teacherOverpaid} tone={summary.teacherOverpaid > 0 ? "warning" : "positive"} strong />
+              {visibleControlRows.map((row) => (
+                <FinancialControlRow
+                  key={row.label}
+                  label={row.label}
+                  kind={row.kind}
+                  detail={row.detail}
+                  value={row.value}
+                  tone={row.tone}
+                  strong={row.strong}
+                />
+              ))}
             </tbody>
           </table>
         </div>
       </div>
     </section>
   );
+}
+
+type FinancialControlRowItem = {
+  label: string;
+  kind: string;
+  detail: string;
+  value: number;
+  tone?: "neutral" | "primary" | "positive" | "cost" | "warning";
+  strong?: boolean;
+  required?: boolean;
+  showWhen?: boolean;
+};
+
+type TeacherAmountItem = {
+  key: string;
+  label: string;
+  value: number;
+  show: boolean;
+  emphasized?: boolean;
+  retained?: boolean;
+};
+
+type HeaderAmountItem = {
+  key: string;
+  show: boolean;
+  label: string;
+  value: number;
+  detail: string;
+  tone?: "neutral" | "refund" | "net" | "warning";
+  emphasized?: boolean;
+};
+
+function hasAnyAmount(values: number[]) {
+  return values.some((value) => value !== 0);
 }
 
 function FinancialControlRow({
@@ -232,11 +557,25 @@ function FinancialMetric({
   );
 }
 
-function FormulaAmount({ label, value, positive = false, result = false }: { label: string; value: number; positive?: boolean; result?: boolean }) {
+function FormulaAmount({
+  label,
+  value,
+  positive = false,
+  result = false,
+  zeroLabel,
+}: {
+  label: string;
+  value: number;
+  positive?: boolean;
+  result?: boolean;
+  zeroLabel?: string;
+}) {
+  const displayValue = zeroLabel && value === 0 ? zeroLabel : formatFCFA(value);
+
   return (
     <div className={cn("rounded-lg border px-3 py-2", result ? "border-[#818CF8] bg-[#EEF2FF]" : "border-[#E2E8F0] bg-white")}>
       <p className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{positive ? "+ " : result ? "= " : "− "}{label}</p>
-      <p className="mt-1 text-sm font-black tabular-nums text-[#111827]">{formatFCFA(value)}</p>
+      <p className="mt-1 text-sm font-black tabular-nums text-[#111827]">{displayValue}</p>
     </div>
   );
 }

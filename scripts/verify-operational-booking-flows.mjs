@@ -11,6 +11,10 @@ const {
   resolveBookingScheduleSummary,
   resolveRescheduleSessionTarget,
 } = jiti("../src/lib/reschedule-session-target.ts");
+const {
+  scheduleSlotsOverlap,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} = jiti("../src/lib/teacher-schedule-conflicts.ts");
 
 const checks = [];
 const legacyForbiddenStorePattern = new RegExp([
@@ -61,8 +65,15 @@ const jekoReconciliation = read("src/lib/jeko-reconciliation.ts");
 const paydunyaReconciliation = read("src/lib/paydunya-reconciliation.ts");
 const clientReservationDetail = read("src/app/client/reservations/[id]/page.tsx");
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
+const clientCoursesPage = read("src/app/client/cours/page.tsx");
+const clientDashboardPage = read("src/app/client/page.tsx");
 const professorMissionDetail = read("src/app/professeur/(espace)/missions/[id]/page.tsx");
 const professorMissionList = read("src/app/professeur/(espace)/missions/page.tsx");
+const paymentProvider = read("src/lib/payment-provider.ts");
+const jekoBookingPaymentRoute = read("src/app/api/bookings/[id]/jeko-payment/route.ts");
+const scheduleConflicts = read("src/lib/teacher-schedule-conflicts.ts");
+const adminBookingRoute = read("src/app/api/admin/bookings/[id]/route.ts");
+const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -174,6 +185,39 @@ record(
     && /paymentProviderLabel="Jèko"/.test(bookingForm)
     && /Payer via Jèko/.test(bookingForm)
     && !/Payer via PayDunya/.test(bookingForm),
+);
+
+record(
+  "Paid Jèko teacher slots are locked before checkout and at webhook confirmation",
+  TEACHER_SCHEDULE_CONFLICT_CODE === "TEACHER_SLOT_ALREADY_RESERVED"
+    && verifyTeacherScheduleConflictScenarios()
+    && /SCHEDULE_BLOCKING_BOOKING_STATUSES[\s\S]*?"PAID"[\s\S]*?"PENDING_CLIENT_VALIDATION"/.test(scheduleConflicts)
+    && /paymentProvider:\s*"JEKO"[\s\S]*?providerPaymentStatus:\s*"SUCCESS"[\s\S]*?paymentVerifiedAt:\s*\{\s*not:\s*null\s*\}/.test(scheduleConflicts)
+    && /transactions:\s*\{\s*some:\s*\{[\s\S]*?type:\s*"CLIENT_PAYMENT"[\s\S]*?amount:\s*\{\s*gt:\s*0\s*\}/.test(scheduleConflicts)
+    && /findTeacherScheduleConflict\(db,\s*\{[\s\S]*?TEACHER_SCHEDULE_CONFLICT_CODE/.test(bookingCreateApi)
+    && /lockTeacherSchedule\(tx,\s*booking\.teacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?bookingId:\s*booking\.id/.test(paymentProvider)
+    && /isTeacherScheduleConflictError\(error\)[\s\S]*?TEACHER_SCHEDULE_CONFLICT_CODE/.test(jekoBookingPaymentRoute)
+    && /findTeacherScheduleConflictForBooking\(tx,\s*current\.booking\.id[\s\S]*?REFUND_PENDING[\s\S]*?Créneau déjà réservé/.test(jekoReconciliation)
+    && /Paiement Jèko reçu sur créneau déjà réservé/.test(jekoReconciliation),
+);
+
+record(
+  "Reschedules and replacements cannot assign an already paid teacher slot",
+  /lockTeacherSchedule\(tx,\s*rescheduleTeacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?parsedReschedule\.slotLabel/.test(bookingApi)
+    && /lockTeacherSchedule\(tx,\s*current\.teacherId\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?courseSession\.proposedTime/.test(bookingSessionRoute)
+    && /lockTeacherSchedule\(tx,\s*teacher\.id\)[\s\S]*?assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?request\.proposedTime/.test(professorRescheduleRoute)
+    && /assertTeacherScheduleAvailable\(tx,\s*\{[\s\S]*?teacherId:\s*newTeacherId[\s\S]*?currentSessions\.map/.test(adminBookingRoute)
+    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsOverlap/.test(replacementEngine)
+    && /bookingSessions:\s*\{[\s\S]*?paymentProvider:\s*"JEKO"[\s\S]*?scheduleSlotsOverlap/.test(adminReplacementSuggestions),
+);
+
+record(
+  "Paid Jèko bookings are visible in client courses immediately after webhook",
+  /statuses:\s*\["PAID",\s*"CONFIRMED",\s*"ASSIGNED",\s*"IN_PROGRESS",\s*"PENDING_ADMIN_VALIDATION",\s*"PAYMENT_TO_RELEASE"\]/.test(clientCoursesPage)
+    && /verifiedClientPaymentBookingWhere/.test(clientCoursesPage)
+    && /hasVerifiedClientPayment/.test(clientCoursesPage)
+    && /"PAID",\s*"PENDING_ADMIN_VALIDATION",\s*"CONFIRMED",\s*"ASSIGNED",\s*"IN_PROGRESS"/.test(clientDashboardPage)
+    && /const verifiedClientBookings\s*=\s*allClientBookings\.filter\(hasVerifiedClientPayment\)/.test(clientDashboardPage),
 );
 
 record(
@@ -719,6 +763,27 @@ function verifyRescheduleSessionTargetScenarios() {
     && !isReschedulableBookingSessionStatus("PARTIALLY_PAID")
     && !isReschedulableBookingSessionStatus("PAID")
     && !isReschedulableBookingSessionStatus("DISPUTED");
+}
+
+function verifyTeacherScheduleConflictScenarios() {
+  const date = new Date("2026-08-20T00:00:00.000Z");
+  const nextDay = new Date("2026-08-21T00:00:00.000Z");
+  return scheduleSlotsOverlap(
+    { scheduledDate: date, scheduledTime: "Lundi 08h00 - 10h00", durationMinutes: 120 },
+    { scheduledDate: date, scheduledTime: "08h-10h", durationMinutes: 120 },
+  )
+    && scheduleSlotsOverlap(
+      { scheduledDate: date, scheduledTime: "09:00 - 11:00", durationMinutes: 120 },
+      { scheduledDate: date, scheduledTime: "10h-12h", durationMinutes: 120 },
+    )
+    && !scheduleSlotsOverlap(
+      { scheduledDate: date, scheduledTime: "08h-10h", durationMinutes: 120 },
+      { scheduledDate: date, scheduledTime: "10h-12h", durationMinutes: 120 },
+    )
+    && !scheduleSlotsOverlap(
+      { scheduledDate: date, scheduledTime: "08h-10h", durationMinutes: 120 },
+      { scheduledDate: nextDay, scheduledTime: "08h-10h", durationMinutes: 120 },
+    );
 }
 
 function verifyBookingScheduleSummaryScenarios() {

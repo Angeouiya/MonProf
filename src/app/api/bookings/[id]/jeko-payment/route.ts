@@ -14,6 +14,7 @@ import { isAllowedJekoRedirectUrl } from "@/lib/jeko-utils";
 import { createJekoBookingCheckout } from "@/lib/payment-provider";
 import { absoluteAppUrl } from "@/lib/public-url";
 import { getSessionUser, type SessionUser } from "@/lib/session";
+import { isTeacherScheduleConflictError, TEACHER_SCHEDULE_CONFLICT_CODE } from "@/lib/teacher-schedule-conflicts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +55,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
   const parsedBody = parseJekoCheckoutBody(body);
   if (!parsedBody.ok) return apiJson({ error: parsedBody.error }, 400);
+  const bookingPaymentMethod = platformMethodToJeko(booking.paymentMethod);
+  if (bookingPaymentMethod && bookingPaymentMethod !== parsedBody.paymentMethod) {
+    return apiJson({
+      error: "Ce dossier a été calculé avec un autre moyen Jèko. Rechargez la réservation pour recalculer les frais de paiement avant de continuer.",
+      code: "PAYMENT_METHOD_PRICE_MISMATCH",
+    }, 409);
+  }
 
   const config = getJekoServerConfig();
   if (!config) {
@@ -338,6 +346,7 @@ async function findOwnedBooking(bookingId: string, clientId: string) {
       totalClientPays: true,
       totalPrice: true,
       pricingSnapshot: true,
+      paymentMethod: true,
     },
   });
 }
@@ -374,6 +383,15 @@ function publicAttempt(attempt: {
 }
 
 function publicJekoError(error: unknown) {
+  if (isTeacherScheduleConflictError(error)) {
+    return {
+      status: 409,
+      body: {
+        error: error.message,
+        code: TEACHER_SCHEDULE_CONFLICT_CODE,
+      },
+    };
+  }
   if (error instanceof JekoApiError) {
     return {
       status: error.httpStatus >= 500 ? 503 : 502,

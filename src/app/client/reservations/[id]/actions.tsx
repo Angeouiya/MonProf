@@ -199,7 +199,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
           badge="Paiement sécurisé"
           notices={[
             `Aucune réservation n'est confirmée sans paiement ${providerLabel} vérifié côté serveur.`,
-            "Le montant affiché inclut les frais de service du moyen de paiement.",
+            "Le montant affiché inclut les frais de service Compétence et les frais de paiement Jèko séparés.",
             "Après paiement, revenez sur ce dossier pour suivre la validation du service client.",
           ]}
           confirmLabel={loading === paymentActionKey ? "Ouverture..." : `Payer via ${providerLabel}`}
@@ -543,7 +543,8 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const paidAmount = paymentVerified ? booking.transactions
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0) : 0;
-  const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount });
+  const paymentProviderFeeAmount = readPaymentProviderFeeAmount(booking.pricingSnapshot);
+  const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount, paymentProviderFeeAmount });
   const reschedulePolicy = useMemo(() => getReschedulePolicy(selectedRescheduleSession
     ? {
         unitPrice: selectedRescheduleSession.courseAmount,
@@ -1080,7 +1081,10 @@ export function BookingActions({ booking }: BookingActionsProps) {
                   <ul className="mt-2 space-y-2">
                     <li>La réservation est arrêtée et le service client reçoit une notification pour contrôler le dossier.</li>
                     <li>Le professeur est informé qu'il ne doit pas se présenter sans nouvelle instruction.</li>
-                    <li>Les frais de service du moyen de paiement ne sont pas remboursés : {formatFCFA(cancellationPolicy.serviceFeeAmount)}.</li>
+                    <li>Les frais de service Compétence ne sont pas remboursés : {formatFCFA(cancellationPolicy.serviceFeeAmount)}.</li>
+                    {cancellationPolicy.paymentProviderFeeAmount > 0 && (
+                      <li>Les frais de paiement Jèko du moyen choisi sont traités séparément : {formatFCFA(cancellationPolicy.paymentProviderFeeAmount)}.</li>
+                    )}
                     {cancellationPolicy.refundAmount > 0 ? (
                       <li>Après annulation, vous devrez renseigner le moyen, le numéro et le titulaire du compte de remboursement.</li>
                     ) : (
@@ -1119,7 +1123,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
                     className="mt-0.5"
                   />
                   <span className="leading-5 text-[#475569]">
-                    Je comprends les règles d'annulation, les frais éventuels, le remboursement estimé et le fait que les frais de service paiement ne sont pas remboursés.
+                    Je comprends les règles d'annulation, les frais éventuels, le remboursement estimé et le fait que les frais de service Compétence ne sont pas remboursés.
                   </span>
                 </label>
               </div>
@@ -1248,6 +1252,17 @@ export function BookingActions({ booking }: BookingActionsProps) {
       </div>
     </details>
   );
+}
+
+function readPaymentProviderFeeAmount(snapshot?: string | null) {
+  if (!snapshot) return 0;
+  try {
+    const parsed = JSON.parse(snapshot) as { paymentProviderFeeAmount?: unknown };
+    const amount = Number(parsed.paymentProviderFeeAmount ?? 0);
+    return Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 function refundStatusLabel(status: string) {

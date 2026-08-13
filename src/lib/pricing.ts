@@ -4,6 +4,7 @@ import {
   PAYMENT_SERVICE_FEE_RATE_BPS,
   paymentServiceFeeDescription,
 } from "@/lib/payment-service-fees";
+import { calculateJekoClientPaymentFee } from "@/lib/jeko-client-payment-fees";
 import { ABIDJAN_COMMUNES } from "@/lib/ivory-coast-locations";
 import { isProfessionalLevelSelection } from "@/lib/course-catalog";
 
@@ -316,6 +317,7 @@ export type BookingPricingInput = PricingDerivationInput & {
   clientQuartier?: string | null;
   materialFee?: number;
   platformCommissionPercent?: number;
+  paymentMethod?: string | null;
   transportFeeAmounts?: Partial<TransportFeeAmounts>;
   grandAbidjanCommuneNames?: string[];
   clientCommuneTransportFeeOverride?: number | null;
@@ -360,6 +362,13 @@ export type BookingPricingSnapshot = {
   paymentServiceFeeRate: number;
   paymentServiceFeeAmount: number;
   paymentServiceFeeLabel: string;
+  totalBeforePaymentProviderFee: number;
+  paymentProviderFeeRate: number;
+  paymentProviderFeeAmount: number;
+  paymentProviderFixedFeeAmount: number;
+  paymentProviderFeeLabel: string;
+  paymentProviderFeeMethod: string | null;
+  paymentProviderFeeMethodLabel: string | null;
   totalClientPays: number;
   totalTeacherReceives: number;
   packKey: string;
@@ -1074,7 +1083,9 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const paymentServiceFeeBaseAmount = courseAmount + transportFee;
   const totalBeforePaymentServiceFee = paymentServiceFeeBaseAmount + materialFee;
   const paymentServiceFeeAmount = calculatePaymentServiceFee(paymentServiceFeeBaseAmount);
-  const totalClientPays = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
+  const totalBeforePaymentProviderFee = totalBeforePaymentServiceFee + paymentServiceFeeAmount;
+  const paymentProviderFee = calculateJekoClientPaymentFee(totalBeforePaymentProviderFee, input.paymentMethod);
+  const totalClientPays = totalBeforePaymentProviderFee + paymentProviderFee.amount;
   const totalTeacherReceives = teacherPayoutAmount + transportFee;
 
   return {
@@ -1103,6 +1114,13 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     paymentServiceFeeRate: PAYMENT_SERVICE_FEE_RATE_BPS,
     paymentServiceFeeAmount,
     paymentServiceFeeLabel: `${PAYMENT_SERVICE_FEE_LABEL} (${paymentServiceFeeDescription()})`,
+    totalBeforePaymentProviderFee,
+    paymentProviderFeeRate: paymentProviderFee.rateBps,
+    paymentProviderFeeAmount: paymentProviderFee.amount,
+    paymentProviderFixedFeeAmount: paymentProviderFee.fixedAmount,
+    paymentProviderFeeLabel: paymentProviderFee.label,
+    paymentProviderFeeMethod: paymentProviderFee.method,
+    paymentProviderFeeMethodLabel: paymentProviderFee.methodLabel,
     totalClientPays,
     totalTeacherReceives,
     packKey: pack.key,

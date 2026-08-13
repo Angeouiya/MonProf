@@ -16,7 +16,7 @@ import { ProfessorImage } from "@/components/shared/professor-image";
 import { Money } from "@/components/shared/money";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatFCFA } from "@/lib/format";
-import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { hasVerifiedClientPayment, verifiedClientPaymentBookingWhere } from "@/lib/payment-security";
 import { BookOpen, ArrowRight, Clock, Calendar, CheckCircle2, MessageSquare, WalletCards, Search, ExternalLink } from "lucide-react";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { CourseListClient, type ClientCourseListItem } from "./course-list-client";
@@ -24,7 +24,7 @@ import { CourseListClient, type ClientCourseListItem } from "./course-list-clien
 export const dynamic = "force-dynamic";
 
 const TABS = [
-  { id: "avenir", label: "À venir", statuses: ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_ADMIN_VALIDATION", "PAYMENT_TO_RELEASE"] },
+  { id: "avenir", label: "À venir", statuses: ["PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_ADMIN_VALIDATION", "PAYMENT_TO_RELEASE"] },
   { id: "encours", label: "En cours", statuses: ["IN_PROGRESS"] },
   { id: "termines", label: "Terminés", statuses: ["COURSE_DONE", "PENDING_CLIENT_VALIDATION", "VALIDATED_BY_CLIENT", "TEACHER_PAID"] },
 ];
@@ -43,7 +43,7 @@ export default async function CoursPage({
 
   const [rawBookings, rawOverviewBookings, pendingCourseBookings] = await db.$transaction([
   db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
+    where: verifiedClientPaymentBookingWhere({
       clientId: user.id,
       status: { in: tab.statuses as any },
       isQuoteOnly: false,
@@ -60,7 +60,7 @@ export default async function CoursPage({
     },
   }),
   db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
+    where: verifiedClientPaymentBookingWhere({
       clientId: user.id,
       status: { in: COURSE_STATUSES as any },
       isQuoteOnly: false,
@@ -124,13 +124,13 @@ export default async function CoursPage({
     },
   }),
   ]);
-  const bookings = rawBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
-  const overviewBookings = rawOverviewBookings.filter((booking) => hasVerifiedPayDunyaClientPayment(booking));
+  const bookings = rawBookings.filter((booking) => hasVerifiedClientPayment(booking));
+  const overviewBookings = rawOverviewBookings.filter((booking) => hasVerifiedClientPayment(booking));
 
   const tabCounts = Object.fromEntries(
     TABS.map((item) => [item.id, overviewBookings.filter((booking) => item.statuses.includes(booking.status)).length]),
   ) as Record<string, number>;
-  const nextCourse = overviewBookings.find((booking) => ["CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_ADMIN_VALIDATION"].includes(booking.status));
+  const nextCourse = overviewBookings.find((booking) => ["PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PENDING_ADMIN_VALIDATION"].includes(booking.status));
   const confirmationCount = overviewBookings.filter((booking) => booking.status === "PENDING_CLIENT_VALIDATION").length;
   const protectedAmount = overviewBookings
     .reduce((sum, booking) => sum + (booking.totalClientPays || booking.totalPrice), 0);
@@ -488,7 +488,7 @@ function getCourseActionKind(status: BookingStatus, paymentStatus: PaymentStatus
   if (status === "PENDING_CLIENT_VALIDATION") return "action";
   if (status === "IN_PROGRESS") return "current";
   if (["COURSE_DONE", "VALIDATED_BY_CLIENT", "PAYMENT_TO_RELEASE", "TEACHER_PAID"].includes(status) || paymentStatus === "TEACHER_PAID") return "closed";
-  if (["CONFIRMED", "ASSIGNED", "PENDING_ADMIN_VALIDATION"].includes(status)) return "upcoming";
+  if (["PAID", "CONFIRMED", "ASSIGNED", "PENDING_ADMIN_VALIDATION"].includes(status)) return "upcoming";
   return "all";
 }
 

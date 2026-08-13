@@ -98,7 +98,7 @@ const sections: LegalSection[] = [
       "La réservation doit être faite au moins 24 heures avant le cours.",
       "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers PayDunya restent conservés uniquement dans l'historique.",
       "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
-      "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Les frais propres au prestataire de paiement sont suivis séparément par la plateforme.",
+      "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Ils ne remplacent pas les frais de paiement Jèko : le client paie aussi les frais Jèko correspondant au moyen choisi, lorsqu'ils s'appliquent.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
     ],
   },
@@ -116,7 +116,7 @@ const sections: LegalSection[] = [
       "Système ivoirien : CP1 à CM1 15 000 FCFA, CM2 à 4e 20 000 FCFA, 3e à 1ère 25 000 FCFA, Terminale 30 000 FCFA par séance de 2 heures.",
       "Système français : CP1 à CM1 37 500 FCFA, CM2 à 4e 50 000 FCFA, 3e à 1ère 62 500 FCFA, Terminale 75 000 FCFA par séance de 2 heures.",
       "Professionnel : 40 000 FCFA par séance de 2 heures, sauf accord écrit spécifique validé par Compétence.",
-      "Les frais de déplacement, frais de service et frais techniques applicables sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
+      "Les frais de déplacement, frais de service Compétence et frais de paiement Jèko applicables sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
     ],
   },
   {
@@ -145,7 +145,7 @@ const sections: LegalSection[] = [
     body: [
       "Toute annulation doit être demandée depuis l'espace prévu ou par le service client, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
       "Avant de confirmer une annulation, le client peut demander un autre professeur. Cette demande ne constitue pas une annulation : le paiement reste sécurisé, la réservation reste active et Compétence recherche automatiquement un professeur compatible avant tout traitement manuel.",
-      "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais du moyen de paiement, de la préparation déjà engagée, du comportement des parties, du litige déclaré et de la politique d'annulation en vigueur.",
+      "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais de service Compétence, des frais de paiement Jèko réellement engagés, de la préparation déjà engagée, du comportement des parties, du litige déclaré et de la politique d'annulation en vigueur.",
       "Lorsque l'annulation est imputable au professeur ou à Compétence, le client peut se voir proposer un remplacement, un report, un autre créneau ou un remboursement selon la situation.",
       "Des annulations répétées, tardives ou abusives peuvent entraîner des pénalités, une limitation du compte ou un contrôle renforcé par le service client.",
     ],

@@ -34,6 +34,12 @@ import {
 } from "@/lib/payment-security";
 import { distributeAmount, syncBookingSessionAggregates } from "@/lib/booking-sessions";
 import { isReschedulableBookingSessionStatus } from "@/lib/reschedule-session-target";
+import {
+  assertTeacherScheduleAvailable,
+  isTeacherScheduleConflictError,
+  lockTeacherSchedule,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} from "@/lib/teacher-schedule-conflicts";
 
 const TEACHER_CAUSED_NO_PENALTY_REASONS = new Set<string>([
   "UNAVAILABLE",
@@ -1096,9 +1102,11 @@ export async function PATCH(
           _sum: { amount: true },
         });
         const paidAmount = Math.max(0, paidAggregate._sum.amount ?? 0);
+        const paymentProviderFeeAmount = parsePricingSnapshot(booking.pricingSnapshot)?.paymentProviderFeeAmount ?? 0;
         const policy = getCancellationPolicy({
           ...booking,
           paidAmount,
+          paymentProviderFeeAmount,
         }, now, "TEACHER");
         const refundStatus = policy.refundAmount > 0 ? "REFUND_PENDING" : "REFUNDED";
 
@@ -2165,6 +2173,17 @@ export async function PATCH(
           if (isSameDate(currentDate, parsedReschedule.date) && currentTime === parsedReschedule.slotLabel) {
             return { ok: false as const, status: 400, error: "Le nouveau créneau est identique au créneau actuel." };
           }
+          await lockTeacherSchedule(tx, rescheduleTeacherId);
+          await assertTeacherScheduleAvailable(tx, {
+            teacherId: rescheduleTeacherId,
+            excludeBookingId: lockedSession ? null : lockedBooking.id,
+            excludeSessionId: lockedSession?.id ?? null,
+            slots: [{
+              scheduledDate: parsedReschedule.date,
+              scheduledTime: parsedReschedule.slotLabel,
+              durationMinutes: lockedSession?.durationMinutes ?? 120,
+            }],
+          });
 
           const existingAwaiting = await tx.bookingRescheduleRequest.findFirst({
             where: {
@@ -2258,6 +2277,12 @@ export async function PATCH(
           return { ok: true as const, createdRequest, policy };
         }, { isolationLevel: "Serializable" });
       } catch (error) {
+        if (isTeacherScheduleConflictError(error)) {
+          return NextResponse.json({
+            error: error.message,
+            code: TEACHER_SCHEDULE_CONFLICT_CODE,
+          }, { status: 409 });
+        }
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
           return NextResponse.json({
             error: "Une autre modification de créneau vient d'être créée pour cette réservation. Ouvrez-la au lieu d'en payer une seconde.",
@@ -2636,7 +2661,12 @@ export async function PATCH(
           })
         : null;
       const paidAmount = paidAggregate?._sum.amount ?? 0;
-      const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, "CLIENT");
+      const paymentProviderFeeAmount = parsePricingSnapshot(booking.pricingSnapshot)?.paymentProviderFeeAmount ?? 0;
+      const policy = getCancellationPolicy({
+        ...booking,
+        paidAmount: wasPaid ? paidAmount : null,
+        paymentProviderFeeAmount,
+      }, now, "CLIENT");
       const penaltySplit = getCancellationPenaltySplit(policy, "CLIENT");
       const paymentStatus = !wasPaid
         ? booking.paymentStatus

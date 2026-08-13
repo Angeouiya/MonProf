@@ -35,6 +35,7 @@ type Booking = {
   totalPrice: number;
   totalClientPays?: number;
   paymentServiceFeeAmount?: number;
+  pricingSnapshot?: string | null;
   cancellationRefundAmount?: number;
   commissionAmount: number;
   teacherNetAmount: number;
@@ -139,14 +140,17 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   const paidAmount = booking.transactions
     ?.filter((transaction) => transaction.type === "CLIENT_PAYMENT" && PAID_CLIENT_TRANSACTION_STATUSES.includes(transaction.status as (typeof PAID_CLIENT_TRANSACTION_STATUSES)[number]))
     .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount }, new Date(), cancelActor);
+  const paymentProviderFeeAmount = readPaymentProviderFeeAmount(booking.pricingSnapshot);
+  const cancellationPolicy = getCancellationPolicy({ ...booking, paidAmount, paymentProviderFeeAmount }, new Date(), cancelActor);
   const cancellationPenaltySplit = getCancellationPenaltySplit(cancellationPolicy, cancelActor);
   const normalizedPayTeacherPhone = normalizePaymentPhone(payTeacherPhone);
   const normalizedPayTeacherPhoneConfirm = normalizePaymentPhone(payTeacherPhoneConfirm);
   const payTeacherPhoneInvalid = normalizedPayTeacherPhone.length < 8 || normalizedPayTeacherPhone.length > 20;
   const payTeacherPhoneMismatch = normalizedPayTeacherPhone !== normalizedPayTeacherPhoneConfirm;
   const latestRefundRequest = booking.clientRefundRequests?.[0] ?? null;
-  const refundableAmount = booking.cancellationRefundAmount || Math.max(0, (booking.totalClientPays || booking.totalPrice) - (booking.paymentServiceFeeAmount || 0));
+  const refundableAmount = typeof booking.cancellationRefundAmount === "number" && booking.cancellationRefundAmount > 0
+    ? booking.cancellationRefundAmount
+    : cancellationPolicy.refundAmount;
   const refundDetailsMissing = refundableAmount > 0 && !latestRefundRequest;
   const refundReferenceInvalid = refundExternalReference.trim().length < 3;
   const hasSessionLedger = Boolean(booking.sessions?.length);
@@ -1031,4 +1035,15 @@ function getReplacementLockedReason(booking: Booking) {
     return "Un versement professeur est déjà enregistré. Il faut traiter la comptabilité avant de changer le professeur.";
   }
   return "";
+}
+
+function readPaymentProviderFeeAmount(snapshot?: string | null) {
+  if (!snapshot) return 0;
+  try {
+    const parsed = JSON.parse(snapshot) as { paymentProviderFeeAmount?: unknown };
+    const amount = Number(parsed.paymentProviderFeeAmount ?? 0);
+    return Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
+  } catch {
+    return 0;
+  }
 }

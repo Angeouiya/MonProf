@@ -22,6 +22,7 @@ import {
   providerFeeFinancialFields,
   sumProviderFeeAmounts,
 } from "@/lib/financial-summary";
+import { parsePricingSnapshot } from "@/lib/pricing";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import type { Prisma } from "@prisma/client";
 
@@ -74,6 +75,7 @@ export default async function AdminPaiementsPage({
         booking: {
           select: {
             id: true, reference: true, subjectName: true, levelName: true, status: true, paymentStatus: true,
+            pricingSnapshot: true,
             totalClientPays: true, totalPrice: true, courseAmount: true, transportFee: true,
             paymentServiceFeeRate: true, paymentServiceFeeAmount: true,
             commissionAmount: true, cancellationPenaltyPlatformAmount: true,
@@ -135,6 +137,7 @@ export default async function AdminPaiementsPage({
       where: verifiedPayDunyaBookingWhere(),
       select: {
         status: true,
+        pricingSnapshot: true,
         paymentStatus: true,
         paydunyaStatus: true,
         paydunyaVerifiedAt: true,
@@ -237,6 +240,7 @@ export default async function AdminPaiementsPage({
   const financialSummary = buildPlatformFinancialSummary(
     financialBookings.filter(hasVerifiedPayDunyaClientPayment).map((booking) => ({
       ...booking,
+      paymentProviderFeeAmount: parsePricingSnapshot(booking.pricingSnapshot)?.paymentProviderFeeAmount ?? 0,
       paidPayoutAllocationAmount: booking.teacherPayoutAllocations.reduce(
         (sum, allocation) => sum + Math.max(0, allocation.amount),
         0,
@@ -255,8 +259,9 @@ export default async function AdminPaiementsPage({
     financialPayouts,
     appliedTeacherAdjustments,
   );
-  const providerFeesTotal = financialSummary.providerCollectionFees + financialSummary.rescheduleProviderFees;
+  const providerFeesTotal = financialSummary.providerCollectionFees;
   const heroHasAttention = financialAttentionCount > 0;
+  const heroHasTeacherRemaining = financialSummary.teacherRemaining > 0;
   const heroAmount = heroHasAttention ? financialAttentionAmount : financialSummary.teacherRemaining;
   const heroEyebrow = heroHasAttention ? "À traiter" : "Reste professeurs";
   const heroTitle = heroHasAttention
@@ -265,8 +270,52 @@ export default async function AdminPaiementsPage({
   const heroDescription = heroHasAttention
     ? "On contrôle les blocages, litiges, remboursements et libérations avant tout mouvement d'argent."
     : "Le net professeur, les frais et les commissions restent séparés, lisibles et rapprochés.";
-  const heroActionHref = heroHasAttention ? "/admin/paiements?status=BLOCKED" : "/admin/professeurs-a-payer";
-  const heroActionLabel = heroHasAttention ? "Contrôler" : "Payer les profs";
+  const heroActionHref = heroHasAttention
+    ? "/admin/paiements?status=BLOCKED"
+    : heroHasTeacherRemaining
+      ? "/admin/professeurs-a-payer"
+      : "/admin/centre-operationnel";
+  const heroActionLabel = heroHasAttention ? "Contrôler" : heroHasTeacherRemaining ? "Payer les profs" : "Voir le contrôle";
+  const paymentHeroMetrics = [
+    { key: "commission", show: commissionAmount > 0, label: "Commission", value: commissionAmount, detail: "Filtrée" },
+    { key: "service", show: financialSummary.serviceFeesRemaining !== 0, label: "Service restant", value: financialSummary.serviceFeesRemaining, detail: "Hors frais paiement" },
+    { key: "jeko", show: providerFeesTotal > 0, label: "Frais Jèko réels", value: providerFeesTotal, detail: "Encaissement" },
+    { key: "teacher", show: financialSummary.teacherRemaining > 0, label: "Reste profs", value: financialSummary.teacherRemaining, detail: "Net à libérer" },
+  ].filter((metric) => metric.show);
+  const attentionCards = [
+    {
+      key: "blocked",
+      show: blockedAmount > 0,
+      title: "Fonds bloqués",
+      value: formatFCFA(blockedAmount),
+      description: "Paiements clients sécurisés en attente de cours, validation ou décision admin.",
+      tone: "amber" as const,
+    },
+    {
+      key: "to-pay",
+      show: toPayTeacherAmount > 0,
+      title: "À payer professeurs",
+      value: formatFCFA(toPayTeacherAmount),
+      description: "Montants arrivés au stade de libération après validation du cours.",
+      tone: "violet" as const,
+    },
+    {
+      key: "disputed",
+      show: disputedAmount > 0,
+      title: "Litiges financiers",
+      value: formatFCFA(disputedAmount),
+      description: "Sommes suspendues jusqu'à arbitrage, remboursement ou paiement partiel.",
+      tone: "red" as const,
+    },
+    {
+      key: "attention",
+      show: financialAttentionCount > 0,
+      title: "À surveiller",
+      value: `${financialAttentionCount} ligne${financialAttentionCount > 1 ? "s" : ""}`,
+      description: "Transactions qui nécessitent une décision, un suivi professeur ou une libération.",
+      tone: "amber" as const,
+    },
+  ].filter((card) => card.show);
 
   return (
     <div className="space-y-5">
@@ -297,19 +346,30 @@ export default async function AdminPaiementsPage({
             <p className="text-xs font-black uppercase tracking-[0.16em] text-white/60">
               Montant prioritaire
             </p>
-            <Money amount={heroAmount} className="mt-2 block text-3xl font-black leading-none text-white sm:text-4xl" />
+            {heroAmount > 0 ? (
+              <Money amount={heroAmount} className="mt-2 block text-3xl font-black leading-none text-white sm:text-4xl" />
+            ) : (
+              <p className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">Aucun montant à traiter</p>
+            )}
             <Button asChild className="mt-4 h-11 w-full rounded-xl bg-white text-[#111B4D] hover:bg-white/90">
               <Link href={heroActionHref}>{heroActionLabel}</Link>
             </Button>
           </div>
         </div>
 
-        <div data-admin-payment-amount-strip className="grid grid-cols-2 gap-2 border-t border-white/15 bg-white/[0.06] p-4 sm:grid-cols-4 sm:px-6">
-          <PaymentHeroMetric label="Commission" value={commissionAmount} detail="Filtrée" />
-          <PaymentHeroMetric label="Service restant" value={financialSummary.serviceFeesRemaining} detail="Après frais" />
-          <PaymentHeroMetric label="Frais Jèko" value={providerFeesTotal} detail="Encaissement" />
-          <PaymentHeroMetric label="Reste profs" value={financialSummary.teacherRemaining} detail="Net à libérer" />
-        </div>
+        {paymentHeroMetrics.length > 0 ? (
+          <div data-admin-payment-amount-strip className="grid grid-cols-2 gap-2 border-t border-white/15 bg-white/[0.06] p-4 sm:grid-cols-4 sm:px-6">
+            {paymentHeroMetrics.map((metric) => (
+              <PaymentHeroMetric key={metric.key} label={metric.label} value={metric.value} detail={metric.detail} />
+            ))}
+          </div>
+        ) : (
+          <div data-admin-payment-amount-strip className="border-t border-white/15 bg-white/[0.06] p-4 sm:px-6">
+            <div className="rounded-2xl border border-white/12 bg-white/10 px-4 py-3 text-sm font-semibold text-white/75">
+              Aucun montant sensible à afficher pour le moment. Les cartes apparaissent uniquement quand une somme réelle ou une anomalie existe.
+            </div>
+          </div>
+        )}
       </section>
 
       <FinancialOverview summary={financialSummary} />
@@ -335,32 +395,23 @@ export default async function AdminPaiementsPage({
         <PaiementsFiltersClient filters={{ method: method ?? "", status: status ?? "", from: sp.from ?? "", to: sp.to ?? "" }} />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <SignalCard
-          title="Fonds bloqués"
-          value={formatFCFA(blockedAmount)}
-          description="Paiements clients sécurisés en attente de cours, validation ou décision admin."
-          tone={blockedAmount ? "amber" : "blue"}
-        />
-        <SignalCard
-          title="À payer professeurs"
-          value={formatFCFA(toPayTeacherAmount)}
-          description="Montants arrivés au stade de libération après validation du cours."
-          tone={toPayTeacherAmount ? "violet" : "blue"}
-        />
-        <SignalCard
-          title="Litiges financiers"
-          value={formatFCFA(disputedAmount)}
-          description="Sommes suspendues jusqu'à arbitrage, remboursement ou paiement partiel."
-          tone={disputedAmount ? "red" : "blue"}
-        />
-        <SignalCard
-          title="À surveiller"
-          value={`${financialAttentionCount} ligne${financialAttentionCount > 1 ? "s" : ""}`}
-          description="Transactions qui nécessitent une décision, un suivi professeur ou une libération."
-          tone={financialAttentionCount ? "amber" : "blue"}
-        />
-      </div>
+      {attentionCards.length > 0 ? (
+        <div className="grid gap-3 md:grid-cols-4">
+          {attentionCards.map((card) => (
+            <SignalCard
+              key={card.key}
+              title={card.title}
+              value={card.value}
+              description={card.description}
+              tone={card.tone}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm font-semibold leading-6 text-emerald-950">
+          Aucun blocage financier en cours : les fonds bloqués, litiges, remboursements et libérations apparaîtront ici seulement lorsqu'une action est nécessaire.
+        </div>
+      )}
 
       {txs.length === 0 ? (
         <EmptyState icon={Wallet} title="Aucun paiement" description="Aucune transaction ne correspond." />
@@ -528,19 +579,19 @@ export default async function AdminPaiementsPage({
                       </TableCell>
                       <FinancialTableAmount value={t.booking?.totalClientPays ?? t.amount} strong />
                       <FinancialTableAmount value={t.booking?.courseAmount ?? 0} />
-                      <FinancialTableAmount value={t.booking?.transportFee ?? 0} />
-                      <FinancialTableAmount value={t.booking?.paymentServiceFeeAmount ?? 0} />
-                      <FinancialTableAmount value={sumProviderFeeAmounts(t.booking?.paymentAttempts)} muted />
+                      <FinancialTableAmount value={t.booking?.transportFee ?? 0} hideZero />
+                      <FinancialTableAmount value={t.booking?.paymentServiceFeeAmount ?? 0} hideZero />
+                      <FinancialTableAmount value={sumProviderFeeAmounts(t.booking?.paymentAttempts)} muted hideZero />
                       <FinancialTableAmount value={t.booking ? getActualBookingCommission(t.booking) : t.commission} />
                       <FinancialTableAmount value={t.booking ? getActualBookingTeacherNet(t.booking) : 0} />
-                      <FinancialTableAmount value={t.booking?.teacherPaidAmount ?? 0} />
-                      <FinancialTableAmount value={t.booking ? sumAppliedBookingRetentions(t.booking) : 0} muted />
+                      <FinancialTableAmount value={t.booking?.teacherPaidAmount ?? 0} hideZero />
+                      <FinancialTableAmount value={t.booking ? sumAppliedBookingRetentions(t.booking) : 0} muted hideZero />
                       <FinancialTableAmount value={t.booking ? Math.max(
                         0,
                         getActualBookingTeacherNet(t.booking)
                           - t.booking.teacherPaidAmount
                           - sumAppliedBookingRetentions(t.booking),
-                      ) : 0} strong />
+                      ) : 0} strong hideZero />
                       <TableCell>
                         <div className="space-y-1">
                           <PaymentStatusBadge status={t.status} />
@@ -790,6 +841,19 @@ function BookingFinancialBreakdown({
   const teacherBalance = teacherNetAmount - teacherPaidAmount - teacherRetainedAmount;
   const teacherRemaining = Math.max(0, teacherBalance);
   const teacherOverpaid = Math.max(0, -teacherBalance);
+  const financialMiniCards: FinancialMiniCard[] = [
+    { key: "course", label: "Cours", value: courseAmount, show: courseAmount > 0 || clientTotal > 0 },
+    { key: "transport", label: "Transport", value: transportFee, show: transportFee > 0 },
+    { key: "service", label: "Service 3 %", value: serviceFeeAmount, show: serviceFeeAmount > 0 },
+    { key: "provider", label: "Frais Jèko", value: providerFeeAmount, show: providerFeeAmount > 0, muted: true },
+    { key: "commission", label: "Commission", value: commissionAmount, show: commissionAmount > 0 },
+    { key: "total", label: "Total client", value: clientTotal, show: clientTotal > 0, strong: true },
+    { key: "teacher-net", label: "Net professeur", value: teacherNetAmount, show: teacherNetAmount > 0 },
+    { key: "teacher-paid", label: "Déjà payé", value: teacherPaidAmount, show: teacherPaidAmount > 0 },
+    { key: "retained", label: "Retenues", value: teacherRetainedAmount, show: teacherRetainedAmount > 0, muted: true },
+    { key: "remaining", label: "Reste professeur", value: teacherRemaining, show: teacherRemaining > 0, strong: true },
+    { key: "overpaid", label: "Surpaiement à régulariser", value: teacherOverpaid, show: teacherOverpaid > 0, strong: true },
+  ].filter((card) => card.show);
 
   return (
     <div className="rounded-lg border border-[#C7D2FE] bg-[#F8FAFF] p-3">
@@ -800,21 +864,28 @@ function BookingFinancialBreakdown({
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 min-[520px]:grid-cols-3">
-        <FinancialMini label="Cours" value={courseAmount} />
-        <FinancialMini label="Transport" value={transportFee} />
-        <FinancialMini label="Service 3 %" value={serviceFeeAmount} />
-        <FinancialMini label="Frais Jèko" value={providerFeeAmount} muted />
-        <FinancialMini label="Commission" value={commissionAmount} />
-        <FinancialMini label="Total client" value={clientTotal} strong />
-        <FinancialMini label="Net professeur" value={teacherNetAmount} />
-        <FinancialMini label="Déjà payé" value={teacherPaidAmount} />
-        <FinancialMini label="Retenues" value={teacherRetainedAmount} muted />
-        <FinancialMini label="Reste professeur" value={teacherRemaining} strong />
-        <FinancialMini label="Surpaiement à régulariser" value={teacherOverpaid} strong={teacherOverpaid > 0} muted={teacherOverpaid === 0} />
+        {financialMiniCards.map((card) => (
+          <FinancialMini
+            key={card.key}
+            label={card.label}
+            value={card.value}
+            strong={card.strong}
+            muted={card.muted}
+          />
+        ))}
       </div>
     </div>
   );
 }
+
+type FinancialMiniCard = {
+  key: string;
+  label: string;
+  value: number;
+  show: boolean;
+  strong?: boolean;
+  muted?: boolean;
+};
 
 function FinancialMini({ label, value, strong = false, muted = false }: { label: string; value: number; strong?: boolean; muted?: boolean }) {
   return (
@@ -825,7 +896,25 @@ function FinancialMini({ label, value, strong = false, muted = false }: { label:
   );
 }
 
-function FinancialTableAmount({ value, strong = false, muted = false }: { value: number; strong?: boolean; muted?: boolean }) {
+function FinancialTableAmount({
+  value,
+  strong = false,
+  muted = false,
+  hideZero = false,
+}: {
+  value: number;
+  strong?: boolean;
+  muted?: boolean;
+  hideZero?: boolean;
+}) {
+  if (hideZero && value === 0) {
+    return (
+      <TableCell className="whitespace-nowrap text-right">
+        <span className="text-xs font-semibold text-muted-foreground">—</span>
+      </TableCell>
+    );
+  }
+
   return (
     <TableCell className="whitespace-nowrap text-right">
       <Money
@@ -875,7 +964,7 @@ function sumAppliedBookingRetentions(booking: {
 }
 
 function paymentProviderLabel(provider?: string | null, hasLegacyPayDunyaProof = false) {
-  if (provider === "PAYDUNYA" || hasLegacyPayDunyaProof) return "PayDunya (historique)";
+  if (provider === "PAYDUNYA" || hasLegacyPayDunyaProof) return "Paiement historique";
   if (provider === "JEKO") return "Jèko";
   return "Versement historique";
 }

@@ -77,7 +77,7 @@ export default function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Tarifs officiels</p>
             <h2 className="mt-3 text-3xl font-semibold text-[#111827]">Le niveau fixe le cours. Le trajet fixe le transport.</h2>
             <p className="mt-4 max-w-lg text-sm leading-6 text-[#64748B]">
-              Le professeur ne change pas le prix. Le moteur ajoute uniquement le déplacement éventuel et les frais de service de 3 %, puis affiche le total avant Jèko.
+              Le professeur ne change pas le prix. Le moteur ajoute le déplacement éventuel, les frais de service Compétence de 3 % et les frais de paiement Jèko du moyen choisi, puis affiche le total avant paiement.
             </p>
             <Link href="/tarifs" className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D]">
               Voir toute la grille <ArrowRight className="h-4 w-4" />

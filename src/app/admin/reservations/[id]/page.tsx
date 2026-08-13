@@ -115,9 +115,13 @@ export default async function ReservationDetailPage({ params }: { params: Promis
   const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
   const displayPaymentServiceFeeAmount = pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount;
   const displayPaymentServiceFeeLabel = pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel;
+  const displayPaymentProviderFeeAmount = pricingSnapshot?.paymentProviderFeeAmount ?? 0;
+  const displayPaymentProviderFeeLabel = pricingSnapshot?.paymentProviderFeeLabel ?? "Frais de paiement Jèko";
   const displayTotalPrice = pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice;
+  const displayTotalBeforePaymentProviderFee = pricingSnapshot?.totalBeforePaymentProviderFee
+    ?? Math.max(0, displayTotalPrice - displayPaymentProviderFeeAmount);
   const displayTotalBeforePaymentServiceFee = pricingSnapshot?.totalBeforePaymentServiceFee
-    ?? Math.max(0, displayTotalPrice - displayPaymentServiceFeeAmount);
+    ?? Math.max(0, displayTotalBeforePaymentProviderFee - displayPaymentServiceFeeAmount);
   const displaySessionsCount = pricingSnapshot?.numberOfSessions ?? booking.sessionsCount;
   const displayParticipantsCount = pricingSnapshot?.participantsCount ?? booking.participantsCount;
   const displayCommissionAmount = pricingSnapshot?.platformCommissionAmount ?? booking.commissionAmount;
@@ -412,6 +416,9 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             paymentServiceFeeAmount={displayPaymentServiceFeeAmount}
             paymentServiceFeeLabel={displayPaymentServiceFeeLabel}
             totalBeforePaymentServiceFee={displayTotalBeforePaymentServiceFee}
+            paymentProviderFeeAmount={displayPaymentProviderFeeAmount}
+            paymentProviderFeeLabel={displayPaymentProviderFeeLabel}
+            totalBeforePaymentProviderFee={displayTotalBeforePaymentProviderFee}
             isQuoteOnly={booking.isQuoteOnly}
             teacherNetAmount={booking.teacherNetAmount}
             teacherPayoutAmount={displayTeacherCoursePayout}

@@ -23,6 +23,7 @@ import { formatFCFA, timeAgo } from "@/lib/format";
 import { hasVerifiedClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
 import { buildPlatformFinancialSummary, providerFeeFinancialFields } from "@/lib/financial-summary";
 import { hasAdminPermission } from "@/lib/admin-permissions";
+import { parsePricingSnapshot } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,7 @@ export default async function AdminDashboard() {
       where: verifiedPayDunyaBookingWhere(),
       select: {
         status: true,
+        pricingSnapshot: true,
         totalClientPays: true,
         courseAmount: true,
         transportFee: true,
@@ -150,6 +152,7 @@ export default async function AdminDashboard() {
   const financialSummary = buildPlatformFinancialSummary(
     financialBookings.filter(hasVerifiedClientPayment).map((booking) => ({
       ...booking,
+      paymentProviderFeeAmount: parsePricingSnapshot(booking.pricingSnapshot)?.paymentProviderFeeAmount ?? 0,
       paidPayoutAllocationAmount: booking.teacherPayoutAllocations.reduce(
         (sum, allocation) => sum + Math.max(0, allocation.amount),
         0,
@@ -169,6 +172,94 @@ export default async function AdminDashboard() {
     appliedTeacherAdjustments,
   );
   const blockedFunds = blockedFundsAgg._sum.totalClientPays ?? 0;
+  const adminFinanceActivity = hasAnyAdminAmount([
+    financialSummary.clientGross,
+    financialSummary.refundsPaid,
+    financialSummary.courseRevenue,
+    financialSummary.transportCollected,
+    financialSummary.serviceFeesCollected,
+    financialSummary.clientProviderFeesCollected,
+    financialSummary.providerCollectionFees,
+    financialSummary.commissionRevenue,
+    financialSummary.teacherNetGenerated,
+    financialSummary.teacherPaid,
+    financialSummary.teacherRetained,
+    financialSummary.teacherOverpaid,
+    financialSummary.transferFeesCovered,
+    blockedFunds,
+  ]);
+  const allAdminFinanceCards: AdminFinanceCard[] = [
+    {
+      key: "net",
+      show: adminFinanceActivity,
+      label: "Net encaissé",
+      value: financialSummary.clientNetCollected,
+      icon: Wallet,
+      tone: "navy" as const,
+    },
+    {
+      key: "commission",
+      show: financialSummary.commissionRevenue > 0,
+      label: "Commission",
+      value: financialSummary.commissionRevenue,
+      icon: CircleDollarSign,
+      tone: "green" as const,
+    },
+    {
+      key: "service",
+      show: financialSummary.serviceFeesRemaining !== 0,
+      label: "Service restant",
+      value: financialSummary.serviceFeesRemaining,
+      icon: Banknote,
+      tone: financialSummary.serviceFeesRemaining < 0 ? "red" : "violet",
+    },
+    {
+      key: "teacher",
+      show: financialSummary.teacherRemaining > 0,
+      label: "Reste professeurs",
+      value: financialSummary.teacherRemaining,
+      icon: GraduationCap,
+      tone: "blue" as const,
+    },
+  ];
+  const adminFinanceCards = allAdminFinanceCards.filter((card) => card.show);
+  const allAdminFinanceRows: AdminFinanceRow[] = [
+    { label: "Brut encaissé", value: financialSummary.clientGross, required: adminFinanceActivity },
+    { label: "Remboursé", value: financialSummary.refundsPaid },
+    { label: "Frais de service collectés (3 %)", value: financialSummary.serviceFeesCollected },
+    {
+      label: "Frais paiement Jèko facturés",
+      value: financialSummary.clientProviderFeesCollected,
+      showWhen: hasAnyAdminAmount([
+        financialSummary.clientProviderFeesCollected,
+        financialSummary.providerCollectionFees,
+        financialSummary.providerFeeCoverageBalance,
+      ]),
+    },
+    {
+      label: "Frais d'encaissement Jèko réels",
+      value: financialSummary.providerCollectionFees,
+      showWhen: hasAnyAdminAmount([
+        financialSummary.clientProviderFeesCollected,
+        financialSummary.providerCollectionFees,
+        financialSummary.providerFeeCoverageBalance,
+      ]),
+    },
+    {
+      label: "Solde frais paiement Jèko",
+      value: financialSummary.providerFeeCoverageBalance,
+      showWhen: hasAnyAdminAmount([
+        financialSummary.clientProviderFeesCollected,
+        financialSummary.providerCollectionFees,
+        financialSummary.providerFeeCoverageBalance,
+      ]),
+    },
+    { label: "Frais de retrait couverts", value: financialSummary.transferFeesCovered },
+    { label: "Fonds clients bloqués", value: blockedFunds },
+    { label: "Déjà versé aux professeurs", value: financialSummary.teacherPaid },
+    { label: "Retenues professeurs", value: financialSummary.teacherRetained },
+  ];
+  const adminFinanceRows = allAdminFinanceRows.filter((row) => row.required || row.showWhen || row.value !== 0);
   const priority = openDisputes > 0
     ? {
         eyebrow: "Litige prioritaire",
@@ -287,23 +378,33 @@ export default async function AdminDashboard() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-5 lg:grid-cols-4">
-            <AdminAmount label="Net encaissé" value={financialSummary.clientNetCollected} icon={Wallet} tone="navy" />
-            <AdminAmount label="Commission" value={financialSummary.commissionRevenue} icon={CircleDollarSign} tone="green" />
-            <AdminAmount label="Service restant" value={financialSummary.serviceFeesRemaining} icon={Banknote} tone={financialSummary.serviceFeesRemaining < 0 ? "red" : "violet"} />
-            <AdminAmount label="Reste professeurs" value={financialSummary.teacherRemaining} icon={GraduationCap} tone="blue" />
-          </div>
+          {adminFinanceCards.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2 p-4 sm:gap-3 sm:p-5 lg:grid-cols-4">
+              {adminFinanceCards.map((card) => (
+                <AdminAmount
+                  key={card.key}
+                  label={card.label}
+                  value={card.value}
+                  icon={card.icon}
+                  tone={card.tone}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 sm:p-5">
+              <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 text-sm font-semibold leading-6 text-[#475569]">
+                Aucune opération financière confirmée pour le moment. Dès qu'un paiement est vérifié côté serveur, les cartes utiles apparaissent ici.
+              </div>
+            </div>
+          )}
 
-          <div className="border-t border-[#E0E7FF] px-4 py-2 sm:px-5" role="table" aria-label="Montants financiers essentiels">
-            <FinanceRow label="Brut encaissé" value={financialSummary.clientGross} />
-            <FinanceRow label="Remboursé" value={financialSummary.refundsPaid} />
-            <FinanceRow label="Frais de service collectés (3 %)" value={financialSummary.serviceFeesCollected} />
-            <FinanceRow label="Frais d'encaissement Jèko" value={financialSummary.providerCollectionFees} />
-            <FinanceRow label="Frais de retrait couverts" value={financialSummary.transferFeesCovered} />
-            <FinanceRow label="Fonds clients bloqués" value={blockedFunds} />
-            <FinanceRow label="Déjà versé aux professeurs" value={financialSummary.teacherPaid} />
-            <FinanceRow label="Retenues professeurs" value={financialSummary.teacherRetained} />
-          </div>
+          {adminFinanceRows.length > 0 && (
+            <div className="border-t border-[#E0E7FF] px-4 py-2 sm:px-5" role="table" aria-label="Montants financiers essentiels">
+              {adminFinanceRows.map((row) => (
+                <FinanceRow key={row.label} label={row.label} value={row.value} />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -387,4 +488,24 @@ function FinanceRow({ label, value }: { label: string; value: number }) {
       <span className="shrink-0 text-sm font-black tabular-nums text-[#111827]" role="cell">{formatFCFA(value)}</span>
     </div>
   );
+}
+
+type AdminFinanceCard = {
+  key: string;
+  show: boolean;
+  label: string;
+  value: number;
+  icon: typeof Wallet;
+  tone: "navy" | "green" | "violet" | "blue" | "red";
+};
+
+type AdminFinanceRow = {
+  label: string;
+  value: number;
+  required?: boolean;
+  showWhen?: boolean;
+};
+
+function hasAnyAdminAmount(values: number[]) {
+  return values.some((value) => value !== 0);
 }

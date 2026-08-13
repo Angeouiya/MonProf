@@ -7,6 +7,12 @@ import {
 } from "@/lib/pricing";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import {
+  SCHEDULE_BLOCKING_BOOKING_STATUSES,
+  SCHEDULE_BLOCKING_PAYMENT_STATUSES,
+  SCHEDULE_BLOCKING_SESSION_STATUSES,
+  scheduleSlotsOverlap,
+} from "@/lib/teacher-schedule-conflicts";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -170,6 +176,33 @@ export async function findReplacementCandidatesForBooking(
         },
         take: 30,
       },
+      bookingSessions: {
+        where: {
+          status: { in: [...SCHEDULE_BLOCKING_SESSION_STATUSES] as any },
+          booking: {
+            status: { in: [...SCHEDULE_BLOCKING_BOOKING_STATUSES] as any },
+            paymentStatus: { in: [...SCHEDULE_BLOCKING_PAYMENT_STATUSES] as any },
+            paymentProvider: "JEKO",
+            providerPaymentStatus: "SUCCESS",
+            paymentVerifiedAt: { not: null },
+            transactions: {
+              some: {
+                type: "CLIENT_PAYMENT",
+                status: { in: [...SCHEDULE_BLOCKING_PAYMENT_STATUSES] as any },
+                amount: { gt: 0 },
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          bookingId: true,
+          scheduledDate: true,
+          scheduledTime: true,
+          durationMinutes: true,
+        },
+        take: 50,
+      },
       _count: { select: { bookings: true, reviews: true } },
     },
     take: 100,
@@ -233,7 +266,19 @@ export async function findReplacementCandidatesForBooking(
         : null;
       const formatCompatible = booking.courseFormat === "HOME" ? teacher.offersHome : teacher.offersOnline;
       const availabilityCompatible = isAvailabilityCompatible(teacher.availability, matchingBooking);
-      const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking);
+      const activeConflict = hasActiveConflict(teacher.bookings, matchingBooking)
+        || teacher.bookingSessions.some((session) => scheduleSlotsOverlap(
+          {
+            scheduledDate: matchingBooking.scheduledDate,
+            scheduledTime: matchingBooking.scheduledTime || matchingBooking.preferredTime,
+            durationMinutes: 120,
+          },
+          {
+            scheduledDate: session.scheduledDate,
+            scheduledTime: session.scheduledTime,
+            durationMinutes: session.durationMinutes,
+          },
+        ));
       const recentDisputeCount = teacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
       const noRecentIssue = teacher.warnings.length === 0 && teacher.sanctions.length === 0 && recentDisputeCount === 0;
       const destinationOverride = destination?.transportFeeOverride;

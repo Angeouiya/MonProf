@@ -42,6 +42,11 @@ import {
 import { buildBookingSessionRows } from "@/lib/booking-sessions";
 import { createJekoBookingCheckout } from "@/lib/payment-provider";
 import { JEKO_PAYMENT_METHODS, type JekoPaymentMethod } from "@/lib/jeko-utils";
+import {
+  findTeacherScheduleConflict,
+  formatTeacherScheduleConflictMessage,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} from "@/lib/teacher-schedule-conflicts";
 import { absoluteAppUrl } from "@/lib/public-url";
 import {
   confirmablePricing,
@@ -211,6 +216,12 @@ function publicBookingPayload(b: any) {
     paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? b.paymentServiceFeeLabel ?? null,
     totalBeforePaymentServiceFee: pricingSnapshot?.totalBeforePaymentServiceFee
       ?? Math.max(0, totalClientPays - (pricingSnapshot?.paymentServiceFeeAmount ?? b.paymentServiceFeeAmount ?? 0)),
+    totalBeforePaymentProviderFee: pricingSnapshot?.totalBeforePaymentProviderFee
+      ?? Math.max(0, totalClientPays - (pricingSnapshot?.paymentProviderFeeAmount ?? 0)),
+    paymentProviderFeeAmount: pricingSnapshot?.paymentProviderFeeAmount ?? 0,
+    paymentProviderFeeLabel: pricingSnapshot?.paymentProviderFeeLabel ?? null,
+    paymentProviderFeeMethod: pricingSnapshot?.paymentProviderFeeMethod ?? null,
+    paymentProviderFeeMethodLabel: pricingSnapshot?.paymentProviderFeeMethodLabel ?? null,
     totalClientPays,
     isQuoteOnly: b.isQuoteOnly,
     status: b.status,
@@ -539,6 +550,7 @@ export async function POST(req: NextRequest) {
     packType,
     participantsCount: normalizedParticipants,
     teacherPricePerSession: teacher.pricePerSession,
+    paymentMethod,
     teacherCommune: courseFormat === "HOME" ? teacher.commune : undefined,
     teacherQuartier: courseFormat === "HOME" ? teacher.quartier : undefined,
     teacherZoneNames: courseFormat === "HOME" ? teacher.zones.map((zone) => zone.commune.name) : undefined,
@@ -590,6 +602,7 @@ export async function POST(req: NextRequest) {
       ? `Cours individuel: base brute ${basePrice.toLocaleString("fr-FR")} FCFA${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
       : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
   const paymentServiceLine = `Frais de service Compétence: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
+  const paymentProviderFeeLine = `Frais de paiement Jèko: ${pricing.paymentProviderFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentProviderFeeLabel}).`;
   const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de 2h, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
   const commissionRate = Math.round(pricing.platformCommissionRate * 100);
   const teacherRate = 100 - commissionRate;
@@ -696,6 +709,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cette clé de création appartient à un autre compte." }, { status: 409 });
   }
 
+  if (booking && !bookingDraftMatchesExpected(booking, expectedDraftFields)) {
+    return NextResponse.json({
+      error: "Ce brouillon a déjà été créé avec un autre calcul. Ouvrez-le depuis vos paiements ou rechargez la page pour créer un nouveau dossier.",
+      bookingId: booking.id,
+    }, { status: 409 });
+  }
+
+  const bookingSessionRows = buildBookingSessionRows({
+    bookingId: booking?.id ?? clientCreationKey,
+    teacherId,
+    sessionsCount: normalizedSessionsCount,
+    startDate: parsedStartDate,
+    selectedTimeSlots: normalizedSelectedSlots,
+    fallbackTime: initialScheduledTime,
+    courseAmount: pricing.courseAmount,
+    commissionAmount,
+    teacherPayoutAmount: teacherCoursePayoutAmount,
+    transportFee: pricing.transportFee,
+  });
+  const scheduleConflict = await findTeacherScheduleConflict(db, {
+    teacherId,
+    excludeBookingId: booking?.id ?? null,
+    slots: bookingSessionRows,
+  });
+  if (scheduleConflict) {
+    return NextResponse.json({
+      code: TEACHER_SCHEDULE_CONFLICT_CODE,
+      error: formatTeacherScheduleConflictMessage(scheduleConflict),
+    }, { status: 409 });
+  }
+
   if (!booking) {
     try {
       booking = await db.$transaction(async (tx) => {
@@ -711,18 +755,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await tx.bookingSession.createMany({
-      data: buildBookingSessionRows({
-        bookingId: createdBooking.id,
-        teacherId,
-        sessionsCount: normalizedSessionsCount,
-        startDate: parsedStartDate,
-        selectedTimeSlots: normalizedSelectedSlots,
-        fallbackTime: initialScheduledTime,
-        courseAmount: pricing.courseAmount,
-        commissionAmount,
-        teacherPayoutAmount: teacherCoursePayoutAmount,
-        transportFee: pricing.transportFee,
-      }),
+      data: bookingSessionRows.map((row) => ({ ...row, bookingId: createdBooking.id })),
     });
     if (partnerReferralCreateData) {
       if (partnerReferralLeadSource) {
@@ -750,7 +783,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         title: "Brouillon de réservation - paiement requis",
-        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que Jèko n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${groupPricingLine} Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. Le paiement est finalisé sur la page sécurisée Jèko et validé uniquement après confirmation serveur.`,
+        message: `Votre brouillon de réservation pour le cours de ${canonicalSubjectName} avec ${profName} est créé, mais il n'est pas actif tant que Jèko n'a pas confirmé le paiement côté serveur. ${startDateLine} ${sessionPricingLine} ${groupPricingLine} Déplacement: ${pricing.transportFee.toLocaleString("fr-FR")} FCFA. ${paymentServiceLine} ${paymentProviderFeeLine} Total à payer: ${totalPrice.toLocaleString("fr-FR")} FCFA. Le paiement est finalisé sur la page sécurisée Jèko et validé uniquement après confirmation serveur.`,
         type: "PAYMENT_PENDING",
         recipientType: "CLIENT",
         recipientName: clientName,
@@ -775,7 +808,7 @@ export async function POST(req: NextRequest) {
         action: "Réservation client rattachée au professeur",
         entityType: "Teacher",
         entityId: teacherId,
-        detail: `${clientName} a créé ${createdBooking.reference}. Paiement Jèko en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} Total Jèko: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
+        detail: `${clientName} a créé ${createdBooking.reference}. Paiement Jèko en attente. ${startDateLine} ${scheduleLine} ${sessionPricingLine} ${groupPricingLine} ${paymentServiceLine} ${paymentProviderFeeLine} Total Jèko: ${totalPrice.toLocaleString("fr-FR")} FCFA. Net professeur prévu après paiement: ${teacherNetAmount.toLocaleString("fr-FR")} FCFA.`,
         oldStatus: "NO_BOOKING",
         newStatus: "JEKO_PAYMENT_PENDING",
       },
@@ -796,13 +829,6 @@ export async function POST(req: NextRequest) {
 
   if (!booking) {
     return NextResponse.json({ error: "Impossible de retrouver le brouillon de réservation." }, { status: 500 });
-  }
-
-  if (!bookingDraftMatchesExpected(booking, expectedDraftFields)) {
-    return NextResponse.json({
-      error: "Ce brouillon a déjà été créé avec un autre calcul. Ouvrez-le depuis vos paiements ou rechargez la page pour créer un nouveau dossier.",
-      bookingId: booking.id,
-    }, { status: 409 });
   }
 
   let jeko: Awaited<ReturnType<typeof createJekoBookingCheckout>> | null = null;

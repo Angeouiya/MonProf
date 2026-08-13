@@ -130,6 +130,7 @@ type PriceChangeNotice = {
     courseAmount: number;
     transportFee: number;
     paymentServiceFeeAmount: number;
+    paymentProviderFeeAmount: number;
     totalClientPays: number;
   };
   current: {
@@ -137,6 +138,9 @@ type PriceChangeNotice = {
     courseAmount: number;
     transportFee: number;
     paymentServiceFeeAmount: number;
+    paymentProviderFeeAmount: number;
+    paymentProviderFeeLabel?: string | null;
+    paymentProviderFeeMethod: string | null;
     totalClientPays: number;
     priceTierKey: string;
     priceTierLabel: string;
@@ -644,6 +648,7 @@ export function ReserverForm({
   const participantsCount = form.groupType === "SMALL_GROUP" ? clampGroupParticipants(form.participantsCount) : 1;
   const deliveryMode = form.courseFormat === "ONLINE" ? "en_ligne" : "domicile";
   const canResolveTransport = form.courseFormat === "HOME" && Boolean(form.commune.trim());
+  const selectedJekoPaymentMethod = toJekoPaymentMethod(selectedPaymentMethod);
   const pricing = calculateBookingPricing({
     category: effectiveCourseCategory,
     schoolSystem: form.schoolSystem,
@@ -657,6 +662,7 @@ export function ReserverForm({
     packType: form.packType,
     participantsCount,
     teacherPricePerSession: teacher.pricePerSession,
+    paymentMethod: selectedJekoPaymentMethod,
     teacherCommune: canResolveTransport ? teacher.commune : undefined,
     teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
     teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
@@ -924,6 +930,8 @@ export function ReserverForm({
             courseAmount: pricing.courseAmount,
             transportFee: pricing.transportFee,
             paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+            paymentProviderFeeAmount: pricing.paymentProviderFeeAmount,
+            paymentProviderFeeMethod: pricing.paymentProviderFeeMethod,
             totalClientPays: pricing.totalClientPays,
             priceTierKey: pricing.priceTierKey,
           },
@@ -945,6 +953,7 @@ export function ReserverForm({
               courseAmount: pricing.courseAmount,
               transportFee: pricing.transportFee,
               paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
+              paymentProviderFeeAmount: pricing.paymentProviderFeeAmount,
               totalClientPays: pricing.totalClientPays,
             },
             current: data.pricing,
@@ -1750,6 +1759,7 @@ export function ReserverForm({
                         packType: p.value,
                         participantsCount,
                         teacherPricePerSession: teacher.pricePerSession,
+                        paymentMethod: selectedJekoPaymentMethod,
                         teacherCommune: canResolveTransport ? teacher.commune : undefined,
                         teacherQuartier: canResolveTransport ? teacher.quartier : undefined,
                         teacherZoneNames: canResolveTransport ? teacher.zones : undefined,
@@ -1923,6 +1933,9 @@ export function ReserverForm({
                   paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
+                  paymentProviderFeeAmount={pricing.paymentProviderFeeAmount}
+                  paymentProviderFeeLabel={pricing.paymentProviderFeeLabel}
+                  totalBeforePaymentProviderFee={pricing.totalBeforePaymentProviderFee}
                 />
                 {sessionPreview.length > 1 && (
                   <details className="rounded-lg border border-[#DDE6F7] bg-white p-3">
@@ -2022,6 +2035,9 @@ export function ReserverForm({
                   paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
+                  paymentProviderFeeAmount={pricing.paymentProviderFeeAmount}
+                  paymentProviderFeeLabel={pricing.paymentProviderFeeLabel}
+                  totalBeforePaymentProviderFee={pricing.totalBeforePaymentProviderFee}
                 />
               </div>
 
@@ -2247,6 +2263,7 @@ export function ReserverForm({
                 <PriceConfirmationRow label={`Cours · ${priceChangeNotice.current.priceTierLabel}`} value={priceChangeNotice.current.courseAmount} />
                 <PriceConfirmationRow label={priceChangeNotice.current.transportRouteLabel || "Déplacement"} value={priceChangeNotice.current.transportFee} />
                 <PriceConfirmationRow label="Frais de service Compétence" value={priceChangeNotice.current.paymentServiceFeeAmount} />
+                <PriceConfirmationRow label={priceChangeNotice.current.paymentProviderFeeLabel || "Frais de paiement Jèko"} value={priceChangeNotice.current.paymentProviderFeeAmount} />
                 <PriceConfirmationRow label="Total confirmé" value={priceChangeNotice.current.totalClientPays} strong />
               </dl>
             </div>

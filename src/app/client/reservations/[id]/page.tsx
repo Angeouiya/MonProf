@@ -308,8 +308,12 @@ export default async function ReservationDetailPage({
   const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
   const displayPaymentServiceFeeAmount = pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount;
   const displayPaymentServiceFeeLabel = pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel;
+  const displayPaymentProviderFeeAmount = pricingSnapshot?.paymentProviderFeeAmount ?? 0;
+  const displayPaymentProviderFeeLabel = pricingSnapshot?.paymentProviderFeeLabel ?? "Frais de paiement Jèko";
+  const displayTotalBeforePaymentProviderFee = pricingSnapshot?.totalBeforePaymentProviderFee
+    ?? Math.max(0, (pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice) - displayPaymentProviderFeeAmount);
   const displayTotalBeforePaymentServiceFee = pricingSnapshot?.totalBeforePaymentServiceFee
-    ?? Math.max(0, (pricingSnapshot?.totalClientPays ?? booking.totalClientPays ?? booking.totalPrice) - displayPaymentServiceFeeAmount);
+    ?? Math.max(0, displayTotalBeforePaymentProviderFee - displayPaymentServiceFeeAmount);
   const displayTotalPrice = firstPositiveAmount(
     pricingSnapshot?.totalClientPays,
     booking.totalClientPays,
@@ -828,6 +832,9 @@ export default async function ReservationDetailPage({
             paymentServiceFeeAmount={displayPaymentServiceFeeAmount}
             paymentServiceFeeLabel={displayPaymentServiceFeeLabel}
             totalBeforePaymentServiceFee={displayTotalBeforePaymentServiceFee}
+            paymentProviderFeeAmount={displayPaymentProviderFeeAmount}
+            paymentProviderFeeLabel={displayPaymentProviderFeeLabel}
+            totalBeforePaymentProviderFee={displayTotalBeforePaymentProviderFee}
             isQuoteOnly={booking.isQuoteOnly}
           />
 

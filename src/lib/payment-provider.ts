@@ -7,6 +7,7 @@ import { createJekoPaymentRequest, JekoApiError } from "@/lib/jeko";
 import { validateJekoRescheduleFinancialSnapshot } from "@/lib/jeko-client-payment";
 import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-recovery";
 import { isAllowedJekoRedirectUrl, xofToJekoAmountCents, type JekoPaymentMethod } from "@/lib/jeko-utils";
+import { assertTeacherScheduleAvailable, lockTeacherSchedule } from "@/lib/teacher-schedule-conflicts";
 
 const SECURED_PAYMENT_STATUSES = new Set([
   "RECEIVED",
@@ -79,6 +80,7 @@ export async function createJekoBookingCheckout(
       select: {
         id: true,
         reference: true,
+        teacherId: true,
         status: true,
         paymentStatus: true,
         isQuoteOnly: true,
@@ -134,6 +136,13 @@ export async function createJekoBookingCheckout(
         "Le tarif a été recalculé. Vérifiez le nouveau détail puis confirmez-le avant d'ouvrir Jèko.",
       );
     }
+
+    await lockTeacherSchedule(tx, booking.teacherId);
+    await assertTeacherScheduleAvailable(tx, {
+      teacherId: booking.teacherId,
+      bookingId: booking.id,
+      excludeBookingId: booking.id,
+    });
 
     // Verrou inter-fournisseurs posé en base avant tout appel externe. Les
     // anciens brouillons sans provider sont ainsi revendiqués par Jèko de façon

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import { Prisma, type BookingStatus, type PaymentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateReference } from "@/lib/format";
 import { requireJekoServerConfig, type JekoServerConfig } from "@/lib/jeko-config";
@@ -14,6 +14,12 @@ import { reconcileJekoRescheduleWebhook } from "@/lib/jeko-reschedule-reconcilia
 import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 import { resolveJekoPaymentStatusConsensus } from "@/lib/jeko-client-payment";
 import { markPartnerReferralPaymentConfirmedInTransaction } from "@/lib/partner-referrals";
+import {
+  findTeacherScheduleConflictForBooking,
+  formatTeacherScheduleConflictMessage,
+  lockTeacherSchedule,
+  type TeacherScheduleConflict,
+} from "@/lib/teacher-schedule-conflicts";
 import {
   isJekoIncomingPaymentType,
   jekoAmountCentsToXof,
@@ -301,6 +307,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
   const paymentMethod = incomingMethod!;
   const now = new Date();
   let action: ReconcileJekoResult["action"] = "paid";
+  let postPaymentScheduleConflictMessage: string | null = null;
 
   await db.$transaction(async (tx) => {
     const current = await tx.paymentAttempt.findUnique({
@@ -402,6 +409,50 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
       return;
     }
 
+    let scheduleConflict: TeacherScheduleConflict | null = null;
+    let scheduleConflictMessage = "";
+    let nextTransactionStatus: "BLOCKED" | "REFUND_PENDING" = "BLOCKED";
+    let nextPaymentStatus: PaymentStatus | null = null;
+    let nextBookingStatus: BookingStatus | null = null;
+    let preserveAnotherProvider = false;
+    let clientDeletedDraft = false;
+    if (current.booking) {
+      const bookingWasAlreadySecured = SECURED_PAYMENT_STATUSES.has(current.booking.paymentStatus);
+      clientDeletedDraft = isClientDeletedDraft(current.booking);
+      preserveAnotherProvider = bookingWasAlreadySecured && current.booking.paymentProvider !== "JEKO";
+      if (!bookingWasAlreadySecured && !clientDeletedDraft && !preserveAnotherProvider) {
+        const lockedBooking = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id"
+          FROM "Booking"
+          WHERE "id" = ${current.booking.id}
+          FOR UPDATE
+        `);
+        if (lockedBooking.length !== 1) {
+          throw new Error("Réservation supprimée pendant le rapprochement Jèko.");
+        }
+        await lockTeacherSchedule(tx, current.booking.teacherId);
+        scheduleConflict = await findTeacherScheduleConflictForBooking(tx, current.booking.id, {
+          teacherId: current.booking.teacherId,
+          excludeBookingId: current.booking.id,
+        });
+        if (scheduleConflict) {
+          scheduleConflictMessage = formatTeacherScheduleConflictMessage(scheduleConflict);
+          postPaymentScheduleConflictMessage = "Paiement Jèko reçu, mais le créneau est déjà réservé. Le cours n'a pas été activé et le remboursement est en traitement.";
+        }
+      }
+      nextTransactionStatus = clientDeletedDraft || scheduleConflict ? "REFUND_PENDING" : "BLOCKED";
+      nextPaymentStatus = bookingWasAlreadySecured
+        ? current.booking.paymentStatus
+        : clientDeletedDraft || scheduleConflict
+          ? "REFUND_PENDING"
+          : "BLOCKED";
+      nextBookingStatus = current.booking.status === "PENDING_PAYMENT"
+        ? scheduleConflict
+          ? "CANCELLED"
+          : "PAID"
+        : current.booking.status;
+    }
+
     let transactionId = current.transactionId;
     if (!transactionId && current.booking) {
       const financialTransaction = await tx.transaction.create({
@@ -413,7 +464,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
           commission: current.commissionAmountXof,
           teacherNet: current.teacherAmountXof,
           type: "CLIENT_PAYMENT",
-          status: "BLOCKED",
+          status: nextTransactionStatus,
           method: toPlatformPaymentMethod(paymentMethod),
           paidAt: now,
         },
@@ -426,7 +477,7 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
           amount: paidAmountXof,
           commission: current.commissionAmountXof,
           teacherNet: current.teacherAmountXof,
-          status: "BLOCKED",
+          status: nextTransactionStatus,
           method: toPlatformPaymentMethod(paymentMethod),
           paidAt: now,
         },
@@ -434,31 +485,23 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
     }
 
     if (current.booking) {
-      const bookingWasAlreadySecured = SECURED_PAYMENT_STATUSES.has(current.booking.paymentStatus);
-      const clientDeletedDraft = isClientDeletedDraft(current.booking);
-      const nextPaymentStatus = bookingWasAlreadySecured
-        ? current.booking.paymentStatus
-        : clientDeletedDraft
-          ? "REFUND_PENDING"
-          : "BLOCKED";
-      const preserveAnotherProvider = bookingWasAlreadySecured && current.booking.paymentProvider !== "JEKO";
       await tx.booking.update({
         where: { id: current.booking.id },
         data: {
-          status: current.booking.status === "PENDING_PAYMENT" ? "PAID" : current.booking.status,
-          paymentStatus: nextPaymentStatus,
+          status: nextBookingStatus ?? current.booking.status,
+          paymentStatus: nextPaymentStatus ?? current.booking.paymentStatus,
           paymentMethod: toPlatformPaymentMethod(paymentMethod),
           paymentProvider: preserveAnotherProvider ? current.booking.paymentProvider : "JEKO",
           providerPaymentStatus: preserveAnotherProvider ? current.booking.providerPaymentStatus : "SUCCESS",
           paymentVerifiedAt: preserveAnotherProvider ? current.booking.paymentVerifiedAt : now,
         },
       });
-      if (!clientDeletedDraft && !preserveAnotherProvider) {
+      if (!clientDeletedDraft && !scheduleConflict && !preserveAnotherProvider) {
         await markPartnerReferralPaymentConfirmedInTransaction(tx, {
           id: current.booking.id,
           clientId: current.booking.clientId,
           teacherId: current.booking.teacherId,
-          status: current.booking.status === "PENDING_PAYMENT" ? "PAID" : current.booking.status,
+          status: nextBookingStatus ?? current.booking.status,
           confirmedAt: current.booking.confirmedAt,
           paymentConfirmedAt: now,
         }, now);
@@ -468,14 +511,54 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
           adminId: null,
           action: clientDeletedDraft
             ? "Paiement Jèko reçu après suppression d'un brouillon"
+            : scheduleConflict
+              ? "Paiement Jèko reçu sur créneau déjà réservé"
             : "Paiement Jèko vérifié serveur",
           entityType: "Booking",
           entityId: current.booking.id,
-          detail: `Référence ${reference}. Montant confirmé : ${paidAmountXof} FCFA. Frais Jèko couverts : ${providerFeeXof} FCFA (${confirmedTransaction.feeCents} unités mineures).${clientDeletedDraft ? " Le brouillon avait déjà été retiré par le client : aucun cours n'est activé et les fonds passent en remboursement." : ""}${preserveAnotherProvider ? " Alerte : la réservation possédait déjà des fonds sécurisés par un autre flux ; contrôle de double encaissement requis." : ""}`,
+          detail: `Référence ${reference}. Montant confirmé : ${paidAmountXof} FCFA. Frais d'encaissement Jèko réels : ${providerFeeXof} FCFA (${confirmedTransaction.feeCents} unités mineures).${clientDeletedDraft ? " Le brouillon avait déjà été retiré par le client : aucun cours n'est activé et les fonds passent en remboursement." : ""}${scheduleConflict ? ` ${scheduleConflictMessage} Aucun cours n'est activé et les fonds passent en remboursement.` : ""}${preserveAnotherProvider ? " Alerte : la réservation possédait déjà des fonds sécurisés par un autre flux ; contrôle de double encaissement requis." : ""}`,
           oldStatus: current.booking.paymentStatus,
-          newStatus: nextPaymentStatus,
+          newStatus: nextPaymentStatus ?? current.booking.paymentStatus,
         },
       });
+      if (scheduleConflict) {
+        await tx.notification.createMany({
+          data: [
+            {
+              userId: current.booking.clientId,
+              title: "Créneau déjà réservé",
+              message: `Le paiement ${current.booking.reference} a été reçu, mais le créneau choisi est déjà occupé par une autre réservation confirmée. Aucun cours n'a été activé ; le remboursement est maintenant en traitement.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "CLIENT",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "IMPORTANT",
+              bookingId: current.booking.id,
+              teacherId: current.booking.teacherId,
+              clientId: current.booking.clientId,
+              sentAt: now,
+              link: `/client/reservations/${current.booking.id}`,
+              actionLabel: "Suivre le remboursement",
+            },
+            {
+              userId: null,
+              title: "Remboursement requis - créneau déjà réservé",
+              message: `Jèko a confirmé ${current.booking.reference}, mais le créneau est déjà pris. Le cours reste annulé et ${paidAmountXof} FCFA doivent être remboursés ou traités manuellement.`,
+              type: "REFUND_REQUESTED",
+              recipientType: "ADMIN",
+              channel: "INTERNAL",
+              status: "SENT",
+              priority: "URGENT",
+              bookingId: current.booking.id,
+              teacherId: current.booking.teacherId,
+              clientId: current.booking.clientId,
+              sentAt: now,
+              link: `/admin/reservations/${current.booking.id}`,
+              actionLabel: "Traiter le remboursement",
+            },
+          ],
+        });
+      }
       if (clientDeletedDraft) {
         await tx.notification.createMany({
           data: [
@@ -574,7 +657,9 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
     verified: finalAction === "paid" || finalAction === "already_paid" || finalAction === "duplicate",
     action: finalAction,
     status: finalAction === "rejected" ? "rejected" : finalAction === "failed" ? "error" : "success",
-    message: finalAction === "paid"
+    message: finalAction === "paid" && postPaymentScheduleConflictMessage
+      ? postPaymentScheduleConflictMessage
+      : finalAction === "paid"
       ? "Paiement Jèko confirmé, rapproché et sécurisé."
       : finalAction === "rejected"
         ? "Tentative Jèko précédemment rejetée ; contrôle manuel requis."

@@ -6,6 +6,7 @@ export type CancellationPolicyResult = {
   description: string;
   baseAmount: number;
   serviceFeeAmount: number;
+  paymentProviderFeeAmount: number;
   feeRate: number;
   feeAmount: number;
   refundAmount: number;
@@ -25,6 +26,7 @@ export type CancellationPenaltySplit = {
 type BookingLike = {
   totalPrice: number;
   paymentServiceFeeAmount?: number | null;
+  paymentProviderFeeAmount?: number | null;
   paidAmount?: number | null;
   scheduledDate?: Date | string | null;
   scheduledTime?: string | null;
@@ -92,36 +94,40 @@ export function getCancellationPolicy(booking: BookingLike, now = new Date(), ac
     grossAmount,
     Math.max(0, Math.round(Number(booking.paymentServiceFeeAmount) || 0))
   );
-  const baseAmount = Math.max(0, grossAmount - serviceFeeAmount);
+  const paymentProviderFeeAmount = Math.min(
+    Math.max(0, grossAmount - serviceFeeAmount),
+    Math.max(0, Math.round(Number(booking.paymentProviderFeeAmount) || 0))
+  );
+  const baseAmount = Math.max(0, grossAmount - serviceFeeAmount - paymentProviderFeeAmount);
 
   if (actor === "ADMIN") {
-    return result("ADMIN_OVERRIDE", "Annulation service client", "Le service client annule ou arbitre manuellement. Aucun frais client n'est appliqué par défaut.", 0, baseAmount, serviceFeeAmount, null, null);
+    return result("ADMIN_OVERRIDE", "Annulation service client", "Le service client annule ou arbitre manuellement. Aucun frais client n'est appliqué par défaut.", 0, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, null, null);
   }
 
   if (actor === "TEACHER") {
-    return result("TEACHER_FAULT", "Annulation côté professeur", "Le client n'est pas pénalisé. Le service client propose un remplacement, un report ou un remboursement.", 0, baseAmount, serviceFeeAmount, null, null);
+    return result("TEACHER_FAULT", "Annulation côté professeur", "Le client n'est pas pénalisé. Le service client propose un remplacement, un report ou un remboursement.", 0, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, null, null);
   }
 
   const scheduledAt = getScheduledDateTime(booking.scheduledDate, booking.scheduledTime || booking.preferredTime);
   if (!scheduledAt) {
-    return result("UNSCHEDULED", "Cours non encore planifié", "Aucun créneau définitif n'est fixé. L'annulation client reste gratuite.", 0, baseAmount, serviceFeeAmount, null, null);
+    return result("UNSCHEDULED", "Cours non encore planifié", "Aucun créneau définitif n'est fixé. L'annulation client reste gratuite.", 0, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, null, null);
   }
 
   const hoursBeforeCourse = (scheduledAt.getTime() - now.getTime()) / HOUR_MS;
 
   if (hoursBeforeCourse <= 0) {
-    return result("NO_SHOW", "Cours déjà commencé ou dépassé", "Le cours est déjà commencé ou dépassé. Le dossier doit être examiné par le service client.", 100, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+    return result("NO_SHOW", "Cours déjà commencé ou dépassé", "Le cours est déjà commencé ou dépassé. Le dossier doit être examiné par le service client.", 100, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, hoursBeforeCourse, scheduledAt);
   }
 
   if (hoursBeforeCourse < 6) {
-    return result("LATE", "Annulation tardive", "Moins de 6h avant le cours : 50% du montant est retenu, sauf décision exceptionnelle du service client.", 50, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+    return result("LATE", "Annulation tardive", "Moins de 6h avant le cours : 50% du montant est retenu, sauf décision exceptionnelle du service client.", 50, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, hoursBeforeCourse, scheduledAt);
   }
 
   if (hoursBeforeCourse < 24) {
-    return result("MODERATE", "Annulation proche du cours", "Entre 24h et 6h avant le cours : 25% du montant est retenu.", 25, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+    return result("MODERATE", "Annulation proche du cours", "Entre 24h et 6h avant le cours : 25% du montant est retenu.", 25, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, hoursBeforeCourse, scheduledAt);
   }
 
-  return result("FREE", "Annulation gratuite", "Plus de 24h avant le cours : aucun frais d'annulation.", 0, baseAmount, serviceFeeAmount, hoursBeforeCourse, scheduledAt);
+  return result("FREE", "Annulation gratuite", "Plus de 24h avant le cours : aucun frais d'annulation.", 0, baseAmount, serviceFeeAmount, paymentProviderFeeAmount, hoursBeforeCourse, scheduledAt);
 }
 
 export function cancellationPolicySummary(policy: CancellationPolicyResult) {
@@ -156,6 +162,7 @@ function result(
   feeRate: number,
   baseAmount: number,
   serviceFeeAmount: number,
+  paymentProviderFeeAmount: number,
   hoursBeforeCourse: number | null,
   scheduledAt: Date | null
 ): CancellationPolicyResult {
@@ -166,6 +173,7 @@ function result(
     description,
     baseAmount,
     serviceFeeAmount,
+    paymentProviderFeeAmount,
     feeRate,
     feeAmount,
     refundAmount: Math.max(0, baseAmount - feeAmount),

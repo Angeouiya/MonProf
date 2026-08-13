@@ -594,6 +594,7 @@ function verifyServerPriceConfirmation() {
     category: "formation_professionnelle",
     courseCatalogName: "Power BI",
     teacherPricePerSession: 10_000,
+    paymentMethod: "wave",
   })));
 
   assert.equal(expectedPricingMatches({ ...canonical }, canonical), true);
@@ -607,6 +608,61 @@ function verifyServerPriceConfirmation() {
   );
   assert.match(first, /^price_v1_[a-f0-9]{64}$/);
   assert.notEqual(first, second);
+}
+
+function verifyJekoClientPaymentFeesAreSeparate() {
+  const baseWithoutJeko = calculateBookingPricing(baseBooking({
+    schoolSystem: "ivoirien",
+    levelName: "CM2",
+    deliveryMode: "domicile",
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+  }));
+  const wavePricing = calculateBookingPricing(baseBooking({
+    schoolSystem: "ivoirien",
+    levelName: "CM2",
+    deliveryMode: "domicile",
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    paymentMethod: "wave",
+  }));
+  const orangePricing = calculateBookingPricing(baseBooking({
+    schoolSystem: "ivoirien",
+    levelName: "CM2",
+    deliveryMode: "domicile",
+    teacherCommune: "Cocody",
+    teacherQuartier: "Mermoz",
+    clientCommune: "Cocody",
+    clientQuartier: "Mermoz",
+    paymentMethod: "orange",
+  }));
+
+  assert.equal(baseWithoutJeko.totalClientPays, 20_600);
+  assert.equal(wavePricing.paymentServiceFeeAmount, 600);
+  assert.equal(wavePricing.totalBeforePaymentProviderFee, 20_600);
+  assert.equal(wavePricing.paymentProviderFeeAmount, 209);
+  assert.equal(wavePricing.totalClientPays, 20_809);
+  assert.equal(wavePricing.paymentProviderFeeMethod, "wave");
+  assert.match(wavePricing.paymentProviderFeeLabel, /Frais de paiement Jèko Wave/);
+  assert.equal(orangePricing.paymentProviderFeeAmount, 421);
+  assert.equal(orangePricing.totalClientPays, 21_021);
+
+  const waveConfirmable = confirmablePricing(wavePricing);
+  assert.equal(expectedPricingMatches({ ...waveConfirmable }, waveConfirmable), true);
+  assert.equal(
+    expectedPricingMatches({ ...waveConfirmable, paymentProviderFeeAmount: 0 }, waveConfirmable),
+    false,
+    "le serveur doit refuser un total sans frais de paiement Jèko",
+  );
+  assert.equal(
+    expectedPricingMatches({ ...waveConfirmable, paymentProviderFeeMethod: "orange" }, waveConfirmable),
+    false,
+    "le moyen Jèko fait partie de l'empreinte de prix",
+  );
 }
 
 function verifyPacksAndGroups() {
@@ -719,6 +775,7 @@ verifyCatalogCompatibility();
 verifyDraftIdempotence();
 verifyTeacherHomeActivation();
 verifyServerPriceConfirmation();
+verifyJekoClientPaymentFeesAreSeparate();
 verifyPacksAndGroups();
 verifyMaterialFeeIsExcludedFromServiceFeeBase();
 verifyDiscountedGroupBreakdownCopy();

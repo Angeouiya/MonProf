@@ -45,8 +45,10 @@ assert.deepEqual(summary, {
   rescheduleFeesCollected: 0,
   serviceFeesCollected: 990,
   rescheduleServiceFees: 0,
+  clientProviderFeesCollected: 0,
   providerCollectionFees: 511,
   rescheduleProviderFees: 0,
+  providerFeeCoverageBalance: -511,
   commissionRevenue: 9_000,
   rescheduleCommissionRevenue: 0,
   teacherNetGenerated: 24_000,
@@ -57,7 +59,7 @@ assert.deepEqual(summary, {
   teacherRemaining: 4_000,
   teacherOverpaid: 0,
   transferFeesCovered: 300,
-  serviceFeesRemaining: 179,
+  serviceFeesRemaining: 690,
 });
 
 function paidReport(overrides: Partial<FinancialRescheduleLine> = {}): FinancialRescheduleLine {
@@ -99,8 +101,10 @@ assert.deepEqual(withAppliedReport, {
   rescheduleFeesCollected: 2_000,
   serviceFeesCollected: 750,
   rescheduleServiceFees: 60,
+  clientProviderFeesCollected: 0,
   providerCollectionFees: 387,
   rescheduleProviderFees: 31,
+  providerFeeCoverageBalance: -387,
   commissionRevenue: 6_800,
   rescheduleCommissionRevenue: 800,
   teacherNetGenerated: 18_200,
@@ -111,7 +115,7 @@ assert.deepEqual(withAppliedReport, {
   teacherRemaining: 18_200,
   teacherOverpaid: 0,
   transferFeesCovered: 0,
-  serviceFeesRemaining: 363,
+  serviceFeesRemaining: 750,
 });
 
 const awaitingReport = buildPlatformFinancialSummary([{
@@ -188,7 +192,8 @@ assert.equal(refundedReport.clientNetCollected, 23_690);
 assert.equal(refundedReport.rescheduleServiceFees, 0, "le 3 % d'un supplément remboursé n'est plus collecté");
 assert.equal(refundedReport.serviceFeesCollected, 690, "seuls les frais de service du paiement principal restent collectés");
 assert.equal(refundedReport.rescheduleProviderFees, 31, "le coût Jèko du supplément reste un coût réel");
-assert.equal(refundedReport.serviceFeesRemaining, 303, "le reste déduit les frais Jèko sans conserver le 3 % remboursé");
+assert.equal(refundedReport.serviceFeesRemaining, 690, "le solde du service 3 % ne déduit plus les frais d'encaissement Jèko payés séparément par le client");
+assert.equal(refundedReport.providerFeeCoverageBalance, -387, "les anciens dossiers sans frais Jèko facturés au client restent visibles comme écart de couverture");
 assert.equal(refundedReport.rescheduleCommissionRevenue, 0);
 assert.equal(refundedReport.rescheduleTeacherNetGenerated, 0);
 
@@ -232,7 +237,8 @@ assert.equal(
   1,
   "les frais de retrait mineurs sont cumulés avant un seul arrondi XOF",
 );
-assert.equal(fractionalProviderFees.serviceFeesRemaining, 3);
+assert.equal(fractionalProviderFees.serviceFeesRemaining, 4);
+assert.equal(fractionalProviderFees.providerFeeCoverageBalance, -1);
 assert.equal(
   sumProviderFeeAmounts([
     { providerFeeAmountMinor: 40, providerFeeAmountXof: 1 },
@@ -247,7 +253,23 @@ const subsidized = buildPlatformFinancialSummary(
   [{ paymentServiceFeeAmount: 100, providerFeeAmountXof: 120 }],
   [{ transferFeeCoveredByPlatform: 50, status: "PAID" }],
 );
-assert.equal(subsidized.serviceFeesRemaining, -70);
+assert.equal(subsidized.serviceFeesRemaining, 50);
+assert.equal(subsidized.providerFeeCoverageBalance, -120);
+
+const clientPaidProviderFees = buildPlatformFinancialSummary(
+  [{
+    totalClientPays: 24_046,
+    courseAmount: 20_000,
+    transportFee: 3_000,
+    paymentServiceFeeAmount: 690,
+    paymentProviderFeeAmount: 356,
+    providerFeeAmountXof: 356,
+  }],
+);
+assert.equal(clientPaidProviderFees.clientProviderFeesCollected, 356);
+assert.equal(clientPaidProviderFees.providerCollectionFees, 356);
+assert.equal(clientPaidProviderFees.providerFeeCoverageBalance, 0);
+assert.equal(clientPaidProviderFees.serviceFeesRemaining, 690);
 
 const freeCancellation = buildPlatformFinancialSummary([{
   status: "CANCELLED",
@@ -402,6 +424,31 @@ assert.match(
   paymentsPageSource,
   /table affiche au maximum les 300 plus récentes/,
   "la limite d'affichage doit être expliquée à l'administrateur",
+);
+assert.match(
+  paymentsPageSource,
+  /Aucun montant à traiter/,
+  "le bandeau finance ne doit pas afficher un gros 0 FCFA lorsqu'aucune action n'est requise",
+);
+assert.match(
+  paymentsPageSource,
+  /hideZero/,
+  "la table finance doit pouvoir remplacer les zéros secondaires par un tiret lisible",
+);
+
+const financialOverviewSource = readFileSync(
+  new URL("../src/components/admin/financial-overview.tsx", import.meta.url),
+  "utf8",
+);
+assert.match(
+  financialOverviewSource,
+  /primaryMetrics\.length > 0/,
+  "la vue financière consolidée doit rendre les cartes seulement lorsqu'elles portent un montant réel",
+);
+assert.match(
+  financialOverviewSource,
+  /zeroLabel="Non isolé"/,
+  "les anciens frais Jèko non isolés ne doivent pas apparaître comme une fausse carte à 0 FCFA",
 );
 
 const professorPaymentsPageSource = readFileSync(

@@ -37,6 +37,13 @@ import { normalizeBookingRefundExternalReference } from "@/lib/booking-refund";
 import { lockTeacherPayoutBalances } from "@/lib/teacher-payout-reservations";
 import { resolveTeacherJourney, teacherSupportsJourney } from "@/lib/teacher-journeys";
 import { markPartnerReferralBookingConfirmedInTransaction } from "@/lib/partner-referrals";
+import {
+  assertTeacherScheduleAvailable,
+  findTeacherScheduleConflict,
+  formatTeacherScheduleConflictMessage,
+  isTeacherScheduleConflictError,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} from "@/lib/teacher-schedule-conflicts";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RECENT_ISSUE_DAYS = 90;
@@ -331,8 +338,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (!isAvailabilityCompatible(newTeacher.availability, booking)) {
           return NextResponse.json({ error: "La disponibilité du professeur remplaçant ne correspond pas au jour ou au créneau de cette réservation." }, { status: 400 });
         }
-        if (hasActiveConflict(newTeacher.bookings, booking)) {
-          return NextResponse.json({ error: "Le professeur remplaçant a déjà une mission active sur ce créneau." }, { status: 400 });
+        const replacementScheduleSlots = booking.sessions.length > 0
+          ? booking.sessions.map((session) => ({
+              scheduledDate: session.scheduledDate,
+              scheduledTime: session.scheduledTime,
+              durationMinutes: session.durationMinutes,
+            }))
+          : [{
+              scheduledDate: booking.scheduledDate ?? booking.startDate,
+              scheduledTime: booking.scheduledTime || booking.preferredTime,
+              durationMinutes: 120,
+            }];
+        const replacementScheduleConflict = await findTeacherScheduleConflict(db, {
+          teacherId: newTeacherId,
+          excludeBookingId: booking.id,
+          slots: replacementScheduleSlots,
+        });
+        if (replacementScheduleConflict || hasActiveConflict(newTeacher.bookings, booking)) {
+          return NextResponse.json({
+            error: replacementScheduleConflict
+              ? formatTeacherScheduleConflictMessage(replacementScheduleConflict)
+              : "Le professeur remplaçant a déjà une mission active sur ce créneau.",
+            code: replacementScheduleConflict ? TEACHER_SCHEDULE_CONFLICT_CODE : undefined,
+          }, { status: 400 });
         }
         const recentDisputeCount = newTeacher.bookings.reduce((sum, item) => sum + item.disputes.length, 0);
         if (recentDisputeCount > 0) {
@@ -534,6 +562,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           if (currentSessions.some((session) => !lockedTeacherIds.includes(session.teacherId))) {
             throw new Error("BOOKING_REPLACEMENT_CONFLICT");
           }
+          await assertTeacherScheduleAvailable(tx, {
+            teacherId: newTeacherId,
+            excludeBookingId: booking.id,
+            slots: currentSessions.length > 0
+              ? currentSessions.map((session) => ({
+                  scheduledDate: session.scheduledDate,
+                  scheduledTime: session.scheduledTime,
+                  durationMinutes: session.durationMinutes,
+                }))
+              : replacementScheduleSlots,
+          });
           const sessionSnapshots = buildTeacherReplacementSessionSnapshots({
             sessions: currentSessions.map((session) => ({
               id: session.id,
@@ -868,7 +907,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             })
           : null;
         const paidAmount = paidAggregate?._sum.amount ?? 0;
-        const policy = getCancellationPolicy({ ...booking, paidAmount: wasPaid ? paidAmount : null }, now, cancellationActor);
+        const paymentProviderFeeAmount = parsePricingSnapshot(booking.pricingSnapshot)?.paymentProviderFeeAmount ?? 0;
+        const policy = getCancellationPolicy({
+          ...booking,
+          paidAmount: wasPaid ? paidAmount : null,
+          paymentProviderFeeAmount,
+        }, now, cancellationActor);
         const penaltySplit = getCancellationPenaltySplit(policy, cancellationActor);
         const nextPaymentStatus = !wasPaid
           ? booking.paymentStatus
@@ -1273,6 +1317,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
     }
   } catch (e: any) {
+    if (isTeacherScheduleConflictError(e)) {
+      return NextResponse.json({
+        error: e.message,
+        code: TEACHER_SCHEDULE_CONFLICT_CODE,
+      }, { status: 409 });
+    }
     if (e instanceof BookingRefundWorkflowError) {
       return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
     }

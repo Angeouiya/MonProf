@@ -10,6 +10,12 @@ import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-m
 import { syncBookingSessionAggregates } from "@/lib/booking-sessions";
 import { isBookingFinanciallyTerminal, isBookingRefundInProgressOrFinal } from "@/lib/booking-financial-state";
 import { lockTeacherPayoutBalance } from "@/lib/teacher-payout-reservations";
+import {
+  assertTeacherScheduleAvailable,
+  isTeacherScheduleConflictError,
+  lockTeacherSchedule,
+  TEACHER_SCHEDULE_CONFLICT_CODE,
+} from "@/lib/teacher-schedule-conflicts";
 
 type PortalRole = "CLIENT" | "ADMIN" | "TEACHER";
 
@@ -338,6 +344,16 @@ export async function PATCH(
         expectedTeacherId: courseSession.teacherId,
         expectedStatus: courseSession.status,
       });
+      await lockTeacherSchedule(tx, current.teacherId);
+      await assertTeacherScheduleAvailable(tx, {
+        teacherId: current.teacherId,
+        excludeSessionId: current.id,
+        slots: [{
+          scheduledDate: proposedDate,
+          scheduledTime: proposedTime,
+          durationMinutes: current.durationMinutes,
+        }],
+      });
       await updateSessionWithCas(tx, current, {
         status: "RESCHEDULE_PROPOSED",
         proposedDate,
@@ -396,6 +412,21 @@ export async function PATCH(
       });
       if (current.status !== "RESCHEDULE_PROPOSED") {
         throw new SessionWorkflowError("Aucun nouveau créneau en attente.", 409, "SESSION_STATUS_INVALID");
+      }
+      if (accepted) {
+        if (!courseSession.proposedDate || !courseSession.proposedTime) {
+          throw new SessionWorkflowError("Le nouveau créneau proposé est incomplet. Demandez une nouvelle proposition.", 409, "SESSION_RESCHEDULE_TARGET_MISSING");
+        }
+        await lockTeacherSchedule(tx, current.teacherId);
+        await assertTeacherScheduleAvailable(tx, {
+          teacherId: current.teacherId,
+          excludeSessionId: current.id,
+          slots: [{
+            scheduledDate: courseSession.proposedDate,
+            scheduledTime: courseSession.proposedTime,
+            durationMinutes: current.durationMinutes,
+          }],
+        });
       }
       await updateSessionWithCas(
         tx,
@@ -546,6 +577,18 @@ export async function PATCH(
       });
       if (current.status !== "REPLACEMENT_PROPOSED" || current.proposedTeacherId !== proposedTeacherId) {
         throw new SessionWorkflowError("Aucun remplaçant en attente.", 409, "SESSION_REPLACEMENT_CONFLICT");
+      }
+      if (accepted) {
+        await lockTeacherSchedule(tx, proposedTeacherId);
+        await assertTeacherScheduleAvailable(tx, {
+          teacherId: proposedTeacherId,
+          excludeSessionId: current.id,
+          slots: [{
+            scheduledDate: current.scheduledDate,
+            scheduledTime: current.scheduledTime,
+            durationMinutes: current.durationMinutes,
+          }],
+        });
       }
       await updateSessionWithCas(
         tx,
@@ -708,6 +751,12 @@ export async function PATCH(
 
   return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (error) {
+    if (isTeacherScheduleConflictError(error)) {
+      return NextResponse.json({
+        error: error.message,
+        code: TEACHER_SCHEDULE_CONFLICT_CODE,
+      }, { status: 409 });
+    }
     if (error instanceof SessionWorkflowError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }

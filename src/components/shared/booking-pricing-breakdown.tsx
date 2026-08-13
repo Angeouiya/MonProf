@@ -24,6 +24,9 @@ type BookingPricingBreakdownBaseProps = {
   paymentServiceFeeAmount?: number | null;
   paymentServiceFeeLabel?: string | null;
   totalBeforePaymentServiceFee?: number | null;
+  paymentProviderFeeAmount?: number | null;
+  paymentProviderFeeLabel?: string | null;
+  totalBeforePaymentProviderFee?: number | null;
   isQuoteOnly?: boolean | null;
   presentation?: "full" | "checkout";
 };
@@ -68,8 +71,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const discountAmount = props.discountAmount ?? 0;
   const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
   const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service Compétence";
+  const paymentProviderFeeAmount = Math.max(0, Math.round(Number(props.paymentProviderFeeAmount) || 0));
+  const paymentProviderFeeLabel = props.paymentProviderFeeLabel ?? "Frais de paiement Jèko";
   const paymentProviderLabel = props.paymentProviderLabel?.trim() || "le prestataire de paiement sécurisé";
-  const totalBeforePaymentServiceFee = props.totalBeforePaymentServiceFee ?? Math.max(0, totalPrice - paymentServiceFeeAmount);
+  const totalBeforePaymentProviderFee = props.totalBeforePaymentProviderFee
+    ?? Math.max(0, totalPrice - paymentProviderFeeAmount);
+  const totalBeforePaymentServiceFee = props.totalBeforePaymentServiceFee
+    ?? Math.max(0, totalBeforePaymentProviderFee - paymentServiceFeeAmount);
   const indicativeSessionAmount = Math.max(0, Math.round(Number(unitPrice) || 0));
   const persistedCourseAmount = props.courseAmount ?? indicativeSessionAmount;
   const courseAmount = persistedCourseAmount > 0
@@ -109,7 +117,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
               {isQuoteOnly
                 ? "Calcul automatique à reprendre avant le paiement."
                 : audience === "client"
-                  ? `Séances de 2h, niveau, participants${transportFeePending ? ", déplacement à calculer" : transportFee > 0 ? ", déplacement" : ""} et frais de service.`
+                  ? `Séances de 2h, niveau, participants${transportFeePending ? ", déplacement à calculer" : transportFee > 0 ? ", déplacement" : ""}, frais de service et frais Jèko séparés.`
                   : "Vue interne avec éléments comptables réservés au service client."}
             </p>
           </div>
@@ -186,6 +194,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
           />
           {materialFee > 0 && <CheckoutPricingLine label="Matériel" value={<Money amount={materialFee} />} />}
           <CheckoutPricingLine label={paymentServiceFeeLabel} value={<Money amount={paymentServiceFeeAmount} />} />
+          {paymentProviderFeeAmount > 0 && (
+            <CheckoutPricingLine label={paymentProviderFeeLabel} detail="Frais du moyen choisi, distincts des 3 % Compétence" value={<Money amount={paymentProviderFeeAmount} />} />
+          )}
         </div>
       )}
 
@@ -282,6 +293,19 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                 <>
                   <PricingLine label="Sous-total réservation" value={<Money amount={totalBeforePaymentServiceFee} />} />
                   <PricingLine label={paymentServiceFeeLabel} value={<Money amount={paymentServiceFeeAmount} />} />
+                </>
+              )}
+              {paymentProviderFeeAmount > 0 && (
+                <>
+                  <PricingLine
+                    label="Sous-total avant frais Jèko"
+                    value={<Money amount={totalBeforePaymentProviderFee} />}
+                  />
+                  <PricingLine
+                    label={paymentProviderFeeLabel}
+                    detail="Frais du moyen de paiement choisi, ajoutés en plus du frais de service Compétence"
+                    value={<Money amount={paymentProviderFeeAmount} />}
+                  />
                 </>
               )}
               <div className="mt-3 border-t border-[#E3E8F2] pt-3">
