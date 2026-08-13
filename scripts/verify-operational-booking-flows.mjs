@@ -486,9 +486,19 @@ record(
 record(
   "Client confirmation releases only the completed session",
   /action === "confirm"/.test(bookingSessionRoute)
+    && /releaseFundsAcknowledged\s*=\s*body\.releaseFundsAcknowledged === true/.test(bookingSessionRoute)
+    && /FUNDS_RELEASE_ACKNOWLEDGEMENT_REQUIRED/.test(bookingSessionRoute)
     && /status: "RELEASED"/.test(bookingSessionRoute)
     && /releasedAmount: current\.teacherNetAmount/.test(bookingSessionRoute)
     && /updateSessionWithCas\(tx, current/.test(bookingSessionRoute)
+    && /releaseFundsAcknowledged\s*=\s*body\.releaseFundsAcknowledged === true/.test(bookingApi)
+    && /FUNDS_RELEASE_ACKNOWLEDGEMENT_REQUIRED/.test(bookingApi)
+    && /Confirmer et libérer les fonds/.test(bookingActions)
+    && /Ce bouton libère les fonds/.test(bookingActions)
+    && /releaseFundsAcknowledged:\s*true/.test(bookingActions)
+    && /Confirmation financière/.test(sessionLedger)
+    && /Confirmer cette séance et libérer les fonds/.test(sessionLedger)
+    && /releaseFundsAcknowledged:\s*true/.test(sessionLedger)
     && /Chaque séance possède son planning, son professeur et son propre décompte financier/.test(sessionLedger),
 );
 

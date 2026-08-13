@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImportantActionConfirm, ImportantActionNotice } from "@/components/shared/important-action-confirm";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { formatFCFA, formatDate } from "@/lib/format";
 
@@ -154,9 +155,30 @@ export function BookingSessionLedger({
               <div className="mt-3 flex flex-wrap gap-2 border-t border-[#EEF2F7] pt-3">
                 {audience === "client" && session.status === "AWAITING_CLIENT_CONFIRMATION" && (
                   <>
-                    <Button size="sm" onClick={() => act(session.id, "confirm")} disabled={pending("confirm")} className="bg-[#111B4D] text-white">
-                      <CheckCircle2 className="h-4 w-4" /> Confirmer
-                    </Button>
+                    <div className="basis-full">
+                      <ImportantActionNotice
+                        title="Confirmation financière"
+                        description={`Si vous confirmez cette séance, ${formatFCFA(session.teacherNetAmount)} deviennent libérables pour le professeur. Confirmez seulement si la séance a bien eu lieu.`}
+                      />
+                    </div>
+                    <ImportantActionConfirm
+                      title="Confirmer cette séance et libérer les fonds ?"
+                      description={`Cette action confirme que la séance ${session.sequence}/${sessions.length} a bien été réalisée. Si vous continuez, ${formatFCFA(session.teacherNetAmount)} deviennent libérables pour le professeur.`}
+                      badge="Libération des fonds"
+                      notices={[
+                        "Je confirme que cette séance a réellement été effectuée.",
+                        "Je comprends que cette confirmation libère les fonds de cette séance.",
+                        "En cas d'absence, de retard important ou de problème qualité, je choisis plutôt “Signaler”.",
+                      ]}
+                      confirmLabel={pending("confirm") ? "Confirmation..." : "Oui, confirmer"}
+                      cancelLabel="Non, revenir"
+                      onConfirm={() => act(session.id, "confirm", { releaseFundsAcknowledged: true })}
+                      trigger={
+                        <Button size="sm" disabled={pending("confirm")} className="bg-[#111B4D] text-white">
+                          <CheckCircle2 className="h-4 w-4" /> Confirmer et libérer
+                        </Button>
+                      }
+                    />
                     <Button size="sm" variant="outline" onClick={() => setDialog({ session, mode: "dispute" })}>
                       <ShieldAlert className="h-4 w-4" /> Signaler
                     </Button>

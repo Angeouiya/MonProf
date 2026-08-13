@@ -190,6 +190,7 @@ export async function PATCH(
   const body = await req.json();
   const action = typeof body.action === "string" ? body.action : "";
   const reason = cleanReason(body.reason);
+  const releaseFundsAcknowledged = body.releaseFundsAcknowledged === true;
 
   if (role === "ADMIN" && !(await requireAdminApi("BOOKINGS_MANAGE"))) {
     return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
@@ -277,6 +278,12 @@ export async function PATCH(
 
   if (action === "confirm") {
     if (role !== "CLIENT") return NextResponse.json({ error: "Action réservée au client" }, { status: 403 });
+    if (!releaseFundsAcknowledged) {
+      return NextResponse.json({
+        error: "Vous devez confirmer que cette action libère les fonds du professeur avant de continuer.",
+        code: "FUNDS_RELEASE_ACKNOWLEDGEMENT_REQUIRED",
+      }, { status: 400 });
+    }
     if (courseSession.status !== "AWAITING_CLIENT_CONFIRMATION") {
       return NextResponse.json({ error: "Cette séance n'attend pas de confirmation." }, { status: 409 });
     }

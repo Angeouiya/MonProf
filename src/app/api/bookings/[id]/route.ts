@@ -310,6 +310,7 @@ export async function PATCH(
     replacementId,
     clientResponse,
   } = body;
+  const releaseFundsAcknowledged = body.releaseFundsAcknowledged === true;
 
   const now = new Date();
 
@@ -497,6 +498,12 @@ export async function PATCH(
     }
 
     case "confirm": {
+      if (!releaseFundsAcknowledged) {
+        return NextResponse.json({
+          error: "Vous devez confirmer que cette action libère les fonds du professeur avant de continuer.",
+          code: "FUNDS_RELEASE_ACKNOWLEDGEMENT_REQUIRED",
+        }, { status: 400 });
+      }
       const pendingSessions = booking.sessions.filter((session) => session.status === "AWAITING_CLIENT_CONFIRMATION");
       if (booking.sessions.length > 0) {
         if (pendingSessions.length !== 1) {

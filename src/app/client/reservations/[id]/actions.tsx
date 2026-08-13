@@ -96,13 +96,13 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   const verificationActionKey = providerIsJeko ? "jeko_verify" : "paydunya_verify";
   const canResumePayment = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
 
-  async function callAction(action: string) {
+  async function callAction(action: string, body?: Record<string, unknown>) {
     setLoading(action);
     try {
       const res = await fetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...body }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -184,9 +184,9 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   }
 
   async function onConfirmCourse() {
-    const data = await callAction("confirm");
+    const data = await callAction("confirm", { releaseFundsAcknowledged: true });
     if (!data) return;
-    toast.success("Cours confirmé. Le service client finalise le dossier.");
+    toast.success("Cours confirmé. Les fonds deviennent libérables selon le dossier.");
     router.refresh();
   }
 
@@ -251,21 +251,26 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   if (status === "PENDING_CLIENT_VALIDATION" && paymentVerified) {
     return (
       <div className="mt-4 grid gap-2">
+        <ImportantActionNotice
+          title="Ce bouton libère les fonds"
+          description="Confirmez uniquement si le cours a réellement été effectué. Après confirmation, le montant professeur devient libérable selon la comptabilité du dossier."
+        />
         <ImportantActionConfirm
-          title="Confirmer le cours ?"
-          description="Confirmez uniquement si le cours a bien eu lieu. Cette action déclenche la suite du traitement par le service client pour le paiement professeur."
-          badge="Confirmation cours"
+          title="Confirmer et libérer les fonds ?"
+          description="Cette confirmation indique que le cours a bien été réalisé. Si vous continuez, les fonds liés au professeur deviennent libérables. En cas de problème, ne confirmez pas : signalez le dossier."
+          badge="Libération financière"
           notices={[
-            "Votre confirmation est enregistrée dans le dossier.",
-            "En cas de problème, utilisez plutôt les actions détaillées du dossier.",
+            "Je confirme que le cours a réellement été effectué.",
+            "Je comprends que cette action rend les fonds du professeur libérables.",
+            "Si le professeur était absent ou si le cours pose problème, je choisis plutôt “Signaler un problème”.",
           ]}
-          confirmLabel={loading === "confirm" ? "Confirmation..." : "Confirmer le cours"}
-          cancelLabel="Revoir le dossier"
+          confirmLabel={loading === "confirm" ? "Confirmation..." : "Oui, confirmer et libérer"}
+          cancelLabel="Non, revenir"
           onConfirm={onConfirmCourse}
           trigger={
             <Button className="min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]" disabled={loading === "confirm"}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              {loading === "confirm" ? "Confirmation..." : "Confirmer le cours"}
+              {loading === "confirm" ? "Confirmation..." : "Confirmer le cours et libérer"}
             </Button>
           }
         />
