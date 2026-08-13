@@ -9,6 +9,7 @@ const statCard = read("src/components/shared/stat-card.tsx");
 const css = read("src/app/globals.css");
 const dashboard = read("src/app/admin/page.tsx");
 const adminPayments = read("src/app/admin/paiements/page.tsx");
+const financialOverview = read("src/components/admin/financial-overview.tsx");
 const layout = read("src/components/layouts/admin-layout.tsx");
 const reservations = read("src/app/admin/reservations/page.tsx");
 const notifications = read("src/app/admin/notifications/page.tsx");
@@ -117,6 +118,20 @@ record(
     && /Moy\. \{formatFCFA\(averageAmount\)\}/.test(adminPayments)
     && !/<StatCard/.test(adminPayments)
     && !/Commission réelle filtrée/.test(adminPayments),
+);
+
+record(
+  "Admin finance dark panels keep readable contrast after global surface cleanup",
+  /data-admin-finance-surface="light"/.test(dashboard)
+    && /data-admin-finance-card="light"/.test(dashboard)
+    && /data-admin-payment-hero-total/.test(adminPayments)
+    && /data-admin-payment-hero-metric/.test(adminPayments)
+    && !/text-white\/55|text-white\/60|text-white\/65|text-white\/72|text-white\/75/.test(adminPayments)
+    && /data-admin-financial-overview-hero/.test(financialOverview)
+    && /data-admin-financial-header-amount/.test(financialOverview)
+    && /data-admin-payment-app-hero[\s\S]*data-admin-financial-overview-hero[\s\S]*background-color: #111B4D !important/.test(css)
+    && /\[data-admin-payment-hero-metric\][\s\S]*\[data-admin-financial-header-amount\][\s\S]*background-color: rgba\(255, 255, 255, 0\.12\) !important/.test(css)
+    && /\[data-admin-finance-card="light"\][\s\S]*color: #111827 !important/.test(css),
 );
 
 record(

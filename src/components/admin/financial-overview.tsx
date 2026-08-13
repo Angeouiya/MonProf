@@ -250,7 +250,10 @@ export function FinancialOverview({
 
   return (
     <section aria-labelledby="financial-overview-title" className="overflow-hidden rounded-xl border border-[#C7D2FE] bg-white shadow-sm">
-      <div className="grid gap-5 bg-[#111B4D] px-4 py-5 text-white sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.8fr)] lg:items-end">
+      <div
+        className="grid gap-5 bg-[#111B4D] px-4 py-5 text-white sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.8fr)] lg:items-end"
+        data-admin-financial-overview-hero
+      >
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#C7D2FE]">Vue financière consolidée</p>
           <h2 id="financial-overview-title" className="mt-1 text-xl font-black sm:text-2xl">Tous les montants, sans frais cachés</h2>
@@ -272,7 +275,7 @@ export function FinancialOverview({
               />
             ))
           ) : (
-            <div className="col-span-2 rounded-xl border border-white/20 bg-white/10 px-3 py-3 text-sm font-semibold leading-5 text-white/75 sm:col-span-3">
+            <div className="col-span-2 rounded-xl border border-white/20 bg-white/10 px-3 py-3 text-sm font-semibold leading-5 text-[#E0E7FF] sm:col-span-3">
               Aucun paiement vérifié côté serveur pour le moment.
             </div>
           )}
@@ -548,11 +551,11 @@ function FinancialMetric({
   return (
     <div className={cn("rounded-xl border p-4", tones[tone])}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-wide">{label}</p>
-        <Icon className="h-5 w-5" aria-hidden />
+        <p className="text-xs font-black uppercase tracking-wide text-[#334155]">{label}</p>
+        <Icon className="h-5 w-5 text-[#111B4D]" aria-hidden />
       </div>
       <p className="mt-3 text-xl font-black tabular-nums text-[#111827]">{formatFCFA(value)}</p>
-      <p className="mt-1 text-xs font-semibold leading-5 opacity-80">{detail}</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-[#475569]">{detail}</p>
     </div>
   );
 }
@@ -623,10 +626,10 @@ function HeaderAmount({
   emphasized?: boolean;
 }) {
   const tones = {
-    neutral: "border-white/20 bg-white/10 text-white",
-    refund: "border-rose-300/40 bg-rose-400/10 text-rose-100",
-    net: "border-emerald-300/50 bg-emerald-400/15 text-emerald-100",
-    warning: "border-red-300/50 bg-red-400/15 text-red-100",
+    neutral: "border-white/20 bg-white/10",
+    refund: "border-rose-300/40 bg-rose-400/10",
+    net: "border-emerald-300/50 bg-emerald-400/15",
+    warning: "border-red-300/50 bg-red-400/15",
   } as const;
 
   return (
@@ -634,10 +637,10 @@ function HeaderAmount({
       "rounded-xl border px-3 py-3",
       emphasized && "col-span-2 sm:col-span-1",
       tones[tone],
-    )}>
-      <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">{label}</p>
-      <p className={cn("mt-1 font-black tabular-nums", emphasized ? "text-2xl" : "text-lg")}>{formatFCFA(value)}</p>
-      <p className="mt-1 text-[10px] font-semibold leading-4 opacity-80">{detail}</p>
+    )} data-admin-financial-header-amount>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[#E0E7FF]">{label}</p>
+      <p className={cn("mt-1 font-black tabular-nums text-white", emphasized ? "text-2xl" : "text-lg")}>{formatFCFA(value)}</p>
+      <p className="mt-1 text-[10px] font-semibold leading-4 text-[#C7D2FE]">{detail}</p>
     </div>
   );
 }

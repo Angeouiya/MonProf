@@ -331,19 +331,19 @@ export default async function AdminPaiementsPage({
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 text-white ring-1 ring-white/15">
               <Wallet className="h-5 w-5" />
             </span>
-            <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-white/65">
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-[#C7D2FE]">
               {heroEyebrow}
             </p>
-            <h2 id="admin-payment-hero-title" className="mt-2 text-2xl font-black leading-[1.05] tracking-tight sm:text-4xl">
+            <h2 id="admin-payment-hero-title" className="mt-2 text-2xl font-black leading-[1.05] tracking-tight text-white sm:text-4xl">
               {heroTitle}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/72">
+            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-[#E0E7FF]">
               {heroDescription}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 lg:min-w-72">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-white/60">
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 lg:min-w-72" data-admin-payment-hero-total>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#C7D2FE]">
               Montant prioritaire
             </p>
             {heroAmount > 0 ? (
@@ -365,7 +365,7 @@ export default async function AdminPaiementsPage({
           </div>
         ) : (
           <div data-admin-payment-amount-strip className="border-t border-white/15 bg-white/[0.06] p-4 sm:px-6">
-            <div className="rounded-2xl border border-white/12 bg-white/10 px-4 py-3 text-sm font-semibold text-white/75">
+            <div className="rounded-2xl border border-white/12 bg-white/10 px-4 py-3 text-sm font-semibold text-[#E0E7FF]">
               Aucun montant sensible à afficher pour le moment. Les cartes apparaissent uniquement quand une somme réelle ou une anomalie existe.
             </div>
           </div>
@@ -805,10 +805,10 @@ function PaymentHeroMetric({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/12 bg-white/10 px-3 py-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/55">{label}</p>
+    <div className="rounded-2xl border border-white/12 bg-white/10 px-3 py-3" data-admin-payment-hero-metric>
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#E0E7FF]">{label}</p>
       <Money amount={value} className="mt-1 block text-sm font-black text-white sm:text-base" />
-      <p className="mt-0.5 text-[11px] font-semibold text-white/55">{detail}</p>
+      <p className="mt-0.5 text-[11px] font-semibold text-[#C7D2FE]">{detail}</p>
     </div>
   );
 }

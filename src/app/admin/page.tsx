@@ -364,7 +364,11 @@ export default async function AdminDashboard() {
       </Card>
 
       {canViewFinance && (
-        <section className="overflow-hidden rounded-xl border border-[#C7D2FE] bg-white shadow-sm" aria-labelledby="admin-finance-title">
+        <section
+          className="overflow-hidden rounded-xl border border-[#C7D2FE] bg-white shadow-sm"
+          aria-labelledby="admin-finance-title"
+          data-admin-finance-surface="light"
+        >
           <div className="flex flex-col gap-3 border-b border-[#E0E7FF] bg-[#F8FAFF] p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#4F46E5]">Vue financière</p>
@@ -463,18 +467,27 @@ function AdminAmount({
   tone: "navy" | "green" | "violet" | "blue" | "red";
 }) {
   const tones = {
-    navy: "border-[#C7D2FE] bg-[#EEF2FF] text-[#111B4D]",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    violet: "border-violet-200 bg-violet-50 text-violet-800",
-    blue: "border-sky-200 bg-sky-50 text-sky-800",
-    red: "border-red-200 bg-red-50 text-red-800",
+    navy: "border-[#C7D2FE] bg-white",
+    green: "border-emerald-200 bg-white",
+    violet: "border-violet-200 bg-white",
+    blue: "border-sky-200 bg-white",
+    red: "border-red-200 bg-white",
+  } as const;
+  const iconTones = {
+    navy: "bg-[#EEF2FF] text-[#111B4D]",
+    green: "bg-emerald-50 text-emerald-800",
+    violet: "bg-violet-50 text-violet-800",
+    blue: "bg-sky-50 text-sky-800",
+    red: "bg-red-50 text-red-800",
   } as const;
 
   return (
-    <div className={`rounded-xl border p-3 sm:p-4 ${tones[tone]}`}>
+    <div className={`rounded-xl border p-3 sm:p-4 ${tones[tone]}`} data-admin-finance-card="light">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-wide">{label}</p>
-        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <p className="text-[10px] font-black uppercase tracking-wide text-[#334155]">{label}</p>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconTones[tone]}`}>
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
       </div>
       <p className="mt-3 text-base font-black tabular-nums text-[#111827] sm:text-xl">{formatFCFA(value)}</p>
     </div>

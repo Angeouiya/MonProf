@@ -5785,3 +5785,79 @@ b {
   background-color: rgba(16, 185, 129, 0.24) !important;
   border-color: rgba(110, 231, 183, 0.72) !important;
 }
+
+/* Admin finance contrast hardening: these panels sit on navy backgrounds, so
+   the global "solid white surfaces" cleanup must not turn their translucent
+   metric cards into white cards with white text. */
+.admin-shell :where(
+  [data-admin-payment-app-hero],
+  [data-admin-financial-overview-hero],
+  [data-admin-dashboard-app-hero]
+) {
+  background-color: #111B4D !important;
+  border-color: #111B4D !important;
+  color: #FFFFFF !important;
+}
+
+.admin-shell [data-admin-payment-app-hero] :where(div, span)[class*="bg-white/"],
+.admin-shell [data-admin-financial-overview-hero] :where(div, span)[class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #FFFFFF !important;
+}
+
+.admin-shell [data-admin-payment-amount-strip] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+.admin-shell :where(
+  [data-admin-payment-hero-total],
+  [data-admin-payment-hero-metric],
+  [data-admin-financial-header-amount]
+) {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #FFFFFF !important;
+}
+
+.admin-shell :where(
+  [data-admin-payment-app-hero],
+  [data-admin-financial-overview-hero]
+) :where(h2, [data-slot="money"]) {
+  color: #FFFFFF !important;
+}
+
+.admin-shell :where(
+  [data-admin-payment-hero-total],
+  [data-admin-payment-hero-metric],
+  [data-admin-financial-header-amount]
+) :where(p, span, [data-slot="money"]) {
+  color: #FFFFFF !important;
+}
+
+.admin-shell :where(
+  [data-admin-payment-hero-total],
+  [data-admin-payment-hero-metric],
+  [data-admin-financial-header-amount]
+) p:first-child,
+.admin-shell :where(
+  [data-admin-payment-hero-metric],
+  [data-admin-financial-header-amount]
+) p:last-child {
+  color: #E0E7FF !important;
+}
+
+.admin-shell [data-admin-finance-surface="light"],
+.admin-shell [data-admin-finance-card="light"] {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+
+.admin-shell [data-admin-finance-card="light"] :where(p, span, svg) {
+  color: #111827 !important;
+}
+
+.admin-shell [data-admin-finance-card="light"] p:first-child {
+  color: #334155 !important;
+}
