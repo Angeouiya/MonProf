@@ -97,8 +97,10 @@ record(
 record(
   "Admin dashboard keeps critical amounts visible behind the finance permission",
   /\{canViewFinance\s*&&\s*\([\s\S]*?aria-labelledby="admin-finance-title"/.test(dashboard)
-    && (dashboard.match(/<AdminAmount /g) ?? []).length === 4
-    && (dashboard.match(/<FinanceRow /g) ?? []).length === 8
+    && /allAdminFinanceCards:[\s\S]*?key: "net"[\s\S]*?key: "commission"[\s\S]*?key: "service"[\s\S]*?key: "teacher"/.test(dashboard)
+    && /adminFinanceCards = allAdminFinanceCards\.filter\(\(card\) => card\.show\)/.test(dashboard)
+    && /adminFinanceRows = allAdminFinanceRows\.filter\(\(row\) => row\.required \|\| row\.showWhen \|\| row\.value !== 0\)/.test(dashboard)
+    && /Aucune opération financière confirmée/.test(dashboard)
     && /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
 );
 
@@ -107,11 +109,11 @@ record(
   /data-admin-payment-app-hero/.test(adminPayments)
     && /data-admin-payment-amount-strip/.test(adminPayments)
     && /<FinancialOverview summary=\{financialSummary\}/.test(adminPayments)
-    && /PaymentHeroMetric label="Commission"/.test(adminPayments)
-    && /PaymentHeroMetric label="Service restant"/.test(adminPayments)
-    && /PaymentHeroMetric label="Frais Jèko"/.test(adminPayments)
-    && /PaymentHeroMetric label="Reste profs"/.test(adminPayments)
-    && /providerFeesTotal = financialSummary\.providerCollectionFees \+ financialSummary\.rescheduleProviderFees/.test(adminPayments)
+    && /paymentHeroMetrics = \[[\s\S]*?label: "Commission"[\s\S]*?label: "Service restant"[\s\S]*?label: "Frais Jèko réels"[\s\S]*?label: "Reste profs"/.test(adminPayments)
+    && /paymentHeroMetrics\.map\(\(metric\) =>/.test(adminPayments)
+    && /Aucun montant à traiter/.test(adminPayments)
+    && /hideZero/.test(adminPayments)
+    && /providerFeesTotal = financialSummary\.providerCollectionFees/.test(adminPayments)
     && /Moy\. \{formatFCFA\(averageAmount\)\}/.test(adminPayments)
     && !/<StatCard/.test(adminPayments)
     && !/Commission réelle filtrée/.test(adminPayments),
