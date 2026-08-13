@@ -1057,6 +1057,13 @@ model WebPushSubscription {
   id             String    @id @default(cuid())
   userId         String?
   teacherId      String?
+  deviceId       String?
+  platform       String?
+  browser        String?
+  os             String?
+  pwaInstalled   Boolean   @default(false)
+  supportsVibration Boolean @default(false)
+  supportsBadging Boolean  @default(false)
   endpoint       String    @unique @db.Text
   p256dh         String    @db.Text
   auth           String    @db.Text
@@ -1064,6 +1071,7 @@ model WebPushSubscription {
   userAgent      String?   @db.Text
   enabled        Boolean   @default(true)
   failureCount   Int       @default(0)
+  lastSeenAt     DateTime?
   lastSuccessAt  DateTime?
   lastFailureAt  DateTime?
   revokedAt      DateTime?
@@ -1072,9 +1080,12 @@ model WebPushSubscription {
 
   user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  deliveries WebPushDelivery[]
 
   @@index([userId, enabled])
   @@index([teacherId, enabled])
+  @@index([deviceId])
+  @@index([platform, enabled])
   @@index([enabled, updatedAt])
 }
 
@@ -1098,6 +1109,7 @@ model WebPushOutbox {
   lastError             String?                   @db.Text
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
+  deliveries            WebPushDelivery[]
 
   @@index([status, nextAttemptAt])
   @@index([targetUserId, status])
@@ -1112,6 +1124,38 @@ enum WebPushOutboxStatus {
   NO_SUBSCRIPTION
   FAILED
   DEAD
+}
+
+model WebPushDelivery {
+  id                 String                @id @default(uuid()) @db.Uuid
+  outboxId           String                @db.Uuid
+  subscriptionId     String
+  status             WebPushDeliveryStatus @default(PENDING)
+  attempt            Int                   @default(0)
+  providerStatusCode Int?
+  providerMessageId  String?
+  lastError          String?               @db.Text
+  acceptedAt         DateTime?
+  failedAt           DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  outbox       WebPushOutbox       @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+  subscription WebPushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([outboxId, subscriptionId])
+  @@index([outboxId, status])
+  @@index([subscriptionId, status])
+  @@index([status, updatedAt])
+}
+
+enum WebPushDeliveryStatus {
+  PENDING
+  PROCESSING
+  ACCEPTED
+  FAILED
+  EXPIRED
+  REVOKED
 }
 
 model TeacherNotification {

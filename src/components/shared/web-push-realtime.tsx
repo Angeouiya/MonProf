@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const FALLBACK_CHECK_INTERVAL_MS = 45_000;
+const FALLBACK_CHECK_INTERVAL_MS = 5 * 60_000;
 
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
   const router = useRouter();

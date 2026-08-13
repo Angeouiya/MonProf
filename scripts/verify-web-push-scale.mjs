@@ -1,0 +1,90 @@
+import fs from "node:fs";
+import path from "node:path";
+
+const root = process.cwd();
+const checks = [];
+const record = (label, ok) => checks.push({ label, ok: Boolean(ok) });
+const read = (filePath) => fs.readFileSync(path.join(root, filePath), "utf8");
+const exists = (filePath) => fs.existsSync(path.join(root, filePath));
+
+const packageJson = JSON.parse(read("package.json"));
+const prismaSchema = read("prisma/schema.prisma");
+const webPush = read("src/lib/web-push.ts");
+const queueLib = read("src/lib/web-push-queue.ts");
+const queueRoute = read("src/app/api/queues/web-push/route.ts");
+const cronRoute = read("src/app/api/cron/web-push/route.ts");
+const subscriptionRoute = read("src/app/api/push/subscriptions/route.ts");
+const realtime = read("src/components/shared/web-push-realtime.tsx");
+const control = read("src/components/shared/web-push-control.tsx");
+const serviceWorker = read("public/sw.js");
+const vercelJson = JSON.parse(read("vercel.json"));
+
+record("Dépendance Vercel Queues installée", Boolean(packageJson.dependencies?.["@vercel/queue"]));
+record("Script verify:push-scale déclaré", packageJson.scripts?.["verify:push-scale"] === "node scripts/verify-web-push-scale.mjs");
+record("build:quality vérifie le mode push 100k", packageJson.scripts?.["build:quality"]?.includes("verify:push-scale"));
+
+record("Modèle WebPushDelivery présent", /model\s+WebPushDelivery\s+\{/.test(prismaSchema));
+record("Statuts livraison appareil présents", /enum\s+WebPushDeliveryStatus\s+\{[\s\S]*PENDING[\s\S]*PROCESSING[\s\S]*ACCEPTED[\s\S]*FAILED[\s\S]*EXPIRED[\s\S]*REVOKED/.test(prismaSchema));
+record("Abonnements enrichis par appareil", [
+  "deviceId",
+  "platform",
+  "browser",
+  "os",
+  "pwaInstalled",
+  "supportsVibration",
+  "supportsBadging",
+  "lastSeenAt",
+].every((field) => prismaSchema.includes(field)));
+record("Migration WebPushDelivery créée", exists("prisma/migrations/20260813120000_web_push_scale_delivery/migration.sql"));
+
+record("Outbox traitée par lots de 500", /MAX_BATCH_SIZE\s*=\s*500/.test(webPush) && /LIMIT\s+\$\{batchLimit\}/.test(webPush));
+record("Priorité CRITICAL/URGENT avant NORMAL", webPush.includes("WHEN 'CRITICAL' THEN 1") && webPush.includes("WHEN 'URGENT' THEN 2"));
+record("Livraisons suivies par abonnement", webPush.includes("db.webPushDelivery.upsert") && webPush.includes("outboxId_subscriptionId"));
+record("Endpoints 404/410 révoqués automatiquement", webPush.includes("statusCode === 404 || statusCode === 410") && webPush.includes('enabled: false'));
+record("Accepté provider n'est pas assimilé à lu", webPush.includes('status: "ACCEPTED"') && !webPush.includes("read: true"));
+record("Retry PARTIAL sans redoubler ACCEPTED/REVOKED", webPush.includes("'PARTIAL'") && webPush.includes("alreadyFinalBySubscription"));
+
+record("Topic queue web-push-events défini", queueLib.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
+record("Publication queue avec idempotence", queueLib.includes("idempotencyKey") && queueLib.includes("DuplicateMessageError"));
+record("Région Vercel Queue explicite hors Vercel", queueLib.includes('process.env.VERCEL_REGION || "iad1"') && queueRoute.includes('process.env.VERCEL_REGION || "iad1"'));
+record("Worker queue privé avec retry", queueRoute.includes("handleCallback<WebPushQueueMessage>") && queueRoute.includes("visibilityTimeoutSeconds: 600") && queueRoute.includes("retry:"));
+record("Cron secours chaque minute côté route", cronRoute.includes("publishWebPushFlushEvent(\"cron_recovery\"") && cronRoute.includes("flushWebPushOutbox(500)"));
+record("Vercel Queues configuré dans vercel.json", JSON.stringify(vercelJson.functions || {}).includes("web-push-events"));
+record("Cron Vercel /api/cron/web-push toutes les minutes", (vercelJson.crons || []).some((cron) => cron.path === "/api/cron/web-push" && cron.schedule === "* * * * *"));
+
+record("API abonnement reçoit le suivi appareil", [
+  "deviceId",
+  "platform",
+  "browser",
+  "os",
+  "pwaInstalled",
+  "supportsVibration",
+  "supportsBadging",
+].every((field) => subscriptionRoute.includes(field)));
+record("Polling global fréquent supprimé", realtime.includes("5 * 60_000") && !realtime.includes("45_000"));
+record("Carte installation PWA visible", control.includes("data-pwa-install-guide") && control.includes("Installer l’application Compétence"));
+record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && control.includes("supportsVibration") && control.includes("supportsBadging"));
+record("Service Worker icône Compétence + badge + vibration", [
+  "competence-icon-512-safe.png",
+  "competence-icon-192-safe.png",
+  "setAppBadge",
+  "vibrate",
+  "renotify",
+  "silent",
+].every((needle) => serviceWorker.includes(needle)));
+
+record("Vue admin Santé notifications disponible", exists("src/app/admin/notifications/sante/page.tsx"));
+record("API admin Santé notifications disponible", exists("src/app/api/admin/web-push-health/route.ts"));
+record("Entrée métier unique enqueueNotificationEvent disponible", exists("src/lib/notification-events.ts") && read("src/lib/notification-events.ts").includes("enqueueNotificationEvent"));
+
+for (const check of checks) {
+  console.log(`${check.ok ? "OK" : "FAIL"} ${check.label}`);
+}
+
+const failed = checks.filter((check) => !check.ok);
+if (failed.length > 0) {
+  console.error(`FAIL Web Push scale incomplet : ${failed.length} contrôle(s) en échec.`);
+  process.exitCode = 1;
+} else {
+  console.log("OK Web Push haute charge, PWA et observabilité vérifiés.");
+}

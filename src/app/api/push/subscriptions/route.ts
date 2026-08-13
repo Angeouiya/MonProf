@@ -13,6 +13,13 @@ const subscriptionSchema = z.object({
     p256dh: z.string().min(20).max(2048),
     auth: z.string().min(8).max(1024),
   }),
+  deviceId: z.string().min(8).max(120).optional(),
+  platform: z.string().max(80).optional(),
+  browser: z.string().max(80).optional(),
+  os: z.string().max(80).optional(),
+  pwaInstalled: z.boolean().optional(),
+  supportsVibration: z.boolean().optional(),
+  supportsBadging: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -42,7 +49,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Abonnement push invalide." }, { status: 400 });
   }
 
-  const { endpoint, expirationTime, keys } = parsed.data;
+  const {
+    endpoint,
+    expirationTime,
+    keys,
+    deviceId,
+    platform,
+    browser,
+    os,
+    pwaInstalled,
+    supportsVibration,
+    supportsBadging,
+  } = parsed.data;
+  const now = new Date();
   await db.webPushSubscription.upsert({
     where: { endpoint },
     create: {
@@ -51,6 +70,14 @@ export async function POST(request: Request) {
       auth: keys.auth,
       expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
       userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
+      deviceId: cleanDeviceValue(deviceId),
+      platform: cleanDeviceValue(platform),
+      browser: cleanDeviceValue(browser),
+      os: cleanDeviceValue(os),
+      pwaInstalled: Boolean(pwaInstalled),
+      supportsVibration: Boolean(supportsVibration),
+      supportsBadging: Boolean(supportsBadging),
+      lastSeenAt: now,
       userId: actor.userId,
       teacherId: actor.teacherId,
       enabled: true,
@@ -60,6 +87,14 @@ export async function POST(request: Request) {
       auth: keys.auth,
       expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
       userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
+      deviceId: cleanDeviceValue(deviceId),
+      platform: cleanDeviceValue(platform),
+      browser: cleanDeviceValue(browser),
+      os: cleanDeviceValue(os),
+      pwaInstalled: Boolean(pwaInstalled),
+      supportsVibration: Boolean(supportsVibration),
+      supportsBadging: Boolean(supportsBadging),
+      lastSeenAt: now,
       userId: actor.userId,
       teacherId: actor.teacherId,
       enabled: true,
@@ -89,4 +124,9 @@ export async function DELETE(request: Request) {
 
 function noStore(data: unknown) {
   return NextResponse.json(data, { headers: { "Cache-Control": "no-store, max-age=0" } });
+}
+
+function cleanDeviceValue(value: string | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized.slice(0, 120) : null;
 }

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Bell, ChevronDown, ClipboardList, ShieldAlert, UserCog, Wallet } from "lucide-react";
+import { ArrowRight, Bell, ChevronDown, ClipboardList, RadioTower, ShieldAlert, UserCog, Wallet } from "lucide-react";
 import { NotificationsClient } from "./client";
 import { NotificationHistoryTable, NotificationItem } from "@/components/admin/notification-components";
 import { NotificationQuickActionsClient } from "./quick-actions-client";
@@ -121,6 +121,12 @@ export default async function AdminNotificationsPage({
     <div className="space-y-5">
       <PageHeader title="Notifications" description={`${notifications.length} notification(s) • ${unreadCount} non lue(s)`} rootPage>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          <Button asChild variant="outline" className="rounded-xl border-[#D9E1EF] text-[#111B4D]">
+            <Link href="/admin/notifications/sante">
+              <RadioTower className="h-4 w-4" />
+              Santé push
+            </Link>
+          </Button>
           <RunNotificationRemindersClient />
           <NotificationsClient mode="markAll" />
         </div>

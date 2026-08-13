@@ -46,7 +46,7 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify(subscription.toJSON()),
+        body: JSON.stringify(buildSubscriptionPayload(subscription)),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Activation impossible.");
@@ -117,6 +117,15 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
         <p className="flex items-center gap-2"><BellRing className="h-4 w-4 text-[#111B4D]" /> Badges mis à jour automatiquement</p>
         <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#111B4D]" /> Abonnement chiffré par navigateur</p>
       </div>
+      <div data-pwa-install-guide className="mt-4 rounded-lg border border-[#E6EAF3] bg-[#F8FAFC] p-3 text-sm font-medium leading-6 text-[#475569]">
+        <p className="font-black text-[#111B4D]">Installer l’application Compétence</p>
+        <p className="mt-1">
+          Sur Android/Chrome, utilisez “Installer l’application”. Sur iPhone/iPad, ajoutez Compétence à l’écran d’accueil puis activez les notifications depuis cette carte.
+        </p>
+        <p className="mt-1 text-xs font-semibold text-[#64748B]">
+          Les sons et vibrations restent contrôlés par le téléphone et le navigateur ; Compétence force le mode non silencieux pour les alertes urgentes quand c’est supporté.
+        </p>
+      </div>
     </section>
   );
 }
@@ -140,7 +149,7 @@ async function inspect() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify(subscription.toJSON()),
+      body: JSON.stringify(buildSubscriptionPayload(subscription)),
     });
     return { status: "enabled" as const, message: "Cet appareil reçoit les alertes en temps réel.", publicKey: data.publicKey, activeDevices: Math.max(1, Number(data.activeDevices || 0)) };
   }
@@ -152,4 +161,75 @@ function urlBase64ToUint8Array(value: string) {
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
+function buildSubscriptionPayload(subscription: PushSubscription) {
+  return {
+    ...subscription.toJSON(),
+    deviceId: getStableDeviceId(),
+    ...detectDeviceCapabilities(),
+  };
+}
+
+function getStableDeviceId() {
+  const key = "competence_web_push_device_id";
+  try {
+    const existing = window.localStorage.getItem(key);
+    if (existing) return existing;
+    const next = typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    window.localStorage.setItem(key, next);
+    return next;
+  } catch {
+    return `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+}
+
+function detectDeviceCapabilities() {
+  const navigatorWithHints = navigator as Navigator & {
+    userAgentData?: { platform?: string; brands?: Array<{ brand: string; version: string }> };
+    standalone?: boolean;
+  };
+  const userAgent = navigator.userAgent || "";
+  const brands = navigatorWithHints.userAgentData?.brands?.map((item) => item.brand).join(", ") || "";
+  const pwaInstalled = window.matchMedia?.("(display-mode: standalone)").matches || navigatorWithHints.standalone === true;
+
+  return {
+    platform: normalizeMeta(navigatorWithHints.userAgentData?.platform || detectPlatform(userAgent)),
+    browser: normalizeMeta(brands || detectBrowser(userAgent)),
+    os: normalizeMeta(detectOs(userAgent)),
+    pwaInstalled,
+    supportsVibration: "vibrate" in navigator,
+    supportsBadging: "setAppBadge" in navigator || "clearAppBadge" in navigator,
+  };
+}
+
+function detectPlatform(userAgent: string) {
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/windows/i.test(userAgent)) return "Windows";
+  if (/mac os/i.test(userAgent)) return "macOS";
+  return "Web";
+}
+
+function detectOs(userAgent: string) {
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "iOS";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/windows nt/i.test(userAgent)) return "Windows";
+  if (/mac os x/i.test(userAgent)) return "macOS";
+  if (/linux/i.test(userAgent)) return "Linux";
+  return "Navigateur web";
+}
+
+function detectBrowser(userAgent: string) {
+  if (/edg/i.test(userAgent)) return "Edge";
+  if (/chrome|crios/i.test(userAgent)) return "Chrome";
+  if (/safari/i.test(userAgent)) return "Safari";
+  if (/firefox|fxios/i.test(userAgent)) return "Firefox";
+  return "Navigateur";
+}
+
+function normalizeMeta(value: string) {
+  return value.trim().slice(0, 80);
 }

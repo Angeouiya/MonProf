@@ -25,9 +25,17 @@ self.addEventListener("push", (event) => {
       tag: data.tag,
       data: { url: data.url },
       renotify: true,
+      silent: data.silent === true,
       requireInteraction: data.priority === "CRITICAL",
       vibrate: data.priority === "CRITICAL" || data.priority === "URGENT" ? [180, 80, 180] : [120],
     });
+    const badgeCount = Number(data.badgeCount);
+    if (Number.isFinite(badgeCount) && badgeCount >= 0 && self.navigator && "setAppBadge" in self.navigator) {
+      try {
+        if (badgeCount > 0) await self.navigator.setAppBadge(badgeCount);
+        else if ("clearAppBadge" in self.navigator) await self.navigator.clearAppBadge();
+      } catch {}
+    }
   })());
 });
 

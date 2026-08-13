@@ -4,8 +4,12 @@ import { after } from 'next/server'
 function scheduleWebPushFlush() {
   try {
     after(async () => {
-      const { flushWebPushOutbox } = await import('@/lib/web-push')
-      await flushWebPushOutbox()
+      const { publishWebPushFlushEvent } = await import('@/lib/web-push-queue')
+      const queued = await publishWebPushFlushEvent('outbox_created')
+      if (!queued.queued) {
+        const { flushWebPushOutbox } = await import('@/lib/web-push')
+        await flushWebPushOutbox(100)
+      }
     })
   } catch {
     // Les scripts hors requête laissent l'outbox persistante au prochain passage.
