@@ -66,12 +66,12 @@ record("Polling global fréquent supprimé", realtime.includes("5 * 60_000") && 
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
-record("Tuile notification Compétence disponible", exists("public/images/brand/competence-notification-tile-512.png"));
-record("Badge notification transparent disponible", exists("public/images/brand/competence-notification-badge-outline-192.png"));
-record("Icône notification utilise la tuile bleu nuit Compétence", serviceWorker.includes("competence-notification-tile-512.png?v=7"));
-record("Badge système utilise le logo Compétence transparent", serviceWorker.includes("competence-notification-badge-outline-192.png?v=7"));
+record("Tuile monogramme Compétence disponible", exists("public/images/brand/competence-notification-monogram-tile-512.png"));
+record("Badge monogramme transparent disponible", exists("public/images/brand/competence-notification-monogram-badge-192.png"));
+record("Icône notification utilise le grand monogramme Compétence", serviceWorker.includes("competence-notification-monogram-tile-512.png?v=9"));
+record("Badge système utilise le grand monogramme transparent", serviceWorker.includes("competence-notification-monogram-badge-192.png?v=9"));
 record("Service Worker icône Compétence + badge + vibration", [
-  "competence-notification-tile-512.png?v=7",
+  "competence-notification-monogram-tile-512.png?v=9",
   "setAppBadge",
   "vibrate",
   "renotify",

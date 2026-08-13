@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Compétence">
+  <rect width="96" height="96" fill="#0A1C4E"/>
+  <path
+    d="M48 27c8.7 0 16.2 3.3 21.6 8.7l-9.1 8.4A17 17 0 0 0 48 39.2c-9 0-16.2 6.6-16.2 14.8S39 68.8 48 68.8c5.1 0 9.4-1.9 12.4-5.2l9.4 8.4A29.7 29.7 0 0 1 48 80.9C31.8 80.9 18.7 68.8 18.7 54S31.8 27 48 27Z"
+    transform="matrix(1.55 0 0 1.55 -20 -36)"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="3.4"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+</svg>
