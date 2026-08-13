@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { RestrictionNoticeDialog } from "@/components/shared/restriction-notice-dialog";
 
 type PartnerReferralAction = "verify_identity" | "mark_paid" | "reject";
 
@@ -25,6 +26,7 @@ export function PartnerReferralActionsClient({
   const [payoutPhone, setPayoutPhone] = useState("");
   const [payoutReference, setPayoutReference] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   async function run(action: PartnerReferralAction) {
     setBusyAction(action);
@@ -43,7 +45,7 @@ export function PartnerReferralActionsClient({
       });
       const data = await response.json();
       if (!response.ok) {
-        toast.error(data.error || "Action impossible.");
+        setErrorNotice(data.error || "Action impossible.");
         return;
       }
       toast.success(data.message || "Partenariat mis à jour.");
@@ -102,6 +104,15 @@ export function PartnerReferralActionsClient({
           {busyAction === "reject" ? "Rejet..." : "Rejeter"}
         </Button>
       </div>
+      <RestrictionNoticeDialog
+        open={Boolean(errorNotice)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setErrorNotice(null);
+        }}
+        title="Action partenariat impossible"
+        description={errorNotice ?? ""}
+        variant="restriction"
+      />
     </div>
   );
 }

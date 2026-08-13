@@ -91,6 +91,7 @@ export function AvisClient({
                 <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous statuts</SelectItem>
+                  <SelectItem value="reputation">Risque réputation</SelectItem>
                   <SelectItem value="published">Publiés</SelectItem>
                   <SelectItem value="hidden">Masqués</SelectItem>
                   <SelectItem value="low">Faibles notes</SelectItem>

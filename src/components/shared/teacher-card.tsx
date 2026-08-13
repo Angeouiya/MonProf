@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Home, MapPin, Video } from "lucide-react";
+import { Home, MapPin, Star, Video } from "lucide-react";
 import { Teacher } from "@prisma/client";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
+import { getTeacherDisplayRating } from "@/lib/teacher-display-rating";
 
 type TeacherCardData = Pick<Teacher,
   "id" | "fullName" | "professionalName" | "photoUrl" | "coverUrl" |
@@ -31,12 +32,7 @@ export function TeacherCard({
   const directBookingHref = `/client/reserver?teacherId=${teacher.id}`;
   const bookingHref = href ?? `/connexion?from=${encodeURIComponent(directBookingHref)}`;
   const displayName = teacher.professionalName || teacher.fullName;
-  const publicRating = teacher.ratingCount > 0 && teacher.rating > 0
-    ? teacher.rating
-    : teacher.adminRatingPublic && teacher.adminRating > 0
-      ? teacher.adminRating
-      : null;
-  const ratingLabel = publicRating ? `Note ${publicRating.toFixed(1)}/5` : null;
+  const displayRating = getTeacherDisplayRating(teacher);
   const primarySubject = teacher.primarySubject ?? "Matière à confirmer";
   const commune = teacher.commune ?? "Abidjan";
   const cover = resolveTeacherCover({ teacherId: teacher.id, coverUrl: teacher.coverUrl });
@@ -95,6 +91,7 @@ export function TeacherCard({
               {displayName}
             </h3>
             <p className="mt-0.5 line-clamp-1 text-[12.5px] font-medium leading-5 text-[#64748B] sm:line-clamp-2 sm:text-[13px]">{teacher.jobTitle || "Professeur Compétence"}</p>
+            <TeacherCardRating rating={displayRating} />
           </div>
         </div>
 
@@ -109,7 +106,6 @@ export function TeacherCard({
               {teacher.offersOnline && !teacher.offersHome ? <Video className="h-3.5 w-3.5 text-[#111B4D]" /> : <Home className="h-3.5 w-3.5 text-[#111B4D]" />}
               {formatLabel}
             </span>
-            {ratingLabel && <span className="hidden rounded-full bg-[#F8FAFF] px-2.5 py-1 text-[#111827] sm:inline-flex">{ratingLabel}</span>}
             <span className="hidden rounded-full bg-[#F8FAFF] px-2.5 py-1 sm:inline-flex">{teacher.experienceYears} ans exp.</span>
           </div>
         </div>
@@ -127,6 +123,53 @@ export function TeacherCard({
         </Button>
       </div>
     </article>
+  );
+}
+
+function TeacherCardRating({
+  rating,
+}: {
+  rating: ReturnType<typeof getTeacherDisplayRating>;
+}) {
+  if (!rating.hasRating) {
+    return (
+      <div
+        className="mt-1.5 inline-flex min-h-7 max-w-full items-center rounded-full border border-[#E3E8F2] bg-white px-2.5 text-[11px] font-black text-[#64748B]"
+        data-client-teacher-card-rating="empty"
+      >
+        Nouveau · aucun avis
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-black text-[#111827]"
+      data-client-teacher-card-rating="scored"
+    >
+      <RatingStars value={rating.average} />
+      <span className="tabular-nums text-[#111B4D]">{rating.average.toFixed(1).replace(".", ",")}/5</span>
+      <span className="min-w-0 truncate text-[#64748B]">{rating.sourceLabel}</span>
+    </div>
+  );
+}
+
+function RatingStars({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-hidden="true" data-client-teacher-card-stars>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fillPercent = Math.max(0, Math.min(100, (value - star + 1) * 100));
+
+        return (
+          <span key={star} className="relative inline-flex h-3.5 w-3.5 shrink-0">
+            <Star className="absolute inset-0 h-3.5 w-3.5 text-[#CBD5E1]" strokeWidth={2.4} />
+            <span className="absolute inset-0 overflow-hidden" style={{ width: `${fillPercent}%` }}>
+              <Star className="h-3.5 w-3.5 fill-[#F59E0B] text-[#F59E0B]" strokeWidth={2.4} />
+            </span>
+          </span>
+        );
+      })}
+    </span>
   );
 }
 

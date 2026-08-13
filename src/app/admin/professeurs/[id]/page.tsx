@@ -51,6 +51,8 @@ import { formatFCFA, formatDate, formatDateTime, timeAgo } from "@/lib/format";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
 import { getTeacherAdjustedPayable, getTeacherAdjustmentAmount, getTeacherFinancialSettlement, isCancellationPenaltyPayout, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { detectReviewReputationRisk, isOpenReputationReview } from "@/lib/review-reputation";
+import { getTeacherDisplayRating } from "@/lib/teacher-display-rating";
 import { parseAvailability, TWO_HOUR_SLOTS, WEEK_DAYS } from "@/lib/scheduling";
 import {
   teacherSanctionStatusLabel,
@@ -511,8 +513,11 @@ export default async function ProfesseurDetailPage({
   const criticalReviews = teacher.reviews.filter((review) => review.rating <= 2);
   const watchReviews = teacher.reviews.filter((review) => review.rating === 3);
   const reviewsToProcess = teacher.reviews.filter((review) => sensitiveReviewStatuses.includes(review.adminStatus));
+  const reputationReviews = teacher.reviews.filter(isOpenReputationReview);
   const latestSensitiveReview = teacher.reviews.find((review) => review.rating <= 3 || sensitiveReviewStatuses.includes(review.adminStatus));
+  const latestReputationReview = reputationReviews[0] ?? null;
   const reviewDecision = getReviewDecision({
+    reputationCount: reputationReviews.length,
     criticalCount: criticalReviews.length,
     watchCount: watchReviews.length,
     toProcessCount: reviewsToProcess.length,
@@ -522,16 +527,9 @@ export default async function ProfesseurDetailPage({
     rating,
     count: publishedReviews.filter((review) => review.rating === rating).length,
   }));
-  const effectivePublicRating = teacher.ratingCount > 0
-    ? teacher.rating
-    : teacher.adminRatingPublic && teacher.adminRating > 0
-      ? teacher.adminRating
-      : teacher.rating;
-  const effectiveRatingSource = teacher.ratingCount > 0
-    ? `${teacher.ratingCount} avis client(s)`
-    : teacher.adminRatingPublic && teacher.adminRating > 0
-      ? "note admin publique"
-      : "aucune note publique";
+  const displayRating = getTeacherDisplayRating(teacher);
+  const effectivePublicRating = displayRating.average;
+  const effectiveRatingSource = displayRating.sourceLabel;
   const payoutProgress = totalNet > 0 ? Math.min(100, Math.round((alreadyPaid / totalNet) * 100)) : 0;
   const restrictiveStatus = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"].includes(teacher.status);
   const openTasksCount = teacher.tasks.filter((task) => !["DONE", "CANCELLED"].includes(task.status)).length;
@@ -661,6 +659,52 @@ export default async function ProfesseurDetailPage({
         pendingAdjustments={pendingAdjustments}
         nextBooking={nextControlBooking}
       />
+
+      {reputationReviews.length > 0 && (
+        <Card className="overflow-hidden border-red-200 bg-red-50/80" data-admin-teacher-reputation-risk-card>
+          <CardContent className="grid gap-4 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-red-700 shadow-sm">
+                <ShieldAlert className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide text-red-900/70">
+                  Profil sous observation réputation
+                </p>
+                <h3 className="mt-1 text-xl font-black tracking-[-0.02em] text-red-950">
+                  {reputationReviews.length} avis/commentaire(s) peuvent nuire à la réputation de Compétence.CI.
+                </h3>
+                <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-red-950/78">
+                  Le professeur est à traiter en priorité : vérifier les faits, contacter le client si nécessaire, puis décider maintien en observation, avertissement, suspension ou blacklist.
+                </p>
+                {latestReputationReview && (
+                  <p className="mt-2 rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-900">
+                    Dernier signal : note {latestReputationReview.rating}/5 · réservation {latestReputationReview.booking.reference}
+                    {latestReputationReview.comment ? ` · “${latestReputationReview.comment.slice(0, 150)}${latestReputationReview.comment.length > 150 ? "…" : ""}”` : ""}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[380px] lg:grid-cols-1">
+              <Button asChild className="rounded-lg bg-red-700 text-white hover:bg-red-800">
+                <Link href={`/admin/professeurs/${teacher.id}?tab=avis${latestReputationReview ? `&bookingId=${latestReputationReview.bookingId}` : ""}`}>
+                  Traiter les avis
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-lg border-red-200 bg-white text-red-700 hover:bg-red-50">
+                <Link href={`/admin/professeurs/${teacher.id}?tab=operationnel&action=suspend`}>
+                  Préparer restriction
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-lg border-red-200 bg-white text-red-700 hover:bg-red-50">
+                <Link href={`/admin/professeurs/${teacher.id}?tab=discipline`}>
+                  Discipline
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="overflow-hidden border-[#E3E8F2] bg-white">
         <CardHeader className="border-b border-[#E3E8F2] bg-white">
@@ -1117,6 +1161,9 @@ export default async function ProfesseurDetailPage({
           <div className="grid gap-3 lg:grid-cols-3">
             {criticalTasks > 0 && (
               <OperationalAlertCard title="Tâche critique ouverte" description="Une action urgente doit être traitée par l'administration ou le professeur." tone="red" />
+            )}
+            {reputationReviews.length > 0 && (
+              <OperationalAlertCard title="Risque réputation" description="Un avis sensible peut dégrader l'image de Compétence.CI. Traiter le dossier et décider la restriction adaptée." tone="red" />
             )}
             {lateTasks > 0 && (
               <OperationalAlertCard title="Retard à traiter" description="Une tâche ou un cours est marqué en retard. Vérifiez le professeur et le client." tone="amber" />
@@ -1806,6 +1853,7 @@ export default async function ProfesseurDetailPage({
                   <InfoBox label="Note admin" value={teacher.adminRating > 0 ? `${teacher.adminRating.toFixed(1)}/5` : "Non noté"} />
                   <InfoBox label="Avis publiés" value={`${publishedReviews.length}`} />
                   <InfoBox label="Avis masqués" value={`${hiddenReviews}`} />
+                  <InfoBox label="Risque réputation" value={`${reputationReviews.length}`} danger={reputationReviews.length > 0} />
                   <InfoBox label="Avis critiques" value={`${criticalReviews.length}`} danger={criticalReviews.length > 0} />
                   <InfoBox label="À traiter" value={`${reviewsToProcess.length}`} danger={reviewsToProcess.length > 0} />
                 </div>
@@ -1871,6 +1919,8 @@ export default async function ProfesseurDetailPage({
               {teacher.reviews.length === 0 && <p className="text-sm text-muted-foreground">Aucun avis.</p>}
               {teacher.reviews.map((r) => {
                 const severity = reviewSeverity(r.rating);
+                const reputationRisk = detectReviewReputationRisk(r);
+                const openReputationRisk = isOpenReputationReview(r);
                 return (
                   <div
                     key={r.id}
@@ -1888,6 +1938,11 @@ export default async function ProfesseurDetailPage({
                         {severity && (
                           <Badge variant="outline" className={severity.className}>
                             {severity.label}
+                          </Badge>
+                        )}
+                        {openReputationRisk && (
+                          <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+                            {reputationRisk.label}
                           </Badge>
                         )}
                         {r.bookingId === targetBookingId && (
@@ -1988,16 +2043,25 @@ function InfoBox({ label, value, danger = false }: { label: string; value: strin
 }
 
 function getReviewDecision({
+  reputationCount,
   criticalCount,
   watchCount,
   toProcessCount,
   hiddenCount,
 }: {
+  reputationCount: number;
   criticalCount: number;
   watchCount: number;
   toProcessCount: number;
   hiddenCount: number;
 }) {
+  if (reputationCount > 0) {
+    return {
+      tone: "red" as const,
+      title: "Risque réputation à traiter",
+      description: "Un avis ou commentaire sensible peut nuire à l'image de Compétence.CI. Maintenir l'observation et décider rapidement avertissement, suspension ou blacklist selon les preuves.",
+    };
+  }
   if (criticalCount > 0) {
     return {
       tone: "red" as const,

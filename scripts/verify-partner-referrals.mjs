@@ -91,11 +91,35 @@ const checks = [
     file: "src/app/admin/partenariats/page.tsx",
     patterns: [
       /Registre des commissions/,
+      /Lots comptables par numéro partenaire/,
+      /data-partner-referral-grouped-ledger/,
+      /buildPartnerReferralGroups/,
       /Pré-déclarations apporteurs/,
       /partnerReferralLead\.findMany/,
       /Transport exclu/,
       /Frais service exclus/,
       /PartnerReferralActionsClient/,
+      /PartnerReferralGroupActionsClient/,
+    ],
+  },
+  {
+    file: "src/app/api/admin/partner-referrals/groups/route.ts",
+    patterns: [
+      /requireAdminApi\("FINANCE_MANAGE"\)/,
+      /normalizePartnerReferralPhone/,
+      /status: "PAYABLE"/,
+      /status: "PAID"/,
+      /PartnerReferralGroup/,
+      /Commission partenaire payée dans un lot/,
+    ],
+  },
+  {
+    file: "src/app/admin/partenariats/partner-referral-group-actions-client.tsx",
+    patterns: [
+      /Payer le lot/,
+      /\/api\/admin\/partner-referrals\/groups/,
+      /RestrictionNoticeDialog/,
+      /Référence dépôt commune/,
     ],
   },
   {

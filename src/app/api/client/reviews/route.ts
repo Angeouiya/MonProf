@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isReviewableBookingStatus } from "@/lib/review-policy";
 import { refreshTeacherPublicRating } from "@/lib/reviews";
+import { detectReviewReputationRisk } from "@/lib/review-reputation";
 import { PAYMENT_PROOF_REQUIRED_ERROR, requiresVerifiedPayDunyaForOperationalAction } from "@/lib/payment-security";
 
 const MAX_REVIEW_COMMENT_LENGTH = 900;
@@ -71,12 +72,18 @@ export async function POST(req: NextRequest) {
   }
 
   const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
-  const priority = roundedRating <= 2 ? "CRITICAL" : roundedRating <= 3 ? "URGENT" : roundedRating === 4 ? "IMPORTANT" : "NORMAL";
+  const reputationRisk = detectReviewReputationRisk({ rating: roundedRating, comment: cleanedComment });
+  const priority = reputationRisk.isReputationRisk
+    ? reputationRisk.priority
+    : roundedRating <= 3 ? "URGENT" : roundedRating === 4 ? "IMPORTANT" : "NORMAL";
   const reviewLink = `/admin/professeurs/${booking.teacherId}?tab=avis&bookingId=${booking.id}`;
   const qualityImpact = reviewQualityImpact(roundedRating);
   const nextQualityScore = Math.max(0, booking.teacher.qualityScore - qualityImpact);
-  const shouldMoveToObservation = roundedRating <= 2 && nextQualityScore < 60 && QUALITY_OBSERVATION_STATUSES.has(booking.teacher.status);
+  const shouldMoveToObservation = reputationRisk.shouldObserveTeacher && QUALITY_OBSERVATION_STATUSES.has(booking.teacher.status);
   const nextTeacherStatus = shouldMoveToObservation ? "OBSERVATION" : booking.teacher.status;
+  const reputationSummary = reputationRisk.isReputationRisk
+    ? `Risque réputation détecté : ${reputationRisk.reasons.join(", ")}${reputationRisk.matchedTerms.length ? `. Termes sensibles: ${reputationRisk.matchedTerms.join(", ")}` : ""}.`
+    : "";
   const description = cleanedComment
     ? `Avis client ${roundedRating}/5 : ${cleanedComment}`
     : `Avis client ${roundedRating}/5 sans commentaire détaillé.`;
@@ -95,21 +102,22 @@ export async function POST(req: NextRequest) {
         rating: roundedRating,
         comment: cleanedComment || null,
         published: true,
-        adminStatus: roundedRating <= 3 ? "TO_REVIEW" : "NEW",
+        adminStatus: reputationRisk.adminStatus,
       },
     });
 
     await tx.notification.create({
       data: {
         userId: null,
-        title: roundedRating <= 3 ? "Avis client à traiter" : "Nouvel avis professeur",
+        title: reputationRisk.isReputationRisk ? "Risque réputation professeur" : roundedRating <= 3 ? "Avis client à traiter" : "Nouvel avis professeur",
         message: [
           `${booking.client.name} a laissé ${roundedRating}/5 à ${teacherName} sur ${booking.reference}.`,
           description,
+          reputationSummary,
           qualityImpact > 0 ? `Impact score qualité : -${qualityImpact} point(s), nouveau score ${nextQualityScore}/100.` : "Aucun impact qualité négatif.",
-          shouldMoveToObservation ? "Le professeur passe automatiquement en observation." : "",
+          shouldMoveToObservation ? "Le professeur passe automatiquement en observation pour protéger la réputation de Compétence.CI jusqu'au traitement admin." : "",
         ].filter(Boolean).join(" "),
-        type: roundedRating <= 3 ? "LOW_TEACHER_REVIEW" : "TEACHER_REVIEW",
+        type: reputationRisk.isReputationRisk ? "TEACHER_REPUTATION_RISK" : roundedRating <= 3 ? "LOW_TEACHER_REVIEW" : "TEACHER_REVIEW",
         recipientType: "ADMIN",
         channel: "INTERNAL",
         status: "CREATED",
@@ -118,7 +126,7 @@ export async function POST(req: NextRequest) {
         teacherId: booking.teacherId,
         clientId: userId,
         link: reviewLink,
-        actionLabel: roundedRating <= 3 ? "Traiter l'avis" : "Voir l'avis",
+        actionLabel: reputationRisk.isReputationRisk ? "Restreindre si nécessaire" : roundedRating <= 3 ? "Traiter l'avis" : "Voir l'avis",
       },
     });
 
@@ -146,11 +154,19 @@ export async function POST(req: NextRequest) {
           teacherId: booking.teacherId,
           bookingId: booking.id,
           type: "ADMIN_ACTION",
-          title: `Traiter avis client ${roundedRating}/5 - ${booking.reference}`,
-          description: `${description} Vérifier le déroulé du cours, contacter le client si nécessaire et décider d'un suivi professeur.`,
+          title: reputationRisk.isReputationRisk
+            ? `Risque réputation / restriction - ${booking.reference}`
+            : `Traiter avis client ${roundedRating}/5 - ${booking.reference}`,
+          description: [
+            description,
+            reputationSummary,
+            reputationRisk.isReputationRisk
+              ? "Décision attendue : vérifier les faits, contacter le client si nécessaire, puis décider avertissement, maintien en observation, suspension temporaire, suspension définitive ou blacklist."
+              : "Vérifier le déroulé du cours, contacter le client si nécessaire et décider d'un suivi professeur.",
+          ].filter(Boolean).join(" "),
           priority,
           status: "TODO",
-          dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          dueAt: new Date(Date.now() + (reputationRisk.isReputationRisk ? 12 : 24) * 60 * 60 * 1000),
         },
       });
     }
@@ -160,7 +176,7 @@ export async function POST(req: NextRequest) {
       data: {
         qualityScore: nextQualityScore,
         status: nextTeacherStatus as any,
-        badgeRecommended: roundedRating <= 3 ? false : undefined,
+        badgeRecommended: reputationRisk.isReputationRisk || roundedRating <= 3 ? false : undefined,
         lastActivityAt: new Date(),
       },
     });
@@ -168,11 +184,13 @@ export async function POST(req: NextRequest) {
     await tx.adminActionLog.create({
       data: {
         adminId: null,
-        action: roundedRating <= 3 ? "Avis client faible détecté" : "Avis client enregistré",
+        action: reputationRisk.isReputationRisk ? "Risque réputation détecté" : roundedRating <= 3 ? "Avis client faible détecté" : "Avis client enregistré",
         entityType: "Teacher",
         entityId: booking.teacherId,
-        detail: roundedRating <= 3
-          ? `Tâche qualité créée automatiquement après un avis ${roundedRating}/5 sur ${booking.reference}. Score qualité: ${booking.teacher.qualityScore} -> ${nextQualityScore}.${shouldMoveToObservation ? " Professeur passé en observation." : ""}`
+        detail: reputationRisk.isReputationRisk
+          ? `Tâche réputation/restriction créée automatiquement après un avis ${roundedRating}/5 sur ${booking.reference}. ${reputationSummary} Score qualité: ${booking.teacher.qualityScore} -> ${nextQualityScore}.${shouldMoveToObservation ? " Professeur passé en observation." : ""}`
+          : roundedRating <= 3
+          ? `Tâche qualité créée automatiquement après un avis ${roundedRating}/5 sur ${booking.reference}. Score qualité: ${booking.teacher.qualityScore} -> ${nextQualityScore}.`
           : `Avis ${roundedRating}/5 enregistré pour ${teacherName} sur ${booking.reference}. Score qualité: ${booking.teacher.qualityScore} -> ${nextQualityScore}.`,
         oldStatus: `${booking.teacher.status}:SCORE_${booking.teacher.qualityScore}`,
         newStatus: `${nextTeacherStatus}:SCORE_${nextQualityScore}`,

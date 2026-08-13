@@ -412,6 +412,16 @@ record(
 );
 
 record(
+  "Client booking restrictions open as centered cards with travel context",
+  /RestrictionNoticeDialog/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /data-booking-travel-buffer-explanation/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Le calcul se fait entre le dernier cours confirmé du professeur et votre cours demandé, pas depuis son domicile/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /showScheduleConflictNotice/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Choisir une autre heure/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /data-restriction-notice-card/.test(read("src/components/shared/restriction-notice-dialog.tsx")),
+);
+
+record(
   "Client booking condenses transport and pack choices into progressive summaries",
   /pricing\.transportFee\s*===\s*0\s*\?\s*"Gratuit"/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && /Choisissez votre commune pour obtenir le montant exact/.test(read("src/app/client/reserver/reserver-form.tsx"))
@@ -842,12 +852,14 @@ record(
 );
 
 record(
-  "Client teacher cards avoid fake zero-rating trust signals",
-  /const publicRating\s*=\s*teacher\.ratingCount\s*>\s*0\s*&&\s*teacher\.rating\s*>\s*0/.test(teacherCard)
-    && /const ratingLabel\s*=\s*publicRating/.test(teacherCard)
-    && /\{ratingLabel\s*&&/.test(teacherCard)
+  "Client teacher cards expose real star ratings without fake zero-rating trust signals",
+  /getTeacherDisplayRating\(teacher\)/.test(teacherCard)
+    && /data-client-teacher-card-rating="scored"/.test(teacherCard)
+    && /data-client-teacher-card-rating="empty"/.test(teacherCard)
+    && /data-client-teacher-card-stars/.test(teacherCard)
+    && /Nouveau · aucun avis/.test(teacherCard)
     && !/Profil suivi|const trustLabel/.test(teacherCard)
-    && !/displayRating\.toFixed\(1\)\/5/.test(teacherCard),
+    && !/0\.0\/5/.test(teacherCard),
 );
 
 record(
@@ -876,7 +888,7 @@ record(
     && /data-client-teacher-card-action-row/.test(teacherCard)
     && /grid-cols-\[minmax\(0,1fr\)_112px\]/.test(teacherCard)
     && !/mx-4 border-t border-\[#E3E8F2\] pt-3/.test(teacherCard)
-    && /sm:inline-flex">\{ratingLabel\}/.test(teacherCard)
+    && /data-client-teacher-card-rating/.test(teacherCard)
     && /sm:inline-flex">\{teacher\.experienceYears\} ans exp\./.test(teacherCard),
 );
 

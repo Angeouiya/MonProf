@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatFCFA } from "@/lib/format";
-import { buildPartnerReferralSharePath, getPartnerPromotionWindow } from "@/lib/partner-referrals";
+import { buildPartnerReferralSharePath, getPartnerPromotionWindow, normalizePartnerReferralPhone } from "@/lib/partner-referrals";
 import { PartnerReferralActionsClient } from "./partner-referral-actions-client";
+import { PartnerReferralGroupActionsClient } from "./partner-referral-group-actions-client";
 
 const STATUS_LABELS: Record<PartnerReferralStatus, string> = {
   DECLARED: "Déclarée",
@@ -99,6 +100,7 @@ export default async function AdminPartenariatsPage({
   const payableAmount = countsByStatus.get("PAYABLE")?._sum.commissionAmount ?? 0;
   const paidAmount = countsByStatus.get("PAID")?._sum.commissionAmount ?? 0;
   const { startsAt, endsAt } = getPartnerPromotionWindow();
+  const groupedReferrals = buildPartnerReferralGroups(items);
 
   return (
     <div className="space-y-4">
@@ -157,6 +159,96 @@ export default async function AdminPartenariatsPage({
                     {lead.matchedBookingId ? ` · réservation rattachée ${lead.matchedBookingId}` : ""}
                   </p>
                 </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="gap-2">
+          <CardTitle className="text-base">Lots comptables par numéro partenaire</CardTitle>
+          <p className="text-sm font-medium leading-6 text-[#64748B]">
+            Les commissions du même numéro sont regroupées pour faciliter le dépôt et la comptabilité. Ouvrez un lot pour voir chaque client et chaque réservation.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {groupedReferrals.length === 0 ? (
+            <EmptyState
+              icon={WalletCards}
+              title="Aucun lot partenaire"
+              description="Les lots apparaîtront dès qu'une commission possède un numéro apporteur."
+            />
+          ) : (
+            <div className="grid gap-3" data-partner-referral-grouped-ledger>
+              {groupedReferrals.map((group) => (
+                <details key={group.key} className="rounded-2xl border border-[#E3E8F2] bg-white p-4">
+                  <summary className="cursor-pointer list-none marker:hidden">
+                    <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Numéro partenaire</p>
+                        <p className="mt-1 text-lg font-black text-[#111B4D]">{group.phoneLabel}</p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                          {group.names.join(", ") || "Nom non renseigné"} · {group.clientCount} client(s) · {group.items.length} dossier(s)
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 min-[520px]:grid-cols-4">
+                        <GroupMetric label="Dû" value={group.payableAmount} strong />
+                        <GroupMetric label="Payé" value={group.paidAmount} />
+                        <GroupMetric label="Rejeté/expiré" value={group.closedAmount} muted />
+                        <GroupMetric label="Total" value={group.totalAmount} />
+                      </div>
+                      <PartnerReferralGroupActionsClient
+                        promoterPhone={group.phone}
+                        promoterNames={group.names}
+                        payableCount={group.payableCount}
+                        payableAmount={group.payableAmount}
+                      />
+                    </div>
+                  </summary>
+                  <div className="mt-4 overflow-x-auto border-t border-[#E6EAF3] pt-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Réservation</TableHead>
+                          <TableHead>Formation</TableHead>
+                          <TableHead>Commission</TableHead>
+                          <TableHead>Statut</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.map((item) => (
+                          <TableRow key={item.id} className="align-top">
+                            <TableCell className="min-w-48">
+                              <p className="font-semibold text-[#111827]">{item.client.name}</p>
+                              <p className="text-xs text-[#64748B]">{item.client.phone || item.client.email || "Contact non renseigné"}</p>
+                            </TableCell>
+                            <TableCell className="min-w-44">
+                              <Link href={`/admin/reservations/${item.booking.id}`} className="font-semibold text-[#111B4D] hover:underline">
+                                {item.booking.reference}
+                              </Link>
+                              <p className="mt-1 text-xs text-[#64748B]">{formatDate(item.declaredAt)}</p>
+                            </TableCell>
+                            <TableCell className="min-w-56">
+                              <p className="font-semibold text-[#111827]">{item.booking.subjectName}</p>
+                              <p className="text-xs text-[#64748B]">{item.booking.levelName} · {journeyLabel(item.booking.schoolSystem, item.booking.courseCategory)}</p>
+                            </TableCell>
+                            <TableCell className="min-w-40">
+                              <AmountLine label="Cours" value={item.courseAmount} />
+                              <AmountLine label={`${item.commissionRate} %`} value={item.commissionAmount} strong />
+                            </TableCell>
+                            <TableCell className="min-w-44">
+                              <Badge variant="outline" className={STATUS_CLASSES[item.status]}>
+                                {STATUS_LABELS[item.status]}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </details>
               ))}
             </div>
           )}
@@ -287,6 +379,15 @@ function AmountLine({ label, value, strong = false, muted = false }: { label: st
   );
 }
 
+function GroupMetric({ label, value, strong = false, muted = false }: { label: string; value: number; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className={`min-w-28 rounded-xl border px-3 py-2 text-right ${strong ? "border-[#111B4D] bg-[#EEF2FF]" : "border-[#E3E8F2] bg-white"}`}>
+      <p className={`text-[10px] font-black uppercase tracking-wide ${muted ? "text-[#94A3B8]" : "text-[#64748B]"}`}>{label}</p>
+      <p className={`mt-1 whitespace-nowrap text-sm font-black ${strong ? "text-[#111B4D]" : muted ? "text-[#64748B]" : "text-[#111827]"}`}>{formatFCFA(value)}</p>
+    </div>
+  );
+}
+
 function InfoBlock({ label, value, detail }: { label: string; value: string; detail?: string | null }) {
   return (
     <div className="min-w-0 rounded-xl border border-[#EEF2F7] bg-[#F8FAFC] p-3">
@@ -295,6 +396,85 @@ function InfoBlock({ label, value, detail }: { label: string; value: string; det
       {detail && <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{detail}</p>}
     </div>
   );
+}
+
+type PartnerReferralItem = {
+  id: string;
+  clientId: string;
+  promoterName: string;
+  promoterPhone: string | null;
+  status: PartnerReferralStatus;
+  courseAmount: number;
+  commissionRate: number;
+  commissionAmount: number;
+  declaredAt: Date;
+  client: { id: string; name: string; phone: string | null; email: string | null };
+  teacher: { id: string; fullName: string; professionalName: string | null } | null;
+  booking: {
+    id: string;
+    reference: string;
+    subjectName: string;
+    levelName: string;
+    courseCategory: string | null;
+    schoolSystem: string | null;
+    status: string;
+    paymentStatus: string;
+    courseAmount: number;
+    transportFee: number;
+    paymentServiceFeeAmount: number;
+    totalClientPays: number;
+  };
+};
+
+function buildPartnerReferralGroups(items: PartnerReferralItem[]) {
+  const groups = new Map<string, {
+    key: string;
+    phone: string | null;
+    phoneLabel: string;
+    names: string[];
+    clientIds: Set<string>;
+    items: PartnerReferralItem[];
+    totalAmount: number;
+    payableAmount: number;
+    payableCount: number;
+    paidAmount: number;
+    closedAmount: number;
+  }>();
+
+  for (const item of items) {
+    const phone = normalizePartnerReferralPhone(item.promoterPhone);
+    const key = phone || `sans-numero:${item.promoterName}`;
+    const group = groups.get(key) ?? {
+      key,
+      phone,
+      phoneLabel: phone || "Numéro non renseigné",
+      names: [],
+      clientIds: new Set<string>(),
+      items: [],
+      totalAmount: 0,
+      payableAmount: 0,
+      payableCount: 0,
+      paidAmount: 0,
+      closedAmount: 0,
+    };
+    if (item.promoterName && !group.names.includes(item.promoterName)) group.names.push(item.promoterName);
+    group.clientIds.add(item.clientId);
+    group.items.push(item);
+    group.totalAmount += Math.max(0, item.commissionAmount);
+    if (item.status === "PAYABLE") {
+      group.payableAmount += Math.max(0, item.commissionAmount);
+      group.payableCount += 1;
+    } else if (item.status === "PAID") {
+      group.paidAmount += Math.max(0, item.commissionAmount);
+    } else if (item.status === "REJECTED" || item.status === "EXPIRED") {
+      group.closedAmount += Math.max(0, item.commissionAmount);
+    }
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({ ...group, clientCount: group.clientIds.size }))
+    .sort((a, b) => b.payableAmount - a.payableAmount || b.totalAmount - a.totalAmount || a.phoneLabel.localeCompare(b.phoneLabel, "fr"));
 }
 
 function formatDate(date: Date) {

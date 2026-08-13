@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,7 @@ import { BookingPricingBreakdown } from "@/components/shared/booking-pricing-bre
 import { JekoHostedCheckoutPreview } from "@/components/shared/jeko-hosted-checkout-preview";
 import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
+import { RestrictionNoticeDialog, type RestrictionNoticeVariant } from "@/components/shared/restriction-notice-dialog";
 import { formatFCFA } from "@/lib/format";
 import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
@@ -57,10 +57,13 @@ import {
   buildNeighborhoodAliasMap,
   calculateBookingPricing,
   packSessionCount,
+  type NeighborhoodAliasMap,
 } from "@/lib/pricing";
 import {
   formatTimeRangeFromStart,
+  normalizeScheduleSlot,
   normalizeCustomDurationMinutes,
+  resolveTravelBufferMinutes,
   scheduleSlotsConflict,
   validateCustomScheduleTime,
   type ScheduleBufferMinutes,
@@ -148,6 +151,28 @@ type OccupiedScheduleConflict = {
   occurrence: ScheduleOccurrence;
   occupied: OccupiedTeacherSlot;
   conflict: ScheduleSlotsConflictResult;
+};
+
+type RestrictionNoticeState = {
+  title: string;
+  description: ReactNode;
+  variant?: RestrictionNoticeVariant;
+  primaryLabel?: string;
+  onPrimary?: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+};
+
+type TravelPlanningNotice = {
+  status: "idle" | "clear" | "blocked";
+  title: string;
+  description: string;
+  requestedLabel?: string;
+  existingLabel?: string;
+  requestedLocation?: string;
+  existingLocation?: string;
+  requiredBufferMinutes?: number;
+  gapMinutes?: number | null;
 };
 
 type BookingJourney = "ivoirien" | "francais" | "professionnel";
@@ -482,6 +507,7 @@ function findOccupiedConflictForTime(
     transportFeeKey?: string | null;
   },
   scheduleBuffers: ScheduleBufferMinutes,
+  conflictContext?: { grandAbidjanCommuneNames?: string[]; neighborhoodAliases?: NeighborhoodAliasMap },
 ) {
   for (const occupied of occupiedSlots) {
     if (occupied.date !== date) continue;
@@ -505,6 +531,7 @@ function findOccupiedConflictForTime(
         transportFeeKey: occupied.transportFeeKey,
       },
       scheduleBuffers,
+      conflictContext,
     );
     if (conflict) return { occupied, conflict };
   }
@@ -522,9 +549,10 @@ function findOccupiedConflictForSelection(
     transportFeeKey?: string | null;
   },
   scheduleBuffers: ScheduleBufferMinutes,
+  conflictContext?: { grandAbidjanCommuneNames?: string[]; neighborhoodAliases?: NeighborhoodAliasMap },
 ) {
   const time = slotLabelFromSelection(selection);
-  return time ? findOccupiedConflictForTime(occupiedSlots, date, time, 120, requestContext, scheduleBuffers) : null;
+  return time ? findOccupiedConflictForTime(occupiedSlots, date, time, 120, requestContext, scheduleBuffers, conflictContext) : null;
 }
 
 function formatOccupiedConflictMessage(conflict: OccupiedScheduleConflict) {
@@ -534,6 +562,118 @@ function formatOccupiedConflictMessage(conflict: OccupiedScheduleConflict) {
     return `Déplacement insuffisant pour ce professeur (${formatDateInputLabel(conflict.occurrence.date)} · ${conflict.occurrence.time}${sequenceLabel}${referenceLabel}). Il faut au moins ${conflict.conflict.requiredBufferMinutes} min entre deux cours. Choisissez une autre heure ou un autre professeur.`;
   }
   return `Ce créneau est déjà payé pour ce professeur (${formatDateInputLabel(conflict.occurrence.date)} · ${conflict.occurrence.time}${sequenceLabel}${referenceLabel}). Choisissez un autre créneau ou un autre professeur.`;
+}
+
+function buildTravelPlanningNotice(
+  occurrences: ScheduleOccurrence[],
+  occupiedSlots: OccupiedTeacherSlot[],
+  requestContext: {
+    courseFormat?: string | null;
+    commune?: string | null;
+    quartier?: string | null;
+    transportFeeKey?: string | null;
+  },
+  scheduleBuffers: ScheduleBufferMinutes,
+  conflictContext?: { grandAbidjanCommuneNames?: string[]; neighborhoodAliases?: NeighborhoodAliasMap },
+): TravelPlanningNotice {
+  if (occurrences.length === 0) {
+    return {
+      status: "idle",
+      title: "Planning à compléter",
+      description: "Choisissez une date et un horaire : le moteur vérifiera les cours déjà payés du professeur avant paiement.",
+    };
+  }
+
+  let closestClear: {
+    occurrence: ScheduleOccurrence;
+    occupied: OccupiedTeacherSlot;
+    gapMinutes: number;
+    requiredBufferMinutes: number;
+  } | null = null;
+
+  for (const occurrence of occurrences) {
+    const requestedSlotInput = {
+      scheduledDate: occurrence.date,
+      scheduledTime: occurrence.time,
+      durationMinutes: occurrence.durationMinutes,
+      courseFormat: requestContext.courseFormat,
+      commune: requestContext.commune,
+      quartier: requestContext.quartier,
+      transportFeeKey: requestContext.transportFeeKey,
+    };
+    const requested = normalizeScheduleSlot(requestedSlotInput);
+    if (!requested?.range) continue;
+
+    for (const occupied of occupiedSlots) {
+      if (occupied.date !== occurrence.date) continue;
+      const existingSlotInput = {
+        scheduledDate: occupied.date,
+        scheduledTime: occupied.time,
+        durationMinutes: occupied.durationMinutes,
+        courseFormat: occupied.courseFormat,
+        commune: occupied.commune,
+        quartier: occupied.quartier,
+        transportFeeKey: occupied.transportFeeKey,
+      };
+      const existing = normalizeScheduleSlot(existingSlotInput);
+      if (!existing?.range) continue;
+      const conflict = scheduleSlotsConflict(requestedSlotInput, existingSlotInput, scheduleBuffers, conflictContext);
+      if (conflict) {
+        const requestedLabel = `${formatDateInputLabel(occurrence.date)} · ${occurrence.time}`;
+        const existingLabel = `${formatDateInputLabel(occupied.date)} · ${occupied.time}${occupied.bookingReference ? ` · ${occupied.bookingReference}` : ""}`;
+        return {
+          status: "blocked",
+          title: conflict.kind === "TRAVEL_BUFFER" ? "Déplacement insuffisant" : "Créneau déjà payé",
+          description: conflict.kind === "TRAVEL_BUFFER"
+            ? `Le professeur a déjà un cours confirmé sur cette journée. Il faut ${conflict.requiredBufferMinutes} min de déplacement entre les deux lieux, mais la marge disponible est de ${Math.max(0, conflict.gapMinutes ?? 0)} min.`
+            : "Ce créneau chevauche un cours déjà payé pour ce professeur. Choisissez une autre heure ou un autre professeur.",
+          requestedLabel,
+          existingLabel,
+          requestedLocation: formatTravelLocation(requestContext),
+          existingLocation: formatTravelLocation(occupied),
+          requiredBufferMinutes: conflict.requiredBufferMinutes,
+          gapMinutes: conflict.gapMinutes,
+        };
+      }
+
+      const requestedBeforeExisting = requested.range.endMinutes <= existing.range.startMinutes;
+      const existingBeforeRequested = existing.range.endMinutes <= requested.range.startMinutes;
+      if (!requestedBeforeExisting && !existingBeforeRequested) continue;
+      const gapMinutes = requestedBeforeExisting
+        ? existing.range.startMinutes - requested.range.endMinutes
+        : requested.range.startMinutes - existing.range.endMinutes;
+      const requiredBufferMinutes = resolveTravelBufferMinutes(requestedSlotInput, existingSlotInput, scheduleBuffers, conflictContext);
+      if (gapMinutes < requiredBufferMinutes) continue;
+      if (!closestClear || gapMinutes < closestClear.gapMinutes) {
+        closestClear = { occurrence, occupied, gapMinutes, requiredBufferMinutes };
+      }
+    }
+  }
+
+  if (closestClear) {
+    return {
+      status: "clear",
+      title: "Marge de déplacement suffisante",
+      description: `Le calcul se fait entre le dernier cours confirmé du professeur et votre cours demandé, pas depuis son domicile. Marge disponible : ${closestClear.gapMinutes} min pour ${closestClear.requiredBufferMinutes} min requis.`,
+      requestedLabel: `${formatDateInputLabel(closestClear.occurrence.date)} · ${closestClear.occurrence.time}`,
+      existingLabel: `${formatDateInputLabel(closestClear.occupied.date)} · ${closestClear.occupied.time}${closestClear.occupied.bookingReference ? ` · ${closestClear.occupied.bookingReference}` : ""}`,
+      requestedLocation: formatTravelLocation(requestContext),
+      existingLocation: formatTravelLocation(closestClear.occupied),
+      requiredBufferMinutes: closestClear.requiredBufferMinutes,
+      gapMinutes: closestClear.gapMinutes,
+    };
+  }
+
+  return {
+    status: "clear",
+    title: "Aucun cours payé proche ce jour",
+    description: "Le temps de déplacement sera quand même contrôlé côté serveur avant paiement Jèko. Le calcul utilise les cours confirmés du professeur, pas son domicile.",
+  };
+}
+
+function formatTravelLocation(slot: { courseFormat?: string | null; commune?: string | null; quartier?: string | null }) {
+  if (slot.courseFormat === "ONLINE") return "En ligne";
+  return [slot.commune, slot.quartier].filter(Boolean).join(" · ") || "Lieu à confirmer";
 }
 
 function buildSessionPreview(timeLabels: string[], customTimeRequest: string, sessionsCount: number, startDateLabel: string) {
@@ -595,6 +735,7 @@ export function ReserverForm({
   const [clientCreationKey] = useState(createClientCreationKey);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("WAVE");
   const [priceChangeNotice, setPriceChangeNotice] = useState<PriceChangeNotice | null>(null);
+  const [restrictionNotice, setRestrictionNotice] = useState<RestrictionNoticeState | null>(null);
   const [paymentLaunchMessage, setPaymentLaunchMessage] = useState("");
   const displayName = teacher.professionalName || teacher.fullName;
   const teacherAvailability = parseAvailability(teacher.availability);
@@ -656,6 +797,21 @@ export function ReserverForm({
         quartier: current.courseFormat === "HOME" ? current.quartier : null,
         transportFeeKey: null,
       };
+      const localRelevantCommunes = new Set(
+        [teacher.commune, current.commune].map(normalizeLocation).filter(Boolean),
+      );
+      const localConflictContext = {
+        grandAbidjanCommuneNames: communes.filter((commune) => commune.transportClass === "GRAND_ABIDJAN").map((commune) => commune.name),
+        neighborhoodAliases: buildNeighborhoodAliasMap(
+          communes
+            .filter((commune) => localRelevantCommunes.has(normalizeLocation(commune.name)))
+            .flatMap((commune) => commune.quarters.map((quarter) => ({
+              ...quarter,
+              communeId: commune.id,
+              communeName: commune.name,
+            }))),
+        ),
+      };
       return {
         ...current,
         startDate: value,
@@ -668,6 +824,7 @@ export function ReserverForm({
                 slot,
                 requestContext,
                 pricingConfig.scheduleBuffers,
+                localConflictContext,
               )
             ))
           : current.selectedTimeSlots,
@@ -867,6 +1024,10 @@ export function ReserverForm({
     quartier: form.courseFormat === "HOME" ? form.quartier : null,
     transportFeeKey: pricing.transportFeeKey,
   };
+  const scheduleConflictContext = {
+    grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
+    neighborhoodAliases,
+  };
   const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
   const selectedPackLabel = PACK_OPTIONS.find((pack) => pack.value === form.packType)?.label ?? form.packType;
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
@@ -920,14 +1081,15 @@ export function ReserverForm({
     && selectedStartDayKey
     && !selectedDays.includes(selectedStartDayKey),
   );
-  const sessionPreview = buildSessionPreview(selectedTimeLabels, customTimeRequest, selectedPackSessions, selectedStartDateLabel);
-  const selectedScheduleConflicts: OccupiedScheduleConflict[] = buildScheduleOccurrences({
+  const selectedScheduleOccurrences = buildScheduleOccurrences({
     startDate: form.startDate,
     selectedTimeSlots: form.selectedTimeSlots,
     sessionsCount: selectedPackSessions,
     fallbackTime: customTimeRange || null,
     fallbackDurationMinutes: normalizedCustomDurationMinutes,
-  })
+  });
+  const sessionPreview = buildSessionPreview(selectedTimeLabels, customTimeRequest, selectedPackSessions, selectedStartDateLabel);
+  const selectedScheduleConflicts: OccupiedScheduleConflict[] = selectedScheduleOccurrences
     .map((occurrence) => {
       const conflict = findOccupiedConflictForTime(
         occupiedSlots,
@@ -936,6 +1098,7 @@ export function ReserverForm({
         occurrence.durationMinutes,
         scheduleRequestContext,
         pricingConfig.scheduleBuffers,
+        scheduleConflictContext,
       );
       return conflict
         ? { occurrence, occupied: conflict.occupied, conflict: conflict.conflict }
@@ -943,6 +1106,13 @@ export function ReserverForm({
     })
     .filter((item): item is OccupiedScheduleConflict => Boolean(item));
   const firstScheduleConflict = selectedScheduleConflicts[0] ?? null;
+  const travelPlanningNotice = buildTravelPlanningNotice(
+    selectedScheduleOccurrences,
+    occupiedSlots,
+    scheduleRequestContext,
+    pricingConfig.scheduleBuffers,
+    scheduleConflictContext,
+  );
   const hasValidStartDate = Boolean(form.startDate && form.startDate >= todayIso);
   const hasValidTimeRequest = form.selectedTimeSlots.length > 0 || Boolean(form.customDay && form.customStartTime);
   const earliestCourseStartAt = form.startDate
@@ -973,15 +1143,64 @@ export function ReserverForm({
                 : !hasMinimumBookingNotice
                   ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
                   : "";
+
+  function openRestrictionNotice(notice: RestrictionNoticeState) {
+    setRestrictionNotice(notice);
+  }
+
+  function showValidationRestriction(message: string, title = "Action impossible pour le moment") {
+    openRestrictionNotice({
+      title,
+      description: message,
+      variant: "restriction",
+      primaryLabel: "OK",
+    });
+  }
+
+  function showScheduleConflictNotice(conflict: OccupiedScheduleConflict) {
+    const isTravel = conflict.conflict.kind === "TRAVEL_BUFFER";
+    openRestrictionNotice({
+      title: isTravel ? "Déplacement insuffisant" : "Créneau déjà payé",
+      description: (
+        <div className="space-y-3">
+          <p>{formatOccupiedConflictMessage(conflict)}</p>
+          <div className="grid gap-2 rounded-xl border border-white/60 bg-white/70 p-3 text-xs font-bold text-[#111827]">
+            <span>Cours demandé : {formatDateInputLabel(conflict.occurrence.date)} · {conflict.occurrence.time} · {formatTravelLocation(scheduleRequestContext)}</span>
+            <span>Cours existant : {formatDateInputLabel(conflict.occupied.date)} · {conflict.occupied.time} · {formatTravelLocation(conflict.occupied)}</span>
+            {isTravel && (
+              <span>
+                Marge disponible : {Math.max(0, conflict.conflict.gapMinutes ?? 0)} min · temps requis : {conflict.conflict.requiredBufferMinutes} min.
+              </span>
+            )}
+          </div>
+        </div>
+      ),
+      variant: "restriction",
+      primaryLabel: "Choisir une autre heure",
+      onPrimary: () => {
+        setStep(2);
+        if (typeof window !== "undefined") {
+          window.setTimeout(() => document.querySelector("[data-booking-schedule-section]")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+        }
+      },
+      secondaryLabel: "Changer de professeur",
+      onSecondary: () => {
+        const params = new URLSearchParams();
+        if (bookingJourney) params.set("journey", bookingJourney);
+        router.push(`/client/rechercher${params.toString() ? `?${params}` : ""}`);
+      },
+    });
+  }
+
   function handleJourneyChange(journey: "ivoirien" | "francais" | "professionnel") {
     if (!eligibleJourneys.includes(journey)) {
-      toast.error("Ce professeur n'enseigne pas dans ce système. Choisissez un parcours autorisé.");
+      showValidationRestriction("Ce professeur n'enseigne pas dans ce système. Choisissez un parcours autorisé.", "Système non disponible");
       return;
     }
     const nextSubjects = filterSubjectsForJourney(subjects, journey);
     const nextLevels = filterLevelsForJourney(levels, journey);
     if (nextSubjects.length === 0 || nextLevels.length === 0) {
-      toast.error("Ce professeur n'a pas encore de matière et niveau compatibles avec ce système.");
+      showValidationRestriction("Ce professeur n'a pas encore de matière et niveau compatibles avec ce système.", "Profil incompatible");
       return;
     }
     const nextSubject = nextSubjects.find((subject) => (
@@ -1104,7 +1323,7 @@ export function ReserverForm({
   function next() {
     const err = validateStep(step);
     if (err) {
-      toast.error(err);
+      showValidationRestriction(err);
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -1119,7 +1338,7 @@ export function ReserverForm({
   async function submit(confirmedPricingFingerprint?: string) {
     const err = [0, 1, 2, 3, 4].map(validateStep).find(Boolean);
     if (err) {
-      toast.error(err);
+      showValidationRestriction(err);
       return;
     }
     setSubmitting(true);
@@ -1198,10 +1417,9 @@ export function ReserverForm({
             },
             current: data.pricing,
           });
-          toast.info("Le tarif a changé : votre confirmation est requise avant Jèko.");
           return;
         }
-        toast.error(data.error || "Erreur lors de la réservation");
+        showValidationRestriction(data.error || "Erreur lors de la réservation", "Réservation impossible");
         return;
       }
       setPriceChangeNotice(null);
@@ -1212,11 +1430,16 @@ export function ReserverForm({
         setPaymentLaunchMessage("Paiement confirmé. Ouverture de votre réservation...");
         router.push(`/client/reservations/${data.booking.id}?jeko=confirmed`);
       } else {
-        toast.error(data.payment?.message || data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.");
-        router.push(`/client/reservations/${data.booking.id}?payment=pending`);
+        openRestrictionNotice({
+          title: "Paiement à reprendre",
+          description: data.payment?.message || data.payment?.error || "Jèko n'a pas renvoyé de lien de paiement sécurisé. Le dossier reste en brouillon et aucun professeur n'est notifié.",
+          variant: "warning",
+          primaryLabel: "Ouvrir le dossier",
+          onPrimary: () => router.push(`/client/reservations/${data.booking.id}?payment=pending`),
+        });
       }
     } catch (e: any) {
-      toast.error("Erreur réseau, veuillez réessayer.");
+      showValidationRestriction("Erreur réseau, veuillez réessayer.", "Connexion impossible");
     } finally {
       setSubmitting(false);
     }
@@ -1224,7 +1447,7 @@ export function ReserverForm({
 
   const isFinalStep = step === STEPS.length - 1;
   const primaryActionLabel = isFinalStep ? "Payer via Jèko" : "Continuer";
-  const primaryActionDisabled = submitting || (isFinalStep && !isScheduleReadyForPayment);
+  const primaryActionDisabled = submitting;
   const handlePrimaryAction = () => {
     if (isFinalStep) {
       void submit();
@@ -1799,7 +2022,7 @@ export function ReserverForm({
                 </div>
               </div>
 
-              <div>
+              <div data-booking-schedule-section>
                 <Label>Créneaux disponibles du professeur *</Label>
                 <p className="mt-1 text-sm text-[#64748B]">
                   Sélectionnez un ou plusieurs créneaux exacts. Chaque séance dure 2 heures.
@@ -1823,6 +2046,7 @@ export function ReserverForm({
                       `${day.key}|${slot.key}`,
                       scheduleRequestContext,
                       pricingConfig.scheduleBuffers,
+                      scheduleConflictContext,
                     )).length;
                     return (
                       <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
@@ -1847,6 +2071,7 @@ export function ReserverForm({
                                 key,
                                 scheduleRequestContext,
                                 pricingConfig.scheduleBuffers,
+                                scheduleConflictContext,
                               );
                               const locked = Boolean(occupiedConflict);
                               const lockedLabel = occupiedConflict?.conflict.kind === "TRAVEL_BUFFER"
@@ -1856,9 +2081,21 @@ export function ReserverForm({
                                 <button
                                   key={key}
                                   type="button"
-                                  disabled={locked}
+                                  aria-disabled={locked}
                                   onClick={() => {
-                                    if (locked) return;
+                                    if (locked && occupiedConflict) {
+                                      showScheduleConflictNotice({
+                                        occurrence: {
+                                          date: form.startDate,
+                                          time: slot.label,
+                                          sequence: 1,
+                                          durationMinutes: 120,
+                                        },
+                                        occupied: occupiedConflict.occupied,
+                                        conflict: occupiedConflict.conflict,
+                                      });
+                                      return;
+                                    }
                                     update(
                                       "selectedTimeSlots",
                                       checked
@@ -1893,11 +2130,6 @@ export function ReserverForm({
                         {label}
                       </span>
                     ))}
-                  </div>
-                )}
-                {firstScheduleConflict && (
-                  <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-red-700">
-                    {formatOccupiedConflictMessage(firstScheduleConflict)}
                   </div>
                 )}
                 {sessionPreview.length > 0 && (
@@ -1993,8 +2225,11 @@ export function ReserverForm({
                     </div>
                   )}
                   {usesCustomSchedule && firstScheduleConflict && (
-                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
-                      {formatOccupiedConflictMessage(firstScheduleConflict)}
+                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                      <p>{firstScheduleConflict.conflict.kind === "TRAVEL_BUFFER" ? "Déplacement insuffisant sur cet autre horaire." : "Cet autre horaire chevauche un créneau payé."}</p>
+                      <button type="button" onClick={() => showScheduleConflictNotice(firstScheduleConflict)} className="mt-2 text-xs font-black uppercase tracking-wide text-[#111B4D] underline">
+                        Voir l'explication
+                      </button>
                     </div>
                   )}
                   {form.customDay && customTimeRange && (
@@ -2018,6 +2253,51 @@ export function ReserverForm({
                   </p>
                 </div>
               </details>
+
+              <div
+                className={`rounded-lg border p-4 ${
+                  travelPlanningNotice.status === "blocked"
+                    ? "border-red-200 bg-white"
+                    : travelPlanningNotice.status === "clear"
+                      ? "border-emerald-200 bg-white"
+                      : "border-[#E5E7EB] bg-white"
+                }`}
+                data-booking-travel-buffer-explanation
+              >
+                <div className="flex flex-col gap-3 min-[720px]:flex-row min-[720px]:items-start min-[720px]:justify-between">
+                  <div>
+                    <p className={`text-sm font-black ${travelPlanningNotice.status === "blocked" ? "text-red-700" : "text-[#111B4D]"}`}>
+                      {travelPlanningNotice.title}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
+                      {travelPlanningNotice.description}
+                    </p>
+                  </div>
+                  {travelPlanningNotice.status === "blocked" && firstScheduleConflict && (
+                    <Button type="button" variant="outline" onClick={() => showScheduleConflictNotice(firstScheduleConflict)} className="min-h-10 shrink-0 rounded-lg">
+                      Voir la restriction
+                    </Button>
+                  )}
+                </div>
+                {(travelPlanningNotice.requestedLabel || travelPlanningNotice.existingLabel) && (
+                  <div className="mt-3 grid gap-2 text-xs font-bold text-[#111827] min-[720px]:grid-cols-2">
+                    {travelPlanningNotice.requestedLabel && (
+                      <div className="rounded-lg border border-[#EEF2F7] bg-[#F8FAFC] p-3">
+                        <p className="uppercase tracking-wide text-[#64748B]">Votre cours demandé</p>
+                        <p className="mt-1">{travelPlanningNotice.requestedLabel}</p>
+                        <p className="mt-0.5 text-[#64748B]">{travelPlanningNotice.requestedLocation ?? formatTravelLocation(scheduleRequestContext)}</p>
+                      </div>
+                    )}
+                    {travelPlanningNotice.existingLabel && (
+                      <div className="rounded-lg border border-[#EEF2F7] bg-[#F8FAFC] p-3">
+                        <p className="uppercase tracking-wide text-[#64748B]">Cours confirmé du professeur</p>
+                        <p className="mt-1">{travelPlanningNotice.existingLabel}</p>
+                        {travelPlanningNotice.existingLocation && <p className="mt-0.5 text-[#64748B]">{travelPlanningNotice.existingLocation}</p>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div>
                 <Label>Formule *</Label>
@@ -2452,7 +2732,7 @@ export function ReserverForm({
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={() => void submit()} disabled={submitting || !isScheduleReadyForPayment} className="min-h-11 w-full min-w-44 rounded-lg min-[640px]:w-auto">
+              <Button type="button" onClick={() => void submit()} disabled={submitting} className="min-h-11 w-full min-w-44 rounded-lg min-[640px]:w-auto">
                 {submitting ? (
                   <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-[#9AAAD0]" /> Traitement...</>
                 ) : (
@@ -2514,6 +2794,22 @@ export function ReserverForm({
           </Button>
         </div>
       </div>
+
+      {restrictionNotice && (
+        <RestrictionNoticeDialog
+          open={Boolean(restrictionNotice)}
+          onOpenChange={(open) => {
+            if (!open) setRestrictionNotice(null);
+          }}
+          title={restrictionNotice.title}
+          description={restrictionNotice.description}
+          variant={restrictionNotice.variant}
+          primaryLabel={restrictionNotice.primaryLabel}
+          onPrimary={restrictionNotice.onPrimary}
+          secondaryLabel={restrictionNotice.secondaryLabel}
+          onSecondary={restrictionNotice.onSecondary}
+        />
+      )}
 
       <AlertDialog
         open={Boolean(priceChangeNotice)}

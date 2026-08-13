@@ -20,6 +20,8 @@ import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
 import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { getReviewReputationPrismaWhere, isOpenReputationReview } from "@/lib/review-reputation";
+import { getTeacherDisplayRating } from "@/lib/teacher-display-rating";
 import {
   TEACHER_JOURNEYS,
   TEACHER_JOURNEY_CONFIG,
@@ -99,6 +101,12 @@ export default async function AdminProfesseursPage({
         },
       },
       tasks: { orderBy: { createdAt: "desc" }, take: 50 },
+      reviews: {
+        where: getReviewReputationPrismaWhere(),
+        select: { id: true, rating: true, comment: true, adminStatus: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
       warnings: { orderBy: { createdAt: "desc" }, take: 50 },
       sanctions: { orderBy: { createdAt: "desc" }, take: 50 },
       oldReplacements: { orderBy: { createdAt: "desc" }, take: 50 },
@@ -159,6 +167,7 @@ export default async function AdminProfesseursPage({
     const lateTasks = t.tasks.filter((task) => task.status === "LATE").length;
     const criticalTasks = t.tasks.filter((task) => task.priority === "CRITICAL" && !["DONE", "CANCELLED"].includes(task.status)).length;
     const incidents = lateTasks + criticalTasks + t.warnings.length + t.sanctions.length + t.oldReplacements.length;
+    const reputationAlerts = t.reviews.filter(isOpenReputationReview).length;
     const score = computeTeacherQualityScore({
       rating: t.rating,
       bookings: t.bookings,
@@ -166,8 +175,9 @@ export default async function AdminProfesseursPage({
       sanctions: t.sanctions,
       replacements: t.oldReplacements,
     });
-    const visibleRating = t.ratingCount > 0 && t.rating > 0 ? t.rating : t.adminRating;
-    const ratingSource = t.ratingCount > 0 ? `${t.ratingCount} avis client(s)` : t.adminRating > 0 ? "Service client" : "Non noté";
+    const displayRating = getTeacherDisplayRating(t);
+    const visibleRating = displayRating.average;
+    const ratingSource = displayRating.sourceLabel;
     return {
       teacher: t,
       primary,
@@ -181,7 +191,8 @@ export default async function AdminProfesseursPage({
       toPay,
       lateTasks,
       criticalTasks,
-      incidents,
+      incidents: incidents + reputationAlerts,
+      reputationAlerts,
       score,
       visibleRating,
       ratingSource,
@@ -255,7 +266,7 @@ export default async function AdminProfesseursPage({
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, score, visibleRating, ratingSource }) => {
+            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, reputationAlerts, score, visibleRating, ratingSource }) => {
 
               return (
                 <Card key={t.id} className="border-violet-100 bg-white">
@@ -312,12 +323,17 @@ export default async function AdminProfesseursPage({
                       />
                       {t.featured && <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">Mis en avant</Badge>}
                       {!hasPhoto && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">Photo manquante</Badge>}
+                      {reputationAlerts > 0 && (
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+                          Risque réputation · {reputationAlerts}
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                       <TeacherStatusBadge status={t.status} />
                       <Badge variant="outline" className="border-violet-100 bg-white text-violet-800">
-                        {visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Non noté"} · {ratingSource}
+                        {visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Nouveau"} · {ratingSource}
                       </Badge>
                       <Badge variant="outline" className={score >= 75 ? "border-blue-100 bg-blue-50 text-blue-800" : score >= 60 ? "border-amber-100 bg-amber-50 text-amber-800" : "border-red-100 bg-red-50 text-red-800"}>
                         Score qualité {score}/100
@@ -407,7 +423,7 @@ export default async function AdminProfesseursPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, blocked, toPay, paid, totalGenerated, realized, criticalTasks, lateTasks, incidents, score, visibleRating, ratingSource }) => {
+                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, blocked, toPay, paid, totalGenerated, realized, criticalTasks, lateTasks, incidents, reputationAlerts, score, visibleRating, ratingSource }) => {
                   return (
                     <TableRow key={t.id}>
                       <TableCell>
@@ -436,6 +452,11 @@ export default async function AdminProfesseursPage({
                               className="mt-1"
                             />
                             {!hasPhoto && <Badge variant="outline" className="mt-1 border-red-200 bg-red-50 text-red-800">Photo manquante</Badge>}
+                            {reputationAlerts > 0 && (
+                              <Badge variant="outline" className="mt-1 border-red-200 bg-red-50 text-red-800">
+                                Risque réputation · {reputationAlerts}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -445,7 +466,7 @@ export default async function AdminProfesseursPage({
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{communeName}</TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium">{visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Non noté"}</span>
+                          <span className="text-sm font-medium">{visibleRating > 0 ? `Note ${visibleRating.toFixed(1)}/5` : "Nouveau"}</span>
                           <span className="text-xs text-muted-foreground">{ratingSource}</span>
                         </div>
                       </TableCell>
@@ -459,6 +480,7 @@ export default async function AdminProfesseursPage({
                         <div className="flex flex-col items-end gap-1">
                           <span className={incidents > 0 ? "text-sm font-bold text-red-700" : "text-sm text-muted-foreground"}>{incidents}</span>
                           {(criticalTasks + lateTasks) > 0 && <span className="text-[11px] text-red-700">{criticalTasks + lateTasks} urgente(s)</span>}
+                          {reputationAlerts > 0 && <span className="text-[11px] font-bold text-red-700">réputation {reputationAlerts}</span>}
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-right text-sm tabular-nums">{realized}</TableCell>

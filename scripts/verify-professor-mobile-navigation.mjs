@@ -195,6 +195,14 @@ record(
 );
 
 record(
+  "Professor blocking restrictions open as centered cards instead of floating errors",
+  /RestrictionNoticeDialog/.test(missionResponseActions)
+    && /RestrictionNoticeDialog/.test(rescheduleRequestActions)
+    && !/toast\.error/.test(missionResponseActions)
+    && !/toast\.error/.test(rescheduleRequestActions),
+);
+
+record(
   "Professor settings confirm routine updates inline instead of floating success toasts",
   /data-professor-payout-profile-saved/.test(settings)
     && /setPayoutSavedMessage/.test(settings)

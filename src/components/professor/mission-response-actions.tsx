@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, Loader2, ShieldAlert, XCircle } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RestrictionNoticeDialog } from "@/components/shared/restriction-notice-dialog";
 
 const MIN_RESPONSE_LENGTH_FOR_ISSUE = 10;
 const MAX_RESPONSE_LENGTH = 700;
@@ -34,30 +34,31 @@ export function MissionResponseActions({
   const [proposalDate, setProposalDate] = useState("");
   const [proposalStartTime, setProposalStartTime] = useState("");
   const [done, setDone] = useState(false);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
   const cleanResponse = response.trim();
   const responseTooLong = cleanResponse.length > MAX_RESPONSE_LENGTH;
   const isPackMission = sessionsCount > 1;
 
   async function send(action: "confirm" | "unavailable" | "problem" | "reschedule") {
     if (responseTooLong) {
-      toast.error(`Message trop long (${MAX_RESPONSE_LENGTH} caractères maximum).`);
+      setErrorNotice(`Message trop long (${MAX_RESPONSE_LENGTH} caractères maximum).`);
       return;
     }
     if ((action === "unavailable" || action === "problem" || action === "reschedule") && cleanResponse.length < MIN_RESPONSE_LENGTH_FOR_ISSUE) {
-      toast.error("Expliquez brièvement la raison pour aider le service client.");
+      setErrorNotice("Expliquez brièvement la raison pour aider le service client.");
       return;
     }
     if (action === "unavailable" && courseStarted) {
-      toast.error("Le cours a déjà commencé ou est dépassé. Signalez un problème au service client.");
+      setErrorNotice("Le cours a déjà commencé ou est dépassé. Signalez un problème au service client.");
       return;
     }
     if (action === "reschedule") {
       if (!proposalDate || !proposalStartTime) {
-        toast.error("Indiquez une date et une heure de début pour le nouveau créneau.");
+        setErrorNotice("Indiquez une date et une heure de début pour le nouveau créneau.");
         return;
       }
       if (proposalDate < minimumProposalDateInput()) {
-        toast.error("Proposez un créneau au moins 24h après aujourd'hui.");
+        setErrorNotice("Proposez un créneau au moins 24h après aujourd'hui.");
         return;
       }
     }
@@ -79,7 +80,7 @@ export function MissionResponseActions({
       setDone(true);
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur réseau");
+      setErrorNotice(error instanceof Error ? error.message : "Erreur réseau");
     } finally {
       setLoading(null);
     }
@@ -192,6 +193,15 @@ export function MissionResponseActions({
           </div>
         )}
       </div>
+      <RestrictionNoticeDialog
+        open={Boolean(errorNotice)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setErrorNotice(null);
+        }}
+        title="Action professeur impossible"
+        description={errorNotice ?? ""}
+        variant="restriction"
+      />
     </div>
   );
 }

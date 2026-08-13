@@ -13,6 +13,11 @@ import { EyeOff, MessageSquare, ShieldAlert, Users } from "lucide-react";
 import { AvisClient } from "./client";
 import { formatDate } from "@/lib/format";
 import { ReviewOperationalActionsClient } from "@/components/admin/review-operational-actions-client";
+import {
+  detectReviewReputationRisk,
+  getReviewReputationPrismaWhere,
+  isOpenReputationReview,
+} from "@/lib/review-reputation";
 
 export const dynamic = "force-dynamic";
 
@@ -60,25 +65,28 @@ export default async function AdminAvisPage({
   const status = sp.status;
 
   const where: any = {};
+  const andFilters: any[] = [];
   if (rating && rating >= 1 && rating <= 5) where.rating = rating;
   if (status === "published") where.published = true;
   if (status === "hidden") where.published = false;
   if (status === "low") where.rating = { lte: 2 };
+  if (status === "reputation") andFilters.push(getReviewReputationPrismaWhere());
   if (status && reviewAdminStatusLabel[status]) where.adminStatus = status;
   if (q) {
-    where.OR = [
+    andFilters.push({ OR: [
       { comment: { contains: q } },
       { client: { name: { contains: q } } },
       { teacher: { OR: [{ fullName: { contains: q } }, { professionalName: { contains: q } }] } },
-    ];
+    ] });
   }
+  if (andFilters.length) where.AND = andFilters;
 
   const reviews = await db.review.findMany({
     where,
     orderBy: { createdAt: "desc" },
     include: {
       client: { select: { id: true, name: true } },
-      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+      teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true, status: true } },
       booking: { select: { id: true, reference: true, subjectName: true, levelName: true } },
     },
     take: 200,
@@ -91,13 +99,16 @@ export default async function AdminAvisPage({
     : 0;
   const impactedTeachers = new Set(reviews.filter((review) => review.rating <= 3).map((review) => review.teacher.id)).size;
   const reviewsToProcess = reviews.filter((review) => ["TO_REVIEW", "CONTACT_CLIENT", "CONTACT_TEACHER", "ESCALATED"].includes(review.adminStatus)).length;
+  const reputationReviews = reviews.filter(isOpenReputationReview);
+  const reputationTeachers = new Set(reputationReviews.map((review) => review.teacher.id)).size;
 
   return (
     <div className="space-y-5">
       <PageHeader title="Avis & notes" description={`${reviews.length} avis`} rootPage />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <ReviewSummaryCard label="Moyenne filtrée" value={reviews.length ? `${averageRating.toFixed(1)}/5` : "—"} detail={`${publishedReviews} publié(s)`} icon={MessageSquare} tone="blue" />
         <ReviewSummaryCard label="Avis critiques" value={`${lowReviews}`} detail="Notes 1/5 ou 2/5" icon={ShieldAlert} tone={lowReviews ? "red" : "blue"} />
+        <ReviewSummaryCard label="Risque réputation" value={`${reputationReviews.length}`} detail={`${reputationTeachers} profil(s) à surveiller`} icon={ShieldAlert} tone={reputationReviews.length ? "red" : "violet"} />
         <ReviewSummaryCard label="Avis masqués" value={`${hiddenReviews}`} detail="À revoir ou modérer" icon={EyeOff} tone={hiddenReviews ? "amber" : "violet"} />
         <ReviewSummaryCard label="Profs impactés" value={`${impactedTeachers}`} detail="Notes 3/5 ou moins" icon={Users} tone={impactedTeachers ? "amber" : "blue"} />
         <ReviewSummaryCard label="À traiter" value={`${reviewsToProcess}`} detail="Suivi qualité ouvert" icon={MessageSquare} tone={reviewsToProcess ? "amber" : "violet"} />
@@ -113,6 +124,8 @@ export default async function AdminAvisPage({
             {reviews.map((r) => {
               const teacherName = r.teacher.professionalName || r.teacher.fullName;
               const severity = reviewSeverity(r.rating);
+              const reputationRisk = detectReviewReputationRisk(r);
+              const openReputationRisk = isOpenReputationReview(r);
               return (
                 <Card key={r.id} className="border-violet-100 bg-white">
                   <CardContent className="space-y-4 p-4">
@@ -144,6 +157,16 @@ export default async function AdminAvisPage({
                       {severity && (
                         <Badge variant="outline" className={severity.className}>
                           {severity.label}
+                        </Badge>
+                      )}
+                      {openReputationRisk && (
+                        <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+                          {reputationRisk.label}
+                        </Badge>
+                      )}
+                      {r.teacher.status === "OBSERVATION" && (
+                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-800">
+                          Profil en observation
                         </Badge>
                       )}
                       {r.published ? (
@@ -228,6 +251,8 @@ export default async function AdminAvisPage({
               <TableBody>
                 {reviews.map((r) => {
                   const severity = reviewSeverity(r.rating);
+                  const reputationRisk = detectReviewReputationRisk(r);
+                  const openReputationRisk = isOpenReputationReview(r);
                   return (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm">
@@ -257,6 +282,11 @@ export default async function AdminAvisPage({
                         {severity && (
                           <Badge variant="outline" className={severity.className}>
                             {severity.label}
+                          </Badge>
+                        )}
+                        {openReputationRisk && (
+                          <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
+                            {reputationRisk.label}
                           </Badge>
                         )}
                       </div>

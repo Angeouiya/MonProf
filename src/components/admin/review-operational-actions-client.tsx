@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ClipboardCopy, Loader2, ShieldAlert, ClipboardList } from "lucide-react";
+import { Ban, ClipboardCopy, Loader2, ShieldAlert, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -151,6 +152,20 @@ export function ReviewOperationalActionsClient({
         <ClipboardCopy className="mr-1.5 h-4 w-4" />
         Copier
       </Button>
+      {rating <= 3 && (
+        <Button
+          asChild
+          type="button"
+          variant="outline"
+          size={compact ? "sm" : "default"}
+          className="border-red-200 text-red-700 hover:bg-red-50"
+        >
+          <Link href={`/admin/professeurs/${teacherId}?tab=operationnel&action=suspend`}>
+            <Ban className="mr-1.5 h-4 w-4" />
+            Restriction
+          </Link>
+        </Button>
+      )}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button

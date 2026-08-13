@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { RestrictionNoticeDialog } from "@/components/shared/restriction-notice-dialog";
 
 export function ProfessorRescheduleRequestActions({
   requestId,
@@ -18,11 +18,12 @@ export function ProfessorRescheduleRequestActions({
   const [loading, setLoading] = useState<"accept" | "reject" | null>(null);
   const [response, setResponse] = useState("");
   const [doneMessage, setDoneMessage] = useState("");
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   async function respond(action: "accept" | "reject") {
     const cleanResponse = response.trim();
     if (action === "reject" && cleanResponse.length < 5) {
-      toast.error("Expliquez brièvement pourquoi vous refusez ce créneau.");
+      setErrorNotice("Expliquez brièvement pourquoi vous refusez ce créneau.");
       return;
     }
     setLoading(action);
@@ -35,14 +36,14 @@ export function ProfessorRescheduleRequestActions({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Action impossible.");
+        setErrorNotice(data.error || "Action impossible.");
         return;
       }
       setDoneMessage(action === "accept" ? "Nouveau créneau confirmé." : "Refus transmis au service client.");
       setResponse("");
       router.refresh();
     } catch {
-      toast.error("Erreur réseau.");
+      setErrorNotice("Erreur réseau.");
     } finally {
       setLoading(null);
     }
@@ -82,6 +83,15 @@ export function ProfessorRescheduleRequestActions({
           Refuser
         </Button>
       </div>
+      <RestrictionNoticeDialog
+        open={Boolean(errorNotice)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setErrorNotice(null);
+        }}
+        title="Réponse impossible"
+        description={errorNotice ?? ""}
+        variant="restriction"
+      />
     </div>
   );
 }
