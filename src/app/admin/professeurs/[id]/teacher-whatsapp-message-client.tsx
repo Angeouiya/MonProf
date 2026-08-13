@@ -170,7 +170,7 @@ export function TeacherWhatsAppMessageClient({
       "- Confirmez rapidement votre disponibilité.",
       "- Contactez le client uniquement pour organiser le cours prévu.",
       "- Prévenez immédiatement le service client en cas de retard, indisponibilité, changement de lieu ou problème client.",
-      "- Après le cours, attendez la validation client/admin avant toute demande de paiement.",
+      "- Après le cours, attendez la validation client/admin ; si le net est libérable, retirez directement via Jèko dans votre espace professeur.",
     ].join("\n");
   }, [selected, teacherName]);
 
@@ -213,7 +213,7 @@ export function TeacherWhatsAppMessageClient({
       ...(lines.length ? lines : ["- Aucune réservation suivie pour le moment."]),
       bookings.length > lines.length ? `- +${bookings.length - lines.length} autre(s) réservation(s) visible(s) dans la fiche admin.` : "",
       "",
-      "Consigne service client : utiliser ce dossier pour appeler, relancer, remplacer ou préparer un paiement professeur. Toute décision financière doit rester validée manuellement par l'équipe Compétence.",
+      "Consigne service client : utiliser ce dossier pour appeler, relancer, remplacer, suivre les retenues/litiges et vérifier les retraits Jèko. Toute décision financière sensible reste documentée par l'équipe Compétence.",
     ].filter(Boolean).join("\n");
   }, [bookings, teacherName]);
 

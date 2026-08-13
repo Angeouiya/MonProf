@@ -166,7 +166,7 @@ export function ParametresClient({
         </div>
       </SettingSection>
 
-      <SettingSection icon={WalletCards} title="Demandes de paiement professeur" description="Délai opérationnel annoncé au professeur après sa demande de paiement.">
+      <SettingSection icon={WalletCards} title="Retraits professeurs Jèko" description="Délai indicatif affiché au professeur lorsqu'un transfert Jèko nécessite une reprise ou une vérification réseau.">
         <div className="grid gap-4 sm:grid-cols-2">
           <SettingField icon={Clock3} label="Délai minimum (heures)">
             <Input type="number" min={1} max={72} value={values.teacher_payout_min_hours ?? "1"} onChange={(event) => set("teacher_payout_min_hours", event.target.value)} />

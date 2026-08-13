@@ -115,9 +115,9 @@ function verifyExactRequestableBalanceAfterReservations() {
     globalRetentionLedger,
     pendingRequestedAmount: 2_000,
     draftReservations: [
-      // Ce DRAFT est déjà couvert par les 2 000 FCFA PENDING : pas de double réservation.
+      // Une ancienne demande PENDING est désormais informative : seul le DRAFT Jèko réserve.
       { amount: 2_000, payoutRequestStatus: "PENDING" },
-      // Un transfert admin direct réserve en revanche son propre montant.
+      // Tout transfert DRAFT réserve son propre montant jusqu'à succès ou annulation.
       { amount: 1_500, payoutRequestStatus: null },
     ],
   });
@@ -126,7 +126,7 @@ function verifyExactRequestableBalanceAfterReservations() {
     readyToReceive: 11_200,
     totalOutstanding: 11_200,
     pendingRequestedAmount: 2_000,
-    draftReservedAmount: 1_500,
+    draftReservedAmount: 3_500,
     requestableAmount: 7_700,
     retentionNotRepresentedInSettlements: 800,
   });
@@ -182,7 +182,8 @@ function verifyProfessorPayoutRequestRetryIsIdempotent() {
 }
 
 function verifyDatabaseGuardsAreWired() {
-  const route = readFileSync(new URL("../src/app/api/admin/teacher-payouts/route.ts", import.meta.url), "utf8");
+  const adminPayoutRoute = readFileSync(new URL("../src/app/api/admin/teacher-payouts/route.ts", import.meta.url), "utf8");
+  const payoutAutomation = readFileSync(new URL("../src/lib/teacher-jeko-payouts.ts", import.meta.url), "utf8");
   const reconciliation = readFileSync(new URL("../src/lib/jeko-payout-reconciliation.ts", import.meta.url), "utf8");
   const webhook = readFileSync(new URL("../src/app/api/webhooks/jeko/route.ts", import.meta.url), "utf8");
   const legacyBookingRoute = readFileSync(new URL("../src/app/api/admin/bookings/[id]/route.ts", import.meta.url), "utf8");
@@ -199,19 +200,19 @@ function verifyDatabaseGuardsAreWired() {
     "utf8",
   );
 
-  assert.match(route, /status:\s*"DRAFT"/);
-  assert.match(route, /paidAmountBefore:/);
-  assert.match(route, /releasedAmountSnapshot:/);
-  assert.match(route, /retainedAmountSnapshot:/);
-  assert.match(route, /current\.retainedAmount !== item\.retainedAmountBefore/);
-  assert.match(route, /retainedAmount: item\.retainedAmountBefore/);
-  assert.match(route, /data: \{ retainedAmount: item\.retainedAmountAfter \}/);
-  assert.match(route, /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/);
-  assert.doesNotMatch(route, /current\.retainedAmount !== item\.session\.retainedAmount/);
-  assert.match(route, /processJekoTeacherPayoutRecord\(payoutRecordId\)/);
-  assert.match(route, /resolvePayoutRequestAttemptId\(payoutRequest\.id\)/);
-  assert.match(route, /`\$\{prefix\}:attempt:\$\{attemptNumber\}`/);
-  assert.match(route, /existing\.status !== "CANCELLED"/);
+  assert.match(adminPayoutRoute, /ADMIN_TEACHER_PAYOUT_DISABLED/);
+  assert.doesNotMatch(adminPayoutRoute, /teacherPayoutRecord\.create/);
+  assert.match(payoutAutomation, /status:\s*"DRAFT"/);
+  assert.match(payoutAutomation, /paidAmountBefore:/);
+  assert.match(payoutAutomation, /releasedAmountSnapshot:/);
+  assert.match(payoutAutomation, /retainedAmountSnapshot:/);
+  assert.match(payoutAutomation, /current\.retainedAmount !== item\.retainedAmountBefore/);
+  assert.match(payoutAutomation, /retainedAmount: item\.retainedAmountBefore/);
+  assert.match(payoutAutomation, /data: \{ retainedAmount: item\.retainedAmountAfter \}/);
+  assert.match(payoutAutomation, /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/);
+  assert.doesNotMatch(payoutAutomation, /current\.retainedAmount !== item\.session\.retainedAmount/);
+  assert.match(payoutAutomation, /processJekoTeacherPayoutRecord\(payoutRecordId\)/);
+  assert.match(payoutAutomation, /existingPayout\.status === "CANCELLED"/);
   assert.match(reconciliation, /where:\s*\{ id: record\.id, status: "DRAFT" \}/);
   assert.match(reconciliation, /isolationLevel:\s*"Serializable"/);
   assert.match(reconciliation, /status:\s*"PAID",\s*\n\s*paidAt:\s*now/);
@@ -232,17 +233,12 @@ function verifyDatabaseGuardsAreWired() {
   assert.match(payoutRequestReviewRoute, /request\.payoutRecord\?\.status === "DRAFT"/);
   assert.match(payoutReservationGuard, /provider:\s*"JEKO"/);
   assert.match(payoutReservationGuard, /status:\s*"DRAFT"/);
-  assert.match(professorPayoutRequestRoute, /lockTeacherPayoutBalance\(tx, teacher\.id\)/);
-  assert.ok(
-    professorPayoutRequestRoute.indexOf("lockTeacherPayoutBalance(tx, teacher.id)")
-      < professorPayoutRequestRoute.indexOf("tx.teacherPayoutRequest.aggregate"),
-    "la demande professeur verrouille le solde avant de le relire",
-  );
-  assert.match(professorPayoutRequestRoute, /calculateTeacherPayoutAvailability/);
+  assert.match(payoutAutomation, /lockTeacherPayoutBalance\(tx, teacher\.id\)/);
+  assert.match(payoutAutomation, /teacherPayoutAllocation\.findMany/);
+  assert.match(payoutAutomation, /calculate|totalDue|allocationCandidates/);
+  assert.match(professorPayoutRequestRoute, /createAndProcessTeacherJekoPayout/);
   assert.match(professorPayoutRequestRoute, /normalizeTeacherPayoutRequestIdempotencyKey/);
-  assert.match(professorPayoutRequestRoute, /where:\s*\{\s*idempotencyKey\s*\}/);
   assert.match(professorPayoutRequestRoute, /idempotencyKey,/);
-  assert.match(professorPayoutRequestRoute, /idempotentReplay:\s*true/);
   assert.match(professorPayoutRequestForm, /pendingSubmissionRef/);
   assert.match(professorPayoutRequestForm, /crypto\.randomUUID\(\)/);
   assert.match(professorPayoutRequestForm, /idempotencyKey,/);

@@ -152,13 +152,11 @@ export function getMaterializedTeacherGlobalRetention(
 }
 
 /**
- * Source de vérité commune entre l'API de demande et les dashboards.
+ * Source de vérité commune entre l'API de retrait et les dashboards.
  *
- * Une demande PENDING réserve déjà son montant. Lorsqu'elle est reliée à un
- * transfert DRAFT, l'allocation correspondante ne doit donc pas être comptée
- * une seconde fois. Les DRAFT créés directement par un administrateur restent
- * en revanche des réservations à part entière jusqu'au succès ou à l'annulation
- * du transfert Jèko.
+ * Depuis le retrait automatique, une ancienne demande PENDING ne réserve plus
+ * le wallet professeur. Seul un transfert Jèko DRAFT réserve réellement des
+ * lignes, jusqu'au succès ou à l'annulation du transfert.
  */
 export function calculateTeacherPayoutAvailability(input: {
   settlements: TeacherPayoutSettlementBalance[];
@@ -188,21 +186,18 @@ export function calculateTeacherPayoutAvailability(input: {
       0,
     ) - retentionNotRepresentedInSettlements,
   );
-  const pendingRequestedAmount = Math.max(0, input.pendingRequestedAmount ?? 0);
   const draftReservedAmount = (input.draftReservations ?? []).reduce((sum, reservation) => (
-    reservation.payoutRequestStatus === "PENDING"
-      ? sum
-      : sum + Math.max(0, reservation.amount)
+    sum + Math.max(0, reservation.amount)
   ), 0);
   const requestableAmount = Math.max(
     0,
-    readyToReceive - pendingRequestedAmount - draftReservedAmount,
+    readyToReceive - draftReservedAmount,
   );
 
   return {
     readyToReceive,
     totalOutstanding,
-    pendingRequestedAmount,
+    pendingRequestedAmount: Math.max(0, input.pendingRequestedAmount ?? 0),
     draftReservedAmount,
     requestableAmount,
     retentionNotRepresentedInSettlements,

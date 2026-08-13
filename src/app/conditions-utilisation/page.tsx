@@ -96,7 +96,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
-      "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers PayDunya restent conservés uniquement dans l'historique.",
+      "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers de paiement restent conservés uniquement dans l'historique.",
       "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
       "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Ils ne remplacent pas les frais de paiement Jèko : le client paie aussi les frais Jèko correspondant au moyen choisi, lorsqu'ils s'appliquent.",
       "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
@@ -181,14 +181,14 @@ const sections: LegalSection[] = [
   {
     title: "Paiement professeur",
     body: [
-      "La comptabilité professeur est interne à Compétence. Le professeur ne dispose pas d'un wallet autonome. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables par le service client.",
+      "La comptabilité professeur est suivie par Compétence et consultable dans l'espace professeur. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables.",
       "Pour une réservation comprenant plusieurs séances, chaque séance possède son propre planning, son professeur affecté et son décompte. Les fonds d'une séance deviennent libérables uniquement après sa réalisation puis sa confirmation par le client; les séances futures restent bloquées.",
       "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
       "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
       "Le professeur retire le montant net libérable validé dans son espace. Lorsque Compétence décide de prendre en charge des frais techniques de transfert, ces frais sont comptabilisés séparément et ne diminuent pas le net professeur déjà validé.",
-      "Lorsqu'un professeur fait une demande de retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Une demande correctement envoyée est normalement traitée entre 1 heure et 72 heures ouvrées après contrôle.",
-      "Ce délai est prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement, décision du service client ou information manquante.",
-      "Compétence peut payer partiellement, suspendre, différer, refuser ou ajuster un paiement professeur lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient.",
+      "Lorsqu'un professeur lance un retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Un retrait correctement envoyé est normalement confirmé automatiquement, avec reprise possible entre 1 heure et 72 heures ouvrées selon le réseau et les vérifications Jèko.",
+      "Ce délai est prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement Jèko ou information manquante.",
+      "Compétence peut suspendre, différer, retenir ou ajuster le montant libérable lorsque la réservation, la qualité, le litige, la sanction ou les fonds disponibles le justifient. L'administration ne déclenche pas le retrait à la place du professeur.",
     ],
   },
   {

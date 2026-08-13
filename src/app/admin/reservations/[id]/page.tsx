@@ -405,7 +405,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             audience="admin"
             priceTierKey={booking.priceTierKey}
             priceTierLabel={pricingSnapshot?.priceTierLabel}
-            paymentProviderLabel={booking.paymentProvider === "JEKO" ? "Jèko" : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt ? "PayDunya (historique)" : "Paiement sécurisé"}
+            paymentProviderLabel={booking.paymentProvider === "JEKO" ? "Jèko" : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt ? "Paiement historique" : "Paiement sécurisé"}
             courseAmount={displayCourseAmount}
             transportFee={displayTransportFee}
             transportFeeLabel={pricingSnapshot?.transportFeeLabel}

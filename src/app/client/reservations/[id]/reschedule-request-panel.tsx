@@ -47,7 +47,7 @@ export function ClientRescheduleRequestPanel({
   if (requests.length === 0) return null;
   const latest = requests[0];
   const isJeko = latest.paymentProvider === "JEKO";
-  const providerLabel = isJeko ? "Jèko" : "PayDunya (historique)";
+  const providerLabel = isJeko ? "Jèko" : "Paiement historique";
 
   async function openSupplementCheckout() {
     setLoading("checkout");
@@ -66,7 +66,7 @@ export function ClientRescheduleRequestPanel({
         toast.error(data.error || `Impossible d'ouvrir ${providerLabel} pour ce supplément.`);
         return;
       }
-      const responseProvider = data.payment?.provider === "PAYDUNYA" ? "PayDunya (historique)" : providerLabel;
+      const responseProvider = data.payment?.provider === "PAYDUNYA" ? "Paiement historique" : providerLabel;
       if (responseProvider === "Jèko" && !isAllowedJekoRedirectUrl(checkoutUrl)) {
         toast.error("Jèko n'a pas renvoyé de lien de paiement sécurisé.");
         return;
@@ -191,7 +191,7 @@ export function ClientRescheduleRequestPanel({
           )}
           {paymentRequired && !isJeko && latest.paydunyaStatus && (
             <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
-              État PayDunya historique : {latest.paydunyaStatus}
+              État du paiement historique : {latest.paydunyaStatus}
             </p>
           )}
         </div>

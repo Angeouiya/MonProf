@@ -157,7 +157,7 @@ export default async function AdminProfesseursAPayerPage() {
         <PaymentSignalCard
           label="Plus ancien reste dû"
           value={oldestWaiting ? formatDate(oldestWaiting) : "—"}
-          detail="Permet de prioriser les versements internes à traiter."
+          detail="Permet de prioriser le suivi des retraits Jèko à surveiller."
           tone={oldestWaiting ? "violet" : "blue"}
         />
       </div>

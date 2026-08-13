@@ -91,7 +91,7 @@ function AdminConnexionContent() {
               Console de contrôle Compétence.
             </h1>
             <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-[#64748B]">
-              Gérez les professeurs, réservations, paiements Jèko et historiques PayDunya, remboursements, notifications, litiges et actions opérationnelles depuis un espace protégé.
+              Gérez les professeurs, réservations, paiements Jèko, historiques de paiement, remboursements, notifications, litiges et actions opérationnelles depuis un espace protégé.
             </p>
             <div className="mt-6 grid max-w-xl gap-3">
               {[

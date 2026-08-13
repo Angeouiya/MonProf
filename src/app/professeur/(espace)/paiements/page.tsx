@@ -233,7 +233,7 @@ export default async function ProfesseurPaiementsPage() {
         </div>
         <div className="grid grid-cols-3 gap-2 border-t border-white/15 bg-white/5 p-4 sm:px-6">
           <TeacherExactMetric label="Reste total" value={remaining} emphasized />
-          <TeacherExactMetric label="En traitement" value={pendingRequested + draftReservedAmount} />
+          <TeacherExactMetric label="Jèko en cours" value={draftReservedAmount} />
           <TeacherExactMetric label="Frais couverts" value={transferFeesCovered} />
         </div>
       </section>
@@ -262,7 +262,7 @@ export default async function ProfesseurPaiementsPage() {
             <AccountingMini label="Reste dû" value={formatFCFA(remaining)} strong />
             <AccountingMini label="Déjà libéré" value={formatFCFA(totalReleased)} />
             <AccountingMini label="Payable brut" value={formatFCFA(readyToReceive)} />
-            <AccountingMini label="Demandes en attente" value={formatFCFA(pendingRequested)} />
+            <AccountingMini label="Anciennes demandes" value={formatFCFA(pendingRequested)} />
             <AccountingMini label="Transferts en cours" value={formatFCFA(draftReservedAmount)} />
             <AccountingMini label="Demandable" value={formatFCFA(requestableAmount)} strong />
             <AccountingMini label="Encore bloqué" value={formatFCFA(blockedAmount)} />
@@ -273,7 +273,7 @@ export default async function ProfesseurPaiementsPage() {
 
       <ProfessorDisclosure
         title="Retraits"
-        description="Demandes et confirmations."
+        description="Historique des anciennes demandes et confirmations Jèko."
         count={payoutRequests.length}
       >
           <div className="flex justify-end">
@@ -284,7 +284,7 @@ export default async function ProfesseurPaiementsPage() {
           </div>
           {payoutRequests.length === 0 ? (
             <p className="mt-4 rounded-lg border border-dashed border-[#D7DEE9] bg-white p-4 text-sm font-semibold leading-6 text-[#64748B]">
-              Aucune demande envoyée pour le moment.
+              Aucun ancien retrait enregistré pour le moment.
             </p>
           ) : (
             <div className="mt-4 grid gap-3">
@@ -320,7 +320,7 @@ export default async function ProfesseurPaiementsPage() {
                           <p className="mt-1 font-mono text-sm font-semibold text-[#111827]">{request.payoutRecord.reference}</p>
                            <p className="mt-1 text-xs font-semibold text-[#64748B]">
                              {request.payoutRecord.status === "PAID"
-                               ? "Document généré après validation et versement par le service client."
+                               ? "Document généré après confirmation Jèko."
                                : "Transfert Jèko en attente de confirmation. Votre solde n'est pas encore marqué comme payé."}
                            </p>
                            {request.payoutRecord.status === "PAID" && (

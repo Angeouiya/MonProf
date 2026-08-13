@@ -171,7 +171,7 @@ export function TeacherPaymentProfileSettingsForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Enregistrement impossible.");
-      setPayoutSavedMessage(`Coordonnées ${paymentMethodLabel(method)} enregistrées. Les prochaines demandes de retrait utiliseront ce numéro confirmé.`);
+      setPayoutSavedMessage(`Coordonnées ${paymentMethodLabel(method)} enregistrées. Les prochains retraits Jèko utiliseront ce numéro confirmé.`);
     } catch (error) {
       setPayoutError(error instanceof Error ? error.message : "Enregistrement impossible.");
     } finally {

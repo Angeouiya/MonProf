@@ -603,7 +603,7 @@ function ClientAmountMini({ label, value, strong = false }: { label: string; val
 }
 
 function paymentProviderLabel(provider?: string | null, hasLegacyPayDunyaProof = false) {
-  return provider === "PAYDUNYA" || hasLegacyPayDunyaProof ? "PayDunya (historique)" : "Jèko";
+  return provider === "PAYDUNYA" || hasLegacyPayDunyaProof ? "Paiement historique" : "Jèko";
 }
 
 function transactionPaymentProvider(transaction: {

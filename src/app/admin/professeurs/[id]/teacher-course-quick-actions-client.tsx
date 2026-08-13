@@ -121,7 +121,7 @@ function buildMissionMessage(teacherName: string, booking: TeacherCourseActionBo
     "- Confirmez rapidement votre disponibilité.",
     "- Contactez le client uniquement pour organiser le cours prévu.",
     "- Prévenez immédiatement le service client en cas de retard, indisponibilité, changement de lieu ou problème client.",
-    "- Après le cours, attendez la validation client/admin avant toute demande de paiement.",
+    "- Après le cours, attendez la validation client/admin ; si le net est libérable, retirez directement via Jèko dans votre espace professeur.",
   ].join("\n");
 }
 

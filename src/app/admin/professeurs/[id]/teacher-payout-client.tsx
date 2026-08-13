@@ -352,10 +352,10 @@ export function TeacherPayoutClient({
   const accountingState = useMemo(() => {
     if (dueAmount > 0) {
       return {
-        label: "Paiement à traiter",
-        title: "Un versement professeur peut être enregistré maintenant.",
+        label: "Retrait disponible",
+        title: "Le professeur peut lancer son retrait via Jèko.",
         detail: `Net payable : ${formatFCFA(dueAmount)}. ${payableRows.length} réservation(s) prête(s), plafond opérationnel ${formatFCFA(payoutLimit)}.`,
-        action: "Vérifier la preuve opérateur, enregistrer le versement, puis copier le reçu ou le message professeur.",
+        action: "Vérifier les retenues/litiges si nécessaire. Le retrait est déclenché par le professeur et rapproché par Jèko.",
         className: "border-amber-100 bg-amber-50/85 text-amber-950",
         badgeClassName: "border-amber-200 bg-white text-amber-800",
       };
@@ -653,12 +653,12 @@ export function TeacherPayoutClient({
         <div>
           <CardTitle className="text-base">Comptabilité interne professeur</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Registre interne sans wallet professeur : enregistrez les versements réels, puis le système déduit automatiquement le reste dû.
+            Wallet interne professeur : suivez les montants libérables, les transferts Jèko, les retenues et les litiges sans déclencher le retrait à la place du professeur.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
           <Badge variant="outline" className="w-fit border-violet-200 bg-violet-50 text-violet-800">
-            Comptabilité agence, pas de wallet
+            Suivi agence, retrait Jèko
           </Badge>
           <Button variant="outline" onClick={copyAccountingSummary}>
             <ClipboardCopy className="mr-1.5 h-4 w-4" />
@@ -766,7 +766,7 @@ export function TeacherPayoutClient({
               <div>
                 <p className="text-sm font-black text-foreground">Demandes de paiement reçues</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Le professeur peut demander un paiement. L'administration contrôle le solde, exécute le dépôt, puis enregistre le reçu officiel.
+                  Historique consultatif. Le professeur déclenche désormais son retrait lui-même et Jèko confirme le transfert.
                 </p>
               </div>
               <Badge variant="outline" className="w-fit border-violet-200 bg-white text-violet-800">
@@ -777,7 +777,6 @@ export function TeacherPayoutClient({
               {payoutRequests.slice(0, 5).map((request) => {
                 const isPending = request.status === "PENDING";
                 const transferInProgress = request.payoutRecord?.status === "DRAFT";
-                const canUseRequest = isPending && request.amount <= payoutLimit;
                 const isActive = activeRequestId === request.id;
                 return (
                   <div key={request.id} className={isActive ? "rounded-lg border border-[#111B4D] bg-white p-3" : "rounded-lg border border-[#E3E8F2] bg-white p-3"}>
@@ -808,22 +807,20 @@ export function TeacherPayoutClient({
                       <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
                         <Button
                           type="button"
-                          variant={isActive ? "default" : "outline"}
-                          disabled={!canUseRequest || requestActionLoading === request.id}
-                          onClick={() => prefillFromPayoutRequest(request)}
+                          variant="outline"
+                          disabled
                         >
-                          {isActive ? "Sélectionnée" : canUseRequest ? "Préremplir" : isPending ? "Solde insuffisant" : "Traitée"}
+                          {transferInProgress ? "Jèko en cours" : isPending ? "Ancien blocage à libérer" : "Historique"}
                         </Button>
                         {isPending && (
                           <Button
                             type="button"
                             variant="outline"
                             className="border-red-200 bg-white text-red-700 hover:bg-white"
-                            disabled={transferInProgress || requestActionLoading === request.id}
-                            onClick={() => reviewPayoutRequest(request, "reject")}
+                            disabled
                           >
-                            {requestActionLoading === request.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <AlertTriangle className="mr-1.5 h-4 w-4" />}
-                            {transferInProgress ? "Transfert en cours" : "Rejeter"}
+                            <AlertTriangle className="mr-1.5 h-4 w-4" />
+                            Validation admin fermée
                           </Button>
                         )}
                       </div>
@@ -1006,13 +1003,13 @@ export function TeacherPayoutClient({
           <div className="rounded-lg border border-violet-100 bg-white p-4">
             <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-black text-foreground">Saisir un versement réel au professeur</p>
+                <p className="text-sm font-black text-foreground">Retrait professeur via Jèko uniquement</p>
                 <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
-                  L'admin saisit le montant réellement déposé. Après validation, le système déduit automatiquement ce montant du reste dû et crée le reçu.
+                  Verrouillé : le professeur retire directement via Jèko. L'admin suit le ledger, les retenues et les litiges sans exécuter le dépôt.
                 </p>
               </div>
-              <Badge variant="outline" className="w-fit border-blue-200 bg-white text-blue-800">
-                Déduction automatique
+                <Badge variant="outline" className="w-fit border-blue-200 bg-white text-blue-800">
+                Retrait professeur uniquement
               </Badge>
             </div>
             <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/70 p-4">
@@ -1020,10 +1017,10 @@ export function TeacherPayoutClient({
                 <div>
                   <p className="flex items-center gap-2 text-sm font-black text-blue-950">
                     <FileText className="h-4 w-4" />
-                    Ordre de versement interne
+                    Suivi retrait Jèko
                   </p>
                   <p className="mt-1 text-sm text-blue-950/75">
-                    Prévisualisation exploitable avant paiement : montant prévu, imputation, reste après versement et contrôles à faire.
+                    Prévisualisation comptable : montant prévu, imputation, reste après retrait et contrôles à faire.
                   </p>
                 </div>
                 <Button type="button" variant="outline" className="border-blue-100 bg-white text-blue-800 hover:bg-blue-50" onClick={copyPayoutOrder}>
@@ -1122,9 +1119,9 @@ export function TeacherPayoutClient({
                 )}
               </div>
               <div className="flex items-end">
-                <Button className="w-full" disabled={!canSubmit} onClick={submit}>
-                  {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
-                  Lancer le versement Jèko
+                <Button className="w-full" disabled>
+                  <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                  Retrait réservé au professeur
                 </Button>
               </div>
             </div>

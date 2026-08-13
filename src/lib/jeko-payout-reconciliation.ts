@@ -634,7 +634,7 @@ export async function finalizeJekoTeacherPayout(input: {
             bookingSessionId: session.id,
             action: "PAYOUT_RECORDED",
             detail: `${allocation.amount} FCFA versés via Jèko sous la référence ${record.reference}.`,
-            actorType: "ADMIN",
+            actorType: record.createdById ? "ADMIN" : "JEKO",
             actorId: record.createdById,
             fromStatus: session.status,
             toStatus: fullyPaid ? "PAID" : "PARTIALLY_PAID",

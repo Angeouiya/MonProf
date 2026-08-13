@@ -233,7 +233,7 @@ export default async function ProfesseurDashboardPage() {
             ? {
                 eyebrow: "Paiement à configurer",
                 title: "Ajoutez votre numéro de retrait",
-                detail: "Votre moyen de paiement est nécessaire avant une demande de retrait.",
+                detail: "Votre moyen de retrait Jèko est nécessaire avant un retrait automatique.",
                 href: "/professeur/parametres",
                 action: "Configurer",
                 icon: CreditCard,
@@ -242,9 +242,9 @@ export default async function ProfesseurDashboardPage() {
               ? {
                   eyebrow: "Retrait disponible",
                   title: formatFCFA(readyToRequestAmount),
-                  detail: "Ce montant net peut être demandé maintenant.",
+                  detail: "Ce montant net peut être retiré maintenant via Jèko.",
                   href: "/professeur/paiements",
-                  action: "Retirer",
+                  action: "Retirer via Jèko",
                   icon: CreditCard,
                 }
               : pendingScheduleProposalCount > 0

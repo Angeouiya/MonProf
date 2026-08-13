@@ -385,7 +385,7 @@ function ClientBreakdownLine({ label, value, compact, strong = false }: { label:
 }
 
 function paymentProviderLabel(provider?: string | null) {
-  return provider === "PAYDUNYA" ? "PayDunya (historique)" : "Jèko";
+  return provider === "PAYDUNYA" ? "Paiement historique" : "Jèko";
 }
 
 function groupTransactionsByDate(transactions: ClientPaymentHistoryItem[]) {

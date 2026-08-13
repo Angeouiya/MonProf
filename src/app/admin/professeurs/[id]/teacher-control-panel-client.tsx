@@ -84,7 +84,7 @@ function buildDecision({
   if (warningsCount >= 3) return "Professeur à surveiller : avertissements répétés, privilégier une validation admin renforcée.";
   if (criticalTasks > 0) return "Traiter les tâches critiques avant toute nouvelle attribution.";
   if (lateTasks > 0) return "Relancer le professeur et vérifier les réservations liées aux retards.";
-  if (netToPay > 0) return "Contrôler les validations et enregistrer le versement professeur si tout est conforme.";
+  if (netToPay > 0) return "Contrôler les validations : le professeur peut retirer via Jèko dès que le net est libérable.";
   if (blockedFunds > 0) return "Suivre la confirmation client/admin avant libération des fonds.";
   return "Dossier stable : le professeur peut continuer à recevoir des missions.";
 }
@@ -340,7 +340,7 @@ export function TeacherControlPanelClient({
                 Solde interne agence
               </p>
               <p className="mt-1 text-sm text-blue-950/70">
-                Pas de wallet professeur : l'admin enregistre un versement réel, le montant est imputé aux réservations, puis le reste dû est recalculé automatiquement.
+                Wallet professeur suivi par Compétence : le professeur déclenche le retrait via Jèko, l'admin suit le ledger, les retenues et les litiges.
               </p>
             </div>
             <Badge variant="outline" className={netToPay > 0 ? "w-fit border-amber-200 bg-amber-50 text-amber-800" : "w-fit border-blue-200 bg-blue-50 text-blue-800"}>

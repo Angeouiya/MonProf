@@ -297,7 +297,7 @@ export default async function ReservationDetailPage({
   const paymentProviderLabel = booking.paymentProvider === "JEKO"
     ? "Jèko"
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
-      ? "PayDunya (historique)"
+      ? "Paiement historique"
       : "Paiement sécurisé";
   const preferredDays: string[] = booking.preferredDays ? JSON.parse(booking.preferredDays) : [];
   const pricingSnapshot = parsePricingSnapshot(booking.pricingSnapshot);
@@ -573,7 +573,7 @@ export default async function ReservationDetailPage({
         <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-semibold text-[#111B4D]">Paiement PayDunya confirmé</p>
+            <p className="font-semibold text-[#111B4D]">Paiement historique confirmé</p>
             <p className="mt-1 leading-6 text-[#64748B]">
               {isReschedulePayDunyaReturn
                 ? "Votre supplément de modification a été reçu. Le professeur doit maintenant confirmer le nouveau créneau."
@@ -593,10 +593,10 @@ export default async function ReservationDetailPage({
         <div className="flex items-start gap-3 rounded-lg border border-[#DDE6F7] bg-white p-4">
           <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-semibold text-[#111B4D]">Retour PayDunya enregistré</p>
+            <p className="font-semibold text-[#111B4D]">Retour de paiement enregistré</p>
             <p className="mt-1 leading-6 text-[#64748B]">
               Nous attendons la confirmation automatique de PayDunya. Si le paiement a été validé, le statut passera en paiement sécurisé dès réception de la confirmation serveur.
-              {paydunyaReturnCheck?.message ? ` Contrôle serveur: ${paydunyaReturnCheck.message}` : " Aucun paiement n'est validé sans confirmation serveur PayDunya."}
+              {paydunyaReturnCheck?.message ? ` Contrôle serveur: ${paydunyaReturnCheck.message}` : " Aucun paiement n'est validé sans confirmation serveur."}
             </p>
           </div>
         </div>
@@ -606,9 +606,9 @@ export default async function ReservationDetailPage({
         <div className="flex items-start gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
           <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
           <div className="text-sm">
-            <p className="font-semibold text-[#111B4D]">Paiement PayDunya non finalisé</p>
+            <p className="font-semibold text-[#111B4D]">Paiement non finalisé</p>
             <p className="mt-1 leading-6 text-[#64748B]">
-              Vous pouvez reprendre le paiement depuis les actions du dossier. Le moyen et les informations de paiement restent gérés sur PayDunya.
+              Vous pouvez reprendre le paiement depuis les actions du dossier. Le moyen et les informations de paiement restent gérés par le prestataire sécurisé.
             </p>
           </div>
         </div>
@@ -934,7 +934,7 @@ function getClientSituation({
   if (status === "VALIDATED_BY_CLIENT" || status === "PAYMENT_TO_RELEASE") {
     return {
       title: "Validation enregistrée",
-      description: "Le service client finalise le paiement professeur.",
+      description: "Les fonds sont libérables ; le professeur retire via Jèko.",
       icon: <ShieldCheck className="h-5 w-5 text-[#111B4D]" />,
       className: "border-[#CAD7F2] bg-white text-[#111B4D]",
     };

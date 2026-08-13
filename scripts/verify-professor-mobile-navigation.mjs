@@ -111,7 +111,7 @@ record(
     && /À retirer maintenant/.test(payments)
     && /Net exact demandable\. Frais Jèko pris en charge\./.test(payments)
     && /TeacherExactMetric label="Reste total" value=\{remaining\} emphasized/.test(payments)
-    && /TeacherExactMetric label="En traitement" value=\{pendingRequested \+ draftReservedAmount\}/.test(payments)
+    && /TeacherExactMetric label="Jèko en cours" value=\{draftReservedAmount\}/.test(payments)
     && /TeacherExactMetric label="Frais couverts" value=\{transferFeesCovered\}/.test(payments),
 );
 

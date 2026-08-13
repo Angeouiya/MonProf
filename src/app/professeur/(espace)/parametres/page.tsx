@@ -70,7 +70,7 @@ export default async function ProfesseurParametresPage() {
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">Coordonnées de paiement</h2>
               <p className="mt-1 text-sm font-semibold leading-6 text-[#64748B]">
-                Ces informations préremplissent vos demandes de paiement. Le service client garde la validation finale avant tout versement.
+                Ces informations préremplissent vos retraits Jèko. Le professeur déclenche le retrait ; Jèko confirme le transfert et Compétence suit la comptabilité.
               </p>
             </div>
           </div>

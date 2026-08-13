@@ -90,7 +90,7 @@ export function BookingPrimaryAction({ booking }: BookingActionsProps) {
   const providerLabel = providerIsJeko
     ? "Jèko"
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
-      ? "PayDunya (historique)"
+      ? "Paiement historique"
       : "Paiement sécurisé";
   const paymentActionKey = providerIsJeko ? "jeko_checkout" : "paydunya_checkout";
   const verificationActionKey = providerIsJeko ? "jeko_verify" : "paydunya_verify";
@@ -569,7 +569,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   ));
   const isJekoReschedule = pendingRescheduleRequest?.paymentProvider === "JEKO";
   const isHistoricalReschedulePayDunya = Boolean(pendingRescheduleRequest && !isJekoReschedule);
-  const reschedulePaymentProviderLabel = isJekoReschedule ? "Jèko" : "PayDunya (historique)";
+  const reschedulePaymentProviderLabel = isJekoReschedule ? "Jèko" : "Paiement historique";
   const canReview = isReviewableBookingStatus(status);
   const canCancel = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(status);
   const canRequestReschedule = canCancel && paymentVerified && !pendingRescheduleRequest;
@@ -577,7 +577,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
   const providerLabel = providerIsJeko
     ? "Jèko"
     : booking.paymentProvider === "PAYDUNYA" || booking.paydunyaVerifiedAt
-      ? "PayDunya (historique)"
+      ? "Paiement historique"
       : "Paiement sécurisé";
   const canResumePayment = !booking.isQuoteOnly && status === "PENDING_PAYMENT" && booking.paymentStatus === "FAILED";
   const foregroundNotice = getForegroundNotice({
@@ -817,7 +817,7 @@ export function BookingActions({ booking }: BookingActionsProps) {
             {["PAYMENT_PENDING", "PAYMENT_FAILED"].includes(pendingRescheduleRequest.status) && isHistoricalReschedulePayDunya && pendingRescheduleRequest.paydunyaCheckoutUrl && (
               <Button asChild className="mt-3 min-h-11 w-full rounded-lg">
                 <a href={pendingRescheduleRequest.paydunyaCheckoutUrl}>
-                  Payer via PayDunya (historique)
+                  Payer le supplément historique
                 </a>
               </Button>
             )}

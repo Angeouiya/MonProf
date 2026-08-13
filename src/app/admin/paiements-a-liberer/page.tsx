@@ -106,7 +106,7 @@ export default async function AdminPaiementsALibererPage() {
           <SignalCard
             title="Validation ancienne"
             value={`${oldRows.length} dossier${oldRows.length > 1 ? "s" : ""}`}
-            description="Client a validé depuis plus de 48h : paiement professeur à traiter rapidement."
+            description="Client a validé depuis plus de 48h : retrait professeur à surveiller rapidement."
             tone={oldRows.length ? "violet" : "blue"}
           />
         </div>
@@ -115,13 +115,13 @@ export default async function AdminPaiementsALibererPage() {
       <div className="rounded-lg border border-amber-100 bg-amber-50/55 p-4 text-sm text-amber-950/80">
         <p className="font-bold text-amber-950">Règle de libération</p>
         <p className="mt-1">
-          Le paiement professeur est libérable uniquement après validation client ou décision admin. Les retenues restent
-          manuelles, justifiées, et visibles dans la comptabilité du professeur.
+          Le net professeur est libérable uniquement après validation client ou décision admin. Le retrait est lancé par le professeur via Jèko.
+          Les retenues restent manuelles, justifiées, et visibles dans la comptabilité du professeur.
         </p>
       </div>
 
       {paymentRows.length === 0 ? (
-        <EmptyState icon={Unlock} title="Aucun paiement à libérer" description="Aucune réservation n'attend un paiement professeur." />
+        <EmptyState icon={Unlock} title="Aucun retrait à surveiller" description="Aucune réservation n'attend un retrait professeur." />
       ) : (
         <>
           <div className="grid gap-3 md:hidden">

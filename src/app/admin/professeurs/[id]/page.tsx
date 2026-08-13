@@ -2059,13 +2059,13 @@ function AmountTile({ label, amount, danger = false, muted = false }: { label: s
 
 function getTargetPaymentHint(row: { paymentStatus: string; remaining: number; retained: number; isCancellationPenalty?: boolean }) {
   if (row.isCancellationPenalty && row.remaining > 0) {
-    return "Indemnité d'annulation payable : vérifier que le remboursement client est traité ou que les fonds sont retenus, puis enregistrer le versement professeur.";
+    return "Indemnité d'annulation payable : vérifier que le remboursement client est traité ou que les fonds sont retenus, puis laisser le professeur retirer via Jèko.";
   }
   if (row.paymentStatus === "BLOCKED") {
     return "Fonds encore bloqués : vérifier réalisation du cours, confirmation client et absence de litige avant tout versement.";
   }
   if (row.paymentStatus === "TO_PAY_TEACHER" && row.remaining > 0) {
-    return "Paiement prêt à traiter : l'admin peut enregistrer un versement réel dans la comptabilité interne du professeur.";
+    return "Retrait prêt : le professeur peut lancer son retrait via Jèko, l'admin suit la comptabilité.";
   }
   if (row.paymentStatus === "DISPUTED") {
     return "Paiement suspendu : résoudre le litige avant paiement, remboursement ou retenue manuelle.";

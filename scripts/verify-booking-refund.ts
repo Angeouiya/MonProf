@@ -95,7 +95,7 @@ const route = readFileSync("src/app/api/admin/bookings/[id]/route.ts", "utf8");
 const finalization = readFileSync("src/lib/booking-refund-finalization.ts", "utf8");
 const disputeRoute = readFileSync("src/app/api/admin/disputes/[id]/route.ts", "utf8");
 const sessionRoute = readFileSync("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts", "utf8");
-const payoutRoute = readFileSync("src/app/api/admin/teacher-payouts/route.ts", "utf8");
+const payoutAutomation = readFileSync("src/lib/teacher-jeko-payouts.ts", "utf8");
 const bookingSessions = readFileSync("src/lib/booking-sessions.ts", "utf8");
 assert.match(route, /action === "refund" \? "FINANCE_MANAGE" : "BOOKINGS_MANAGE"/);
 assert.match(route, /finalizeBookingRefundInTransaction\(tx/);
@@ -122,7 +122,7 @@ assert.match(sessionRoute, /DISPUTE_OPENED_AFTER_PAYOUT/);
 assert.match(sessionRoute, /DISPUTE_ALREADY_OPEN/);
 assert.match(sessionRoute, /requiresManualFinancialReview/);
 assert.match(sessionRoute, /lockAndRevalidateSession/);
-assert.match(payoutRoute, /current\.disputes\.length > 0/);
+assert.match(payoutAutomation, /current\.disputes\.length > 0/);
 assert.match(bookingSessions, /booking\.status === "DISPUTED"/);
 
 console.log("✓ remboursement général: calculs purs et gardes statiques d'idempotence, concurrence et permission vérifiés");

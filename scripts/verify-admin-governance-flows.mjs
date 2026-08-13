@@ -4,10 +4,16 @@ import { createJiti } from "jiti";
 import { PrismaClient } from "@prisma/client";
 
 function loadDatabaseUrl() {
-  if (process.env.DATABASE_URL || !fs.existsSync(".env")) return;
-  const env = fs.readFileSync(".env", "utf8");
-  const row = env.split(/\r?\n/).find((line) => line.trim().startsWith("DATABASE_URL="));
-  if (row) process.env.DATABASE_URL = row.slice(row.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "");
+  if (process.env.DATABASE_URL) return;
+  for (const file of [".env", ".env.local"]) {
+    if (!fs.existsSync(file)) continue;
+    const env = fs.readFileSync(file, "utf8");
+    const row = env.split(/\r?\n/).find((line) => line.trim().startsWith("DATABASE_URL="));
+    if (row) {
+      process.env.DATABASE_URL = row.slice(row.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "");
+      return;
+    }
+  }
 }
 
 loadDatabaseUrl();
@@ -32,6 +38,7 @@ const after = getTeacherFinancialSettlement({
 
 const errors = [];
 const payoutRouteSource = fs.readFileSync("src/app/api/admin/teacher-payouts/route.ts", "utf8");
+const payoutAutomationSource = fs.readFileSync("src/lib/teacher-jeko-payouts.ts", "utf8");
 const payoutReconciliationSource = fs.readFileSync("src/lib/jeko-payout-reconciliation.ts", "utf8");
 if (before.remaining !== 8_500 || after.remaining !== 7_500 || before.remaining - after.remaining !== 1_000) {
   errors.push("Un versement de 1 000 FCFA ne débite pas exactement 1 000 FCFA du reste professeur.");
@@ -39,17 +46,28 @@ if (before.remaining !== 8_500 || after.remaining !== 7_500 || before.remaining 
 if (!ADMIN_ROLE_PERMISSIONS.FINANCE.includes("FINANCE_MANAGE")) errors.push("Le rôle Finance ne peut pas traiter les paiements.");
 if (ADMIN_ROLE_PERMISSIONS.OBSERVER.includes("FINANCE_MANAGE")) errors.push("Le rôle Lecture seule peut modifier les paiements.");
 if (ADMIN_ROLE_PERMISSIONS.SUPPORT.includes("TEAM_MANAGE")) errors.push("Le Service client peut gérer l'équipe admin.");
-if (!payoutRouteSource.includes('isolationLevel: "Serializable"')) errors.push("Les paiements professeur ne sont pas isolés contre les validations simultanées.");
-const verifiesLegacyBalance = payoutRouteSource.includes("current.teacherPaidAmount !== item.paid")
+if (!payoutRouteSource.includes("ADMIN_TEACHER_PAYOUT_DISABLED")) errors.push("L'admin peut encore déclencher un retrait professeur.");
+if (!payoutAutomationSource.includes('isolationLevel: "Serializable"')) errors.push("Les paiements professeur ne sont pas isolés contre les validations simultanées.");
+const verifiesLegacyBalance = payoutAutomationSource.includes("current.teacherPaidAmount !== item.paid")
   && payoutReconciliationSource.includes("booking.teacherPaidAmount !== allocation.paidAmountBefore")
   && payoutReconciliationSource.includes("teacherPaidAmount: allocation.paidAmountBefore");
-const verifiesSessionBalance = payoutRouteSource.includes("current.paidAmount !== item.session.paidAmount")
-  && payoutRouteSource.includes("current.releasedAmount !== item.session.releasedAmount")
+const verifiesSessionBalance = payoutAutomationSource.includes("current.paidAmount !== item.session.paidAmount")
+  && payoutAutomationSource.includes("current.releasedAmount !== item.session.releasedAmount")
   && payoutReconciliationSource.includes("session.paidAmount !== allocation.paidAmountBefore")
   && payoutReconciliationSource.includes("session.releasedAmount !== allocation.releasedAmountSnapshot")
   && payoutReconciliationSource.includes("PAYOUT_BALANCE_CHANGED");
 if (!verifiesLegacyBalance || !verifiesSessionBalance) errors.push("Le débit professeur ne vérifie pas le solde précédent de la réservation et de la séance avant mise à jour.");
-if (!payoutRouteSource.includes('status: "PENDING", payoutRecordId: null')) errors.push("Une demande de paiement peut être réutilisée après traitement.");
+if (!payoutAutomationSource.includes("buildJekoPayoutRecordId(input.idempotencyKey)")) errors.push("Un retrait professeur peut être réutilisé sans clé Jèko déterministe.");
+
+if (!process.env.DATABASE_URL) {
+  console.log(JSON.stringify({
+    debitScenario: { before: before.remaining, payment: 1_000, after: after.remaining },
+    databaseAuditSkipped: "DATABASE_URL absent localement",
+    errors,
+  }, null, 2));
+  process.exitCode = errors.length ? 1 : 0;
+  process.exit();
+}
 
 const prisma = new PrismaClient();
 try {

@@ -41,7 +41,7 @@ export function TeacherPayoutRequestForm({
   maximumProcessingHours: number;
 }) {
   const router = useRouter();
-  const requestableAmount = Math.max(0, readyToReceive - pendingRequested - draftReservedAmount);
+  const requestableAmount = Math.max(0, readyToReceive - draftReservedAmount);
   const [amount, setAmount] = useState(requestableAmount > 0 ? String(requestableAmount) : "");
   const [method, setMethod] = useState(defaultMethod || "WAVE");
   const [paymentPhone, setPaymentPhone] = useState(defaultPhone ?? "");
@@ -96,21 +96,21 @@ export function TeacherPayoutRequestForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (data.code === "PAYOUT_REQUEST_IDEMPOTENCY_MISMATCH") {
+        if (data.code === "PAYOUT_REQUEST_IDEMPOTENCY_MISMATCH" || data.code === "PAYOUT_PREVIOUS_ATTEMPT_CANCELLED" || data.payout?.action === "failed") {
           pendingSubmissionRef.current = null;
         }
-        toast.error(data.error || "Impossible d'envoyer la demande.");
+        toast.error(data.error || "Impossible de lancer le retrait Jèko.");
         return;
       }
       pendingSubmissionRef.current = null;
-      setNotice(data.idempotentReplay
-        ? "Cette demande avait déjà été reçue : aucune seconde réservation n'a été créée."
-        : `Demande envoyée. Traitement prévu entre ${minimumProcessingHours}h et ${maximumProcessingHours}h.`);
+      setNotice(data.pending
+        ? "Retrait Jèko lancé. Le solde reste réservé jusqu'à confirmation finale, sans double débit."
+        : `Retrait confirmé. Vous recevez exactement ${formatFCFA(cleanAmount)} ; frais Jèko pris en charge par Compétence.`);
       setAmount("");
       setNote("");
       router.refresh();
     } catch {
-      toast.error("La réponse du serveur n'a pas été reçue. Vous pouvez réessayer : la même demande ne sera pas créée deux fois.");
+      toast.error("La réponse du serveur n'a pas été reçue. Vous pouvez réessayer : le même retrait ne sera pas créé deux fois.");
     } finally {
       setLoading(false);
     }
@@ -120,8 +120,8 @@ export function TeacherPayoutRequestForm({
     <div id="demande-retrait-professeur" data-professor-payout-request data-professor-payout-primary-action className="scroll-mt-24 rounded-xl border border-[#DDE6F7] bg-white p-4 shadow-sm min-[640px]:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold text-[#111827]">Retirer</p>
-          <p className="mt-1 text-sm font-semibold text-[#64748B]">Montant. Numéro. Validation.</p>
+          <p className="text-lg font-semibold text-[#111827]">Retirer via Jèko</p>
+          <p className="mt-1 text-sm font-semibold text-[#64748B]">Montant. Numéro. Confirmation Jèko.</p>
         </div>
         <div className="shrink-0 rounded-lg bg-[#EEF2FF] px-3 py-2 text-right">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Disponible</p>
@@ -131,7 +131,7 @@ export function TeacherPayoutRequestForm({
 
       <p className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-emerald-700">
         <CheckCircle2 className="h-4 w-4" aria-hidden />
-        Vous recevez le montant exact. Frais pris en charge.
+        Vous recevez le montant exact. Frais Jèko pris en charge par Compétence.
       </p>
 
       <div data-professor-payout-fields className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
@@ -204,7 +204,7 @@ export function TeacherPayoutRequestForm({
           <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Ajouter une précision au service client"
+            placeholder="Ajouter une précision facultative"
             disabled={requestableAmount <= 0}
             className="min-h-20"
           />
@@ -224,13 +224,15 @@ export function TeacherPayoutRequestForm({
 
       <div className="mt-4 grid gap-2 min-[640px]:grid-cols-[minmax(0,1fr)_auto] min-[640px]:items-center">
         <p className="text-xs font-semibold leading-5 text-[#64748B]">
-          {pendingRequested > 0 || draftReservedAmount > 0
-            ? `${formatFCFA(pendingRequested + draftReservedAmount)} en cours.`
-            : `Traitement : ${minimumProcessingHours}h à ${maximumProcessingHours}h après contrôle.`}
+          {draftReservedAmount > 0
+            ? `${formatFCFA(draftReservedAmount)} en confirmation Jèko.`
+            : pendingRequested > 0
+              ? `${formatFCFA(pendingRequested)} ancienne(s) demande(s) à libérer sans blocage du wallet.`
+              : `Confirmation Jèko automatique. Historique indicatif : ${minimumProcessingHours}h à ${maximumProcessingHours}h selon le réseau.`}
         </p>
         <Button type="button" onClick={submit} disabled={!canSubmit} className="min-h-12 w-full rounded-lg bg-[#111B4D] px-6 text-white hover:bg-[#1E2A78] min-[640px]:w-auto">
           {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-          {cleanAmount > 0 && cleanAmount <= requestableAmount ? `Retirer ${formatFCFA(cleanAmount)}` : "Retirer"}
+          {cleanAmount > 0 && cleanAmount <= requestableAmount ? `Retirer via Jèko ${formatFCFA(cleanAmount)}` : "Retirer via Jèko"}
         </Button>
       </div>
     </div>

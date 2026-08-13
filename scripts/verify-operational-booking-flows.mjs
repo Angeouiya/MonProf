@@ -59,6 +59,7 @@ const privacyPage = read("src/app/politique-confidentialite/page.tsx");
 const bookingSessions = read("src/lib/booking-sessions.ts");
 const bookingSessionRoute = read("src/app/api/bookings/[id]/sessions/[sessionId]/route.ts");
 const payoutRoute = read("src/app/api/admin/teacher-payouts/route.ts");
+const payoutAutomation = read("src/lib/teacher-jeko-payouts.ts");
 const payoutRequestReviewRoute = read("src/app/api/admin/teacher-payout-requests/[id]/route.ts");
 const payoutAdjustmentRoute = read("src/app/api/admin/teacher-payment-adjustments/[id]/route.ts");
 const payoutSanctionRoute = read("src/app/api/admin/teacher-sanctions/[id]/route.ts");
@@ -153,8 +154,8 @@ record(
   /data-professor-payout-method-picker/.test(payoutPicker)
     && /role="radiogroup"/.test(payoutPicker)
     && /activePaymentMethodOptions\.map/.test(payoutPicker)
-    && /defaultPayoutMethod:\s*method/.test(payoutRequestRoute)
-    && /defaultPayoutPhone:\s*paymentPhone/.test(payoutRequestRoute),
+    && /defaultPayoutMethod:\s*input\.method/.test(payoutAutomation)
+    && /defaultPayoutPhone:\s*paymentPhone/.test(payoutAutomation),
 );
 
 record(
@@ -539,12 +540,12 @@ record(
 
 record(
   "Professor payouts reserve exact session snapshots and debit only after Jèko confirmation",
-  /status:\s*"DRAFT"/.test(payoutRoute)
-    && /bookingSessionId:\s*allocation\.item\.session\?\.id\s*\?\?\s*null/.test(payoutRoute)
-    && /paidAmountBefore: allocation\.item\.paid/.test(payoutRoute)
-    && /releasedAmountSnapshot: allocation\.item\.payableAmount/.test(payoutRoute)
-    && /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/.test(payoutRoute)
-    && /ledger professeur ne sera débité qu'après confirmation finale/i.test(payoutRoute)
+  /status:\s*"DRAFT"/.test(payoutAutomation)
+    && /bookingSessionId:\s*allocation\.item\.session\?\.id\s*\?\?\s*null/.test(payoutAutomation)
+    && /paidAmountBefore: allocation\.item\.paid/.test(payoutAutomation)
+    && /releasedAmountSnapshot: allocation\.item\.payableAmount/.test(payoutAutomation)
+    && /retainedAmountSnapshot: allocation\.item\.retainedAmountAfter/.test(payoutAutomation)
+    && /ledger professeur ne sera débité qu'après confirmation finale/i.test(payoutAutomation)
     && /if\s*\(transition\s*===\s*"finalize"\)/.test(payoutReconciliation)
     && /where:\s*\{ id: record\.id, status: "DRAFT" \}/.test(payoutReconciliation)
     && /session\.paidAmount\s*!==\s*allocation\.paidAmountBefore/.test(payoutReconciliation)
@@ -557,10 +558,10 @@ record(
 record(
   "Jèko drafts and applied retentions serialize on one teacher balance lock",
   /FROM\s+"Teacher"[\s\S]*?WHERE\s+"id"\s*=\s*\$\{teacherId\}[\s\S]*?FOR UPDATE/.test(payoutBalanceLock)
-    && /lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?teacherPaymentAdjustment\.findMany\([\s\S]*?appliedAdjustmentFingerprint\(currentAppliedAdjustments\)[\s\S]*?teacherPayoutRecord\.create\(/.test(payoutRoute)
+    && /lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?teacherPaymentAdjustment\.findMany\([\s\S]*?appliedAdjustmentFingerprint\(currentAppliedAdjustments\)[\s\S]*?teacherPayoutRecord\.create\(/.test(payoutAutomation)
     && /lockTeacherPayoutBalance\(tx,\s*adjustment\.teacherId\)[\s\S]*?teacherPaymentAdjustment\.findUnique\([\s\S]*?hasActiveJekoPayoutReservationInTransaction\([\s\S]*?teacherPaymentAdjustment\.updateMany\(/.test(payoutAdjustmentRoute)
     && /lockTeacherPayoutBalance\(tx,\s*sanction\.teacherId\)[\s\S]*?teacherSanction\.findUnique\([\s\S]*?hasActiveJekoPayoutReservationInTransaction\([\s\S]*?teacherPaymentAdjustment\.(updateMany|create)\(/.test(payoutSanctionRoute)
-    && /isolationLevel:\s*"Serializable"/.test(payoutRoute)
+    && /isolationLevel:\s*"Serializable"/.test(payoutAutomation)
     && /isolationLevel:\s*"Serializable"/.test(payoutAdjustmentRoute)
     && /isolationLevel:\s*"Serializable"/.test(payoutSanctionRoute)
     && /code\s*===\s*"P2034"/.test(payoutAdjustmentRoute)
@@ -568,39 +569,36 @@ record(
 );
 
 record(
-  "Professor payout requests use the exact released session and replacement ledger",
-  /sessions:\s*\{\s*some:\s*\{\s*teacherId:\s*teacher\.id,\s*status:\s*\{\s*in:\s*\["RELEASED",\s*"PARTIALLY_PAID"\]/.test(payoutRequestRoute)
-    && /sessions:\s*\{\s*none:\s*\{\}\s*\}[\s\S]*?teacherNetAmount:\s*\{\s*gt:\s*0\s*\}[\s\S]*?paymentStatus:\s*"TO_PAY_TEACHER"/.test(payoutRequestRoute)
-    && /teacherId:\s*\{\s*not:\s*teacher\.id\s*\}[\s\S]*?sessions:\s*\{\s*some:\s*\{\s*teacherId:\s*teacher\.id/.test(payoutRequestRoute)
-    && /sessions:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}[\s\S]*?releasedAmount:\s*true[\s\S]*?paidAmount:\s*true[\s\S]*?retainedAmount:\s*true/.test(payoutRequestRoute)
-    && /getTeacherFinancialSettlement\(booking, adjustments\)/.test(payoutRequestRoute),
+  "Automatic professor payouts use the exact released session and replacement ledger",
+  /sessions:\s*\{\s*some:\s*\{\s*teacherId,\s*status:\s*\{\s*in:\s*\["RELEASED",\s*"PARTIALLY_PAID"\]/.test(payoutAutomation)
+    && /paymentStatus:\s*"TO_PAY_TEACHER"/.test(payoutAutomation)
+    && /teacherId:\s*\{\s*not:\s*teacher\.id\s*\}[\s\S]*?sessions:\s*\{\s*some:\s*\{\s*teacherId:\s*teacher\.id/.test(payoutAutomation)
+    && /sessions:\s*\{[\s\S]*?where:\s*\{\s*teacherId:\s*teacher\.id[\s\S]*?releasedAmount:\s*true[\s\S]*?paidAmount:\s*true[\s\S]*?retainedAmount:\s*true/.test(payoutAutomation)
+    && /hasVerifiedPayDunyaClientPayment/.test(payoutAutomation),
 );
 
 record(
-  "Professor payout request balance and reservation share one serializable transaction",
-  /db\.\$transaction\(async\s*\(tx\)\s*=>\s*\{[\s\S]*?lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?tx\.teacherPayoutRequest\.aggregate\(\{[\s\S]*?tx\.teacherPayoutAllocation\.findMany\(\{[\s\S]*?tx\.teacherPayoutRequest\.create\(\{/.test(payoutRequestRoute)
-    && /payout:\s*\{\s*teacherId:\s*teacher\.id,\s*status:\s*"DRAFT"\s*\}/.test(payoutRequestRoute)
-    && /payoutRequestStatus:\s*allocation\.payout\.payoutRequest\?\.status\s*\?\?\s*null/.test(payoutRequestRoute)
-    && /calculateTeacherPayoutAvailability\(\{/.test(payoutRequestRoute)
-    && /isolationLevel:\s*"Serializable"/.test(payoutRequestRoute)
-    && /const code\s*=\s*errorCode\(error\)/.test(payoutRequestRoute)
-    && /\["P2034",\s*"TEACHER_PAYOUT_LOCK_NOT_FOUND"\]\.includes\(code\)[\s\S]*?PAYOUT_REQUEST_BALANCE_CONFLICT/.test(payoutRequestRoute),
+  "Professor payout balance and Jèko reservation share one serializable transaction",
+  /createAndProcessTeacherJekoPayout/.test(payoutRequestRoute)
+    && /db\.\$transaction\(async\s*\(tx\)\s*=>\s*\{[\s\S]*?lockTeacherPayoutBalance\(tx,\s*teacher\.id\)[\s\S]*?tx\.teacherPayoutAllocation\.findMany\(\{[\s\S]*?tx\.teacherPayoutRecord\.create\(\{/.test(payoutAutomation)
+    && /payout:\s*\{\s*teacherId:\s*teacher\.id,\s*provider:\s*"JEKO",\s*status:\s*"DRAFT"\s*\}/.test(payoutAutomation)
+    && /isolationLevel:\s*"Serializable"/.test(payoutAutomation)
+    && /TEACHER_PAYOUT_LOCK_NOT_FOUND/.test(payoutAutomation),
 );
 
 record(
-  "Admin payouts never fall back to a replaced booking-level balance",
-  /_count:\s*\{\s*select:\s*\{\s*sessions:\s*true\s*\}\s*\}/.test(payoutRoute)
-    && /booking\._count\.sessions\s*>\s*0[\s\S]*?if\s*\(booking\.sessions\.length\s*===\s*0\)\s*continue/.test(payoutRoute),
+  "Automatic payouts never fall back to a replaced booking-level balance",
+  /_count:\s*\{\s*select:\s*\{\s*sessions:\s*true\s*\}\s*\}/.test(payoutAutomation)
+    && /booking\._count\.sessions\s*>\s*0[\s\S]*?if\s*\(booking\.sessions\.length\s*===\s*0\)\s*continue/.test(payoutAutomation),
 );
 
 record(
-  "Pending professor requests reserve the balance without blocking idempotent payout recovery",
-  payoutRoute.indexOf("const existingPayout") >= 0
-    && payoutRoute.indexOf("const existingPayout") < payoutRoute.indexOf("const oldestUnallocatedRequest")
-    && payoutRoute.indexOf("const existing = await tx.teacherPayoutRecord.findUnique")
-      < payoutRoute.indexOf("const currentOldestUnallocatedRequest")
-    && /PENDING_PAYOUT_REQUEST_RESERVED/.test(payoutRoute)
-    && /payoutRecordMatches\(raced/.test(payoutRoute),
+  "Admin payout endpoint is disabled and legacy PENDING requests no longer reserve balances",
+  /ADMIN_TEACHER_PAYOUT_DISABLED/.test(payoutRoute)
+    && !/teacherPayoutRecord\.create/.test(payoutRoute)
+    && /Depuis le retrait automatique, une ancienne demande PENDING ne réserve plus/.test(teacherPayments)
+    && /readyToReceive - draftReservedAmount/.test(teacherPayments)
+    && /processJekoTeacherPayoutRecord\(record\.id\)/.test(read("scripts/release-legacy-pending-payout-requests.ts")),
 );
 
 record(
@@ -615,10 +613,10 @@ record(
   "Global retentions are consumed once across paid and legacy history",
   /getTeacherGlobalRetentionLedger/.test(teacherPayments)
     && /rawSessionGlobal[\s\S]*?rawLegacyGlobal[\s\S]*?sessionByBooking[\s\S]*?legacyByBooking/.test(teacherPayments)
-    && /bookingSession\.findMany\(\{[\s\S]*?retainedAmount:\s*\{\s*gt:\s*0/.test(payoutRequestRoute)
-    && /status:\s*\{\s*in:\s*\["DRAFT",\s*"PAID"\]\s*\}/.test(payoutRequestRoute)
-    && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutRoute)
-    && /calculateTeacherPayoutAvailability\(\{[\s\S]*?globalRetentionLedger/.test(payoutRequestRoute)
+    && /bookingSession\.findMany\(\{[\s\S]*?retainedAmount:\s*\{\s*gt:\s*0/.test(payoutAutomation)
+    && /status:\s*\{\s*in:\s*\["DRAFT",\s*"PAID"\]\s*\}/.test(payoutAutomation)
+    && /globalRetentionLedger\.legacyByBooking\.get\(booking\.id\)/.test(payoutAutomation)
+    && /getTeacherGlobalRetentionLedger\(/.test(payoutAutomation)
     && /globalRetentionLedger\.legacyByBooking\.get\(settlement\.bookingId\)/.test(teacherPayments),
 );
 

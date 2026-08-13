@@ -260,6 +260,6 @@ function publicReceiptNote(note: string | null | undefined) {
 
 function payoutProviderLabel(provider?: string | null) {
   if (provider === "JEKO") return "Jèko";
-  if (provider === "PAYDUNYA") return "PayDunya (historique)";
+  if (provider === "PAYDUNYA") return "Paiement historique";
   return "Versement historique / interne";
 }

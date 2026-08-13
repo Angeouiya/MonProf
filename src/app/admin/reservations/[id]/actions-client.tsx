@@ -399,82 +399,10 @@ export function BookingActionsClient({ booking }: { booking: Booking }) {
   }
   if (paymentStatus === "TO_PAY_TEACHER" && !hasSessionLedger) {
     actions.push(
-      <AlertDialog key="pay" open={payTeacherOpen} onOpenChange={setPayTeacherOpen}>
-        <AlertDialogTrigger asChild>
-          <Button variant="default" disabled={!!loading}>
-            {loading === "pay_teacher" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Banknote className="mr-1.5 h-4 w-4" />}
-            Payer le professeur ({formatFCFA(teacherRemainingAmount)} restant)
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Payer le professeur ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vous allez libérer le paiement de <strong>{formatFCFA(teacherRemainingAmount)}</strong> (reste net) à {booking.teacher.professionalName || booking.teacher.fullName}.
-              Saisissez le moyen et le numéro exact du dépôt. Un reçu comptable sera créé automatiquement.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-3 py-2 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Méthode</Label>
-              <Select value={payTeacherMethod} onValueChange={setPayTeacherMethod}>
-                <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="WAVE">Wave</SelectItem>
-                  <SelectItem value="ORANGE_MONEY">Orange Money</SelectItem>
-                  <SelectItem value="MTN_MONEY">MTN Money</SelectItem>
-                  <SelectItem value="MOOV_MONEY">Moov Money</SelectItem>
-                  <SelectItem value="DJAMO">Djamo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Numéro de paiement</Label>
-              <Input
-                inputMode="tel"
-                value={payTeacherPhone}
-                onChange={(event) => setPayTeacherPhone(event.target.value)}
-                placeholder="Ex : +225 07 00 00 00 00"
-                className="mt-1"
-              />
-              <p className={payTeacherPhoneInvalid ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
-                Le net exact sera envoyé à ce numéro via Jèko.
-              </p>
-            </div>
-            <div className="sm:col-span-2">
-              <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Confirmer le numéro</Label>
-              <Input
-                inputMode="tel"
-                value={payTeacherPhoneConfirm}
-                onChange={(event) => setPayTeacherPhoneConfirm(event.target.value)}
-                placeholder="Retapez le numéro de paiement"
-                className="mt-1"
-              />
-              <p className={payTeacherPhoneConfirm && payTeacherPhoneMismatch ? "mt-1 text-xs font-medium text-red-700" : "mt-1 text-xs text-muted-foreground"}>
-                {payTeacherPhoneConfirm && payTeacherPhoneMismatch
-                  ? "Les deux numéros ne correspondent pas."
-                  : "Double saisie obligatoire avant le transfert."}
-              </p>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={payTeacherPhoneInvalid || payTeacherPhoneMismatch || loading === "pay_teacher"}
-              onClick={(event) => {
-                event.preventDefault();
-                if (payTeacherPhoneInvalid || payTeacherPhoneMismatch) {
-                  toast.error("Saisissez et confirmez le numéro exact du paiement Mobile Money.");
-                  return;
-                }
-                void payTeacherWithJeko();
-              }}
-            >
-              Lancer le versement Jèko
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Button key="pay" variant="outline" disabled>
+        <Banknote className="mr-1.5 h-4 w-4" />
+        Retrait professeur via Jèko ({formatFCFA(teacherRemainingAmount)} suivi)
+      </Button>
     );
   }
 

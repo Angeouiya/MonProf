@@ -26,6 +26,8 @@
     "db:sync-catalog": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/sync-production-catalog.ts",
     "db:reprice-drafts": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/repair-unpaid-draft-pricing.ts",
     "db:reprice-drafts:apply": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/repair-unpaid-draft-pricing.ts --apply",
+    "db:release-legacy-payout-requests": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/release-legacy-pending-payout-requests.ts",
+    "db:release-legacy-payout-requests:apply": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/release-legacy-pending-payout-requests.ts --apply",
     "db:backfill-admin-team": "node scripts/backfill-admin-team.mjs",
     "db:backfill-sessions": "node scripts/backfill-booking-sessions.mjs",
     "db:backfill-sessions:apply": "node scripts/backfill-booking-sessions.mjs --apply",
