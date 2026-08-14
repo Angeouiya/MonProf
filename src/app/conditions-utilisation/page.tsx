@@ -6,15 +6,16 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "12 août 2026";
+const version = "14 août 2026";
 
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
+  "Chaque date et chaque heure sont contrôlées côté serveur : un créneau payé, son chevauchement et son temps de déplacement deviennent indisponibles pour tout autre client.",
   "Avant d'annuler, le client peut demander une alternative professeur : la réservation reste active pendant que le moteur propose un profil compatible ou signale le dossier au service client.",
-  "Le retrait professeur porte sur le net validé ; les frais techniques que Compétence prend en charge restent séparés et auditables.",
+  "Le professeur déclenche son retrait dans son espace ; Jèko l'exécute automatiquement après les contrôles de solde, de litige et d'identité, sans validation manuelle de l'administration.",
   "Programme partenariat : aucune commission n'est acquise sans déclaration dans les délais, paiement Jèko confirmé par le serveur et réservation validée par Compétence.",
   "Un brouillon non payé reste supprimable par le client tant qu'aucun paiement vérifié ni workflow protégé n'est rattaché au dossier.",
 ];
@@ -85,7 +86,7 @@ const sections: LegalSection[] = [
   {
     title: "Réservations et paiement client",
     body: [
-      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko ou, pour un ancien dossier, par le prestataire historique concerné. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
+      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
       "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence à partir d'une réponse API, webhook ou transaction vérifiable.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
       "Avant d'ouvrir Jèko, Compétence peut recalculer la compatibilité du professeur avec le système choisi. Si le professeur n'est pas autorisé dans ce système ou si son catalogue ne couvre pas la demande, le paiement doit être bloqué afin d'éviter une commande impossible à exécuter.",
@@ -94,7 +95,7 @@ const sections: LegalSection[] = [
       "Si le marchand affiché, le montant, le moyen, le statut serveur ou la référence ne correspondent pas au dossier attendu, Compétence peut bloquer l'activation, demander un contrôle manuel, rejeter le webhook ou demander au client de relancer un paiement propre.",
     ],
     bullets: [
-      "Les séances sont organisées par blocs de 2 heures, sauf mention contraire validée par Compétence.",
+      "Les créneaux standards sont organisés par blocs de 2 heures. Dans « Autre horaire », le client peut choisir 1 heure ou 2 heures ; le tarif de la séance reste identique.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
       "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers de paiement restent conservés uniquement dans l'historique.",
       "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
@@ -120,9 +121,23 @@ const sections: LegalSection[] = [
     ],
   },
   {
+    title: "Réservations multi-dates et packs",
+    body: [
+      "Le client peut sélectionner plusieurs dates dans une même réservation et attribuer à chacune une heure disponible. Chaque date constitue une séance distincte, avec son planning, sa durée, son statut et sa preuve de paiement.",
+      "Le serveur recalcule le nombre total de séances avant le paiement et applique automatiquement le meilleur palier de pack atteint. Si le nombre choisi dépasse un palier sans atteindre le suivant, la réduction du palier précédent reste applicable aux séances éligibles.",
+      "Les formules et leurs réductions sont affichées avant validation. La plateforme peut proposer d'ajouter les séances manquantes pour atteindre le palier suivant, sans jamais les ajouter ni les facturer sans l'action explicite du client.",
+      "Le prix, la réduction de pack, le transport par déplacement, les frais de service Compétence et les frais de paiement Jèko sont recalculés côté serveur sur l'ensemble des séances avant l'ouverture de la fenêtre de paiement.",
+      "Un pack ne garantit pas la disponibilité permanente d'un professeur en dehors des dates confirmées. Toute nouvelle date, modification ou séance de remplacement reste soumise aux contrôles de compatibilité, chevauchement et déplacement.",
+    ],
+  },
+  {
     title: "Disponibilités, horaires et modification de créneau",
     body: [
       "Les disponibilités affichées ou proposées sont des créneaux opérationnels soumis à confirmation. Le professeur confirme, signale une indisponibilité ou propose un autre créneau selon le délai restant avant le cours.",
+      "Un client ne peut pas sélectionner une plage déjà payée pour le même professeur, ni une plage qui la chevauche, même partiellement. Le contrôle concerne les créneaux standards, « Autre horaire », les réservations multi-dates, les packs, les reports, les remplacements, le lancement du paiement et la confirmation webhook Jèko.",
+      "Le planning réserve aussi un temps de déplacement entre deux cours selon leurs lieux réels : dernier cours confirmé du professeur puis cours demandé, et non depuis le domicile du professeur. Le délai appliqué est celui configuré par Compétence selon le format, le quartier et la commune, généralement de 30 à 90 minutes ; deux cours en ligne peuvent se suivre sans déplacement.",
+      "Lorsque la marge disponible est inférieure au temps requis, le créneau est verrouillé et le client doit choisir une autre heure. Lorsque l'écart est supérieur au délai requis, aucun blocage supplémentaire n'est appliqué.",
+      "Tous les contrôles sont répétés côté serveur afin qu'une modification du navigateur ou deux paiements presque simultanés ne puissent pas créer deux cours incompatibles. En cas de concurrence de paiement, seule la première confirmation valide compatible peut activer le créneau ; l'autre dossier est bloqué pour traitement, remplacement ou remboursement selon son état.",
       "Si le professeur propose un nouveau créneau, le client accepte ou refuse depuis son espace. Une absence de réponse entraîne une relance, un remplacement ou une décision du service client.",
       "À moins de 24 heures du cours, le professeur ne peut pas annuler directement la réservation. Il doit prioritairement proposer un nouveau créneau. En cas d'empêchement absolu signalé comme urgence, la réservation reste active pendant que Compétence recherche automatiquement un remplaçant compatible et soumet la proposition au client.",
       "Compétence se réserve le droit de modifier, remplacer ou annuler une attribution si la qualité du service, la sécurité, le paiement, l'adresse, la disponibilité ou la satisfaction client l'exige.",
@@ -137,6 +152,7 @@ const sections: LegalSection[] = [
       "La déclaration ne devient pas automatiquement payable. Elle devient payable uniquement lorsque le paiement a été confirmé côté serveur par Jèko et lorsque la réservation a été validée par Compétence. Un brouillon, une promesse de paiement, une capture d'écran ou une réclamation verbale ne crée aucun droit au paiement.",
       "L'apporteur fournit son identité, une pièce justificative, une photo ou un numéro de dépôt lorsque Compétence les demande afin de vérifier la cohérence de la déclaration avant tout versement. Compétence se réserve le droit de refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
       "Un code ou lien ne constitue pas à lui seul une commission acquise. Une attribution ne peut pas être changée vers un autre partenaire pendant sa période active, sauf décision justifiée de Compétence en cas d'erreur, fraude ou litige. Après expiration, aucune commission nouvelle n'est due au titre de cette attribution.",
+      "Une annulation, un remboursement, une rétrofacturation, un paiement frauduleux ou une commande finalement non éligible annule ou corrige la réduction et la commission correspondantes. Les contrôles d'identité, de téléphone, d'unicité du compte, de référence Jèko et d'idempotence empêchent le cumul artificiel et le double versement.",
       "Le suivi des partenariats est effectué dans le dashboard administrateur. Les paiements aux apporteurs sont des dépôts manuels ou contrôlés par Compétence et ne constituent ni un salaire, ni un emploi, ni une relation d'agence permanente.",
     ],
   },
@@ -147,6 +163,7 @@ const sections: LegalSection[] = [
       "Le cadeau disponible est appliqué automatiquement au prochain cours éligible avant paiement. Un seul avantage s'applique par paiement ; les cadeaux ne se cumulent pas entre eux ni avec une autre réduction lorsque ce cumul dépasse la marge disponible.",
       "La réduction porte uniquement sur le cours. Le transport, le matériel, les frais de service Compétence et les frais Jèko restent dus séparément. Le professeur conserve toujours sa part officielle calculée sur le cours avant avantage client.",
       "Compétence conserve une marge minimale, peut désactiver ou modifier les étapes futures du programme et peut annuler un cadeau obtenu par fraude, double paiement, remboursement, annulation abusive ou erreur technique. Un cadeau expiré n'est ni remboursable ni convertible en espèces.",
+      "Un même paiement ne peut compter qu'une fois dans la progression. Un cadeau est réservé côté serveur, appliqué une seule fois à un paiement éligible puis marqué utilisé uniquement après confirmation Jèko ; en cas d'échec ou d'abandon, il peut redevenir disponible tant qu'il reste valide.",
     ],
   },
   {
@@ -192,6 +209,8 @@ const sections: LegalSection[] = [
     body: [
       "La comptabilité professeur est suivie par Compétence et consultable dans l'espace professeur. Les sommes dues sont calculées à partir des réservations payées, vérifiées, réalisées, validées, non litigieuses et libérables.",
       "Pour une réservation comprenant plusieurs séances, chaque séance possède son propre planning, son professeur affecté et son décompte. Les fonds d'une séance deviennent libérables uniquement après sa réalisation puis sa confirmation par le client; les séances futures restent bloquées.",
+      "Lorsque le professeur marque une séance terminée, le client voit avant toute validation une confirmation claire indiquant que l'action libère les fonds de cette séance. S'il confirme, la plateforme enregistre son accord et rend le montant libérable sous réserve d'un contrôle de sécurité ou d'un litige déjà ouvert.",
+      "Si le cours n'a pas eu lieu, s'est mal déroulé ou fait l'objet d'un désaccord, le client ne doit pas confirmer sa réalisation : il doit ouvrir un litige ou contacter le service client. Compétence peut alors maintenir le blocage, rembourser tout ou partie du client, ajuster la part professeur ou proposer un report selon les preuves et les règles applicables.",
       "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
       "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
       "Le professeur retire le montant net libérable validé dans son espace. Lorsque Compétence décide de prendre en charge des frais techniques de transfert, ces frais sont comptabilisés séparément et ne diminuent pas le net professeur déjà validé.",
@@ -206,6 +225,7 @@ const sections: LegalSection[] = [
       "Les clients peuvent laisser des avis et notes lorsque le cours le permet. Le service client peut également attribuer une note qualité interne ou publique selon son contrôle opérationnel.",
       "Compétence peut masquer, corriger, refuser ou modérer un avis abusif, injurieux, mensonger, non pertinent, frauduleux ou contraire à l'intérêt du service.",
       "Les notes et avis servent à améliorer la qualité, orienter les décisions du service client, détecter les litiges et protéger les clients.",
+      "Une note très faible ou un commentaire signalant une absence, une menace, un faux profil, un paiement direct, un cours non assuré ou un autre risque grave peut placer automatiquement le profil en observation et créer une alerte prioritaire. La suspension ou la sanction définitive reste soumise à l'examen de Compétence.",
     ],
   },
   {
@@ -221,7 +241,8 @@ const sections: LegalSection[] = [
   {
     title: "Notifications et communications",
     body: [
-      "Compétence peut envoyer des notifications internes, emails, SMS, messages WhatsApp, liens privés sécurisés ou messages du service client pour gérer les réservations, paiements, confirmations, remplacements, annulations, remboursements, missions, litiges et alertes.",
+      "Compétence peut envoyer des notifications internes, notifications push, emails, SMS, messages WhatsApp, liens privés sécurisés ou messages du service client pour gérer les réservations, paiements, confirmations, remplacements, annulations, remboursements, missions, litiges et alertes.",
+      "Les notifications push nécessitent l'autorisation de l'appareil. Elles peuvent être reçues lorsque l'application web est fermée si le navigateur et le système le permettent ; l'utilisateur peut les désactiver sur l'appareil à tout moment.",
       "Les confirmations ordinaires sont affichées dans l'écran concerné. Les notifications flottantes sont réservées aux erreurs, risques de sécurité, changements financiers ou actions critiques qui exigent une attention immédiate.",
       "Le professeur accepte que les missions puissent lui être communiquées par téléphone, WhatsApp, SMS, email, lien privé ou espace professeur léger. Le client accepte de recevoir les informations utiles à la sécurité et au suivi de sa réservation.",
       "Les communications importantes peuvent être conservées comme preuve dans l'historique de la plateforme.",
@@ -294,10 +315,10 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    title: "Contact officiel et canal transitoire",
+    title: "Contact officiel",
     body: [
       "Le contact opérationnel de référence est contact@competence.ci. Les messages envoyés au service client peuvent être conservés lorsqu'ils servent à prouver une demande, une décision, un incident, une assistance mot de passe, un paiement, un retrait, un litige ou un remboursement.",
-      "À titre transitoire, certains emails techniques de sécurité peuvent partir depuis diplomateimmobilier99@gmail.com avec le nom d'expéditeur Compétence.CI. Cette adresse ne modifie pas la marque, les droits, les obligations ni le cadre contractuel de Compétence.CI.",
+      "Les emails techniques et de sécurité sont présentés sous le nom Compétence.CI et utilisent un canal d'envoi autorisé par la plateforme. Un changement de prestataire technique ne change ni l'identité de Compétence.CI ni le cadre contractuel.",
       "Compétence ne demande jamais à un client ou à un professeur de communiquer son mot de passe par email, téléphone, WhatsApp ou SMS.",
     ],
   },

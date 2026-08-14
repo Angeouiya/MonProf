@@ -21,7 +21,7 @@ export default function PartenariatPage() {
               Votre client gagne 10 %. Vous gagnez {PARTNER_REFERRAL_RATE_PERCENT} % pendant six mois.
             </h1>
             <p className="mt-4 max-w-xl text-base font-medium leading-7 text-[#64748B]">
-              Un code permanent suffit. Après le premier paiement Jèko confirmé, chaque paiement éligible de ce client ajoute votre commission pendant six mois, sans réduire le professeur.
+              Un code permanent suffit. Après le premier paiement Jèko confirmé, chaque paiement éligible de ce client ajoute votre commission pendant six mois.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="min-h-12 rounded-2xl">

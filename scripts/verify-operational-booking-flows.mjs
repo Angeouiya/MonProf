@@ -454,7 +454,7 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /12 août 2026/.test(termsPage)
+  /14 août 2026/.test(termsPage)
     && /Résumé opposable/.test(termsPage)
     && /Paiement serveur exact obligatoire/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
@@ -474,14 +474,19 @@ record(
     && /CP1 à CM1 15 000 FCFA/.test(termsPage)
     && /Professionnel : 40 000 FCFA/.test(termsPage)
     && /net professeur déjà validé/.test(termsPage)
-    && /diplomateimmobilier99@gmail.com/.test(termsPage)
+    && /Réservations multi-dates et packs/.test(termsPage)
+    && /dernier cours confirmé du professeur puis cours demandé/.test(termsPage)
+    && /de 30 à 90 minutes/.test(termsPage)
+    && /Les notifications push nécessitent l'autorisation de l'appareil/.test(termsPage)
+    && !/prestataire historique/.test(termsPage)
+    && !/diplomateimmobilier99@gmail.com/.test(termsPage)
     && /Toute boutique tierce, inconnue ou non autorisée bloque la commande/.test(termsPage)
     && !legacyForbiddenStorePattern.test(termsPage)
     && !legacyForbiddenStorePattern.test(privacyPage)
     && /coordonnées directes du client et du professeur/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
-    && /12 août 2026/.test(privacyPage)
+    && /14 août 2026/.test(privacyPage)
     && /Résumé de protection/.test(privacyPage)
     && /Compétence ne vend pas les données personnelles/.test(privacyPage)
     && /adresses opérationnelles validées/.test(privacyPage)
@@ -501,7 +506,19 @@ record(
     && /Réinitialisation des mots de passe/.test(privacyPage)
     && /liens de réinitialisation temporaires/.test(privacyPage)
     && /trace minimale d'audit/.test(privacyPage)
-    && /coordonnées entre client et professeur restent masquées/.test(privacyPage),
+    && /coordonnées entre client et professeur restent masquées/.test(privacyPage)
+    && /Données d'appareil push/.test(privacyPage)
+    && /notifications ordinaires expirent des interfaces après 90 jours/.test(privacyPage)
+    && /deux clients activent le même créneau/.test(privacyPage)
+    && !/prestataire historique/.test(privacyPage),
+);
+
+record(
+  "Client referral copy presents only the client benefit inside booking",
+  /Votre premier cours bénéficie de 10 % de réduction\./.test(bookingForm)
+    && /Votre réduction de 10 % est appliquée au montant éligible de ce premier cours\./.test(bookingForm)
+    && !/le partenaire reçoit 10 % sur vos paiements éligibles pendant six mois/i.test(bookingForm)
+    && !/le partenaire recevra 10 % sur chaque paiement éligible pendant six mois/i.test(bookingForm),
 );
 
 record(

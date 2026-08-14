@@ -1343,8 +1343,8 @@ export function ReserverForm({
     setRestrictionNotice({
       title: data.benefits.partnerDiscountPercent > 0 ? "Réduction de 10 % appliquée" : "Partenaire confirmé",
       description: data.benefits.partnerDiscountPercent > 0
-        ? "Le montant du cours vient d'être recalculé. Le professeur conserve son montant exact et le partenaire recevra 10 % sur chaque paiement éligible pendant six mois."
-        : "Votre compte est déjà rattaché à ce partenaire. Sa commission reste active jusqu'à la fin des six mois.",
+        ? "Votre réduction de 10 % est appliquée au montant éligible de ce premier cours."
+        : "Votre compte est déjà rattaché à ce partenaire.",
       variant: "info",
       primaryLabel: "Voir le nouveau total",
       onPrimary: () => setRestrictionNotice(null),
@@ -2515,7 +2515,7 @@ export function ReserverForm({
                 <div className="max-w-2xl">
                   <p className="text-sm font-semibold text-[#111827]">Quelqu’un vous a recommandé Compétence.CI ?</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                    Saisissez son code, ou son nom et son numéro. Votre premier cours bénéficie de 10 % et le partenaire reçoit 10 % sur vos paiements éligibles pendant six mois.
+                    Saisissez son code, ou son nom et son numéro. Votre premier cours bénéficie de 10 % de réduction.
                   </p>
                   {partnerVerificationState === "verified" && form.partnerReferralCode && (
                     <p className="mt-3 inline-flex min-h-8 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-900">
