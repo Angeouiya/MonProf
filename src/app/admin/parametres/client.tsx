@@ -112,7 +112,7 @@ export function ParametresClient({
       <SettingSection icon={Gift} title="Cadeaux & fidélité" description="Parcours automatique après paiement Jèko vérifié. Les taux restent compris entre 8 et 15 %, avec une validité de 7 à 14 jours.">
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField label="Programme cadeaux" value={values.loyalty_gifts_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_enabled", value)} />
-          <SelectField label="Route cyclique après le 7ᵉ paiement" value={values.loyalty_gifts_cycle_enabled ?? "false"} onChange={(value) => set("loyalty_gifts_cycle_enabled", value)} />
+          <SelectField label="Route infinie après le 7ᵉ paiement" value={values.loyalty_gifts_cycle_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_cycle_enabled", value)} />
           <SettingField icon={ShieldCheck} label="Marge Compétence minimale (%)">
             <Input type="number" min={0} max={20} value={values.loyalty_minimum_margin_percent ?? "5"} onChange={(event) => set("loyalty_minimum_margin_percent", event.target.value)} />
           </SettingField>

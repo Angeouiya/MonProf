@@ -22,7 +22,7 @@ export default async function ClientGiftsPage() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B47C00]">Cadeaux Compétence</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#111827] sm:text-4xl">Ramassez vos cadeaux sur le chemin.</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#111827] sm:text-4xl">Ramassez vos cadeaux sur une route infinie.</h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
               Chaque paiement Jèko confirmé vous rapproche d’un nouvel avantage. La réduction s’applique automatiquement au cours suivant, sans réduire le montant du professeur.
             </p>
@@ -35,7 +35,13 @@ export default async function ClientGiftsPage() {
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Metric icon={Route} label="Progression" value={`${overview.currentStep}/7 paiements`} />
-        <Metric icon={Gift} label="Prochain cadeau" value={overview.currentStep >= 7 ? "Parcours terminé" : `Étape ${nextMilestone}`} />
+        <Metric
+          icon={Gift}
+          label="Prochain cadeau"
+          value={overview.currentStep >= 7
+            ? overview.config.cycleEnabled ? "Nouveau cycle" : "Parcours terminé"
+            : `Étape ${nextMilestone}`}
+        />
         <Metric icon={TimerReset} label="Cadeau actif" value={overview.activeReward ? `-${overview.activeReward.discountRate} %` : "Aucun pour le moment"} />
       </section>
 

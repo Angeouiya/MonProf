@@ -35,7 +35,7 @@ export async function getLoyaltyProgramConfig() {
   const values = new Map(rows.map((row) => [row.key, row.value]));
   return {
     enabled: parseBoolean(values.get("loyalty_gifts_enabled"), true),
-    cycleEnabled: parseBoolean(values.get("loyalty_gifts_cycle_enabled"), false),
+    cycleEnabled: parseBoolean(values.get("loyalty_gifts_cycle_enabled"), true),
     minimumMarginPercent: clampInt(values.get("loyalty_minimum_margin_percent"), 5, 0, 20),
     steps: giftStepsFromSettings(values),
   };
@@ -329,7 +329,7 @@ export async function qualifyLoyaltyPurchaseInTransaction(
   });
   const values = new Map(configRows.map((row) => [row.key, row.value]));
   const enabled = parseBoolean(values.get("loyalty_gifts_enabled"), true);
-  const cycleEnabled = parseBoolean(values.get("loyalty_gifts_cycle_enabled"), false);
+  const cycleEnabled = parseBoolean(values.get("loyalty_gifts_cycle_enabled"), true);
   const steps = giftStepsFromSettings(values);
   const purchaseCount = await tx.clientLoyaltyPurchase.count({ where: { clientId: input.clientId, reversedAt: null } });
   const absoluteSequence = purchaseCount + 1;

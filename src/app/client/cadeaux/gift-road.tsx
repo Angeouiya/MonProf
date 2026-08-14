@@ -43,11 +43,6 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
 
       <svg className="gift-road-svg" viewBox="0 0 800 1500" preserveAspectRatio="none" aria-hidden>
         <defs>
-          <linearGradient id="road" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#24305f" />
-            <stop offset="0.5" stopColor="#111B4D" />
-            <stop offset="1" stopColor="#07102f" />
-          </linearGradient>
           <filter id="road-shadow" x="-30%" y="-20%" width="160%" height="160%">
             <feDropShadow dx="0" dy="18" stdDeviation="16" floodColor="#0b1438" floodOpacity="0.22" />
           </filter>
@@ -55,7 +50,16 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
         <path
           d="M315 1560 C720 1380 710 1225 360 1125 C15 1025 50 850 390 760 C750 665 720 485 365 390 C45 305 95 125 485 -70"
           fill="none"
-          stroke="url(#road)"
+          stroke="#07102F"
+          strokeWidth="190"
+          strokeLinecap="round"
+          opacity="0.18"
+          transform="translate(0 20)"
+        />
+        <path
+          d="M315 1560 C720 1380 710 1225 360 1125 C15 1025 50 850 390 760 C750 665 720 485 365 390 C45 305 95 125 485 -70"
+          fill="none"
+          stroke="#111B4D"
           strokeWidth="178"
           strokeLinecap="round"
           filter="url(#road-shadow)"
@@ -88,7 +92,7 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
             <strong>{milestone === 1 ? "Bienvenue" : `${milestone}ᵉ paiement`}</strong>
             <small>
               {milestone === 1
-                ? "-10 % partenaire"
+                ? cycle === 1 ? "-10 % partenaire" : "Nouveau tour"
                 : reward
                   ? `-${reward.discountRate} % · ${reward.validityDays} jours`
                   : "Étape fidélité"}
@@ -108,7 +112,7 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
       </motion.div>
 
       <style jsx>{`
-        .gift-road-stage { position: relative; min-height: 1050px; overflow: hidden; border: 1px solid #dfe6f2; border-radius: 28px; background: linear-gradient(180deg,#f8fbff 0%,#fff 38%,#f7f9fc 100%); isolation: isolate; }
+        .gift-road-stage { position: relative; min-height: 1050px; overflow: hidden; border: 1px solid #dfe6f2; border-radius: 28px; background: #fff; isolation: isolate; }
         .gift-road-sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
         .gift-horizon { position: absolute; left: 50%; top: 2.3%; transform: translateX(-50%); color: #64748b; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
         .gift-cloud { position: absolute; width: 135px; height: 34px; border-radius: 999px; background: rgba(255,255,255,.9); box-shadow: 0 12px 35px rgba(17,27,77,.08); animation: cloud 14s ease-in-out infinite alternate; }

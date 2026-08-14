@@ -25,7 +25,7 @@ export const PLATFORM_SETTING_DEFAULTS = {
   notification_delivery_enabled: "true",
   notification_from_name: "Compétence",
   loyalty_gifts_enabled: "true",
-  loyalty_gifts_cycle_enabled: "false",
+  loyalty_gifts_cycle_enabled: "true",
   loyalty_minimum_margin_percent: "5",
   loyalty_gift_2_rate: "12",
   loyalty_gift_2_days: "9",
