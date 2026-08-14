@@ -43,6 +43,7 @@ assert.deepEqual(DEFAULT_LOYALTY_GIFT_STEPS, [
 
 const staticChecks = [
   ["src/app/client/cadeaux/gift-road.tsx", /gift-road-centerline[\s\S]*road-flow/],
+  ["src/app/client/cadeaux/gift-road.tsx", /<style jsx global>/],
   ["src/app/client/cadeaux/gift-road.tsx", /background: #fff/],
   ["src/app/client/cadeaux/page.tsx", /Ramassez vos cadeaux sur une route infinie/],
   ["src/components/layouts/client-layout.tsx", /href: "\/client\/cadeaux"/],
