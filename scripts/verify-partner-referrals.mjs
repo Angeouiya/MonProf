@@ -17,9 +17,16 @@ const checks = [
     ],
   },
   {
-    file: "src/lib/loyalty-program.ts",
+    file: "src/lib/loyalty-constants.ts",
     patterns: [
       /PARTNER_ATTRIBUTION_MONTHS = 6/,
+      /milestone: 2, discountRate: 12, validityDays: 9/,
+      /milestone: 7, discountRate: 15, validityDays: 7/,
+    ],
+  },
+  {
+    file: "src/lib/loyalty-program.ts",
+    patterns: [
       /resolveClientPromotionBenefits/,
       /attachPromotionToBookingInTransaction/,
       /confirmPromotionPaymentInTransaction/,
