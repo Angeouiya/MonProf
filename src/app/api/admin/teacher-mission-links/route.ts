@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     ? (booking.onlineLink || "Lien en ligne à confirmer")
     : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" / ") || "Adresse à confirmer";
   const groupLabel = booking.participantsCount > 1
-    ? `Petit groupe (${booking.participantsCount} participants)`
+    ? `${booking.participantsCount >= 13 ? "Grand groupe" : "Petit groupe"} (${booking.participantsCount} participants)`
     : "Cours individuel";
   const pedagogicalDetails = [
     booking.objective ? `Objectif : ${booking.objective}` : "",

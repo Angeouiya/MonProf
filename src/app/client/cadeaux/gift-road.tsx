@@ -142,12 +142,12 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
             {state === "done" ? <Check aria-hidden /> : state === "locked" ? <LockKeyhole aria-hidden /> : <Gift aria-hidden />}
           </span>
           <span className="gift-node-copy">
-            <strong>{milestone === 1 ? "Bienvenue" : `${milestone}ᵉ paiement`}</strong>
+            <strong>{milestone === 1 ? "Bienvenue" : `Cadeau ${milestone - 1}`}</strong>
             <small>
               {milestone === 1
                 ? cycle === 1 ? "-10 % partenaire" : "Nouveau tour"
                 : reward
-                  ? `-${reward.discountRate} % · ${reward.validityDays} jours`
+                  ? `-${reward.discountRate} % · après ${reward.paymentGap} paiement${reward.paymentGap > 1 ? "s" : ""}`
                   : "Étape fidélité"}
             </small>
           </span>

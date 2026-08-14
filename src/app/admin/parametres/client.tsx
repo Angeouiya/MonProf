@@ -140,10 +140,10 @@ export function ParametresClient({
         </div>
       </SettingSection>
 
-      <SettingSection icon={Gift} title="Cadeaux & fidélité" description="Parcours automatique après paiement Jèko vérifié. Les taux restent compris entre 8 et 15 %, avec une validité de 7 à 14 jours.">
+      <SettingSection icon={Gift} title="Cadeaux & fidélité" description="Chaque cadeau est séparé du précédent par 1 à 3 paiements Jèko confirmés. Les taux restent compris entre 8 et 15 %, avec une validité de 7 à 14 jours.">
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField label="Programme cadeaux" value={values.loyalty_gifts_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_enabled", value)} />
-          <SelectField label="Route infinie après le 7ᵉ paiement" value={values.loyalty_gifts_cycle_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_cycle_enabled", value)} />
+          <SelectField label="Route infinie après les 6 cadeaux" value={values.loyalty_gifts_cycle_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_cycle_enabled", value)} />
           <SettingField icon={ShieldCheck} label="Marge Compétence minimale (%)">
             <Input type="number" min={0} max={20} value={values.loyalty_minimum_margin_percent ?? "5"} onChange={(event) => set("loyalty_minimum_margin_percent", event.target.value)} />
           </SettingField>
@@ -151,8 +151,12 @@ export function ParametresClient({
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {[2, 3, 4, 5, 6, 7].map((milestone) => (
             <div key={milestone} className="rounded-xl border border-[#DDE6F7] bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-[#111B4D]">Après le {milestone}ᵉ paiement</p>
-              <div className="mt-3 grid grid-cols-2 gap-3">
+              <p className="text-xs font-black uppercase tracking-wide text-[#111B4D]">Cadeau {milestone - 1}</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="text-xs font-semibold text-[#64748B]">
+                  Paiements requis
+                  <Input className="mt-1" type="number" min={1} max={3} value={values[`loyalty_gift_${milestone}_gap_payments`] ?? "1"} onChange={(event) => set(`loyalty_gift_${milestone}_gap_payments`, event.target.value)} />
+                </label>
                 <label className="text-xs font-semibold text-[#64748B]">
                   Réduction %
                   <Input className="mt-1" type="number" min={8} max={15} value={values[`loyalty_gift_${milestone}_rate`] ?? "8"} onChange={(event) => set(`loyalty_gift_${milestone}_rate`, event.target.value)} />
@@ -174,7 +178,7 @@ export function ParametresClient({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <RuleMetric icon={Clock3} label="Anticipation" value="24 heures" detail="Réservation impossible sous ce délai" />
           <RuleMetric icon={CalendarClock} label="Durée séance" value="2h standard" detail="Autre horaire possible en 1h ou 2h, prix identique" />
-          <RuleMetric icon={UsersRound} label="Groupe" value="+50 %" detail="Par participant supplémentaire" />
+          <RuleMetric icon={UsersRound} label="Groupes" value="+50 % / +40 %" detail="Petit groupe / au-delà de 12" />
           <RuleMetric icon={ShieldCheck} label="Paiement" value="Jèko vérifié" detail="Aucune réservation avant confirmation serveur" />
         </div>
         <p className="mt-4 text-xs font-medium leading-5 text-[#64748B]">

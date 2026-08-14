@@ -58,7 +58,7 @@ export default async function TeacherMissionPage({ params }: { params: Promise<{
   const statusLabel = getMissionStatusLabel(expired ? "EXPIRED" : mission.status);
   const statusTone = getMissionStatusTone(expired ? "EXPIRED" : mission.status);
   const groupLabel = booking.participantsCount > 1
-    ? `Petit groupe (${booking.participantsCount} participants)`
+    ? `${booking.participantsCount >= 13 ? "Grand groupe" : "Petit groupe"} (${booking.participantsCount} participants)`
     : "Cours individuel";
   const locationLabel = booking.courseFormat === "ONLINE"
     ? booking.onlineLink || "Lien en ligne à confirmer"

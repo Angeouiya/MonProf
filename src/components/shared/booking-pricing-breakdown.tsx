@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Calculator, Car, Clock, ShieldCheck, Users } from "lucide-react";
 import { Money } from "@/components/shared/money";
 import { packTypeLabel } from "@/lib/platform-labels";
+import { groupPricingDetails } from "@/lib/group-pricing";
 
 type BookingPricingBreakdownBaseProps = {
   unitPrice: number;
@@ -68,6 +69,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const safeSessionsCount = Math.max(1, Math.round(Number(sessionsCount) || 1));
   const safeParticipantsCount = Math.max(1, Math.round(Number(participantsCount) || 1));
   const extraParticipants = Math.max(0, safeParticipantsCount - 1);
+  const groupPricing = groupPricingDetails(safeParticipantsCount);
   const transportFee = props.transportFee ?? 0;
   const transportFeePending = props.transportFeePending === true;
   const transportRouteLabel = props.transportRouteLabel;
@@ -106,7 +108,10 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
     : 0;
   const averageSessionPrice = Math.round(courseAmount / safeSessionsCount);
   const totalHours = safeSessionsCount * 2;
-  const isGroup = groupType === "SMALL_GROUP" || safeParticipantsCount > 1;
+  const isGroup = groupType === "SMALL_GROUP" || groupType === "LARGE_GROUP" || safeParticipantsCount > 1;
+  const groupRateDetail = groupPricing.isLargeGroup
+    ? `11 × 50 % puis ${groupPricing.largeGroupExtraParticipants} × 40 %`
+    : `+50 % × ${extraParticipants}`;
   const adminProps = props as BookingPricingBreakdownAdminProps;
   const teacherCourseRate = adminProps.commissionRate === undefined
     ? null
@@ -162,7 +167,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             icon={<Users className="h-4 w-4" />}
             label="Apprenants"
             value={`${safeParticipantsCount} ${safeParticipantsCount > 1 ? "participants" : "participant"}`}
-            detail={isGroup ? `+50% x ${extraParticipants}` : "Individuel"}
+            detail={isGroup ? groupRateDetail : "Individuel"}
           />
           <PricingFact
             label="Prix / séance"
@@ -229,7 +234,9 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             <p className="text-sm font-semibold text-[#111827]">Détail du calcul</p>
             <p className="mt-0.5 hidden text-xs font-medium leading-5 text-[#64748B] min-[430px]:block">
               {isGroup
-                ? "Chaque apprenant supplémentaire ajoute 50% du prix de base."
+                ? groupPricing.isLargeGroup
+                  ? "Les participants 2 à 12 ajoutent 50 % chacun ; chaque participant au-delà de 12 ajoute 40 %."
+                  : "Chaque apprenant supplémentaire ajoute 50 % du prix de base."
                 : "Calcul individuel sur la formule choisie."}
             </p>
           </div>

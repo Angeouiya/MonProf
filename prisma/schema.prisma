@@ -577,6 +577,7 @@ enum CourseFormat {
 enum GroupType {
   INDIVIDUAL
   SMALL_GROUP
+  LARGE_GROUP
 }
 
 enum PackType {
@@ -809,6 +810,7 @@ model ClientReward {
   usedBookingId       String?            @unique
   cycle               Int                @default(1)
   milestone           Int
+  unlockPaymentNumber Int?
   discountRate        Int
   validityDays        Int
   status              ClientRewardStatus @default(AVAILABLE)
@@ -825,6 +827,7 @@ model ClientReward {
   usedBooking       Booking? @relation("RewardUsedByBooking", fields: [usedBookingId], references: [id], onDelete: SetNull)
 
   @@index([clientId, status, expiresAt])
+  @@index([clientId, unlockedAt])
 }
 
 enum ClientRewardStatus {

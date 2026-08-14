@@ -703,6 +703,25 @@ function verifyPacksAndGroups() {
     groupedPack.courseAmount,
     "base brute + majoration groupe brute - remise doit égaler le montant cours",
   );
+
+  const largeGroup = calculateBookingPricing(baseBooking({
+    category: "formation_professionnelle",
+    schoolSystem: "professionnel",
+    deliveryMode: "en_ligne",
+    packType: "SINGLE",
+    participantsCount: 13,
+  }));
+  assert.equal(largeGroup.groupMultiplier, 6.9);
+  assert.equal(largeGroup.unitSessionAmount, 40_000);
+  assert.equal(largeGroup.rawCourseAmount, 276_000);
+
+  const reservationForm = readFileSync(new URL("../src/app/client/reserver/reserver-form.tsx", import.meta.url), "utf8");
+  const bookingRoute = readFileSync(new URL("../src/app/api/bookings/route.ts", import.meta.url), "utf8");
+  assert.match(reservationForm, /Tous les packs, leurs montants et leurs économies sont visibles immédiatement/);
+  assert.doesNotMatch(reservationForm, /Comparer les formules/);
+  assert.match(reservationForm, /RadioGroupItem value="LARGE_GROUP"/);
+  assert.match(bookingRoute, /Un grand groupe doit contenir au moins 13 participants/);
+  assert.match(bookingRoute, /groupPricing\.largeGroupExtraParticipants/);
 }
 
 function verifyMaterialFeeIsExcludedFromServiceFeeBase() {

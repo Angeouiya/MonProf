@@ -14,7 +14,11 @@ export default async function ClientGiftsPage() {
   if (!session?.user || (session.user as { role?: string }).role !== "CLIENT") redirect("/connexion");
   const clientId = (session.user as { id: string }).id;
   const overview = await getClientLoyaltyOverview(clientId);
-  const nextMilestone = Math.min(7, overview.currentStep + 1);
+  const nextGiftLabel = overview.programCompleted
+    ? "Parcours terminé"
+    : overview.paymentsUntilNextGift <= 1
+      ? "Dans 1 paiement"
+      : `Dans ${overview.paymentsUntilNextGift} paiements`;
 
   return (
     <main className="space-y-5" data-client-gifts-page>
@@ -24,7 +28,7 @@ export default async function ClientGiftsPage() {
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B47C00]">Cadeaux Compétence</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-[#111827] sm:text-4xl">Ramassez vos cadeaux sur une route infinie.</h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
-              Chaque paiement Jèko confirmé vous rapproche d’un nouvel avantage. La réduction s’applique automatiquement au cours suivant.
+              Chaque cadeau arrive après 1 à 3 paiements Jèko confirmés. La réduction s’applique automatiquement au cours suivant.
             </p>
           </div>
           <Button asChild className="min-h-12 rounded-xl px-5">
@@ -34,14 +38,8 @@ export default async function ClientGiftsPage() {
       </header>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Metric icon={Route} label="Progression" value={`${overview.currentStep}/7 paiements`} />
-        <Metric
-          icon={Gift}
-          label="Prochain cadeau"
-          value={overview.currentStep >= 7
-            ? overview.config.cycleEnabled ? "Nouveau cycle" : "Parcours terminé"
-            : `Étape ${nextMilestone}`}
-        />
+        <Metric icon={Route} label="Progression" value={`${overview.qualifiedPaymentCount} paiement${overview.qualifiedPaymentCount > 1 ? "s" : ""} validé${overview.qualifiedPaymentCount > 1 ? "s" : ""}`} />
+        <Metric icon={Gift} label="Prochain cadeau" value={nextGiftLabel} />
         <Metric icon={TimerReset} label="Cadeau actif" value={overview.activeReward ? `-${overview.activeReward.discountRate} %` : "Aucun pour le moment"} />
       </section>
 

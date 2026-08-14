@@ -348,7 +348,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
           <Detail icon={GraduationCap} label="Matière" value={booking.subjectName} />
           <Detail icon={User} label="Niveau" value={booking.levelName} />
           <Detail icon={booking.courseFormat === "HOME" ? Home : Video} label="Format" value={booking.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
-          <Detail icon={Users} label="Type" value={booking.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"} />
+          <Detail icon={Users} label="Type" value={booking.groupType === "INDIVIDUAL" ? "Individuel" : booking.groupType === "LARGE_GROUP" ? "Grand groupe" : "Petit groupe"} />
           <Detail icon={Calendar} label="Pack" value={packTypeLabel(booking.packType)} />
           <Detail icon={Clock} label="Séances" value={`${booking.sessionsCount}`} />
           <Detail icon={Calendar} label="Jours souhaités" value={(() => { try { return JSON.parse(booking.preferredDays).join(", "); } catch { return booking.preferredDays; } })()} />

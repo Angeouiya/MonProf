@@ -133,7 +133,7 @@ export function TeacherWhatsAppMessageClient({
     const format = courseFormatLabels[selected.courseFormat] ?? selected.courseFormat;
     const location = formatBookingLocation(selected);
     const groupLabel = selected.participantsCount > 1
-      ? `Petit groupe (${selected.participantsCount} participants)`
+      ? `${selected.participantsCount >= 13 ? "Grand groupe" : "Petit groupe"} (${selected.participantsCount} participants)`
       : "Cours individuel";
     const pedagogicalDetails = [
       selected.objective ? `Objectif : ${selected.objective}` : "",

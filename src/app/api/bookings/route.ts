@@ -67,9 +67,15 @@ import {
   attachPromotionToBookingInTransaction,
   resolveClientPromotionBenefits,
 } from "@/lib/loyalty-program";
+import {
+  LARGE_GROUP_MIN_PARTICIPANTS,
+  SMALL_GROUP_MAX_PARTICIPANTS,
+  SMALL_GROUP_MIN_PARTICIPANTS,
+  groupPricingDetails,
+} from "@/lib/group-pricing";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
-const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
+const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP", "LARGE_GROUP"];
 const PACK_TYPES: PackType[] = ["SINGLE", "PACK_4", "PACK_8", "PACK_12", "EXAM_PREP", "CUSTOM"];
 const JEKO_PLATFORM_PAYMENT_METHODS: Record<JekoPaymentMethod, PaymentMethod> = {
   wave: "WAVE",
@@ -489,17 +495,20 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  if (normalizedGroupType === "SMALL_GROUP" && !teacher.offersGroup) {
-    return NextResponse.json({ error: "Ce professeur ne propose pas les cours en petit groupe" }, { status: 400 });
+  if (normalizedGroupType !== "INDIVIDUAL" && !teacher.offersGroup) {
+    return NextResponse.json({ error: "Ce professeur ne propose pas les cours en groupe." }, { status: 400 });
   }
   if (normalizedGroupType === "INDIVIDUAL" && Number(participantsCount) > 1) {
-    return NextResponse.json({ error: "Choisissez Petit groupe pour réserver avec plusieurs participants." }, { status: 400 });
+    return NextResponse.json({ error: "Choisissez Petit groupe ou Grand groupe pour réserver avec plusieurs participants." }, { status: 400 });
   }
   const parsedParticipants = Number(participantsCount);
-  if (normalizedGroupType === "SMALL_GROUP" && (!Number.isInteger(parsedParticipants) || parsedParticipants < 2 || parsedParticipants > 12)) {
+  if (normalizedGroupType === "SMALL_GROUP" && (!Number.isInteger(parsedParticipants) || parsedParticipants < SMALL_GROUP_MIN_PARTICIPANTS || parsedParticipants > SMALL_GROUP_MAX_PARTICIPANTS)) {
     return NextResponse.json({ error: "Un petit groupe doit contenir entre 2 et 12 participants." }, { status: 400 });
   }
-  const normalizedParticipants = normalizedGroupType === "SMALL_GROUP" ? parsedParticipants : 1;
+  if (normalizedGroupType === "LARGE_GROUP" && (!Number.isSafeInteger(parsedParticipants) || parsedParticipants < LARGE_GROUP_MIN_PARTICIPANTS || parsedParticipants > 2_147_483_647)) {
+    return NextResponse.json({ error: "Un grand groupe doit contenir au moins 13 participants." }, { status: 400 });
+  }
+  const normalizedParticipants = normalizedGroupType === "INDIVIDUAL" ? 1 : parsedParticipants;
   const parsedStartDate = parseDateInput(startDate);
   if (!parsedStartDate) {
     return NextResponse.json({ error: "Veuillez sélectionner la date souhaitée pour commencer les séances." }, { status: 400 });
@@ -632,6 +641,11 @@ export async function POST(req: NextRequest) {
       })),
     ),
   });
+  if (!Number.isSafeInteger(pricing.totalClientPays) || pricing.totalClientPays > 2_147_483_647) {
+    return NextResponse.json({
+      error: "Ce grand groupe dépasse la limite d’un paiement automatique. Contactez le service client pour une prise en charge dédiée.",
+    }, { status: 400 });
+  }
   const canonicalConfirmablePricing = confirmablePricing(pricing);
   const canonicalPricingFingerprint = createPricingConfirmationFingerprint(
     canonicalConfirmablePricing,
@@ -653,7 +667,7 @@ export async function POST(req: NextRequest) {
   const normalizedSessionsCount = pricing.numberOfSessions ?? 0;
   const totalPrice = pricing.totalClientPays;
   const averageSessionPrice = normalizedSessionsCount > 0 ? Math.round(pricing.courseAmount / normalizedSessionsCount) : 0;
-  const extraParticipantCount = Math.max(0, normalizedParticipants - 1);
+  const groupPricing = groupPricingDetails(normalizedParticipants);
   const groupSurchargeAmount = Math.max(0, pricing.rawCourseAmount - basePrice);
   const discountLabel = pricing.appliedDiscountKind === "PARTNER"
     ? "réduction partenaire"
@@ -663,8 +677,8 @@ export async function POST(req: NextRequest) {
   const packDiscountLine = pricing.discountAmount > 0
     ? ` - ${discountLabel} ${pricing.discountAmount.toLocaleString("fr-FR")} FCFA`
     : "";
-  const groupPricingLine = normalizedGroupType === "SMALL_GROUP"
-    ? `Petit groupe: ${normalizedParticipants} participants, base brute ${basePrice.toLocaleString("fr-FR")} FCFA + majoration groupe brute ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA (${extraParticipantCount} x 50 % de la base)${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
+  const groupPricingLine = normalizedGroupType !== "INDIVIDUAL"
+    ? `${normalizedGroupType === "LARGE_GROUP" ? "Grand groupe" : "Petit groupe"}: ${normalizedParticipants} participants, base brute ${basePrice.toLocaleString("fr-FR")} FCFA + majoration groupe brute ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA (${groupPricing.smallGroupExtraParticipants} x 50 %${groupPricing.largeGroupExtraParticipants > 0 ? ` + ${groupPricing.largeGroupExtraParticipants} x 40 %` : ""} de la base)${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
     : pricing.discountAmount > 0
       ? `Cours individuel: base brute ${basePrice.toLocaleString("fr-FR")} FCFA${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
       : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;

@@ -10,6 +10,7 @@ import {
 import {
   DEFAULT_LOYALTY_GIFT_STEPS,
   PARTNER_ATTRIBUTION_MONTHS,
+  resolveLoyaltyGiftCadence,
   type LoyaltyGiftStep,
 } from "@/lib/loyalty-constants";
 
@@ -27,7 +28,11 @@ export async function getLoyaltyProgramConfig() {
           "loyalty_gifts_cycle_enabled",
           "loyalty_minimum_margin_percent",
           "loyalty_gift_steps_json",
-          ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [`loyalty_gift_${step.milestone}_rate`, `loyalty_gift_${step.milestone}_days`]),
+          ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [
+            `loyalty_gift_${step.milestone}_rate`,
+            `loyalty_gift_${step.milestone}_days`,
+            `loyalty_gift_${step.milestone}_gap_payments`,
+          ]),
         ],
       },
     },
@@ -346,7 +351,11 @@ export async function qualifyLoyaltyPurchaseInTransaction(
       "loyalty_gifts_enabled",
       "loyalty_gifts_cycle_enabled",
       "loyalty_gift_steps_json",
-      ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [`loyalty_gift_${step.milestone}_rate`, `loyalty_gift_${step.milestone}_days`]),
+      ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [
+        `loyalty_gift_${step.milestone}_rate`,
+        `loyalty_gift_${step.milestone}_days`,
+        `loyalty_gift_${step.milestone}_gap_payments`,
+      ]),
     ] } },
   });
   const values = new Map(configRows.map((row) => [row.key, row.value]));
@@ -357,20 +366,37 @@ export async function qualifyLoyaltyPurchaseInTransaction(
   const absoluteSequence = purchaseCount + 1;
   const cycle = Math.floor((absoluteSequence - 1) / 7) + 1;
   const sequence = ((absoluteSequence - 1) % 7) + 1;
-  if (cycle > 1 && !cycleEnabled) return null;
 
   const purchase = await tx.clientLoyaltyPurchase.create({
     data: { clientId: input.clientId, bookingId: input.bookingId, sequence, cycle, qualifiedAt: now },
   });
-  const gift = enabled ? steps.find((step) => step.milestone === sequence) : null;
-  if (gift) {
+  const rewardCount = await tx.clientReward.count({ where: { clientId: input.clientId } });
+  const lastReward = await tx.clientReward.findFirst({
+    where: { clientId: input.clientId },
+    orderBy: [{ unlockedAt: "desc" }, { id: "desc" }],
+    select: { unlockPaymentNumber: true, unlockedByBookingId: true },
+  });
+  const legacyUnlockPurchase = lastReward && !lastReward.unlockPaymentNumber
+    ? await tx.clientLoyaltyPurchase.findUnique({
+        where: { bookingId: lastReward.unlockedByBookingId },
+        select: { cycle: true, sequence: true },
+      })
+    : null;
+  const lastUnlockPaymentNumber = lastReward?.unlockPaymentNumber
+    ?? (legacyUnlockPurchase ? ((legacyUnlockPurchase.cycle - 1) * 7) + legacyUnlockPurchase.sequence : 1);
+  const paymentsSinceLastGift = Math.max(0, absoluteSequence - lastUnlockPaymentNumber);
+  const cadence = resolveLoyaltyGiftCadence({ steps, rewardCount, paymentsSinceLastGift, cycleEnabled });
+  const gift = enabled ? cadence.nextGift : null;
+
+  if (gift && cadence.shouldUnlock) {
     const expiresAt = addDays(now, gift.validityDays);
     await tx.clientReward.create({
       data: {
         clientId: input.clientId,
         unlockedByBookingId: input.bookingId,
-        cycle,
+        cycle: cadence.nextRewardCycle,
         milestone: gift.milestone,
+        unlockPaymentNumber: absoluteSequence,
         discountRate: gift.discountRate,
         validityDays: gift.validityDays,
         expiresAt,
@@ -476,20 +502,48 @@ export async function getClientLoyaltyOverview(clientId: string, now = new Date(
     where: { clientId, status: { in: ["AVAILABLE", "RESERVED"] }, expiresAt: { lt: now } },
     data: { status: "EXPIRED" },
   });
-  const [config, attribution, purchases, rewards] = await Promise.all([
+  const [config, attribution, purchases, rewards, qualifiedPaymentCount, rewardCount] = await Promise.all([
     getLoyaltyProgramConfig(),
     db.clientPartnerAttribution.findUnique({ where: { clientId }, include: { partnerProfile: true } }),
     db.clientLoyaltyPurchase.findMany({ where: { clientId, reversedAt: null }, orderBy: { qualifiedAt: "desc" }, take: 14 }),
     db.clientReward.findMany({ where: { clientId }, orderBy: { unlockedAt: "desc" }, take: 14 }),
+    db.clientLoyaltyPurchase.count({ where: { clientId, reversedAt: null } }),
+    db.clientReward.count({ where: { clientId } }),
   ]);
-  const latest = purchases[0];
+  const lastReward = rewards[0];
+  const legacyUnlockPurchase = lastReward && !lastReward.unlockPaymentNumber
+    ? await db.clientLoyaltyPurchase.findUnique({
+        where: { bookingId: lastReward.unlockedByBookingId },
+        select: { cycle: true, sequence: true },
+      })
+    : null;
+  const lastUnlockPaymentNumber = lastReward?.unlockPaymentNumber
+    ?? (legacyUnlockPurchase ? ((legacyUnlockPurchase.cycle - 1) * 7) + legacyUnlockPurchase.sequence : 1);
+  const paymentsSinceLastGift = Math.max(0, qualifiedPaymentCount - lastUnlockPaymentNumber);
+  const cadence = resolveLoyaltyGiftCadence({
+    steps: config.steps,
+    rewardCount,
+    paymentsSinceLastGift,
+    cycleEnabled: config.cycleEnabled,
+  });
+  const roadStep = cadence.programCompleted
+    ? 7
+    : qualifiedPaymentCount > 0
+      ? cadence.completedGiftsInCycle + 1
+      : 0;
   return {
     config,
     attribution,
     purchases,
     rewards,
-    cycle: latest?.cycle ?? 1,
-    currentStep: latest?.sequence ?? 0,
+    cycle: cadence.programCompleted ? Math.max(1, cadence.nextRewardCycle - 1) : cadence.nextRewardCycle,
+    currentStep: roadStep,
+    qualifiedPaymentCount,
+    completedGiftsInCycle: cadence.completedGiftsInCycle,
+    paymentsSinceLastGift,
+    paymentsUntilNextGift: cadence.paymentsUntilNextGift,
+    nextGift: cadence.nextGift,
+    programCompleted: cadence.programCompleted,
     activeReward: rewards.find((reward) => reward.status === "AVAILABLE" && reward.expiresAt >= now) ?? null,
   };
 }
@@ -516,6 +570,12 @@ function parseGiftSteps(value?: string) {
         milestone,
         discountRate: clampInt(row?.discountRate, 8, 8, 15),
         validityDays: clampInt(row?.validityDays, 7, 7, 14),
+        paymentGap: clampInt(
+          row?.paymentGap,
+          DEFAULT_LOYALTY_GIFT_STEPS.find((step) => step.milestone === milestone)?.paymentGap ?? 1,
+          1,
+          3,
+        ),
       });
     }
     return DEFAULT_LOYALTY_GIFT_STEPS.map((fallback) => byMilestone.get(fallback.milestone) ?? fallback);
@@ -530,6 +590,7 @@ function giftStepsFromSettings(values: Map<string, string>) {
     milestone: step.milestone,
     discountRate: clampInt(values.get(`loyalty_gift_${step.milestone}_rate`), step.discountRate, 8, 15),
     validityDays: clampInt(values.get(`loyalty_gift_${step.milestone}_days`), step.validityDays, 7, 14),
+    paymentGap: clampInt(values.get(`loyalty_gift_${step.milestone}_gap_payments`), step.paymentGap, 1, 3),
   }));
 }
 

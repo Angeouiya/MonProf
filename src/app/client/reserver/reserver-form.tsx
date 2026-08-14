@@ -60,6 +60,14 @@ import {
   type NeighborhoodAliasMap,
 } from "@/lib/pricing";
 import {
+  LARGE_GROUP_EXTRA_RATE,
+  LARGE_GROUP_MIN_PARTICIPANTS,
+  SMALL_GROUP_EXTRA_RATE,
+  SMALL_GROUP_MAX_PARTICIPANTS,
+  SMALL_GROUP_MIN_PARTICIPANTS,
+  groupPricingDetails,
+} from "@/lib/group-pricing";
+import {
   formatTimeRangeFromStart,
   normalizeScheduleSlot,
   normalizeCustomDurationMinutes,
@@ -381,10 +389,26 @@ function suggestLevelForCategory(levels: string[], category: string, currentLeve
   return levels.find((level) => pattern.test(normalizeForMatch(level))) ?? currentLevel;
 }
 
-function clampGroupParticipants(value: unknown): number {
+function normalizeReservationParticipants(groupType: string, value: unknown): number {
+  if (groupType === "INDIVIDUAL") return 1;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 2;
-  return Math.max(2, Math.min(12, Math.round(parsed)));
+  const minimum = groupType === "LARGE_GROUP" ? LARGE_GROUP_MIN_PARTICIPANTS : SMALL_GROUP_MIN_PARTICIPANTS;
+  if (!Number.isFinite(parsed)) return minimum;
+  const rounded = Math.max(minimum, Math.round(parsed));
+  return groupType === "SMALL_GROUP" ? Math.min(SMALL_GROUP_MAX_PARTICIPANTS, rounded) : rounded;
+}
+
+function participantCountError(groupType: string, value: unknown): string | null {
+  if (groupType === "INDIVIDUAL") return null;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) return "Saisissez un nombre entier de participants.";
+  if (groupType === "SMALL_GROUP" && (parsed < SMALL_GROUP_MIN_PARTICIPANTS || parsed > SMALL_GROUP_MAX_PARTICIPANTS)) {
+    return "Un petit groupe doit contenir entre 2 et 12 participants.";
+  }
+  if (groupType === "LARGE_GROUP" && parsed < LARGE_GROUP_MIN_PARTICIPANTS) {
+    return "Un grand groupe doit contenir au moins 13 participants.";
+  }
+  return null;
 }
 
 function formatTimeRange(startTime: string, durationMinutes = 120) {
@@ -1010,7 +1034,7 @@ export function ReserverForm({
     courseCatalogId: safeCourseCatalogId,
     freeProgram: form.schoolProgram,
   });
-  const participantsCount = form.groupType === "SMALL_GROUP" ? clampGroupParticipants(form.participantsCount) : 1;
+  const participantsCount = normalizeReservationParticipants(form.groupType, form.participantsCount);
   const deliveryMode = form.courseFormat === "ONLINE" ? "en_ligne" : "domicile";
   const canResolveTransport = form.courseFormat === "HOME" && Boolean(form.commune.trim());
   const selectedJekoPaymentMethod = toJekoPaymentMethod(selectedPaymentMethod);
@@ -1065,8 +1089,10 @@ export function ReserverForm({
   const selectedSessionDurationMinutes = usesCustomSchedule ? normalizedCustomDurationMinutes : 120;
   const selectedSessionDurationLabel = selectedSessionDurationMinutes === 60 ? "1h" : "2h";
   const totalHours = selectedPackSessions * selectedSessionDurationMinutes / 60;
+  const groupPricing = groupPricingDetails(participantsCount);
   const extraParticipantCount = Math.max(0, participantsCount - 1);
-  const surchargePerExtraParticipant = Math.round(basePrice * 0.5);
+  const smallGroupSurchargePerParticipant = Math.round(basePrice * SMALL_GROUP_EXTRA_RATE);
+  const largeGroupSurchargePerParticipant = Math.round(basePrice * LARGE_GROUP_EXTRA_RATE);
   const selectedDays = Array.from(new Set([
     ...form.selectedTimeSlots.map((slot) => slot.split("|")[0]),
     ...(form.customDay ? [form.customDay] : []),
@@ -1298,6 +1324,8 @@ export function ReserverForm({
     }
     if (s === 1) {
       if (!form.courseFormat) return "Veuillez choisir un format de cours.";
+      const participantsError = participantCountError(form.groupType, form.participantsCount);
+      if (participantsError) return participantsError;
     }
     if (s === 2) {
       if (form.courseFormat === "HOME") {
@@ -1878,10 +1906,10 @@ export function ReserverForm({
                       setForm((current) => ({
                         ...current,
                         groupType: v,
-                        participantsCount: v === "SMALL_GROUP" ? clampGroupParticipants(current.participantsCount) : 1,
+                        participantsCount: normalizeReservationParticipants(v, current.participantsCount),
                       }));
                     }}
-                    className="mt-2 grid gap-3 min-[720px]:grid-cols-2"
+                    className="mt-2 grid gap-3 min-[720px]:grid-cols-3"
                   >
                     <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
                       form.groupType === "INDIVIDUAL" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
@@ -1901,40 +1929,59 @@ export function ReserverForm({
                       <div>
                         <p className="text-sm font-medium text-[#111827]">Petit groupe</p>
                         <p className="text-xs text-[#64748B]">
-                          Plusieurs élèves. +50% du montant de base par participant supplémentaire.
+                          De 2 à 12 personnes. +50 % par participant supplémentaire.
                         </p>
+                      </div>
+                    </label>
+                    <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition-colors ${
+                      form.groupType === "LARGE_GROUP" ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D] hover:bg-white"
+                    }`}>
+                      <RadioGroupItem value="LARGE_GROUP" />
+                      <Users className="h-5 w-5 text-[#64748B]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#111827]">Grand groupe</p>
+                        <p className="text-xs text-[#64748B]">À partir de 13 personnes. +40 % pour chaque personne au-delà de 12.</p>
                       </div>
                     </label>
                   </RadioGroup>
                 </div>
               )}
 
-              {form.groupType === "SMALL_GROUP" && (
+              {form.groupType !== "INDIVIDUAL" && (
                 <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
                   <div className="grid gap-4 min-[720px]:grid-cols-[1fr_220px] min-[640px]:items-end">
                     <div>
                       <Label htmlFor="participantsCount">Nombre de participants *</Label>
                       <p className="mt-1 text-sm text-[#64748B]">
-                        Le premier participant paie le tarif normal. Chaque participant supplémentaire ajoute 50% du montant de base.
+                        {form.groupType === "LARGE_GROUP"
+                          ? "À partir du 13e participant, chaque nouvelle personne ajoute 40 % du montant de base."
+                          : "Le premier participant paie le tarif normal. Chaque participant supplémentaire ajoute 50 % du montant de base."}
                       </p>
                     </div>
                     <Input
                       id="participantsCount"
                       type="number"
-                      min={2}
-                      max={12}
-                      value={participantsCount}
-                      onChange={(event) => update("participantsCount", clampGroupParticipants(event.target.value))}
+                      min={form.groupType === "LARGE_GROUP" ? LARGE_GROUP_MIN_PARTICIPANTS : SMALL_GROUP_MIN_PARTICIPANTS}
+                      max={form.groupType === "SMALL_GROUP" ? SMALL_GROUP_MAX_PARTICIPANTS : undefined}
+                      step={1}
+                      inputMode="numeric"
+                      value={form.participantsCount}
+                      onChange={(event) => update("participantsCount", event.target.value)}
                       className="h-11 rounded-lg bg-white"
                     />
                   </div>
                   <div className="mt-3 grid gap-2 text-sm min-[760px]:grid-cols-3">
                     <InfoMini label="Base" value={formatFCFA(basePrice)} />
-                    <InfoMini label="Par participant en plus" value={`+${formatFCFA(surchargePerExtraParticipant)}`} />
+                    <InfoMini
+                      label={form.groupType === "LARGE_GROUP" ? "Par personne après 12" : "Par participant en plus"}
+                      value={`+${formatFCFA(form.groupType === "LARGE_GROUP" ? largeGroupSurchargePerParticipant : smallGroupSurchargePerParticipant)}`}
+                    />
                     <InfoMini label="Total formule groupe" value={formatFCFA(courseFormulaAmount)} />
                   </div>
                   <p className="mt-2 text-xs font-medium text-[#6B7280]">
-                    Calcul groupe : {formatFCFA(basePrice)} + {formatCount(extraParticipantCount, "participant supplémentaire", "participants supplémentaires")} x {formatFCFA(surchargePerExtraParticipant)} = {formatFCFA(courseFormulaAmount)}.
+                    {form.groupType === "LARGE_GROUP"
+                      ? <>Calcul grand groupe : {formatFCFA(basePrice)} + {groupPricing.smallGroupExtraParticipants} × {formatFCFA(smallGroupSurchargePerParticipant)} + {groupPricing.largeGroupExtraParticipants} × {formatFCFA(largeGroupSurchargePerParticipant)}. La remise du pack est ensuite appliquée.</>
+                      : <>Calcul petit groupe : {formatFCFA(basePrice)} + {formatCount(extraParticipantCount, "participant supplémentaire", "participants supplémentaires")} × {formatFCFA(smallGroupSurchargePerParticipant)}. La remise du pack est ensuite appliquée.</>}
                   </p>
                 </div>
               )}
@@ -2381,19 +2428,9 @@ export function ReserverForm({
 
               <div>
                 <Label>Formule *</Label>
-                <div className="mt-2 flex items-center justify-between gap-4 rounded-lg border border-[#111B4D] bg-white px-4 py-3">
-                  <div>
-                    <p className="text-sm font-semibold text-[#111827]">{selectedPackLabel}</p>
-                    <p className="mt-0.5 text-xs font-medium text-[#64748B]">
-                      {formatCount(selectedPackSessions, "séance")} de {selectedSessionDurationLabel} · env. {formatFCFA(averageSessionPrice)} / séance
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-base font-semibold text-[#111B4D]">{formatFCFA(pricing.totalClientPays)}</p>
-                </div>
-                <details className="mt-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                  <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
-                    Comparer les formules
-                  </summary>
+                <div className="mt-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
+                  <p className="text-sm font-semibold text-[#111B4D]">Choisissez votre formule</p>
+                  <p className="mt-1 text-xs font-medium text-[#64748B]">Tous les packs, leurs montants et leurs économies sont visibles immédiatement.</p>
                   <RadioGroup
                     value={form.packType}
                     onValueChange={(v) => update("packType", v as PackType)}
@@ -2450,7 +2487,7 @@ export function ReserverForm({
                       );
                     })}
                   </RadioGroup>
-                </details>
+                </div>
               </div>
 
               <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -2539,7 +2576,7 @@ export function ReserverForm({
                   <Row label="Niveau" value={form.levelName} />
                   <Row label="Objectif" value={form.objective} />
                   <Row label="Format" value={form.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
-                  <Row label="Type" value={form.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"} />
+                  <Row label="Type" value={form.groupType === "INDIVIDUAL" ? "Individuel" : form.groupType === "LARGE_GROUP" ? "Grand groupe" : "Petit groupe"} />
                   <Row label="Participants" value={`${participantsCount} ${participantsCount > 1 ? "participants" : "participant"}`} />
                   <Row label="Tarif appliqué" value={pricing.priceTierLabel} />
                   {form.courseFormat === "HOME" ? (
@@ -2771,7 +2808,7 @@ export function ReserverForm({
                 )}
                 {pricing.rewardDiscountAmount > 0 && promotionBenefits?.reward && (
                   <div className="mt-3 rounded-lg border border-[#E8D7A0] bg-[#FFF9E8] px-4 py-3 text-sm font-bold text-[#6B4F00]">
-                    Cadeau du {promotionBenefits.reward.milestone}ᵉ paiement appliqué automatiquement : -{formatFCFA(pricing.rewardDiscountAmount)}
+                    Cadeau fidélité appliqué automatiquement : -{formatFCFA(pricing.rewardDiscountAmount)}
                   </div>
                 )}
               </div>

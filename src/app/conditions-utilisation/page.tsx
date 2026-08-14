@@ -109,7 +109,7 @@ const sections: LegalSection[] = [
       "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
       "Aucun professeur ne peut remplacer la grille officielle par son propre prix public. Une exception commerciale ou un accord particulier doit être validé par Compétence et apparaître dans le dossier avant paiement.",
       "L'affichage “dès” sur un profil professeur dépend du système actif et des niveaux réellement couverts. Un profil professionnel doit afficher la base professionnelle lorsqu'il est consulté dans la mini-application Pro, tandis qu'un profil scolaire affiche la base du système ivoirien ou français concerné.",
-      "Lorsque le cours se fait en groupe, chaque participant supplémentaire entraîne la majoration calculée selon la règle tarifaire en vigueur sur la plateforme.",
+      "Le petit groupe comprend de 2 à 12 participants : chaque participant après le premier ajoute 50 % du prix de base. Le grand groupe commence à 13 participants : les participants 2 à 12 suivent la règle de 50 %, puis chaque participant au-delà de 12 ajoute 40 % du prix de base.",
       "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur refuse une combinaison incompatible et demande au client de choisir un autre profil.",
     ],
     bullets: [
@@ -143,7 +143,7 @@ const sections: LegalSection[] = [
   {
     title: "Programme Cadeaux Compétence",
     body: [
-      "Compétence peut attribuer automatiquement un cadeau après certains paiements Jèko confirmés. Le parcours initial comprend des avantages du deuxième au septième paiement, avec des réductions comprises entre 8 % et 15 % et une durée d'utilisation comprise entre 7 et 14 jours.",
+      "Compétence peut attribuer automatiquement un cadeau après certains paiements Jèko confirmés. Entre deux cadeaux, le client doit effectuer de un à trois nouveaux paiements éligibles confirmés. Les réductions sont comprises entre 8 % et 15 % et leur durée d'utilisation entre 7 et 14 jours.",
       "Le cadeau disponible est appliqué automatiquement au prochain cours éligible avant paiement. Un seul avantage s'applique par paiement ; les cadeaux ne se cumulent pas entre eux ni avec une autre réduction lorsque ce cumul dépasse la marge disponible.",
       "La réduction porte uniquement sur le cours. Le transport, le matériel, les frais de service Compétence et les frais Jèko restent dus séparément. Le professeur conserve toujours sa part officielle calculée sur le cours avant avantage client.",
       "Compétence conserve une marge minimale, peut désactiver ou modifier les étapes futures du programme et peut annuler un cadeau obtenu par fraude, double paiement, remboursement, annulation abusive ou erreur technique. Un cadeau expiré n'est ni remboursable ni convertible en espèces.",

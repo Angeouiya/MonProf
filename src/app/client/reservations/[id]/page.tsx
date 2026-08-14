@@ -696,7 +696,7 @@ export default async function ReservationDetailPage({
                 <DetailRow
                   icon={booking.groupType === "INDIVIDUAL" ? <User className="h-4 w-4" /> : <Users className="h-4 w-4" />}
                   label="Type"
-                  value={booking.groupType === "INDIVIDUAL" ? "Individuel" : "Petit groupe"}
+                  value={booking.groupType === "INDIVIDUAL" ? "Individuel" : booking.groupType === "LARGE_GROUP" ? "Grand groupe" : "Petit groupe"}
                 />
                 <DetailRow icon={<Clock className="h-4 w-4" />} label="Durée" value={`${displaySessionsCount} séance${displaySessionsCount > 1 ? "s" : ""} de 2h`} />
                 {schoolProgramDisplay && (

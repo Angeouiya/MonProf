@@ -141,9 +141,9 @@ export default async function ClientDashboardPage() {
             <strong className="block text-sm font-black text-[#111827]">
               {loyaltyOverview.activeReward
                 ? `Votre cadeau de ${loyaltyOverview.activeReward.discountRate} % est prêt`
-                : loyaltyOverview.currentStep >= 7
+                : loyaltyOverview.programCompleted
                   ? "Votre route cadeaux est complète"
-                  : "Encore 1 paiement pour avancer vers votre prochain cadeau"}
+                  : `Encore ${loyaltyOverview.paymentsUntilNextGift} paiement${loyaltyOverview.paymentsUntilNextGift > 1 ? "s" : ""} avant votre prochain cadeau`}
             </strong>
             <span className="mt-1 block text-xs font-semibold text-[#64748B]">Suivez votre route animée et vos dates d’utilisation.</span>
           </span>

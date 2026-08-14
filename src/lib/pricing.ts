@@ -7,6 +7,7 @@ import {
 import { calculateJekoClientPaymentFee } from "@/lib/jeko-client-payment-fees";
 import { ABIDJAN_COMMUNES } from "@/lib/ivory-coast-locations";
 import { isProfessionalLevelSelection } from "@/lib/course-catalog";
+import { groupPricingMultiplier } from "@/lib/group-pricing";
 
 export const CURRENCY = "XOF";
 
@@ -1054,7 +1055,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const tierCode = calculatePriceTier(context);
   const pack = getPackConfig(input.packType);
   const participantsCount = Math.max(1, Math.round(Number(input.participantsCount) || 1));
-  const groupMultiplier = 1 + Math.max(0, participantsCount - 1) * 0.5;
+  const groupMultiplier = groupPricingMultiplier(participantsCount);
   const materialFee = Math.max(0, Math.round(Number(input.materialFee) || 0));
 
   const tier = PRICE_TIERS[tierCode];

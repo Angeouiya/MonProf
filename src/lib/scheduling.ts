@@ -170,9 +170,10 @@ export function unavailableSelections(
 }
 
 export function groupPricingMultiplier(participantsCount: number): number {
-  return 1 + Math.max(0, participantsCount - 1) * 0.5;
+  return calculateGroupPricingMultiplier(participantsCount);
 }
 
 export function applyGroupPricing(baseAmount: number, participantsCount: number): number {
   return Math.round(baseAmount * groupPricingMultiplier(participantsCount));
 }
+import { groupPricingMultiplier as calculateGroupPricingMultiplier } from "@/lib/group-pricing";

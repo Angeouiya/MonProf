@@ -424,12 +424,13 @@ record(
 );
 
 record(
-  "Client booking condenses transport and pack choices into progressive summaries",
+  "Client booking keeps transport compact and exposes every pack without a click",
   /pricing\.transportFee\s*===\s*0\s*\?\s*"Gratuit"/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && /Choisissez votre commune pour obtenir le montant exact/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && !/InfoMini label="Base professeur"/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && /selectedPackLabel/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /<details className="mt-2[\s\S]*?Comparer les formules/.test(read("src/app/client/reserver/reserver-form.tsx")),
+    && /Tous les packs, leurs montants et leurs économies sont visibles immédiatement/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && !/Comparer les formules/.test(read("src/app/client/reserver/reserver-form.tsx")),
 );
 
 record(
