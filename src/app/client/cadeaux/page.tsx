@@ -24,7 +24,7 @@ export default async function ClientGiftsPage() {
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B47C00]">Cadeaux Compétence</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-[#111827] sm:text-4xl">Ramassez vos cadeaux sur une route infinie.</h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-[#64748B]">
-              Chaque paiement Jèko confirmé vous rapproche d’un nouvel avantage. La réduction s’applique automatiquement au cours suivant, sans réduire le montant du professeur.
+              Chaque paiement Jèko confirmé vous rapproche d’un nouvel avantage. La réduction s’applique automatiquement au cours suivant.
             </p>
           </div>
           <Button asChild className="min-h-12 rounded-xl px-5">
