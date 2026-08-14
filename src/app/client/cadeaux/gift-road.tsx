@@ -5,33 +5,47 @@ import { Check, Gift, LockKeyhole, Sparkles } from "lucide-react";
 import { DEFAULT_LOYALTY_GIFT_STEPS, type LoyaltyGiftStep } from "@/lib/loyalty-constants";
 
 type GiftRoadProps = {
-  currentStep: number;
   cycle: number;
   cycleEnabled: boolean;
+  qualifiedPaymentCount: number;
   steps?: LoyaltyGiftStep[];
 };
 
 const POSITIONS = [
-  { left: 29, top: 9 },
-  { left: 70, top: 21 },
-  { left: 29, top: 34 },
-  { left: 69, top: 47 },
-  { left: 30, top: 60 },
-  { left: 69, top: 73 },
-  { left: 39, top: 85 },
+  { left: 39, top: 8 },
+  { left: 68, top: 15 },
+  { left: 70, top: 22 },
+  { left: 31, top: 29 },
+  { left: 27, top: 36 },
+  { left: 66, top: 43 },
+  { left: 71, top: 50 },
+  { left: 33, top: 57 },
+  { left: 28, top: 64 },
+  { left: 66, top: 71 },
+  { left: 71, top: 78 },
+  { left: 34, top: 85 },
+  { left: 40, top: 92 },
 ] as const;
 
 const MAIN_ROAD = "M390 -90 C720 55 720 225 410 305 C75 390 92 560 448 640 C770 713 724 900 385 962 C62 1020 92 1205 430 1280 C710 1342 704 1500 375 1660";
 
-export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOYALTY_GIFT_STEPS }: GiftRoadProps) {
-  const rewards = new Map(steps.map((step) => [step.milestone, step]));
-  const items = Array.from({ length: 7 }, (_, index) => {
-    const milestone = index + 1;
+export function GiftRoad({ cycle, cycleEnabled, qualifiedPaymentCount, steps = DEFAULT_LOYALTY_GIFT_STEPS }: GiftRoadProps) {
+  const cycleSpan = steps.reduce((total, step) => total + step.paymentGap, 0);
+  const cycleStartPayment = 1 + Math.max(0, cycle - 1) * cycleSpan;
+  let rewardPaymentNumber = cycleStartPayment;
+  const rewardsByPayment = new Map<number, LoyaltyGiftStep>();
+  for (const step of steps) {
+    rewardPaymentNumber += step.paymentGap;
+    rewardsByPayment.set(rewardPaymentNumber, step);
+  }
+  const items = POSITIONS.map((position, index) => {
+    const paymentNumber = cycleStartPayment + index;
+    const reward = rewardsByPayment.get(paymentNumber);
     return {
-      milestone,
-      reward: rewards.get(milestone),
-      state: milestone <= currentStep ? "done" : milestone === currentStep + 1 ? "next" : "locked",
-      position: POSITIONS[index],
+      paymentNumber,
+      reward,
+      state: paymentNumber <= qualifiedPaymentCount ? "done" : paymentNumber === qualifiedPaymentCount + 1 ? "next" : "locked",
+      position,
     } as const;
   });
 
@@ -123,10 +137,10 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
       </svg>
 
       <div className="gift-road-start">Départ · cycle {cycle}</div>
-      {items.map(({ milestone, reward, state, position }, index) => (
+      {items.map(({ paymentNumber, reward, state, position }, index) => (
         <motion.article
-          key={milestone}
-          className={`gift-road-node gift-road-node-${state}`}
+          key={paymentNumber}
+          className={`gift-road-node gift-road-node-${state} ${reward ? "gift-road-node-reward" : "gift-road-node-payment"}`}
           style={{ left: `${position.left}%`, top: `${position.top}%` }}
           initial={{ opacity: 0, y: 22, scale: 0.92 }}
           animate={{ opacity: 1, y: state === "next" ? [0, -6, 0] : 0, scale: 1 }}
@@ -139,19 +153,19 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
           }}
         >
           <span className="gift-node-orb">
-            {state === "done" ? <Check aria-hidden /> : state === "locked" ? <LockKeyhole aria-hidden /> : <Gift aria-hidden />}
+            {reward
+              ? <Gift aria-hidden />
+              : state === "done"
+                ? <Check aria-hidden />
+                : state === "locked"
+                  ? <LockKeyhole aria-hidden />
+                  : <Sparkles aria-hidden />}
           </span>
           <span className="gift-node-copy">
-            <strong>{milestone === 1 ? "Bienvenue" : `Cadeau ${milestone - 1}`}</strong>
-            <small>
-              {milestone === 1
-                ? cycle === 1 ? "-10 % partenaire" : "Nouveau tour"
-                : reward
-                  ? `-${reward.discountRate} % · après ${reward.paymentGap} paiement${reward.paymentGap > 1 ? "s" : ""}`
-                  : "Étape fidélité"}
-            </small>
+            <strong>{reward ? `Cadeau -${reward.discountRate} %` : `Paiement ${paymentNumber}`}</strong>
+            <small>{reward ? `Débloqué au paiement ${paymentNumber} · ${reward.validityDays} jours` : state === "done" ? "Paiement validé" : "Prochaine étape sur la route"}</small>
           </span>
-          {state === "next" && <Sparkles className="gift-node-sparkle" aria-hidden />}
+          {(state === "next" || (reward && state === "done")) && <Sparkles className="gift-node-sparkle" aria-hidden />}
         </motion.article>
       ))}
 
@@ -165,7 +179,7 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
       </motion.div>
 
       <style jsx global>{`
-        .gift-road-stage { position:relative; min-height:1080px; overflow:hidden; border:1px solid #d8d5cf; border-radius:30px; background:#f3f2ef; isolation:isolate; box-shadow:0 22px 55px rgba(17,27,77,.1); }
+        .gift-road-stage { position:relative; min-height:1780px; overflow:hidden; border:1px solid #d8d5cf; border-radius:30px; background:#f3f2ef; isolation:isolate; box-shadow:0 22px 55px rgba(17,27,77,.1); }
         .gift-road-title { position:absolute; z-index:5; top:1.1rem; right:1rem; max-width:148px; border:1px solid #d8d5cf; border-radius:16px; background:#fff; padding:.65rem .75rem; box-shadow:0 8px 0 #d8d5cf; text-align:left; }
         .gift-road-title span,.gift-road-title strong { display:block; }.gift-road-title span { color:#b47c00; font-size:.58rem; font-weight:950; letter-spacing:.12em; text-transform:uppercase; }.gift-road-title strong { margin-top:.15rem; color:#111827; font-size:.75rem; line-height:1.15; }
         .gift-road-svg { position:absolute; inset:0; width:100%; height:100%; }
@@ -174,6 +188,9 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
         .gift-vehicle-blue { animation-delay:-.6s; }.gift-vehicle-yellow { animation-delay:-1.1s; }.gift-vehicle-van { animation-delay:-1.6s; }
         .gift-road-start { position:absolute; z-index:6; left:1rem; top:1.1rem; border:1px solid #d8d5cf; border-radius:999px; background:#fff; color:#132654; padding:.55rem .8rem; font-size:.62rem; font-weight:950; text-transform:uppercase; letter-spacing:.08em; box-shadow:0 6px 0 #d8d5cf; }
         .gift-road-node { position:absolute; z-index:7; display:flex; align-items:center; gap:.48rem; width:min(178px,45vw); translate:-50% -50%; border:1px solid #d2d4d8; border-radius:16px; background:#fff; padding:.5rem; box-shadow:0 8px 0 rgba(77,80,85,.18),0 14px 28px rgba(17,24,39,.13); }
+        .gift-road-node-payment { width:min(150px,40vw); border-radius:13px; padding:.4rem; }
+        .gift-road-node-reward { width:min(195px,48vw); border-color:#d49a00; box-shadow:0 8px 0 #e7c667,0 17px 34px rgba(154,105,0,.21); }
+        .gift-road-node-reward .gift-node-orb { background:#d49a00; animation:gift-bounce 1.9s ease-in-out infinite; }
         .gift-node-orb { display:flex; width:40px; height:40px; flex:none; align-items:center; justify-content:center; border-radius:12px; background:#132654; color:#fff; box-shadow:inset 0 -4px 0 rgba(0,0,0,.15); }
         .gift-node-orb :global(svg) { width:19px; height:19px; }.gift-node-copy { min-width:0; display:block; }.gift-node-copy strong,.gift-node-copy small { display:block; }.gift-node-copy strong { color:#111827; font-size:.75rem; line-height:1.15; }.gift-node-copy small { margin-top:.16rem; color:#4b5563; font-size:.63rem; font-weight:800; line-height:1.25; }
         .gift-road-node-done { border-color:#8cccb0; }.gift-road-node-done .gift-node-orb { background:#13795b; }
@@ -184,8 +201,9 @@ export function GiftRoad({ currentStep, cycle, cycleEnabled, steps = DEFAULT_LOY
         .gift-road-future :global(svg) { width:15px; height:15px; }
         @keyframes road-flow { to { stroke-dashoffset:-61; } }
         @keyframes vehicle-float { 0%,100% { translate:0 0; } 50% { translate:0 -5px; } }
-        @media (min-width:720px) { .gift-road-stage { min-height:1220px; }.gift-road-node { width:220px; padding:.68rem; gap:.65rem; }.gift-node-orb { width:48px; height:48px; }.gift-node-copy strong { font-size:.88rem; }.gift-node-copy small { font-size:.73rem; }.gift-road-title { max-width:190px; padding:.8rem 1rem; }.gift-road-title strong { font-size:.9rem; } }
-        @media (prefers-reduced-motion:reduce) { .gift-road-centerline,.gift-vehicle { animation:none!important; } }
+        @keyframes gift-bounce { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-6px) rotate(3deg); } }
+        @media (min-width:720px) { .gift-road-stage { min-height:1980px; }.gift-road-node { width:220px; padding:.68rem; gap:.65rem; }.gift-road-node-payment { width:176px; }.gift-road-node-reward { width:242px; }.gift-node-orb { width:48px; height:48px; }.gift-node-copy strong { font-size:.88rem; }.gift-node-copy small { font-size:.73rem; }.gift-road-title { max-width:190px; padding:.8rem 1rem; }.gift-road-title strong { font-size:.9rem; } }
+        @media (prefers-reduced-motion:reduce) { .gift-road-centerline,.gift-vehicle,.gift-road-node-reward .gift-node-orb { animation:none!important; } }
       `}</style>
     </section>
   );

@@ -407,9 +407,10 @@ record(
 record(
   "Client booking shows only relevant format and selected-day availability",
   /\{teacher\.offersGroup\s*&&\s*\(/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /selectedAvailabilityDays\.map/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /scheduleRows\.map/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /const availableSlots = rowDay \? TWO_HOUR_SLOTS\.filter/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && !/grid-cols-\[92px_repeat\(7/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Un autre horaire \?/.test(read("src/app/client/reserver/reserver-form.tsx"))
+    && /Autre horaire/.test(read("src/app/client/reserver/reserver-form.tsx"))
     && /Ajouter un message \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx")),
 );
 

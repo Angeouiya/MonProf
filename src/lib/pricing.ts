@@ -308,6 +308,7 @@ export type PricingDerivationInput = {
 
 export type BookingPricingInput = PricingDerivationInput & {
   packType: string;
+  sessionsCount?: number;
   participantsCount?: number;
   teacherPricePerSession?: number | null;
   transportFeeKey?: string | null;
@@ -934,6 +935,36 @@ export function packSessionCount(packType: string) {
   return getPackConfig(packType).sessions ?? 0;
 }
 
+export function resolveAutomaticPackType(sessionsCount: number) {
+  const count = Math.max(1, Math.round(Number(sessionsCount) || 1));
+  if (count >= COURSE_PACKS.PACK_12.sessions) return "PACK_12" as const;
+  if (count >= COURSE_PACKS.PACK_8.sessions) return "PACK_8" as const;
+  if (count >= COURSE_PACKS.PACK_4.sessions) return "PACK_4" as const;
+  return "SINGLE" as const;
+}
+
+export function getAutomaticPackProgress(sessionsCount: number) {
+  const count = Math.max(1, Math.round(Number(sessionsCount) || 1));
+  const packType = resolveAutomaticPackType(count);
+  const pack = getPackConfig(packType);
+  const nextPackType = packType === "SINGLE"
+    ? "PACK_4"
+    : packType === "PACK_4"
+      ? "PACK_8"
+      : packType === "PACK_8"
+        ? "PACK_12"
+        : null;
+  const nextPack = nextPackType ? getPackConfig(nextPackType) : null;
+  return {
+    sessionsCount: count,
+    packType,
+    pack,
+    nextPackType,
+    nextPack,
+    sessionsUntilNextPack: nextPack ? Math.max(0, nextPack.sessions - count) : 0,
+  };
+}
+
 export function derivePricingContext(input: PricingDerivationInput): PricingInput {
   const category = input.category;
   const schoolSystem = input.schoolSystem || undefined;
@@ -1063,7 +1094,7 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   // mais ne participent jamais au calcul d'une nouvelle réservation.
   const unitSessionAmount = tier.amount;
 
-  const sessions = Math.max(1, pack.sessions ?? 1);
+  const sessions = Math.max(1, Math.round(Number(input.sessionsCount) || pack.sessions || 1));
   const rawCourseAmount = Math.round(unitSessionAmount * sessions * groupMultiplier);
   const commissionPercent = Math.max(0, Math.min(60, Number.isFinite(input.platformCommissionPercent)
     ? Math.round(Number(input.platformCommissionPercent))

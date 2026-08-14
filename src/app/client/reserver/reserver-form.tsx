@@ -31,7 +31,6 @@ import { formatFCFA } from "@/lib/format";
 import { isAllowedJekoRedirectUrl } from "@/lib/jeko-checkout-url";
 import { activePaymentMethodOptions } from "@/lib/payment-methods";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
-import { PackType } from "@prisma/client";
 import {
   COURSE_CATALOG,
   COURSE_CATEGORIES,
@@ -45,7 +44,6 @@ import {
 import {
   MIN_BOOKING_NOTICE_HOURS,
   availabilitySelectionLabel,
-  dayLabel,
   getEarliestCourseStartDateTime,
   parseAvailability,
   respectsMinimumBookingNotice,
@@ -56,7 +54,8 @@ import {
   COURSE_PACKS,
   buildNeighborhoodAliasMap,
   calculateBookingPricing,
-  packSessionCount,
+  getAutomaticPackProgress,
+  resolveAutomaticPackType,
   type NeighborhoodAliasMap,
 } from "@/lib/pricing";
 import {
@@ -70,9 +69,9 @@ import {
 import {
   formatTimeRangeFromStart,
   normalizeScheduleSlot,
-  normalizeCustomDurationMinutes,
   resolveTravelBufferMinutes,
   scheduleSlotsConflict,
+  scheduleSlotsOverlap,
   validateCustomScheduleTime,
   type ScheduleBufferMinutes,
   type ScheduleSlotsConflictResult,
@@ -87,6 +86,7 @@ import {
 import {
   ArrowLeft, ArrowRight, Home, Video, User, Users,
   ShieldCheck, CalendarDays, CheckCircle2, Clock3, ClipboardList, WalletCards, ExternalLink, AlertTriangle,
+  CalendarPlus, Gift, Sparkles, Trash2,
 } from "lucide-react";
 
 type Teacher = {
@@ -166,6 +166,15 @@ type ScheduleOccurrence = {
   time: string;
   sequence: number;
   durationMinutes: number;
+};
+
+type ScheduleDraftRow = {
+  id: string;
+  date: string;
+  mode: "standard" | "custom";
+  selection: string;
+  customStartTime: string;
+  durationMinutes: 60 | 120;
 };
 
 type OccupiedScheduleConflict = {
@@ -270,8 +279,18 @@ const PACK_OPTIONS = [
   { value: "PACK_4", label: COURSE_PACKS.PACK_4.label, count: COURSE_PACKS.PACK_4.sessions },
   { value: "PACK_8", label: COURSE_PACKS.PACK_8.label, count: COURSE_PACKS.PACK_8.sessions },
   { value: "PACK_12", label: COURSE_PACKS.PACK_12.label, count: COURSE_PACKS.PACK_12.sessions },
-  { value: "CUSTOM", label: COURSE_PACKS.CUSTOM.label, count: COURSE_PACKS.CUSTOM.sessions },
-];
+] as const;
+
+function createScheduleDraftRow(index: number, date = ""): ScheduleDraftRow {
+  return {
+    id: `session-${index}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
+    date,
+    mode: "standard",
+    selection: "",
+    customStartTime: "",
+    durationMinutes: 120,
+  };
+}
 
 function normalizeLocation(value?: string | null) {
   return (value ?? "")
@@ -446,8 +465,6 @@ function formatDateTimeLabel(date: Date) {
 }
 
 const DATE_DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-const CLIENT_DAY_INDEX = new Map<string, number>(WEEK_DAYS.map((day, index) => [day.key, index === 6 ? 0 : index + 1]));
-
 function dayKeyFromDateInput(value: string) {
   if (!value) return "";
   const [year, month, day] = value.split("-").map(Number);
@@ -464,75 +481,11 @@ function dateFromInput(value: string) {
   return date;
 }
 
-function addDaysToDateInput(value: string, days: number) {
-  const date = dateFromInput(value);
-  if (!date) return "";
-  date.setDate(date.getDate() + days);
-  return toDateInputValue(date);
-}
-
 function slotLabelFromSelection(selection?: string | null) {
   if (!selection) return null;
   const [, slotKey] = selection.split("|");
   const slot = TWO_HOUR_SLOTS.find((item) => item.key === slotKey);
   return slot?.label ?? selection;
-}
-
-function buildScheduleOccurrences({
-  startDate,
-  selectedTimeSlots,
-  sessionsCount,
-  fallbackTime,
-  fallbackDurationMinutes,
-}: {
-  startDate: string;
-  selectedTimeSlots: string[];
-  sessionsCount: number;
-  fallbackTime?: string | null;
-  fallbackDurationMinutes?: number | null;
-}): ScheduleOccurrence[] {
-  const count = Math.max(1, Math.round(sessionsCount));
-  if (!dateFromInput(startDate)) return [];
-  const validSelections = selectedTimeSlots
-    .map((selection) => {
-      const [dayKey, slotKey] = selection.split("|");
-      const dayIndex = CLIENT_DAY_INDEX.get(dayKey);
-      const slotIndex = TWO_HOUR_SLOTS.findIndex((slot) => slot.key === slotKey);
-      return dayIndex === undefined || slotIndex < 0 ? null : { selection, dayIndex, slotIndex };
-    })
-    .filter((selection): selection is NonNullable<typeof selection> => Boolean(selection));
-
-  if (validSelections.length === 0) {
-    if (!fallbackTime) return [];
-    return Array.from({ length: count }, (_, index) => ({
-      date: addDaysToDateInput(startDate, index * 7),
-      time: fallbackTime,
-      sequence: index + 1,
-      durationMinutes: normalizeCustomDurationMinutes(fallbackDurationMinutes),
-    })).filter((item) => Boolean(item.date));
-  }
-
-  const schedule: ScheduleOccurrence[] = [];
-  for (let dayOffset = 0; schedule.length < count && dayOffset < count * 14 + 14; dayOffset += 1) {
-    const date = dateFromInput(startDate);
-    if (!date) break;
-    date.setDate(date.getDate() + dayOffset);
-    const matches = validSelections
-      .filter((selection) => selection.dayIndex === date.getDay())
-      .sort((a, b) => a.slotIndex - b.slotIndex);
-    for (const match of matches) {
-      const time = slotLabelFromSelection(match.selection);
-      if (!time) continue;
-      if (schedule.length >= count) break;
-      schedule.push({
-        date: toDateInputValue(date),
-        time,
-        sequence: schedule.length + 1,
-        durationMinutes: 120,
-      });
-    }
-  }
-  return schedule;
 }
 
 function findOccupiedConflictForTime(
@@ -716,21 +669,6 @@ function formatTravelLocation(slot: { courseFormat?: string | null; commune?: st
   return [slot.commune, slot.quartier].filter(Boolean).join(" · ") || "Lieu à confirmer";
 }
 
-function buildSessionPreview(timeLabels: string[], customTimeRequest: string, sessionsCount: number, startDateLabel: string) {
-  const anchors = [
-    ...timeLabels,
-    ...(customTimeRequest ? [`Demande client : ${customTimeRequest}`] : []),
-  ];
-  if (anchors.length === 0) return [];
-
-  return Array.from({ length: sessionsCount }, (_, index) => ({
-    label: `Séance ${index + 1}`,
-    date: index === 0 && startDateLabel ? startDateLabel : startDateLabel ? `À programmer après ${startDateLabel}` : "Date à confirmer",
-    time: anchors[index % anchors.length],
-    repeated: index >= anchors.length,
-  }));
-}
-
 function normalizeForMatch(value: string) {
   return value
     .normalize("NFD")
@@ -818,64 +756,48 @@ export function ReserverForm({
     quartier: "",
     addressHint: "",
     onlineLink: "",
-    selectedTimeSlots: [] as string[],
-    customDay: "",
-    customStartTime: "",
-    customDurationMinutes: 120,
-    customTimeRequest: "",
-    startDate: "",
-    packType: "SINGLE" as PackType,
     message: "",
     partnerReferralCode: initialPartnerReferral?.code ?? "",
     partnerReferralName: initialPartnerReferral?.promoterName ?? "",
     partnerReferralPhone: initialPartnerReferral?.promoterPhone ?? "",
   });
+  const [scheduleRows, setScheduleRows] = useState<ScheduleDraftRow[]>([
+    {
+      id: "session-1",
+      date: "",
+      mode: "standard",
+      selection: "",
+      customStartTime: "",
+      durationMinutes: 120,
+    },
+  ]);
 
   const update = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
-  function handleStartDateChange(value: string) {
-    const dayKey = dayKeyFromDateInput(value);
-    setForm((current) => {
-      const requestContext = {
-        courseFormat: current.courseFormat,
-        commune: current.courseFormat === "HOME" ? current.commune : null,
-        quartier: current.courseFormat === "HOME" ? current.quartier : null,
-        transportFeeKey: null,
-      };
-      const localRelevantCommunes = new Set(
-        [teacher.commune, current.commune].map(normalizeLocation).filter(Boolean),
-      );
-      const localConflictContext = {
-        grandAbidjanCommuneNames: communes.filter((commune) => commune.transportClass === "GRAND_ABIDJAN").map((commune) => commune.name),
-        neighborhoodAliases: buildNeighborhoodAliasMap(
-          communes
-            .filter((commune) => localRelevantCommunes.has(normalizeLocation(commune.name)))
-            .flatMap((commune) => commune.quarters.map((quarter) => ({
-              ...quarter,
-              communeId: commune.id,
-              communeName: commune.name,
-            }))),
-        ),
-      };
-      return {
-        ...current,
-        startDate: value,
-        selectedTimeSlots: dayKey
-          ? current.selectedTimeSlots.filter((slot) => (
-              slot.startsWith(`${dayKey}|`)
-              && !findOccupiedConflictForSelection(
-                occupiedSlots,
-                value,
-                slot,
-                requestContext,
-                pricingConfig.scheduleBuffers,
-                localConflictContext,
-              )
-            ))
-          : current.selectedTimeSlots,
-        customDay: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customDay,
-        customStartTime: current.customDay && dayKey && current.customDay !== dayKey ? "" : current.customStartTime,
-      };
+  function updateScheduleRow(id: string, patch: Partial<ScheduleDraftRow>) {
+    setScheduleRows((rows) => rows.map((row) => row.id === id ? { ...row, ...patch } : row));
+  }
+
+  function addScheduleRow() {
+    setScheduleRows((rows) => rows.length >= 52 ? rows : [
+      ...rows,
+      createScheduleDraftRow(rows.length + 1, rows.at(-1)?.date ?? ""),
+    ]);
+  }
+
+  function removeScheduleRow(id: string) {
+    setScheduleRows((rows) => rows.length > 1 ? rows.filter((row) => row.id !== id) : rows);
+  }
+
+  function ensureScheduleRowCount(targetCount: number) {
+    const safeTarget = Math.max(1, Math.min(52, Math.round(targetCount)));
+    setScheduleRows((rows) => {
+      if (rows.length >= safeTarget) return rows;
+      const next = [...rows];
+      while (next.length < safeTarget) {
+        next.push(createScheduleDraftRow(next.length + 1, next.at(-1)?.date ?? ""));
+      }
+      return next;
     });
   }
 
@@ -1038,6 +960,9 @@ export function ReserverForm({
   const deliveryMode = form.courseFormat === "ONLINE" ? "en_ligne" : "domicile";
   const canResolveTransport = form.courseFormat === "HOME" && Boolean(form.commune.trim());
   const selectedJekoPaymentMethod = toJekoPaymentMethod(selectedPaymentMethod);
+  const requestedSessionCount = Math.max(1, scheduleRows.length);
+  const packProgress = getAutomaticPackProgress(requestedSessionCount);
+  const automaticPackType = resolveAutomaticPackType(requestedSessionCount);
   const pricing = calculateBookingPricing({
     category: effectiveCourseCategory,
     schoolSystem: form.schoolSystem,
@@ -1048,7 +973,8 @@ export function ReserverForm({
     objective: form.objective,
     deliveryMode,
     requiresMaterial: false,
-    packType: form.packType,
+    packType: automaticPackType,
+    sessionsCount: requestedSessionCount,
     participantsCount,
     teacherPricePerSession: teacher.pricePerSession,
     paymentMethod: selectedJekoPaymentMethod,
@@ -1077,46 +1003,56 @@ export function ReserverForm({
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
     neighborhoodAliases,
   };
-  const selectedPackSessions = pricing.numberOfSessions ?? packSessionCount(form.packType);
-  const selectedPackLabel = PACK_OPTIONS.find((pack) => pack.value === form.packType)?.label ?? form.packType;
+  const selectedPackSessions = pricing.numberOfSessions ?? requestedSessionCount;
+  const selectedPackLabel = requestedSessionCount === 1
+    ? COURSE_PACKS.SINGLE.label
+    : `${packProgress.pack.label} atteint · ${requestedSessionCount} séances`;
   const basePrice = selectedPackSessions > 0 ? pricing.unitSessionAmount * selectedPackSessions : 0;
   const courseFormulaAmount = pricing.courseAmount;
   const totalPrice = pricing.totalClientPays;
   const hasResolvedPricing = bookingJourney !== "";
   const averageSessionPrice = selectedPackSessions > 0 ? Math.round(pricing.courseAmount / selectedPackSessions) : 0;
-  const normalizedCustomDurationMinutes = normalizeCustomDurationMinutes(form.customDurationMinutes);
-  const usesCustomSchedule = form.selectedTimeSlots.length === 0 && Boolean(form.customDay && form.customStartTime);
-  const selectedSessionDurationMinutes = usesCustomSchedule ? normalizedCustomDurationMinutes : 120;
-  const selectedSessionDurationLabel = selectedSessionDurationMinutes === 60 ? "1h" : "2h";
-  const totalHours = selectedPackSessions * selectedSessionDurationMinutes / 60;
+  const selectedSessionDurationLabel = scheduleRows.every((row) => row.durationMinutes === 120) ? "2h" : "1h ou 2h";
+  const totalHours = scheduleRows.reduce((sum, row) => sum + row.durationMinutes, 0) / 60;
   const groupPricing = groupPricingDetails(participantsCount);
   const extraParticipantCount = Math.max(0, participantsCount - 1);
   const smallGroupSurchargePerParticipant = Math.round(basePrice * SMALL_GROUP_EXTRA_RATE);
   const largeGroupSurchargePerParticipant = Math.round(basePrice * LARGE_GROUP_EXTRA_RATE);
-  const selectedDays = Array.from(new Set([
-    ...form.selectedTimeSlots.map((slot) => slot.split("|")[0]),
-    ...(form.customDay ? [form.customDay] : []),
-  ]));
-  const selectedTimeLabels = form.selectedTimeSlots.map(availabilitySelectionLabel);
-  const customTimeRange = form.customStartTime ? formatTimeRange(form.customStartTime, normalizedCustomDurationMinutes) : "";
-  const customTimeValidation = form.customStartTime
-    ? validateCustomScheduleTime(form.customStartTime, normalizedCustomDurationMinutes)
-    : { valid: true, reason: "" };
-  const customTimeParts = [
-    form.customDay && customTimeRange ? `${dayLabel(form.customDay)} ${customTimeRange}` : "",
-    form.customTimeRequest.trim(),
-  ].filter(Boolean);
-  const customTimeRequest = customTimeParts.join(" - ");
-  const preferredTimeSummary = [
-    ...selectedTimeLabels,
-    ...(customTimeRequest ? [`Demande client : ${customTimeRequest}`] : []),
-  ];
-  const selectedStartDateLabel = formatDateInputLabel(form.startDate);
-  const selectedStartDayKey = dayKeyFromDateInput(form.startDate);
-  const selectedStartDayLabel = selectedStartDayKey ? dayLabel(selectedStartDayKey) : "";
-  const selectedAvailabilityDays = selectedStartDayKey
-    ? WEEK_DAYS.filter((day) => day.key === selectedStartDayKey)
-    : [];
+  const selectedDays = Array.from(new Set(scheduleRows.map((row) => dayKeyFromDateInput(row.date)).filter(Boolean)));
+  const scheduleRowIssues = scheduleRows.map((row, index) => {
+    const label = `Séance ${index + 1}`;
+    if (!row.date) return `${label} : choisissez une date.`;
+    if (row.date < todayIso) return `${label} : la date ne peut pas être dans le passé.`;
+    const dateDayKey = dayKeyFromDateInput(row.date);
+    if (row.mode === "standard") {
+      if (!row.selection) return `${label} : choisissez un créneau de 2h.`;
+      const [selectionDay] = row.selection.split("|");
+      if (!dateDayKey || selectionDay !== dateDayKey) return `${label} : le créneau ne correspond pas au jour choisi.`;
+      const [dayKey, slotKey] = row.selection.split("|");
+      if (!teacherAvailability[dayKey]?.[slotKey]) return `${label} : ce professeur n'est pas disponible sur ce créneau.`;
+      return "";
+    }
+    if (!row.customStartTime) return `${label} : indiquez l'heure souhaitée.`;
+    const validation = validateCustomScheduleTime(row.customStartTime, row.durationMinutes);
+    return validation.valid ? "" : `${label} : ${validation.reason}`;
+  });
+  const selectedScheduleOccurrences: ScheduleOccurrence[] = scheduleRows.flatMap((row, index) => {
+    if (scheduleRowIssues[index]) return [];
+    const time = row.mode === "standard"
+      ? slotLabelFromSelection(row.selection)
+      : formatTimeRange(row.customStartTime, row.durationMinutes);
+    return time ? [{
+      date: row.date,
+      time,
+      sequence: index + 1,
+      durationMinutes: row.mode === "standard" ? 120 : row.durationMinutes,
+    }] : [];
+  });
+  const preferredTimeSummary = selectedScheduleOccurrences.map((occurrence) => (
+    `${formatDateInputLabel(occurrence.date)} · ${occurrence.time}`
+  ));
+  const firstScheduleDate = selectedScheduleOccurrences[0]?.date ?? scheduleRows[0]?.date ?? "";
+  const selectedStartDateLabel = formatDateInputLabel(firstScheduleDate);
   const progressPercent = Math.round(((step + 1) / STEPS.length) * 100);
   const currentStepDetail = STEP_DETAILS[step] ?? STEP_DETAILS[0];
   const primarySubjectLabel = form.subjectName
@@ -1126,20 +1062,15 @@ export function ReserverForm({
   const teacherTrustSignal = teacher.rating > 0
     ? `Note ${teacher.rating.toFixed(1)}/5 · ${teacher.commune ?? "Abidjan"}`
     : `Certifié · ${teacher.commune ?? "Abidjan"}`;
-  const hasScheduleDayMismatch = Boolean(
-    form.startDate
-    && selectedDays.length > 0
-    && selectedStartDayKey
-    && !selectedDays.includes(selectedStartDayKey),
-  );
-  const selectedScheduleOccurrences = buildScheduleOccurrences({
-    startDate: form.startDate,
-    selectedTimeSlots: form.selectedTimeSlots,
-    sessionsCount: selectedPackSessions,
-    fallbackTime: customTimeRange || null,
-    fallbackDurationMinutes: normalizedCustomDurationMinutes,
+  const sessionPreview = scheduleRows.map((row, index) => {
+    const occurrence = selectedScheduleOccurrences.find((item) => item.sequence === index + 1);
+    return {
+      label: `Séance ${index + 1}`,
+      date: row.date ? formatDateInputLabel(row.date) : "Date à choisir",
+      time: occurrence?.time ?? "Horaire à choisir",
+      repeated: false,
+    };
   });
-  const sessionPreview = buildSessionPreview(selectedTimeLabels, customTimeRequest, selectedPackSessions, selectedStartDateLabel);
   const selectedScheduleConflicts: OccupiedScheduleConflict[] = selectedScheduleOccurrences
     .map((occurrence) => {
       const conflict = findOccupiedConflictForTime(
@@ -1157,6 +1088,21 @@ export function ReserverForm({
     })
     .filter((item): item is OccupiedScheduleConflict => Boolean(item));
   const firstScheduleConflict = selectedScheduleConflicts[0] ?? null;
+  const internalScheduleConflict = (() => {
+    for (let leftIndex = 0; leftIndex < selectedScheduleOccurrences.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < selectedScheduleOccurrences.length; rightIndex += 1) {
+        const left = selectedScheduleOccurrences[leftIndex];
+        const right = selectedScheduleOccurrences[rightIndex];
+        if (left.date !== right.date) continue;
+        const conflict = scheduleSlotsOverlap(
+          { scheduledDate: left.date, scheduledTime: left.time, durationMinutes: left.durationMinutes, ...scheduleRequestContext },
+          { scheduledDate: right.date, scheduledTime: right.time, durationMinutes: right.durationMinutes, ...scheduleRequestContext },
+        );
+        if (conflict) return { left, right, conflict };
+      }
+    }
+    return null;
+  })();
   const travelPlanningNotice = buildTravelPlanningNotice(
     selectedScheduleOccurrences,
     occupiedSlots,
@@ -1164,36 +1110,32 @@ export function ReserverForm({
     pricingConfig.scheduleBuffers,
     scheduleConflictContext,
   );
-  const hasValidStartDate = Boolean(form.startDate && form.startDate >= todayIso);
-  const hasValidTimeRequest = form.selectedTimeSlots.length > 0 || Boolean(form.customDay && form.customStartTime);
-  const earliestCourseStartAt = form.startDate
-    ? getEarliestCourseStartDateTime({
-        dateInput: form.startDate,
-        selectedTimeSlots: form.selectedTimeSlots,
-        customStartTime: usesCustomSchedule ? form.customStartTime : null,
-      })
-    : null;
+  const hasValidStartDate = scheduleRows.every((row) => Boolean(row.date && row.date >= todayIso));
+  const hasValidTimeRequest = selectedScheduleOccurrences.length === scheduleRows.length;
+  const earliestCourseStartAt = scheduleRows.reduce<Date | null>((earliest, row) => {
+    if (!row.date) return earliest;
+    const occurrenceStart = getEarliestCourseStartDateTime({
+      dateInput: row.date,
+      selectedTimeSlots: row.mode === "standard" && row.selection ? [row.selection] : [],
+      customStartTime: row.mode === "custom" ? row.customStartTime : null,
+    });
+    return occurrenceStart && (!earliest || occurrenceStart < earliest) ? occurrenceStart : earliest;
+  }, null);
   const minimumBookingDeadline = new Date(Date.now() + MIN_BOOKING_NOTICE_HOURS * 60 * 60 * 1000);
   const hasMinimumBookingNotice = hasValidTimeRequest && respectsMinimumBookingNotice(earliestCourseStartAt);
-  const hasMixedScheduleRequest = form.selectedTimeSlots.length > 0 && Boolean(form.customDay || form.customStartTime || form.customTimeRequest.trim());
-  const isScheduleReadyForPayment = hasValidStartDate && hasValidTimeRequest && !hasMixedScheduleRequest && customTimeValidation.valid && !hasScheduleDayMismatch && !firstScheduleConflict && hasMinimumBookingNotice;
-  const paymentScheduleWarning = !form.startDate
-    ? "Sélectionnez une date de première séance avant de passer au paiement."
-    : form.startDate < todayIso
-      ? "La date sélectionnée est passée. Choisissez aujourd'hui ou une date ultérieure."
-      : hasMixedScheduleRequest
-        ? "Choisissez soit un créneau disponible, soit un autre horaire personnalisé, pas les deux."
-        : !customTimeValidation.valid
-          ? customTimeValidation.reason
-          : hasScheduleDayMismatch
-            ? `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}, mais le créneau choisi correspond à un autre jour.`
-            : firstScheduleConflict
-              ? formatOccupiedConflictMessage(firstScheduleConflict)
-              : !hasValidTimeRequest
-                ? "Sélectionnez un créneau de 2h ou indiquez une préférence horaire complète."
-                : !hasMinimumBookingNotice
-                  ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
-                  : "";
+  const isScheduleReadyForPayment = hasValidStartDate
+    && hasValidTimeRequest
+    && !firstScheduleConflict
+    && !internalScheduleConflict
+    && hasMinimumBookingNotice;
+  const paymentScheduleWarning = scheduleRowIssues.find(Boolean)
+    || (internalScheduleConflict
+      ? `Les séances ${internalScheduleConflict.left.sequence} et ${internalScheduleConflict.right.sequence} se chevauchent.`
+      : firstScheduleConflict
+        ? formatOccupiedConflictMessage(firstScheduleConflict)
+        : !hasMinimumBookingNotice
+          ? `Réservez au moins ${MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Choisissez un créneau à partir du ${formatDateTimeLabel(minimumBookingDeadline)}.`
+          : "");
 
   function openRestrictionNotice(notice: RestrictionNoticeState) {
     setRestrictionNotice(notice);
@@ -1335,35 +1277,10 @@ export function ReserverForm({
         if (!form.quartier.trim()) return "Veuillez indiquer votre quartier.";
         if (!form.addressHint.trim()) return "Veuillez indiquer un repère ou une adresse approximative pour le cours à domicile.";
       }
-      if (!form.startDate) {
-        return "Veuillez sélectionner la date souhaitée pour commencer les séances.";
-      }
-      if (form.startDate < todayIso) {
-        return "La date souhaitée ne peut pas être dans le passé. Choisissez aujourd'hui ou une date ultérieure.";
-      }
-      if (hasMixedScheduleRequest) {
-        return "Choisissez soit un créneau disponible, soit un autre horaire personnalisé, pas les deux.";
-      }
-      if (form.selectedTimeSlots.length === 0 && !customTimeRequest) {
-        return "Sélectionnez un créneau disponible ou indiquez votre horaire souhaité.";
-      }
-      if (form.selectedTimeSlots.length === 0 && (!form.customDay || !form.customStartTime)) {
-        return "Pour une demande personnalisée sans créneau sélectionné, indiquez le jour et l'heure souhaités.";
-      }
-      if ((form.customDay && !form.customStartTime) || (!form.customDay && form.customStartTime)) {
-        return "Pour une demande personnalisée, indiquez le jour et l'heure souhaités.";
-      }
-      if (!customTimeValidation.valid) {
-        return customTimeValidation.reason;
-      }
-      if (hasScheduleDayMismatch) {
-        return `La date choisie tombe un ${selectedStartDayLabel.toLowerCase()}. Sélectionnez un créneau du ${selectedStartDayLabel.toLowerCase()} ou modifiez la date.`;
-      }
+      if (scheduleRows.length > 52) return "Une réservation est limitée à 52 séances. Créez un second dossier pour la suite.";
+      if (!isScheduleReadyForPayment) return paymentScheduleWarning || "Complétez chaque date et son créneau.";
       if (firstScheduleConflict) {
         return formatOccupiedConflictMessage(firstScheduleConflict);
-      }
-      if (!hasMinimumBookingNotice) {
-        return paymentScheduleWarning;
       }
     }
     if (s === 4) {
@@ -1476,13 +1393,17 @@ export function ReserverForm({
           addressHint: form.addressHint.trim(),
           onlineLink: form.onlineLink.trim(),
           preferredDays: selectedDays,
-          selectedTimeSlots: form.selectedTimeSlots,
+          selectedTimeSlots: [],
           preferredTime: preferredTimeSummary.join(" ; "),
-          customStartTime: form.customStartTime || undefined,
-          customDurationMinutes: usesCustomSchedule ? normalizedCustomDurationMinutes : undefined,
-          startDate: form.startDate || undefined,
-          sessionsCount: PACK_OPTIONS.find((p) => p.value === form.packType)?.count ?? 1,
-          packType: form.packType,
+          scheduleOccurrences: scheduleRows.map((row) => ({
+            date: row.date,
+            selection: row.mode === "standard" ? row.selection : undefined,
+            customStartTime: row.mode === "custom" ? row.customStartTime : undefined,
+            durationMinutes: row.mode === "custom" ? row.durationMinutes : 120,
+          })),
+          startDate: firstScheduleDate || undefined,
+          sessionsCount: requestedSessionCount,
+          packType: automaticPackType,
           message: form.message.trim(),
           partnerReferralCode: form.partnerReferralCode || undefined,
           partnerReferralName: form.partnerReferralName.trim() || undefined,
@@ -2105,281 +2026,131 @@ export function ReserverForm({
 
               <Separator />
 
-              <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-center">
-                  <div>
-                    <Label htmlFor="startDate" className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
-                      <CalendarDays className="h-4 w-4" />
-                      Date de la première séance *
-                    </Label>
-                    <Input
-                      id="startDate"
-                      type="date"
-                      min={todayIso}
-                      value={form.startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
-                      onInput={(e) => handleStartDateChange(e.currentTarget.value)}
-                      className="mt-2 h-12 rounded-lg"
-                      aria-invalid={!hasValidStartDate}
-                      required
-                    />
-                    <p className="mt-1.5 text-xs text-[#64748B]">
-                      Le client doit réserver au moins {MIN_BOOKING_NOTICE_HOURS}h avant le début du cours. Cette date est reprise au récapitulatif, au paiement et dans l'espace service client.
-                    </p>
-                  </div>
-                  <div className={`rounded-lg border px-4 py-3 ${
-                    hasScheduleDayMismatch
-                      ? "border-[#111B4D] bg-white text-[#111827]"
-                      : selectedStartDateLabel
-                        ? "border-[#DDE6F7] bg-white text-[#111827]"
-                        : "border-[#E3E8F2] bg-white text-[#111B4D]"
-                  }`}>
-                    <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Date retenue pour le paiement</p>
-                    <p className="mt-1 text-base font-semibold leading-snug">
-                      {selectedStartDateLabel || "À sélectionner avant paiement"}
-                    </p>
-                    <p className="mt-1 text-sm leading-snug text-[#64748B]">
-                      {hasScheduleDayMismatch
-                        ? `Cette date tombe un ${selectedStartDayLabel.toLowerCase()}, mais aucun créneau de ce jour n'est sélectionné.`
-                        : selectedStartDateLabel
-                          ? "La réservation et la notification professeur utiliseront cette date comme première séance souhaitée."
-                          : "Aucune réservation ne peut être finalisée sans date."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <div data-booking-schedule-section>
-                <Label>Créneaux disponibles du professeur *</Label>
-                <p className="mt-1 text-sm text-[#64748B]">
-                  Sélectionnez un ou plusieurs créneaux exacts. Chaque séance dure 2 heures.
-                  {selectedStartDayLabel ? ` Pour la date choisie, seuls les créneaux du ${selectedStartDayLabel.toLowerCase()} sont activés.` : " Choisissez d'abord la date souhaitée."}
-                </p>
-                <div className="mt-3 space-y-3">
-                  {selectedAvailabilityDays.length === 0 && (
-                    <div className="rounded-lg border border-[#E3E8F2] bg-white p-4">
-                      <p className="font-semibold text-[#111B4D]">Choisissez d'abord une date</p>
-                      <p className="mt-1 text-sm leading-6 text-[#64748B]">
-                        Les créneaux s'affichent ensuite uniquement pour le jour correspondant, afin de garder la réservation claire et rapide.
-                      </p>
-                    </div>
-                  )}
-                  {selectedAvailabilityDays.map((day) => {
-                    const matchesSelectedDate = !selectedStartDayKey || day.key === selectedStartDayKey;
-                    const availableSlots = TWO_HOUR_SLOTS.filter((slot) => matchesSelectedDate && !!teacherAvailability[day.key]?.[slot.key]);
-                    const freeSlotsCount = availableSlots.filter((slot) => !findOccupiedConflictForSelection(
-                      occupiedSlots,
-                      form.startDate,
-                      `${day.key}|${slot.key}`,
-                      scheduleRequestContext,
-                      pricingConfig.scheduleBuffers,
-                      scheduleConflictContext,
-                    )).length;
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <Label className="flex items-center gap-2 text-base font-black text-[#111827]">
+                      <CalendarDays className="h-5 w-5 text-[#111B4D]" />
+                      Vos dates et créneaux
+                    </Label>
+                    <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">Ajoutez chaque séance séparément. Chaque date est contrôlée avant le paiement Jèko.</p>
+                  </div>
+                  <span className="rounded-xl border border-[#DDE6F7] bg-white px-3 py-2 text-sm font-black text-[#111B4D]">{formatCount(requestedSessionCount, "séance")} · {totalHours}h</span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {scheduleRows.map((row, index) => {
+                    const rowDayKey = dayKeyFromDateInput(row.date);
+                    const rowDay = WEEK_DAYS.find((day) => day.key === rowDayKey);
+                    const availableSlots = rowDay ? TWO_HOUR_SLOTS.filter((slot) => Boolean(teacherAvailability[rowDay.key]?.[slot.key])) : [];
                     return (
-                      <div key={day.key} className="rounded-lg border border-[#E3E8F2] bg-white p-3">
+                      <article key={row.id} className="rounded-xl border border-[#DDE6F7] bg-white p-4" data-schedule-row>
                         <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold text-[#111B4D]">{day.label}</p>
-                          <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-[#111B4D]">
-                            {freeSlotsCount} libre{freeSlotsCount > 1 ? "s" : ""}
-                          </span>
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#B47C00]">Séance {index + 1}</p>
+                            <p className="mt-1 text-sm font-semibold text-[#64748B]">Une date, un horaire précis.</p>
+                          </div>
+                          {scheduleRows.length > 1 && (
+                            <button type="button" onClick={() => removeScheduleRow(row.id)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#64748B] transition hover:border-red-200 hover:text-red-700" aria-label={`Supprimer la séance ${index + 1}`}>
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
-                        {availableSlots.length === 0 ? (
-                          <p className="mt-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-[#64748B]">
-                            Aucun créneau disponible ce jour.
-                          </p>
+
+                        <div className="mt-4 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+                          <div>
+                            <Label htmlFor={`session-date-${row.id}`} className="text-xs font-bold text-[#475569]">Date *</Label>
+                            <Input id={`session-date-${row.id}`} type="date" min={todayIso} value={row.date} onChange={(event) => updateScheduleRow(row.id, { date: event.target.value, selection: "" })} className="mt-1.5 h-11 rounded-xl" required />
+                            {row.date && <p className="mt-1.5 text-xs font-semibold text-[#64748B]">{formatDateInputLabel(row.date)}</p>}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-[#475569]">Type d'horaire</p>
+                            <div className="mt-1.5 grid grid-cols-2 gap-2 rounded-xl border border-[#E5E7EB] bg-white p-1">
+                              <button type="button" onClick={() => updateScheduleRow(row.id, { mode: "standard", customStartTime: "", durationMinutes: 120 })} className={`min-h-10 rounded-lg px-3 text-xs font-black ${row.mode === "standard" ? "bg-[#111B4D] text-white" : "bg-white text-[#111B4D]"}`}>Créneau de 2h</button>
+                              <button type="button" onClick={() => updateScheduleRow(row.id, { mode: "custom", selection: "" })} className={`min-h-10 rounded-lg px-3 text-xs font-black ${row.mode === "custom" ? "bg-[#111B4D] text-white" : "bg-white text-[#111B4D]"}`}>Autre horaire</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {row.mode === "standard" ? (
+                          <div className="mt-4">
+                            {!row.date ? (
+                              <p className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#64748B]">Choisissez la date pour afficher les créneaux de ce jour.</p>
+                            ) : availableSlots.length === 0 ? (
+                              <p className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm font-semibold text-[#64748B]">Aucun créneau standard disponible ce {rowDay?.label.toLowerCase()}. Essayez une autre date ou “Autre horaire”.</p>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                                {availableSlots.map((slot) => {
+                                  const selection = `${rowDayKey}|${slot.key}`;
+                                  const checked = row.selection === selection;
+                                  const occupiedConflict = findOccupiedConflictForSelection(occupiedSlots, row.date, selection, scheduleRequestContext, pricingConfig.scheduleBuffers, scheduleConflictContext);
+                                  const lockedLabel = occupiedConflict?.conflict.kind === "TRAVEL_BUFFER" ? "Déplacement" : "Déjà payé";
+                                  return (
+                                    <button
+                                      key={selection}
+                                      type="button"
+                                      aria-disabled={Boolean(occupiedConflict)}
+                                      onClick={() => {
+                                        if (occupiedConflict) {
+                                          showScheduleConflictNotice({ occurrence: { date: row.date, time: slot.label, sequence: index + 1, durationMinutes: 120 }, occupied: occupiedConflict.occupied, conflict: occupiedConflict.conflict });
+                                          return;
+                                        }
+                                        updateScheduleRow(row.id, { selection: checked ? "" : selection });
+                                      }}
+                                      className={`min-h-12 rounded-xl border px-2 py-2 text-xs font-black transition ${checked ? "border-[#111B4D] bg-[#111B4D] text-white" : occupiedConflict ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8]" : "border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D]"}`}
+                                    >
+                                      <span className="block">{slot.label}</span>
+                                      {occupiedConflict && <span className="mt-1 block text-[10px] uppercase">{lockedLabel}</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-                            {availableSlots.map((slot) => {
-                              const key = `${day.key}|${slot.key}`;
-                              const checked = form.selectedTimeSlots.includes(key);
-                              const occupiedConflict = findOccupiedConflictForSelection(
-                                occupiedSlots,
-                                form.startDate,
-                                key,
-                                scheduleRequestContext,
-                                pricingConfig.scheduleBuffers,
-                                scheduleConflictContext,
-                              );
-                              const locked = Boolean(occupiedConflict);
-                              const lockedLabel = occupiedConflict?.conflict.kind === "TRAVEL_BUFFER"
-                                ? "Déplacement insuffisant"
-                                : "Déjà payé";
-                              return (
-                                <button
-                                  key={key}
-                                  type="button"
-                                  aria-disabled={locked}
-                                  onClick={() => {
-                                    if (locked && occupiedConflict) {
-                                      showScheduleConflictNotice({
-                                        occurrence: {
-                                          date: form.startDate,
-                                          time: slot.label,
-                                          sequence: 1,
-                                          durationMinutes: 120,
-                                        },
-                                        occupied: occupiedConflict.occupied,
-                                        conflict: occupiedConflict.conflict,
-                                      });
-                                      return;
-                                    }
-                                    update(
-                                      "selectedTimeSlots",
-                                      checked
-                                        ? form.selectedTimeSlots.filter((item) => item !== key)
-                                        : [...form.selectedTimeSlots, key],
-                                    );
-                                  }}
-                                  className={`min-h-11 rounded-lg border px-2 py-2 text-center text-xs font-semibold transition ${
-                                    checked
-                                      ? "border-[#111B4D] bg-[#111B4D] text-white"
-                                      : locked
-                                        ? "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8]"
-                                      : "border-[#E3E8F2] bg-white text-[#111B4D] hover:border-[#DDE6F7] hover:bg-white"
-                                  }`}
-                                  title={locked ? lockedLabel : undefined}
-                                >
-                                  <span className="block">{slot.label}</span>
-                                  {locked && <span className="mt-1 block text-[10px] font-black uppercase tracking-wide text-[#64748B]">{lockedLabel}</span>}
-                                </button>
-                              );
-                            })}
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <Label htmlFor={`session-time-${row.id}`} className="text-xs font-bold text-[#475569]">Heure souhaitée *</Label>
+                              <Input id={`session-time-${row.id}`} type="time" min="08:00" max={row.durationMinutes === 60 ? "21:00" : "20:00"} step={1800} value={row.customStartTime} onChange={(event) => updateScheduleRow(row.id, { customStartTime: event.target.value })} className="mt-1.5 h-11 rounded-xl" />
+                            </div>
+                            <div>
+                              <Label htmlFor={`session-duration-${row.id}`} className="text-xs font-bold text-[#475569]">Durée</Label>
+                              <select id={`session-duration-${row.id}`} value={String(row.durationMinutes)} onChange={(event) => updateScheduleRow(row.id, { durationMinutes: Number(event.target.value) as 60 | 120 })} className={FIELD_CLASS_TALL}>
+                                <option value="60">1h · prix identique</option>
+                                <option value="120">2h standard</option>
+                              </select>
+                            </div>
+                            <p className="text-xs font-semibold leading-5 text-[#64748B] sm:col-span-2">Tranches de 30 minutes entre 08h et 22h. Une séance de 1h garde le même prix officiel.</p>
                           </div>
                         )}
-                      </div>
+
+                        {scheduleRowIssues[index] && <p role="alert" className="mt-3 rounded-xl border border-[#F2D5D5] bg-white px-3 py-2 text-xs font-bold text-red-700">{scheduleRowIssues[index]}</p>}
+                      </article>
                     );
                   })}
                 </div>
-                {form.selectedTimeSlots.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedTimeLabels.map((label) => (
-                      <span key={label} className="rounded-lg bg-white px-3 py-1 text-xs font-semibold text-[#111B4D]">
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {sessionPreview.length > 0 && (
-                  <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="flex flex-col gap-1 min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between">
+
+                <Button type="button" variant="outline" onClick={addScheduleRow} disabled={scheduleRows.length >= 52} className="mt-3 min-h-12 w-full rounded-xl border-dashed border-[#9AAAD0] bg-white text-[#111B4D]">
+                  <CalendarPlus className="mr-2 h-4 w-4" />Ajouter une autre date
+                </Button>
+
+                {packProgress.nextPack && (
+                  <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#E8D7A0] bg-white p-4 sm:flex-row sm:items-center sm:justify-between" data-next-pack-nudge>
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E8D7A0] bg-white text-[#B47C00]"><Sparkles className="h-5 w-5" /></span>
                       <div>
-                        <p className="text-sm font-semibold text-[#111827]">Plan prévisionnel des séances de {selectedSessionDurationLabel}</p>
-                        <p className="text-xs leading-5 text-[#6B7280]">
-                          Le service client confirmera les dates exactes avec {displayName}. Les créneaux répétés suivent la disponibilité du professeur.
+                        <p className="text-sm font-black text-[#111827]">Plus que {formatCount(packProgress.sessionsUntilNextPack, "séance")} pour {packProgress.nextPack.label}</p>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">
+                          {packProgress.nextPack.discountRate > packProgress.pack.discountRate
+                            ? `Passez de ${formatDiscountRate(packProgress.pack.discountRate)} à ${formatDiscountRate(packProgress.nextPack.discountRate)} de réduction pack.`
+                            : "Atteignez cette formule maintenant ; le premier avantage tarifaire arrive ensuite avec le pack 8."}
                         </p>
                       </div>
-                      <span className="text-xs font-semibold text-[#111B4D]">{formatCount(selectedPackSessions, "séance")}, {totalHours}h</span>
                     </div>
-                    <div className="mt-3 grid gap-2 min-[720px]:grid-cols-2 lg:grid-cols-3">
-                      {sessionPreview.map((session) => (
-                        <div key={session.label} className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm">
-                          <p className="font-semibold text-[#111827]">{session.label}</p>
-                          <p className="mt-0.5 text-xs font-semibold text-[#111827]">{session.date}</p>
-                          <p className="mt-0.5 text-xs font-medium text-[#6B7280]">{session.time}</p>
-                          {session.repeated && <p className="mt-1 text-xs text-[#6B7280]">Répété selon disponibilité</p>}
-                        </div>
-                      ))}
-                    </div>
+                    <Button type="button" onClick={() => ensureScheduleRowCount(packProgress.nextPack!.sessions)} className="min-h-11 rounded-xl px-4">Ajouter {packProgress.sessionsUntilNextPack}</Button>
                   </div>
                 )}
               </div>
-
-              <details className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-[#111B4D] marker:hidden">
-                  Un autre horaire ?
-                </summary>
-                <div className="mt-3 border-t border-[#E5E7EB] pt-4">
-                  <p className="text-sm text-[#64748B]">
-                    Indiquez une plage précise. La plateforme vérifie déjà les créneaux payés et le temps de déplacement avant paiement.
-                  </p>
-                  <div className="mt-3 grid gap-3 min-[720px]:grid-cols-[1fr_180px_180px]">
-                  <div>
-                    <Label htmlFor="customDay" className="text-xs font-semibold text-[#64748B]">Jour souhaité</Label>
-                    <select
-                      id="customDay"
-                      value={form.customDay}
-                      onChange={(event) => update("customDay", event.target.value)}
-                      className={FIELD_CLASS_TALL}
-                    >
-                      <option value="">Aucun jour personnalisé</option>
-                      {WEEK_DAYS.map((day) => (
-                        <option key={day.key} value={day.key} disabled={Boolean(selectedStartDayKey && day.key !== selectedStartDayKey)}>
-                          {day.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="customStartTime" className="text-xs font-semibold text-[#64748B]">Heure souhaitée</Label>
-                    <Input
-                      id="customStartTime"
-                      type="time"
-                      min="08:00"
-                      max={normalizedCustomDurationMinutes === 60 ? "21:00" : "20:00"}
-                      step={1800}
-                      value={form.customStartTime}
-                      onChange={(event) => update("customStartTime", event.target.value)}
-                      className="mt-1.5 h-11 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="customDurationMinutes" className="text-xs font-semibold text-[#64748B]">Durée</Label>
-                    <select
-                      id="customDurationMinutes"
-                      value={String(normalizedCustomDurationMinutes)}
-                      onChange={(event) => update("customDurationMinutes", Number(event.target.value))}
-                      className={FIELD_CLASS_TALL}
-                    >
-                      <option value="60">1h · prix identique</option>
-                      <option value="120">2h standard</option>
-                    </select>
-                  </div>
-                  <div className="min-[720px]:col-span-3">
-                    <Label htmlFor="customTimeRequest" className="text-xs font-semibold text-[#64748B]">Précision optionnelle</Label>
-                    <Textarea
-                      id="customTimeRequest"
-                      value={form.customTimeRequest}
-                      onChange={(event) => update("customTimeRequest", event.target.value)}
-                      placeholder="Ex : possible aussi après l'école, préférence samedi matin, éviter les jours d'examen..."
-                      rows={2}
-                      className="mt-1.5"
-                    />
-                  </div>
-                  </div>
-                  {!customTimeValidation.valid && form.customStartTime && (
-                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
-                      {customTimeValidation.reason}
-                    </div>
-                  )}
-                  {usesCustomSchedule && firstScheduleConflict && (
-                    <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-red-700">
-                      <p>{firstScheduleConflict.conflict.kind === "TRAVEL_BUFFER" ? "Déplacement insuffisant sur cet autre horaire." : "Cet autre horaire chevauche un créneau payé."}</p>
-                      <button type="button" onClick={() => showScheduleConflictNotice(firstScheduleConflict)} className="mt-2 text-xs font-black uppercase tracking-wide text-[#111B4D] underline">
-                        Voir l'explication
-                      </button>
-                    </div>
-                  )}
-                  {form.customDay && customTimeRange && (
-                    <div className="mt-3 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                    <div className="grid gap-3 min-[720px]:grid-cols-[1fr_auto] min-[640px]:items-center">
-                      <div>
-                        <p className="text-sm font-semibold text-[#111827]">Demande client prévisualisée</p>
-                        <p className="mt-1 text-sm leading-6 text-[#6B7280]">
-                          {dayLabel(form.customDay)} {customTimeRange}. Cette demande représente une séance de {selectedSessionDurationLabel}; le prix reste identique.
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-right">
-                        <p className="text-xs font-semibold uppercase tracking-normal text-[#6B7280]">Prix moyen</p>
-                        <p className="mt-0.5 whitespace-nowrap text-sm font-semibold text-[#111827]">{formatFCFA(averageSessionPrice)} / séance</p>
-                      </div>
-                    </div>
-                    </div>
-                  )}
-                  <p className="mt-2 text-xs text-[#64748B]">
-                    Les créneaux standards restent des blocs de 2h. Dans “Autre horaire”, 1h ou 2h verrouillent l'agenda, mais ne changent pas le prix officiel affiché.
-                  </p>
-                </div>
-              </details>
 
               <div
                 className={`rounded-lg border p-4 ${
@@ -2428,14 +2199,15 @@ export function ReserverForm({
 
               <div>
                 <Label>Formule *</Label>
-                <div className="mt-2 rounded-lg border border-[#E5E7EB] bg-white p-4">
-                  <p className="text-sm font-semibold text-[#111B4D]">Choisissez votre formule</p>
-                  <p className="mt-1 text-xs font-medium text-[#64748B]">Tous les packs, leurs montants et leurs économies sont visibles immédiatement.</p>
-                  <RadioGroup
-                    value={form.packType}
-                    onValueChange={(v) => update("packType", v as PackType)}
-                    className="mt-4 grid gap-2 border-t border-[#E5E7EB] pt-4 min-[720px]:grid-cols-2"
-                  >
+                <div className="mt-2 rounded-xl border border-[#DDE6F7] bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#DDE6F7] bg-white text-[#111B4D]"><Gift className="h-5 w-5" /></span>
+                    <div>
+                      <p className="text-sm font-black text-[#111827]">{selectedPackLabel}</p>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-[#64748B]">Tous les packs, leurs montants et leurs économies sont visibles immédiatement. La meilleure réduction déjà atteinte est appliquée automatiquement et reste active jusqu'au pack suivant.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2 border-t border-[#E5E7EB] pt-4 min-[720px]:grid-cols-2">
                     {PACK_OPTIONS.map((p) => {
                       const optionPricing = calculateBookingPricing({
                         category: effectiveCourseCategory,
@@ -2448,6 +2220,7 @@ export function ReserverForm({
                         deliveryMode,
                         requiresMaterial: false,
                         packType: p.value,
+                        sessionsCount: p.count,
                         participantsCount,
                         teacherPricePerSession: teacher.pricePerSession,
                         paymentMethod: selectedJekoPaymentMethod,
@@ -2464,29 +2237,29 @@ export function ReserverForm({
                       });
                       const count = optionPricing.numberOfSessions ?? 0;
                       const average = count > 0 ? Math.round(optionPricing.courseAmount / count) : 0;
+                      const isCurrent = automaticPackType === p.value;
+                      const isReached = requestedSessionCount >= p.count;
                       return (
-                        <label
+                        <button
                           key={p.value}
-                          className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors ${
-                            form.packType === p.value ? "border-[#111B4D] bg-white text-[#111B4D]" : "border-[#E3E8F2] bg-white hover:border-[#111B4D]"
-                          }`}
+                          type="button"
+                          onClick={() => !isReached && ensureScheduleRowCount(p.count)}
+                          className={`rounded-xl border p-3 text-left text-sm transition-colors ${isCurrent ? "border-[#111B4D] bg-white" : "border-[#E3E8F2] bg-white hover:border-[#111B4D]"}`}
                         >
-                          <RadioGroupItem value={p.value} />
-                          <span>
-                            <span className="block font-medium text-[#111827]">{p.label}</span>
+                          <span className="flex items-start justify-between gap-2">
+                            <span className="block font-black text-[#111827]">{p.label}</span>
+                            <span className="rounded-lg border border-[#DDE6F7] bg-white px-2 py-1 text-[10px] font-black uppercase text-[#111B4D]">{isCurrent ? "Actif" : isReached ? "Atteint" : `+${p.count - requestedSessionCount}`}</span>
+                          </span>
+                          <span className="mt-1 block">
                             <span className="block text-xs text-[#64748B]">
                               {formatCount(count, "séance")} · {formatFCFA(optionPricing.totalClientPays)} · env. {formatFCFA(average)} / séance
                             </span>
-                            {optionPricing.discountAmount > 0 && (
-                              <span className="mt-0.5 block text-xs font-semibold text-[#111B4D]">
-                                Économie {formatFCFA(optionPricing.discountAmount)} · {formatDiscountRate(optionPricing.discountRate)}
-                              </span>
-                            )}
+                            <span className="mt-0.5 block text-xs font-semibold text-[#111B4D]">Réduction pack {formatDiscountRate(COURSE_PACKS[p.value].discountRate)}{optionPricing.discountAmount > 0 ? ` · économie ${formatFCFA(optionPricing.discountAmount)}` : ""}</span>
                           </span>
-                        </label>
+                        </button>
                       );
                     })}
-                  </RadioGroup>
+                  </div>
                 </div>
               </div>
 
@@ -2609,7 +2382,7 @@ export function ReserverForm({
                   sessionsCount={selectedPackSessions}
                   participantsCount={participantsCount}
                   groupType={form.groupType}
-                  packType={form.packType}
+                  packType={automaticPackType}
                   priceTierKey={pricing.priceTierKey}
                   priceTierLabel={pricing.priceTierLabel}
                   paymentProviderLabel="Jèko"
@@ -2691,7 +2464,7 @@ export function ReserverForm({
                     <SummaryLine icon={<CalendarDays className="h-4 w-4" />} label="Date de première séance" value={selectedStartDateLabel || "Date obligatoire"} />
                     <SummaryLine icon={<Clock3 className="h-4 w-4" />} label="Créneau demandé" value={preferredTimeSummary.join(" ; ") || "Créneau obligatoire"} />
                     <SummaryLine icon={form.courseFormat === "HOME" ? <Home className="h-4 w-4" /> : <Video className="h-4 w-4" />} label="Format" value={form.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
-                    <SummaryLine icon={<Users className="h-4 w-4" />} label="Formule" value={PACK_OPTIONS.find((p) => p.value === form.packType)?.label ?? form.packType} />
+                    <SummaryLine icon={<Users className="h-4 w-4" />} label="Formule" value={selectedPackLabel} />
                   </div>
 
                   {schoolProgramPayload && (
@@ -2714,7 +2487,7 @@ export function ReserverForm({
                   sessionsCount={selectedPackSessions}
                   participantsCount={participantsCount}
                   groupType={form.groupType}
-                  packType={form.packType}
+                  packType={automaticPackType}
                   priceTierKey={pricing.priceTierKey}
                   priceTierLabel={pricing.priceTierLabel}
                   paymentProviderLabel="Jèko"

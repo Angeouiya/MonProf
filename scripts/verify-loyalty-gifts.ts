@@ -66,6 +66,7 @@ const staticChecks = [
   ["src/app/client/cadeaux/gift-road.tsx", /gift-vehicle-bus/],
   ["src/app/client/cadeaux/gift-road.tsx", /function RoadBranch/],
   ["src/app/client/cadeaux/page.tsx", /Ramassez vos cadeaux sur une route infinie/],
+  ["src/app/client/cadeaux/page.tsx", /data-gift-compact-metrics[\s\S]*?grid-cols-3|grid-cols-3[\s\S]*?data-gift-compact-metrics/],
   ["src/components/layouts/client-layout.tsx", /href: "\/client\/cadeaux"/],
   ["src/app/admin/parametres/client.tsx", /Cadeaux & fidélité/],
   ["src/lib/platform-settings.ts", /loyalty_gifts_cycle_enabled: "true"/],

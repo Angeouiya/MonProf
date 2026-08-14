@@ -37,7 +37,7 @@ export default async function ClientGiftsPage() {
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-3 gap-1.5 sm:gap-2" data-gift-compact-metrics>
         <Metric icon={Route} label="Progression" value={`${overview.qualifiedPaymentCount} paiement${overview.qualifiedPaymentCount > 1 ? "s" : ""} validé${overview.qualifiedPaymentCount > 1 ? "s" : ""}`} />
         <Metric icon={Gift} label="Prochain cadeau" value={nextGiftLabel} />
         <Metric icon={TimerReset} label="Cadeau actif" value={overview.activeReward ? `-${overview.activeReward.discountRate} %` : "Aucun pour le moment"} />
@@ -55,7 +55,12 @@ export default async function ClientGiftsPage() {
         </section>
       )}
 
-      <GiftRoad currentStep={overview.currentStep} cycle={overview.cycle} cycleEnabled={overview.config.cycleEnabled} steps={overview.config.steps} />
+      <GiftRoad
+        cycle={overview.cycle}
+        cycleEnabled={overview.config.cycleEnabled}
+        qualifiedPaymentCount={overview.qualifiedPaymentCount}
+        steps={overview.config.steps}
+      />
 
       <section className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
@@ -67,10 +72,12 @@ export default async function ClientGiftsPage() {
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Gift; label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[#DDE6F7] bg-white p-4">
-      <Icon className="h-5 w-5 text-[#111B4D]" />
-      <p className="mt-3 text-xs font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-1 text-lg font-black text-[#111827]">{value}</p>
+    <div className="min-w-0 rounded-lg border border-[#DDE6F7] bg-white px-2 py-2.5 sm:px-3">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-[#111B4D] sm:h-4 sm:w-4" />
+        <p className="min-w-0 truncate text-[9px] font-black uppercase tracking-[0.04em] text-[#64748B] sm:text-[10px]">{label}</p>
+      </div>
+      <p className="mt-1.5 text-[11px] font-black leading-tight text-[#111827] sm:text-sm">{value}</p>
     </div>
   );
 }

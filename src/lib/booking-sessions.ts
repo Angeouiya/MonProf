@@ -109,6 +109,7 @@ export function buildBookingSessionRows({
   selectedTimeSlots,
   fallbackTime,
   fallbackDurationMinutes,
+  scheduleOccurrences,
   courseAmount,
   commissionAmount,
   teacherPayoutAmount,
@@ -121,13 +122,25 @@ export function buildBookingSessionRows({
   selectedTimeSlots: string[];
   fallbackTime?: string | null;
   fallbackDurationMinutes?: number | null;
+  scheduleOccurrences?: Array<{
+    scheduledDate: Date;
+    scheduledTime: string | null;
+    durationMinutes: number;
+  }>;
   courseAmount: number;
   commissionAmount: number;
   teacherPayoutAmount: number;
   transportFee: number;
 }): Prisma.BookingSessionCreateManyInput[] {
-  const count = Math.max(1, Math.round(sessionsCount));
-  const schedule = buildSchedule(startDate, selectedTimeSlots, count, fallbackTime, fallbackDurationMinutes);
+  const explicitSchedule = scheduleOccurrences?.length
+    ? scheduleOccurrences.map((occurrence) => ({
+        scheduledDate: new Date(occurrence.scheduledDate),
+        scheduledTime: occurrence.scheduledTime,
+        durationMinutes: normalizeCustomDurationMinutes(occurrence.durationMinutes),
+      }))
+    : null;
+  const count = explicitSchedule?.length ?? Math.max(1, Math.round(sessionsCount));
+  const schedule = explicitSchedule ?? buildSchedule(startDate, selectedTimeSlots, count, fallbackTime, fallbackDurationMinutes);
   const courseAmounts = distributeAmount(courseAmount, count);
   const commissionAmounts = distributeAmount(commissionAmount, count);
   const teacherCourseAmounts = distributeAmount(teacherPayoutAmount, count);

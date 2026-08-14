@@ -25,8 +25,10 @@ import {
 import {
   buildNeighborhoodAliasMap,
   calculateBookingPricing,
+  packSessionCount,
   parsePricingSnapshot,
   pricingSnapshotToJson,
+  resolveAutomaticPackType,
 } from "@/lib/pricing";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
@@ -43,6 +45,7 @@ import { buildBookingSessionRows } from "@/lib/booking-sessions";
 import {
   formatTimeRangeFromStart,
   normalizeCustomDurationMinutes,
+  scheduleSlotsOverlap,
   validateCustomScheduleTime,
 } from "@/lib/schedule-conflict-core";
 import { createJekoBookingCheckout } from "@/lib/payment-provider";
@@ -83,6 +86,15 @@ const JEKO_PLATFORM_PAYMENT_METHODS: Record<JekoPaymentMethod, PaymentMethod> = 
   mtn: "MTN_MONEY",
   moov: "MOOV_MONEY",
   djamo: "DJAMO",
+};
+
+type ValidatedScheduleOccurrence = {
+  scheduledDate: Date;
+  scheduledTime: string;
+  durationMinutes: 60 | 120;
+  dayKey: string;
+  selection: string | null;
+  customStartTime: string | null;
 };
 
 function normalizeLabel(value: unknown) {
@@ -311,7 +323,8 @@ export async function POST(req: NextRequest) {
     teacherId, subjectName, levelName, objective, schoolProgram, needDescription,
     clientType, courseCategory, schoolSystem, preciseLevel, courseCatalogId,
     courseFormat, groupType, commune, quartier, addressHint, onlineLink,
-    preferredDays, selectedTimeSlots, preferredTime, customStartTime, customDurationMinutes, startDate, packType, message, participantsCount,
+    preferredDays, selectedTimeSlots, preferredTime, customStartTime, customDurationMinutes, startDate, packType,
+    scheduleOccurrences, message, participantsCount,
     clientCreationKey: rawClientCreationKey, paymentMethod: rawPaymentMethod,
     expectedPricing, confirmedPricingFingerprint,
     partnerReferralCode: rawPartnerReferralCode,
@@ -453,13 +466,108 @@ export async function POST(req: NextRequest) {
     }, { status: 400 });
   }
 
-  const normalizedSelectedSlots = parseAvailabilitySelection(selectedTimeSlots);
+  const rawScheduleOccurrences = Array.isArray(scheduleOccurrences) ? scheduleOccurrences : [];
+  const usesExplicitSchedule = rawScheduleOccurrences.length > 0;
+  if (rawScheduleOccurrences.length > 52) {
+    return NextResponse.json({ error: "Une réservation ne peut pas contenir plus de 52 séances." }, { status: 400 });
+  }
+
+  const teacherAvailability = parseAvailability(teacher.availability);
+  const explicitScheduleOccurrences: ValidatedScheduleOccurrence[] = [];
+  if (usesExplicitSchedule) {
+    for (let index = 0; index < rawScheduleOccurrences.length; index += 1) {
+      const rawOccurrence = rawScheduleOccurrences[index];
+      if (!rawOccurrence || typeof rawOccurrence !== "object") {
+        return NextResponse.json({ error: `La séance ${index + 1} est invalide.` }, { status: 400 });
+      }
+
+      const scheduledDate = parseDateInput((rawOccurrence as { date?: unknown }).date);
+      if (!scheduledDate) {
+        return NextResponse.json({ error: `Choisissez une date valide pour la séance ${index + 1}.` }, { status: 400 });
+      }
+      if (scheduledDate < startOfDay(new Date())) {
+        return NextResponse.json({ error: `La date de la séance ${index + 1} ne peut pas être dans le passé.` }, { status: 400 });
+      }
+
+      const selection = parseAvailabilitySelection([(rawOccurrence as { selection?: unknown }).selection])[0] ?? null;
+      const rawCustomStart = typeof (rawOccurrence as { customStartTime?: unknown }).customStartTime === "string"
+        ? (rawOccurrence as { customStartTime: string }).customStartTime.trim()
+        : "";
+      if (Boolean(selection) === Boolean(rawCustomStart)) {
+        return NextResponse.json({
+          error: `Pour la séance ${index + 1}, choisissez soit un créneau disponible, soit un autre horaire.`,
+        }, { status: 400 });
+      }
+
+      const dayKey = dayKeyFromDate(scheduledDate);
+      if (selection) {
+        if (!selection.startsWith(`${dayKey}|`)) {
+          return NextResponse.json({
+            error: `Le créneau de la séance ${index + 1} ne correspond pas au jour de la date choisie.`,
+          }, { status: 400 });
+        }
+        if (unavailableSelections(teacherAvailability, [selection]).length > 0) {
+          return NextResponse.json({
+            error: `Créneau indisponible pour ce professeur : ${availabilitySelectionLabel(selection)}.`,
+          }, { status: 400 });
+        }
+        explicitScheduleOccurrences.push({
+          scheduledDate,
+          scheduledTime: availabilitySelectionLabel(selection),
+          durationMinutes: 120,
+          dayKey,
+          selection,
+          customStartTime: null,
+        });
+        continue;
+      }
+
+      const rawDurationMinutes = (rawOccurrence as { durationMinutes?: unknown }).durationMinutes;
+      const parsedDurationMinutes = Number(rawDurationMinutes);
+      if (parsedDurationMinutes !== 60 && parsedDurationMinutes !== 120) {
+        return NextResponse.json({ error: `Séance ${index + 1} : choisissez une durée de 1h ou 2h.` }, { status: 400 });
+      }
+      const durationMinutes = parsedDurationMinutes as 60 | 120;
+      const customValidation = validateCustomScheduleTime(rawCustomStart, durationMinutes);
+      if (!customValidation.valid) {
+        return NextResponse.json({ error: `Séance ${index + 1} : ${customValidation.reason}` }, { status: 400 });
+      }
+      explicitScheduleOccurrences.push({
+        scheduledDate,
+        scheduledTime: formatTimeRangeFromStart(rawCustomStart, durationMinutes),
+        durationMinutes,
+        dayKey,
+        selection: null,
+        customStartTime: rawCustomStart,
+      });
+    }
+
+    explicitScheduleOccurrences.sort((first, second) => {
+      const dateOrder = first.scheduledDate.getTime() - second.scheduledDate.getTime();
+      return dateOrder || first.scheduledTime.localeCompare(second.scheduledTime);
+    });
+    for (let firstIndex = 0; firstIndex < explicitScheduleOccurrences.length; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < explicitScheduleOccurrences.length; secondIndex += 1) {
+        if (scheduleSlotsOverlap(explicitScheduleOccurrences[firstIndex], explicitScheduleOccurrences[secondIndex])) {
+          return NextResponse.json({
+            error: `Les séances ${firstIndex + 1} et ${secondIndex + 1} se chevauchent. Choisissez des horaires distincts.`,
+          }, { status: 409 });
+        }
+      }
+    }
+  }
+
+  const normalizedSelectedSlots = usesExplicitSchedule
+    ? explicitScheduleOccurrences.flatMap((occurrence) => occurrence.selection ? [occurrence.selection] : [])
+    : parseAvailabilitySelection(selectedTimeSlots);
   const rawCustomTimeRequest = typeof preferredTime === "string"
     ? preferredTime.split(";").find((part) => part.trim().toLowerCase().startsWith("demande client"))?.trim() ?? ""
     : "";
   const normalizedCustomStartTime = typeof customStartTime === "string" ? customStartTime.trim() : "";
   const normalizedCustomDurationMinutes = normalizeCustomDurationMinutes(customDurationMinutes);
-  const hasCustomScheduleRequest = Boolean(rawCustomTimeRequest || normalizedCustomStartTime);
+  const hasCustomScheduleRequest = usesExplicitSchedule
+    ? explicitScheduleOccurrences.some((occurrence) => Boolean(occurrence.customStartTime))
+    : Boolean(rawCustomTimeRequest || normalizedCustomStartTime);
   const customTimeRange = hasCustomScheduleRequest
     ? formatTimeRangeFromStart(normalizedCustomStartTime, normalizedCustomDurationMinutes)
     : "";
@@ -467,28 +575,27 @@ export async function POST(req: NextRequest) {
     ? `Demande client : ${customTimeRange} (${normalizedCustomDurationMinutes === 60 ? "1h" : "2h"}, prix identique)`
     : "";
   const requestedPreferredDays = parsePreferredDays(preferredDays);
-  if (normalizedSelectedSlots.length > 0 && hasCustomScheduleRequest) {
+  if (!usesExplicitSchedule && normalizedSelectedSlots.length > 0 && hasCustomScheduleRequest) {
     return NextResponse.json({
       error: "Choisissez soit un créneau disponible, soit un autre horaire personnalisé, pas les deux.",
     }, { status: 400 });
   }
-  if (normalizedSelectedSlots.length === 0 && !hasCustomScheduleRequest) {
+  if (!usesExplicitSchedule && normalizedSelectedSlots.length === 0 && !hasCustomScheduleRequest) {
     return NextResponse.json({ error: "Sélectionnez un créneau disponible ou indiquez votre horaire souhaité." }, { status: 400 });
   }
-  if (hasCustomScheduleRequest && !normalizedCustomStartTime) {
+  if (!usesExplicitSchedule && hasCustomScheduleRequest && !normalizedCustomStartTime) {
     return NextResponse.json({ error: "Indiquez l'heure de début de votre autre horaire." }, { status: 400 });
   }
-  if (normalizedSelectedSlots.length === 0 && hasCustomScheduleRequest && requestedPreferredDays.length === 0) {
+  if (!usesExplicitSchedule && normalizedSelectedSlots.length === 0 && hasCustomScheduleRequest && requestedPreferredDays.length === 0) {
     return NextResponse.json({ error: "Indiquez le jour souhaité pour votre demande horaire personnalisée." }, { status: 400 });
   }
-  if (hasCustomScheduleRequest) {
+  if (!usesExplicitSchedule && hasCustomScheduleRequest) {
     const customTimeValidation = validateCustomScheduleTime(normalizedCustomStartTime, normalizedCustomDurationMinutes);
     if (!customTimeValidation.valid) {
       return NextResponse.json({ error: customTimeValidation.reason }, { status: 400 });
     }
   }
-  const teacherAvailability = parseAvailability(teacher.availability);
-  const unavailable = unavailableSelections(teacherAvailability, normalizedSelectedSlots);
+  const unavailable = usesExplicitSchedule ? [] : unavailableSelections(teacherAvailability, normalizedSelectedSlots);
   if (unavailable.length > 0) {
     return NextResponse.json({
       error: `Créneau indisponible pour ce professeur : ${availabilitySelectionLabel(unavailable[0])}.`,
@@ -509,28 +616,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Un grand groupe doit contenir au moins 13 participants." }, { status: 400 });
   }
   const normalizedParticipants = normalizedGroupType === "INDIVIDUAL" ? 1 : parsedParticipants;
-  const parsedStartDate = parseDateInput(startDate);
+  const parsedStartDate = usesExplicitSchedule
+    ? explicitScheduleOccurrences[0]?.scheduledDate ?? null
+    : parseDateInput(startDate);
   if (!parsedStartDate) {
     return NextResponse.json({ error: "Veuillez sélectionner la date souhaitée pour commencer les séances." }, { status: 400 });
   }
   if (parsedStartDate < startOfDay(new Date())) {
     return NextResponse.json({ error: "La date souhaitée ne peut pas être dans le passé. Choisissez aujourd'hui ou une date ultérieure." }, { status: 400 });
   }
-  const requestedScheduleDays = Array.from(new Set([
-    ...normalizedSelectedSlots.map((slot) => slot.split("|")[0]),
-    ...requestedPreferredDays,
-  ]));
+  const requestedScheduleDays = Array.from(new Set(usesExplicitSchedule
+    ? explicitScheduleOccurrences.map((occurrence) => occurrence.dayKey)
+    : [
+        ...normalizedSelectedSlots.map((slot) => slot.split("|")[0]),
+        ...requestedPreferredDays,
+      ]));
   const startDateDayKey = dayKeyFromDate(parsedStartDate);
-  if (requestedScheduleDays.length > 0 && !requestedScheduleDays.includes(startDateDayKey)) {
+  if (!usesExplicitSchedule && requestedScheduleDays.length > 0 && !requestedScheduleDays.includes(startDateDayKey)) {
     return NextResponse.json({
       error: `La date souhaitée (${formatDateFr(parsedStartDate)}) ne correspond pas au jour du créneau sélectionné. Choisissez une date du même jour ou modifiez le créneau.`,
     }, { status: 400 });
   }
-  const earliestCourseStartAt = getEarliestCourseStartDateTime({
-    dateInput: parsedStartDate,
-    selectedTimeSlots: normalizedSelectedSlots,
-    customStartTime: hasCustomScheduleRequest ? normalizedCustomStartTime : null,
-  });
+  const earliestCourseStartAt = usesExplicitSchedule
+    ? explicitScheduleOccurrences.reduce<Date | null>((earliest, occurrence) => {
+        const occurrenceStart = getEarliestCourseStartDateTime({
+          dateInput: occurrence.scheduledDate,
+          selectedTimeSlots: occurrence.selection ? [occurrence.selection] : [],
+          customStartTime: occurrence.customStartTime,
+        });
+        return occurrenceStart && (!earliest || occurrenceStart < earliest) ? occurrenceStart : earliest;
+      }, null)
+    : getEarliestCourseStartDateTime({
+        dateInput: parsedStartDate,
+        selectedTimeSlots: normalizedSelectedSlots,
+        customStartTime: hasCustomScheduleRequest ? normalizedCustomStartTime : null,
+      });
   const minimumBookingDeadline = new Date(Date.now() + MIN_BOOKING_NOTICE_HOURS * 60 * 60 * 1000);
   if (!respectsMinimumBookingNotice(earliestCourseStartAt, new Date(), MIN_BOOKING_NOTICE_HOURS)) {
     return NextResponse.json({
@@ -604,6 +724,12 @@ export async function POST(req: NextRequest) {
   const appliedCommissionPercent = Number.isFinite(teacher.commissionRate)
     ? Math.max(0, Math.min(60, Math.round(teacher.commissionRate)))
     : platformSettings.commissionPercent;
+  const requestedSessionsCount = usesExplicitSchedule
+    ? explicitScheduleOccurrences.length
+    : packSessionCount(packType);
+  const effectivePackType = usesExplicitSchedule
+    ? resolveAutomaticPackType(requestedSessionsCount)
+    : packType;
   const pricing = calculateBookingPricing({
     category: canonicalCourseCategory,
     schoolSystem: canonicalSchoolSystem,
@@ -614,7 +740,8 @@ export async function POST(req: NextRequest) {
     objective,
     deliveryMode: courseFormat === "ONLINE" ? "en_ligne" : "domicile",
     requiresMaterial: false,
-    packType,
+    packType: effectivePackType,
+    sessionsCount: requestedSessionsCount,
     participantsCount: normalizedParticipants,
     teacherPricePerSession: teacher.pricePerSession,
     paymentMethod,
@@ -684,7 +811,10 @@ export async function POST(req: NextRequest) {
       : `Cours individuel: ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`;
   const paymentServiceLine = `Frais de service Compétence: ${pricing.paymentServiceFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentServiceFeeLabel}).`;
   const paymentProviderFeeLine = `Frais de paiement Jèko: ${pricing.paymentProviderFeeAmount.toLocaleString("fr-FR")} FCFA (${pricing.paymentProviderFeeLabel}).`;
-  const sessionDurationLabel = hasCustomScheduleRequest && normalizedCustomDurationMinutes === 60
+  const hasOneHourOccurrence = usesExplicitSchedule
+    ? explicitScheduleOccurrences.some((occurrence) => occurrence.durationMinutes === 60)
+    : hasCustomScheduleRequest && normalizedCustomDurationMinutes === 60;
+  const sessionDurationLabel = hasOneHourOccurrence
     ? "1h demandée via autre horaire (prix identique)"
     : "2h";
   const sessionPricingLine = `Formule: ${normalizedSessionsCount} séance(s) de ${sessionDurationLabel}, moyenne ${averageSessionPrice.toLocaleString("fr-FR")} FCFA/séance.`;
@@ -694,13 +824,17 @@ export async function POST(req: NextRequest) {
   const teacherNetAmount = pricing.totalTeacherReceives;
   const teacherCoursePayoutAmount = pricing.teacherPayoutAmount;
   const normalizedPreferredDays = requestedScheduleDays;
-  const normalizedPreferredTime = [
-    ...normalizedSelectedSlots.map(availabilitySelectionLabel),
-    ...(customTimeRequest ? [customTimeRequest] : []),
-  ].join(" ; ");
-  const initialScheduledTime = normalizedSelectedSlots.length > 0
-    ? availabilitySelectionLabel(normalizedSelectedSlots[0])
-    : customTimeRange || null;
+  const normalizedPreferredTime = usesExplicitSchedule
+    ? explicitScheduleOccurrences.map((occurrence) => `${formatDateFr(occurrence.scheduledDate)} · ${occurrence.scheduledTime}`).join(" ; ")
+    : [
+        ...normalizedSelectedSlots.map(availabilitySelectionLabel),
+        ...(customTimeRequest ? [customTimeRequest] : []),
+      ].join(" ; ");
+  const initialScheduledTime = usesExplicitSchedule
+    ? explicitScheduleOccurrences[0]?.scheduledTime ?? null
+    : normalizedSelectedSlots.length > 0
+      ? availabilitySelectionLabel(normalizedSelectedSlots[0])
+      : customTimeRange || null;
   const serializedPricingSnapshot = pricingSnapshotToJson(pricing);
   const bookingPaymentMethod: PaymentMethod = JEKO_PLATFORM_PAYMENT_METHODS[paymentMethod];
   const bookingPaymentProvider: PaymentProvider = "JEKO";
@@ -730,7 +864,7 @@ export async function POST(req: NextRequest) {
     scheduledDate: parsedStartDate,
     scheduledTime: initialScheduledTime,
     sessionsCount: normalizedSessionsCount,
-    packType,
+    packType: effectivePackType,
     message: nullableTrimmedText(message),
     unitPrice,
     totalPrice,
@@ -796,6 +930,13 @@ export async function POST(req: NextRequest) {
     selectedTimeSlots: normalizedSelectedSlots,
     fallbackTime: initialScheduledTime,
     fallbackDurationMinutes: hasCustomScheduleRequest ? normalizedCustomDurationMinutes : 120,
+    scheduleOccurrences: usesExplicitSchedule
+      ? explicitScheduleOccurrences.map((occurrence) => ({
+          scheduledDate: occurrence.scheduledDate,
+          scheduledTime: occurrence.scheduledTime,
+          durationMinutes: occurrence.durationMinutes,
+        }))
+      : undefined,
     courseAmount: pricing.courseAmount,
     commissionAmount,
     teacherPayoutAmount: teacherCoursePayoutAmount,
