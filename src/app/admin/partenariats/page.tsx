@@ -55,7 +55,7 @@ export default async function AdminPartenariatsPage({
   const selectedStatus = isPartnerReferralStatus(params?.status) ? params.status : undefined;
   const where = selectedStatus ? { status: selectedStatus } : {};
 
-  const [items, counts, sums, leads] = await Promise.all([
+  const [items, counts, sums, leads, partnerProfilesCount, activeAttributions] = await Promise.all([
     db.partnerReferral.findMany({
       where,
       orderBy: [{ status: "asc" }, { declaredAt: "desc" }],
@@ -94,6 +94,17 @@ export default async function AdminPartenariatsPage({
       orderBy: [{ status: "asc" }, { declaredAt: "desc" }],
       take: 40,
     }),
+    db.partnerProfile.count({ where: { status: "ACTIVE" } }),
+    db.clientPartnerAttribution.findMany({
+      where: { status: { in: ["PENDING", "ACTIVE"] } },
+      include: {
+        client: { select: { id: true, name: true, phone: true, email: true } },
+        partnerProfile: true,
+        _count: { select: { referrals: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 60,
+    }),
   ]);
 
   const countsByStatus = new Map(counts.map((item) => [item.status, item]));
@@ -106,7 +117,7 @@ export default async function AdminPartenariatsPage({
     <div className="space-y-4">
       <PageHeader
         title="Partenariats"
-        description="Suivi des apporteurs d’affaires : déclaration pendant la promotion, paiement Jèko confirmé, réservation validée, commission de 10 % sur le montant cours hors transport/frais."
+        description="Attribution client sur six mois : 10 % au partenaire sur chaque paiement Jèko éligible, 10 % au client sur son premier cours, sans réduire le professeur."
         rootPage
       >
         <Button asChild variant="outline">
@@ -114,8 +125,9 @@ export default async function AdminPartenariatsPage({
         </Button>
       </PageHeader>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={Handshake} label="Déclarations" value={`${sums._count._all}`} detail={`${formatDate(startsAt)} → ${formatDate(endsAt)} · ${leads.length} lien(s)`} />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <MetricCard icon={Handshake} label="Partenaires actifs" value={`${partnerProfilesCount}`} detail={`${activeAttributions.length} attribution(s) client`} />
+        <MetricCard icon={Handshake} label="Paiements attribués" value={`${sums._count._all}`} detail={`Campagne ${formatDate(startsAt)} → ${formatDate(endsAt)}`} />
         <MetricCard icon={WalletCards} label="Commissions totales" value={formatFCFA(sums._sum.commissionAmount ?? 0)} detail="10 % du montant cours uniquement" />
         <MetricCard icon={Clock3} label="À payer" value={formatFCFA(payableAmount)} detail={`${countsByStatus.get("PAYABLE")?._count._all ?? 0} dossier(s)`} />
         <MetricCard icon={CheckCircle2} label="Déjà payé" value={formatFCFA(paidAmount)} detail={`${countsByStatus.get("PAID")?._count._all ?? 0} dépôt(s)`} />
@@ -123,9 +135,35 @@ export default async function AdminPartenariatsPage({
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Clients rattachés pendant six mois</CardTitle>
+          <p className="text-sm font-medium leading-6 text-[#64748B]">Une ligne par client. Tous ses paiements éligibles créent ensuite une commission dans le lot du même numéro partenaire.</p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {activeAttributions.map((attribution) => (
+              <div key={attribution.id} className="rounded-2xl border border-[#E3E8F2] bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-[#111827]">{attribution.client.name}</p>
+                    <p className="mt-1 text-xs font-semibold text-[#64748B]">{attribution.client.phone || attribution.client.email || "Contact à compléter"}</p>
+                  </div>
+                  <Badge variant="outline" className={attribution.status === "ACTIVE" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}>{attribution.status === "ACTIVE" ? "6 mois actifs" : "Premier paiement attendu"}</Badge>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <InfoBlock label="Partenaire" value={attribution.partnerProfile.promoterName} detail={attribution.partnerProfile.promoterPhone} />
+                  <InfoBlock label="Paiements liés" value={`${attribution._count.referrals}`} detail={attribution.endsAt ? `Jusqu'au ${formatDate(attribution.endsAt)}` : "Démarre au paiement Jèko"} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Pré-déclarations apporteurs</CardTitle>
           <p className="text-sm font-medium leading-6 text-[#64748B]">
-            Ces dossiers viennent du formulaire mobile apporteur. Ils restent en attente tant qu’un client ne réserve pas avec le lien généré.
+            Ces dossiers viennent du formulaire mobile. Le code partenaire affiché au client est permanent ; l’attribution de six mois démarre au premier paiement Jèko confirmé.
           </p>
         </CardHeader>
         <CardContent>

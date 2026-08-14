@@ -139,6 +139,31 @@ export async function createPartnerReferralLead(input: {
     declaredAt: now,
   };
 
+  let profile = await db.partnerProfile.findUnique({ where: { promoterPhone } });
+  if (profile && profile.status !== "ACTIVE") {
+    return { ok: false as const, error: "Ce profil partenaire n'est pas actif. Contactez Compétence.CI." };
+  }
+
+  if (!profile) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        profile = await db.partnerProfile.create({
+          data: {
+            code: generatePartnerReferralCode(),
+            promoterName,
+            promoterPhone,
+            promoterEmail: normalizePartnerReferralEmail(input.promoterEmail),
+          },
+        });
+        break;
+      } catch (error) {
+        if (isUniqueConstraintError(error)) continue;
+        throw error;
+      }
+    }
+  }
+  if (!profile) return { ok: false as const, error: "Création du profil partenaire impossible. Réessayez." };
+
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = generatePartnerReferralCode();
     try {
@@ -148,7 +173,7 @@ export async function createPartnerReferralLead(input: {
           code,
         },
       });
-      return { ok: true as const, lead };
+      return { ok: true as const, lead, profile };
     } catch (error) {
       if (isUniqueConstraintError(error)) continue;
       throw error;
@@ -306,7 +331,7 @@ export async function markPartnerReferralBookingConfirmedInTransaction(
 }
 
 export async function expirePartnerReferrals(now = new Date()) {
-  const [referrals, leads] = await db.$transaction([
+  const [referrals, leads, attributions, rewards] = await db.$transaction([
     db.partnerReferral.updateMany({
       where: {
         status: { in: ["DECLARED", "PAYMENT_CONFIRMED"] },
@@ -327,8 +352,16 @@ export async function expirePartnerReferrals(now = new Date()) {
         expiredAt: now,
       },
     }),
+    db.clientPartnerAttribution.updateMany({
+      where: { status: "ACTIVE", endsAt: { lt: now } },
+      data: { status: "EXPIRED" },
+    }),
+    db.clientReward.updateMany({
+      where: { status: { in: ["AVAILABLE", "RESERVED"] }, expiresAt: { lt: now } },
+      data: { status: "EXPIRED" },
+    }),
   ]);
-  return referrals.count + leads.count;
+  return referrals.count + leads.count + attributions.count + rewards.count;
 }
 
 function parsePromotionDate(value: string | undefined, fallback: string) {

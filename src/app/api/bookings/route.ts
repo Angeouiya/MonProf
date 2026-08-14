@@ -61,12 +61,12 @@ import {
 } from "@/lib/pricing-confirmation";
 import { bookingDraftMatchesExpected } from "@/lib/booking-draft-consistency";
 import { hasVerifiedClientPayment } from "@/lib/payment-security";
+import { calculatePartnerReferralCommission } from "@/lib/partner-referrals";
 import {
-  attachPartnerReferralLeadReferralInTransaction,
-  buildPartnerReferralCreateData,
-  claimPartnerReferralLeadInTransaction,
-  getActivePartnerReferralLeadSource,
-} from "@/lib/partner-referrals";
+  addMonths,
+  attachPromotionToBookingInTransaction,
+  resolveClientPromotionBenefits,
+} from "@/lib/loyalty-program";
 
 const COURSE_FORMATS: CourseFormat[] = ["HOME", "ONLINE"];
 const GROUP_TYPES: GroupType[] = ["INDIVIDUAL", "SMALL_GROUP"];
@@ -216,6 +216,9 @@ function publicBookingPayload(b: any) {
     transportRuleLabel: pricingSnapshot?.transportRuleLabel ?? null,
     materialFee: pricingSnapshot?.materialFee ?? b.materialFee,
     discountAmount: pricingSnapshot?.discountAmount ?? b.discountAmount,
+    appliedDiscountKind: pricingSnapshot?.appliedDiscountKind ?? "NONE",
+    partnerDiscountAmount: pricingSnapshot?.partnerDiscountAmount ?? b.partnerDiscountAmount ?? 0,
+    rewardDiscountAmount: pricingSnapshot?.rewardDiscountAmount ?? b.rewardDiscountAmount ?? 0,
     paymentServiceFeeRate: pricingSnapshot?.paymentServiceFeeRate ?? b.paymentServiceFeeRate ?? 0,
     paymentServiceFeeAmount: pricingSnapshot?.paymentServiceFeeAmount ?? b.paymentServiceFeeAmount ?? 0,
     paymentServiceFeeLabel: pricingSnapshot?.paymentServiceFeeLabel ?? b.paymentServiceFeeLabel ?? null,
@@ -530,6 +533,31 @@ export async function POST(req: NextRequest) {
       .map((value) => value?.trim())
       .filter((value): value is string => Boolean(value)),
   ));
+  const existingDraftForPromotion = await db.booking.findUnique({
+    where: { clientCreationKey },
+    select: { id: true, clientId: true },
+  });
+  if (existingDraftForPromotion && existingDraftForPromotion.clientId !== userId) {
+    return NextResponse.json({ error: "Cette clé de création appartient à un autre compte." }, { status: 409 });
+  }
+  let promotionBenefits;
+  try {
+    promotionBenefits = await resolveClientPromotionBenefits({
+      clientId: userId,
+      referralCode: rawPartnerReferralCode,
+      referralName: rawPartnerReferralName,
+      referralPhone: rawPartnerReferralPhone,
+      bookingId: existingDraftForPromotion?.id ?? null,
+    });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "PARTNER_NOT_VERIFIED";
+    return NextResponse.json({
+      code,
+      error: code === "PARTNER_ATTRIBUTION_LOCKED"
+        ? "Ce compte est déjà rattaché à un partenaire pendant sa période de six mois."
+        : "Partenaire non vérifié. Vérifiez son code, son nom et son numéro avant de continuer.",
+    }, { status: 409 });
+  }
   const [platformSettings, clientLocation, grandAbidjanCommunes, neighborhoodAliasRows] = await Promise.all([
     getPlatformRuntimeSettings(),
     courseFormat === "HOME" && typeof commune === "string" && commune.trim()
@@ -588,6 +616,10 @@ export async function POST(req: NextRequest) {
     transportFeeAmounts: platformSettings.transportFees,
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((item) => item.name),
     clientCommuneTransportFeeOverride: clientLocation?.transportFeeOverride,
+    partnerDiscountPercent: promotionBenefits.partnerDiscountPercent,
+    partnerCommissionPercent: promotionBenefits.partnerCommissionPercent,
+    rewardDiscountPercent: promotionBenefits.reward?.discountRate ?? 0,
+    minimumPlatformMarginPercent: promotionBenefits.minimumMarginPercent,
     neighborhoodAliases: buildNeighborhoodAliasMap(
       neighborhoodAliasRows.map((quarter) => ({
         id: quarter.id,
@@ -621,8 +653,13 @@ export async function POST(req: NextRequest) {
   const averageSessionPrice = normalizedSessionsCount > 0 ? Math.round(pricing.courseAmount / normalizedSessionsCount) : 0;
   const extraParticipantCount = Math.max(0, normalizedParticipants - 1);
   const groupSurchargeAmount = Math.max(0, pricing.rawCourseAmount - basePrice);
+  const discountLabel = pricing.appliedDiscountKind === "PARTNER"
+    ? "réduction partenaire"
+    : pricing.appliedDiscountKind === "GIFT"
+      ? "cadeau fidélité"
+      : "remise pack";
   const packDiscountLine = pricing.discountAmount > 0
-    ? ` - remise pack ${pricing.discountAmount.toLocaleString("fr-FR")} FCFA`
+    ? ` - ${discountLabel} ${pricing.discountAmount.toLocaleString("fr-FR")} FCFA`
     : "";
   const groupPricingLine = normalizedGroupType === "SMALL_GROUP"
     ? `Petit groupe: ${normalizedParticipants} participants, base brute ${basePrice.toLocaleString("fr-FR")} FCFA + majoration groupe brute ${groupSurchargeAmount.toLocaleString("fr-FR")} FCFA (${extraParticipantCount} x 50 % de la base)${packDiscountLine} = ${pricing.courseAmount.toLocaleString("fr-FR")} FCFA hors déplacement.`
@@ -691,6 +728,12 @@ export async function POST(req: NextRequest) {
     transportFeeKey: pricing.transportFeeKey,
     materialFee: pricing.materialFee,
     discountAmount: pricing.discountAmount,
+    partnerAttributionId: promotionBenefits.attribution?.id ?? null,
+    partnerDiscountRate: Math.round(pricing.partnerDiscountRate * 100),
+    partnerDiscountAmount: pricing.partnerDiscountAmount,
+    rewardDiscountRate: Math.round(pricing.rewardDiscountRate * 100),
+    rewardDiscountAmount: pricing.rewardDiscountAmount,
+    partnerCommissionAmount: pricing.partnerCommissionAmount,
     paymentServiceFeeRate: pricing.paymentServiceFeeRate,
     paymentServiceFeeAmount: pricing.paymentServiceFeeAmount,
     paymentServiceFeeLabel: pricing.paymentServiceFeeLabel,
@@ -714,25 +757,7 @@ export async function POST(req: NextRequest) {
     ? `Créneaux demandés: ${normalizedPreferredTime}.`
     : "Créneaux demandés: à confirmer avec le client.";
   const now = new Date();
-  const partnerReferralLeadSource = rawPartnerReferralCode
-    ? await getActivePartnerReferralLeadSource(rawPartnerReferralCode, now)
-    : null;
-  if (rawPartnerReferralCode && !partnerReferralLeadSource) {
-    return NextResponse.json({ error: "Lien apporteur invalide, déjà utilisé ou expiré. Demandez un nouveau lien à l'apporteur." }, { status: 409 });
-  }
   const startDateLine = `Date souhaitée: ${formatDateFr(parsedStartDate)}.`;
-  const partnerReferralCreateData = buildPartnerReferralCreateData({
-    booking: {
-      id: "",
-      clientId: userId,
-      teacherId,
-      courseAmount: pricing.courseAmount,
-    },
-    promoterName: partnerReferralLeadSource?.promoterName ?? rawPartnerReferralName,
-    promoterPhone: partnerReferralLeadSource?.promoterPhone ?? rawPartnerReferralPhone,
-    promotionCode: partnerReferralLeadSource?.code ?? rawPartnerReferralCode,
-    now,
-  });
 
   let booking = await db.booking.findUnique({ where: { clientCreationKey } });
   let bookingCreatedNow = false;
@@ -808,27 +833,39 @@ export async function POST(req: NextRequest) {
     await tx.bookingSession.createMany({
       data: bookingSessionRows.map((row) => ({ ...row, bookingId: createdBooking.id })),
     });
-    if (partnerReferralCreateData) {
-      if (partnerReferralLeadSource) {
-        const claimed = await claimPartnerReferralLeadInTransaction(tx, {
-          leadId: partnerReferralLeadSource.id,
-          bookingId: createdBooking.id,
-          now,
-        });
-        if (!claimed) throw new Error("PARTNER_REFERRAL_LEAD_ALREADY_USED");
-      }
-      const createdReferral = await tx.partnerReferral.create({
+    const resolvedAttributionId = await attachPromotionToBookingInTransaction(tx, {
+      clientId: userId,
+      bookingId: createdBooking.id,
+      benefits: promotionBenefits,
+      now,
+    });
+    if (resolvedAttributionId && createdBooking.partnerAttributionId !== resolvedAttributionId) {
+      await tx.booking.update({
+        where: { id: createdBooking.id },
+        data: { partnerAttributionId: resolvedAttributionId },
+      });
+    }
+    if (promotionBenefits.attribution && resolvedAttributionId) {
+      await tx.partnerReferral.create({
         data: {
-          ...partnerReferralCreateData,
           bookingId: createdBooking.id,
+          clientId: userId,
+          teacherId,
+          promoterName: promotionBenefits.attribution.promoterName,
+          promoterPhone: promotionBenefits.attribution.promoterPhone,
+          promotionCode: promotionBenefits.attribution.code,
+          promotionStartsAt: promotionBenefits.attribution.startsAt ?? now,
+          promotionEndsAt: promotionBenefits.attribution.endsAt ?? addMonths(now, 6),
+          declaredAt: now,
+          courseAmount: pricing.rawCourseAmount,
+          eligibleCourseAmount: pricing.rawCourseAmount,
+          clientDiscountAmount: pricing.discountAmount,
+          commissionRate: 10,
+          commissionAmount: calculatePartnerReferralCommission(pricing.rawCourseAmount),
+          partnerProfileId: promotionBenefits.attribution.profileId,
+          attributionId: resolvedAttributionId,
         },
       });
-      if (partnerReferralLeadSource) {
-        await attachPartnerReferralLeadReferralInTransaction(tx, {
-          leadId: partnerReferralLeadSource.id,
-          referralId: createdReferral.id,
-        });
-      }
     }
     await tx.notification.create({
       data: {
@@ -869,8 +906,11 @@ export async function POST(req: NextRequest) {
       });
       bookingCreatedNow = true;
     } catch (error) {
-      if (error instanceof Error && error.message === "PARTNER_REFERRAL_LEAD_ALREADY_USED") {
-        return NextResponse.json({ error: "Ce lien apporteur vient d'être utilisé. Demandez un nouveau lien à l'apporteur." }, { status: 409 });
+      if (error instanceof Error && ["PARTNER_DISCOUNT_ALREADY_RESERVED", "LOYALTY_REWARD_ALREADY_RESERVED"].includes(error.message)) {
+        return NextResponse.json({
+          code: error.message,
+          error: "Cet avantage vient d'être rattaché à un autre brouillon. Ouvrez vos paiements ou recommencez avec le prix actualisé.",
+        }, { status: 409 });
       }
       if (!isUniqueConstraintError(error)) throw error;
       booking = await db.booking.findUnique({ where: { clientCreationKey } });

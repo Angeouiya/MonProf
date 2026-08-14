@@ -82,7 +82,7 @@ export function PartnerInterestForm() {
           <div>
             <p className="text-sm font-semibold text-[#111827]">Déclaration apporteur mobile</p>
             <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-              Remplissez, copiez le lien et envoyez-le au client. Le paiement reste contrôlé par Jèko avant toute commission.
+              Créez votre code permanent, copiez le lien et envoyez-le. Jèko reste la seule preuve de paiement acceptée.
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export function PartnerInterestForm() {
             </Button>
           </div>
           <p className="text-xs font-medium leading-5 text-[#64748B]">
-            Le client doit réserver avec ce lien avant la fin de la promotion. Sans paiement Jèko confirmé, aucune commission n’est créée.
+            Le client reçoit 10 % sur son premier cours. Vous recevez 10 % sur chacun de ses paiements éligibles pendant six mois. Sans confirmation serveur Jèko, aucune commission n’est créée.
           </p>
         </div>
       )}

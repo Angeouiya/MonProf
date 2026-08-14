@@ -264,12 +264,14 @@ record(
 record(
   "Client navigation keeps core destinations compact while exposing partnership",
   countMatches(primaryNavSource, /href:/g) === 1
-    && countMatches(desktopNavSource, /href:/g) === 3
+    && countMatches(desktopNavSource, /href:/g) === 4
     && countMatches(partnershipNavSource, /href:/g) === 1
     && countMatches(accountNavSource, /href:/g) === 2
     && /label:\s*"Mon compte"/.test(accountNavSource)
     && /label:\s*"Partenariat"/.test(partnershipNavSource)
     && /href:\s*"\/client\/partenariat"/.test(partnershipNavSource)
+    && /label:\s*"Cadeaux"/.test(desktopNavSource)
+    && /href:\s*"\/client\/cadeaux"/.test(desktopNavSource)
     && !/label:\s*"Paramètres"/.test(accountNavSource),
 );
 

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   ArrowUpRight, BadgePercent, BellRing, Building2, CalendarClock, CheckCircle2, Clock3, Database,
   Loader2, Mail, MapPinned, Route, Save, Settings, ShieldCheck, Smartphone,
-  UsersRound, WalletCards, XCircle,
+  UsersRound, WalletCards, XCircle, Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -107,6 +107,36 @@ export function ParametresClient({
             <p className="col-span-2 text-xs leading-5 text-[#64748B]">Cette répartition est interne. Le client voit uniquement le prix total à payer.</p>
           </div>
         </div>
+      </SettingSection>
+
+      <SettingSection icon={Gift} title="Cadeaux & fidélité" description="Parcours automatique après paiement Jèko vérifié. Les taux restent compris entre 8 et 15 %, avec une validité de 7 à 14 jours.">
+        <div className="grid gap-4 md:grid-cols-3">
+          <SelectField label="Programme cadeaux" value={values.loyalty_gifts_enabled ?? "true"} onChange={(value) => set("loyalty_gifts_enabled", value)} />
+          <SelectField label="Route cyclique après le 7ᵉ paiement" value={values.loyalty_gifts_cycle_enabled ?? "false"} onChange={(value) => set("loyalty_gifts_cycle_enabled", value)} />
+          <SettingField icon={ShieldCheck} label="Marge Compétence minimale (%)">
+            <Input type="number" min={0} max={20} value={values.loyalty_minimum_margin_percent ?? "5"} onChange={(event) => set("loyalty_minimum_margin_percent", event.target.value)} />
+          </SettingField>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {[2, 3, 4, 5, 6, 7].map((milestone) => (
+            <div key={milestone} className="rounded-xl border border-[#DDE6F7] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#111B4D]">Après le {milestone}ᵉ paiement</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="text-xs font-semibold text-[#64748B]">
+                  Réduction %
+                  <Input className="mt-1" type="number" min={8} max={15} value={values[`loyalty_gift_${milestone}_rate`] ?? "8"} onChange={(event) => set(`loyalty_gift_${milestone}_rate`, event.target.value)} />
+                </label>
+                <label className="text-xs font-semibold text-[#64748B]">
+                  Validité jours
+                  <Input className="mt-1" type="number" min={7} max={14} value={values[`loyalty_gift_${milestone}_days`] ?? "7"} onChange={(event) => set(`loyalty_gift_${milestone}_days`, event.target.value)} />
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 rounded-lg border border-[#E8D7A0] bg-[#FFF9E8] px-4 py-3 text-xs font-semibold leading-5 text-[#6B4F00]">
+          Un seul avantage est appliqué par paiement. Le moteur conserve automatiquement le meilleur avantage autorisé, la commission partenaire et au moins la marge minimale configurée ; le professeur reçoit toujours son montant officiel.
+        </p>
       </SettingSection>
 
       <SettingSection icon={CalendarClock} title="Règles de réservation" description="Règles métier obligatoires appliquées de la simulation client jusqu'à la validation serveur.">

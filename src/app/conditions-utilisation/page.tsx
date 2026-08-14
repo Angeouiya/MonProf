@@ -131,13 +131,22 @@ const sections: LegalSection[] = [
   {
     title: "Programme partenariat et apporteurs d'affaires",
     body: [
-      "Compétence organise ou active des promotions temporaires permettant à une personne ayant apporté un client de recevoir une commission commerciale. Chaque promotion est limitée à la période officielle affichée par la plateforme ou validée par Compétence, généralement six mois ou un an selon la campagne.",
-      "Pour qu'une déclaration soit valable, le client doit indiquer le nom de l'apporteur pendant la réservation, avant le paiement, ou réserver à partir d'un lien apporteur généré pendant la période promotionnelle. Une personne qui n'a pas été déclarée pendant la période promotionnelle ne peut pas réclamer une commission après la fin de la promotion.",
-      "La commission de lancement est fixée à 10 % du montant du cours ou de la formation effectivement confirmé. Les frais de transport, les frais de service Compétence, les frais techniques Jèko, les remboursements, pénalités et montants non liés au cours sont exclus de cette base.",
+      "Compétence peut activer, suspendre, prolonger ou arrêter une campagne partenaire. Lorsqu'un code partenaire valide est vérifié avant le premier paiement, le compte client est attribué à ce partenaire pendant six mois à compter du premier paiement Jèko confirmé par le serveur.",
+      "Le client bénéficie de 10 % de réduction sur le montant éligible de son premier cours. Le partenaire reçoit une commission de 10 % sur le montant éligible de chaque cours payé par ce client pendant l'attribution de six mois. Ces avantages sont financés sur la marge Compétence et ne diminuent jamais la part officielle du professeur.",
+      "Les réductions et commissions excluent le transport, le matériel, les frais de service Compétence, les frais techniques Jèko, les remboursements, pénalités et tout montant hors cours. La plateforme calcule et vérifie la base côté serveur avant l'ouverture du paiement.",
       "La déclaration ne devient pas automatiquement payable. Elle devient payable uniquement lorsque le paiement a été confirmé côté serveur par Jèko et lorsque la réservation a été validée par Compétence. Un brouillon, une promesse de paiement, une capture d'écran ou une réclamation verbale ne crée aucun droit au paiement.",
       "L'apporteur fournit son identité, une pièce justificative, une photo ou un numéro de dépôt lorsque Compétence les demande afin de vérifier la cohérence de la déclaration avant tout versement. Compétence se réserve le droit de refuser, différer ou annuler une commission en cas de doute, doublon, fraude, identité incohérente, déclaration tardive ou litige.",
-      "Une pré-déclaration apporteur ou un lien de recommandation ne constitue pas à lui seul une commission acquise. La déclaration valable reste active jusqu'à la fin officielle de la période promotionnelle. Si la promotion prend fin alors qu'aucune déclaration valable n'a été enregistrée pour un client, aucune commission ne sera due. Les déclarations enregistrées mais non confirmées par un paiement et une réservation validée pendant la période expirent automatiquement à la fin de la promotion.",
+      "Un code ou lien ne constitue pas à lui seul une commission acquise. Une attribution ne peut pas être changée vers un autre partenaire pendant sa période active, sauf décision justifiée de Compétence en cas d'erreur, fraude ou litige. Après expiration, aucune commission nouvelle n'est due au titre de cette attribution.",
       "Le suivi des partenariats est effectué dans le dashboard administrateur. Les paiements aux apporteurs sont des dépôts manuels ou contrôlés par Compétence et ne constituent ni un salaire, ni un emploi, ni une relation d'agence permanente.",
+    ],
+  },
+  {
+    title: "Programme Cadeaux Compétence",
+    body: [
+      "Compétence peut attribuer automatiquement un cadeau après certains paiements Jèko confirmés. Le parcours initial comprend des avantages du deuxième au septième paiement, avec des réductions comprises entre 8 % et 15 % et une durée d'utilisation comprise entre 7 et 14 jours.",
+      "Le cadeau disponible est appliqué automatiquement au prochain cours éligible avant paiement. Un seul avantage s'applique par paiement ; les cadeaux ne se cumulent pas entre eux ni avec une autre réduction lorsque ce cumul dépasse la marge disponible.",
+      "La réduction porte uniquement sur le cours. Le transport, le matériel, les frais de service Compétence et les frais Jèko restent dus séparément. Le professeur conserve toujours sa part officielle calculée sur le cours avant avantage client.",
+      "Compétence conserve une marge minimale, peut désactiver ou modifier les étapes futures du programme et peut annuler un cadeau obtenu par fraude, double paiement, remboursement, annulation abusive ou erreur technique. Un cadeau expiré n'est ni remboursable ni convertible en espèces.",
     ],
   },
   {

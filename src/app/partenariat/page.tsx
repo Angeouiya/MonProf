@@ -18,10 +18,10 @@ export default function PartenariatPage() {
               <ShieldCheck className="h-4 w-4" /> Programme lancement
             </p>
             <h1 className="mt-5 max-w-2xl text-4xl font-black tracking-tight text-[#111827] sm:text-5xl">
-              Apportez un client. Gagnez {PARTNER_REFERRAL_RATE_PERCENT} %.
+              Votre client gagne 10 %. Vous gagnez {PARTNER_REFERRAL_RATE_PERCENT} % pendant six mois.
             </h1>
             <p className="mt-4 max-w-xl text-base font-medium leading-7 text-[#64748B]">
-              Pendant la période de promotion, toute personne déclarée par un client au moment de la réservation peut recevoir une commission sur le montant du cours réellement confirmé. La déclaration reste valable jusqu’à la fin officielle de la campagne.
+              Un code permanent suffit. Après le premier paiement Jèko confirmé, chaque paiement éligible de ce client ajoute votre commission pendant six mois, sans réduire le professeur.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="min-h-12 rounded-2xl">
@@ -34,9 +34,9 @@ export default function PartenariatPage() {
           </div>
 
           <div className="grid gap-3">
-            <RuleCard icon={WalletCards} title="Commission nette et lisible" text={`${PARTNER_REFERRAL_RATE_PERCENT} % du montant cours. Transport, frais de service et frais Jèko sont exclus.`} />
+            <RuleCard icon={WalletCards} title="Deux avantages, une règle claire" text={`10 % sur le premier cours du client et ${PARTNER_REFERRAL_RATE_PERCENT} % pour vous sur chaque cours éligible. Transport et frais sont exclus.`} />
             <RuleCard icon={CheckCircle2} title="Paiement uniquement après confirmation" text="La commission devient payable seulement si Jèko confirme le paiement et si la réservation est validée." />
-            <RuleCard icon={TimerReset} title="Fenêtre promotionnelle" text={`Déclarations valables du ${formatDate(startsAt)} au ${formatDate(endsAt)}, que la campagne dure 6 mois ou 1 an. Après la fin, aucune déclaration oubliée ne peut être ajoutée.`} />
+            <RuleCard icon={TimerReset} title="Six mois par client" text={`Codes créés pendant la campagne du ${formatDate(startsAt)} au ${formatDate(endsAt)}. L'attribution individuelle démarre au premier paiement confirmé.`} />
           </div>
         </div>
       </section>
@@ -48,9 +48,10 @@ export default function PartenariatPage() {
             <div className="space-y-3">
               {[
                 "Vous recommandez Compétence.CI à une personne.",
-                "Vous créez un lien apporteur mobile et vous l’envoyez au client.",
-                "Le client réserve avec ce lien ou vous déclare dans le formulaire avant de payer.",
-                "Le serveur confirme le paiement Jèko et l’équipe valide la réservation.",
+                "Vous créez votre code partenaire permanent sur mobile ou ordinateur.",
+                "Le client vérifie le code avant de payer et reçoit immédiatement 10 % sur le cours.",
+                "Le serveur Jèko confirme : votre période de six mois démarre.",
+                "Chaque nouveau paiement éligible crée automatiquement votre commission de 10 %.",
                 "Vous contactez Compétence.CI avec votre pièce et votre numéro de dépôt.",
                 `L’administration verse ${formatFCFA(2_000)} sur un cours de ${formatFCFA(20_000)}.`,
               ].map((item, index) => (
@@ -65,7 +66,7 @@ export default function PartenariatPage() {
           <div id="contact-partenaire" className="scroll-mt-24">
             <PartnerInterestForm />
             <p className="mt-3 text-xs font-medium leading-5 text-[#64748B]">
-              Ce formulaire ne crée pas une commission à lui seul. La preuve principale reste la déclaration faite par le client pendant sa réservation, avant la fin de la promotion.
+              Le code seul ne crée aucune commission. La preuve principale reste le paiement Jèko confirmé côté serveur et rattaché au client.
             </p>
           </div>
         </div>

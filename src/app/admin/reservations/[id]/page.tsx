@@ -113,6 +113,11 @@ export default async function ReservationDetailPage({ params }: { params: Promis
   const displayTransportFee = pricingSnapshot?.transportFee ?? booking.transportFee;
   const displayMaterialFee = pricingSnapshot?.materialFee ?? booking.materialFee;
   const displayDiscountAmount = pricingSnapshot?.discountAmount ?? booking.discountAmount;
+  const displayPartnerDiscountAmount = pricingSnapshot?.partnerDiscountAmount ?? booking.partnerDiscountAmount;
+  const displayRewardDiscountAmount = pricingSnapshot?.rewardDiscountAmount ?? booking.rewardDiscountAmount;
+  const displayPartnerCommissionAmount = pricingSnapshot?.partnerCommissionAmount ?? booking.partnerCommissionAmount;
+  const displayPlatformNetAfterPartner = pricingSnapshot?.platformNetAfterPartnerAmount
+    ?? Math.max(0, booking.commissionAmount - booking.partnerCommissionAmount);
   const displayPaymentServiceFeeAmount = pricingSnapshot?.paymentServiceFeeAmount ?? booking.paymentServiceFeeAmount;
   const displayPaymentServiceFeeLabel = pricingSnapshot?.paymentServiceFeeLabel ?? booking.paymentServiceFeeLabel;
   const displayPaymentProviderFeeAmount = pricingSnapshot?.paymentProviderFeeAmount ?? 0;
@@ -413,6 +418,9 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             transportRuleLabel={pricingSnapshot?.transportRuleLabel}
             materialFee={displayMaterialFee}
             discountAmount={displayDiscountAmount}
+            appliedDiscountKind={pricingSnapshot?.appliedDiscountKind}
+            partnerDiscountAmount={displayPartnerDiscountAmount}
+            rewardDiscountAmount={displayRewardDiscountAmount}
             paymentServiceFeeAmount={displayPaymentServiceFeeAmount}
             paymentServiceFeeLabel={displayPaymentServiceFeeLabel}
             totalBeforePaymentServiceFee={displayTotalBeforePaymentServiceFee}
@@ -425,6 +433,8 @@ export default async function ReservationDetailPage({ params }: { params: Promis
             totalTeacherReceives={displayTeacherTotalReceives}
             commissionAmount={displayCommissionAmount}
             commissionRate={booking.commissionRate}
+            partnerCommissionAmount={displayPartnerCommissionAmount}
+            platformNetAfterPartnerAmount={displayPlatformNetAfterPartner}
           />
           {booking.isQuoteOnly && (
             <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4 text-sm text-amber-950">

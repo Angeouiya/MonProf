@@ -11,6 +11,10 @@ import {
 } from "@/lib/booking-refund";
 import { lockTeacherPayoutBalances } from "@/lib/teacher-payout-reservations";
 import { hasRefundableClientFunds, hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import {
+  adjustPartnerCommissionForPartialRefundInTransaction,
+  reverseBookingPromotionsForRefundInTransaction,
+} from "@/lib/loyalty-program";
 
 export class BookingRefundWorkflowError extends Error {
   constructor(
@@ -333,6 +337,20 @@ export async function finalizeBookingRefundInTransaction(
     where: { id: snapshot.id },
     data: { status: "REFUNDED", paymentStatus: calculation.finalPaymentStatus },
   });
+  if (calculation.finalPaymentStatus === "REFUNDED") {
+    await reverseBookingPromotionsForRefundInTransaction(tx, {
+      bookingId: snapshot.id,
+      clientId: snapshot.clientId,
+      now: input.now,
+      reason: `Remboursement intégral ${externalReference}`,
+    });
+  } else {
+    await adjustPartnerCommissionForPartialRefundInTransaction(tx, {
+      bookingId: snapshot.id,
+      totalRefundedAmount: calculation.totalRefundedAfter,
+      now: input.now,
+    });
+  }
   await tx.dispute.updateMany({
     where: { bookingId: snapshot.id, status: { in: ["OPEN", "INVESTIGATING", "RESOLVED"] } },
     data: { status: "REFUNDED", resolvedAt: input.now },

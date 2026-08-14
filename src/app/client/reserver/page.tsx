@@ -2,12 +2,14 @@ import { db } from "@/lib/db";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound, redirect } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import {
   parseTeacherJourney,
 } from "@/lib/teacher-journeys";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
-import { getActivePartnerReferralLeadSource } from "@/lib/partner-referrals";
+import { resolveClientPromotionBenefits } from "@/lib/loyalty-program";
 import { verifiedClientPaymentBookingWhere } from "@/lib/payment-security";
 import {
   SCHEDULE_BLOCKING_BOOKING_STATUSES,
@@ -23,6 +25,9 @@ export default async function ReserverPage({
   searchParams: Promise<{ teacherId?: string; journey?: string; ref?: string; partnerRef?: string }>;
 }) {
   const { teacherId, journey: requestedJourney, ref, partnerRef } = await searchParams;
+  const session = await getServerSession(authOptions);
+  if (!session?.user || (session.user as { role?: string }).role !== "CLIENT") redirect("/connexion");
+  const clientId = (session.user as { id: string }).id;
   if (!teacherId) redirect("/client/rechercher");
   const initialJourney = parseTeacherJourney(requestedJourney) ?? undefined;
 
@@ -51,10 +56,10 @@ export default async function ReserverPage({
   if (eligibleJourneys.length === 0) notFound();
   if (initialJourney && !eligibleJourneys.includes(initialJourney)) notFound();
 
-  const [{ communes }, platformSettings, partnerReferral, occupiedSlots] = await Promise.all([
+  const [{ communes }, platformSettings, promotionBenefits, occupiedSlots] = await Promise.all([
     getCachedTeacherSearchCatalog(),
     getPlatformRuntimeSettings(),
-    getActivePartnerReferralLeadSource(ref || partnerRef),
+    resolveClientPromotionBenefits({ clientId, referralCode: ref || partnerRef }).catch(() => null),
     getTeacherOccupiedSlots(teacher.id),
   ]);
 
@@ -105,10 +110,22 @@ export default async function ReserverPage({
           transportFees: platformSettings.transportFees,
           scheduleBuffers: platformSettings.scheduleBuffers,
         }}
-        initialPartnerReferral={partnerReferral ? {
-          code: partnerReferral.code,
-          promoterName: partnerReferral.promoterName,
-          promoterPhone: partnerReferral.promoterPhone ?? "",
+        initialPartnerReferral={promotionBenefits?.attribution ? {
+          code: promotionBenefits.attribution.code,
+          promoterName: promotionBenefits.attribution.promoterName,
+          promoterPhone: promotionBenefits.attribution.promoterPhone,
+        } : undefined}
+        initialPromotionBenefits={promotionBenefits ? {
+          partnerDiscountPercent: promotionBenefits.partnerDiscountPercent,
+          partnerCommissionPercent: promotionBenefits.partnerCommissionPercent,
+          minimumMarginPercent: promotionBenefits.minimumMarginPercent,
+          reward: promotionBenefits.reward ? {
+            id: promotionBenefits.reward.id,
+            milestone: promotionBenefits.reward.milestone,
+            discountRate: promotionBenefits.reward.discountRate,
+            validityDays: promotionBenefits.reward.validityDays,
+            expiresAt: promotionBenefits.reward.expiresAt.toISOString(),
+          } : null,
         } : undefined}
         occupiedSlots={occupiedSlots}
       />

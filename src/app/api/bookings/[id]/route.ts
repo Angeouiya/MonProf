@@ -26,6 +26,7 @@ import { findReplacementCandidatesForBooking } from "@/lib/teacher-replacement-m
 import { absoluteAppUrl } from "@/lib/public-url";
 import { getReschedulePolicy, reschedulePolicySummary } from "@/lib/reschedule-policy";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
+import { releaseBookingPromotionReservationsInTransaction } from "@/lib/loyalty-program";
 import {
   hasVerifiedClientFunds,
   hasVerifiedPayDunyaClientPayment,
@@ -388,6 +389,7 @@ export async function PATCH(
             where: { bookingId: booking.id, status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] } },
             data: { status: "EXPIRED", expiresAt: now, response: "Brouillon supprimé par le client." },
           });
+          await releaseBookingPromotionReservationsInTransaction(tx, booking.id);
           await tx.booking.update({
             where: { id: booking.id },
             data: {

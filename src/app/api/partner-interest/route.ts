@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       subject: "Partenariat apporteur d'affaires",
       message: [
         "Pré-déclaration partenariat / apporteur d'affaires.",
-        `Code apporteur : ${leadResult.lead.code}`,
+        `Code partenaire permanent : ${leadResult.profile.code}`,
         referredClient ? `Client concerné : ${referredClient}` : "",
         referredClientPhone ? `Téléphone client : ${referredClientPhone}` : "",
         requestedJourney ? `Système conseillé : ${requestedJourney}` : "",
@@ -53,13 +53,13 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const sharePath = buildPartnerReferralSharePath(leadResult.lead.code, requestedJourney);
+  const sharePath = buildPartnerReferralSharePath(leadResult.profile.code, requestedJourney);
   const shareUrl = absoluteAppUrl(sharePath, req);
 
   return NextResponse.json({
     ok: true,
-    message: "Déclaration enregistrée. Envoyez ce lien au client : il gardera votre code jusqu'à la réservation.",
-    code: leadResult.lead.code,
+    message: "Profil partenaire vérifié. Ce code permanent attribue le client pendant six mois après son premier paiement Jèko confirmé.",
+    code: leadResult.profile.code,
     shareUrl,
     sharePath,
     promotionEndsAt: leadResult.lead.promotionEndsAt.toISOString(),

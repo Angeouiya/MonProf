@@ -15,31 +15,31 @@ datasource db {
 // UTILISATEURS (Client + Admin seulement — pas de compte prof)
 // ============================================================
 model User {
-  id                     String              @id @default(cuid())
-  email                  String?             @unique
-  name                   String
-  phone                  String?
-  phoneNormalized        String?             @unique
-  passwordHash           String
-  passwordMustChange     Boolean             @default(false)
+  id                        String              @id @default(cuid())
+  email                     String?             @unique
+  name                      String
+  phone                     String?
+  phoneNormalized           String?             @unique
+  passwordHash              String
+  passwordMustChange        Boolean             @default(false)
   temporaryPasswordIssuedAt DateTime?
-  sessionVersion         Int                 @default(0)
-  role                   UserRole            @default(CLIENT)
-  commune                String?
-  quartier               String?
-  avatarUrl              String?
-  adminTeamRole          AdminTeamRole?
-  adminAccountStatus     AdminAccountStatus?
-  adminPermissions       Json?
-  adminAccessEnabled     Boolean             @default(true)
-  adminLastLoginAt       DateTime?
-  adminPasswordChangedAt DateTime?
-  adminCreatedById       String?
-  adminSuspendedAt       DateTime?
-  adminSuspensionReason  String?
-  adminDeletedAt         DateTime?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
+  sessionVersion            Int                 @default(0)
+  role                      UserRole            @default(CLIENT)
+  commune                   String?
+  quartier                  String?
+  avatarUrl                 String?
+  adminTeamRole             AdminTeamRole?
+  adminAccountStatus        AdminAccountStatus?
+  adminPermissions          Json?
+  adminAccessEnabled        Boolean             @default(true)
+  adminLastLoginAt          DateTime?
+  adminPasswordChangedAt    DateTime?
+  adminCreatedById          String?
+  adminSuspendedAt          DateTime?
+  adminSuspensionReason     String?
+  adminDeletedAt            DateTime?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
 
   bookings                      Booking[]
   reviews                       Review[]
@@ -64,7 +64,10 @@ model User {
   communicationCampaigns        CommunicationCampaign[]    @relation("CommunicationCampaignCreator")
   webPushSubscriptions          WebPushSubscription[]
   partnerReferrals              PartnerReferral[]          @relation("PartnerReferralClient")
-  partnerReferralPayouts         PartnerReferral[]          @relation("PartnerReferralPaidBy")
+  partnerReferralPayouts        PartnerReferral[]          @relation("PartnerReferralPaidBy")
+  partnerAttribution            ClientPartnerAttribution?
+  loyaltyPurchases              ClientLoyaltyPurchase[]
+  clientRewards                 ClientReward[]
 
   @@index([role])
   @@index([adminTeamRole, adminAccountStatus])
@@ -161,84 +164,84 @@ enum CommuneTransportClass {
 // PROFESSEUR (fiche interne gérée par l'admin)
 // ============================================================
 model Teacher {
-  id                     String             @id @default(cuid())
+  id                              String             @id @default(cuid())
   // Identité
-  fullName               String
-  professionalName       String?
-  photoUrl               String?
-  coverUrl               String?
-  pendingCoverUrl        String?
-  phone                  String
-  email                  String?
-  commune                String?
-  quartier               String?
-  addressHint            String?
+  fullName                        String
+  professionalName                String?
+  photoUrl                        String?
+  coverUrl                        String?
+  pendingCoverUrl                 String?
+  phone                           String
+  email                           String?
+  commune                         String?
+  quartier                        String?
+  addressHint                     String?
   // Accès léger à la plateforme professeur, activé uniquement par l'admin
-  portalAccessEnabled    Boolean            @default(false)
-  portalPhone            String?            @unique
-  portalPasswordHash     String?
-  portalPasswordMustChange Boolean          @default(false)
+  portalAccessEnabled             Boolean            @default(false)
+  portalPhone                     String?            @unique
+  portalPasswordHash              String?
+  portalPasswordMustChange        Boolean            @default(false)
   portalTemporaryPasswordIssuedAt DateTime?
-  sessionVersion         Int                @default(0)
-  portalLastLoginAt      DateTime?
-  defaultPayoutMethod    PaymentMethod?
-  defaultPayoutPhone     String?
-  payoutInstructions     String?
+  sessionVersion                  Int                @default(0)
+  portalLastLoginAt               DateTime?
+  defaultPayoutMethod             PaymentMethod?
+  defaultPayoutPhone              String?
+  payoutInstructions              String?
   // Pédagogie
-  jobTitle               String
-  bio                    String
-  experienceYears        Int                @default(0)
-  diploma                String?
-  cvUrl                  String?
-  careerSummary          String?
-  skills                 String?
-  workHistory            String?
-  certifications         String?
-  teachingAchievements   String?
-  learnersCoached        Int                @default(0)
-  profileType            TeacherProfileType @default(ENSEIGNANT)
+  jobTitle                        String
+  bio                             String
+  experienceYears                 Int                @default(0)
+  diploma                         String?
+  cvUrl                           String?
+  careerSummary                   String?
+  skills                          String?
+  workHistory                     String?
+  certifications                  String?
+  teachingAchievements            String?
+  learnersCoached                 Int                @default(0)
+  profileType                     TeacherProfileType @default(ENSEIGNANT)
   // Statut & visibilité
-  status                 TeacherStatus      @default(PENDING)
-  featured               Boolean            @default(false)
-  qualityScore           Int                @default(85)
-  lastActivityAt         DateTime?
-  operationalComment     String?
-  adminRating            Float              @default(0) // 0..5, note plateforme/admin
-  adminRatingNote        String?
-  adminRatingPublic      Boolean            @default(true)
-  adminRatingUpdatedAt   DateTime?
-  adminRatingUpdatedById String?
+  status                          TeacherStatus      @default(PENDING)
+  featured                        Boolean            @default(false)
+  qualityScore                    Int                @default(85)
+  lastActivityAt                  DateTime?
+  operationalComment              String?
+  adminRating                     Float              @default(0) // 0..5, note plateforme/admin
+  adminRatingNote                 String?
+  adminRatingPublic               Boolean            @default(true)
+  adminRatingUpdatedAt            DateTime?
+  adminRatingUpdatedById          String?
   // Évaluation interne (gérée par admin)
-  rating                 Float              @default(0) // 0..5
-  ratingCount            Int                @default(0)
+  rating                          Float              @default(0) // 0..5
+  ratingCount                     Int                @default(0)
   // Badges
-  badgeVerified          Boolean            @default(true)
-  badgeRecommended       Boolean            @default(false)
-  badgeNew               Boolean            @default(true)
-  badgePopular           Boolean            @default(false)
-  badgePremium           Boolean            @default(false)
-  internalNote           String?
+  badgeVerified                   Boolean            @default(true)
+  badgeRecommended                Boolean            @default(false)
+  badgeNew                        Boolean            @default(true)
+  badgePopular                    Boolean            @default(false)
+  badgePremium                    Boolean            @default(false)
+  internalNote                    String?
   // Format
-  offersHome             Boolean            @default(true)
-  offersOnline           Boolean            @default(true)
-  offersGroup            Boolean            @default(false)
+  offersHome                      Boolean            @default(true)
+  offersOnline                    Boolean            @default(true)
+  offersGroup                     Boolean            @default(false)
   // Mini-applications dans lesquelles ce profil peut proposer son offre.
   // Les trois autorisations sont cumulables sur un même professeur.
-  offersIvorianSystem       Boolean          @default(true)
-  offersFrenchSystem        Boolean          @default(false)
-  offersProfessionalTraining Boolean         @default(false)
+  offersIvorianSystem             Boolean            @default(true)
+  offersFrenchSystem              Boolean            @default(false)
+  offersProfessionalTraining      Boolean            @default(false)
   // Tarification (FCFA)
-  pricePerHour           Int                @default(10000)
-  pricePerSession        Int                @default(10000)
-  pricePack4             Int                @default(38000)
-  pricePack8             Int                @default(72000)
-  commissionRate         Int                @default(30) // %
-  pricingTier            PricingTier        @default(STANDARD)
+  pricePerHour                    Int                @default(10000)
+  pricePerSession                 Int                @default(10000)
+  pricePack4                      Int                @default(38000)
+  pricePack8                      Int                @default(72000)
+  commissionRate                  Int                @default(30) // %
+  pricingTier                     PricingTier        @default(STANDARD)
   // Disponibilités (JSON: {mon:{morning,afternoon,evening}, ...})
-  availability           String?
+  availability                    String?
   // Métadonnées
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  createdAt                       DateTime           @default(now())
+  updatedAt                       DateTime           @updatedAt
 
   subjects             TeacherSubject[]
   levels               TeacherLevel[]
@@ -468,6 +471,17 @@ model Booking {
   sessions                  BookingSession[]
   paymentAttempts           PaymentAttempt[]
   partnerReferral           PartnerReferral?
+  partnerAttribution        ClientPartnerAttribution?  @relation(fields: [partnerAttributionId], references: [id], onDelete: SetNull)
+  loyaltyPurchase           ClientLoyaltyPurchase?
+  unlockedReward            ClientReward?              @relation("RewardUnlockedByBooking")
+  usedReward                ClientReward?              @relation("RewardUsedByBooking")
+
+  partnerAttributionId    String?
+  partnerDiscountRate     Int     @default(0)
+  partnerDiscountAmount   Int     @default(0)
+  rewardDiscountRate      Int     @default(0)
+  rewardDiscountAmount    Int     @default(0)
+  partnerCommissionAmount Int     @default(0)
 
   @@index([clientId])
   @@index([teacherId])
@@ -506,12 +520,12 @@ model BookingSession {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
-  booking           Booking                   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  teacher           Teacher                   @relation("BookingSessionTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
-  proposedTeacher   Teacher?                  @relation("BookingSessionProposedTeacher", fields: [proposedTeacherId], references: [id], onDelete: SetNull)
-  payoutAllocations TeacherPayoutAllocation[]
-  history           BookingSessionHistory[]
-  disputes          Dispute[]
+  booking            Booking                    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  teacher            Teacher                    @relation("BookingSessionTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  proposedTeacher    Teacher?                   @relation("BookingSessionProposedTeacher", fields: [proposedTeacherId], references: [id], onDelete: SetNull)
+  payoutAllocations  TeacherPayoutAllocation[]
+  history            BookingSessionHistory[]
+  disputes           Dispute[]
   rescheduleRequests BookingRescheduleRequest[]
 
   @@unique([bookingId, sequence])
@@ -619,46 +633,54 @@ enum PaymentMethod {
 // PARTENARIAT / APPORTEURS D'AFFAIRES
 // ============================================================
 model PartnerReferral {
-  id                       String                @id @default(cuid())
-  bookingId                String                @unique
-  clientId                 String
-  teacherId                String?
-  promoterName             String
-  promoterPhone            String?
-  promotionCode            String?
-  promotionStartsAt        DateTime
-  promotionEndsAt          DateTime
-  declaredAt               DateTime              @default(now())
-  status                   PartnerReferralStatus @default(DECLARED)
-  courseAmount             Int
-  commissionRate           Int                   @default(10)
-  commissionAmount         Int
-  paymentConfirmedAt       DateTime?
-  bookingConfirmedAt       DateTime?
-  payableAt                DateTime?
-  paidAt                   DateTime?
-  paidById                 String?
-  payoutMethod             PaymentMethod?
-  payoutPhone              String?
-  payoutReference          String?
-  promoterIdentityName     String?
+  id                         String                @id @default(cuid())
+  bookingId                  String                @unique
+  clientId                   String
+  teacherId                  String?
+  promoterName               String
+  promoterPhone              String?
+  promotionCode              String?
+  promotionStartsAt          DateTime
+  promotionEndsAt            DateTime
+  declaredAt                 DateTime              @default(now())
+  status                     PartnerReferralStatus @default(DECLARED)
+  courseAmount               Int
+  commissionRate             Int                   @default(10)
+  commissionAmount           Int
+  eligibleCourseAmount       Int                   @default(0)
+  clientDiscountAmount       Int                   @default(0)
+  partnerProfileId           String?
+  attributionId              String?
+  paymentConfirmedAt         DateTime?
+  bookingConfirmedAt         DateTime?
+  payableAt                  DateTime?
+  paidAt                     DateTime?
+  paidById                   String?
+  payoutMethod               PaymentMethod?
+  payoutPhone                String?
+  payoutReference            String?
+  promoterIdentityName       String?
   promoterIdentityVerifiedAt DateTime?
-  adminNote                String?
-  rejectedAt               DateTime?
-  expiredAt                DateTime?
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
+  adminNote                  String?
+  rejectedAt                 DateTime?
+  expiredAt                  DateTime?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
 
-  booking Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  client  User     @relation("PartnerReferralClient", fields: [clientId], references: [id], onDelete: Cascade)
-  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  paidBy  User?    @relation("PartnerReferralPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  booking        Booking                   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client         User                      @relation("PartnerReferralClient", fields: [clientId], references: [id], onDelete: Cascade)
+  teacher        Teacher?                  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  paidBy         User?                     @relation("PartnerReferralPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  partnerProfile PartnerProfile?           @relation(fields: [partnerProfileId], references: [id], onDelete: SetNull)
+  attribution    ClientPartnerAttribution? @relation(fields: [attributionId], references: [id], onDelete: SetNull)
 
   @@index([status, promotionEndsAt])
   @@index([clientId, declaredAt])
   @@index([teacherId, declaredAt])
   @@index([promoterName])
   @@index([promoterPhone])
+  @@index([partnerProfileId, status])
+  @@index([attributionId, declaredAt])
 }
 
 model PartnerReferralLead {
@@ -706,6 +728,113 @@ enum PartnerReferralLeadStatus {
   REJECTED
 }
 
+// Un code partenaire est permanent. L'attribution client démarre au premier
+// paiement Jèko vérifié et reste valable six mois.
+model PartnerProfile {
+  id            String               @id @default(cuid())
+  code          String               @unique
+  promoterName  String
+  promoterPhone String               @unique
+  promoterEmail String?
+  status        PartnerProfileStatus @default(ACTIVE)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  attributions ClientPartnerAttribution[]
+  referrals    PartnerReferral[]
+
+  @@index([status, createdAt])
+}
+
+model ClientPartnerAttribution {
+  id                       String                   @id @default(cuid())
+  clientId                 String                   @unique
+  partnerProfileId         String
+  sourceCode               String
+  status                   PartnerAttributionStatus @default(PENDING)
+  declaredAt               DateTime                 @default(now())
+  startsAt                 DateTime?
+  endsAt                   DateTime?
+  firstBookingId           String?
+  initialDiscountBookingId String?                  @unique
+  initialDiscountUsedAt    DateTime?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  client         User              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  partnerProfile PartnerProfile    @relation(fields: [partnerProfileId], references: [id], onDelete: Restrict)
+  bookings       Booking[]
+  referrals      PartnerReferral[]
+
+  @@index([partnerProfileId, status, endsAt])
+  @@index([status, endsAt])
+}
+
+enum PartnerProfileStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum PartnerAttributionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+// Chaque paiement comptabilisé n'alimente la progression qu'une seule fois.
+model ClientLoyaltyPurchase {
+  id             String    @id @default(cuid())
+  clientId       String
+  bookingId      String    @unique
+  sequence       Int
+  cycle          Int       @default(1)
+  qualifiedAt    DateTime  @default(now())
+  reversedAt     DateTime?
+  reversalReason String?
+  createdAt      DateTime  @default(now())
+
+  client  User    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, qualifiedAt])
+  @@index([clientId, reversedAt, qualifiedAt])
+}
+
+model ClientReward {
+  id                  String             @id @default(cuid())
+  clientId            String
+  unlockedByBookingId String             @unique
+  usedBookingId       String?            @unique
+  cycle               Int                @default(1)
+  milestone           Int
+  discountRate        Int
+  validityDays        Int
+  status              ClientRewardStatus @default(AVAILABLE)
+  unlockedAt          DateTime           @default(now())
+  expiresAt           DateTime
+  reservedAt          DateTime?
+  usedAt              DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  client            User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  unlockedByBooking Booking  @relation("RewardUnlockedByBooking", fields: [unlockedByBookingId], references: [id], onDelete: Cascade)
+  usedBooking       Booking? @relation("RewardUsedByBooking", fields: [usedBookingId], references: [id], onDelete: SetNull)
+
+  @@index([clientId, status, expiresAt])
+}
+
+enum ClientRewardStatus {
+  AVAILABLE
+  RESERVED
+  USED
+  EXPIRED
+  CANCELLED
+}
+
 // ============================================================
 // TRANSACTION (historique financier)
 // ============================================================
@@ -724,8 +853,8 @@ model Transaction {
   paidAt              DateTime?
   createdAt           DateTime        @default(now())
 
-  booking           Booking                   @relation(fields: [bookingId], references: [id])
-  teacher           Teacher                   @relation(fields: [teacherId], references: [id])
+  booking                   Booking                   @relation(fields: [bookingId], references: [id])
+  teacher                   Teacher                   @relation(fields: [teacherId], references: [id])
   rescheduleRequest         BookingRescheduleRequest? @relation("RescheduleFeeTransaction", fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
   refundedRescheduleRequest BookingRescheduleRequest? @relation("RescheduleRefundTransaction")
   paymentAttempt            PaymentAttempt?
@@ -1064,32 +1193,32 @@ enum NotificationPriority {
 // Un abonnement correspond à un navigateur/appareil. Les clients et les
 // administrateurs utilisent userId ; l'espace professeur utilise teacherId.
 model WebPushSubscription {
-  id             String    @id @default(cuid())
-  userId         String?
-  teacherId      String?
-  deviceId       String?
-  platform       String?
-  browser        String?
-  os             String?
-  pwaInstalled   Boolean   @default(false)
-  supportsVibration Boolean @default(false)
-  supportsBadging Boolean  @default(false)
-  endpoint       String    @unique @db.Text
-  p256dh         String    @db.Text
-  auth           String    @db.Text
-  expirationTime BigInt?
-  userAgent      String?   @db.Text
-  enabled        Boolean   @default(true)
-  failureCount   Int       @default(0)
-  lastSeenAt     DateTime?
-  lastSuccessAt  DateTime?
-  lastFailureAt  DateTime?
-  revokedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String?
+  teacherId         String?
+  deviceId          String?
+  platform          String?
+  browser           String?
+  os                String?
+  pwaInstalled      Boolean   @default(false)
+  supportsVibration Boolean   @default(false)
+  supportsBadging   Boolean   @default(false)
+  endpoint          String    @unique @db.Text
+  p256dh            String    @db.Text
+  auth              String    @db.Text
+  expirationTime    BigInt?
+  userAgent         String?   @db.Text
+  enabled           Boolean   @default(true)
+  failureCount      Int       @default(0)
+  lastSeenAt        DateTime?
+  lastSuccessAt     DateTime?
+  lastFailureAt     DateTime?
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  user       User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacher    Teacher?          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   deliveries WebPushDelivery[]
 
   @@index([userId, enabled])
@@ -1312,12 +1441,12 @@ model BookingRescheduleRequest {
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
 
-  booking           Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  bookingSession    BookingSession?    @relation(fields: [bookingSessionId], references: [id], onDelete: SetNull)
-  teacher           Teacher           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  client            User              @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
-  transaction       Transaction?       @relation("RescheduleFeeTransaction")
-  refundTransaction Transaction?       @relation("RescheduleRefundTransaction", fields: [refundTransactionId], references: [id], onDelete: SetNull)
+  booking           Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingSession    BookingSession?  @relation(fields: [bookingSessionId], references: [id], onDelete: SetNull)
+  teacher           Teacher          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  client            User             @relation("ClientRescheduleRequestClient", fields: [clientId], references: [id], onDelete: Cascade)
+  transaction       Transaction?     @relation("RescheduleFeeTransaction")
+  refundTransaction Transaction?     @relation("RescheduleRefundTransaction", fields: [refundTransactionId], references: [id], onDelete: SetNull)
   paymentAttempts   PaymentAttempt[]
 
   @@index([bookingId, status])
@@ -1664,24 +1793,24 @@ enum TeacherPaymentAdjustmentStatus {
 }
 
 model TeacherPayoutRecord {
-  id                           String                    @id @default(cuid())
-  reference                    String                    @unique
-  teacherId                    String
-  amount                       Int // montant net promis et remis au professeur, sans retenue de frais
-  method                       PaymentMethod?
-  paymentPhone                 String?
-  provider                     PaymentProvider?
-  providerReference            String?                   @unique
-  transferFeeAmount            Int                       @default(0)
-  transferFeeAmountMinor       Int                       @default(0)
-  transferFeeCoveredByPlatform Int                       @default(0)
-  transferFeeCoveredByPlatformMinor Int                  @default(0)
-  note                         String?
-  status                       TeacherPayoutRecordStatus @default(PAID)
-  paidAt                       DateTime?
-  lastCheckedAt                DateTime?
-  createdAt                    DateTime                  @default(now())
-  createdById                  String?
+  id                                String                    @id @default(cuid())
+  reference                         String                    @unique
+  teacherId                         String
+  amount                            Int // montant net promis et remis au professeur, sans retenue de frais
+  method                            PaymentMethod?
+  paymentPhone                      String?
+  provider                          PaymentProvider?
+  providerReference                 String?                   @unique
+  transferFeeAmount                 Int                       @default(0)
+  transferFeeAmountMinor            Int                       @default(0)
+  transferFeeCoveredByPlatform      Int                       @default(0)
+  transferFeeCoveredByPlatformMinor Int                       @default(0)
+  note                              String?
+  status                            TeacherPayoutRecordStatus @default(PAID)
+  paidAt                            DateTime?
+  lastCheckedAt                     DateTime?
+  createdAt                         DateTime                  @default(now())
+  createdById                       String?
 
   teacher       Teacher                   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   createdBy     User?                     @relation("TeacherPayoutCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1796,13 +1925,13 @@ model Setting {
 }
 
 model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
   deliveredAt DateTime?
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1811,13 +1940,13 @@ model PasswordResetToken {
 }
 
 model TeacherPasswordResetToken {
-  id        String    @id @default(cuid())
-  teacherId String
-  tokenHash String    @unique
-  expiresAt DateTime
+  id          String    @id @default(cuid())
+  teacherId   String
+  tokenHash   String    @unique
+  expiresAt   DateTime
   deliveredAt DateTime?
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
 
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
@@ -1844,18 +1973,18 @@ model PasswordResetRequestAudit {
 /// File d'envoi persistante des emails de sécurité. Aucune adresse, aucun nom
 /// et aucun token brut ne sont stockés en clair : le payload est chiffré AES-GCM.
 model PasswordEmailOutbox {
-  id                String   @id @default(cuid())
-  requestAuditId    String?  @unique
+  id                String    @id @default(cuid())
+  requestAuditId    String?   @unique
   kind              String
   accountHash       String
   routingHash       String
-  dedupeKey         String   @unique
+  dedupeKey         String    @unique
   payloadCiphertext String?
   payloadIv         String?
   payloadAuthTag    String?
-  status            String   @default("PENDING")
-  attempts          Int      @default(0)
-  availableAt       DateTime @default(now())
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  availableAt       DateTime  @default(now())
   lockedAt          DateTime?
   ambiguousAt       DateTime?
   acceptedAt        DateTime?
@@ -1864,8 +1993,8 @@ model PasswordEmailOutbox {
   externalId        String?
   lastError         String?
   expiresAt         DateTime
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   requestAudit PasswordResetRequestAudit? @relation(fields: [requestAuditId], references: [id], onDelete: SetNull)
 

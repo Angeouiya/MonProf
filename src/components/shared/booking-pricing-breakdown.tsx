@@ -21,6 +21,9 @@ type BookingPricingBreakdownBaseProps = {
   transportRuleLabel?: string | null;
   materialFee?: number | null;
   discountAmount?: number | null;
+  appliedDiscountKind?: "NONE" | "PACK" | "PARTNER" | "GIFT" | null;
+  partnerDiscountAmount?: number | null;
+  rewardDiscountAmount?: number | null;
   paymentServiceFeeAmount?: number | null;
   paymentServiceFeeLabel?: string | null;
   totalBeforePaymentServiceFee?: number | null;
@@ -45,6 +48,8 @@ type BookingPricingBreakdownAdminProps = BookingPricingBreakdownBaseProps & {
   totalTeacherReceives?: number | null;
   commissionAmount?: number;
   commissionRate?: number;
+  partnerCommissionAmount?: number;
+  platformNetAfterPartnerAmount?: number;
 };
 
 type BookingPricingBreakdownProps = BookingPricingBreakdownClientProps | BookingPricingBreakdownAdminProps;
@@ -69,6 +74,13 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
   const transportRuleLabel = props.transportRuleLabel;
   const materialFee = Math.max(0, Math.round(Number(props.materialFee) || 0));
   const discountAmount = props.discountAmount ?? 0;
+  const partnerDiscountAmount = props.partnerDiscountAmount ?? 0;
+  const rewardDiscountAmount = props.rewardDiscountAmount ?? 0;
+  const discountLabel = partnerDiscountAmount > 0 || props.appliedDiscountKind === "PARTNER"
+    ? "Réduction partenaire"
+    : rewardDiscountAmount > 0 || props.appliedDiscountKind === "GIFT"
+      ? "Cadeau Compétence"
+      : "Économie pack";
   const paymentServiceFeeAmount = props.paymentServiceFeeAmount ?? 0;
   const paymentServiceFeeLabel = props.paymentServiceFeeLabel ?? "Frais de service Compétence";
   const paymentProviderFeeAmount = Math.max(0, Math.round(Number(props.paymentProviderFeeAmount) || 0));
@@ -185,7 +197,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
             value={<Money amount={courseAmount} />}
           />
           {discountAmount > 0 && (
-            <CheckoutPricingLine label="Économie pack" value={<>- <Money amount={discountAmount} /></>} />
+            <CheckoutPricingLine label={discountLabel} detail={partnerDiscountAmount > 0 || rewardDiscountAmount > 0 ? "Appliquée uniquement au montant du cours" : undefined} value={<>- <Money amount={discountAmount} /></>} />
           )}
           <CheckoutPricingLine
             label="Déplacement"
@@ -239,7 +251,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                   <PricingLine label="Majoration groupe brute" detail={`${extraParticipants} participant${extraParticipants > 1 ? "s" : ""} en plus`} value={<Money amount={groupSurchargeAmount} />} />
                   {discountAmount > 0 && (
                     <PricingLine
-                      label="Remise pack"
+                      label={discountLabel}
                       detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
                       value={<>- <Money amount={discountAmount} /></>}
                     />
@@ -255,7 +267,7 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
                 <>
                   <PricingLine label="Base brute des séances" detail={`${safeSessionsCount} x 2h`} value={<Money amount={baseFormulaAmount} />} />
                   <PricingLine
-                    label="Remise pack"
+                    label={discountLabel}
                     detail={`Taux réellement appliqué : ${effectiveDiscountPercent.toLocaleString("fr-FR")} %`}
                     value={<>- <Money amount={discountAmount} /></>}
                   />
@@ -334,6 +346,12 @@ export function BookingPricingBreakdown(props: BookingPricingBreakdownProps) {
       {audience === "admin" && (
         <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[#E3E8F2] pt-3" data-client-pricing-admin>
           <PricingMini label="Commission" value={<Money amount={adminProps.commissionAmount ?? 0} />} detail={adminProps.commissionRate !== undefined ? `${adminProps.commissionRate}%` : undefined} />
+          {(adminProps.partnerCommissionAmount ?? 0) > 0 && (
+            <PricingMini label="Commission partenaire" value={<Money amount={adminProps.partnerCommissionAmount ?? 0} />} detail="10 % du cours éligible" />
+          )}
+          {adminProps.platformNetAfterPartnerAmount !== undefined && (
+            <PricingMini label="Marge Compétence nette" value={<Money amount={adminProps.platformNetAfterPartnerAmount} />} detail="Après avantage client et partenaire" />
+          )}
           <PricingMini
             label="Part prof cours"
             value={<Money amount={adminProps.teacherPayoutAmount ?? adminProps.teacherNetAmount ?? 0} />}

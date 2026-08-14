@@ -9,6 +9,9 @@ export type ConfirmablePricing = {
   paymentProviderFeeMethod: string | null;
   totalClientPays: number;
   priceTierKey: string;
+  partnerDiscountAmount: number;
+  rewardDiscountAmount: number;
+  partnerCommissionAmount: number;
 };
 
 type PricingLike = ConfirmablePricing & {
@@ -26,6 +29,9 @@ const NUMERIC_FIELDS = [
   "paymentServiceFeeAmount",
   "paymentProviderFeeAmount",
   "totalClientPays",
+  "partnerDiscountAmount",
+  "rewardDiscountAmount",
+  "partnerCommissionAmount",
 ] as const;
 
 export function confirmablePricing(pricing: PricingLike): ConfirmablePricing {
@@ -38,6 +44,9 @@ export function confirmablePricing(pricing: PricingLike): ConfirmablePricing {
     paymentProviderFeeMethod: pricing.paymentProviderFeeMethod ?? null,
     totalClientPays: pricing.totalClientPays,
     priceTierKey: pricing.priceTierKey,
+    partnerDiscountAmount: pricing.partnerDiscountAmount,
+    rewardDiscountAmount: pricing.rewardDiscountAmount,
+    partnerCommissionAmount: pricing.partnerCommissionAmount,
   };
 }
 

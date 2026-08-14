@@ -79,6 +79,7 @@ export default async function AdminPaiementsPage({
             totalClientPays: true, totalPrice: true, courseAmount: true, transportFee: true,
             paymentServiceFeeRate: true, paymentServiceFeeAmount: true,
             commissionAmount: true, cancellationPenaltyPlatformAmount: true,
+            partnerDiscountAmount: true, rewardDiscountAmount: true, partnerCommissionAmount: true,
             teacherNetAmount: true, teacherPaidAmount: true, cancellationPenaltyTeacherAmount: true,
             paydunyaStatus: true, paydunyaVerifiedAt: true,
             paymentProvider: true, providerPaymentStatus: true, paymentVerifiedAt: true,
@@ -149,6 +150,9 @@ export default async function AdminPaiementsPage({
         transportFee: true,
         paymentServiceFeeAmount: true,
         commissionAmount: true,
+        partnerDiscountAmount: true,
+        rewardDiscountAmount: true,
+        partnerCommissionAmount: true,
         teacherNetAmount: true,
         teacherPaidAmount: true,
         cancellationPenaltyTeacherAmount: true,
@@ -260,6 +264,12 @@ export default async function AdminPaiementsPage({
     appliedTeacherAdjustments,
   );
   const providerFeesTotal = financialSummary.providerCollectionFees;
+  const partnerCommissionTotal = financialBookings.reduce((sum, booking) => sum + Math.max(0, booking.partnerCommissionAmount), 0);
+  const clientPromotionDiscountTotal = financialBookings.reduce(
+    (sum, booking) => sum + Math.max(0, booking.partnerDiscountAmount) + Math.max(0, booking.rewardDiscountAmount),
+    0,
+  );
+  const competenceNetAfterPartner = Math.max(0, financialSummary.commissionRevenue - partnerCommissionTotal);
   const heroHasAttention = financialAttentionCount > 0;
   const heroHasTeacherRemaining = financialSummary.teacherRemaining > 0;
   const heroAmount = heroHasAttention ? financialAttentionAmount : financialSummary.teacherRemaining;
@@ -278,6 +288,9 @@ export default async function AdminPaiementsPage({
   const heroActionLabel = heroHasAttention ? "Contrôler" : heroHasTeacherRemaining ? "Payer les profs" : "Voir le contrôle";
   const paymentHeroMetrics = [
     { key: "commission", show: commissionAmount > 0, label: "Commission", value: commissionAmount, detail: "Filtrée" },
+    { key: "partner", show: partnerCommissionTotal > 0, label: "Partenaires", value: partnerCommissionTotal, detail: "À verser / versé" },
+    { key: "client-gifts", show: clientPromotionDiscountTotal > 0, label: "Avantages clients", value: clientPromotionDiscountTotal, detail: "Partenaire + cadeaux" },
+    { key: "competence-net", show: competenceNetAfterPartner > 0, label: "Marge nette", value: competenceNetAfterPartner, detail: "Après partenaires" },
     { key: "service", show: financialSummary.serviceFeesRemaining !== 0, label: "Service restant", value: financialSummary.serviceFeesRemaining, detail: "Hors frais paiement" },
     { key: "jeko", show: providerFeesTotal > 0, label: "Frais Jèko réels", value: providerFeesTotal, detail: "Encaissement" },
     { key: "teacher", show: financialSummary.teacherRemaining > 0, label: "Reste profs", value: financialSummary.teacherRemaining, detail: "Net à libérer" },
@@ -501,6 +514,8 @@ export default async function AdminPaiementsPage({
                           serviceFeeAmount={t.booking.paymentServiceFeeAmount}
                           providerFeeAmount={sumProviderFeeAmounts(t.booking.paymentAttempts)}
                           commissionAmount={getActualBookingCommission(t.booking)}
+                          partnerCommissionAmount={t.booking.partnerCommissionAmount}
+                          clientPromotionDiscountAmount={t.booking.partnerDiscountAmount + t.booking.rewardDiscountAmount}
                           teacherNetAmount={getActualBookingTeacherNet(t.booking)}
                           teacherPaidAmount={t.booking.teacherPaidAmount}
                           teacherRetainedAmount={sumAppliedBookingRetentions(t.booking)}
@@ -821,6 +836,8 @@ function BookingFinancialBreakdown({
   serviceFeeAmount,
   providerFeeAmount,
   commissionAmount,
+  partnerCommissionAmount,
+  clientPromotionDiscountAmount,
   teacherNetAmount,
   teacherPaidAmount,
   teacherRetainedAmount,
@@ -833,6 +850,8 @@ function BookingFinancialBreakdown({
   serviceFeeAmount: number;
   providerFeeAmount: number;
   commissionAmount: number;
+  partnerCommissionAmount: number;
+  clientPromotionDiscountAmount: number;
   teacherNetAmount: number;
   teacherPaidAmount: number;
   teacherRetainedAmount: number;
@@ -847,6 +866,9 @@ function BookingFinancialBreakdown({
     { key: "service", label: "Service 3 %", value: serviceFeeAmount, show: serviceFeeAmount > 0 },
     { key: "provider", label: "Frais Jèko", value: providerFeeAmount, show: providerFeeAmount > 0, muted: true },
     { key: "commission", label: "Commission", value: commissionAmount, show: commissionAmount > 0 },
+    { key: "partner-commission", label: "Commission partenaire", value: partnerCommissionAmount, show: partnerCommissionAmount > 0 },
+    { key: "client-advantage", label: "Avantage client", value: clientPromotionDiscountAmount, show: clientPromotionDiscountAmount > 0, muted: true },
+    { key: "competence-net", label: "Marge Compétence nette", value: Math.max(0, commissionAmount - partnerCommissionAmount), show: commissionAmount > 0, strong: true },
     { key: "total", label: "Total client", value: clientTotal, show: clientTotal > 0, strong: true },
     { key: "teacher-net", label: "Net professeur", value: teacherNetAmount, show: teacherNetAmount > 0 },
     { key: "teacher-paid", label: "Déjà payé", value: teacherPaidAmount, show: teacherPaidAmount > 0 },

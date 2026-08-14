@@ -18,10 +18,11 @@ import { formatDate } from "@/lib/format";
 import { hasVerifiedClientPayment } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
-  ShieldCheck, BookOpen, Bell,
+  ShieldCheck, BookOpen, Bell, Gift,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
+import { getClientLoyaltyOverview } from "@/lib/loyalty-program";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,7 @@ export default async function ClientDashboardPage() {
       },
     },
   });
+  const loyaltyOverview = await getClientLoyaltyOverview(user.id, now);
   const totalBookings = allClientBookings.length;
   const verifiedClientBookings = allClientBookings.filter(hasVerifiedClientPayment);
   const upcomingBookings = verifiedClientBookings.filter((booking) => ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
@@ -127,6 +129,27 @@ export default async function ClientDashboardPage() {
       />
 
       <WebPushControl audienceLabel="client" />
+
+      <Link
+        href="/client/cadeaux"
+        className="group flex items-center justify-between gap-4 rounded-xl border border-[#E8D7A0] bg-white p-4 transition hover:border-[#C99820]"
+        data-client-gift-teaser
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF9E8] text-[#9A6A00]"><Gift className="h-5 w-5" /></span>
+          <span className="min-w-0">
+            <strong className="block text-sm font-black text-[#111827]">
+              {loyaltyOverview.activeReward
+                ? `Votre cadeau de ${loyaltyOverview.activeReward.discountRate} % est prêt`
+                : loyaltyOverview.currentStep >= 7
+                  ? "Votre route cadeaux est complète"
+                  : "Encore 1 paiement pour avancer vers votre prochain cadeau"}
+            </strong>
+            <span className="mt-1 block text-xs font-semibold text-[#64748B]">Suivez votre route animée et vos dates d’utilisation.</span>
+          </span>
+        </span>
+        <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
+      </Link>
 
       <nav
         aria-label="Choisir une mini-application"

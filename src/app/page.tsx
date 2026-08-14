@@ -66,7 +66,7 @@ export default function HomePage() {
             className="mx-auto mt-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]"
           >
             <Handshake className="h-4 w-4" />
-            Partenariat : gagnez 10 %
+            10 % pour votre client · 10 % pour vous
           </Link>
         </div>
       </section>

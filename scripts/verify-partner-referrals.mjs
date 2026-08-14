@@ -6,10 +6,25 @@ const checks = [
     patterns: [
       /model PartnerReferral/,
       /model PartnerReferralLead/,
+      /model PartnerProfile/,
+      /model ClientPartnerAttribution/,
+      /model ClientLoyaltyPurchase/,
+      /model ClientReward/,
       /enum PartnerReferralStatus/,
       /enum PartnerReferralLeadStatus/,
       /commissionRate\s+Int\s+@default\(10\)/,
       /bookingId\s+String\s+@unique/,
+    ],
+  },
+  {
+    file: "src/lib/loyalty-program.ts",
+    patterns: [
+      /PARTNER_ATTRIBUTION_MONTHS = 6/,
+      /resolveClientPromotionBenefits/,
+      /attachPromotionToBookingInTransaction/,
+      /confirmPromotionPaymentInTransaction/,
+      /partnerDiscountPercent/,
+      /LOYALTY_GIFT_UNLOCKED/,
     ],
   },
   {
@@ -32,15 +47,15 @@ const checks = [
     patterns: [
       /partnerReferralName/,
       /partnerReferralCode/,
-      /buildPartnerReferralCreateData/,
-      /claimPartnerReferralLeadInTransaction/,
+      /resolveClientPromotionBenefits/,
+      /attachPromotionToBookingInTransaction/,
       /tx\.partnerReferral\.create/,
     ],
   },
   {
     file: "src/app/client/reserver/page.tsx",
     patterns: [
-      /getActivePartnerReferralLeadSource/,
+      /resolveClientPromotionBenefits/,
       /initialPartnerReferral/,
       /ref\?: string/,
     ],
@@ -49,7 +64,8 @@ const checks = [
     file: "src/app/client/reserver/reserver-form.tsx",
     patterns: [
       /Quelqu’un vous a recommandé Compétence\.CI/,
-      /Lien apporteur détecté/,
+      /Partenaire vérifié/,
+      /Vérifier et appliquer/,
       /partnerReferralCode/,
       /partnerReferralName/,
       /partnerReferralPhone/,
@@ -77,6 +93,7 @@ const checks = [
     file: "src/lib/jeko-reconciliation.ts",
     patterns: [
       /markPartnerReferralPaymentConfirmedInTransaction/,
+      /confirmPromotionPaymentInTransaction/,
       /Paiement Jèko vérifié serveur/,
     ],
   },
@@ -95,6 +112,8 @@ const checks = [
       /data-partner-referral-grouped-ledger/,
       /buildPartnerReferralGroups/,
       /Pré-déclarations apporteurs/,
+      /Clients rattachés pendant six mois/,
+      /partnerProfile\.count/,
       /partnerReferralLead\.findMany/,
       /Transport exclu/,
       /Frais service exclus/,
@@ -128,7 +147,7 @@ const checks = [
       /createPartnerReferralLead/,
       /buildPartnerReferralSharePath/,
       /shareUrl/,
-      /Code apporteur/,
+      /Code partenaire permanent/,
     ],
   },
   {
@@ -144,12 +163,11 @@ const checks = [
   {
     file: "src/app/partenariat/page.tsx",
     patterns: [
-      /Apportez un client\. Gagnez/,
+      /Votre client gagne 10 %/,
       /Créer mon lien apporteur/,
-      /lien apporteur mobile/,
-      /du montant cours/,
-      /déclaration faite par le client/,
-      /6 mois ou 1 an/,
+      /code partenaire permanent/,
+      /chaque paiement éligible/,
+      /six mois/,
     ],
   },
   {
@@ -192,9 +210,9 @@ const checks = [
     file: "src/app/conditions-utilisation/page.tsx",
     patterns: [
       /Programme partenariat et apporteurs d'affaires/,
-      /pendant la réservation/,
-      /lien apporteur généré/,
-      /six mois ou un an/,
+      /attribué à ce partenaire pendant six mois/,
+      /Programme Cadeaux Compétence/,
+      /comprises entre 8 % et 15 %/,
       /frais techniques Jèko.*exclus/s,
     ],
   },
@@ -202,9 +220,18 @@ const checks = [
     file: "src/app/politique-confidentialite/page.tsx",
     patterns: [
       /Données partenariat/,
-      /code ou lien de recommandation/,
-      /commission calculée/,
-      /déclarations partenariat non confirmées expirent/,
+      /code permanent/,
+      /cadeaux débloqués/,
+      /attributions partenaire non activées/,
+    ],
+  },
+  {
+    file: "prisma/migrations/20260813190000_partner_loyalty_engine/migration.sql",
+    patterns: [
+      /CREATE TABLE "PartnerProfile"/,
+      /CREATE TABLE "ClientPartnerAttribution"/,
+      /CREATE TABLE "ClientReward"/,
+      /loyalty_gift_7_rate/,
     ],
   },
   {

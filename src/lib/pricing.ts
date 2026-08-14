@@ -322,6 +322,10 @@ export type BookingPricingInput = PricingDerivationInput & {
   grandAbidjanCommuneNames?: string[];
   clientCommuneTransportFeeOverride?: number | null;
   neighborhoodAliases?: NeighborhoodAliasMap;
+  partnerDiscountPercent?: number;
+  partnerCommissionPercent?: number;
+  rewardDiscountPercent?: number;
+  minimumPlatformMarginPercent?: number;
 };
 
 export type TransportFeeAmounts = {
@@ -376,6 +380,16 @@ export type BookingPricingSnapshot = {
   numberOfSessions: number | null;
   discountAmount: number;
   discountRate: number;
+  appliedDiscountKind: "NONE" | "PACK" | "PARTNER" | "GIFT";
+  packDiscountAmount: number;
+  partnerDiscountRate: number;
+  partnerDiscountAmount: number;
+  rewardDiscountRate: number;
+  rewardDiscountAmount: number;
+  partnerCommissionRate: number;
+  partnerCommissionAmount: number;
+  platformNetAfterPartnerAmount: number;
+  minimumPlatformMarginAmount: number;
   participantsCount: number;
   groupMultiplier: number;
   isQuoteOnly: boolean;
@@ -1057,14 +1071,37 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
   const teacherRate = 1 - platformCommissionRate;
   const rawPlatformCommission = Math.round(rawCourseAmount * platformCommissionRate);
   const teacherPayoutAmount = rawCourseAmount - rawPlatformCommission;
-  const maximumDiscountRate = pack.discountRate ?? 0;
-  const discountAmount = Math.min(rawPlatformCommission, Math.round(rawCourseAmount * maximumDiscountRate));
+  const packDiscountCandidate = Math.round(rawCourseAmount * (pack.discountRate ?? 0));
+  const requestedPartnerDiscountRate = Math.max(0, Math.min(10, Number(input.partnerDiscountPercent) || 0)) / 100;
+  const requestedRewardDiscountRate = Math.max(0, Math.min(15, Number(input.rewardDiscountPercent) || 0)) / 100;
+  const partnerCommissionRate = Math.max(0, Math.min(10, Number(input.partnerCommissionPercent) || 0)) / 100;
+  const partnerCommissionAmount = Math.round(rawCourseAmount * partnerCommissionRate);
+  const minimumPlatformMarginRate = Math.max(0, Math.min(20, Number(input.minimumPlatformMarginPercent) || 5)) / 100;
+  const minimumPlatformMarginAmount = Math.round(rawCourseAmount * minimumPlatformMarginRate);
+  const protectsPartnerOrGiftMargin = partnerCommissionAmount > 0
+    || requestedPartnerDiscountRate > 0
+    || requestedRewardDiscountRate > 0;
+  const maximumPromotionalDiscount = protectsPartnerOrGiftMargin
+    ? Math.max(0, rawPlatformCommission - partnerCommissionAmount - minimumPlatformMarginAmount)
+    : rawPlatformCommission;
+  const candidates = [
+    { kind: "PACK" as const, amount: packDiscountCandidate, priority: 1 },
+    { kind: "PARTNER" as const, amount: Math.round(rawCourseAmount * requestedPartnerDiscountRate), priority: 2 },
+    { kind: "GIFT" as const, amount: Math.round(rawCourseAmount * requestedRewardDiscountRate), priority: 3 },
+  ].sort((left, right) => right.amount - left.amount || right.priority - left.priority);
+  const selectedDiscount = candidates[0];
+  const discountAmount = Math.min(maximumPromotionalDiscount, selectedDiscount.amount);
+  const appliedDiscountKind = discountAmount > 0 ? selectedDiscount.kind : "NONE";
+  const packDiscountAmount = appliedDiscountKind === "PACK" ? discountAmount : 0;
+  const partnerDiscountAmount = appliedDiscountKind === "PARTNER" ? discountAmount : 0;
+  const rewardDiscountAmount = appliedDiscountKind === "GIFT" ? discountAmount : 0;
   // Le snapshot expose le taux réellement accordé. Lorsque la commission
   // est inférieure à la remise maximale du pack, afficher 5 % ou 7 % serait
   // incohérent avec le montant effectivement déduit.
   const discountRate = rawCourseAmount > 0 ? discountAmount / rawCourseAmount : 0;
   const courseAmount = rawCourseAmount - discountAmount;
   const platformCommissionAmount = courseAmount - teacherPayoutAmount;
+  const platformNetAfterPartnerAmount = Math.max(0, platformCommissionAmount - partnerCommissionAmount);
   // Number(null) vaut 0 en JavaScript. Sans cette garde, une commune dont le
   // forfait particulier n'est pas renseigné annule le transport calculé.
   const hasTransportFeeOverride = input.clientCommuneTransportFeeOverride !== null
@@ -1128,6 +1165,16 @@ export function calculateBookingPricing(input: BookingPricingInput): BookingPric
     numberOfSessions: sessions,
     discountAmount,
     discountRate,
+    appliedDiscountKind,
+    packDiscountAmount,
+    partnerDiscountRate: rawCourseAmount > 0 ? partnerDiscountAmount / rawCourseAmount : 0,
+    partnerDiscountAmount,
+    rewardDiscountRate: rawCourseAmount > 0 ? rewardDiscountAmount / rawCourseAmount : 0,
+    rewardDiscountAmount,
+    partnerCommissionRate,
+    partnerCommissionAmount,
+    platformNetAfterPartnerAmount,
+    minimumPlatformMarginAmount,
     participantsCount,
     groupMultiplier,
     isQuoteOnly: false,

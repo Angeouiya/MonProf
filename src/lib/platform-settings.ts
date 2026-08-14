@@ -24,6 +24,21 @@ export const PLATFORM_SETTING_DEFAULTS = {
   notification_cron_enabled: "true",
   notification_delivery_enabled: "true",
   notification_from_name: "Compétence",
+  loyalty_gifts_enabled: "true",
+  loyalty_gifts_cycle_enabled: "false",
+  loyalty_minimum_margin_percent: "5",
+  loyalty_gift_2_rate: "12",
+  loyalty_gift_2_days: "9",
+  loyalty_gift_3_rate: "9",
+  loyalty_gift_3_days: "7",
+  loyalty_gift_4_rate: "10",
+  loyalty_gift_4_days: "12",
+  loyalty_gift_5_rate: "13",
+  loyalty_gift_5_days: "10",
+  loyalty_gift_6_rate: "8",
+  loyalty_gift_6_days: "8",
+  loyalty_gift_7_rate: "15",
+  loyalty_gift_7_days: "7",
 } as const;
 
 const text = (min: number, max: number) => z.string().trim().min(min).max(max);
@@ -51,6 +66,21 @@ export const platformSettingsInputSchema = z.object({
   notification_cron_enabled: z.enum(["true", "false"]),
   notification_delivery_enabled: z.enum(["true", "false"]),
   notification_from_name: text(2, 80),
+  loyalty_gifts_enabled: z.enum(["true", "false"]),
+  loyalty_gifts_cycle_enabled: z.enum(["true", "false"]),
+  loyalty_minimum_margin_percent: numericSetting(0, 20),
+  loyalty_gift_2_rate: numericSetting(8, 15),
+  loyalty_gift_2_days: numericSetting(7, 14),
+  loyalty_gift_3_rate: numericSetting(8, 15),
+  loyalty_gift_3_days: numericSetting(7, 14),
+  loyalty_gift_4_rate: numericSetting(8, 15),
+  loyalty_gift_4_days: numericSetting(7, 14),
+  loyalty_gift_5_rate: numericSetting(8, 15),
+  loyalty_gift_5_days: numericSetting(7, 14),
+  loyalty_gift_6_rate: numericSetting(8, 15),
+  loyalty_gift_6_days: numericSetting(7, 14),
+  loyalty_gift_7_rate: numericSetting(8, 15),
+  loyalty_gift_7_days: numericSetting(7, 14),
 }).superRefine((value, context) => {
   if (value.teacher_payout_max_hours < value.teacher_payout_min_hours) {
     context.addIssue({

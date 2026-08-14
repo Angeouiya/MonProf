@@ -15,6 +15,7 @@ import { isClientDeletedDraft } from "@/lib/booking-draft-deletion";
 import { resolveJekoPaymentStatusConsensus } from "@/lib/jeko-client-payment";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { markPartnerReferralPaymentConfirmedInTransaction } from "@/lib/partner-referrals";
+import { confirmPromotionPaymentInTransaction } from "@/lib/loyalty-program";
 import {
   findTeacherScheduleConflictForBooking,
   formatTeacherScheduleConflictMessage,
@@ -508,6 +509,11 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
           confirmedAt: current.booking.confirmedAt,
           paymentConfirmedAt: now,
         }, now);
+        await confirmPromotionPaymentInTransaction(tx, {
+          bookingId: current.booking.id,
+          clientId: current.booking.clientId,
+          now,
+        });
       }
       await tx.adminActionLog.create({
         data: {

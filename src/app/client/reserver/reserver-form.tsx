@@ -128,6 +128,19 @@ type InitialPartnerReferral = {
   promoterPhone: string;
 };
 
+type InitialPromotionBenefits = {
+  partnerDiscountPercent: number;
+  partnerCommissionPercent: number;
+  minimumMarginPercent: number;
+  reward: {
+    id: string;
+    milestone: number;
+    discountRate: number;
+    validityDays: number;
+    expiresAt: string;
+  } | null;
+};
+
 type OccupiedTeacherSlot = {
   date: string;
   time: string;
@@ -203,6 +216,9 @@ type PriceChangeNotice = {
     totalClientPays: number;
     priceTierKey: string;
     priceTierLabel: string;
+    partnerDiscountAmount: number;
+    rewardDiscountAmount: number;
+    partnerCommissionAmount: number;
     transportFeeLabel: string | null;
     transportRouteLabel: string | null;
     numberOfSessions: number;
@@ -717,7 +733,7 @@ function toJekoPaymentMethod(method: string) {
 }
 
 export function ReserverForm({
-  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys, initialPartnerReferral, occupiedSlots,
+  teacher, subjects, levels, communes, pricingConfig, initialJourney, eligibleJourneys, initialPartnerReferral, initialPromotionBenefits, occupiedSlots,
 }: {
   teacher: Teacher;
   subjects: { id: string; name: string; slug: string }[];
@@ -727,6 +743,7 @@ export function ReserverForm({
   initialJourney?: BookingJourney;
   eligibleJourneys: BookingJourney[];
   initialPartnerReferral?: InitialPartnerReferral;
+  initialPromotionBenefits?: InitialPromotionBenefits;
   occupiedSlots: OccupiedTeacherSlot[];
 }) {
   const router = useRouter();
@@ -737,6 +754,10 @@ export function ReserverForm({
   const [priceChangeNotice, setPriceChangeNotice] = useState<PriceChangeNotice | null>(null);
   const [restrictionNotice, setRestrictionNotice] = useState<RestrictionNoticeState | null>(null);
   const [paymentLaunchMessage, setPaymentLaunchMessage] = useState("");
+  const [promotionBenefits, setPromotionBenefits] = useState<InitialPromotionBenefits | undefined>(initialPromotionBenefits);
+  const [partnerVerificationState, setPartnerVerificationState] = useState<"idle" | "checking" | "verified" | "invalid">(
+    initialPartnerReferral ? "verified" : "idle",
+  );
   const displayName = teacher.professionalName || teacher.fullName;
   const teacherAvailability = parseAvailability(teacher.availability);
   const todayIso = useMemo(() => toDateInputValue(new Date()), []);
@@ -1017,6 +1038,10 @@ export function ReserverForm({
     grandAbidjanCommuneNames: grandAbidjanCommunes.map((commune) => commune.name),
     clientCommuneTransportFeeOverride: selectedCommune?.transportFeeOverride,
     neighborhoodAliases,
+    partnerDiscountPercent: promotionBenefits?.partnerDiscountPercent ?? 0,
+    partnerCommissionPercent: promotionBenefits?.partnerCommissionPercent ?? 0,
+    rewardDiscountPercent: promotionBenefits?.reward?.discountRate ?? 0,
+    minimumPlatformMarginPercent: promotionBenefits?.minimumMarginPercent ?? 5,
   });
   const scheduleRequestContext = {
     courseFormat: form.courseFormat,
@@ -1335,10 +1360,62 @@ export function ReserverForm({
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function updatePartnerField(field: "partnerReferralCode" | "partnerReferralName" | "partnerReferralPhone", value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setPartnerVerificationState("idle");
+    setPromotionBenefits(undefined);
+  }
+
+  async function verifyPartner() {
+    if (!form.partnerReferralCode.trim() && (!form.partnerReferralName.trim() || !form.partnerReferralPhone.trim())) {
+      showValidationRestriction("Saisissez le code partenaire, ou son nom avec son numéro.", "Informations partenaire incomplètes");
+      return false;
+    }
+    setPartnerVerificationState("checking");
+    const response = await fetch("/api/client/partner-referral/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: form.partnerReferralCode.trim() || undefined,
+        name: form.partnerReferralName.trim() || undefined,
+        phone: form.partnerReferralPhone.trim() || undefined,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setPartnerVerificationState("invalid");
+      showValidationRestriction(data.error || "Partenaire non vérifié.", "Code partenaire non appliqué");
+      return false;
+    }
+    setForm((current) => ({
+      ...current,
+      partnerReferralCode: data.partner.code,
+      partnerReferralName: data.partner.promoterName,
+      partnerReferralPhone: data.partner.promoterPhone,
+    }));
+    setPromotionBenefits(data.benefits);
+    setPartnerVerificationState("verified");
+    setRestrictionNotice({
+      title: data.benefits.partnerDiscountPercent > 0 ? "Réduction de 10 % appliquée" : "Partenaire confirmé",
+      description: data.benefits.partnerDiscountPercent > 0
+        ? "Le montant du cours vient d'être recalculé. Le professeur conserve son montant exact et le partenaire recevra 10 % sur chaque paiement éligible pendant six mois."
+        : "Votre compte est déjà rattaché à ce partenaire. Sa commission reste active jusqu'à la fin des six mois.",
+      variant: "info",
+      primaryLabel: "Voir le nouveau total",
+      onPrimary: () => setRestrictionNotice(null),
+    });
+    return true;
+  }
+
   async function submit(confirmedPricingFingerprint?: string) {
     const err = [0, 1, 2, 3, 4].map(validateStep).find(Boolean);
     if (err) {
       showValidationRestriction(err);
+      return;
+    }
+    const hasPartnerInput = Boolean(form.partnerReferralCode.trim() || form.partnerReferralName.trim() || form.partnerReferralPhone.trim());
+    if (hasPartnerInput && partnerVerificationState !== "verified") {
+      await verifyPartner();
       return;
     }
     setSubmitting(true);
@@ -1393,6 +1470,9 @@ export function ReserverForm({
             paymentProviderFeeMethod: pricing.paymentProviderFeeMethod,
             totalClientPays: pricing.totalClientPays,
             priceTierKey: pricing.priceTierKey,
+            partnerDiscountAmount: pricing.partnerDiscountAmount,
+            rewardDiscountAmount: pricing.rewardDiscountAmount,
+            partnerCommissionAmount: pricing.partnerCommissionAmount,
           },
           confirmedPricingFingerprint,
         }),
@@ -2504,6 +2584,9 @@ export function ReserverForm({
                   transportRuleLabel={pricing.transportRuleLabel}
                   materialFee={pricing.materialFee}
                   discountAmount={pricing.discountAmount}
+                  appliedDiscountKind={pricing.appliedDiscountKind}
+                  partnerDiscountAmount={pricing.partnerDiscountAmount}
+                  rewardDiscountAmount={pricing.rewardDiscountAmount}
                   paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
@@ -2606,6 +2689,9 @@ export function ReserverForm({
                   transportRuleLabel={pricing.transportRuleLabel}
                   materialFee={pricing.materialFee}
                   discountAmount={pricing.discountAmount}
+                  appliedDiscountKind={pricing.appliedDiscountKind}
+                  partnerDiscountAmount={pricing.partnerDiscountAmount}
+                  rewardDiscountAmount={pricing.rewardDiscountAmount}
                   paymentServiceFeeAmount={pricing.paymentServiceFeeAmount}
                   paymentServiceFeeLabel={pricing.paymentServiceFeeLabel}
                   totalBeforePaymentServiceFee={pricing.totalBeforePaymentServiceFee}
@@ -2619,26 +2705,38 @@ export function ReserverForm({
                 <div className="max-w-2xl">
                   <p className="text-sm font-semibold text-[#111827]">Quelqu’un vous a recommandé Compétence.CI ?</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
-                    Si oui, indiquez son nom avant le paiement. Sa commission éventuelle sera calculée uniquement après paiement Jèko confirmé et réservation validée.
+                    Saisissez son code, ou son nom et son numéro. Votre premier cours bénéficie de 10 % et le partenaire reçoit 10 % sur vos paiements éligibles pendant six mois.
                   </p>
-                  {form.partnerReferralCode && (
+                  {partnerVerificationState === "verified" && form.partnerReferralCode && (
                     <p className="mt-3 inline-flex min-h-8 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-900">
-                      Lien apporteur détecté · {form.partnerReferralCode}
+                      Partenaire vérifié · {form.partnerReferralCode}
                     </p>
                   )}
                 </div>
-                <div className="mt-4 grid gap-3 min-[720px]:grid-cols-2">
+                <div className="mt-4 grid gap-3 min-[720px]:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="partnerReferralCode">Code partenaire</Label>
+                    <Input
+                      id="partnerReferralCode"
+                      value={form.partnerReferralCode}
+                      onChange={(event) => updatePartnerField("partnerReferralCode", event.target.value.toUpperCase())}
+                      placeholder="CP-XXXXXXXX"
+                      maxLength={24}
+                      autoComplete="off"
+                      readOnly={partnerVerificationState === "verified"}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="partnerReferralName">Nom de l’apporteur d’affaires</Label>
                     <Input
                       id="partnerReferralName"
                       value={form.partnerReferralName}
-                      onChange={(event) => update("partnerReferralName", event.target.value)}
+                      onChange={(event) => updatePartnerField("partnerReferralName", event.target.value)}
                       placeholder="Ex : Kouamé Jean"
                       maxLength={120}
                       autoComplete="off"
-                      readOnly={Boolean(form.partnerReferralCode)}
-                      className={form.partnerReferralCode ? "bg-[#F8FAFC]" : undefined}
+                      readOnly={partnerVerificationState === "verified"}
+                      className={partnerVerificationState === "verified" ? "bg-[#F8FAFC]" : undefined}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2646,19 +2744,36 @@ export function ReserverForm({
                     <Input
                       id="partnerReferralPhone"
                       value={form.partnerReferralPhone}
-                      onChange={(event) => update("partnerReferralPhone", event.target.value)}
+                      onChange={(event) => updatePartnerField("partnerReferralPhone", event.target.value)}
                       placeholder="+225 XX XX XX XX XX"
                       maxLength={32}
                       inputMode="tel"
                       autoComplete="off"
-                      readOnly={Boolean(form.partnerReferralCode)}
-                      className={form.partnerReferralCode ? "bg-[#F8FAFC]" : undefined}
+                      readOnly={partnerVerificationState === "verified"}
+                      className={partnerVerificationState === "verified" ? "bg-[#F8FAFC]" : undefined}
                     />
                   </div>
                 </div>
-                <p className="mt-3 rounded-lg border border-[#EEF2F7] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold leading-5 text-[#475569]">
-                  La déclaration doit être faite pendant la période de promotion. Après la fin, une personne non déclarée ne pourra pas réclamer cette commission.
-                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-semibold leading-5 text-[#475569]">
+                    La réduction porte uniquement sur le cours. Transport, frais de service et frais Jèko restent séparés. Le montant professeur ne change jamais.
+                  </p>
+                  {partnerVerificationState !== "verified" && (
+                    <Button type="button" variant="outline" onClick={verifyPartner} disabled={partnerVerificationState === "checking"} className="min-h-11 shrink-0 rounded-lg">
+                      {partnerVerificationState === "checking" ? "Vérification…" : "Vérifier et appliquer"}
+                    </Button>
+                  )}
+                </div>
+                {pricing.partnerDiscountAmount > 0 && (
+                  <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
+                    Réduction partenaire appliquée : -{formatFCFA(pricing.partnerDiscountAmount)}
+                  </div>
+                )}
+                {pricing.rewardDiscountAmount > 0 && promotionBenefits?.reward && (
+                  <div className="mt-3 rounded-lg border border-[#E8D7A0] bg-[#FFF9E8] px-4 py-3 text-sm font-bold text-[#6B4F00]">
+                    Cadeau du {promotionBenefits.reward.milestone}ᵉ paiement appliqué automatiquement : -{formatFCFA(pricing.rewardDiscountAmount)}
+                  </div>
+                )}
               </div>
 
               <div className="overflow-hidden rounded-lg border border-[#E3E8F2] bg-white">

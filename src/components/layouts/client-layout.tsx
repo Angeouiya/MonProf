@@ -6,7 +6,7 @@ import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, us
 import {
   LayoutDashboard, Search, BookOpen, WalletCards,
   LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, WifiOff, Handshake
+  ArrowRight, WifiOff, Handshake, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -33,6 +33,7 @@ const navItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/client/cours", label: "Mes cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
+  { href: "/client/cadeaux", label: "Cadeaux", icon: Gift },
 ];
 
 const accountNavItems: ClientNavItem[] = [
@@ -811,6 +812,9 @@ function getCurrentSection(pathname: string | null) {
   }
   if (pathname.startsWith("/client/paiements")) {
     return { label: "Paiements", hint: "Jèko sécurisé" };
+  }
+  if (pathname.startsWith("/client/cadeaux")) {
+    return { label: "Cadeaux", hint: "Votre route fidélité" };
   }
   if (pathname.startsWith("/client/partenariat")) {
     return { label: "Partenariat", hint: "Gagnez 10 %" };
