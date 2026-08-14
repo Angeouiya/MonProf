@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
       code,
       error: code === "PARTNER_ATTRIBUTION_LOCKED"
         ? "Votre compte est déjà rattaché à un autre partenaire pour six mois."
+        : code === "PARTNER_SELF_REFERRAL_FORBIDDEN"
+          ? "Vous ne pouvez pas utiliser votre propre numéro comme partenaire."
         : "Partenaire non vérifié. Vérifiez le code, le nom et le numéro.",
     }, { status: 409 });
   }

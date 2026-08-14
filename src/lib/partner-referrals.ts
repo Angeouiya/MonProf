@@ -125,13 +125,14 @@ export async function createPartnerReferralLead(input: {
 
   const { startsAt, endsAt } = getPartnerPromotionWindow();
   const expectedClientName = normalizePartnerReferralName(input.expectedClientName);
+  const expectedClientPhone = normalizePartnerReferralPhone(input.expectedClientPhone);
   const message = normalizePartnerReferralMessage(input.message);
   const baseData = {
     promoterName,
     promoterPhone,
     promoterEmail: normalizePartnerReferralEmail(input.promoterEmail),
     expectedClientName: expectedClientName || null,
-    expectedClientPhone: normalizePartnerReferralPhone(input.expectedClientPhone),
+    expectedClientPhone,
     requestedJourney: normalizePartnerReferralJourney(input.requestedJourney),
     message: message || null,
     promotionStartsAt: startsAt,
@@ -157,12 +158,37 @@ export async function createPartnerReferralLead(input: {
         });
         break;
       } catch (error) {
-        if (isUniqueConstraintError(error)) continue;
+        if (isUniqueConstraintError(error)) {
+          profile = await db.partnerProfile.findUnique({ where: { promoterPhone } });
+          if (profile) break;
+          continue;
+        }
         throw error;
       }
     }
   }
   if (!profile) return { ok: false as const, error: "Création du profil partenaire impossible. Réessayez." };
+
+  const requestWindowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  if (expectedClientPhone) {
+    const duplicate = await db.partnerReferralLead.findFirst({
+      where: {
+        promoterPhone,
+        expectedClientPhone,
+        status: { in: ["DECLARED", "MATCHED"] },
+        declaredAt: { gte: requestWindowStart },
+      },
+      orderBy: { declaredAt: "desc" },
+    });
+    if (duplicate) return { ok: true as const, lead: duplicate, profile };
+  }
+
+  const recentRequests = await db.partnerReferralLead.count({
+    where: { promoterPhone, declaredAt: { gte: requestWindowStart } },
+  });
+  if (recentRequests >= 20) {
+    return { ok: false as const, error: "Trop de déclarations en 24 heures. Réessayez demain ou contactez Compétence.CI." };
+  }
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = generatePartnerReferralCode();
@@ -378,7 +404,7 @@ function normalizePartnerReferralMessage(value: unknown) {
 }
 
 function generatePartnerReferralCode() {
-  return `CP-${randomBytes(4).toString("hex").toUpperCase()}`;
+  return `CP-${randomBytes(8).toString("hex").toUpperCase()}`;
 }
 
 function isUniqueConstraintError(error: unknown) {

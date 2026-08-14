@@ -44,15 +44,30 @@ assert.deepEqual(DEFAULT_LOYALTY_GIFT_STEPS, [
 const staticChecks = [
   ["src/app/client/cadeaux/gift-road.tsx", /gift-road-centerline[\s\S]*road-flow/],
   ["src/app/client/cadeaux/gift-road.tsx", /<style jsx global>/],
-  ["src/app/client/cadeaux/gift-road.tsx", /background: #fff/],
+  ["src/app/client/cadeaux/gift-road.tsx", /stroke="#4D5055"/],
+  ["src/app/client/cadeaux/gift-road.tsx", /gift-vehicle-bus/],
+  ["src/app/client/cadeaux/gift-road.tsx", /function RoadBranch/],
   ["src/app/client/cadeaux/page.tsx", /Ramassez vos cadeaux sur une route infinie/],
   ["src/components/layouts/client-layout.tsx", /href: "\/client\/cadeaux"/],
   ["src/app/admin/parametres/client.tsx", /Cadeaux & fidélité/],
   ["src/lib/platform-settings.ts", /loyalty_gifts_cycle_enabled: "true"/],
   ["src/app/api/client/partner-referral/verify/route.ts", /resolveClientPromotionBenefits/],
+  ["src/lib/loyalty-program.ts", /FOR UPDATE/],
+  ["src/lib/loyalty-program.ts", /PARTNER_SELF_REFERRAL_FORBIDDEN/],
+  ["src/lib/partner-referrals.ts", /randomBytes\(8\)/],
+  ["src/lib/partner-referrals.ts", /recentRequests >= 20/],
+  ["src/app/api/admin/partner-referrals/[id]/route.ts", /updateMany\([\s\S]*status: "PAYABLE"/],
+  ["prisma/migrations/20260814160000_partner_loyalty_security_constraints/migration.sql", /ClientReward_program_ranges/],
 ] as const;
 for (const [file, pattern] of staticChecks) {
   assert.match(readFileSync(file, "utf8"), pattern, `${file} doit contenir ${pattern}`);
 }
 
-console.log("OK loyalty gifts: 6-month attribution, 10% partner/client, 7 milestones, margin floor and animated road verified.");
+const clientGiftPage = readFileSync("src/app/client/cadeaux/page.tsx", "utf8");
+assert.doesNotMatch(clientGiftPage, /Aucun cumul ne peut rendre la marge Compétence négative/);
+assert.doesNotMatch(clientGiftPage, /le professeur conserve toujours son net officiel/i);
+
+const loyaltySource = readFileSync("src/lib/loyalty-program.ts", "utf8");
+assert.doesNotMatch(loyaltySource, /Le professeur reçoit toujours son montant exact/);
+
+console.log("OK loyalty gifts: Jèko-only qualification, per-client lock, self-referral block, atomic rewards, 7 milestones and illustrated road verified.");

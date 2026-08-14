@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   normalizePartnerReferralCode,
@@ -135,6 +135,9 @@ export async function resolveClientPromotionBenefits(input: {
   }
 
   const profile = usableCurrent?.partnerProfile ?? requestedProfile;
+  if (profile) {
+    await assertPartnerIsNotClient(db, input.clientId, profile.id);
+  }
   const attribution = profile
     ? {
         id: usableCurrent?.id ?? (current && requestedProfile ? current.id : null),
@@ -195,11 +198,28 @@ export async function attachPromotionToBookingInTransaction(
 ) {
   const now = input.now ?? new Date();
   const benefit = input.benefits;
-  let attributionId = benefit.attribution?.id ?? null;
+  await lockClientLoyaltyLedger(tx, input.clientId);
+  let attributionId: string | null = null;
 
-  if (benefit.attribution?.isNew && attributionId) {
+  const currentAttribution = await tx.clientPartnerAttribution.findUnique({
+    where: { clientId: input.clientId },
+  });
+
+  if (benefit.attribution) {
+    await assertPartnerIsNotClient(tx, input.clientId, benefit.attribution.profileId);
+    if (
+      currentAttribution
+      && ["PENDING", "ACTIVE"].includes(currentAttribution.status)
+      && currentAttribution.partnerProfileId !== benefit.attribution.profileId
+    ) {
+      throw new Error("PARTNER_ATTRIBUTION_LOCKED");
+    }
+    attributionId = currentAttribution?.id ?? benefit.attribution.id;
+  }
+
+  if (benefit.attribution?.isNew && currentAttribution) {
     await tx.clientPartnerAttribution.update({
-      where: { id: attributionId },
+      where: { id: currentAttribution.id },
       data: {
         partnerProfileId: benefit.attribution.profileId,
         sourceCode: benefit.attribution.code,
@@ -214,7 +234,7 @@ export async function attachPromotionToBookingInTransaction(
     });
   }
 
-  if (benefit.attribution && !attributionId) {
+  if (benefit.attribution && !currentAttribution) {
     const created = await tx.clientPartnerAttribution.create({
       data: {
         clientId: input.clientId,
@@ -257,6 +277,7 @@ export async function confirmPromotionPaymentInTransaction(
   input: { bookingId: string; clientId: string; now?: Date },
 ) {
   const now = input.now ?? new Date();
+  await lockClientLoyaltyLedger(tx, input.clientId);
   const booking = await tx.booking.findUnique({
     where: { id: input.bookingId },
     select: { id: true, partnerAttributionId: true, rewardDiscountAmount: true },
@@ -314,6 +335,7 @@ export async function qualifyLoyaltyPurchaseInTransaction(
   input: { bookingId: string; clientId: string; now?: Date },
 ) {
   const now = input.now ?? new Date();
+  await lockClientLoyaltyLedger(tx, input.clientId);
   const existing = await tx.clientLoyaltyPurchase.findUnique({ where: { bookingId: input.bookingId } });
   if (existing) return existing;
   const attribution = await tx.clientPartnerAttribution.findUnique({ where: { clientId: input.clientId } });
@@ -360,7 +382,7 @@ export async function qualifyLoyaltyPurchaseInTransaction(
         clientId: input.clientId,
         recipientType: "CLIENT",
         title: `Cadeau débloqué : -${gift.discountRate} %`,
-        message: `Votre prochain cours bénéficie automatiquement de ${gift.discountRate} % de réduction pendant ${gift.validityDays} jours. Le professeur reçoit toujours son montant exact.`,
+        message: `Votre prochain cours bénéficie automatiquement de ${gift.discountRate} % de réduction pendant ${gift.validityDays} jours.`,
         type: "LOYALTY_GIFT_UNLOCKED",
         channel: "INTERNAL",
         status: "SENT",
@@ -526,4 +548,44 @@ function namesAreCompatible(left: string, right: string) {
   const a = normalize(left);
   const b = normalize(right);
   return a === b || a.includes(b) || b.includes(a);
+}
+
+async function lockClientLoyaltyLedger(tx: LoyaltyTx, clientId: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT "id"
+    FROM "User"
+    WHERE "id" = ${clientId}
+    FOR UPDATE
+  `);
+  if (rows.length !== 1) throw new Error("CLIENT_NOT_FOUND");
+}
+
+async function assertPartnerIsNotClient(
+  client: Pick<LoyaltyTx, "user" | "partnerProfile">,
+  clientId: string,
+  partnerProfileId: string,
+) {
+  const [user, partner] = await Promise.all([
+    client.user.findUnique({
+      where: { id: clientId },
+      select: { phone: true, phoneNormalized: true },
+    }),
+    client.partnerProfile.findUnique({
+      where: { id: partnerProfileId },
+      select: { promoterPhone: true, status: true },
+    }),
+  ]);
+  if (!partner || partner.status !== "ACTIVE") throw new Error("PARTNER_NOT_VERIFIED");
+  const clientPhone = phoneIdentityKey(user?.phoneNormalized ?? user?.phone);
+  const partnerPhone = phoneIdentityKey(partner.promoterPhone);
+  if (clientPhone && partnerPhone && clientPhone === partnerPhone) {
+    throw new Error("PARTNER_SELF_REFERRAL_FORBIDDEN");
+  }
+}
+
+function phoneIdentityKey(value: string | null | undefined) {
+  let digits = value?.replace(/\D/g, "") ?? "";
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length === 10 && digits.startsWith("0")) digits = `225${digits}`;
+  return digits;
 }

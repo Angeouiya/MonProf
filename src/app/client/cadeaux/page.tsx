@@ -61,7 +61,7 @@ export default async function ClientGiftsPage() {
 
       <section className="flex items-start gap-3 rounded-xl border border-[#DDE6F7] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
-        <p>Un seul cadeau est utilisé par paiement. Aucun cumul ne peut rendre la marge Compétence négative, et le professeur conserve toujours son net officiel.</p>
+        <p>Un seul cadeau est utilisé par paiement. Votre meilleur avantage disponible s’applique automatiquement au prochain cours éligible.</p>
       </section>
     </main>
   );

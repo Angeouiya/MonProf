@@ -555,6 +555,8 @@ export async function POST(req: NextRequest) {
       code,
       error: code === "PARTNER_ATTRIBUTION_LOCKED"
         ? "Ce compte est déjà rattaché à un partenaire pendant sa période de six mois."
+        : code === "PARTNER_SELF_REFERRAL_FORBIDDEN"
+          ? "Vous ne pouvez pas utiliser votre propre numéro comme partenaire."
         : "Partenaire non vérifié. Vérifiez son code, son nom et son numéro avant de continuer.",
     }, { status: 409 });
   }
@@ -906,10 +908,19 @@ export async function POST(req: NextRequest) {
       });
       bookingCreatedNow = true;
     } catch (error) {
-      if (error instanceof Error && ["PARTNER_DISCOUNT_ALREADY_RESERVED", "LOYALTY_REWARD_ALREADY_RESERVED"].includes(error.message)) {
+      if (error instanceof Error && [
+        "PARTNER_DISCOUNT_ALREADY_RESERVED",
+        "LOYALTY_REWARD_ALREADY_RESERVED",
+        "PARTNER_ATTRIBUTION_LOCKED",
+        "PARTNER_SELF_REFERRAL_FORBIDDEN",
+      ].includes(error.message)) {
         return NextResponse.json({
           code: error.message,
-          error: "Cet avantage vient d'être rattaché à un autre brouillon. Ouvrez vos paiements ou recommencez avec le prix actualisé.",
+          error: error.message === "PARTNER_SELF_REFERRAL_FORBIDDEN"
+            ? "Vous ne pouvez pas utiliser votre propre numéro comme partenaire."
+            : error.message === "PARTNER_ATTRIBUTION_LOCKED"
+              ? "Ce compte est déjà rattaché à un autre partenaire."
+              : "Cet avantage vient d'être rattaché à un autre brouillon. Ouvrez vos paiements ou recommencez avec le prix actualisé.",
         }, { status: 409 });
       }
       if (!isUniqueConstraintError(error)) throw error;

@@ -33,27 +33,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!identityName) {
       return NextResponse.json({ error: "Indiquez le nom officiel vu sur la pièce." }, { status: 400 });
     }
-    await db.$transaction(async (tx) => {
-      await tx.partnerReferral.update({
-        where: { id },
-        data: {
-          promoterIdentityName: identityName,
-          promoterIdentityVerifiedAt: now,
-          adminNote: appendAdminNote(referral.adminNote, adminNote || "Pièce d'identité vérifiée."),
-        },
+    try {
+      await db.$transaction(async (tx) => {
+        const updated = await tx.partnerReferral.updateMany({
+          where: { id, status: "PAYABLE" },
+          data: {
+            promoterIdentityName: identityName,
+            promoterIdentityVerifiedAt: now,
+            adminNote: appendAdminNote(referral.adminNote, adminNote || "Pièce d'identité vérifiée."),
+          },
+        });
+        if (updated.count !== 1) throw new PartnerReferralStateConflictError();
+        await tx.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Pièce apporteur vérifiée",
+            entityType: "PartnerReferral",
+            entityId: id,
+            detail: `Déclaration ${referral.booking.reference}. Nom pièce : ${identityName}.`,
+            oldStatus: referral.status,
+            newStatus: referral.status,
+          },
+        });
       });
-      await tx.adminActionLog.create({
-        data: {
-          adminId: admin.id,
-          action: "Pièce apporteur vérifiée",
-          entityType: "PartnerReferral",
-          entityId: id,
-          detail: `Déclaration ${referral.booking.reference}. Nom pièce : ${identityName}.`,
-          oldStatus: referral.status,
-          newStatus: referral.status,
-        },
-      });
-    });
+    } catch (error) {
+      if (error instanceof PartnerReferralStateConflictError) {
+        return NextResponse.json({ error: "Ce dossier a changé pendant l'action. Actualisez avant de recommencer." }, { status: 409 });
+      }
+      throw error;
+    }
     return NextResponse.json({ ok: true, message: "Pièce enregistrée." });
   }
 
@@ -68,33 +76,41 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!payoutMethod || !payoutPhone || !payoutReference) {
       return NextResponse.json({ error: "Moyen, téléphone et référence de dépôt sont requis." }, { status: 400 });
     }
-    await db.$transaction(async (tx) => {
-      await tx.partnerReferral.update({
-        where: { id },
-        data: {
-          status: "PAID",
-          paidAt: now,
-          paidById: admin.id,
-          payoutMethod,
-          payoutPhone,
-          payoutReference,
-          promoterIdentityName: verifiedIdentityName,
-          promoterIdentityVerifiedAt: referral.promoterIdentityVerifiedAt ?? now,
-          adminNote: appendAdminNote(referral.adminNote, adminNote || `Commission payée. Référence dépôt : ${payoutReference}.`),
-        },
+    try {
+      await db.$transaction(async (tx) => {
+        const updated = await tx.partnerReferral.updateMany({
+          where: { id, status: "PAYABLE" },
+          data: {
+            status: "PAID",
+            paidAt: now,
+            paidById: admin.id,
+            payoutMethod,
+            payoutPhone,
+            payoutReference,
+            promoterIdentityName: verifiedIdentityName,
+            promoterIdentityVerifiedAt: referral.promoterIdentityVerifiedAt ?? now,
+            adminNote: appendAdminNote(referral.adminNote, adminNote || `Commission payée. Référence dépôt : ${payoutReference}.`),
+          },
+        });
+        if (updated.count !== 1) throw new PartnerReferralStateConflictError();
+        await tx.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Commission partenaire payée",
+            entityType: "PartnerReferral",
+            entityId: id,
+            detail: `Déclaration ${referral.booking.reference}. Commission ${referral.commissionAmount} FCFA payée par ${payoutMethod} au ${payoutPhone}. Référence : ${payoutReference}.`,
+            oldStatus: referral.status,
+            newStatus: "PAID",
+          },
+        });
       });
-      await tx.adminActionLog.create({
-        data: {
-          adminId: admin.id,
-          action: "Commission partenaire payée",
-          entityType: "PartnerReferral",
-          entityId: id,
-          detail: `Déclaration ${referral.booking.reference}. Commission ${referral.commissionAmount} FCFA payée par ${payoutMethod} au ${payoutPhone}. Référence : ${payoutReference}.`,
-          oldStatus: referral.status,
-          newStatus: "PAID",
-        },
-      });
-    });
+    } catch (error) {
+      if (error instanceof PartnerReferralStateConflictError) {
+        return NextResponse.json({ error: "Cette commission a déjà été traitée. Aucun second paiement n'a été enregistré." }, { status: 409 });
+      }
+      throw error;
+    }
     return NextResponse.json({ ok: true, message: "Commission marquée payée." });
   }
 
@@ -102,27 +118,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (["PAID", "REJECTED", "EXPIRED"].includes(referral.status)) {
       return NextResponse.json({ error: "Ce dossier ne peut plus être rejeté." }, { status: 400 });
     }
-    await db.$transaction(async (tx) => {
-      await tx.partnerReferral.update({
-        where: { id },
-        data: {
-          status: "REJECTED",
-          rejectedAt: now,
-          adminNote: appendAdminNote(referral.adminNote, adminNote || "Déclaration rejetée par l'administration."),
-        },
+    try {
+      await db.$transaction(async (tx) => {
+        const updated = await tx.partnerReferral.updateMany({
+          where: { id, status: { notIn: ["PAID", "REJECTED", "EXPIRED"] } },
+          data: {
+            status: "REJECTED",
+            rejectedAt: now,
+            adminNote: appendAdminNote(referral.adminNote, adminNote || "Déclaration rejetée par l'administration."),
+          },
+        });
+        if (updated.count !== 1) throw new PartnerReferralStateConflictError();
+        await tx.adminActionLog.create({
+          data: {
+            adminId: admin.id,
+            action: "Déclaration partenaire rejetée",
+            entityType: "PartnerReferral",
+            entityId: id,
+            detail: `Déclaration ${referral.booking.reference} rejetée.${adminNote ? ` Note : ${adminNote}` : ""}`,
+            oldStatus: referral.status,
+            newStatus: "REJECTED",
+          },
+        });
       });
-      await tx.adminActionLog.create({
-        data: {
-          adminId: admin.id,
-          action: "Déclaration partenaire rejetée",
-          entityType: "PartnerReferral",
-          entityId: id,
-          detail: `Déclaration ${referral.booking.reference} rejetée.${adminNote ? ` Note : ${adminNote}` : ""}`,
-          oldStatus: referral.status,
-          newStatus: "REJECTED",
-        },
-      });
-    });
+    } catch (error) {
+      if (error instanceof PartnerReferralStateConflictError) {
+        return NextResponse.json({ error: "Ce dossier a déjà été traité. Actualisez avant de recommencer." }, { status: 409 });
+      }
+      throw error;
+    }
     return NextResponse.json({ ok: true, message: "Déclaration rejetée." });
   }
 
@@ -131,4 +155,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 function appendAdminNote(existing: string | null, note: string) {
   return [existing, note].filter(Boolean).join("\n");
+}
+
+class PartnerReferralStateConflictError extends Error {
+  constructor() {
+    super("Partner referral state changed concurrently");
+    this.name = "PartnerReferralStateConflictError";
+  }
 }
