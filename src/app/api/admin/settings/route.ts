@@ -13,7 +13,10 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const rows = await db.setting.findMany();
-  return NextResponse.json({ settings: platformSettingsForForm(rows) });
+  return NextResponse.json(
+    { settings: platformSettingsForForm(rows), readAt: new Date().toISOString() },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function PATCH(req: NextRequest) {
@@ -73,13 +76,33 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    return { teacherProfilesSynchronized: syncedTeachers.count };
+    const persistedRows = await tx.setting.findMany({
+      where: { key: { in: rows.map((row) => row.key) } },
+    });
+
+    return {
+      teacherProfilesSynchronized: syncedTeachers.count,
+      settings: platformSettingsForForm(persistedRows),
+    };
   });
 
-  revalidateTag("platform-settings", "max");
+  revalidateTag("platform-settings", { expire: 0 });
+  const savedAt = new Date().toISOString();
+  console.log(JSON.stringify({
+    level: "info",
+    message: "admin_settings_saved",
+    route: "/api/admin/settings",
+    adminId: admin.id,
+    changedCount: changedKeys.length,
+    changedKeys,
+    teacherProfilesSynchronized: result.teacherProfilesSynchronized,
+    savedAt,
+  }));
+
   return NextResponse.json({
     ok: true,
-    settings: platformSettingsForForm(rows),
     ...result,
-  });
+    changedKeys,
+    savedAt,
+  }, { headers: { "Cache-Control": "private, no-store" } });
 }

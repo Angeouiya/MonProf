@@ -2,9 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import {
   ArrowUpRight, BadgePercent, BellRing, Building2, CalendarClock, CheckCircle2, Clock3, Database,
   Loader2, Mail, MapPinned, Route, Save, Settings, ShieldCheck, Smartphone,
@@ -29,6 +27,10 @@ type DatabaseStatus = {
   activeCommuneCount: number;
   userCount: number;
 };
+type SaveNotice = {
+  tone: "success" | "error";
+  message: string;
+};
 
 export function ParametresClient({
   initial,
@@ -39,20 +41,24 @@ export function ParametresClient({
   providerStatus: ProviderStatus;
   databaseStatus: DatabaseStatus;
 }) {
-  const router = useRouter();
   const [values, setValues] = useState(initial);
   const [savedValues, setSavedValues] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
   const commission = clampNumber(values.default_commission, 30, 0, 60);
   const teacherShare = 100 - commission;
   const changed = useMemo(
     () => Object.keys(savedValues).some((key) => savedValues[key] !== values[key]),
     [savedValues, values],
   );
-  const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+  const set = (key: string, value: string) => {
+    setSaveNotice(null);
+    setValues((current) => ({ ...current, [key]: value }));
+  };
 
   const save = async () => {
     setSaving(true);
+    setSaveNotice(null);
     try {
       const response = await fetch("/api/admin/settings", {
         method: "PATCH",
@@ -61,16 +67,41 @@ export function ParametresClient({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Impossible d'enregistrer les paramètres.");
-      const nextValues = data.settings ?? values;
-      setValues(nextValues);
-      setSavedValues(nextValues);
+
+      const verificationResponse = await fetch("/api/admin/settings", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const verification = await verificationResponse.json().catch(() => ({}));
+      if (!verificationResponse.ok || !verification.settings) {
+        throw new Error(verification.error || "Les paramètres ont été envoyés, mais leur relecture a échoué.");
+      }
+
+      const verifiedValues = verification.settings as Record<string, string>;
+      const expectedValues = (data.settings ?? values) as Record<string, string>;
+      const mismatches = Object.keys(expectedValues).filter((key) => expectedValues[key] !== verifiedValues[key]);
+      if (mismatches.length > 0) {
+        throw new Error(`La base n'a pas confirmé ${mismatches.length} paramètre(s). Rechargez la page avant de recommencer.`);
+      }
+
+      setValues(verifiedValues);
+      setSavedValues(verifiedValues);
       const synchronized = Number(data.teacherProfilesSynchronized || 0);
-      toast.success(synchronized > 0
-        ? `Paramètres enregistrés. ${synchronized} profil(s) au taux précédent ont été synchronisés.`
-        : "Paramètres enregistrés et appliqués aux nouveaux calculs.");
-      router.refresh();
+      const savedTime = new Date(data.savedAt || verification.readAt || Date.now()).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setSaveNotice({
+        tone: "success",
+        message: synchronized > 0
+          ? `Enregistré et vérifié à ${savedTime}. ${synchronized} profil(s) synchronisé(s).`
+          : `Enregistré et vérifié en base à ${savedTime}.`,
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
+      setSaveNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Enregistrement impossible.",
+      });
     } finally {
       setSaving(false);
     }
@@ -237,7 +268,28 @@ export function ParametresClient({
       <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-lg border border-[#C9D4EA] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#111B4D] text-white"><ShieldCheck className="h-5 w-5" /></div>
-          <div><p className="text-sm font-semibold text-[#111827]">Configuration sensible et journalisée</p><p className="text-xs leading-5 text-[#64748B]">Les changements affectent uniquement les nouveaux calculs et sont conservés dans le journal admin.</p></div>
+          <div>
+            <p className="text-sm font-semibold text-[#111827]">Configuration sensible et journalisée</p>
+            <p className="text-xs leading-5 text-[#64748B]">
+              {saving
+                ? "Enregistrement et vérification dans la base en cours…"
+                : changed
+                  ? "Modifications non enregistrées. Elles ne seront appliquées qu'après validation."
+                  : "Les valeurs affichées correspondent aux paramètres confirmés par la base."}
+            </p>
+            {saveNotice ? (
+              <p
+                role={saveNotice.tone === "error" ? "alert" : "status"}
+                className={`mt-2 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                  saveNotice.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {saveNotice.message}
+              </p>
+            ) : null}
+          </div>
         </div>
         <Button onClick={save} disabled={saving || !changed} className="min-h-11 bg-[#111B4D] text-white hover:bg-[#0B143D] sm:min-w-48">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

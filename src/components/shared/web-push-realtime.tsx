@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { buildSubscriptionPayload, urlBase64ToUint8Array } from "@/lib/web-push-client";
 
-const FALLBACK_CHECK_INTERVAL_MS = 5 * 60_000;
-
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
   const router = useRouter();
   const knownCount = useRef(initialNotificationCount);
@@ -64,15 +62,11 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
     navigator.serviceWorker.addEventListener("message", onMessage);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
-    void refreshState(false);
-    const interval = window.setInterval(() => void refreshState(false), FALLBACK_CHECK_INTERVAL_MS);
-
     return () => {
       cancelled = true;
       navigator.serviceWorker.removeEventListener("message", onMessage);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
-      window.clearInterval(interval);
     };
   }, [refreshState]);
 
