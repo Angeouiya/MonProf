@@ -5,6 +5,7 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 
 const BASELINE_MIGRATION = "20260727000000_baseline";
+const RECOVERABLE_MIGRATION = "20260814200000_loyalty_gift_payment_gaps";
 const baselineSqlPath = path.resolve("prisma", "migrations", BASELINE_MIGRATION, "migration.sql");
 const baselineSql = fs.readFileSync(baselineSqlPath, "utf8");
 const baselineFingerprint = parseBaselineFingerprint(baselineSql);
@@ -20,6 +21,8 @@ if (!migrationDatabaseUrl) {
 const db = new PrismaClient({ datasourceUrl: migrationDatabaseUrl });
 
 try {
+  await resolveKnownFailedMigration(db, migrationDatabaseUrl);
+
   const rows = await db.$queryRaw`
     SELECT table_name AS "tableName"
     FROM information_schema.tables
@@ -216,4 +219,61 @@ function postgresUdtName(sqlType, quoted) {
     TEXT: "text",
     UUID: "uuid",
   }[sqlType] ?? sqlType.toLowerCase();
+}
+
+async function resolveKnownFailedMigration(prisma, databaseUrl) {
+  const migrationTableRows = await prisma.$queryRaw`
+    SELECT table_name AS "tableName"
+    FROM information_schema.tables
+    WHERE table_schema = current_schema()
+      AND table_name = '_prisma_migrations'
+  `;
+  if (migrationTableRows.length === 0) return;
+
+  const failedRows = await prisma.$queryRaw`
+    SELECT logs
+    FROM "_prisma_migrations"
+    WHERE migration_name = ${RECOVERABLE_MIGRATION}
+      AND finished_at IS NULL
+      AND rolled_back_at IS NULL
+    ORDER BY started_at DESC
+    LIMIT 1
+  `;
+  if (failedRows.length === 0) return;
+
+  const logs = String(failedRows[0].logs ?? "");
+  const isKnownSettingColumnFailure =
+    logs.includes('column "createdAt" of relation "Setting" does not exist') &&
+    (logs.includes("42703") || logs.includes("P3018"));
+  if (!isKnownSettingColumnFailure) {
+    console.error(
+      `FAIL ${RECOVERABLE_MIGRATION} is unfinished for an unexpected reason. Refusing automatic recovery.`,
+    );
+    process.exit(1);
+  }
+
+  console.log(`Recovering the known failed migration ${RECOVERABLE_MIGRATION}.`);
+  const require = createRequire(import.meta.url);
+  const prismaPackagePath = require.resolve("prisma/package.json");
+  const prismaCliPath = path.join(path.dirname(prismaPackagePath), "build", "index.js");
+  const result = spawnSync(
+    process.execPath,
+    [prismaCliPath, "migrate", "resolve", "--rolled-back", RECOVERABLE_MIGRATION],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        DATABASE_URL: databaseUrl,
+        DIRECT_URL: databaseUrl,
+      },
+      stdio: "inherit",
+    },
+  );
+
+  if (result.error) {
+    console.error(`FAIL Unable to resolve ${RECOVERABLE_MIGRATION}: ${result.error.message}`);
+    process.exit(1);
+  }
+  if (result.status !== 0) process.exit(result.status ?? 1);
+  console.log(`OK ${RECOVERABLE_MIGRATION} marked rolled back; Prisma can replay the corrected SQL.`);
 }
