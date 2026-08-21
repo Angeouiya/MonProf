@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
@@ -20,6 +21,7 @@ import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
+import { TeacherProfileLink } from "@/components/shared/teacher-profile-link";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/format";
 import { getServerSession } from "next-auth";
@@ -36,8 +38,59 @@ import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
 import { hasTeacherCvContent } from "@/lib/teacher-profile";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 import { normalizePartnerReferralCode } from "@/lib/partner-referrals";
+import { teacherPublicProfilePath, teacherPublicSharePath } from "@/lib/teacher-public-link";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const teacher = await db.teacher.findFirst({
+    where: {
+      id,
+      status: "ACTIVE",
+      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+    },
+    select: {
+      id: true,
+      fullName: true,
+      professionalName: true,
+      jobTitle: true,
+      photoUrl: true,
+      coverUrl: true,
+    },
+  });
+
+  if (!teacher) {
+    return {
+      title: "Profil professeur | Compétence.CI",
+      description: "Découvrez les professeurs vérifiés disponibles sur Compétence.CI.",
+    };
+  }
+
+  const teacherName = teacher.professionalName || teacher.fullName;
+  const description = `${teacherName}, ${teacher.jobTitle}. Découvrez son profil vérifié et réservez votre cours sur Compétence.CI.`;
+  const socialImage = teacher.photoUrl || resolveTeacherCover({ teacherId: teacher.id, coverUrl: teacher.coverUrl }).url;
+
+  return {
+    title: `${teacherName} | Professeur Compétence.CI`,
+    description,
+    alternates: { canonical: teacherPublicProfilePath(teacher.id) },
+    openGraph: {
+      type: "profile",
+      title: `${teacherName} sur Compétence.CI`,
+      description,
+      url: teacherPublicSharePath(teacher.id),
+      siteName: "Compétence.CI",
+      images: [{ url: socialImage, alt: `Profil de ${teacherName}` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${teacherName} sur Compétence.CI`,
+      description,
+      images: [socialImage],
+    },
+  };
+}
 
 export default async function TeacherDetailPage({
   params,
@@ -248,6 +301,9 @@ export default async function TeacherDetailPage({
                   <div className="mt-2 flex flex-wrap justify-start gap-2 text-[11px] font-semibold text-[#111B4D] sm:text-xs">
                     {teacher.offersHome && <span className="inline-flex items-center gap-1"><HomeIcon className="h-3 w-3" />Domicile</span>}
                     {teacher.offersOnline && <span className="inline-flex items-center gap-1"><Video className="h-3 w-3" />En ligne</span>}
+                  </div>
+                  <div className="mt-3">
+                    <TeacherProfileLink teacherId={teacher.id} teacherName={displayName} />
                   </div>
                 </div>
               </div>

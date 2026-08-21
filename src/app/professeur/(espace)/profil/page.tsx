@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { InfoLine, PortalCard, ProfessorPageHeader, StatusPill } from "@/components/professor/professor-ui";
 import { TeacherProfessionalProfileForm } from "@/components/professor/teacher-professional-profile-form";
 import { TeacherProfileMediaForm } from "@/components/professor/teacher-profile-media-form";
+import { TeacherProfileLink } from "@/components/shared/teacher-profile-link";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { teacherEligibleJourneys, TEACHER_JOURNEY_CONFIG } from "@/lib/teacher-journeys";
@@ -78,6 +79,13 @@ export default async function ProfesseurProfilPage() {
           </div>
           <p className="mt-1 text-sm font-bold text-[#64748B]">{profile.jobTitle}</p>
           <p className="mt-4 max-w-3xl text-sm font-semibold leading-6 text-[#475569]">{profile.bio}</p>
+
+          <TeacherProfileLink
+            teacherId={profile.id}
+            teacherName={teacherName}
+            mode="panel"
+            published={profile.status === "ACTIVE" && Boolean(profile.photoUrl)}
+          />
 
           <div className="mt-5 grid gap-3 min-[760px]:grid-cols-3">
             <ContactTile icon={<Phone className="h-4 w-4" />} label="Téléphone" value={profile.phone} />

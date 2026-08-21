@@ -454,7 +454,7 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /14 août 2026/.test(termsPage)
+  /20 août 2026/.test(termsPage)
     && /Résumé opposable/.test(termsPage)
     && /Paiement serveur exact obligatoire/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
@@ -486,7 +486,7 @@ record(
     && /coordonnées directes du client et du professeur/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
-    && /14 août 2026/.test(privacyPage)
+    && /20 août 2026/.test(privacyPage)
     && /Résumé de protection/.test(privacyPage)
     && /Compétence ne vend pas les données personnelles/.test(privacyPage)
     && /adresses opérationnelles validées/.test(privacyPage)

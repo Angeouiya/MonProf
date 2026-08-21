@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.CI.",
 };
 
-const version = "14 août 2026";
+const version = "20 août 2026";
 
 const highlights = [
   "Compétence ne vend pas les données personnelles et limite l'accès aux personnes ou prestataires nécessaires au service.",
@@ -17,6 +17,7 @@ const highlights = [
   "Les brouillons supprimés retirent les données opérationnelles inutiles, sauf trace minimale nécessaire à la sécurité ou à la preuve.",
   "Les données partenariat sont limitées à la déclaration, la vérification, la commission et la preuve de dépôt nécessaire.",
   "Les CV, photos, couvertures et mini-CV professeurs sont structurés, modérés ou remplacés lorsque l'image de Compétence.CI l'exige.",
+  "Chaque lien professeur expose uniquement le profil public autorisé ; les coordonnées privées restent masquées jusqu'au paiement vérifié.",
   "Les demandes sensibles exigent une vérification d'identité avant divulgation, correction ou suppression lorsque la sécurité l'impose.",
 ];
 
@@ -63,6 +64,8 @@ const sections: LegalSection[] = [
       "Données de paiement : montant payé, prix du cours, réduction, transport, frais de service Compétence, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko, statut serveur vérifié, statut webhook, montant remboursable et numéro de remboursement si le client le fournit. Compétence ne demande ni ne conserve le code secret Mobile Money du client.",
       "Données partenariat et cadeaux : nom, téléphone et email facultatif du partenaire, code permanent, client attribué, date du premier paiement confirmé, période d'attribution de six mois, réservations concernées, montants éligibles, réductions client, progression de paiement, cadeaux débloqués, dates d'expiration, commissions calculées, preuve d'identité, moyen de dépôt et notes de contrôle.",
       "Données professeur : photo réelle obligatoire, couverture personnalisée, couleur ou couverture choisie dans le catalogue, identité, téléphone, email, matières, niveaux, systèmes enseignés, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
+      "Données de lien professeur : identifiant public du profil, adresse courte Compétence.CI, fiche de destination, nom professionnel, fonction, photo ou couverture autorisée et métadonnées nécessaires à la prévisualisation sur les réseaux sociaux.",
+      "Données de consultation du lien : date et heure, adresse IP, navigateur, appareil, page d'origine ou référent lorsqu'il est transmis, paramètres de campagne et parcours de navigation jusqu'à la réservation. Ces informations servent à la sécurité, à la mesure d'audience et à l'amélioration du service.",
       "Données de communication : notifications internes et push, emails de réinitialisation client, mots de passe temporaires professeurs émis par le service client, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
       "Données d'appareil push : identifiant d'appareil pseudonyme, abonnement chiffré fourni par le navigateur, plateforme, navigateur, système, installation PWA, capacités de vibration ou de badge, date de dernière activité, statut d'envoi et erreurs techniques. Compétence ne reçoit pas le contenu personnel des autres notifications du téléphone.",
       "Données de preuve : version juridique acceptée, parcours de paiement, coordonnées partagées après confirmation, historique de suppression de brouillon, journaux de retrait et éléments nécessaires à la défense des droits de Compétence, d'un client, d'un professeur ou d'un apprenant.",
@@ -77,6 +80,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Créer et sécuriser les comptes clients et accès professeurs.",
       "Afficher des professeurs réels, vérifiés et adaptés à la demande de l'utilisateur.",
+      "Créer pour chaque professeur un lien public stable, produire une prévisualisation sociale professionnelle et mesurer l'utilisation du lien afin d'améliorer la visibilité, la conversion et la qualité des profils Compétence.CI.",
       "Verrouiller les professeurs qui n'enseignent pas dans le système sélectionné et empêcher toute réservation, paiement ou remplacement incompatible.",
       "Calculer les tarifs, frais de déplacement, frais de service, annulations, remboursements et sommes dues.",
       "Appliquer automatiquement la meilleure réduction de pack atteinte lorsque plusieurs dates sont choisies, sans ajouter de séance sans l'accord du client.",
@@ -118,6 +122,16 @@ const sections: LegalSection[] = [
       "Jèko traite les informations strictement nécessaires aux paiements et aux retraits professeurs ; la boutique ou le marchand attendu doit correspondre à Compétence.CI ou à la Boutique Compétence. Une boutique tierce ou un marchand inattendu ne doit pas être utilisé pour valider un paiement Compétence.",
       "La saisie du numéro de paiement, de l'opérateur mobile money ou des informations financières s'effectue dans l'environnement sécurisé du prestataire lorsque celui-ci l'exige. Compétence conserve seulement les références, statuts, montants et informations nécessaires au rapprochement.",
       "Des prestataires techniques interviennent pour l'hébergement, la base de données, l'email, les notifications ou la sécurité, dans la limite de leur mission.",
+      "Lorsqu'un lien professeur est partagé sur un réseau social ou une messagerie, ce service tiers peut traiter l'adresse du lien, l'aperçu public et les données de l'utilisateur selon sa propre politique. Compétence ne transmet dans l'aperçu ni téléphone privé, ni email privé, ni adresse de cours, ni donnée de paiement.",
+    ],
+  },
+  {
+    title: "Profils publics et liens de partage",
+    body: [
+      "La fiche publique d'un professeur peut contenir son nom professionnel, sa photo, sa couverture, sa fonction, sa biographie, ses compétences, systèmes, niveaux, zones générales, disponibilités indicatives, badges, notes et avis publiés. Le téléphone, l'email, l'adresse précise, le CV source, les informations de paiement et les notes internes ne figurent pas dans le lien public.",
+      "Le professeur peut copier ou partager son lien depuis son espace. La publication de la fiche reste contrôlée par Compétence et dépend du statut, de la photo réelle, du catalogue compatible et des règles de qualité. Une restriction du profil rend également le lien public indisponible.",
+      "Les journaux du lien permettent à Compétence de détecter les abus, mesurer l'audience des profils et comprendre l'origine générale des visites ou réservations. Compétence peut communiquer au professeur des statistiques agrégées, sans lui révéler l'identité d'un visiteur qui n'a pas finalisé une réservation autorisant le partage de coordonnées.",
+      "Une personne qui repartage le lien doit éviter d'ajouter des informations privées, fausses ou préjudiciables. Les copies, captures et republications effectuées hors de Compétence peuvent rester visibles sur les services tiers après la modification du profil ; leur retrait dépend alors aussi des outils du service concerné.",
     ],
   },
   {

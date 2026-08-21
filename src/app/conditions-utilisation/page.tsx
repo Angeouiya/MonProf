@@ -6,12 +6,13 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "14 août 2026";
+const version = "20 août 2026";
 
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
+  "Chaque professeur dispose automatiquement d'un lien public Compétence.CI, partageable sur les réseaux sociaux et contrôlé par la plateforme.",
   "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
   "Chaque date et chaque heure sont contrôlées côté serveur : un créneau payé, son chevauchement et son temps de déplacement deviennent indisponibles pour tout autre client.",
   "Avant d'annuler, le client peut demander une alternative professeur : la réservation reste active pendant que le moteur propose un profil compatible ou signale le dossier au service client.",
@@ -47,6 +48,17 @@ const sections: LegalSection[] = [
       "Compétence conserve un pouvoir de contrôle opérationnel sur les professeurs, les missions, les paiements, les sanctions, les remplacements et la visibilité des profils.",
       "Compétence peut faire évoluer les écrans, boutons, filtres, tableaux de bord, moyens de paiement, règles de contrôle, catalogues, couvertures et automatisations afin d'améliorer la sécurité, la simplicité ou la qualité du service, sans altérer une réservation déjà payée sauf nécessité opérationnelle, légale ou antifraude.",
       "Sauf disposition impérative contraire, le professeur intervient comme prestataire indépendant et reste responsable de ses déclarations, qualifications, méthodes, obligations professionnelles et fiscales. L'accès à la plateforme ne constitue ni une garantie de mission, ni un salaire, ni une relation d'exclusivité.",
+    ],
+  },
+  {
+    title: "Liens publics professeurs et réseaux sociaux",
+    body: [
+      "Compétence attribue automatiquement à chaque professeur un lien public unique rattaché à sa fiche. Ce lien peut être copié ou partagé sur WhatsApp, Facebook, LinkedIn et tout autre canal compatible afin de présenter le profil et conduire le visiteur vers la réservation Compétence.CI.",
+      "Le lien, son format, son adresse, sa redirection, sa présentation sociale, ses boutons et les données techniques associées appartiennent à l'écosystème Compétence.CI. Le professeur bénéficie d'un droit d'utilisation limité à la promotion loyale de son profil tant que celui-ci est autorisé et publié.",
+      "Le lien ne transfère aucun droit sur le domaine, la marque, l'interface, les clients ou les données de Compétence. Il ne crée ni exclusivité, ni rémunération, ni commission, ni priorité de réservation en dehors d'un programme partenaire expressément validé par Compétence.",
+      "Le professeur doit partager son lien sans spam, usurpation, promesse mensongère, faux résultat, tarif non officiel, publicité illicite ou contenu susceptible de nuire à Compétence.CI. Toute communication réalisée autour du lien demeure sous la responsabilité de son auteur.",
+      "Compétence peut corriger la prévisualisation, rediriger, limiter, suspendre ou désactiver le lien lorsque le profil est incomplet, inactif, suspendu, blacklisté, frauduleux, trompeur, litigieux ou contraire à la qualité et à la réputation de la plateforme.",
+      "Toute réservation provenant d'un lien reste soumise aux contrôles ordinaires de système, catalogue, disponibilité, déplacement, prix et paiement Jèko. Le partage du lien ne contourne aucune règle serveur et ne donne accès à aucune coordonnée privée avant le paiement vérifié.",
     ],
   },
   {
@@ -279,6 +291,7 @@ const sections: LegalSection[] = [
     title: "Propriété intellectuelle et contenus",
     body: [
       "La marque, l'interface, le catalogue de couvertures, les textes, règles, composants, bases de données et éléments graphiques de Compétence.CI sont protégés. Toute extraction, copie systématique, revente, imitation ou réutilisation non autorisée est interdite.",
+      "Les liens publics professeurs, les aperçus sociaux et les adresses courtes Compétence.CI sont des fonctionnalités de la plateforme. Ils peuvent être utilisés pour partager un profil, mais ne peuvent pas être revendus, détournés, imités, associés à une fausse boutique ou présentés comme un domaine appartenant au professeur.",
       "L'utilisateur reste responsable des contenus qu'il fournit et garantit disposer des droits nécessaires. Il accorde à Compétence une licence non exclusive, gratuite et limitée à l'hébergement, l'optimisation, la modération et l'affichage du contenu pour fournir et promouvoir son profil ou le service.",
       "Les couvertures proposées par Compétence sont attribuées automatiquement et aléatoirement aux profils professeurs. Un professeur dispose d'outils pour proposer une couverture, une couleur ou une photo personnelle, et Compétence se réserve le droit de la refuser, la remplacer ou la retirer si elle nuit à l'image, à la cohérence pédagogique, aux droits de tiers ou à la sécurité du service.",
       "Cette licence prend fin lorsque le contenu n'est plus nécessaire, après conservation des sauvegardes, preuves, obligations légales et contenus déjà intégrés à un dossier litigieux ou financier.",

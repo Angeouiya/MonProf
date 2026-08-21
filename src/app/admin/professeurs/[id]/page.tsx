@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { TeacherMiniCv } from "@/components/shared/teacher-mini-cv";
+import { TeacherProfileLink } from "@/components/shared/teacher-profile-link";
 import { TeacherOperationsClient } from "@/components/admin/teacher-operations-client";
 import {
   AdminActionLog,
@@ -553,6 +554,7 @@ export default async function ProfesseurDetailPage({
         title={teacher.professionalName || teacher.fullName}
         description={teacher.jobTitle}
       >
+        <TeacherProfileLink teacherId={teacher.id} teacherName={teacher.professionalName || teacher.fullName} />
         <Button asChild variant="outline">
           <Link href="/admin/professeurs">Retour</Link>
         </Button>
