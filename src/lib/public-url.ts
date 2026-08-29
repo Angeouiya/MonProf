@@ -3,6 +3,16 @@ import type { NextRequest } from "next/server";
 const PRODUCTION_APP_ORIGIN = "https://www.competence.ci";
 
 export function getPublicAppOrigin(req?: NextRequest) {
+  const cloudflareEnvironment = (
+    process.env.APP_DEPLOYMENT_ENV || process.env.CLOUDFLARE_ENV
+  )?.trim().toLowerCase();
+  const isCloudflare = process.env.APP_DEPLOYMENT_PLATFORM === "cloudflare" || Boolean(cloudflareEnvironment);
+
+  if (isCloudflare && cloudflareEnvironment !== "production" && req) {
+    const previewOrigin = normalizeCloudflarePreviewOrigin(req.nextUrl.origin);
+    if (previewOrigin) return previewOrigin;
+  }
+
   if (process.env.VERCEL_ENV === "preview") {
     const previewOrigin = normalizeVercelOrigin(process.env.VERCEL_URL);
     if (previewOrigin) return previewOrigin;
@@ -67,4 +77,15 @@ function normalizePublicOrigin(value?: string | null, allowHttpLocal = false) {
 function normalizeVercelOrigin(value?: string | null) {
   if (!value) return null;
   return normalizePublicOrigin(value.includes("://") ? value : `https://${value}`);
+}
+
+function normalizeCloudflarePreviewOrigin(value?: string | null) {
+  const origin = normalizePublicOrigin(value);
+  if (!origin) return null;
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname.endsWith(".workers.dev") ? origin : null;
+  } catch {
+    return null;
+  }
 }

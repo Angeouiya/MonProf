@@ -110,6 +110,8 @@ export async function GET() {
       checks,
       integrationPolicy: {
         mode: integrationPolicy.mode,
+        deploymentPlatform: integrationPolicy.deploymentPlatform,
+        cloudflareEnvironment: integrationPolicy.cloudflareEnvironment,
         vercelEnvironment: integrationPolicy.vercelEnvironment,
       },
       integrations,

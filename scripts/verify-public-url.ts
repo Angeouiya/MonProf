@@ -9,6 +9,9 @@ const keys = [
   "VERCEL_ENV",
   "VERCEL_URL",
   "VERCEL_PROJECT_PRODUCTION_URL",
+  "APP_DEPLOYMENT_PLATFORM",
+  "APP_DEPLOYMENT_ENV",
+  "CLOUDFLARE_ENV",
 ] as const;
 
 const mutableEnv: Record<string, string | undefined> = process.env;
@@ -25,6 +28,21 @@ try {
     getPublicAppOrigin(requestFor("https://competence-staged-abc.vercel.app")),
     "https://competence-staged-abc.vercel.app",
     "un candidat Production --skip-domain doit générer le lien vers lui-même",
+  );
+
+  delete mutableEnv.VERCEL_ENV;
+  delete mutableEnv.VERCEL_URL;
+  mutableEnv.APP_DEPLOYMENT_PLATFORM = "cloudflare";
+  mutableEnv.APP_DEPLOYMENT_ENV = "staging";
+  assert.equal(
+    getPublicAppOrigin(requestFor("https://competence-ci-staging.example.workers.dev")),
+    "https://competence-ci-staging.example.workers.dev",
+    "la préproduction Cloudflare doit produire des liens vers son propre Worker",
+  );
+  assert.equal(
+    getPublicAppOrigin(requestFor("https://evil.example")),
+    "https://www.competence.ci",
+    "un Host arbitraire ne doit jamais devenir l’origine Cloudflare d’un lien sensible",
   );
   assert.equal(
     getPublicAppOrigin(requestFor("https://www.competence.ci")),

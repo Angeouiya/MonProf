@@ -4,6 +4,7 @@ const distDir = process.env.NEXT_DIST_DIR?.trim() || undefined;
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["@prisma/client", ".prisma/client"],
   ...(distDir ? { distDir } : {}),
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   devIndicators: false,

@@ -10,6 +10,7 @@ export type WebPushQueueMessage = {
   reason: "outbox_created" | "communication_campaign" | "cron_recovery" | "manual" | "health_retry";
   limit?: number;
   createdAt: string;
+  idempotencyKey?: string;
 };
 
 export type WebPushQueuePublishResult =
@@ -32,9 +33,16 @@ export async function publishWebPushFlushEvent(
     reason,
     limit,
     createdAt: new Date().toISOString(),
+    idempotencyKey,
   };
 
   try {
+    if (isCloudflareRuntime()) {
+      await sendCloudflareQueueMessage("WEB_PUSH_QUEUE", message);
+      logQueue("published", { reason, limit, idempotencyKey, provider: "cloudflare" });
+      return { queued: true, messageId: idempotencyKey };
+    }
+
     const result = await queueClient.send(WEB_PUSH_QUEUE_TOPIC, message, {
       idempotencyKey,
       retentionSeconds: 60 * 60 * 24,
@@ -62,6 +70,22 @@ export async function publishWebPushFlushEvent(
     return { queued: false, error: messageText };
   }
 }
+
+function isCloudflareRuntime() {
+  return process.env.APP_DEPLOYMENT_PLATFORM === "cloudflare" || Boolean(process.env.CLOUDFLARE_ENV);
+}
+
+async function sendCloudflareQueueMessage(bindingName: "WEB_PUSH_QUEUE", message: WebPushQueueMessage) {
+  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+  const context = getCloudflareContext();
+  const queue = (context.env as unknown as Record<string, CloudflareQueueBinding | undefined>)[bindingName];
+  if (!queue) throw new Error(`Binding Cloudflare ${bindingName} indisponible.`);
+  await queue.send(message, { contentType: "json" });
+}
+
+type CloudflareQueueBinding = {
+  send(body: unknown, options?: { contentType?: "json" | "text" | "bytes" | "v8" }): Promise<void>;
+};
 
 export async function processWebPushQueueMessage(message: WebPushQueueMessage): Promise<WebPushFlushSummary> {
   if (!message || message.kind !== "FLUSH_OUTBOX") {

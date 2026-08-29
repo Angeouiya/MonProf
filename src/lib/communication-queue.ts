@@ -10,6 +10,7 @@ export type CommunicationCampaignQueueMessage = {
   phase: CommunicationCampaignDispatchPhase;
   cursor?: string | null;
   createdAt: string;
+  idempotencyKey?: string;
 };
 
 export type CommunicationCampaignQueuePublishResult =
@@ -35,8 +36,21 @@ export async function publishCommunicationCampaignEvent(
   };
   const idempotencyKey = options.idempotencyKey
     ?? `communication-${payload.campaignId}-${payload.phase}-${payload.cursor || "start"}`;
+  payload.idempotencyKey = idempotencyKey;
 
   try {
+    if (isCloudflareRuntime()) {
+      await sendCloudflareQueueMessage("COMMUNICATION_QUEUE", payload);
+      logCommunicationQueue("published", {
+        campaignId: payload.campaignId,
+        phase: payload.phase,
+        cursor: payload.cursor,
+        messageId: idempotencyKey,
+        provider: "cloudflare",
+      });
+      return { queued: true, messageId: idempotencyKey };
+    }
+
     const result = await queueClient.send(COMMUNICATION_QUEUE_TOPIC, payload, {
       idempotencyKey,
       retentionSeconds: 60 * 60 * 24,
@@ -65,6 +79,25 @@ export async function publishCommunicationCampaignEvent(
     return { queued: false, error: messageText };
   }
 }
+
+function isCloudflareRuntime() {
+  return process.env.APP_DEPLOYMENT_PLATFORM === "cloudflare" || Boolean(process.env.CLOUDFLARE_ENV);
+}
+
+async function sendCloudflareQueueMessage(
+  bindingName: "COMMUNICATION_QUEUE",
+  message: CommunicationCampaignQueueMessage,
+) {
+  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+  const context = getCloudflareContext();
+  const queue = (context.env as unknown as Record<string, CloudflareQueueBinding | undefined>)[bindingName];
+  if (!queue) throw new Error(`Binding Cloudflare ${bindingName} indisponible.`);
+  await queue.send(message, { contentType: "json" });
+}
+
+type CloudflareQueueBinding = {
+  send(body: unknown, options?: { contentType?: "json" | "text" | "bytes" | "v8" }): Promise<void>;
+};
 
 function getQueueRegion(): VercelRegion {
   return (process.env.VERCEL_QUEUE_REGION || process.env.VERCEL_REGION || "lhr1") as VercelRegion;

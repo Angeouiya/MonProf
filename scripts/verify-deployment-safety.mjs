@@ -19,12 +19,22 @@ const {
 assert.deepEqual(getProductionIntegrationPolicy({}), {
   enabled: true,
   mode: "local-explicit",
+  deploymentPlatform: "local",
+  cloudflareEnvironment: null,
   vercelEnvironment: null,
 });
 assert.equal(productionIntegrationsAreEnabled({ VERCEL_ENV: "production" }), true);
 assert.equal(productionIntegrationsAreEnabled({ VERCEL_ENV: "preview" }), false);
 assert.equal(productionIntegrationsAreEnabled({ VERCEL_ENV: "development" }), false);
 assert.equal(productionIntegrationsAreEnabled({ VERCEL_ENV: "custom-preview" }), false);
+assert.equal(productionIntegrationsAreEnabled({
+  APP_DEPLOYMENT_PLATFORM: "cloudflare",
+  APP_DEPLOYMENT_ENV: "staging",
+}), false);
+assert.equal(productionIntegrationsAreEnabled({
+  APP_DEPLOYMENT_PLATFORM: "cloudflare",
+  APP_DEPLOYMENT_ENV: "production",
+}), true);
 
 const {
   hasGmailEnvironmentConfiguration,

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { after } from 'next/server'
 
 function scheduleWebPushFlush() {
@@ -17,9 +18,25 @@ function scheduleWebPushFlush() {
 }
 
 function createPrismaClient() {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'production' ? ['error'] : ['error', 'warn'],
-  }).$extends({
+  const log = process.env.NODE_ENV === 'production' ? ['error'] as const : ['error', 'warn'] as const
+  const cloudflareRuntime = process.env.APP_DEPLOYMENT_PLATFORM === 'cloudflare'
+    || Boolean(process.env.CLOUDFLARE_ENV)
+  const connectionString = process.env.DATABASE_URL?.trim()
+
+  const client = cloudflareRuntime
+    ? new PrismaClient({
+        adapter: new PrismaPg({
+          connectionString: requireDatabaseUrl(connectionString),
+          max: 1,
+          maxUses: 1,
+          idleTimeoutMillis: 10_000,
+          connectionTimeoutMillis: 10_000,
+        }),
+        log: [...log],
+      })
+    : new PrismaClient({ log: [...log] })
+
+  return client.$extends({
     query: {
       notification: {
         async $allOperations({ operation, args, query }) {
@@ -41,6 +58,11 @@ function createPrismaClient() {
       },
     },
   })
+}
+
+function requireDatabaseUrl(value?: string) {
+  if (value) return value
+  throw new Error('DATABASE_URL est obligatoire pour le runtime Cloudflare.')
 }
 
 type AppPrismaClient = ReturnType<typeof createPrismaClient>

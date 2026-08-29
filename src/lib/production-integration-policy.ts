@@ -2,7 +2,14 @@ export type RuntimeEnvironment = Readonly<Record<string, string | undefined>>;
 
 export type ProductionIntegrationPolicy = {
   enabled: boolean;
-  mode: "vercel-production" | "vercel-non-production" | "local-explicit";
+  mode:
+    | "cloudflare-production"
+    | "cloudflare-non-production"
+    | "vercel-production"
+    | "vercel-non-production"
+    | "local-explicit";
+  deploymentPlatform: "cloudflare" | "vercel" | "local";
+  cloudflareEnvironment: string | null;
   vercelEnvironment: string | null;
 };
 
@@ -15,12 +22,29 @@ export type ProductionIntegrationPolicy = {
 export function getProductionIntegrationPolicy(
   environment: RuntimeEnvironment = process.env,
 ): ProductionIntegrationPolicy {
+  const deploymentPlatform = environment.APP_DEPLOYMENT_PLATFORM?.trim().toLowerCase() || null;
+  const cloudflareEnvironment = (
+    environment.APP_DEPLOYMENT_ENV || environment.CLOUDFLARE_ENV
+  )?.trim().toLowerCase() || null;
   const vercelEnvironment = environment.VERCEL_ENV?.trim().toLowerCase() || null;
+
+  if (deploymentPlatform === "cloudflare" || cloudflareEnvironment) {
+    const production = cloudflareEnvironment === "production";
+    return {
+      enabled: production,
+      mode: production ? "cloudflare-production" : "cloudflare-non-production",
+      deploymentPlatform: "cloudflare",
+      cloudflareEnvironment,
+      vercelEnvironment: null,
+    };
+  }
 
   if (!vercelEnvironment) {
     return {
       enabled: true,
       mode: "local-explicit",
+      deploymentPlatform: "local",
+      cloudflareEnvironment: null,
       vercelEnvironment: null,
     };
   }
@@ -29,6 +53,8 @@ export function getProductionIntegrationPolicy(
     return {
       enabled: true,
       mode: "vercel-production",
+      deploymentPlatform: "vercel",
+      cloudflareEnvironment: null,
       vercelEnvironment,
     };
   }
@@ -36,6 +62,8 @@ export function getProductionIntegrationPolicy(
   return {
     enabled: false,
     mode: "vercel-non-production",
+    deploymentPlatform: "vercel",
+    cloudflareEnvironment: null,
     vercelEnvironment,
   };
 }

@@ -41,6 +41,8 @@
     "node_modules",
     "output",
     "out",
-    "build"
+    "build",
+    ".open-next",
+    "cloudflare-worker.ts"
   ]
 }

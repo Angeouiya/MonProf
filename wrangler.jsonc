@@ -1,0 +1,61 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "competence-ci",
+  "main": "./cloudflare-worker.ts",
+  "compatibility_date": "2026-08-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./.open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "workers_dev": true,
+  "env": {
+    "staging": {
+      "name": "competence-ci-staging",
+      "workers_dev": true,
+      "vars": {
+        "APP_DEPLOYMENT_PLATFORM": "cloudflare",
+        "APP_DEPLOYMENT_ENV": "staging",
+        "CLOUDFLARE_ENV": "staging"
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "WEB_PUSH_QUEUE", "queue": "competence-staging-web-push-events" },
+          { "binding": "COMMUNICATION_QUEUE", "queue": "competence-staging-communication-campaigns" }
+        ],
+        "consumers": [
+          { "queue": "competence-staging-web-push-events", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-staging-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 }
+        ]
+      }
+    },
+    "production": {
+      "name": "competence-ci",
+      "workers_dev": false,
+      "vars": {
+        "APP_DEPLOYMENT_PLATFORM": "cloudflare",
+        "APP_DEPLOYMENT_ENV": "production",
+        "CLOUDFLARE_ENV": "production"
+      },
+      "triggers": {
+        "crons": ["* * * * *"]
+      },
+      "queues": {
+        "producers": [
+          { "binding": "WEB_PUSH_QUEUE", "queue": "competence-web-push-events" },
+          { "binding": "COMMUNICATION_QUEUE", "queue": "competence-communication-campaigns" }
+        ],
+        "consumers": [
+          { "queue": "competence-web-push-events", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 }
+        ]
+      }
+    }
+  }
+}
