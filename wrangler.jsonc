@@ -19,8 +19,12 @@
       "vars": {
         "APP_DEPLOYMENT_PLATFORM": "cloudflare",
         "APP_DEPLOYMENT_ENV": "staging",
-        "CLOUDFLARE_ENV": "staging"
+        "CLOUDFLARE_ENV": "staging",
+        "DATABASE_SCHEMA": "competence"
       },
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "fb4ce95de9d74066823f4ad2ced1276e" }
+      ],
       "triggers": {
         "crons": ["* * * * *"]
       },
@@ -41,8 +45,12 @@
       "vars": {
         "APP_DEPLOYMENT_PLATFORM": "cloudflare",
         "APP_DEPLOYMENT_ENV": "production",
-        "CLOUDFLARE_ENV": "production"
+        "CLOUDFLARE_ENV": "production",
+        "DATABASE_SCHEMA": "competence"
       },
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "fb4ce95de9d74066823f4ad2ced1276e" }
+      ],
       "triggers": {
         "crons": ["* * * * *"]
       },

@@ -8,7 +8,7 @@ export const maxDuration = 300;
 const MAX_DELIVERY_COUNT = 6;
 const queueClient = new QueueClient({ region: (process.env.VERCEL_QUEUE_REGION || process.env.VERCEL_REGION || "lhr1") as VercelRegion });
 
-export const POST = queueClient.handleCallback<CommunicationCampaignQueueMessage>(
+const handleQueueCallback = queueClient.handleCallback<CommunicationCampaignQueueMessage>(
   async (message, metadata) => {
     const startedAt = Date.now();
     console.log(JSON.stringify({
@@ -55,3 +55,7 @@ export const POST = queueClient.handleCallback<CommunicationCampaignQueueMessage
     },
   },
 );
+
+export async function POST(request: Request) {
+  return handleQueueCallback(request);
+}

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { after } from 'next/server'
 
 function scheduleWebPushFlush() {
@@ -22,16 +23,19 @@ function createPrismaClient() {
   const cloudflareRuntime = process.env.APP_DEPLOYMENT_PLATFORM === 'cloudflare'
     || Boolean(process.env.CLOUDFLARE_ENV)
   const connectionString = process.env.DATABASE_URL?.trim()
+  const cloudflareDatabase = cloudflareRuntime
+    ? normalizeCloudflareDatabaseUrl(connectionString)
+    : null
 
   const client = cloudflareRuntime
     ? new PrismaClient({
         adapter: new PrismaPg({
-          connectionString: requireDatabaseUrl(connectionString),
+          connectionString: cloudflareDatabase!.connectionString,
           max: 1,
           maxUses: 1,
           idleTimeoutMillis: 10_000,
           connectionTimeoutMillis: 10_000,
-        }),
+        }, cloudflareDatabase!.schema ? { schema: cloudflareDatabase!.schema } : undefined),
         log: [...log],
       })
     : new PrismaClient({ log: [...log] })
@@ -63,6 +67,45 @@ function createPrismaClient() {
 function requireDatabaseUrl(value?: string) {
   if (value) return value
   throw new Error('DATABASE_URL est obligatoire pour le runtime Cloudflare.')
+}
+
+function normalizeCloudflareDatabaseUrl(value?: string) {
+  const fallbackDatabaseUrl = new URL(requireDatabaseUrl(value))
+  const hyperdriveConnectionString = getHyperdriveConnectionString()
+  const databaseUrl = new URL(hyperdriveConnectionString || fallbackDatabaseUrl.toString())
+  const schema = process.env.DATABASE_SCHEMA?.trim()
+    || fallbackDatabaseUrl.searchParams.get('schema')?.trim()
+    || undefined
+
+  // Ces options sont comprises par le moteur Prisma natif mais pas utiles au
+  // pilote `pg` du runtime Workers. Le mode libpq conserve TLS avec le pooler
+  // Supabase sans exiger sa chaîne de certificat auto-signée.
+  databaseUrl.searchParams.delete('pgbouncer')
+  databaseUrl.searchParams.delete('connection_limit')
+  databaseUrl.searchParams.delete('schema')
+  if (databaseUrl.searchParams.get('sslmode')?.toLowerCase() === 'require') {
+    databaseUrl.searchParams.set('uselibpqcompat', 'true')
+  }
+
+  return {
+    connectionString: databaseUrl.toString(),
+    schema,
+  }
+}
+
+function getHyperdriveConnectionString() {
+  try {
+    const context = getCloudflareContext()
+    const binding = (context.env as unknown as {
+      HYPERDRIVE?: { connectionString?: string }
+    }).HYPERDRIVE
+    return binding?.connectionString?.trim() || null
+  } catch {
+    // Le build et les scripts locaux n'ont pas de contexte Workers. Ils
+    // continuent d'utiliser DATABASE_URL, tandis que le Worker utilise
+    // obligatoirement Hyperdrive dès que le binding est présent.
+    return null
+  }
 }
 
 type AppPrismaClient = ReturnType<typeof createPrismaClient>
