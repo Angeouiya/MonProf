@@ -42,6 +42,16 @@
     "production": {
       "name": "competence-ci",
       "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "competence.ci/*",
+          "zone_id": "3cffe59f4bd21e788c7b72d6c245d665"
+        },
+        {
+          "pattern": "www.competence.ci/*",
+          "zone_id": "3cffe59f4bd21e788c7b72d6c245d665"
+        }
+      ],
       "vars": {
         "APP_DEPLOYMENT_PLATFORM": "cloudflare",
         "APP_DEPLOYMENT_ENV": "production",
