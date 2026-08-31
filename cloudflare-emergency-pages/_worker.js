@@ -1,6 +1,6 @@
 const COMPETENCE_ORIGIN = "https://www.competence.ci";
 
-export default {
+const emergencyProxy = {
   async fetch(request) {
     const incomingUrl = new URL(request.url);
     const upstreamUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, COMPETENCE_ORIGIN);
@@ -35,3 +35,5 @@ export default {
     });
   },
 };
+
+export default emergencyProxy;

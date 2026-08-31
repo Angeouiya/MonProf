@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import {
   BadgeCheck,
   BookOpen,
@@ -31,9 +32,11 @@ import {
   parseTeacherJourney,
   teacherJourneyWhere,
   TEACHER_JOURNEY_CONFIG,
+  type TeacherJourney,
 } from "@/lib/teacher-journeys";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
+import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
 import { teacherJourneyPriceLabel } from "@/lib/teacher-profile-pricing";
 import { hasTeacherCvContent } from "@/lib/teacher-profile";
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
@@ -42,24 +45,37 @@ import { teacherPublicProfilePath, teacherPublicSharePath } from "@/lib/teacher-
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const teacher = await db.teacher.findFirst({
-    where: {
-      id,
-      status: "ACTIVE",
-      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+const getPublicTeacherProfile = cache(async (id: string, journey?: TeacherJourney) => db.teacher.findFirst({
+  where: {
+    id,
+    status: "ACTIVE",
+    ...(journey ? teacherJourneyWhere(journey) : {}),
+    AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
+  },
+  include: {
+    subjects: { include: { subject: true } },
+    levels: { include: { level: true }, orderBy: { level: { order: "asc" } } },
+    zones: { include: { commune: true } },
+    reviews: {
+      where: { published: true },
+      include: { client: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
     },
-    select: {
-      id: true,
-      fullName: true,
-      professionalName: true,
-      jobTitle: true,
-      photoUrl: true,
-      coverUrl: true,
-    },
-  });
+    _count: { select: { reviews: true, bookings: true } },
+  },
+}));
 
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ journey?: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const requestedJourney = parseTeacherJourney((await searchParams).journey);
+  const teacher = await getPublicTeacherProfile(id, requestedJourney ?? undefined);
   if (!teacher) {
     return {
       title: "Profil professeur | Compétence.CI",
@@ -70,7 +86,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const teacherName = teacher.professionalName || teacher.fullName;
   const description = `${teacherName}, ${teacher.jobTitle}. Découvrez son profil vérifié et réservez votre cours sur Compétence.CI.`;
   const socialImage = teacher.photoUrl || resolveTeacherCover({ teacherId: teacher.id, coverUrl: teacher.coverUrl }).url;
-
   return {
     title: `${teacherName} | Professeur Compétence.CI`,
     description,
@@ -103,29 +118,10 @@ export default async function TeacherDetailPage({
   const { journey: requestedJourney, ref, partnerRef } = await searchParams;
   const journey = parseTeacherJourney(requestedJourney) ?? "";
   const referralCode = normalizePartnerReferralCode(ref || partnerRef);
-  const [session, teacher] = await Promise.all([
-    getServerSession(authOptions),
-    db.teacher.findFirst({
-    where: {
-      id,
-      status: "ACTIVE",
-      ...(journey ? teacherJourneyWhere(journey) : {}),
-      AND: [{ photoUrl: { not: null } }, { photoUrl: { not: "" } }],
-    },
-    include: {
-      subjects: { include: { subject: true } },
-      levels: { include: { level: true }, orderBy: { level: { order: "asc" } } },
-      zones: { include: { commune: true } },
-      reviews: {
-        where: { published: true },
-        include: { client: { select: { name: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      },
-      _count: { select: { reviews: true, bookings: true } },
-    },
-    }),
-  ]);
+  // Les lectures restent séquentielles sur Workers : le pool Hyperdrive de
+  // la requête n'est jamais partagé entre la session et le profil détaillé.
+  const session = await getServerSession(authOptions);
+  const teacher = await getPublicTeacherProfile(id, journey || undefined);
 
   if (!teacher) {
     notFound();
@@ -254,6 +250,7 @@ export default async function TeacherDetailPage({
                   src={resolvedCover.url}
                   alt={`Couverture pédagogique de ${displayName}`}
                   fill
+                  unoptimized={isManagedTeacherMediaUrl(resolvedCover.url)}
                   sizes="(max-width: 1024px) 100vw, 850px"
                   className="object-contain"
                   priority

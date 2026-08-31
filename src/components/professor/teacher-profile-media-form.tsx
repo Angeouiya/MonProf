@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { TEACHER_COVER_CATALOG, TEACHER_COVER_COLOR_CATALOG } from "@/lib/teacher-cover";
+import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
 
 type TeacherProfileMediaFormProps = {
   teacherName: string;
@@ -74,7 +75,7 @@ export function TeacherProfileMediaForm({
     <div className="space-y-5">
       <div className="overflow-hidden rounded-xl border border-[#DDE6F7] bg-white">
         <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]" data-professor-cover-preview>
-          <Image src={coverUrl} alt="Couverture pédagogique du profil" fill sizes="(max-width: 1280px) 100vw, 1100px" className="object-contain" priority />
+          <Image src={coverUrl} alt="Couverture pédagogique du profil" fill unoptimized={isManagedTeacherMediaUrl(coverUrl)} sizes="(max-width: 1280px) 100vw, 1100px" className="object-contain" priority />
         </div>
         <div className="grid grid-cols-[104px_minmax(0,1fr)] items-start gap-3 border-t border-[#E3E8F2] px-4 pb-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:px-6" data-professor-photo-preview>
           <div

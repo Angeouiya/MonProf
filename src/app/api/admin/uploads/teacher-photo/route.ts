@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/admin-api";
+import { persistTeacherMediaToKv } from "@/lib/server/teacher-media-kv";
 
 export const runtime = "nodejs";
 
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, size: true, width: true, height: true },
     });
+    await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
 
     return NextResponse.json({
       photoUrl: `/api/teacher-photos/${asset.id}`,

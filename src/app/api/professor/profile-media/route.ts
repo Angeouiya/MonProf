@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { db } from "@/lib/db";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import { isTeacherCoverCatalogUrl, selectLeastUsedTeacherCover } from "@/lib/teacher-cover";
+import { persistTeacherMediaToKv } from "@/lib/server/teacher-media-kv";
 
 export const runtime = "nodejs";
 
@@ -116,6 +117,7 @@ export async function POST(request: NextRequest) {
       },
       select: { id: true },
     });
+    await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
     const mediaUrl = `/api/teacher-photos/${asset.id}`;
     const update = action === "custom-cover" ? { pendingCoverUrl: mediaUrl } : { photoUrl: mediaUrl };
     await updateTeacherMedia(

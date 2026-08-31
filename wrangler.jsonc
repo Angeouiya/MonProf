@@ -25,6 +25,15 @@
       "hyperdrive": [
         { "binding": "HYPERDRIVE", "id": "fb4ce95de9d74066823f4ad2ced1276e" }
       ],
+      "kv_namespaces": [
+        { "binding": "TEACHER_MEDIA_KV", "id": "983a407880f04988a8031ab88e7ebc31" }
+      ],
+      "ratelimits": [
+        { "name": "AUTH_RATE_LIMITER", "namespace_id": "47011", "simple": { "limit": 20, "period": 60 } },
+        { "name": "FINANCIAL_RATE_LIMITER", "namespace_id": "47012", "simple": { "limit": 40, "period": 60 } },
+        { "name": "API_WRITE_RATE_LIMITER", "namespace_id": "47013", "simple": { "limit": 180, "period": 60 } },
+        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47014", "simple": { "limit": 600, "period": 60 } }
+      ],
       "triggers": {
         "crons": ["* * * * *"]
       },
@@ -60,6 +69,15 @@
       },
       "hyperdrive": [
         { "binding": "HYPERDRIVE", "id": "fb4ce95de9d74066823f4ad2ced1276e" }
+      ],
+      "kv_namespaces": [
+        { "binding": "TEACHER_MEDIA_KV", "id": "fe54d4b1369f43fc908a380d9e879453" }
+      ],
+      "ratelimits": [
+        { "name": "AUTH_RATE_LIMITER", "namespace_id": "47111", "simple": { "limit": 20, "period": 60 } },
+        { "name": "FINANCIAL_RATE_LIMITER", "namespace_id": "47112", "simple": { "limit": 40, "period": 60 } },
+        { "name": "API_WRITE_RATE_LIMITER", "namespace_id": "47113", "simple": { "limit": 180, "period": 60 } },
+        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47114", "simple": { "limit": 600, "period": 60 } }
       ],
       "triggers": {
         "crons": ["* * * * *"]

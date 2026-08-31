@@ -8,6 +8,24 @@ type AppEnvironment = {
   CRON_SECRET?: string;
   CLOUDFLARE_INTERNAL_SECRET?: string;
   HYPERDRIVE?: { connectionString: string };
+  AUTH_RATE_LIMITER?: RateLimitBinding;
+  FINANCIAL_RATE_LIMITER?: RateLimitBinding;
+  API_WRITE_RATE_LIMITER?: RateLimitBinding;
+  PUBLIC_READ_RATE_LIMITER?: RateLimitBinding;
+  TEACHER_MEDIA_KV?: KvNamespaceBinding;
+};
+
+type RateLimitBinding = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
+type KvNamespaceBinding = {
+  get(key: string, options: { type: "arrayBuffer"; cacheTtl?: number }): Promise<ArrayBuffer | null>;
+  put(
+    key: string,
+    value: ArrayBuffer | ArrayBufferView,
+    options?: { metadata?: Record<string, string | number> },
+  ): Promise<void>;
 };
 
 type WorkerExecutionContext = {
@@ -42,10 +60,15 @@ const CRON_ROUTES = {
 
 const competenceWorker = {
   async fetch(request: Request, env: AppEnvironment, ctx: WorkerExecutionContext) {
+    const securityRejection = await protectPublicRequest(request, env);
+    if (securityRejection) return withSecurityHeaders(securityRejection, request);
+
+    const storedTeacherMedia = await serveTeacherMediaFromKv(request, env);
+    if (storedTeacherMedia) return withSecurityHeaders(storedTeacherMedia, request);
+
     const response = await dispatchOpenNext(request, env, ctx);
-    const headers = new Headers(response.headers);
-    headers.set("x-competence-runtime", "cloudflare-wrapper-v2");
-    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    scheduleTeacherMediaBackfill(request, response, env, ctx);
+    return withSecurityHeaders(response, request);
   },
 
   async scheduled(
@@ -143,4 +166,250 @@ function classifyQueue(queueName: string): "web-push" | "communication" {
 function requireSecret(value: string | undefined, name: string) {
   if (value?.trim()) return value.trim();
   throw new Error(`${name} est obligatoire.`);
+}
+
+async function protectPublicRequest(request: Request, env: AppEnvironment) {
+  const url = new URL(request.url);
+  const method = request.method.toUpperCase();
+
+  if (!isAllowedMutationOrigin(request, url, method)) {
+    return jsonSecurityError(403, "Requête refusée.");
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || "0");
+  if (Number.isFinite(contentLength) && contentLength > maximumRequestBytes(url.pathname)) {
+    return jsonSecurityError(413, "Requête trop volumineuse.");
+  }
+
+  const policy = selectRateLimitPolicy(url.pathname, method, env);
+  if (!policy) return null;
+
+  const key = await buildRateLimitKey(request, url.pathname, policy.scope);
+  try {
+    const result = await policy.binding.limit({ key });
+    if (result.success) return null;
+    console.warn(JSON.stringify({
+      level: "warn",
+      scope: "cloudflare-rate-limit",
+      policy: policy.scope,
+      pathname: url.pathname,
+    }));
+    return new Response(JSON.stringify({
+      error: "Trop de tentatives. Patientez une minute puis réessayez.",
+      code: "RATE_LIMITED",
+    }), {
+      status: 429,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "retry-after": "60",
+      },
+    });
+  } catch (error) {
+    // Une panne du compteur ne doit pas rendre la plateforme indisponible. Les
+    // contrôles d'authentification et de signature restent appliqués en aval.
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-rate-limit-unavailable",
+      policy: policy.scope,
+      error: error instanceof Error ? error.message : "Compteur indisponible.",
+    }));
+    return null;
+  }
+}
+
+function selectRateLimitPolicy(pathname: string, method: string, env: AppEnvironment) {
+  const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
+  if (!pathname.startsWith("/api/")) return null;
+  if (pathname.startsWith("/api/webhooks/") || pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) {
+    return null;
+  }
+
+  const authSensitive = isMutation && (
+    pathname.startsWith("/api/auth/")
+    || pathname === "/api/professor/password-assistance"
+  );
+  if (authSensitive && env.AUTH_RATE_LIMITER) {
+    return { binding: env.AUTH_RATE_LIMITER, scope: "auth" } as const;
+  }
+
+  const financialSensitive = isMutation && (
+    pathname.startsWith("/api/bookings")
+    || pathname.startsWith("/api/professor/payout-requests")
+    || pathname.startsWith("/api/admin/teacher-payout")
+    || pathname.startsWith("/api/admin/transactions")
+    || pathname.startsWith("/api/admin/refund")
+  );
+  if (financialSensitive && env.FINANCIAL_RATE_LIMITER) {
+    return { binding: env.FINANCIAL_RATE_LIMITER, scope: "financial" } as const;
+  }
+
+  if (isMutation && env.API_WRITE_RATE_LIMITER) {
+    return { binding: env.API_WRITE_RATE_LIMITER, scope: "write" } as const;
+  }
+
+  const publicRead = method === "GET" && (
+    pathname.startsWith("/api/teacher-photos/")
+    || pathname === "/api/teachers"
+    || pathname.startsWith("/api/teachers/")
+    || pathname === "/api/course-catalog"
+    || pathname === "/api/subjects"
+    || pathname === "/api/levels"
+    || pathname === "/api/communes"
+  );
+  if (publicRead && env.PUBLIC_READ_RATE_LIMITER) {
+    return { binding: env.PUBLIC_READ_RATE_LIMITER, scope: "public-read" } as const;
+  }
+
+  return null;
+}
+
+async function buildRateLimitKey(request: Request, pathname: string, scope: string) {
+  const ip = request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
+  const userAgent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";
+  const route = normalizeRateLimitRoute(pathname);
+  const value = `${scope}|${route}|${ip}|${userAgent}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function normalizeRateLimitRoute(pathname: string) {
+  if (pathname.startsWith("/api/teacher-photos/")) return "/api/teacher-photos/:id";
+  if (pathname.startsWith("/api/teachers/")) return "/api/teachers/:id";
+  if (pathname.startsWith("/api/bookings/")) return "/api/bookings/:id";
+  return pathname;
+}
+
+function maximumRequestBytes(pathname: string) {
+  if (pathname === "/api/admin/uploads/teacher-photo" || pathname === "/api/professor/profile-media") {
+    return 10 * 1024 * 1024;
+  }
+  if (pathname === "/api/admin/teachers/analyze-cv") return 15 * 1024 * 1024;
+  return 2 * 1024 * 1024;
+}
+
+function isAllowedMutationOrigin(request: Request, url: URL, method: string) {
+  if (["GET", "HEAD", "OPTIONS"].includes(method)) return true;
+  if (url.pathname.startsWith("/api/webhooks/")) return true;
+
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.protocol === "https:"
+      && (
+        originUrl.hostname.toLowerCase() === url.hostname.toLowerCase()
+        || ["competence.ci", "www.competence.ci"].includes(originUrl.hostname.toLowerCase())
+      );
+  } catch {
+    return false;
+  }
+}
+
+function jsonSecurityError(status: number, error: string) {
+  return new Response(JSON.stringify({ error }), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function withSecurityHeaders(response: Response, request: Request) {
+  const headers = new Headers(response.headers);
+  const pathname = new URL(request.url).pathname;
+  headers.set("x-competence-runtime", "cloudflare-wrapper-v4");
+  headers.delete("x-powered-by");
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("x-frame-options", "SAMEORIGIN");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("cross-origin-opener-policy", "same-origin-allow-popups");
+  headers.set("x-permitted-cross-domain-policies", "none");
+  headers.set("origin-agent-cluster", "?1");
+  headers.set(
+    "content-security-policy",
+    "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://*.jeko.africa; upgrade-insecure-requests",
+  );
+  if (
+    pathname.startsWith("/api/auth/")
+    || pathname.startsWith("/api/admin/")
+    || pathname.startsWith("/api/client/")
+    || pathname.startsWith("/api/professor/")
+  ) {
+    headers.set("cache-control", "private, no-store, max-age=0");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+async function serveTeacherMediaFromKv(request: Request, env: AppEnvironment) {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const mediaId = teacherMediaIdFromPath(new URL(request.url).pathname);
+  if (!mediaId || !env.TEACHER_MEDIA_KV) return null;
+
+  try {
+    const data = await env.TEACHER_MEDIA_KV.get(teacherMediaKey(mediaId), {
+      type: "arrayBuffer",
+      cacheTtl: 86_400,
+    });
+    if (!data) return null;
+    return new Response(request.method === "HEAD" ? null : data, {
+      status: 200,
+      headers: {
+        "content-type": "image/webp",
+        "content-length": String(data.byteLength),
+        "cache-control": "public, max-age=31536000, immutable",
+        "etag": `"teacher-media-${mediaId}"`,
+        "x-competence-media": "cloudflare-kv",
+      },
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "teacher-media-kv-read",
+      mediaId,
+      error: error instanceof Error ? error.message : "Lecture KV impossible.",
+    }));
+    return null;
+  }
+}
+
+function scheduleTeacherMediaBackfill(
+  request: Request,
+  response: Response,
+  env: AppEnvironment,
+  ctx: WorkerExecutionContext,
+) {
+  if (request.method !== "GET" || !response.ok || !env.TEACHER_MEDIA_KV) return;
+  const mediaId = teacherMediaIdFromPath(new URL(request.url).pathname);
+  if (!mediaId) return;
+
+  const copy = response.clone();
+  ctx.waitUntil(copy.arrayBuffer()
+    .then((data) => env.TEACHER_MEDIA_KV!.put(teacherMediaKey(mediaId), data, {
+      metadata: { contentType: copy.headers.get("content-type") || "image/webp" },
+    }))
+    .catch((error) => {
+      console.error(JSON.stringify({
+        level: "error",
+        scope: "teacher-media-kv-backfill",
+        mediaId,
+        error: error instanceof Error ? error.message : "Copie KV impossible.",
+      }));
+    }));
+}
+
+function teacherMediaIdFromPath(pathname: string) {
+  const match = pathname.match(/^\/api\/teacher-photos\/(c[a-z0-9]{20,})$/i);
+  return match?.[1] || null;
+}
+
+function teacherMediaKey(mediaId: string) {
+  return `teacher-photos/${mediaId}`;
 }

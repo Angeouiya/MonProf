@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import Image from "next/image";
+import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -85,7 +86,7 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
       {teacher.pendingCoverUrl ? (
         <section className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
           <div className="relative aspect-[3/1] w-full overflow-hidden bg-[#111B4D]">
-            <Image src={teacher.pendingCoverUrl} alt="Couverture personnalisée en attente" fill sizes="100vw" className="object-contain" />
+            <Image src={teacher.pendingCoverUrl} alt="Couverture personnalisée en attente" fill unoptimized={isManagedTeacherMediaUrl(teacher.pendingCoverUrl)} sizes="100vw" className="object-contain" />
           </div>
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

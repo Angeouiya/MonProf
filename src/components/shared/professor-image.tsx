@@ -5,6 +5,7 @@ import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/format";
+import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
 
 type ProfessorImageSize = "sm" | "md" | "lg" | "xl" | number;
 type ProfessorImageShape = "circle" | "rounded";
@@ -74,6 +75,7 @@ export function ProfessorImage({
   const label = `Photo du professeur ${displayName}`;
   const hasImage = Boolean(photoUrl && failedSrc !== photoUrl);
   const isRemote = Boolean(photoUrl && isRemoteImage(photoUrl));
+  const isManagedMedia = isManagedTeacherMediaUrl(photoUrl);
   const badge = resolveBadgeMetrics(px);
 
   return (
@@ -113,6 +115,7 @@ export function ProfessorImage({
             src={photoUrl!}
             alt={label}
             fill
+            unoptimized={isManagedMedia}
             className="object-cover"
             sizes={`${px}px`}
             {...(priority ? { priority: true } : { loading: "lazy" as const })}

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { resolveTeacherCover } from "@/lib/teacher-cover";
 import { getTeacherDisplayRating } from "@/lib/teacher-display-rating";
+import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
 
 type TeacherCardData = Pick<Teacher,
   "id" | "fullName" | "professionalName" | "photoUrl" | "coverUrl" |
@@ -60,6 +61,7 @@ export function TeacherCard({
             src={cover.url}
             alt=""
             fill
+            unoptimized={isManagedTeacherMediaUrl(cover.url)}
             sizes="(max-width: 679px) 100vw, (max-width: 1179px) 50vw, 33vw"
             className="object-contain"
           />
