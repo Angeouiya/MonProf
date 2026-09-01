@@ -86,7 +86,7 @@ export async function GET() {
       db.commune.count(),
       db.user.count({ where: { role: "ADMIN" } }),
       db.$queryRaw<Array<{ trigger_name: string }>>`
-        SELECT trigger_name
+        SELECT trigger_name::text AS trigger_name
         FROM information_schema.triggers
         WHERE event_object_schema = 'competence'
           AND trigger_name IN (
