@@ -178,7 +178,10 @@ async function deliverOutboxItem(item: OutboxRow) {
     priority: item.priority,
     outboxId: item.id,
     badgeCount: await getBadgeCount(item),
-    silent: !["URGENT", "CRITICAL"].includes(item.priority),
+    // Ask the operating system to surface every Compétence notification.
+    // The device/browser can still enforce its own quiet-mode policy, but the
+    // application must not mark routine notifications as silent itself.
+    silent: false,
     actions: [{ action: "open", title: item.priority === "CRITICAL" ? "Traiter" : "Ouvrir" }],
   });
 

@@ -68,6 +68,7 @@ export async function GET() {
     database: false,
     catalog: false,
     adminAccount: false,
+    webPushOutboxReady: false,
     sensitiveFlowsHealthy: false,
     integrationsConfigured: !integrationPolicy.enabled
       || (integrations.jeko.runtimeEnabled && integrations.passwordEmail.runtimeEnabled),
@@ -79,17 +80,27 @@ export async function GET() {
     await db.$queryRaw`SELECT 1`;
     checks.database = true;
 
-    const [subjects, levels, communes, admins, paydunyaConfig, riskRadar] = await Promise.all([
+    const [subjects, levels, communes, admins, webPushTriggers, paydunyaConfig, riskRadar] = await Promise.all([
       db.subject.count(),
       db.level.count(),
       db.commune.count(),
       db.user.count({ where: { role: "ADMIN" } }),
+      db.$queryRaw<Array<{ trigger_name: string }>>`
+        SELECT trigger_name
+        FROM information_schema.triggers
+        WHERE event_object_schema = 'competence'
+          AND trigger_name IN (
+            'notification_web_push_outbox',
+            'teacher_notification_web_push_outbox'
+          )
+      `,
       getPayDunyaConfig().catch(() => null),
       getOperationalRiskRadar(),
     ]);
 
     checks.catalog = subjects > 0 && levels > 0 && communes > 0;
     checks.adminAccount = admins > 0;
+    checks.webPushOutboxReady = webPushTriggers.length === 2;
     checks.sensitiveFlowsHealthy = riskRadar.status !== "critical";
     legacyPaydunya = Boolean(paydunyaConfig);
     operationalRisk = riskRadar;

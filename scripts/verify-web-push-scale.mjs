@@ -110,6 +110,8 @@ record("Service Worker icône Compétence + badge + vibration", [
   "skipWaiting",
   "clients.claim",
 ].every((needle) => serviceWorker.includes(needle)));
+record("Les push ne sont jamais rendus silencieux par Compétence", webPush.includes("silent: false") && !webPush.includes('silent: !["URGENT", "CRITICAL"].includes'));
+record("La santé production contrôle les déclencheurs d'outbox", read("src/app/api/health/route.ts").includes("webPushOutboxReady") && read("src/app/api/health/route.ts").includes("teacher_notification_web_push_outbox"));
 
 record("Vue admin Santé notifications disponible", exists("src/app/admin/notifications/sante/page.tsx"));
 record("API admin Santé notifications disponible", exists("src/app/api/admin/web-push-health/route.ts"));
