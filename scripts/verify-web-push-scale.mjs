@@ -110,12 +110,12 @@ record(
     && control.includes("const current = await inspect()")
     && control.includes("current.status !== \"enabled\""),
 );
-record("Tuile monogramme Compétence disponible", exists("public/images/brand/competence-notification-monogram-tile-512.png"));
-record("Badge monogramme transparent disponible", exists("public/images/brand/competence-notification-monogram-badge-192.png"));
-record("Icône notification utilise le grand monogramme Compétence", serviceWorker.includes("competence-notification-monogram-tile-512.png?v=9"));
-record("Badge système utilise le grand monogramme transparent", serviceWorker.includes("competence-notification-monogram-badge-192.png?v=9"));
+record("Icône complète Compétence disponible", exists("public/images/brand/competence-notification-icon-outline-512.png"));
+record("Badge complet Compétence transparent disponible", exists("public/images/brand/competence-notification-badge-outline-192.png"));
+record("Icône notification utilise le symbole complet Compétence", serviceWorker.includes("competence-notification-icon-outline-512.png?v=10"));
+record("Badge système utilise le symbole complet transparent", serviceWorker.includes("competence-notification-badge-outline-192.png?v=10"));
 record("Service Worker icône Compétence + badge + vibration", [
-  "competence-notification-monogram-tile-512.png?v=9",
+  "competence-notification-icon-outline-512.png?v=10",
   "setAppBadge",
   "vibrate",
   "renotify",
@@ -123,6 +123,13 @@ record("Service Worker icône Compétence + badge + vibration", [
   "skipWaiting",
   "clients.claim",
 ].every((needle) => serviceWorker.includes(needle)));
+record(
+  "Activation appareil proposée depuis chaque espace connecté",
+  realtime.includes("Recevez les alertes Compétence")
+    && realtime.includes("Notification.requestPermission()")
+    && realtime.includes('fetch("/api/push/test"')
+    && realtime.includes("competence-notification-icon-outline-512.png"),
+);
 record("Les push ne sont jamais rendus silencieux par Compétence", webPush.includes("silent: false") && !webPush.includes('silent: !["URGENT", "CRITICAL"].includes'));
 record("La santé production contrôle les déclencheurs d'outbox", read("src/app/api/health/route.ts").includes("webPushOutboxReady") && read("src/app/api/health/route.ts").includes("teacher_notification_web_push_outbox"));
 
