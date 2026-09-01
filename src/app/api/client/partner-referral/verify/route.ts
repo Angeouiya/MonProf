@@ -31,8 +31,6 @@ export async function POST(request: NextRequest) {
       },
       benefits: {
         partnerDiscountPercent: benefits.partnerDiscountPercent,
-        partnerCommissionPercent: benefits.partnerCommissionPercent,
-        minimumMarginPercent: benefits.minimumMarginPercent,
         reward: benefits.reward ? { ...benefits.reward, expiresAt: benefits.reward.expiresAt.toISOString() } : null,
       },
     });

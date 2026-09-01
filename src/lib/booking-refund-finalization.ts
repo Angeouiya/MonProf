@@ -348,6 +348,7 @@ export async function finalizeBookingRefundInTransaction(
     await adjustPartnerCommissionForPartialRefundInTransaction(tx, {
       bookingId: snapshot.id,
       totalRefundedAmount: calculation.totalRefundedAfter,
+      refundablePaymentAmount: calculation.maximumClientRefundableAmount,
       now: input.now,
     });
   }

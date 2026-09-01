@@ -46,7 +46,13 @@ check(
     && /data-home-journey-tabs/.test(publicHome)
     && /HOME_JOURNEY_HREFS/.test(publicHome),
 );
-check("Public teacher search batches results and uses the consolidated catalog", /getCachedTeacherSearchCatalog/.test(publicTeachers) && hasDatabaseTransaction(publicTeachers) && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers));
+check(
+  "Public teacher search batches and caches results with the consolidated catalog",
+  /getCachedTeacherSearchCatalog/.test(publicTeachers)
+    && /getCachedPublicTeacherResults/.test(publicTeachers)
+    && /unstable_cache/.test(publicTeachers)
+    && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers),
+);
 check(
   "Client registration avoids unused catalog reads and booking reuses the consolidated catalog",
   /getCachedTeacherSearchCatalog/.test(clientBooking)

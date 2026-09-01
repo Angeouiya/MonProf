@@ -13,6 +13,7 @@ type AppEnvironment = {
   API_WRITE_RATE_LIMITER?: RateLimitBinding;
   PUBLIC_READ_RATE_LIMITER?: RateLimitBinding;
   TEACHER_MEDIA_KV?: KvNamespaceBinding;
+  WEB_PUSH_QUEUE?: QueueProducerBinding;
 };
 
 type RateLimitBinding = {
@@ -26,6 +27,10 @@ type KvNamespaceBinding = {
     value: ArrayBuffer | ArrayBufferView,
     options?: { metadata?: Record<string, string | number> },
   ): Promise<void>;
+};
+
+type QueueProducerBinding = {
+  send(body: unknown, options?: { contentType?: "json" | "text" | "bytes" | "v8" }): Promise<void>;
 };
 
 type WorkerExecutionContext = {
@@ -71,6 +76,7 @@ const competenceWorker = {
 
     const response = await dispatchOpenNext(request, env, ctx);
     scheduleTeacherMediaBackfill(request, response, env, ctx);
+    scheduleImmediateWebPushWake(request, response, env, ctx);
     return withSecurityHeaders(response, request);
   },
 
@@ -420,6 +426,36 @@ function scheduleTeacherMediaBackfill(
         error: error instanceof Error ? error.message : "Copie KV impossible.",
       }));
     }));
+}
+
+function scheduleImmediateWebPushWake(
+  request: Request,
+  response: Response,
+  env: AppEnvironment,
+  ctx: WorkerExecutionContext,
+) {
+  if (!env.WEB_PUSH_QUEUE || !response.ok) return;
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) return;
+  const pathname = new URL(request.url).pathname;
+  if (!pathname.startsWith("/api/")) return;
+  if (pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) return;
+
+  const createdAt = new Date().toISOString();
+  const message = {
+    kind: "FLUSH_OUTBOX",
+    reason: "outbox_created",
+    limit: 500,
+    createdAt,
+    idempotencyKey: `web-push-mutation-${createdAt}-${crypto.randomUUID()}`,
+  };
+  ctx.waitUntil(env.WEB_PUSH_QUEUE.send(message, { contentType: "json" }).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "web-push-immediate-wake",
+      pathname,
+      error: error instanceof Error ? error.message : "Publication immédiate impossible.",
+    }));
+  }));
 }
 
 function teacherMediaIdFromPath(pathname: string) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { buildSubscriptionPayload, urlBase64ToUint8Array } from "@/lib/web-push-client";
+import { buildSubscriptionPayload, ensureCurrentPushSubscription } from "@/lib/web-push-client";
 
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
   const router = useRouter();
@@ -34,16 +34,13 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
     let cancelled = false;
-    void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async (registration) => {
+    void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async () => {
       if (cancelled || Notification.permission !== "granted" || !("PushManager" in window)) return;
+      const registration = await navigator.serviceWorker.ready;
       const stateResponse = await fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" });
       const state = await stateResponse.json().catch(() => null);
       if (!stateResponse.ok || !state?.configured || !state?.publicKey) return;
-      const current = await registration.pushManager.getSubscription();
-      const subscription = current || await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(state.publicKey),
-      });
+      const subscription = await ensureCurrentPushSubscription(registration, state.publicKey);
       await fetch("/api/push/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

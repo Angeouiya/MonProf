@@ -238,10 +238,10 @@ function AdminMobileBottomNav({
     <nav
       data-admin-mobile-nav
       aria-label="Navigation admin mobile"
-      className="admin-mobile-nav fixed inset-x-0 bottom-0 z-[60] border-t border-[#E6EAF3] bg-white/95 px-2 pt-2 shadow-[0_-18px_44px_rgba(17,24,39,0.10)] backdrop-blur lg:hidden"
+      className="admin-mobile-nav fixed inset-x-3 bottom-3 z-[60] rounded-[1.25rem] border border-[#D9E1EF] bg-white p-1.5 shadow-[0_18px_48px_rgba(17,24,39,0.18)] lg:hidden"
     >
       <div
-        className="mx-auto grid max-w-[28rem] gap-1 rounded-t-[1.35rem] bg-white"
+        className="mx-auto grid max-w-[28rem] gap-1 rounded-[1rem] bg-white"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -255,17 +255,17 @@ function AdminMobileBottomNav({
               data-admin-mobile-item
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex min-h-[4rem] flex-col items-center justify-center gap-1 rounded-lg px-1.5 text-[11px] font-black transition-colors",
+                "relative flex min-h-[3.85rem] min-w-0 flex-col items-center justify-center gap-1 rounded-[0.9rem] px-1 text-[10px] font-black leading-none transition-colors min-[370px]:text-[11px]",
                 active ? "bg-[#111B4D] text-white" : "text-[#64748B] hover:bg-[#F7F9FC] hover:text-[#111B4D]",
               )}
             >
               <span className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full",
+                "flex h-8 w-8 items-center justify-center rounded-xl min-[370px]:h-9 min-[370px]:w-9",
                 active ? "bg-white/15" : "bg-[#F3F6FB]",
               )}>
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-[1.1rem] w-[1.1rem]" />
               </span>
-              <span className="max-w-full truncate">{item.label}</span>
+              <span className="max-w-full truncate px-0.5">{item.label}</span>
               {badge > 0 && (
                 <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
                   {badge > 99 ? "99+" : badge}

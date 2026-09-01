@@ -137,6 +137,25 @@ const checks = [
       /status: "PAID"/,
       /PartnerReferralGroup/,
       /Commission partenaire payée dans un lot/,
+      /promoterPhone: groupPhone/,
+    ],
+  },
+  {
+    file: "src/app/api/client/partner-referral/verify/route.ts",
+    patterns: [
+      /partnerDiscountPercent: benefits\.partnerDiscountPercent/,
+      /reward: benefits\.reward/,
+    ],
+    forbiddenPatterns: [
+      /partnerCommissionPercent: benefits/,
+      /minimumMarginPercent: benefits/,
+    ],
+  },
+  {
+    file: "prisma/migrations/20260901191000_partner_phone_ledger_index/migration.sql",
+    patterns: [
+      /regexp_replace/,
+      /PartnerReferral_status_promoterPhone_payableAt_idx/,
     ],
   },
   {
@@ -258,6 +277,9 @@ for (const check of checks) {
     if (!pattern.test(content)) {
       failures.push(`${check.file} missing ${pattern}`);
     }
+  }
+  for (const pattern of check.forbiddenPatterns ?? []) {
+    if (pattern.test(content)) failures.push(`${check.file} unexpectedly contains ${pattern}`);
   }
 }
 

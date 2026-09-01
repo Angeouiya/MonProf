@@ -370,9 +370,11 @@ export async function qualifyLoyaltyPurchaseInTransaction(
   const purchase = await tx.clientLoyaltyPurchase.create({
     data: { clientId: input.clientId, bookingId: input.bookingId, sequence, cycle, qualifiedAt: now },
   });
-  const rewardCount = await tx.clientReward.count({ where: { clientId: input.clientId } });
+  const rewardCount = await tx.clientReward.count({
+    where: { clientId: input.clientId, status: { not: "CANCELLED" } },
+  });
   const lastReward = await tx.clientReward.findFirst({
-    where: { clientId: input.clientId },
+    where: { clientId: input.clientId, status: { not: "CANCELLED" } },
     orderBy: [{ unlockedAt: "desc" }, { id: "desc" }],
     select: { unlockPaymentNumber: true, unlockedByBookingId: true },
   });
@@ -446,10 +448,41 @@ export async function reverseBookingPromotionsForRefundInTransaction(
   await tx.clientReward.updateMany({
     where: {
       clientId: input.clientId,
-      OR: [{ unlockedByBookingId: input.bookingId }, { usedBookingId: input.bookingId }],
+      unlockedByBookingId: input.bookingId,
       status: { in: ["AVAILABLE", "RESERVED", "USED"] },
     },
     data: { status: "CANCELLED", cancelledAt: now },
+  });
+  await tx.clientReward.updateMany({
+    where: {
+      clientId: input.clientId,
+      usedBookingId: input.bookingId,
+      unlockedByBookingId: { not: input.bookingId },
+      expiresAt: { gte: now },
+      status: { in: ["RESERVED", "USED"] },
+    },
+    data: {
+      status: "AVAILABLE",
+      usedBookingId: null,
+      reservedAt: null,
+      usedAt: null,
+      cancelledAt: null,
+    },
+  });
+  await tx.clientReward.updateMany({
+    where: {
+      clientId: input.clientId,
+      usedBookingId: input.bookingId,
+      unlockedByBookingId: { not: input.bookingId },
+      expiresAt: { lt: now },
+      status: { in: ["RESERVED", "USED"] },
+    },
+    data: {
+      status: "EXPIRED",
+      usedBookingId: null,
+      reservedAt: null,
+      usedAt: null,
+    },
   });
   await tx.partnerReferral.updateMany({
     where: { bookingId: input.bookingId, status: { in: ["DECLARED", "PAYMENT_CONFIRMED", "PAYABLE"] } },
@@ -470,12 +503,22 @@ export async function reverseBookingPromotionsForRefundInTransaction(
 
 export async function adjustPartnerCommissionForPartialRefundInTransaction(
   tx: LoyaltyTx,
-  input: { bookingId: string; totalRefundedAmount: number; now?: Date },
+  input: {
+    bookingId: string;
+    totalRefundedAmount: number;
+    refundablePaymentAmount?: number;
+    now?: Date;
+  },
 ) {
   const referral = await tx.partnerReferral.findUnique({ where: { bookingId: input.bookingId } });
   if (!referral) return;
   const eligibleBase = Math.max(0, referral.eligibleCourseAmount || referral.courseAmount);
-  const remainingEligibleBase = Math.max(0, eligibleBase - Math.max(0, input.totalRefundedAmount));
+  const refundablePaymentAmount = Math.max(0, input.refundablePaymentAmount ?? eligibleBase);
+  const refundedShare = refundablePaymentAmount > 0
+    ? Math.min(1, Math.max(0, input.totalRefundedAmount) / refundablePaymentAmount)
+    : 1;
+  const refundedEligibleBase = Math.min(eligibleBase, Math.round(eligibleBase * refundedShare));
+  const remainingEligibleBase = Math.max(0, eligibleBase - refundedEligibleBase);
   const adjustedCommission = Math.round((remainingEligibleBase * referral.commissionRate) / 100);
   const note = `Remboursement partiel : base partenaire ramenée à ${remainingEligibleBase} FCFA, commission à ${adjustedCommission} FCFA.`;
   if (referral.status === "PAID") {
@@ -506,9 +549,13 @@ export async function getClientLoyaltyOverview(clientId: string, now = new Date(
     getLoyaltyProgramConfig(),
     db.clientPartnerAttribution.findUnique({ where: { clientId }, include: { partnerProfile: true } }),
     db.clientLoyaltyPurchase.findMany({ where: { clientId, reversedAt: null }, orderBy: { qualifiedAt: "desc" }, take: 14 }),
-    db.clientReward.findMany({ where: { clientId }, orderBy: { unlockedAt: "desc" }, take: 14 }),
+    db.clientReward.findMany({
+      where: { clientId, status: { not: "CANCELLED" } },
+      orderBy: { unlockedAt: "desc" },
+      take: 14,
+    }),
     db.clientLoyaltyPurchase.count({ where: { clientId, reversedAt: null } }),
-    db.clientReward.count({ where: { clientId } }),
+    db.clientReward.count({ where: { clientId, status: { not: "CANCELLED" } } }),
   ]);
   const lastReward = rewards[0];
   const legacyUnlockPurchase = lastReward && !lastReward.unlockPaymentNumber

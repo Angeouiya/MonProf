@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const payableRows = await db.partnerReferral.findMany({
-    where: { status: "PAYABLE", promoterPhone: { not: null } },
+    where: { status: "PAYABLE", promoterPhone: groupPhone },
     include: { booking: { select: { reference: true } } },
     orderBy: { payableAt: "asc" },
   });

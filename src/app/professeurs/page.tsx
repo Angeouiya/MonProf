@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import {
   ChevronLeft,
   ChevronRight,
@@ -60,6 +61,39 @@ function parseBookingJourney(value?: string): BookingJourney | "" {
 }
 
 const PAGE_SIZE = 12;
+
+const getCachedPublicTeacherResults = unstable_cache(
+  async (where: any, orderBy: any, page: number) => db.$transaction([
+    db.teacher.count({ where }),
+    db.teacher.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        fullName: true,
+        professionalName: true,
+        photoUrl: true,
+        coverUrl: true,
+        jobTitle: true,
+        rating: true,
+        ratingCount: true,
+        adminRating: true,
+        adminRatingPublic: true,
+        experienceYears: true,
+        offersHome: true,
+        offersOnline: true,
+        commune: true,
+        badgeVerified: true,
+        subjects: { select: { isPrimary: true, subject: { select: { name: true } } } },
+        _count: { select: { reviews: true } },
+      },
+    }),
+  ] as const),
+  ["public-teacher-results-v1"],
+  { revalidate: 45, tags: ["teachers"] },
+);
 
 const SORTS = [
   { value: "recommended", label: "Recommandés" },
@@ -141,34 +175,7 @@ export default async function TeachersPage({
       if (format === "HOME") where.offersHome = true;
       if (format === "ONLINE") where.offersOnline = true;
 
-      const [teacherTotal, teacherRows] = await db.$transaction([
-        db.teacher.count({ where }),
-        db.teacher.findMany({
-            where,
-            orderBy,
-            skip: (page - 1) * PAGE_SIZE,
-            take: PAGE_SIZE,
-            select: {
-              id: true,
-              fullName: true,
-              professionalName: true,
-              photoUrl: true,
-              coverUrl: true,
-              jobTitle: true,
-              rating: true,
-              ratingCount: true,
-              adminRating: true,
-              adminRatingPublic: true,
-              experienceYears: true,
-              offersHome: true,
-              offersOnline: true,
-              commune: true,
-              badgeVerified: true,
-              subjects: { select: { isPrimary: true, subject: { select: { name: true } } } },
-              _count: { select: { reviews: true } },
-            },
-          }),
-      ]);
+      const [teacherTotal, teacherRows] = await getCachedPublicTeacherResults(where, orderBy, page);
       total = teacherTotal;
       teachers = teacherRows;
     }

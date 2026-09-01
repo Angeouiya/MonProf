@@ -75,6 +75,9 @@ const staticChecks = [
   ["src/lib/loyalty-program.ts", /FOR UPDATE/],
   ["src/lib/loyalty-program.ts", /unlockPaymentNumber: absoluteSequence/],
   ["src/lib/loyalty-program.ts", /PARTNER_SELF_REFERRAL_FORBIDDEN/],
+  ["src/lib/loyalty-program.ts", /status: \{ not: "CANCELLED" \}/],
+  ["src/lib/loyalty-program.ts", /refundablePaymentAmount/],
+  ["src/lib/loyalty-program.ts", /usedBookingId: null,[\s\S]*status: "AVAILABLE"|status: "AVAILABLE"[\s\S]*usedBookingId: null/],
   ["src/lib/partner-referrals.ts", /randomBytes\(8\)/],
   ["src/lib/partner-referrals.ts", /recentRequests >= 20/],
   ["src/app/api/admin/partner-referrals/[id]/route.ts", /updateMany\([\s\S]*status: "PAYABLE"/],
@@ -91,5 +94,9 @@ assert.doesNotMatch(clientGiftPage, /le professeur conserve toujours son net off
 
 const loyaltySource = readFileSync("src/lib/loyalty-program.ts", "utf8");
 assert.doesNotMatch(loyaltySource, /Le professeur reçoit toujours son montant exact/);
+
+const partnerVerifyRoute = readFileSync("src/app/api/client/partner-referral/verify/route.ts", "utf8");
+assert.doesNotMatch(partnerVerifyRoute, /partnerCommissionPercent: benefits/);
+assert.doesNotMatch(partnerVerifyRoute, /minimumMarginPercent: benefits/);
 
 console.log("OK loyalty gifts: cadence serveur de 1 à 3 paiements, qualification Jèko, verrou client, récompenses atomiques et route illustrée vérifiés.");

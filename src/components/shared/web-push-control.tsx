@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellOff, BellRing, LoaderCircle, RadioTower } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { buildSubscriptionPayload, urlBase64ToUint8Array } from "@/lib/web-push-client";
+import { buildSubscriptionPayload, ensureCurrentPushSubscription } from "@/lib/web-push-client";
 
 type PushStatus = "loading" | "unsupported" | "unconfigured" | "denied" | "available" | "enabled" | "saving" | "error";
 
@@ -38,12 +38,9 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
           : "L'autorisation n'a pas été accordée.");
         return;
       }
-      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
-      const current = await registration.pushManager.getSubscription();
-      const subscription = current || await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+      await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await ensureCurrentPushSubscription(registration, publicKey);
       const response = await fetch("/api/push/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,12 +170,14 @@ async function inspect() {
   if (!response.ok || !data?.configured || !data?.publicKey) {
     return { status: "unconfigured" as const, message: data?.error || "Le service push n'est pas encore configuré.", publicKey: "" };
   }
-  const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
-  const subscription = await registration.pushManager.getSubscription();
+  await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
   if (Notification.permission === "denied") {
     return { status: "denied" as const, message: "Les notifications sont bloquées dans les réglages de ce navigateur.", publicKey: data.publicKey };
   }
   if (subscription && Notification.permission === "granted") {
+    subscription = await ensureCurrentPushSubscription(registration, data.publicKey);
     await fetch("/api/push/subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

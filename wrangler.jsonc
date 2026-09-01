@@ -43,7 +43,7 @@
           { "binding": "COMMUNICATION_QUEUE", "queue": "competence-staging-communication-campaigns" }
         ],
         "consumers": [
-          { "queue": "competence-staging-web-push-events", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-staging-web-push-events", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 6 },
           { "queue": "competence-staging-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 }
         ]
       }
@@ -88,7 +88,7 @@
           { "binding": "COMMUNICATION_QUEUE", "queue": "competence-communication-campaigns" }
         ],
         "consumers": [
-          { "queue": "competence-web-push-events", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-web-push-events", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 6 },
           { "queue": "competence-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 }
         ]
       }

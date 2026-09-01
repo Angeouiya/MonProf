@@ -4939,14 +4939,13 @@ b {
   }
 
   .admin-shell main.admin-main-with-mobile-nav {
-    padding-bottom: calc(8.25rem + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(7.75rem + env(safe-area-inset-bottom)) !important;
   }
 
   .public-mobile-nav,
   .public-shell [data-public-mobile-nav],
   .client-shell [data-client-mobile-nav],
-  .professor-shell [data-professor-mobile-nav],
-  .admin-shell [data-admin-mobile-nav] {
+  .professor-shell [data-professor-mobile-nav] {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
@@ -4962,7 +4961,22 @@ b {
   .public-mobile-nav > div,
   .public-shell [data-public-mobile-nav] > div,
   .client-shell [data-client-mobile-nav] > div,
-  .professor-shell [data-professor-mobile-nav] > div,
+  .professor-shell [data-professor-mobile-nav] > div {
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+
+  .admin-shell [data-admin-mobile-nav] {
+    bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    width: auto !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+    padding: 0.375rem !important;
+    border-radius: 1.25rem !important;
+  }
+
   .admin-shell [data-admin-mobile-nav] > div {
     max-width: 28rem;
     margin-inline: auto;

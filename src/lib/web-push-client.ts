@@ -5,6 +5,21 @@ export function urlBase64ToUint8Array(value: string) {
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
 }
 
+export async function ensureCurrentPushSubscription(
+  registration: ServiceWorkerRegistration,
+  publicKey: string,
+) {
+  let subscription = await registration.pushManager.getSubscription();
+  if (subscription && !subscriptionUsesPublicKey(subscription, publicKey)) {
+    await subscription.unsubscribe().catch(() => false);
+    subscription = null;
+  }
+  return subscription || registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+}
+
 export function buildSubscriptionPayload(subscription: PushSubscription) {
   return {
     ...subscription.toJSON(),
@@ -74,4 +89,13 @@ function detectBrowser(userAgent: string) {
 
 function normalizeMeta(value: string) {
   return value.trim().slice(0, 80);
+}
+
+function subscriptionUsesPublicKey(subscription: PushSubscription, publicKey: string) {
+  const currentKey = subscription.options.applicationServerKey;
+  if (!currentKey) return false;
+  const current = new Uint8Array(currentKey);
+  const expected = urlBase64ToUint8Array(publicKey);
+  if (current.byteLength !== expected.byteLength) return false;
+  return current.every((byte, index) => byte === expected[index]);
 }
