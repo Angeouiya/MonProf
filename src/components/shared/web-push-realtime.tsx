@@ -31,30 +31,49 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
     }
   }, [router]);
 
+  const synchronizePushSubscription = useCallback(async () => {
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) return;
+    await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+    if (Notification.permission !== "granted") return;
+
+    const registration = await navigator.serviceWorker.ready;
+    const stateResponse = await fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" });
+    const state = await stateResponse.json().catch(() => null);
+    if (!stateResponse.ok || !state?.configured || !state?.publicKey) return;
+
+    const subscription = await ensureCurrentPushSubscription(registration, state.publicKey);
+    const syncResponse = await fetch("/api/push/subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(buildSubscriptionPayload(subscription)),
+    });
+    if (!syncResponse.ok) {
+      const result = await syncResponse.json().catch(() => null);
+      throw new Error(result?.error || "Synchronisation push impossible.");
+    }
+  }, []);
+
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
     let cancelled = false;
-    void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(async () => {
-      if (cancelled || Notification.permission !== "granted" || !("PushManager" in window)) return;
-      const registration = await navigator.serviceWorker.ready;
-      const stateResponse = await fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" });
-      const state = await stateResponse.json().catch(() => null);
-      if (!stateResponse.ok || !state?.configured || !state?.publicKey) return;
-      const subscription = await ensureCurrentPushSubscription(registration, state.publicKey);
-      await fetch("/api/push/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify(buildSubscriptionPayload(subscription)),
-      });
-    }).catch(() => undefined);
+    const synchronize = () => {
+      if (!cancelled) void synchronizePushSubscription().catch(() => undefined);
+    };
+    synchronize();
 
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "COMPETENCE_PUSH_RECEIVED") void refreshState(true);
     };
-    const onFocus = () => void refreshState(false);
+    const onFocus = () => {
+      synchronize();
+      void refreshState(false);
+    };
     const onVisibility = () => {
-      if (document.visibilityState === "visible") void refreshState(false);
+      if (document.visibilityState === "visible") {
+        synchronize();
+        void refreshState(false);
+      }
     };
     navigator.serviceWorker.addEventListener("message", onMessage);
     window.addEventListener("focus", onFocus);
@@ -65,7 +84,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [refreshState]);
+  }, [refreshState, synchronizePushSubscription]);
 
   return null;
 }

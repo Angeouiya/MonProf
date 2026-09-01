@@ -89,6 +89,13 @@ export function WebPushControl({ audienceLabel }: { audienceLabel: string }) {
     }
     setTesting(true);
     try {
+      const current = await inspect();
+      setStatus(current.status);
+      setMessage(current.message);
+      setPublicKey(current.publicKey);
+      if (current.status !== "enabled") {
+        throw new Error(current.message);
+      }
       const response = await fetch("/api/push/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,12 +185,20 @@ async function inspect() {
   }
   if (subscription && Notification.permission === "granted") {
     subscription = await ensureCurrentPushSubscription(registration, data.publicKey);
-    await fetch("/api/push/subscriptions", {
+    const syncResponse = await fetch("/api/push/subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
       body: JSON.stringify(buildSubscriptionPayload(subscription)),
     });
+    const syncResult = await syncResponse.json().catch(() => null);
+    if (!syncResponse.ok) {
+      return {
+        status: "error" as const,
+        message: syncResult?.error || "Cet appareil n'a pas pu être enregistré pour les notifications.",
+        publicKey: data.publicKey,
+      };
+    }
     return { status: "enabled" as const, message: "Cet appareil reçoit les alertes en temps réel.", publicKey: data.publicKey };
   }
   return { status: "available" as const, message: "Activez les alertes pour ne manquer aucune action importante.", publicKey: data.publicKey };

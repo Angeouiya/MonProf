@@ -97,6 +97,19 @@ record(
     && realtime.includes("ensureCurrentPushSubscription")
     && control.includes("ensureCurrentPushSubscription"),
 );
+record(
+  "Abonnement appareil resynchronisé au retour dans l'application",
+  realtime.includes("synchronizePushSubscription")
+    && realtime.includes("syncResponse.ok")
+    && realtime.includes("onFocus")
+    && realtime.includes('document.visibilityState === "visible"'),
+);
+record(
+  "Interface activée uniquement après confirmation serveur",
+  control.includes("syncResponse.ok")
+    && control.includes("const current = await inspect()")
+    && control.includes("current.status !== \"enabled\""),
+);
 record("Tuile monogramme Compétence disponible", exists("public/images/brand/competence-notification-monogram-tile-512.png"));
 record("Badge monogramme transparent disponible", exists("public/images/brand/competence-notification-monogram-badge-192.png"));
 record("Icône notification utilise le grand monogramme Compétence", serviceWorker.includes("competence-notification-monogram-tile-512.png?v=9"));
