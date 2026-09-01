@@ -23,7 +23,13 @@ const vercelConfig = JSON.parse(read("vercel.json"));
 record("Objectif de charge versionné", fs.existsSync(path.join(root, "docs", "SCALE_100K.md")));
 record("Profil k6 distribué 100k versionné", fs.existsSync(path.join(root, "load", "100k-active.k6.js")));
 record("Contrôle de capacité inclus dans build:quality", packageJson.scripts?.["build:quality"]?.includes("verify:scale-readiness"));
-record("Prisma réutilise un singleton par instance", database.includes("globalForPrisma.prisma ?? createPrismaClient()"));
+record(
+  "Prisma est isolé par requête Cloudflare",
+  database.includes("Symbol.for('competence.prisma.request-context')")
+    && database.includes("new AsyncLocalStorage<AppPrismaClient>()")
+    && database.includes("runWithDatabaseRequestContext")
+    && database.includes("max: 5"),
+);
 record("Connexion runtime via pooler Supabase", /pooler\.supabase\.com:6543/.test(envExample));
 record("PgBouncer activé", /pgbouncer=true/.test(envExample));
 record("Une connexion PostgreSQL maximum par instance", /connection_limit=1/.test(envExample));

@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { after } from 'next/server'
+import { AsyncLocalStorage } from 'node:async_hooks'
 
 function scheduleWebPushFlush() {
   try {
@@ -31,7 +32,10 @@ function createPrismaClient() {
     ? new PrismaClient({
         adapter: new PrismaPg({
           connectionString: cloudflareDatabase!.connectionString,
-          max: 1,
+          // A single authenticated dashboard renders several independent
+          // queries. Cloudflare recommends at most five connections per
+          // Worker invocation; Hyperdrive pools the origin connections.
+          max: 5,
           maxUses: 1,
           idleTimeoutMillis: 10_000,
           connectionTimeoutMillis: 10_000,
@@ -110,15 +114,45 @@ function getHyperdriveConnectionString() {
 
 type AppPrismaClient = ReturnType<typeof createPrismaClient>
 
+const databaseRequestContextKey = Symbol.for('competence.prisma.request-context')
 const globalForPrisma = globalThis as unknown as {
   prisma: AppPrismaClient | undefined
 }
+const databaseRuntimeGlobal = globalThis as typeof globalThis & Record<PropertyKey, unknown>
 
-const extendedDb = globalForPrisma.prisma ?? createPrismaClient()
+// OpenNext bundles the entrypoint and the Next.js server function separately.
+// Symbol.for + globalThis makes both module copies share the same request
+// context without sharing the Prisma client itself across requests.
+const requestDatabase = (
+  databaseRuntimeGlobal[databaseRequestContextKey] as AsyncLocalStorage<AppPrismaClient> | undefined
+) ?? new AsyncLocalStorage<AppPrismaClient>()
+databaseRuntimeGlobal[databaseRequestContextKey] = requestDatabase
+
+function getFallbackDatabase() {
+  if (!globalForPrisma.prisma) globalForPrisma.prisma = createPrismaClient()
+  return globalForPrisma.prisma
+}
+
+/**
+ * Cloudflare Workers must not reuse a pg/Prisma client across invocations.
+ * The wrapper installs one client for the duration of the current request;
+ * all existing `db.*` imports transparently resolve to that request client.
+ */
+export function runWithDatabaseRequestContext<T>(callback: () => T): T {
+  const existing = requestDatabase.getStore()
+  if (existing) return callback()
+  return requestDatabase.run(createPrismaClient(), callback)
+}
+
+const databaseProxy = new Proxy({} as AppPrismaClient, {
+  get(_target, property) {
+    const client = requestDatabase.getStore() ?? getFallbackDatabase()
+    const value = Reflect.get(client, property)
+    return typeof value === 'function' ? value.bind(client) : value
+  },
+})
 
 // L'extension ne change pas le contrat des modèles. Conserver le type public
 // PrismaClient garantit la compatibilité avec les fonctions recevant un
 // TransactionClient, tandis que les hooks d'outbox restent actifs à l'exécution.
-export const db = extendedDb as unknown as PrismaClient
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = extendedDb
+export const db = databaseProxy as unknown as PrismaClient

@@ -16,6 +16,7 @@ record("UI compare chaque valeur confirmée", ui.includes("const mismatches = Ob
 record("Succès et erreurs restent visibles dans la carte", ui.includes('role={saveNotice.tone === "error" ? "alert" : "status"}'));
 record("Aucun toast de succès éphémère", !ui.includes('from "sonner"') && !ui.includes("toast.success"));
 record("Page paramètres groupe ses lectures SQL", page.includes("const [rows, schemaStats") && page.includes("await db.$transaction(["));
+record("Schéma PostgreSQL converti en texte pour Prisma Cloudflare", page.includes("table_schema::text AS table_schema"));
 
 for (const check of checks) console.log(`${check.ok ? "OK" : "FAIL"} ${check.label}`);
 const failed = checks.filter((check) => !check.ok);

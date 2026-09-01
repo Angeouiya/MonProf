@@ -14,7 +14,7 @@ export default async function AdminParametresPage() {
   const [rows, schemaStats, teacherCount, subjectCount, levelCount, communeCount, quarterCount, activeCommuneCount, userCount] = await db.$transaction([
     db.setting.findMany(),
     db.$queryRaw<Array<{ table_schema: string; tables: bigint | number }>>`
-      SELECT table_schema, COUNT(*)::int AS tables
+      SELECT table_schema::text AS table_schema, COUNT(*)::int AS tables
       FROM information_schema.tables
       WHERE table_type = 'BASE TABLE'
         AND table_schema IN ('public', 'competence')
