@@ -222,6 +222,7 @@ export async function PATCH(req: NextRequest) {
     const phone = normalizePaymentPhone(body.defaultPayoutPhone);
     const phoneConfirm = normalizePaymentPhone(body.defaultPayoutPhoneConfirm);
     const instructions = typeof body.payoutInstructions === "string" ? body.payoutInstructions.trim() : "";
+    const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
 
     if (!method) {
       return NextResponse.json({ error: "Choisissez le moyen de paiement préféré." }, { status: 400 });
@@ -238,10 +239,22 @@ export async function PATCH(req: NextRequest) {
 
     const stored = await db.teacher.findUnique({
       where: { id: teacher.id },
-      select: { id: true, fullName: true, professionalName: true },
+      select: { id: true, fullName: true, professionalName: true, portalPasswordHash: true },
     });
     if (!stored) {
       return NextResponse.json({ error: "Professeur introuvable." }, { status: 404 });
+    }
+    if (
+      !currentPassword
+      || currentPassword.length > 200
+      || !stored.portalPasswordHash
+      || !await bcrypt.compare(currentPassword, stored.portalPasswordHash)
+    ) {
+      console.warn("[professor:payout_profile_reauthentication_failed]", { teacherId: stored.id });
+      return NextResponse.json({
+        error: "Mot de passe actuel incorrect. Les coordonnées de retrait n'ont pas été modifiées.",
+        code: "PAYOUT_PROFILE_REAUTHENTICATION_FAILED",
+      }, { status: 403 });
     }
     const teacherName = stored.professionalName || stored.fullName;
     const now = new Date();

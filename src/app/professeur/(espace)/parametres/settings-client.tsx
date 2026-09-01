@@ -137,6 +137,7 @@ export function TeacherPaymentProfileSettingsForm({
   const [phone, setPhone] = useState(defaultPhone || fallbackPhone || "");
   const [phoneConfirm, setPhoneConfirm] = useState(defaultPhone || fallbackPhone || "");
   const [instructions, setInstructions] = useState(payoutInstructions ?? "");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [payoutSavedMessage, setPayoutSavedMessage] = useState<string | null>(null);
   const [payoutError, setPayoutError] = useState<string | null>(null);
@@ -146,7 +147,7 @@ export function TeacherPaymentProfileSettingsForm({
   const phoneMismatch = normalizedPhone.length > 0 && normalizedConfirm.length > 0 && normalizedPhone !== normalizedConfirm;
   const phoneOk = normalizedPhone.length >= 8 && normalizedPhone.length <= 20 && normalizedPhone === normalizedConfirm;
   const instructionsTooLong = instructions.trim().length > 500;
-  const canSubmit = Boolean(method) && phoneOk && !instructionsTooLong && !saving;
+  const canSubmit = Boolean(method) && phoneOk && currentPassword.length > 0 && !instructionsTooLong && !saving;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -167,10 +168,12 @@ export function TeacherPaymentProfileSettingsForm({
           defaultPayoutPhone: normalizedPhone,
           defaultPayoutPhoneConfirm: normalizedConfirm,
           payoutInstructions: instructions,
+          currentPassword,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Enregistrement impossible.");
+      setCurrentPassword("");
       setPayoutSavedMessage(`Coordonnées ${paymentMethodLabel(method)} enregistrées. Les prochains retraits Jèko utiliseront ce numéro confirmé.`);
     } catch (error) {
       setPayoutError(error instanceof Error ? error.message : "Enregistrement impossible.");
@@ -245,6 +248,29 @@ export function TeacherPaymentProfileSettingsForm({
         />
         <p className={instructionsTooLong ? "text-xs font-semibold text-red-700" : "text-xs font-semibold text-[#64748B]"}>
           {instructions.trim().length}/500 caractères
+        </p>
+      </div>
+
+      <div className="space-y-1.5 rounded-lg border border-[#DDE6F7] bg-[#F8FAFF] p-3">
+        <Label htmlFor="teacher-payout-profile-current-password" className="inline-flex items-center gap-2">
+          <Lock className="h-4 w-4 text-[#111B4D]" aria-hidden />
+          Mot de passe actuel
+        </Label>
+        <PasswordInput
+          id="teacher-payout-profile-current-password"
+          value={currentPassword}
+          onChange={(event) => {
+            setCurrentPassword(event.target.value);
+            setPayoutSavedMessage(null);
+            setPayoutError(null);
+          }}
+          autoComplete="current-password"
+          placeholder="Confirmez avant de changer le numéro de retrait"
+          className="h-11 rounded-lg border-[#DDE6F7] bg-white"
+          required
+        />
+        <p className="text-xs font-semibold leading-5 text-[#64748B]">
+          Cette vérification protège votre portefeuille si une session reste ouverte sur un autre appareil.
         </p>
       </div>
 

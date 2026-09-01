@@ -2,8 +2,9 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ChevronDown, Loader2, Send } from "lucide-react";
-import { toast } from "sonner";
+import { CheckCircle2, ChevronDown, Loader2, Send, ShieldCheck } from "lucide-react";
+import { PasswordInput } from "@/components/shared/password-input";
+import { RestrictionNoticeDialog } from "@/components/shared/restriction-notice-dialog";
 import { formatFCFA } from "@/lib/format";
 import { paymentMethodLabel } from "@/lib/payment-methods";
 import { Button } from "@/components/ui/button";
@@ -46,9 +47,11 @@ export function TeacherPayoutRequestForm({
   const [method, setMethod] = useState(defaultMethod || "WAVE");
   const [paymentPhone, setPaymentPhone] = useState(defaultPhone ?? "");
   const [paymentPhoneConfirm, setPaymentPhoneConfirm] = useState(defaultPhone ?? "");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [blockingError, setBlockingError] = useState<string | null>(null);
   const pendingSubmissionRef = useRef<{ key: string; fingerprint: string } | null>(null);
 
   const cleanAmount = useMemo(() => Number(amount.replace(/\s/g, "")) || 0, [amount]);
@@ -63,6 +66,7 @@ export function TeacherPayoutRequestForm({
     && normalizedPhone.length >= 8
     && normalizedPhone.length <= 20
     && normalizedPhone === normalizedConfirm
+    && currentPassword.length > 0
     && !noteTooLong
     && !loading;
 
@@ -92,6 +96,7 @@ export function TeacherPayoutRequestForm({
         body: JSON.stringify({
           ...requestPayload,
           idempotencyKey,
+          currentPassword,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -99,7 +104,7 @@ export function TeacherPayoutRequestForm({
         if (data.code === "PAYOUT_REQUEST_IDEMPOTENCY_MISMATCH" || data.code === "PAYOUT_PREVIOUS_ATTEMPT_CANCELLED" || data.payout?.action === "failed") {
           pendingSubmissionRef.current = null;
         }
-        toast.error(data.error || "Impossible de lancer le retrait Jèko.");
+        setBlockingError(data.error || "Impossible de lancer le retrait Jèko.");
         return;
       }
       pendingSubmissionRef.current = null;
@@ -107,10 +112,11 @@ export function TeacherPayoutRequestForm({
         ? "Retrait Jèko lancé. Le solde reste réservé jusqu'à confirmation finale, sans double débit."
         : `Retrait confirmé. Vous recevez exactement ${formatFCFA(cleanAmount)} ; frais Jèko pris en charge par Compétence.`);
       setAmount("");
+      setCurrentPassword("");
       setNote("");
       router.refresh();
     } catch {
-      toast.error("La réponse du serveur n'a pas été reçue. Vous pouvez réessayer : le même retrait ne sera pas créé deux fois.");
+      setBlockingError("La réponse du serveur n'a pas été reçue. Vous pouvez réessayer : le même retrait ne sera pas créé deux fois.");
     } finally {
       setLoading(false);
     }
@@ -195,6 +201,26 @@ export function TeacherPayoutRequestForm({
         </div>
       </div>
 
+      <div className="mt-3 rounded-lg border border-[#DDE6F7] bg-[#F8FAFF] p-3">
+        <label htmlFor="teacher-payout-current-password" className="inline-flex items-center gap-2 text-xs font-semibold text-[#475569]">
+          <ShieldCheck className="h-4 w-4 text-[#111B4D]" aria-hidden />
+          Confirmer avec votre mot de passe actuel
+        </label>
+        <PasswordInput
+          id="teacher-payout-current-password"
+          value={currentPassword}
+          onChange={(event) => setCurrentPassword(event.target.value)}
+          autoComplete="current-password"
+          placeholder="Votre mot de passe professeur"
+          disabled={requestableAmount <= 0 || loading}
+          className="mt-2 min-h-12 bg-white"
+          required
+        />
+        <p className="mt-1.5 text-xs font-semibold leading-5 text-[#64748B]">
+          Cette confirmation empêche un retrait frauduleux depuis une session laissée ouverte. Le mot de passe n'est jamais transmis à Jèko.
+        </p>
+      </div>
+
       <details className="group mt-3 rounded-lg border border-[#E6EAF3] bg-white">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-semibold text-[#475569] [&::-webkit-details-marker]:hidden">
           Note ou consigne facultative
@@ -235,6 +261,17 @@ export function TeacherPayoutRequestForm({
           {cleanAmount > 0 && cleanAmount <= requestableAmount ? `Retirer via Jèko ${formatFCFA(cleanAmount)}` : "Retirer via Jèko"}
         </Button>
       </div>
+      <RestrictionNoticeDialog
+        open={Boolean(blockingError)}
+        onOpenChange={(open) => {
+          if (!open) setBlockingError(null);
+        }}
+        title="Retrait non autorisé"
+        description={blockingError ?? "Le retrait n'a pas été lancé."}
+        variant="restriction"
+        primaryLabel="OK"
+        onPrimary={() => setBlockingError(null)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.CI.",
 };
 
-const version = "20 août 2026";
+const version = "1er septembre 2026";
 
 const highlights = [
   "Compétence ne vend pas les données personnelles et limite l'accès aux personnes ou prestataires nécessaires au service.",
@@ -62,8 +62,10 @@ const sections: LegalSection[] = [
       "Données de parcours : mini-application choisie, système ivoirien, système français ou professionnel, matières et niveaux compatibles, systèmes enseignés cochés par l'administration pour chaque professeur.",
       "Données de brouillon : contenu du dossier non payé, référence du prestataire de paiement lorsqu'elle existe, date de création et état de reprise ou de suppression.",
       "Données de paiement : montant payé, prix du cours, réduction, transport, frais de service Compétence, frais liés au moyen de paiement, boutique ou marchand Jèko affiché, référence Jèko, statut serveur vérifié, statut webhook, montant remboursable et numéro de remboursement si le client le fournit. Compétence ne demande ni ne conserve le code secret Mobile Money du client.",
+      "Données de contrôle financier : détail arithmétique du tarif, empreinte de la demande, identifiant d'idempotence, boutique, devise, moyen, référence, transaction, montant attendu et constaté, horodatages, résultat du rapprochement, compteurs de tentatives et anomalies d'intégrité.",
       "Données partenariat et cadeaux : nom, téléphone et email facultatif du partenaire, code permanent, client attribué, date du premier paiement confirmé, période d'attribution de six mois, réservations concernées, montants éligibles, réductions client, progression de paiement, cadeaux débloqués, dates d'expiration, commissions calculées, preuve d'identité, moyen de dépôt et notes de contrôle.",
       "Données professeur : photo réelle obligatoire, couverture personnalisée, couleur ou couverture choisie dans le catalogue, identité, téléphone, email, matières, niveaux, systèmes enseignés, disponibilités, CV source privé, mini-CV structuré, expériences, notes du service client, avis, sanctions, paiements, destination Mobile Money, numéro confirmé et demandes de retrait.",
+      "Pour autoriser une modification de destination ou un retrait, le professeur saisit son mot de passe actuel dans une connexion chiffrée. Le serveur compare ce secret à l'empreinte protégée du compte ; le mot de passe n'est ni transmis à Jèko ni ajouté aux journaux financiers.",
       "Données de lien professeur : identifiant public du profil, adresse courte Compétence.CI, fiche de destination, nom professionnel, fonction, photo ou couverture autorisée et métadonnées nécessaires à la prévisualisation sur les réseaux sociaux.",
       "Données de consultation du lien : date et heure, adresse IP, navigateur, appareil, page d'origine ou référent lorsqu'il est transmis, paramètres de campagne et parcours de navigation jusqu'à la réservation. Ces informations servent à la sécurité, à la mesure d'audience et à l'amélioration du service.",
       "Données de communication : notifications internes et push, emails de réinitialisation client, mots de passe temporaires professeurs émis par le service client, messages au service client, messages client, messages professeur, traces d'appels manuels, demandes WhatsApp ou SMS lorsque le service client les utilise.",
@@ -93,6 +95,7 @@ const sections: LegalSection[] = [
       "Rechercher automatiquement un professeur remplaçant compatible lorsque le professeur initial signale une indisponibilité, lorsqu'une séance de pack nécessite un remplacement ou lorsque le client demande un autre professeur avant d'annuler.",
       "Permettre au client d'accepter une proposition de remplacement, de la refuser, de recevoir une autre proposition automatique lorsque cela est possible, ou de basculer vers le service client lorsqu'aucun profil immédiat n'est disponible.",
       "Prévenir la fraude, les paiements non vérifiés, les abus, les contournements de plateforme et les comportements non professionnels.",
+      "Rapprocher automatiquement les paiements et retraits avec les preuves Jèko, détecter un montant, une destination, une allocation ou une transaction incohérente, limiter les tentatives anormales et empêcher les doubles validations.",
       "Détecter les avis présentant un risque sérieux pour les apprenants ou la réputation du service, placer préventivement un profil en observation et soumettre toute sanction forte à un examen humain.",
       "Améliorer l'ergonomie, la qualité du service, la sécurité et la performance de la plateforme.",
       "Analyser et structurer un CV professeur, supprimer les répétitions, suggérer des matières ou niveaux et signaler les preuves manquantes sans inventer de diplôme, d'expérience ou de résultat.",

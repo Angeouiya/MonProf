@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "20 août 2026";
+const version = "1er septembre 2026";
 
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
@@ -225,6 +225,7 @@ const sections: LegalSection[] = [
       "Si le cours n'a pas eu lieu, s'est mal déroulé ou fait l'objet d'un désaccord, le client ne doit pas confirmer sa réalisation : il doit ouvrir un litige ou contacter le service client. Compétence peut alors maintenir le blocage, rembourser tout ou partie du client, ajuster la part professeur ou proposer un report selon les preuves et les règles applicables.",
       "Une indisponibilité, un report, un remplacement, un litige, une retenue ou un paiement concernant une séance n'affecte pas automatiquement les autres séances du pack. Les versements partiels sont imputés aux séances libérées les plus anciennes et apparaissent sur la facture de paiement.",
       "Le retrait est exécuté exclusivement par l'infrastructure Jèko vers la destination Mobile Money disponible et confirmée par le professeur. Le numéro exact et le montant sont contrôlés avant création du transfert.",
+      "La saisie du mot de passe actuel du professeur est obligatoire avant l'enregistrement d'une nouvelle destination de retrait et avant chaque nouveau retrait. Cette nouvelle authentification protège le portefeuille lorsqu'une session reste ouverte sur un appareil tiers.",
       "Le professeur retire le montant net libérable validé dans son espace. Lorsque Compétence décide de prendre en charge des frais techniques de transfert, ces frais sont comptabilisés séparément et ne diminuent pas le net professeur déjà validé.",
       "Lorsqu'un professeur lance un retrait, il saisit le montant demandé et confirme le numéro exact. Jèko renvoie un statut serveur qui seul peut valider le transfert. Un retrait correctement envoyé est normalement confirmé automatiquement, avec reprise possible entre 1 heure et 72 heures ouvrées selon le réseau et les vérifications Jèko.",
       "Ce délai est prolongé en cas de litige, erreur de numéro, paiement client non vérifié, retenue, remboursement, contrôle anti-fraude, indisponibilité du moyen de paiement Jèko ou information manquante.",
@@ -283,6 +284,8 @@ const sections: LegalSection[] = [
       "Les journaux horodatés, références, statuts Jèko, signatures de webhook, transactions du montant exact, emails, validations, historiques de connexion et actions enregistrées constituent des éléments de preuve du parcours numérique dans les conditions prévues par la loi.",
       "Une page de retour, une capture d'écran, un SMS isolé, un abandon de fenêtre ou une déclaration de paiement ne valent jamais confirmation. Seule la vérification serveur du prestataire et de la transaction exacte active la réservation ou libère des coordonnées.",
       "Un webhook, une réponse API ou une opération de rapprochement qui ne correspond pas à la boutique Compétence, à la référence attendue, au moyen autorisé, au montant exact ou au statut final est ignoré, rejeté, marqué à contrôler ou bloqué sans activer la commande.",
+      "Avant l'ouverture du paiement, le serveur recalcule le cours, le transport, le matériel, les frais de service, les frais Jèko, la commission, le net professeur et le total. Toute incohérence, même issue d'un formulaire ou d'un ancien brouillon, bloque l'opération et impose un nouveau calcul.",
+      "Les retraits font l'objet de contrôles de mot de passe, de solde, d'allocation, de destination, de montant, de fréquence, d'identifiant unique et de preuve Jèko. Une nouvelle tentative peut être temporairement limitée lorsqu'un volume anormal est détecté, sans doubler un transfert déjà enregistré.",
       "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
       "Les coordonnées directes du client et du professeur ne sont partagées entre eux qu'après confirmation serveur d'un paiement exact et rattaché à la réservation concernée.",
     ],

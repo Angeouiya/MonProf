@@ -29,6 +29,8 @@ export type OperationalRiskRadar = {
     rejectedJekoEventsLast24h: number;
     failedJekoEventsLast24h: number;
     staleJekoPayouts: number;
+    jekoPaymentIntegrityMismatches: number;
+    jekoPayoutIntegrityMismatches: number;
   };
   passwordEmail: {
     dueJobs: number;
@@ -62,6 +64,8 @@ export async function getOperationalRiskRadar(now = new Date()): Promise<Operati
     rejectedJekoEventsLast24h,
     failedJekoEventsLast24h,
     staleJekoPayouts,
+    jekoPaymentIntegrityMismatches,
+    jekoPayoutIntegrityMismatches,
     duePasswordEmailJobs,
     retryPasswordEmailJobs,
     stalePasswordEmailProcessingJobs,
@@ -79,6 +83,8 @@ export async function getOperationalRiskRadar(now = new Date()): Promise<Operati
       where: { provider: "JEKO", status: "FAILED", receivedAt: { gte: oneDayAgo } },
     }),
     countStaleJekoPayouts(stalePayoutBefore),
+    countJekoPaymentIntegrityMismatches(),
+    countJekoPayoutIntegrityMismatches(),
     db.passwordEmailOutbox.count({
       where: {
         status: { in: ["PENDING", "RETRY"] },
@@ -108,6 +114,8 @@ export async function getOperationalRiskRadar(now = new Date()): Promise<Operati
     operationalBookingsWithoutVerifiedFunds
     + securedBookingsWithoutProviderProof
     + securedBookingsWithoutVerifiedTransaction
+    + jekoPaymentIntegrityMismatches
+    + jekoPayoutIntegrityMismatches
     + stalePasswordEmailProcessingJobs
     + failedPasswordEmailJobsLast24h;
   const attentionCount =
@@ -141,6 +149,8 @@ export async function getOperationalRiskRadar(now = new Date()): Promise<Operati
       rejectedJekoEventsLast24h,
       failedJekoEventsLast24h,
       staleJekoPayouts,
+      jekoPaymentIntegrityMismatches,
+      jekoPayoutIntegrityMismatches,
     },
     passwordEmail: {
       dueJobs: duePasswordEmailJobs,
@@ -294,6 +304,91 @@ async function countStaleJekoPayouts(staleBefore: Date) {
     WHERE payout."provider" = 'JEKO'
       AND payout."status" = 'DRAFT'
       AND COALESCE(payout."lastCheckedAt", payout."createdAt") <= ${staleBefore}
+  `));
+}
+
+async function countJekoPaymentIntegrityMismatches() {
+  return firstCount(await db.$queryRaw<CountRow[]>(Prisma.sql`
+    SELECT COUNT(DISTINCT attempt."id")::integer AS "count"
+    FROM "PaymentAttempt" AS attempt
+    LEFT JOIN "Booking" AS booking ON booking."id" = attempt."bookingId"
+    LEFT JOIN "Transaction" AS tx ON tx."id" = attempt."transactionId"
+    WHERE attempt."provider" = 'JEKO'
+      AND attempt."purpose" = 'BOOKING'
+      AND attempt."status" = 'SUCCEEDED'
+      AND (
+        attempt."verifiedAt" IS NULL
+        OR attempt."completedAt" IS NULL
+        OR attempt."providerOrderId" IS NULL
+        OR attempt."bookingId" IS NULL
+        OR booking."id" IS NULL
+        OR attempt."currency" <> 'XOF'
+        OR attempt."providerAmountMinor" <> attempt."amountXof" * 100
+        OR attempt."amountXof" <> CASE
+          WHEN booking."totalClientPays" > 0 THEN booking."totalClientPays"
+          ELSE booking."totalPrice"
+        END
+        OR tx."id" IS NULL
+        OR tx."type" <> 'CLIENT_PAYMENT'
+        OR tx."amount" <> attempt."amountXof"
+      )
+  `));
+}
+
+async function countJekoPayoutIntegrityMismatches() {
+  return firstCount(await db.$queryRaw<CountRow[]>(Prisma.sql`
+    WITH payout_totals AS (
+      SELECT
+        payout."id",
+        COUNT(allocation."id")::integer AS allocation_count,
+        COALESCE(SUM(allocation."amount"), 0)::bigint AS allocated_total
+      FROM "TeacherPayoutRecord" AS payout
+      LEFT JOIN "TeacherPayoutAllocation" AS allocation ON allocation."payoutId" = payout."id"
+      WHERE payout."provider" = 'JEKO'
+        AND payout."status" IN ('DRAFT', 'PAID')
+      GROUP BY payout."id"
+    )
+    SELECT COUNT(DISTINCT payout."id")::integer AS "count"
+    FROM "TeacherPayoutRecord" AS payout
+    JOIN payout_totals AS totals ON totals."id" = payout."id"
+    WHERE payout."provider" = 'JEKO'
+      AND payout."status" IN ('DRAFT', 'PAID')
+      AND (
+        payout."amount" <= 0
+        OR payout."providerReference" IS DISTINCT FROM payout."reference"
+        OR totals.allocation_count = 0
+        OR totals.allocated_total <> payout."amount"
+        OR (
+          payout."status" = 'PAID'
+          AND (
+            payout."paidAt" IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM "PaymentEvent" AS event
+              WHERE event."provider" = 'JEKO'
+                AND event."reference" = payout."reference"
+                AND event."status" = 'PROCESSED'
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM "TeacherPayoutAllocation" AS allocation
+              LEFT JOIN "BookingSession" AS session ON session."id" = allocation."bookingSessionId"
+              LEFT JOIN "Booking" AS booking ON booking."id" = allocation."bookingId"
+              WHERE allocation."payoutId" = payout."id"
+                AND (
+                  (allocation."bookingSessionId" IS NOT NULL AND (
+                    session."id" IS NULL
+                    OR session."paidAmount" < allocation."paidAmountBefore" + allocation."amount"
+                  ))
+                  OR (allocation."bookingSessionId" IS NULL AND (
+                    booking."id" IS NULL
+                    OR booking."teacherPaidAmount" < allocation."paidAmountBefore" + allocation."amount"
+                  ))
+                )
+            )
+          )
+        )
+      )
   `));
 }
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { PaymentMethod } from "@prisma/client";
+import type { PaymentMethod, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import {
@@ -17,6 +17,9 @@ import {
   processJekoTeacherPayoutRecord,
   type JekoPayoutReconciliationResult,
 } from "@/lib/jeko-payout-reconciliation";
+
+export const TEACHER_PAYOUT_MAX_NEW_ATTEMPTS_PER_HOUR = 5;
+export const TEACHER_PAYOUT_MAX_NEW_ATTEMPTS_PER_DAY = 12;
 
 export type TeacherJekoPayoutActor =
   | { type: "TEACHER" }
@@ -427,6 +430,8 @@ export async function createAndProcessTeacherJekoPayout(
         return existing;
       }
 
+      await assertTeacherPayoutVelocity(tx, teacher.id, new Date());
+
       const currentAppliedAdjustments = await tx.teacherPaymentAdjustment.findMany({
         where: { teacherId: teacher.id, status: "APPLIED" },
         select: { id: true, amount: true, bookingId: true, status: true },
@@ -593,6 +598,13 @@ export async function createAndProcessTeacherJekoPayout(
         errorCode,
       );
     }
+    if (errorCode === "PAYOUT_VELOCITY_LIMIT") {
+      throw new TeacherJekoPayoutError(
+        "Trop de nouvelles demandes de retrait ont été lancées. Réessayez plus tard ou reprenez la demande déjà créée.",
+        429,
+        errorCode,
+      );
+    }
     if (errorCode === "P2002") {
       const raced = await db.teacherPayoutRecord.findUnique({ where: { id: payoutRecordId } });
       if (raced) {
@@ -675,4 +687,27 @@ function appliedAdjustmentFingerprint(
     .map((adjustment) => `${adjustment.id}:${adjustment.bookingId ?? "GLOBAL"}:${adjustment.amount}`)
     .sort()
     .join("|");
+}
+
+async function assertTeacherPayoutVelocity(
+  tx: Prisma.TransactionClient,
+  teacherId: string,
+  now: Date,
+) {
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1_000);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1_000);
+  const [hourlyAttempts, dailyAttempts] = await Promise.all([
+    tx.teacherPayoutRecord.count({
+      where: { teacherId, provider: "JEKO", createdAt: { gte: oneHourAgo } },
+    }),
+    tx.teacherPayoutRecord.count({
+      where: { teacherId, provider: "JEKO", createdAt: { gte: oneDayAgo } },
+    }),
+  ]);
+  if (
+    hourlyAttempts >= TEACHER_PAYOUT_MAX_NEW_ATTEMPTS_PER_HOUR
+    || dailyAttempts >= TEACHER_PAYOUT_MAX_NEW_ATTEMPTS_PER_DAY
+  ) {
+    throw new Error("PAYOUT_VELOCITY_LIMIT");
+  }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { PaymentMethod } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
 import { requireTeacherApi } from "@/lib/teacher-auth";
 import {
@@ -11,6 +12,8 @@ import type { JekoPayoutReconciliationResult } from "@/lib/jeko-payout-reconcili
 
 const PAYMENT_METHODS: readonly PaymentMethod[] = ACTIVE_PAYMENT_METHODS;
 const MAX_NOTE_LENGTH = 500;
+const MAX_POST_BODY_BYTES = 8 * 1024;
+const MAX_PASSWORD_LENGTH = 200;
 
 function parseAmount(value: unknown) {
   if (typeof value === "number") return Math.round(value);
@@ -28,6 +31,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Accès professeur non autorisé" }, { status: 403 });
   }
 
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_POST_BODY_BYTES) {
+    return NextResponse.json({ error: "Corps de requête trop volumineux." }, { status: 413 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const amount = parseAmount(body.amount);
   const method = typeof body.method === "string" && PAYMENT_METHODS.includes(body.method as PaymentMethod)
@@ -36,6 +44,7 @@ export async function POST(req: NextRequest) {
   const paymentPhone = normalizePhone(body.paymentPhone);
   const paymentPhoneConfirm = normalizePhone(body.paymentPhoneConfirm);
   const note = typeof body.note === "string" ? body.note.trim() : "";
+  const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: "Montant demandé invalide." }, { status: 400 });
@@ -51,6 +60,18 @@ export async function POST(req: NextRequest) {
   }
   if (note.length > MAX_NOTE_LENGTH) {
     return NextResponse.json({ error: `Note trop longue (${MAX_NOTE_LENGTH} caractères maximum).` }, { status: 400 });
+  }
+  if (
+    !currentPassword
+    || currentPassword.length > MAX_PASSWORD_LENGTH
+    || !teacher.portalPasswordHash
+    || !await bcrypt.compare(currentPassword, teacher.portalPasswordHash)
+  ) {
+    console.warn("[jeko:professor_payout_reauthentication_failed]", { teacherId: teacher.id });
+    return NextResponse.json({
+      error: "Mot de passe actuel incorrect. Le retrait n'a pas été lancé.",
+      code: "PAYOUT_REAUTHENTICATION_FAILED",
+    }, { status: 403 });
   }
 
   const idempotencyKey = normalizeTeacherPayoutRequestIdempotencyKey(body.idempotencyKey);

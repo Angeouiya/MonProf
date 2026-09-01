@@ -3,6 +3,8 @@ import {
   type JekoPaymentStatus,
   type JekoPaymentMethod,
 } from "./jeko-utils";
+import { calculateJekoClientPaymentFee } from "./jeko-client-payment-fees";
+import { calculatePaymentServiceFee } from "./payment-service-fees";
 
 const ACTIVE_ATTEMPT_STATUSES = new Set(["CREATED", "REQUESTING", "PENDING"]);
 const TERMINAL_ATTEMPT_STATUSES = new Set(["FAILED", "REJECTED", "CANCELLED", "EXPIRED"]);
@@ -74,6 +76,103 @@ export type JekoRescheduleFinancialSnapshot = {
   paymentServiceFeeAmount: number;
   totalToPay: number;
 };
+
+export type JekoBookingFinancialSnapshot = {
+  courseAmount: number;
+  transportFee: number;
+  materialFee: number;
+  paymentServiceFeeAmount: number;
+  commissionAmount: number;
+  teacherPayoutAmount: number;
+  totalTeacherReceives: number;
+  totalClientPays: number;
+  totalPrice: number;
+  paymentMethod: JekoPaymentMethod;
+  pricingSnapshot: string | null;
+};
+
+/**
+ * Dernier contrôle arithmétique avant l'ouverture de Jèko. Les champs de
+ * Booking et le snapshot JSON doivent raconter exactement la même histoire :
+ * un client ne peut donc jamais injecter un total, des frais ou une part
+ * professeur différents de ceux calculés par le serveur.
+ */
+export function validateJekoBookingFinancialSnapshot(
+  booking: JekoBookingFinancialSnapshot,
+): string | null {
+  const amounts = [
+    booking.courseAmount,
+    booking.transportFee,
+    booking.materialFee,
+    booking.paymentServiceFeeAmount,
+    booking.commissionAmount,
+    booking.teacherPayoutAmount,
+    booking.totalTeacherReceives,
+    booking.totalClientPays,
+    booking.totalPrice,
+  ];
+  if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0)) {
+    return "L'instantané financier de la réservation contient un montant invalide.";
+  }
+  if (booking.courseAmount <= 0 || booking.totalClientPays <= 0) {
+    return "Le cours et le total client doivent être strictement positifs.";
+  }
+
+  const snapshot = parsePricingSnapshotRecord(booking.pricingSnapshot);
+  if (!snapshot) return "L'instantané tarifaire serveur est absent ou invalide.";
+
+  const snapshotAmounts = [
+    "courseAmount",
+    "transportFee",
+    "materialFee",
+    "paymentServiceFeeAmount",
+    "paymentProviderFeeAmount",
+    "platformCommissionAmount",
+    "teacherPayoutAmount",
+    "totalTeacherReceives",
+    "totalClientPays",
+  ] as const;
+  if (snapshotAmounts.some((field) => !Number.isSafeInteger(snapshot[field]) || Number(snapshot[field]) < 0)) {
+    return "L'instantané tarifaire contient un montant non entier ou négatif.";
+  }
+
+  const snapshotMethod = normalizeJekoPaymentMethod(snapshot.paymentProviderFeeMethod);
+  if (!snapshotMethod || snapshotMethod !== booking.paymentMethod) {
+    return "Le moyen Jèko ne correspond pas au moyen utilisé pour calculer les frais.";
+  }
+
+  const providerFeeAmount = Number(snapshot.paymentProviderFeeAmount);
+  const baseBeforeProviderFee = booking.courseAmount
+    + booking.transportFee
+    + booking.materialFee
+    + booking.paymentServiceFeeAmount;
+  const expectedServiceFee = calculatePaymentServiceFee(booking.courseAmount + booking.transportFee);
+  const expectedProviderFee = calculateJekoClientPaymentFee(
+    baseBeforeProviderFee,
+    booking.paymentMethod,
+  ).amount;
+
+  const mismatched = [
+    Number(snapshot.courseAmount) !== booking.courseAmount,
+    Number(snapshot.transportFee) !== booking.transportFee,
+    Number(snapshot.materialFee) !== booking.materialFee,
+    Number(snapshot.paymentServiceFeeAmount) !== booking.paymentServiceFeeAmount,
+    Number(snapshot.platformCommissionAmount) !== booking.commissionAmount,
+    Number(snapshot.teacherPayoutAmount) !== booking.teacherPayoutAmount,
+    Number(snapshot.totalTeacherReceives) !== booking.totalTeacherReceives,
+    Number(snapshot.totalClientPays) !== booking.totalClientPays,
+    booking.totalPrice !== booking.totalClientPays,
+    booking.commissionAmount + booking.teacherPayoutAmount !== booking.courseAmount,
+    booking.teacherPayoutAmount + booking.transportFee !== booking.totalTeacherReceives,
+    booking.paymentServiceFeeAmount !== expectedServiceFee,
+    providerFeeAmount !== expectedProviderFee,
+    baseBeforeProviderFee + providerFeeAmount !== booking.totalClientPays,
+  ].some(Boolean);
+
+  return mismatched
+    ? "Le détail financier ne correspond pas au total Jèko autorisé."
+    : null;
+}
 
 export function parseJekoCheckoutBody(value: unknown):
   | { ok: true; paymentMethod: JekoPaymentMethod }
@@ -276,4 +375,14 @@ function isActiveOrReconcilableAttempt(attempt: JekoAttemptSummary) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parsePricingSnapshotRecord(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }

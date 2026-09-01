@@ -48,11 +48,11 @@ const checks = [
   ],
   [
     "CGU and privacy policy govern professor links and social traffic",
-    /20 août 2026/.test(terms)
+    /1er septembre 2026/.test(terms)
       && /Liens publics professeurs et réseaux sociaux/.test(terms)
       && /ne crée ni exclusivité, ni rémunération, ni commission/.test(terms)
       && /désactiver le lien/.test(terms)
-      && /20 août 2026/.test(privacy)
+      && /1er septembre 2026/.test(privacy)
       && /Données de lien professeur/.test(privacy)
       && /Profils publics et liens de partage/.test(privacy)
       && /ni téléphone privé, ni email privé/.test(privacy),

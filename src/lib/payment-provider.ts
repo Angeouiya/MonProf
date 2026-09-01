@@ -4,7 +4,10 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { createJekoPaymentRequest, JekoApiError } from "@/lib/jeko";
-import { validateJekoRescheduleFinancialSnapshot } from "@/lib/jeko-client-payment";
+import {
+  validateJekoBookingFinancialSnapshot,
+  validateJekoRescheduleFinancialSnapshot,
+} from "@/lib/jeko-client-payment";
 import { recoverJekoPaymentAttemptIdentity } from "@/lib/jeko-payment-request-recovery";
 import { isAllowedJekoRedirectUrl, xofToJekoAmountCents, type JekoPaymentMethod } from "@/lib/jeko-utils";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
@@ -97,8 +100,10 @@ export async function createJekoBookingCheckout(
         transportFee: true,
         paymentServiceFeeAmount: true,
         commissionAmount: true,
+        teacherPayoutAmount: true,
         teacherNetAmount: true,
         totalTeacherReceives: true,
+        materialFee: true,
         pricingSnapshot: true,
       },
     });
@@ -137,6 +142,23 @@ export async function createJekoBookingCheckout(
       throw new Error(
         "Le tarif a été recalculé. Vérifiez le nouveau détail puis confirmez-le avant d'ouvrir Jèko.",
       );
+    }
+
+    const financialSnapshotError = validateJekoBookingFinancialSnapshot({
+      courseAmount: booking.courseAmount,
+      transportFee: booking.transportFee,
+      materialFee: booking.materialFee,
+      paymentServiceFeeAmount: booking.paymentServiceFeeAmount,
+      commissionAmount: booking.commissionAmount,
+      teacherPayoutAmount: booking.teacherPayoutAmount,
+      totalTeacherReceives: booking.totalTeacherReceives,
+      totalClientPays: amountXof,
+      totalPrice: booking.totalPrice,
+      paymentMethod: input.paymentMethod,
+      pricingSnapshot: booking.pricingSnapshot,
+    });
+    if (financialSnapshotError) {
+      throw new Error(`Contrôle anti-fraude du paiement refusé : ${financialSnapshotError}`);
     }
 
     await lockTeacherSchedule(tx, booking.teacherId);
