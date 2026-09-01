@@ -130,6 +130,14 @@ record(
     && realtime.includes('fetch("/api/push/test"')
     && realtime.includes("competence-notification-icon-outline-512.png"),
 );
+record(
+  "Appareil accordé auto-réparé et testé sans silence",
+  realtime.includes("PUSH_AUTOMATIC_TEST_ENDPOINT_KEY")
+    && realtime.includes("sendAutomaticDeviceTest")
+    && realtime.includes("automatic_device_registration")
+    && realtime.includes("setPermissionError")
+    && subscriptionRoute.includes('message: "device_registered"'),
+);
 record("Les push ne sont jamais rendus silencieux par Compétence", webPush.includes("silent: false") && !webPush.includes('silent: !["URGENT", "CRITICAL"].includes'));
 record("La santé production contrôle les déclencheurs d'outbox", read("src/app/api/health/route.ts").includes("webPushOutboxReady") && read("src/app/api/health/route.ts").includes("teacher_notification_web_push_outbox"));
 

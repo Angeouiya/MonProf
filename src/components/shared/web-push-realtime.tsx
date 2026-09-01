@@ -17,6 +17,7 @@ import {
 import { buildSubscriptionPayload, ensureCurrentPushSubscription } from "@/lib/web-push-client";
 
 const PUSH_PROMPT_DISMISSED_KEY = "competence_push_prompt_dismissed_for_session";
+const PUSH_AUTOMATIC_TEST_ENDPOINT_KEY = "competence_push_automatic_test_endpoint_v10";
 
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
   const router = useRouter();
@@ -49,15 +50,17 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   }, [router]);
 
   const synchronizePushSubscription = useCallback(async () => {
-    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) return;
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
+      throw new Error("Ce navigateur ne prend pas en charge les notifications push Compétence.");
+    }
     await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
-    if (Notification.permission !== "granted") return;
-
-    const registration = await navigator.serviceWorker.ready;
     const stateResponse = await fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" });
     const state = await stateResponse.json().catch(() => null);
-    if (!stateResponse.ok || !state?.configured || !state?.publicKey) return;
+    if (!stateResponse.ok) throw new Error(state?.error || "Vérification de l'appareil impossible.");
+    if (!state?.configured || !state?.publicKey) throw new Error("Le service push Compétence n'est pas configuré.");
+    if (Notification.permission !== "granted") return null;
 
+    const registration = await navigator.serviceWorker.ready;
     const subscription = await ensureCurrentPushSubscription(registration, state.publicKey);
     const syncResponse = await fetch("/api/push/subscriptions", {
       method: "POST",
@@ -69,6 +72,22 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
       const result = await syncResponse.json().catch(() => null);
       throw new Error(result?.error || "Synchronisation push impossible.");
     }
+    return subscription.endpoint;
+  }, []);
+
+  const sendAutomaticDeviceTest = useCallback(async (endpoint: string) => {
+    if (window.localStorage.getItem(PUSH_AUTOMATIC_TEST_ENDPOINT_KEY) === endpoint) return;
+    const response = await fetch("/api/push/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ reason: "automatic_device_registration" }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || result?.message || "Le fournisseur push n'a pas accepté le test de cet appareil.");
+    }
+    window.localStorage.setItem(PUSH_AUTOMATIC_TEST_ENDPOINT_KEY, endpoint);
   }, []);
 
   const enableAndTestPush = useCallback(async () => {
@@ -82,7 +101,8 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
           : "L'autorisation est nécessaire pour recevoir les notifications Compétence.");
       }
 
-      await synchronizePushSubscription();
+      const endpoint = await synchronizePushSubscription();
+      if (!endpoint) throw new Error("L'autorisation des notifications n'a pas été enregistrée.");
       const response = await fetch("/api/push/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,6 +114,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
         throw new Error(result?.error || result?.message || "Le test de notification n'a pas pu être envoyé.");
       }
 
+      window.localStorage.setItem(PUSH_AUTOMATIC_TEST_ENDPOINT_KEY, endpoint);
       window.sessionStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
       setPermissionPromptOpen(false);
       window.dispatchEvent(new CustomEvent("competence:push-enabled"));
@@ -112,36 +133,46 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   }, []);
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
     let cancelled = false;
-    const synchronize = () => {
-      if (!cancelled) void synchronizePushSubscription().catch(() => undefined);
-    };
-    synchronize();
+    const synchronize = async () => {
+      try {
+        const endpoint = await synchronizePushSubscription();
+        if (cancelled) return;
+        if (endpoint) {
+          await sendAutomaticDeviceTest(endpoint);
+          if (cancelled) return;
+          setPermissionError("");
+          setPermissionPromptOpen(false);
+          return;
+        }
 
-    if (
-      Notification.permission === "default"
-      && "PushManager" in window
-      && window.sessionStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) !== "1"
-    ) {
-      void fetch("/api/push/subscriptions", { cache: "no-store", credentials: "same-origin" })
-        .then((response) => response.ok ? response.json() : null)
-        .then((state) => {
-          if (!cancelled && state?.configured && state?.publicKey) setPermissionPromptOpen(true);
-        })
-        .catch(() => undefined);
+        if (window.sessionStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
+        if ("Notification" in window && Notification.permission === "denied") {
+          setPermissionError("Les notifications sont bloquées sur cet appareil. Ouvrez le cadenas du navigateur, choisissez Notifications, puis Autoriser.");
+        }
+        setPermissionPromptOpen(true);
+      } catch (error) {
+        if (cancelled) return;
+        setPermissionError(error instanceof Error ? error.message : "Cet appareil n'a pas pu être enregistré.");
+        setPermissionPromptOpen(true);
+      }
+    };
+    void synchronize();
+
+    if (!("serviceWorker" in navigator)) {
+      return () => { cancelled = true; };
     }
 
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "COMPETENCE_PUSH_RECEIVED") void refreshState(true);
     };
     const onFocus = () => {
-      synchronize();
+      void synchronize();
       void refreshState(false);
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        synchronize();
+        void synchronize();
         void refreshState(false);
       }
     };
@@ -154,7 +185,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [refreshState, synchronizePushSubscription]);
+  }, [refreshState, sendAutomaticDeviceTest, synchronizePushSubscription]);
 
   return (
     <AlertDialog

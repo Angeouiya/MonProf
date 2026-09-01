@@ -104,6 +104,16 @@ export async function POST(request: Request) {
     },
   });
 
+  console.log(JSON.stringify({
+    level: "info",
+    scope: "web-push-subscription",
+    message: "device_registered",
+    actorKind: actor.kind,
+    pwaInstalled: Boolean(pwaInstalled),
+    platform: cleanDeviceValue(platform),
+    browser: cleanDeviceValue(browser),
+  }));
+
   return noStore({ ok: true, message: "Notifications activées sur cet appareil." });
 }
 
