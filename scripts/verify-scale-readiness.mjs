@@ -30,6 +30,13 @@ record(
     && database.includes("runWithDatabaseRequestContext")
     && database.includes("max: 5"),
 );
+record(
+  "Le pool Hyperdrive réutilise les connexions pendant la requête sans attente infinie",
+  !database.includes("maxUses: 1")
+    && database.includes("connectionTimeoutMillis: 8_000")
+    && database.includes("query_timeout: 15_000")
+    && database.includes("statement_timeout: 15_000"),
+);
 record("Connexion runtime via pooler Supabase", /pooler\.supabase\.com:6543/.test(envExample));
 record("PgBouncer activé", /pgbouncer=true/.test(envExample));
 record("Une connexion PostgreSQL maximum par instance", /connection_limit=1/.test(envExample));
