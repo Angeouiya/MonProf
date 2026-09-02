@@ -59,12 +59,19 @@ export async function getWebPushConfiguration(): Promise<WebPushConfiguration> {
     select: { key: true, value: true },
   }).catch(() => [] as Array<{ key: string; value: string }>);
   const settings = new Map<string, string>(rows.map((row) => [row.key, row.value.trim()] as const));
-  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim()
-    || settings.get(WEB_PUSH_SETTING_KEYS.publicKey)
-    || "";
-  const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim()
-    || settings.get(WEB_PUSH_SETTING_KEYS.privateKey)
-    || "";
+  const envPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim() || "";
+  const envPrivateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim() || "";
+  const databasePublicKey = settings.get(WEB_PUSH_SETTING_KEYS.publicKey) || "";
+  const databasePrivateKey = settings.get(WEB_PUSH_SETTING_KEYS.privateKey) || "";
+
+  // A VAPID public/private pair is indivisible. Mixing a public key supplied by
+  // the runtime with an older private key stored in Settings produces valid
+  // subscriptions that every push provider subsequently rejects. Prefer the
+  // runtime pair only when both halves are present; otherwise use the complete
+  // database pair.
+  const hasRuntimePair = Boolean(envPublicKey && envPrivateKey);
+  const publicKey = hasRuntimePair ? envPublicKey : databasePublicKey;
+  const privateKey = hasRuntimePair ? envPrivateKey : databasePrivateKey;
   const subject = process.env.WEB_PUSH_SUBJECT?.trim()
     || settings.get(WEB_PUSH_SETTING_KEYS.subject)
     || "mailto:contact@competence.ci";

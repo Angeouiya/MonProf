@@ -52,6 +52,12 @@ record("Livraisons suivies par abonnement", webPush.includes("db.webPushDelivery
 record("Endpoints 404/410 révoqués automatiquement", webPush.includes("statusCode === 404 || statusCode === 410") && webPush.includes('enabled: false'));
 record("Accepté provider n'est pas assimilé à lu", webPush.includes('status: "ACCEPTED"') && !webPush.includes("read: true"));
 record("Retry PARTIAL sans redoubler ACCEPTED/REVOKED", webPush.includes("'PARTIAL'") && webPush.includes("alreadyFinalBySubscription"));
+record(
+  "Paire VAPID atomique sans mélange environnement/base",
+  webPush.includes("const hasRuntimePair = Boolean(envPublicKey && envPrivateKey)")
+    && webPush.includes("hasRuntimePair ? envPublicKey : databasePublicKey")
+    && webPush.includes("hasRuntimePair ? envPrivateKey : databasePrivateKey"),
+);
 
 record("Topic queue web-push-events défini", queueLib.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
 record("Publication queue avec idempotence", queueLib.includes("idempotencyKey") && queueLib.includes("DuplicateMessageError"));
