@@ -17,6 +17,7 @@ const subscriptionRoute = read("src/app/api/push/subscriptions/route.ts");
 const realtime = read("src/components/shared/web-push-realtime.tsx");
 const control = read("src/components/shared/web-push-control.tsx");
 const webPushClient = read("src/lib/web-push-client.ts");
+const webPushTest = read("src/lib/web-push-test.ts");
 const serviceWorker = read("public/sw.js");
 const cloudflareWorker = read("cloudflare-worker.ts");
 const wranglerConfig = read("wrangler.jsonc");
@@ -96,6 +97,19 @@ record(
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
+record(
+  "Ancien endpoint du même appareil révoqué après rotation VAPID",
+  subscriptionRoute.includes("id: { not: saved.id }")
+    && subscriptionRoute.includes("deviceId: normalizedDeviceId")
+    && subscriptionRoute.includes("enabled: false, revokedAt: now"),
+);
+record(
+  "Test appareil attend la livraison spécifique même si la queue gagne la course",
+  webPushTest.includes("waitForNotificationDelivery")
+    && webPushTest.includes("teacherNotificationId: notification.id")
+    && webPushTest.includes("notificationId: notification.id")
+    && webPushTest.includes('item.status === "ACCEPTED"'),
+);
 record(
   "Abonnements VAPID anciens sont remplacés automatiquement",
   webPushClient.includes("ensureCurrentPushSubscription")

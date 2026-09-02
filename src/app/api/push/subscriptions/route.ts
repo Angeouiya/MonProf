@@ -62,46 +62,63 @@ export async function POST(request: Request) {
     supportsBadging,
   } = parsed.data;
   const now = new Date();
-  await db.webPushSubscription.upsert({
-    where: { endpoint },
-    create: {
-      endpoint,
-      p256dh: keys.p256dh,
-      auth: keys.auth,
-      expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
-      userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
-      deviceId: cleanDeviceValue(deviceId),
-      platform: cleanDeviceValue(platform),
-      browser: cleanDeviceValue(browser),
-      os: cleanDeviceValue(os),
-      pwaInstalled: Boolean(pwaInstalled),
-      supportsVibration: Boolean(supportsVibration),
-      supportsBadging: Boolean(supportsBadging),
-      lastSeenAt: now,
-      userId: actor.userId,
-      teacherId: actor.teacherId,
-      enabled: true,
-    },
-    update: {
-      p256dh: keys.p256dh,
-      auth: keys.auth,
-      expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
-      userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
-      deviceId: cleanDeviceValue(deviceId),
-      platform: cleanDeviceValue(platform),
-      browser: cleanDeviceValue(browser),
-      os: cleanDeviceValue(os),
-      pwaInstalled: Boolean(pwaInstalled),
-      supportsVibration: Boolean(supportsVibration),
-      supportsBadging: Boolean(supportsBadging),
-      lastSeenAt: now,
-      userId: actor.userId,
-      teacherId: actor.teacherId,
-      enabled: true,
-      revokedAt: null,
-      failureCount: 0,
-      lastFailureAt: null,
-    },
+  const normalizedDeviceId = cleanDeviceValue(deviceId);
+  await db.$transaction(async (tx) => {
+    const saved = await tx.webPushSubscription.upsert({
+      where: { endpoint },
+      create: {
+        endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
+        userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
+        deviceId: normalizedDeviceId,
+        platform: cleanDeviceValue(platform),
+        browser: cleanDeviceValue(browser),
+        os: cleanDeviceValue(os),
+        pwaInstalled: Boolean(pwaInstalled),
+        supportsVibration: Boolean(supportsVibration),
+        supportsBadging: Boolean(supportsBadging),
+        lastSeenAt: now,
+        userId: actor.userId,
+        teacherId: actor.teacherId,
+        enabled: true,
+      },
+      update: {
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        expirationTime: expirationTime == null ? null : BigInt(Math.trunc(expirationTime)),
+        userAgent: request.headers.get("user-agent")?.slice(0, 1000) || null,
+        deviceId: normalizedDeviceId,
+        platform: cleanDeviceValue(platform),
+        browser: cleanDeviceValue(browser),
+        os: cleanDeviceValue(os),
+        pwaInstalled: Boolean(pwaInstalled),
+        supportsVibration: Boolean(supportsVibration),
+        supportsBadging: Boolean(supportsBadging),
+        lastSeenAt: now,
+        userId: actor.userId,
+        teacherId: actor.teacherId,
+        enabled: true,
+        revokedAt: null,
+        failureCount: 0,
+        lastFailureAt: null,
+      },
+    });
+
+    // A VAPID rotation can give the same physical device a new endpoint. Keep
+    // only the endpoint most recently synchronized for this stable device id.
+    if (normalizedDeviceId) {
+      await tx.webPushSubscription.updateMany({
+        where: {
+          id: { not: saved.id },
+          deviceId: normalizedDeviceId,
+          ...(actor.kind === "TEACHER" ? { teacherId: actor.teacherId } : { userId: actor.userId }),
+          enabled: true,
+        },
+        data: { enabled: false, revokedAt: now },
+      });
+    }
   });
 
   console.log(JSON.stringify({
