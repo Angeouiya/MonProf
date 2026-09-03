@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.CI.",
 };
 
-const version = "1er septembre 2026";
+const version = "3 septembre 2026";
 
 const highlights = [
   "Compétence ne vend pas les données personnelles et limite l'accès aux personnes ou prestataires nécessaires au service.",
@@ -85,6 +85,7 @@ const sections: LegalSection[] = [
       "Créer pour chaque professeur un lien public stable, produire une prévisualisation sociale professionnelle et mesurer l'utilisation du lien afin d'améliorer la visibilité, la conversion et la qualité des profils Compétence.CI.",
       "Verrouiller les professeurs qui n'enseignent pas dans le système sélectionné et empêcher toute réservation, paiement ou remplacement incompatible.",
       "Calculer les tarifs, frais de déplacement, frais de service, annulations, remboursements et sommes dues.",
+      "Calculer la fenêtre d'annulation à la minute près à partir de la date et de l'heure réelles du cours, afficher la retenue avant confirmation et conserver la répartition comptable appliquée.",
       "Appliquer automatiquement la meilleure réduction de pack atteinte lorsque plusieurs dates sont choisies, sans ajouter de séance sans l'accord du client.",
       "Empêcher qu'un professeur soit réservé sur une séance déjà payée, un chevauchement ou une transition dont le temps de déplacement entre les deux lieux de cours est insuffisant.",
       "Vérifier les paiements Jèko côté serveur avant toute réservation active, notification professeur ou partage de coordonnées.",

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "1er septembre 2026";
+const version = "3 septembre 2026";
 
 const highlights = [
   "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
@@ -183,9 +183,12 @@ const sections: LegalSection[] = [
     body: [
       "Toute annulation doit être demandée depuis l'espace prévu ou par le service client, avec un motif clair. Le client est informé des règles applicables avant la confirmation de l'annulation.",
       "Avant de confirmer une annulation, le client peut demander un autre professeur. Cette demande ne constitue pas une annulation : le paiement reste sécurisé, la réservation reste active et Compétence recherche automatiquement un professeur compatible avant tout traitement manuel.",
-      "Le remboursement dépend du délai d'annulation, du statut du paiement, des frais de service Compétence, des frais de paiement Jèko réellement engagés, de la préparation déjà engagée, du comportement des parties, du litige déclaré et de la politique d'annulation en vigueur.",
-      "Lorsque l'annulation est imputable au professeur ou à Compétence, le client peut se voir proposer un remplacement, un report, un autre créneau ou un remboursement selon la situation.",
-      "Des annulations répétées, tardives ou abusives peuvent entraîner des pénalités, une limitation du compte ou un contrôle renforcé par le service client.",
+      "Pour une annulation demandée par le client plus de 24 heures avant le début du cours, aucun frais d'annulation n'est retenu. Entre 24 heures et 6 heures avant le cours, 25 % de la base remboursable est retenu. À moins de 6 heures, 50 % est retenu. Lorsque le cours a commencé ou que son horaire est dépassé, 100 % de la base peut être retenu et le dossier est soumis au service client.",
+      "La base remboursable exclut les frais de service Compétence et les frais de paiement Jèko réellement engagés. Le montant exact des frais et le remboursement estimé sont recalculés par le serveur et affichés au client avant sa confirmation.",
+      "Lorsqu'une pénalité client de 25 % est appliquée, 60 % de cette pénalité compense la mobilisation du professeur et 40 % revient à la plateforme. Pour une retenue de 50 % ou un dossier de cours commencé, la répartition est de 70 % pour le professeur et 30 % pour la plateforme, sous réserve d'un litige ou d'une décision motivée du service client.",
+      "Lorsque l'annulation ou l'indisponibilité est imputable au professeur, le client ne supporte aucune pénalité d'annulation. La réservation reste protégée pendant la recherche d'un remplaçant ou d'un report ; si la solution est refusée ou impossible, le client peut demander l'annulation et le remboursement de la base remboursable.",
+      "Une indisponibilité professeur est horodatée dans le dossier. Une annulation tardive, une absence injustifiée, des refus répétés ou un non-respect des horaires peuvent entraîner rappel, avertissement, observation, suspension temporaire ou exclusion après examen. Aucun prélèvement financier arbitraire n'est appliqué sans décision traçable liée au dossier, au litige ou à la sanction.",
+      "Des annulations client répétées, tardives ou abusives peuvent entraîner une limitation du compte ou un contrôle renforcé par le service client.",
     ],
   },
   {
@@ -212,6 +215,7 @@ const sections: LegalSection[] = [
     title: "Obligations du professeur",
     body: [
       "Le professeur doit respecter les créneaux confirmés, informer rapidement le service client de toute indisponibilité, répondre aux notifications, préparer son cours, adopter une conduite professionnelle et ne pas contourner la plateforme.",
+      "À moins de 24 heures, le professeur ne peut pas annuler directement : il propose en priorité un autre créneau ou signale une urgence. Le moteur cherche alors un remplaçant compatible et le client garde le choix d'accepter, de refuser ou de demander une autre solution.",
       "Le professeur ne doit pas demander un paiement direct au client, modifier un tarif hors plateforme, récupérer une mission sans validation du service client ou utiliser les coordonnées client en dehors du cadre du cours.",
       "Le professeur accepte le contrôle qualité, les avis, les notes du service client, les avertissements, les sanctions, les suspensions, les remplacements et les décisions de paiement interne lorsque les faits le justifient.",
     ],

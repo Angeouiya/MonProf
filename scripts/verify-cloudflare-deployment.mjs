@@ -38,8 +38,11 @@ assert.match(worker, /\/api\/cron\/jeko-reconciliation/);
 assert.match(worker, /\/api\/cron\/password-email-outbox/);
 
 assert.match(database, /new PrismaPg\(/);
-assert.match(database, /maxUses: 1/);
+assert.doesNotMatch(database, /maxUses: 1/);
 assert.match(database, /max: 5/);
+assert.match(database, /connectionTimeoutMillis: 8_000/);
+assert.match(database, /query_timeout: 15_000/);
+assert.match(database, /statement_timeout: 15_000/);
 assert.match(database, /new AsyncLocalStorage<AppPrismaClient>\(\)/);
 assert.match(database, /Symbol\.for\('competence\.prisma\.request-context'\)/);
 assert.match(database, /runWithDatabaseRequestContext/);

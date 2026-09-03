@@ -19,6 +19,10 @@ const {
 const {
   scheduleSlotsConflict,
 } = jiti("../src/lib/schedule-conflict-core.ts");
+const {
+  getCancellationPenaltySplit,
+  getCancellationPolicy,
+} = jiti("../src/lib/cancellation-policy.ts");
 
 const checks = [];
 const legacyForbiddenStorePattern = new RegExp([
@@ -82,6 +86,7 @@ const platformSettings = read("src/lib/platform-settings.ts");
 const adminSettingsClient = read("src/app/admin/parametres/client.tsx");
 const adminBookingRoute = read("src/app/api/admin/bookings/[id]/route.ts");
 const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
+const teacherMissionActivation = read("src/lib/teacher-mission-activation.ts");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -278,6 +283,41 @@ record(
 );
 
 record(
+  "A verified Jèko payment atomically opens the professor order, task, notification and stakeholder updates",
+  /ensureTeacherMissionActivationInTransaction\(tx,[\s\S]*?sourceLabel:\s*"Paiement Jèko confirmé par le serveur"/.test(jekoReconciliation)
+    && /ensureJekoPaymentStakeholderNotificationsInTransaction\(tx/.test(jekoReconciliation)
+    && /teacherMissionLink\.findFirst[\s\S]*?teacherMissionLink\.create/.test(teacherMissionActivation)
+    && /type:\s*"CONFIRM_AVAILABILITY"/.test(teacherMissionActivation)
+    && /Nouvelle commande à confirmer/.test(teacherMissionActivation)
+    && /recipientType:\s*"CLIENT"[\s\S]*?recipientType:\s*"ADMIN"/.test(teacherMissionActivation),
+);
+
+record(
+  "Accepted single-session replacements receive an actionable professor mission",
+  /action === "accept_replacement"[\s\S]*?ensureTeacherMissionActivationInTransaction\(tx,[\s\S]*?teacherId:\s*proposedTeacherId[\s\S]*?scopeLabel:\s*sessionLabel/.test(bookingSessionRoute),
+);
+
+record(
+  "Professor mission screens never leak another teacher's tasks, links or schedule proposals",
+  /missionLinks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionList)
+    && /teacherTasks:\s*\{[\s\S]*?teacherId:\s*teacher\.id/.test(professorMissionList)
+    && /missionLinks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionDetail)
+    && /teacherTasks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionDetail)
+    && /scheduleProposals:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionDetail),
+);
+
+record(
+  "Client confirmation notifies the professor that funds are available",
+  /teacherNotification\.create\([\s\S]*?Fonds libérés/.test(bookingApi)
+    && /teacherNotification\.create\([\s\S]*?Fonds libérés/.test(bookingSessionRoute),
+);
+
+record(
+  "Cancellation fees use the exact course minute and preserve the approved split",
+  verifyCancellationPolicyScenarios(),
+);
+
+record(
   "Teacher unavailability inside 24h prioritizes rescheduling and urgent automatic replacement",
   /TEACHER_UNAVAILABILITY_NOTICE_HOURS\s*=\s*24/.test(missionPolicy)
     && /within24Hours/.test(missionPolicy)
@@ -454,7 +494,7 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /1er septembre 2026/.test(termsPage)
+  /3 septembre 2026/.test(termsPage)
     && /Résumé opposable/.test(termsPage)
     && /Paiement serveur exact obligatoire/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
@@ -486,7 +526,11 @@ record(
     && /coordonnées directes du client et du professeur/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
-    && /1er septembre 2026/.test(privacyPage)
+    && /3 septembre 2026/.test(privacyPage)
+    && /Entre 24 heures et 6 heures[\s\S]*?25 %/.test(termsPage)
+    && /À moins de 6 heures, 50 %/.test(termsPage)
+    && /répartition est de 70 % pour le professeur et 30 % pour la plateforme/.test(termsPage)
+    && /Aucun prélèvement financier arbitraire/.test(termsPage)
     && /Résumé de protection/.test(privacyPage)
     && /Compétence ne vend pas les données personnelles/.test(privacyPage)
     && /adresses opérationnelles validées/.test(privacyPage)
@@ -899,6 +943,37 @@ function verifyTeacherScheduleConflictScenarios() {
     && overlapInsidePaidSlot
     && bufferBeforePaidSlot
     && crossCommuneTravelBuffer;
+}
+
+function verifyCancellationPolicyScenarios() {
+  const booking = {
+    totalPrice: 21_000,
+    paidAmount: 21_000,
+    paymentServiceFeeAmount: 600,
+    paymentProviderFeeAmount: 400,
+    scheduledDate: new Date(2026, 8, 3, 12, 0, 0),
+    scheduledTime: "18:30 - 20:30",
+  };
+  const free = getCancellationPolicy(booking, new Date(2026, 8, 2, 18, 0, 0), "CLIENT");
+  const moderate = getCancellationPolicy(booking, new Date(2026, 8, 3, 12, 15, 0), "CLIENT");
+  const late = getCancellationPolicy(booking, new Date(2026, 8, 3, 12, 31, 0), "CLIENT");
+  const started = getCancellationPolicy(booking, new Date(2026, 8, 3, 18, 31, 0), "CLIENT");
+  const teacher = getCancellationPolicy(booking, new Date(2026, 8, 3, 12, 31, 0), "TEACHER");
+  const moderateSplit = getCancellationPenaltySplit(moderate, "CLIENT");
+  const lateSplit = getCancellationPenaltySplit(late, "CLIENT");
+
+  return free.feeRate === 0
+    && moderate.hoursBeforeCourse === 6.25
+    && moderate.feeRate === 25
+    && moderate.baseAmount === 20_000
+    && moderate.feeAmount === 5_000
+    && moderate.refundAmount === 15_000
+    && moderateSplit.teacherAmount === 3_000
+    && moderateSplit.platformAmount === 2_000
+    && late.feeRate === 50
+    && lateSplit.teacherRate === 70
+    && started.feeRate === 100
+    && teacher.feeRate === 0;
 }
 
 function verifyBookingScheduleSummaryScenarios() {

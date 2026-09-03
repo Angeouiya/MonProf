@@ -552,6 +552,17 @@ export async function PATCH(
               link: "/admin/reservations/" + booking.id + "#seances",
             },
           });
+          await tx.teacherNotification.create({
+            data: {
+              teacherId: pendingSession.teacherId,
+              bookingId: booking.id,
+              title: `Fonds libérés - ${booking.reference}`,
+              message: `${booking.reference} · séance ${pendingSession.sequence}/${booking.sessionsCount}. Le client a confirmé la réalisation du cours. ${pendingSession.teacherNetAmount.toLocaleString("fr-FR")} FCFA sont maintenant libérables dans votre portefeuille, sous réserve d'un litige déjà ouvert.`,
+              channel: "INTERNAL",
+              status: "SENT",
+              sent: true,
+            },
+          });
         });
         const refreshed = await db.booking.findUniqueOrThrow({ where: { id: booking.id } });
         return NextResponse.json({ booking: publicBookingDetailPayload(refreshed) });
@@ -588,6 +599,17 @@ export async function PATCH(
           sentAt: now,
           link: "/admin/paiements-a-liberer",
           actionLabel: "Libérer paiement",
+        },
+      });
+      await db.teacherNotification.create({
+        data: {
+          teacherId: booking.teacherId,
+          bookingId: booking.id,
+          title: `Fonds libérés - ${booking.reference}`,
+          message: `Le client a confirmé le cours ${booking.reference}. ${booking.teacherNetAmount.toLocaleString("fr-FR")} FCFA sont maintenant libérables dans votre portefeuille, sous réserve d'un litige déjà ouvert.`,
+          channel: "INTERNAL",
+          status: "SENT",
+          sent: true,
         },
       });
       return NextResponse.json({ booking: publicBookingDetailPayload(updated) });

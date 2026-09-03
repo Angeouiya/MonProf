@@ -207,18 +207,20 @@ function getScheduledDateTime(date: Date | string | null | undefined, time: stri
   const base = typeof date === "string" ? new Date(date) : new Date(date);
   if (Number.isNaN(base.getTime())) return null;
 
-  const hour = parseFirstHour(time);
-  if (hour !== null) {
-    base.setHours(hour, 0, 0, 0);
+  const startTime = parseStartTime(time);
+  if (startTime) {
+    base.setHours(startTime.hour, startTime.minute, 0, 0);
   }
   return base;
 }
 
-function parseFirstHour(time: string | null | undefined) {
+function parseStartTime(time: string | null | undefined) {
   if (!time) return null;
   const match = time.match(/(\d{1,2})(?:\s*(?:h|:)\s*(\d{2}))?/i);
   if (!match) return null;
   const hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
   if (!Number.isFinite(hour) || hour < 0 || hour > 23) return null;
-  return hour;
+  if (!Number.isFinite(minute) || minute < 0 || minute > 59) return null;
+  return { hour, minute };
 }

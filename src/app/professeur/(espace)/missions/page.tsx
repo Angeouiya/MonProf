@@ -32,10 +32,13 @@ export default async function ProfesseurMissionsPage() {
     include: {
       client: { select: { name: true, phone: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" } },
-      missionLinks: { orderBy: { createdAt: "desc" }, take: 1 },
-      rescheduleRequests: { orderBy: { createdAt: "desc" }, take: 3 },
+      missionLinks: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 1 },
+      rescheduleRequests: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 3 },
       teacherTasks: {
-        where: { status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] } },
+        where: {
+          teacherId: teacher.id,
+          status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] },
+        },
         take: 3,
       },
     },
@@ -70,7 +73,7 @@ export default async function ProfesseurMissionsPage() {
       {verifiedBookings.length === 0 ? (
         <EmptyProfessorState
           title="Aucune mission pour le moment"
-          description="Quand le service client vous attribue une réservation, elle apparaît ici avec les détails nécessaires."
+          description="Dès qu'un paiement est confirmé par Jèko et qu'une commande vous est attribuée, elle apparaît ici avec les détails nécessaires."
         />
       ) : (
         <div className="grid gap-4">
