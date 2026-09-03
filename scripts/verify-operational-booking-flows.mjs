@@ -87,6 +87,7 @@ const adminSettingsClient = read("src/app/admin/parametres/client.tsx");
 const adminBookingRoute = read("src/app/api/admin/bookings/[id]/route.ts");
 const adminReplacementSuggestions = read("src/app/api/admin/replacement-suggestions/route.ts");
 const teacherMissionActivation = read("src/lib/teacher-mission-activation.ts");
+const notificationScheduler = read("src/lib/notification-scheduler.ts");
 
 record(
   "Every new booking receives an automatic payable amount",
@@ -290,6 +291,16 @@ record(
     && /type:\s*"CONFIRM_AVAILABILITY"/.test(teacherMissionActivation)
     && /Nouvelle commande à confirmer/.test(teacherMissionActivation)
     && /recipientType:\s*"CLIENT"[\s\S]*?recipientType:\s*"ADMIN"/.test(teacherMissionActivation),
+);
+
+record(
+  "The scheduler repairs historical verified paid orders missing a professor mission",
+  /backfillVerifiedPaidTeacherMissions\(now\)/.test(notificationScheduler)
+    && /missionLinks:\s*\{\s*none:\s*\{\}\s*\}/.test(notificationScheduler)
+    && /teacherTasks:\s*\{\s*none:\s*\{\s*type:\s*"CONFIRM_AVAILABILITY"/.test(notificationScheduler)
+    && /FOR UPDATE/.test(notificationScheduler)
+    && /ensureTeacherMissionActivationInTransaction\(tx/.test(notificationScheduler)
+    && /Mission professeur réparée automatiquement/.test(notificationScheduler),
 );
 
 record(
