@@ -88,10 +88,11 @@ const competenceWorker = {
     const date = new Date(controller.scheduledTime);
     const routes: string[] = [CRON_ROUTES.webPush, CRON_ROUTES.communication];
 
-    if (date.getUTCMinutes() % 5 === 0) routes.push(CRON_ROUTES.passwordEmail);
+    if (date.getUTCMinutes() % 5 === 0) {
+      routes.push(CRON_ROUTES.passwordEmail, CRON_ROUTES.notificationReminders);
+    }
     if (date.getUTCMinutes() % 10 === 0) routes.push(CRON_ROUTES.jekoReconciliation);
     if (date.getUTCHours() === 2 && date.getUTCMinutes() === 35) routes.push(CRON_ROUTES.notificationRetention);
-    if (date.getUTCHours() === 8 && date.getUTCMinutes() === 0) routes.push(CRON_ROUTES.notificationReminders);
     if (date.getUTCHours() === 1 && date.getUTCMinutes() === 30) routes.push(CRON_ROUTES.partnerReferrals);
 
     ctx.waitUntil(Promise.all(routes.map((route) => invokeCronRoute(route, env, ctx))).then(() => undefined));

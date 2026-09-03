@@ -36,6 +36,7 @@ assert.match(cloudflareNextBuild, /\["build", "--webpack"\]/);
 assert.match(worker, /CLOUDFLARE_INTERNAL_SECRET/);
 assert.match(worker, /\/api\/cron\/jeko-reconciliation/);
 assert.match(worker, /\/api\/cron\/password-email-outbox/);
+assert.match(worker, /getUTCMinutes\(\) % 5 === 0[\s\S]*?notificationReminders/);
 
 assert.match(database, /new PrismaPg\(/);
 assert.doesNotMatch(database, /maxUses: 1/);
