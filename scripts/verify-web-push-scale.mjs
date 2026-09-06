@@ -130,12 +130,12 @@ record(
     && control.includes("const current = await inspect()")
     && control.includes("current.status !== \"enabled\""),
 );
-record("Icône complète Compétence disponible", exists("public/images/brand/competence-notification-icon-outline-512.png"));
-record("Badge complet Compétence transparent disponible", exists("public/images/brand/competence-notification-badge-outline-192.png"));
-record("Icône notification utilise le symbole complet Compétence", serviceWorker.includes("competence-notification-icon-outline-512.png?v=10"));
-record("Badge système utilise le symbole complet transparent", serviceWorker.includes("competence-notification-badge-outline-192.png?v=10"));
+record("Icône C Compétence disponible", exists("public/images/brand/competence-notification-monogram-tile-512.png"));
+record("Badge C Compétence transparent disponible", exists("public/images/brand/competence-notification-monogram-badge-192.png"));
+record("Icône notification utilise le grand C Compétence", serviceWorker.includes("competence-notification-monogram-tile-512.png?v=11"));
+record("Badge système utilise le C transparent", serviceWorker.includes("competence-notification-monogram-badge-192.png?v=11"));
 record("Service Worker icône Compétence + badge + vibration", [
-  "competence-notification-icon-outline-512.png?v=10",
+  "competence-notification-monogram-tile-512.png?v=11",
   "setAppBadge",
   "vibrate",
   "renotify",
@@ -148,7 +148,7 @@ record(
   realtime.includes("Recevez les alertes Compétence")
     && realtime.includes("Notification.requestPermission()")
     && realtime.includes('fetch("/api/push/test"')
-    && realtime.includes("competence-notification-icon-outline-512.png"),
+    && realtime.includes("competence-notification-monogram-tile-512.png?v=11"),
 );
 record(
   "Appareil accordé auto-réparé et testé sans silence",

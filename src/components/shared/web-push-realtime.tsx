@@ -198,7 +198,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
         <AlertDialogHeader className="items-center px-5 pb-4 pt-6 text-center sm:px-7">
           <div className="mb-2 flex h-24 w-24 items-center justify-center rounded-3xl bg-white shadow-[0_12px_35px_rgba(17,27,77,0.14)] ring-1 ring-[#E3E8F2]">
             <Image
-              src="/images/brand/competence-notification-icon-outline-512.png"
+              src="/images/brand/competence-notification-monogram-tile-512.png?v=11"
               alt="Icône Compétence"
               width={84}
               height={84}
