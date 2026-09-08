@@ -9,15 +9,35 @@ type AppEnvironment = {
   CLOUDFLARE_INTERNAL_SECRET?: string;
   HYPERDRIVE?: { connectionString: string };
   AUTH_RATE_LIMITER?: RateLimitBinding;
+  AUTH_BURST_RATE_LIMITER?: RateLimitBinding;
   FINANCIAL_RATE_LIMITER?: RateLimitBinding;
+  FINANCIAL_BURST_RATE_LIMITER?: RateLimitBinding;
   API_WRITE_RATE_LIMITER?: RateLimitBinding;
+  API_WRITE_BURST_RATE_LIMITER?: RateLimitBinding;
+  API_READ_RATE_LIMITER?: RateLimitBinding;
+  API_READ_BURST_RATE_LIMITER?: RateLimitBinding;
   PUBLIC_READ_RATE_LIMITER?: RateLimitBinding;
+  PUBLIC_READ_BURST_RATE_LIMITER?: RateLimitBinding;
+  WEBHOOK_RATE_LIMITER?: RateLimitBinding;
+  WEBHOOK_BURST_RATE_LIMITER?: RateLimitBinding;
   TEACHER_MEDIA_KV?: KvNamespaceBinding;
   WEB_PUSH_QUEUE?: QueueProducerBinding;
 };
 
 type RateLimitBinding = {
   limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
+type ActiveRateLimitLayer = {
+  binding: RateLimitBinding;
+  name: "burst" | "sustained";
+  limit: number;
+  period: 10 | 60;
+};
+
+type RateLimitPolicy = {
+  scope: "auth" | "financial" | "write" | "read" | "public-read" | "webhook";
+  layers: ActiveRateLimitLayer[];
 };
 
 type KvNamespaceBinding = {
@@ -209,43 +229,68 @@ async function protectPublicRequest(request: Request, env: AppEnvironment) {
   if (!policy) return null;
 
   const key = await buildRateLimitKey(request, url.pathname, policy.scope);
-  try {
-    const result = await policy.binding.limit({ key });
-    if (result.success) return null;
-    console.warn(JSON.stringify({
-      level: "warn",
-      scope: "cloudflare-rate-limit",
-      policy: policy.scope,
-      pathname: url.pathname,
-    }));
-    return new Response(JSON.stringify({
-      error: "Trop de tentatives. Patientez une minute puis réessayez.",
-      code: "RATE_LIMITED",
-    }), {
-      status: 429,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store",
-        "retry-after": "60",
-      },
-    });
-  } catch (error) {
-    // Une panne du compteur ne doit pas rendre la plateforme indisponible. Les
-    // contrôles d'authentification et de signature restent appliqués en aval.
+  const outcomes = await Promise.all(policy.layers.map(async (layer) => {
+    try {
+      return { layer, result: await layer.binding.limit({ key }), error: null };
+    } catch (error) {
+      return { layer, result: null, error };
+    }
+  }));
+
+  for (const outcome of outcomes) {
+    if (!outcome.error) continue;
+    // Une panne d'un compteur ne doit pas rendre la plateforme indisponible.
+    // Les autres couches et les contrôles métier restent actifs.
     console.error(JSON.stringify({
       level: "error",
       scope: "cloudflare-rate-limit-unavailable",
       policy: policy.scope,
-      error: error instanceof Error ? error.message : "Compteur indisponible.",
+      layer: outcome.layer.name,
+      cfRay: request.headers.get("cf-ray"),
+      error: outcome.error instanceof Error ? outcome.error.message : "Compteur indisponible.",
     }));
-    return null;
   }
+
+  const rejected = outcomes.filter((outcome) => outcome.result?.success === false);
+  if (rejected.length === 0) return null;
+
+  const retryAfter = Math.max(...rejected.map((outcome) => outcome.layer.period));
+  console.warn(JSON.stringify({
+    level: "warn",
+    scope: "cloudflare-rate-limit",
+    policy: policy.scope,
+    layers: rejected.map((outcome) => outcome.layer.name),
+    pathname: normalizeRateLimitRoute(url.pathname),
+    cfRay: request.headers.get("cf-ray"),
+  }));
+  return new Response(JSON.stringify({
+    error: retryAfter >= 60
+      ? "Trop de tentatives. Patientez une minute puis réessayez."
+      : "Trop d'actions rapprochées. Patientez quelques secondes puis réessayez.",
+    code: "RATE_LIMITED",
+    retryAfterSeconds: retryAfter,
+  }), {
+    status: 429,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "retry-after": String(retryAfter),
+      "ratelimit-policy": policy.layers.map((layer) => `${layer.limit};w=${layer.period}`).join(", "),
+      "x-competence-rate-limit": policy.scope,
+    },
+  });
 }
 
-function selectRateLimitPolicy(pathname: string, method: string, env: AppEnvironment) {
+function selectRateLimitPolicy(pathname: string, method: string, env: AppEnvironment): RateLimitPolicy | null {
   const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
   if (!pathname.startsWith("/api/")) return null;
-  if (pathname.startsWith("/api/webhooks/") || pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) {
+  if (pathname.startsWith("/api/webhooks/")) {
+    return createRateLimitPolicy("webhook", [
+      { binding: env.WEBHOOK_BURST_RATE_LIMITER, name: "burst", limit: 2_000, period: 10 },
+      { binding: env.WEBHOOK_RATE_LIMITER, name: "sustained", limit: 10_000, period: 60 },
+    ]);
+  }
+  if (pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) {
     return null;
   }
 
@@ -253,8 +298,11 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     pathname.startsWith("/api/auth/")
     || pathname === "/api/professor/password-assistance"
   );
-  if (authSensitive && env.AUTH_RATE_LIMITER) {
-    return { binding: env.AUTH_RATE_LIMITER, scope: "auth" } as const;
+  if (authSensitive) {
+    return createRateLimitPolicy("auth", [
+      { binding: env.AUTH_BURST_RATE_LIMITER, name: "burst", limit: 6, period: 10 },
+      { binding: env.AUTH_RATE_LIMITER, name: "sustained", limit: 20, period: 60 },
+    ]);
   }
 
   const financialSensitive = isMutation && (
@@ -264,12 +312,18 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     || pathname.startsWith("/api/admin/transactions")
     || pathname.startsWith("/api/admin/refund")
   );
-  if (financialSensitive && env.FINANCIAL_RATE_LIMITER) {
-    return { binding: env.FINANCIAL_RATE_LIMITER, scope: "financial" } as const;
+  if (financialSensitive) {
+    return createRateLimitPolicy("financial", [
+      { binding: env.FINANCIAL_BURST_RATE_LIMITER, name: "burst", limit: 12, period: 10 },
+      { binding: env.FINANCIAL_RATE_LIMITER, name: "sustained", limit: 40, period: 60 },
+    ]);
   }
 
-  if (isMutation && env.API_WRITE_RATE_LIMITER) {
-    return { binding: env.API_WRITE_RATE_LIMITER, scope: "write" } as const;
+  if (isMutation) {
+    return createRateLimitPolicy("write", [
+      { binding: env.API_WRITE_BURST_RATE_LIMITER, name: "burst", limit: 45, period: 10 },
+      { binding: env.API_WRITE_RATE_LIMITER, name: "sustained", limit: 180, period: 60 },
+    ]);
   }
 
   const publicRead = method === "GET" && (
@@ -281,29 +335,111 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     || pathname === "/api/levels"
     || pathname === "/api/communes"
   );
-  if (publicRead && env.PUBLIC_READ_RATE_LIMITER) {
-    return { binding: env.PUBLIC_READ_RATE_LIMITER, scope: "public-read" } as const;
+  if (publicRead) {
+    return createRateLimitPolicy("public-read", [
+      { binding: env.PUBLIC_READ_BURST_RATE_LIMITER, name: "burst", limit: 120, period: 10 },
+      { binding: env.PUBLIC_READ_RATE_LIMITER, name: "sustained", limit: 600, period: 60 },
+    ]);
+  }
+
+  if (method === "GET" || method === "HEAD") {
+    return createRateLimitPolicy("read", [
+      { binding: env.API_READ_BURST_RATE_LIMITER, name: "burst", limit: 75, period: 10 },
+      { binding: env.API_READ_RATE_LIMITER, name: "sustained", limit: 300, period: 60 },
+    ]);
   }
 
   return null;
 }
 
+function createRateLimitPolicy(
+  scope: RateLimitPolicy["scope"],
+  layers: Array<Omit<ActiveRateLimitLayer, "binding"> & { binding?: RateLimitBinding }>,
+): RateLimitPolicy | null {
+  const activeLayers = layers.flatMap((layer) => layer.binding ? [{ ...layer, binding: layer.binding }] : []);
+  return activeLayers.length > 0 ? { scope, layers: activeLayers } : null;
+}
+
 async function buildRateLimitKey(request: Request, pathname: string, scope: string) {
-  const ip = request.headers.get("cf-connecting-ip")
-    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || "unknown";
-  const userAgent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";
   const route = normalizeRateLimitRoute(pathname);
-  const value = `${scope}|${route}|${ip}|${userAgent}`;
+  const identity = await resolveRateLimitIdentity(request, scope);
+  const value = `${scope}|${route}|${identity}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeRateLimitRoute(pathname: string) {
-  if (pathname.startsWith("/api/teacher-photos/")) return "/api/teacher-photos/:id";
-  if (pathname.startsWith("/api/teachers/")) return "/api/teachers/:id";
-  if (pathname.startsWith("/api/bookings/")) return "/api/bookings/:id";
-  return pathname;
+  return pathname
+    .replace(/\/c[a-z0-9]{20,}(?=\/|$)/gi, "/:id")
+    .replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}(?=\/|$)/gi, "/:id")
+    .replace(/\/\d{4,}(?=\/|$)/g, "/:id");
+}
+
+async function resolveRateLimitIdentity(request: Request, scope: string) {
+  if (scope === "auth") {
+    const accountIdentifier = await extractAuthAccountIdentifier(request);
+    if (accountIdentifier) return `account:${accountIdentifier}`;
+  }
+
+  const session = readSessionCookie(request.headers.get("cookie"));
+  if (session) return `session:${session}`;
+
+  const ip = request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
+  return `network:${ip}`;
+}
+
+async function extractAuthAccountIdentifier(request: Request) {
+  if (!['POST', 'PUT', 'PATCH'].includes(request.method.toUpperCase())) return null;
+  const contentType = request.headers.get("content-type")?.toLowerCase() || "";
+  const acceptedFields = ["email", "phone", "identifier", "username"];
+  try {
+    if (contentType.includes("application/json")) {
+      const body = await request.clone().json() as Record<string, unknown>;
+      for (const field of acceptedFields) {
+        const normalized = normalizeAccountIdentifier(body?.[field]);
+        if (normalized) return normalized;
+      }
+    } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      const form = await request.clone().formData();
+      for (const field of acceptedFields) {
+        const normalized = normalizeAccountIdentifier(form.get(field));
+        if (normalized) return normalized;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function normalizeAccountIdentifier(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().slice(0, 160);
+  if (!normalized) return null;
+  if (normalized.includes("@")) return normalized;
+  const phone = normalized.replace(/[^\d+]/g, "");
+  return phone.length >= 6 ? phone : normalized;
+}
+
+function readSessionCookie(cookieHeader: string | null) {
+  if (!cookieHeader) return null;
+  const sessionNames = new Set([
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+  ]);
+  for (const part of cookieHeader.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 1) continue;
+    const name = part.slice(0, separator).trim();
+    if (!sessionNames.has(name)) continue;
+    const value = part.slice(separator + 1).trim();
+    if (value) return value.slice(0, 1_024);
+  }
+  return null;
 }
 
 function maximumRequestBytes(pathname: string) {

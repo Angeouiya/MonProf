@@ -30,9 +30,17 @@
       ],
       "ratelimits": [
         { "name": "AUTH_RATE_LIMITER", "namespace_id": "47011", "simple": { "limit": 20, "period": 60 } },
+        { "name": "AUTH_BURST_RATE_LIMITER", "namespace_id": "47015", "simple": { "limit": 6, "period": 10 } },
         { "name": "FINANCIAL_RATE_LIMITER", "namespace_id": "47012", "simple": { "limit": 40, "period": 60 } },
+        { "name": "FINANCIAL_BURST_RATE_LIMITER", "namespace_id": "47016", "simple": { "limit": 12, "period": 10 } },
         { "name": "API_WRITE_RATE_LIMITER", "namespace_id": "47013", "simple": { "limit": 180, "period": 60 } },
-        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47014", "simple": { "limit": 600, "period": 60 } }
+        { "name": "API_WRITE_BURST_RATE_LIMITER", "namespace_id": "47017", "simple": { "limit": 45, "period": 10 } },
+        { "name": "API_READ_RATE_LIMITER", "namespace_id": "47021", "simple": { "limit": 300, "period": 60 } },
+        { "name": "API_READ_BURST_RATE_LIMITER", "namespace_id": "47022", "simple": { "limit": 75, "period": 10 } },
+        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47014", "simple": { "limit": 600, "period": 60 } },
+        { "name": "PUBLIC_READ_BURST_RATE_LIMITER", "namespace_id": "47018", "simple": { "limit": 120, "period": 10 } },
+        { "name": "WEBHOOK_RATE_LIMITER", "namespace_id": "47019", "simple": { "limit": 10000, "period": 60 } },
+        { "name": "WEBHOOK_BURST_RATE_LIMITER", "namespace_id": "47020", "simple": { "limit": 2000, "period": 10 } }
       ],
       "triggers": {
         "crons": ["* * * * *"]
@@ -75,9 +83,17 @@
       ],
       "ratelimits": [
         { "name": "AUTH_RATE_LIMITER", "namespace_id": "47111", "simple": { "limit": 20, "period": 60 } },
+        { "name": "AUTH_BURST_RATE_LIMITER", "namespace_id": "47115", "simple": { "limit": 6, "period": 10 } },
         { "name": "FINANCIAL_RATE_LIMITER", "namespace_id": "47112", "simple": { "limit": 40, "period": 60 } },
+        { "name": "FINANCIAL_BURST_RATE_LIMITER", "namespace_id": "47116", "simple": { "limit": 12, "period": 10 } },
         { "name": "API_WRITE_RATE_LIMITER", "namespace_id": "47113", "simple": { "limit": 180, "period": 60 } },
-        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47114", "simple": { "limit": 600, "period": 60 } }
+        { "name": "API_WRITE_BURST_RATE_LIMITER", "namespace_id": "47117", "simple": { "limit": 45, "period": 10 } },
+        { "name": "API_READ_RATE_LIMITER", "namespace_id": "47121", "simple": { "limit": 300, "period": 60 } },
+        { "name": "API_READ_BURST_RATE_LIMITER", "namespace_id": "47122", "simple": { "limit": 75, "period": 10 } },
+        { "name": "PUBLIC_READ_RATE_LIMITER", "namespace_id": "47114", "simple": { "limit": 600, "period": 60 } },
+        { "name": "PUBLIC_READ_BURST_RATE_LIMITER", "namespace_id": "47118", "simple": { "limit": 120, "period": 10 } },
+        { "name": "WEBHOOK_RATE_LIMITER", "namespace_id": "47119", "simple": { "limit": 10000, "period": 60 } },
+        { "name": "WEBHOOK_BURST_RATE_LIMITER", "namespace_id": "47120", "simple": { "limit": 2000, "period": 10 } }
       ],
       "triggers": {
         "crons": ["* * * * *"]
