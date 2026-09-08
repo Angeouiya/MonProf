@@ -96,6 +96,13 @@ record(
 );
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
+record(
+  "Plus tard masque durablement l'invite push sur cet appareil",
+  realtime.includes('PUSH_PROMPT_DISMISSED_KEY = "competence:push-prompt-dismissed-on-device:v1"')
+    && realtime.includes("window.localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY")
+    && realtime.includes("window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY")
+    && !realtime.includes("window.sessionStorage.setItem(PUSH_PROMPT_DISMISSED_KEY"),
+);
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
 record(
   "Ancien endpoint du même appareil révoqué après rotation VAPID",

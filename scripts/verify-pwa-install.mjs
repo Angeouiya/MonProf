@@ -12,6 +12,8 @@ assert.match(prompt, /display-mode: standalone/);
 assert.match(prompt, /iPhone\|iPad\|iPod/);
 assert.match(prompt, /Ajouter à l’écran d’accueil/);
 assert.match(prompt, /DISMISS_DURATION_MS/);
+assert.match(prompt, /competence:pwa-install-dismissed-at:v2/);
+assert.match(prompt, /data-pwa-install-prompt/);
 assert.match(layout, /<PwaInstallPrompt \/>/);
 assert.match(manifest, /display: "standalone"/);
 assert.match(manifest, /competence-icon-512-maskable\.png/);

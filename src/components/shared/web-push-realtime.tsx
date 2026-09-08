@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buildSubscriptionPayload, ensureCurrentPushSubscription } from "@/lib/web-push-client";
 
-const PUSH_PROMPT_DISMISSED_KEY = "competence_push_prompt_dismissed_for_session";
+const PUSH_PROMPT_DISMISSED_KEY = "competence:push-prompt-dismissed-on-device:v1";
 const PUSH_AUTOMATIC_TEST_ENDPOINT_KEY = "competence_push_automatic_test_endpoint_v10";
 
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
@@ -115,7 +115,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
       }
 
       window.localStorage.setItem(PUSH_AUTOMATIC_TEST_ENDPOINT_KEY, endpoint);
-      window.sessionStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
+      window.localStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
       setPermissionPromptOpen(false);
       window.dispatchEvent(new CustomEvent("competence:push-enabled"));
     } catch (error) {
@@ -127,7 +127,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   }, [synchronizePushSubscription]);
 
   const dismissPermissionPrompt = useCallback(() => {
-    window.sessionStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, "1");
+    window.localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, "1");
     setPermissionPromptOpen(false);
     setPermissionError("");
   }, []);
@@ -146,13 +146,14 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
           return;
         }
 
-        if (window.sessionStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
+        if (window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
         if ("Notification" in window && Notification.permission === "denied") {
           setPermissionError("Les notifications sont bloquées sur cet appareil. Ouvrez le cadenas du navigateur, choisissez Notifications, puis Autoriser.");
         }
         setPermissionPromptOpen(true);
       } catch (error) {
         if (cancelled) return;
+        if (window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
         setPermissionError(error instanceof Error ? error.message : "Cet appareil n'a pas pu être enregistré.");
         setPermissionPromptOpen(true);
       }

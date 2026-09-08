@@ -10,7 +10,7 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v1";
+const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v2";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function PwaInstallPrompt() {
