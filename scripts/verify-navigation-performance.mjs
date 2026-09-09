@@ -17,7 +17,9 @@ const rootLayout = read("src/app/layout.tsx");
 const publicLayout = read("src/components/layouts/public-layout.tsx");
 const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
 const teacherCard = read("src/components/shared/teacher-card.tsx");
+const brandLogo = read("src/components/shared/brand-logo.tsx");
 const pwaPrompt = read("src/components/shared/pwa-install-prompt.tsx");
+const deferredPwaPrompt = read("src/components/shared/deferred-pwa-install-prompt.tsx");
 const cloudflareWorker = read("cloudflare-worker.ts");
 const staticHeaders = read("public/_headers");
 const clientBooking = read("src/app/client/reserver/page.tsx");
@@ -60,8 +62,9 @@ check(
     && /prefetch=\{false\}/.test(journeySwitcher)
     && /prefetch=\{false\}/.test(teacherCard),
 );
-check("PWA install prompt waits until after the critical load", /PROMPT_AFTER_LOAD_DELAY_MS\s*=\s*5_000/.test(pwaPrompt) && /addEventListener\("load"/.test(pwaPrompt));
+check("PWA install prompt loads only after the critical render", /PWA_PROMPT_AFTER_LOAD_MS\s*=\s*5_000/.test(deferredPwaPrompt) && /addEventListener\("load"/.test(deferredPwaPrompt) && /lazy\(\(\) => import/.test(deferredPwaPrompt) && /data-pwa-install-prompt/.test(pwaPrompt));
 check("Immutable Next assets keep a one-year browser cache", /\/_next\/static\/\*/.test(staticHeaders) && /max-age=31536000,immutable/.test(staticHeaders));
+check("Header brand uses a right-sized logo asset", /competence-mark-112\.webp/.test(brandLogo));
 check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CACHE_SECONDS\s*=\s*300/.test(cloudflareWorker) && /caches\.default\.put/.test(cloudflareWorker));
 check(
   "Public teacher search batches and caches results with the consolidated catalog",

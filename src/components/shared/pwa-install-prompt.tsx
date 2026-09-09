@@ -12,7 +12,6 @@ type InstallPromptEvent = Event & {
 
 const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v2";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
-const PROMPT_AFTER_LOAD_DELAY_MS = 5_000;
 
 export function PwaInstallPrompt() {
   const deferredPrompt = useRef<InstallPromptEvent | null>(null);
@@ -36,15 +35,10 @@ export function PwaInstallPrompt() {
       void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
     }
 
-    let showTimer: number | undefined;
-    const schedulePrompt = () => {
-      showTimer = window.setTimeout(() => {
-        setIsIos(ios);
-        setOpen(true);
-      }, PROMPT_AFTER_LOAD_DELAY_MS);
-    };
-    if (document.readyState === "complete") schedulePrompt();
-    else window.addEventListener("load", schedulePrompt, { once: true });
+    const showTimer = window.setTimeout(() => {
+      setIsIos(ios);
+      setOpen(true);
+    }, 0);
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -60,8 +54,7 @@ export function PwaInstallPrompt() {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      if (showTimer !== undefined) window.clearTimeout(showTimer);
-      window.removeEventListener("load", schedulePrompt);
+      window.clearTimeout(showTimer);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onInstalled);
     };

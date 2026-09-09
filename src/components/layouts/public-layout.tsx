@@ -267,10 +267,10 @@ export function PublicLayout({
             <p className="mt-2 text-xs font-medium text-[#64748B]">© {new Date().getFullYear()} Compétence · Cocody, Abidjan</p>
           </div>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#64748B]">
-            <Link href={tariffsHref} className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
-            <Link href="/contact" className="min-h-10 content-center hover:text-[#111B4D]">Aide</Link>
-            <Link href="/conditions-utilisation" className="min-h-10 content-center hover:text-[#111B4D]">Conditions</Link>
-            <Link href="/politique-confidentialite" className="min-h-10 content-center hover:text-[#111B4D]">Confidentialité</Link>
+            <Link href={tariffsHref} prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
+            <Link href="/contact" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Aide</Link>
+            <Link href="/conditions-utilisation" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Conditions</Link>
+            <Link href="/politique-confidentialite" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Confidentialité</Link>
           </nav>
           </div>
       </footer>

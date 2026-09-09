@@ -63,6 +63,7 @@ export default function HomePage() {
           </div>
           <Link
             href="/partenariat"
+            prefetch={false}
             className="mx-auto mt-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]"
           >
             <Handshake className="h-4 w-4" />
@@ -79,7 +80,7 @@ export default function HomePage() {
             <p className="mt-4 max-w-lg text-sm leading-6 text-[#64748B]">
               Le professeur ne change pas le prix. Le moteur ajoute le déplacement éventuel, les frais de service Compétence de 3 % et les frais de paiement Jèko du moyen choisi, puis affiche le total avant paiement.
             </p>
-            <Link href="/tarifs" className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D]">
+            <Link href="/tarifs" prefetch={false} className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D]">
               Voir toute la grille <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
