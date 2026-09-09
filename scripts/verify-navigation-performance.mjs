@@ -13,6 +13,13 @@ const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
 const publicHome = read("src/app/page.tsx");
 const publicTeachers = read("src/app/professeurs/page.tsx");
+const rootLayout = read("src/app/layout.tsx");
+const publicLayout = read("src/components/layouts/public-layout.tsx");
+const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
+const teacherCard = read("src/components/shared/teacher-card.tsx");
+const pwaPrompt = read("src/components/shared/pwa-install-prompt.tsx");
+const cloudflareWorker = read("cloudflare-worker.ts");
+const staticHeaders = read("public/_headers");
 const clientBooking = read("src/app/client/reserver/page.tsx");
 const clientRegistration = read("src/app/inscription/page.tsx");
 const clientCourses = read("src/app/client/cours/page.tsx");
@@ -46,6 +53,16 @@ check(
     && /data-home-journey-tabs/.test(publicHome)
     && /HOME_JOURNEY_HREFS/.test(publicHome),
 );
+check("Global shell avoids an unused React Query provider", !/<Providers>/.test(rootLayout) && !/@tanstack\/react-query/.test(publicLayout));
+check(
+  "Public navigation avoids eager RSC fan-out",
+  !/prefetch=\{true\}/.test(publicLayout)
+    && /prefetch=\{false\}/.test(journeySwitcher)
+    && /prefetch=\{false\}/.test(teacherCard),
+);
+check("PWA install prompt waits until after the critical load", /PROMPT_AFTER_LOAD_DELAY_MS\s*=\s*5_000/.test(pwaPrompt) && /addEventListener\("load"/.test(pwaPrompt));
+check("Immutable Next assets keep a one-year browser cache", /\/_next\/static\/\*/.test(staticHeaders) && /max-age=31536000,immutable/.test(staticHeaders));
+check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CACHE_SECONDS\s*=\s*300/.test(cloudflareWorker) && /caches\.default\.put/.test(cloudflareWorker));
 check(
   "Public teacher search batches and caches results with the consolidated catalog",
   /getCachedTeacherSearchCatalog/.test(publicTeachers)

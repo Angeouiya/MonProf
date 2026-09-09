@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CalendarCheck,
@@ -72,13 +71,24 @@ export function PublicLayout({
     href: buildPublicJourneyHref(link.href, activeJourney),
     baseHref: link.href,
   }));
-  const { data: sessionRole = null } = useQuery({
-    queryKey: ["public-session-role"],
-    queryFn: readPublicSessionRole,
-    enabled: !hideFooter,
-    staleTime: 60_000,
-    retry: false,
-  });
+  const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null);
+
+  useEffect(() => {
+    if (hideFooter) return;
+    const controller = new AbortController();
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void readPublicSessionRole(controller.signal).then((role) => {
+        if (!cancelled) setSessionRole(role);
+      }).catch(() => undefined);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [hideFooter]);
   const sessionDestination = sessionRole ? sessionDestinations[sessionRole] : null;
   const isAuthenticated = sessionDestination !== null;
 
@@ -93,7 +103,7 @@ export function PublicLayout({
         <div className="mx-auto flex min-h-18 max-w-7xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             href="/"
-            prefetch={true}
+            prefetch={false}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-1.5 transition hover:bg-white"
             onClick={() => setMobileOpen(false)}
           >
@@ -105,7 +115,7 @@ export function PublicLayout({
               <Link
                 key={link.baseHref}
                 href={link.href}
-                prefetch={true}
+                prefetch={false}
                 className={cn(
                   "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.baseHref)
@@ -121,19 +131,19 @@ export function PublicLayout({
           <div className="hidden items-center gap-2 lg:flex">
             {sessionDestination && (
               <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                <Link href={sessionDestination.href} prefetch={true}>
+                <Link href={sessionDestination.href} prefetch={false}>
                   <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
                 </Link>
               </Button>
             )}
             {!isAuthenticated && (
               <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
-                <Link href="/connexion" prefetch={true}>Connexion</Link>
+                <Link href="/connexion" prefetch={false}>Connexion</Link>
               </Button>
             )}
             {!isAuthenticated && !hideGlobalBookingAction && (
               <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
-                <Link href={professorListHref} prefetch={true}>
+                <Link href={professorListHref} prefetch={false}>
                   Réserver
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
@@ -169,7 +179,7 @@ export function PublicLayout({
           <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
             <Link
               href={professorListHref}
-              prefetch={true}
+              prefetch={false}
               onClick={() => setMobileOpen(false)}
               className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
             >
@@ -183,7 +193,7 @@ export function PublicLayout({
               <Link
                 key={link.baseHref}
                 href={link.href}
-                prefetch={true}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
                   "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
@@ -209,7 +219,7 @@ export function PublicLayout({
             <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
               {sessionDestination && (
                 <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href={sessionDestination.href} prefetch={true} onClick={() => setMobileOpen(false)}>
+                  <Link href={sessionDestination.href} prefetch={false} onClick={() => setMobileOpen(false)}>
                     <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
                   </Link>
                 </Button>
@@ -217,10 +227,10 @@ export function PublicLayout({
               {!isAuthenticated && (
                 <>
                   <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                    <Link href="/connexion" prefetch={true} onClick={() => setMobileOpen(false)}>Connexion</Link>
+                    <Link href="/connexion" prefetch={false} onClick={() => setMobileOpen(false)}>Connexion</Link>
                   </Button>
                   <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href={professorListHref} prefetch={true} onClick={() => setMobileOpen(false)}>
+                    <Link href={professorListHref} prefetch={false} onClick={() => setMobileOpen(false)}>
                       Réserver une séance
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
@@ -335,7 +345,7 @@ function PublicMobileNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch={true}
+              prefetch={false}
               className={cn(
                 "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[0.7rem] font-semibold transition-colors",
                 active
@@ -373,8 +383,8 @@ function shouldShowPublicBack(pathname: string | null) {
   return Boolean(pathname && !publicRootPaths.has(pathname));
 }
 
-async function readPublicSessionRole(): Promise<PublicSessionRole | null> {
-  const response = await fetch("/api/auth/me", { cache: "no-store" });
+async function readPublicSessionRole(signal: AbortSignal): Promise<PublicSessionRole | null> {
+  const response = await fetch("/api/auth/me", { cache: "no-store", signal });
   if (!response.ok) return null;
 
   const payload = await response.json() as { user?: { role?: string } | null };

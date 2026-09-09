@@ -86,7 +86,7 @@ export function JourneySwitcher({
             <Link
               key={journey}
               href={href}
-              prefetch
+              prefetch={false}
               aria-label={showMeta ? `${config.label} · ${tabMeta}` : config.label}
               aria-current={active ? "page" : undefined}
               aria-selected={active}

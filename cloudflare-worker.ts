@@ -91,13 +91,16 @@ const competenceWorker = {
     const securityRejection = await protectPublicRequest(request, env);
     if (securityRejection) return withSecurityHeaders(securityRejection, request);
 
+    const cachedPublicHome = await readCachedPublicHome(request);
+    if (cachedPublicHome) return withSecurityHeaders(cachedPublicHome, request);
+
     const storedTeacherMedia = await serveTeacherMediaFromKv(request, env);
     if (storedTeacherMedia) return withSecurityHeaders(storedTeacherMedia, request);
 
     const response = await dispatchOpenNext(request, env, ctx);
     scheduleTeacherMediaBackfill(request, response, env, ctx);
     scheduleImmediateWebPushWake(request, response, env, ctx);
-    return withSecurityHeaders(response, request);
+    return schedulePublicHomeCache(request, withSecurityHeaders(response, request), ctx);
   },
 
   async scheduled(
@@ -210,6 +213,87 @@ function classifyQueue(queueName: string): "web-push" | "communication" {
 function requireSecret(value: string | undefined, name: string) {
   if (value?.trim()) return value.trim();
   throw new Error(`${name} est obligatoire.`);
+}
+
+const PUBLIC_HOME_CACHE_SECONDS = 300;
+const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-v1";
+
+async function readCachedPublicHome(request: Request) {
+  const cacheKey = publicHomeCacheKey(request);
+  if (!cacheKey) return null;
+
+  try {
+    const cached = await caches.default.match(cacheKey);
+    if (!cached) return null;
+    const headers = new Headers(cached.headers);
+    headers.set("x-competence-edge-cache", "HIT");
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-home-cache-read",
+      error: error instanceof Error ? error.message : "Cache indisponible.",
+    }));
+    return null;
+  }
+}
+
+function schedulePublicHomeCache(
+  request: Request,
+  response: Response,
+  ctx: WorkerExecutionContext,
+) {
+  const cacheKey = publicHomeCacheKey(request);
+  const contentType = response.headers.get("content-type") || "";
+  if (
+    !cacheKey
+    || response.status !== 200
+    || !contentType.includes("text/html")
+    || response.headers.has("set-cookie")
+  ) {
+    return response;
+  }
+
+  const cacheCopy = response.clone();
+  const cacheHeaders = new Headers(cacheCopy.headers);
+  cacheHeaders.delete("vary");
+  cacheHeaders.set("cache-control", `public, max-age=0, s-maxage=${PUBLIC_HOME_CACHE_SECONDS}`);
+  cacheHeaders.set("cache-tag", "competence-public-home");
+  cacheHeaders.set("x-competence-edge-cache", "HIT");
+  ctx.waitUntil(caches.default.put(cacheKey, new Response(cacheCopy.body, {
+    status: cacheCopy.status,
+    statusText: cacheCopy.statusText,
+    headers: cacheHeaders,
+  })).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-home-cache-write",
+      error: error instanceof Error ? error.message : "Mise en cache impossible.",
+    }));
+  }));
+
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.set("x-competence-edge-cache", "MISS");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+  });
+}
+
+function publicHomeCacheKey(request: Request) {
+  if (request.method !== "GET") return null;
+  const url = new URL(request.url);
+  if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/" || url.search) return null;
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
+  const navigation = request.headers.get("sec-fetch-mode") === "navigate";
+  if (!acceptsHtml && !navigation) return null;
+
+  return new Request(`${url.origin}${PUBLIC_HOME_CACHE_PATH}`, { method: "GET" });
 }
 
 async function protectPublicRequest(request: Request, env: AppEnvironment) {

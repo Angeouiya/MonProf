@@ -12,6 +12,7 @@ const publicTeachersPath = "src/app/professeurs/page.tsx";
 const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
 const publicTariffsPath = "src/app/tarifs/page.tsx";
 const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
+const teacherResponsiveFiltersPath = "src/components/shared/teacher-responsive-filters.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientNotificationActionsPath = "src/app/client/notifications/actions-client.tsx";
@@ -70,6 +71,7 @@ const publicTeachersPage = read(publicTeachersPath);
 const publicTeacherDetail = read(publicTeacherDetailPath);
 const publicTariffs = read(publicTariffsPath);
 const mobileFilterSheet = read(mobileFilterSheetPath);
+const teacherResponsiveFilters = read(teacherResponsiveFiltersPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
 const clientNotificationActions = read(clientNotificationActionsPath);
@@ -656,7 +658,10 @@ record(
 record(
   "Public teacher search uses one app-like mobile filter sheet before profiles",
   /data-public-teacher-search-controls/.test(mobileFilterSheet)
-    && /<MobileFilterSheet resultLabel=\{mobileResultLabel\} activeFiltersCount=\{activeFiltersCount\}>/.test(publicTeachersPage)
+    && /<TeacherResponsiveFilters/.test(publicTeachersPage)
+    && /<MobileFilterSheet/.test(teacherResponsiveFilters)
+    && /resultLabel=\{props\.resultLabel\}/.test(teacherResponsiveFilters)
+    && /activeFiltersCount=\{props\.activeFiltersCount\}/.test(teacherResponsiveFilters)
     && /data-public-teacher-app-header/.test(publicTeachersPage)
     && /data-public-teacher-system-pill/.test(publicTeachersPage)
     && /data-public-teacher-count/.test(publicTeachersPage)
@@ -752,9 +757,9 @@ record(
     && /defaultChecked=\{checked\}/.test(courseFormatControl)
     && /normalizeCourseFormat\(requestedFormat\)/.test(publicTeachersPage)
     && /normalizeCourseFormat\(requestedFormat\)/.test(read("src/app/client/rechercher/page.tsx"))
-    && /<CourseFormatSegmentedControl/.test(publicTeachersPage)
+    && /<CourseFormatSegmentedControl/.test(teacherResponsiveFilters)
     && /<CourseFormatSegmentedControl/.test(read("src/app/client/rechercher/page.tsx"))
-    && !/<button[\s\S]{0,220}name="format"/.test(publicTeachersPage)
+    && !/<button[\s\S]{0,220}name="format"/.test(teacherResponsiveFilters)
     && !/<button[\s\S]{0,220}name="format"/.test(read("src/app/client/rechercher/page.tsx")),
 );
 

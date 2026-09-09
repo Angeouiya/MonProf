@@ -62,13 +62,13 @@ const checks = [
   ],
   [
     "Public navigation resolves client, admin and teacher sessions without blocking first render",
-    publicLayout.includes('queryKey: ["public-session-role"]')
-      && publicLayout.includes('enabled: !hideFooter')
-      && publicLayout.includes('staleTime: 60_000')
+    publicLayout.includes('const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null)')
+      && publicLayout.includes('const controller = new AbortController()')
+      && publicLayout.includes('readPublicSessionRole(controller.signal)')
       && publicLayout.includes('CLIENT: { href: "/client"')
       && publicLayout.includes('ADMIN: { href: "/admin"')
       && publicLayout.includes('TEACHER: { href: "/professeur"')
-      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store" })'),
+      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store", signal })'),
   ],
   [
     "Public teacher search preserves the selected journey through search, filters, pagination and cards",

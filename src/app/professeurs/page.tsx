@@ -3,7 +3,6 @@ import { unstable_cache } from "next/cache";
 import {
   ChevronLeft,
   ChevronRight,
-  Filter,
   Home as HomeIcon,
   Search,
   Video,
@@ -13,14 +12,10 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
-import {
-  CourseFormatSegmentedControl,
-  normalizeCourseFormat,
-} from "@/components/shared/course-format-segmented-control";
+import { normalizeCourseFormat } from "@/components/shared/course-format-segmented-control";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
-import { MobileFilterSheet } from "@/components/shared/mobile-filter-sheet";
 import { TeacherCard } from "@/components/shared/teacher-card";
-import { SearchableCatalogSelect } from "@/components/shared/searchable-catalog-select";
+import { TeacherResponsiveFilters } from "@/components/shared/teacher-responsive-filters";
 import { EmptyState } from "@/components/shared/page-header";
 import { db } from "@/lib/db";
 import { getLevelCategory, getSubjectCategory, groupByCatalogCategory } from "@/lib/catalog-taxonomy";
@@ -254,6 +249,22 @@ export default async function TeachersPage({
     : "Sans filtre";
   const subjectGroups = groupByCatalogCategory(subjects, (item) => getSubjectCategory(item.name, item.icon));
   const levelGroups = groupByCatalogCategory(levels, (item) => getLevelCategory(item.name, item.order));
+  const subjectFilterGroups = subjectGroups.map((group) => ({
+    label: group.category.label,
+    options: group.items.map((item) => ({
+      value: item.slug,
+      label: item.name,
+      keywords: group.category.label,
+    })),
+  }));
+  const levelFilterGroups = levelGroups.map((group) => ({
+    label: group.category.label,
+    options: group.items.map((item) => ({
+      value: item.slug,
+      label: item.name,
+      keywords: group.category.label,
+    })),
+  }));
 
   return (
     <PublicLayout activeJourney={journey}>
@@ -377,10 +388,12 @@ export default async function TeachersPage({
       {/* CONTENU */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
-          {showTeacherFilters && (
-            <MobileFilterSheet resultLabel={mobileResultLabel} activeFiltersCount={activeFiltersCount}>
-              <FiltersForm
+          <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
+            {showTeacherFilters && (
+              <TeacherResponsiveFilters
                 activeFiltersCount={activeFiltersCount}
+                resultLabel={mobileResultLabel}
+                resetFiltersHref={resetFiltersHref}
                 journey={journey}
                 q={q}
                 subject={subject}
@@ -389,67 +402,11 @@ export default async function TeachersPage({
                 format={format}
                 sort={sort}
                 referralCode={referralCode}
-                subjectGroups={subjectGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((s) => ({
-                    value: s.slug,
-                    label: s.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
-                levelGroups={levelGroups.map((group) => ({
-                  label: group.category.label,
-                  options: group.items.map((l) => ({
-                    value: l.slug,
-                    label: l.name,
-                    keywords: group.category.label,
-                  })),
-                }))}
+                subjectGroups={subjectFilterGroups}
+                levelGroups={levelFilterGroups}
                 communes={communes}
                 journeyConfig={journeyConfig}
-                compact
               />
-              {activeFiltersCount > 0 && (
-                <Link href={resetFiltersHref} className="mt-3 inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[#111B4D]">
-                  Effacer ({activeFiltersCount})
-                </Link>
-              )}
-            </MobileFilterSheet>
-          )}
-          <div className={showTeacherFilters ? "grid min-w-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]" : "mx-auto max-w-3xl"}>
-            {/* SIDEBAR FILTRES */}
-            {showTeacherFilters && (
-              <aside className="hidden min-w-0 lg:sticky lg:top-20 lg:block lg:h-fit">
-                <FiltersForm
-                  activeFiltersCount={activeFiltersCount}
-                  journey={journey}
-                  q={q}
-                  subject={subject}
-                  level={level}
-                  commune={commune}
-                  format={format}
-                  sort={sort}
-                  referralCode={referralCode}
-                  subjectGroups={subjectGroups.map((group) => ({
-                    label: group.category.label,
-                    options: group.items.map((s) => ({
-                      value: s.slug,
-                      label: s.name,
-                      keywords: group.category.label,
-                    })),
-                  }))}
-                  levelGroups={levelGroups.map((group) => ({
-                    label: group.category.label,
-                    options: group.items.map((l) => ({
-                      value: l.slug,
-                      label: l.name,
-                      keywords: group.category.label,
-                    })),
-                  }))}
-                  communes={communes}
-                  journeyConfig={journeyConfig}
-                />
-              </aside>
             )}
 
             {/* RÉSULTATS */}
@@ -630,169 +587,6 @@ function TeacherSearchForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-type CatalogFilterGroup = {
-  label: string;
-  options: { value: string; label: string; keywords?: string }[];
-};
-
-type CommuneFilterOption = {
-  id: string;
-  name: string;
-};
-
-function FiltersForm({
-  activeFiltersCount,
-  journey,
-  q,
-  subject,
-  level,
-  commune,
-  format,
-  sort,
-  referralCode,
-  subjectGroups,
-  levelGroups,
-  communes,
-  journeyConfig,
-  compact = false,
-}: {
-  activeFiltersCount: number;
-  journey: BookingJourney | "";
-  q: string;
-  subject: string;
-  level: string;
-  commune: string;
-  format: string;
-  sort: string;
-  referralCode: string;
-  subjectGroups: CatalogFilterGroup[];
-  levelGroups: CatalogFilterGroup[];
-  communes: CommuneFilterOption[];
-  journeyConfig: (typeof TEACHER_JOURNEY_CONFIG)[BookingJourney];
-  compact?: boolean;
-}) {
-  const communeGroups = [{
-    label: "Villes et communes",
-    options: communes.map((item) => ({
-      value: item.name,
-      label: item.name,
-      keywords: item.name,
-    })),
-  }];
-
-  return (
-    <form
-      method="GET"
-      action="/professeurs"
-      className={compact ? "min-w-0" : "min-w-0 rounded-lg border border-[#E3E8F2] bg-white p-5"}
-    >
-      {!compact && (
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#111827]">
-            <Filter className="h-4 w-4 text-[#111B4D]" />
-            Filtres
-          </h2>
-          {activeFiltersCount > 0 && (
-            <Link
-              href={buildTeacherResetHref(journey, referralCode)}
-              className="text-xs font-medium text-[#111B4D] hover:underline"
-            >
-              Réinitialiser ({activeFiltersCount})
-            </Link>
-          )}
-        </div>
-      )}
-
-      <div className={compact ? "grid gap-3 min-[560px]:grid-cols-2" : "space-y-4"}>
-        {journey && <input type="hidden" name="journey" value={journey} />}
-        {referralCode && <input type="hidden" name="ref" value={referralCode} />}
-        <Field label={journeyConfig.subjectLabel}>
-          <SearchableCatalogSelect
-            name="subject"
-            value={subject}
-            placeholder={journeyConfig.subjectPlaceholder}
-            searchPlaceholder={journeyConfig.subjectSearchPlaceholder}
-            emptyLabel={journeyConfig.subjectEmptyLabel}
-            allLabel={journeyConfig.subjectPlaceholder}
-            groups={subjectGroups}
-            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-          />
-        </Field>
-
-        <Field label={journeyConfig.levelLabel}>
-          <SearchableCatalogSelect
-            name="level"
-            value={level}
-            placeholder={journeyConfig.levelPlaceholder}
-            searchPlaceholder={journeyConfig.levelSearchPlaceholder}
-            emptyLabel={`Aucun ${journeyConfig.levelLabel.toLowerCase()} trouvé`}
-            allLabel={journeyConfig.levelPlaceholder}
-            groups={levelGroups}
-            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-          />
-        </Field>
-
-        <Field label="Commune">
-          <SearchableCatalogSelect
-            name="commune"
-            value={commune}
-            placeholder="Toutes les communes"
-            searchPlaceholder="Tapez une ville ou commune..."
-            emptyLabel="Aucune commune trouvée"
-            allLabel="Toutes les communes"
-            groups={communeGroups}
-            triggerClassName="focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-          />
-        </Field>
-
-        <Field label="Format">
-          <CourseFormatSegmentedControl
-            idPrefix={compact ? "public-teacher-format-mobile" : "public-teacher-format-desktop"}
-            value={format}
-            compact={compact}
-          />
-        </Field>
-
-        <Field label="Trier par">
-          <select
-            name="sort"
-            defaultValue={sort}
-            className="min-h-11 w-full rounded-lg border border-[#DDE6F7] bg-white px-3 text-sm outline-none transition focus:border-[#9AAAD0] focus:ring-4 focus:ring-[#DDE6F7]"
-          >
-            {SORTS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        {q && <input type="hidden" name="q" value={q} />}
-
-        <div className={compact ? "min-[560px]:self-end" : ""}>
-          <button
-            type="submit"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111B4D] px-4 text-sm font-semibold text-white transition hover:bg-[#182260]"
-          >
-            Appliquer les filtres
-          </button>
-        </div>
-      </div>
-    </form>
-  );
-}
-
 function InlineFilter({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -815,12 +609,4 @@ function buildBookingHref(teacherId: string, journey: BookingJourney | "", refer
   if (journey) params.set("journey", journey);
   if (referralCode) params.set("ref", referralCode);
   return `/client/reserver?${params.toString()}`;
-}
-
-function buildTeacherResetHref(journey: BookingJourney | "", referralCode: string) {
-  const params = new URLSearchParams();
-  if (journey) params.set("journey", journey);
-  if (referralCode) params.set("ref", referralCode);
-  const query = params.toString();
-  return query ? `/professeurs?${query}` : "/professeurs";
 }

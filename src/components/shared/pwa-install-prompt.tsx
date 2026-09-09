@@ -12,6 +12,7 @@ type InstallPromptEvent = Event & {
 
 const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v2";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const PROMPT_AFTER_LOAD_DELAY_MS = 5_000;
 
 export function PwaInstallPrompt() {
   const deferredPrompt = useRef<InstallPromptEvent | null>(null);
@@ -35,15 +36,20 @@ export function PwaInstallPrompt() {
       void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
     }
 
-    const showTimer = window.setTimeout(() => {
-      setIsIos(ios);
-      setOpen(true);
-    }, ios ? 700 : 1_400);
+    let showTimer: number | undefined;
+    const schedulePrompt = () => {
+      showTimer = window.setTimeout(() => {
+        setIsIos(ios);
+        setOpen(true);
+      }, PROMPT_AFTER_LOAD_DELAY_MS);
+    };
+    if (document.readyState === "complete") schedulePrompt();
+    else window.addEventListener("load", schedulePrompt, { once: true });
+
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       deferredPrompt.current = event as InstallPromptEvent;
       setNativePromptAvailable(true);
-      setOpen(true);
     };
     const onInstalled = () => {
       deferredPrompt.current = null;
@@ -54,7 +60,8 @@ export function PwaInstallPrompt() {
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.clearTimeout(showTimer);
+      if (showTimer !== undefined) window.clearTimeout(showTimer);
+      window.removeEventListener("load", schedulePrompt);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onInstalled);
     };
@@ -97,7 +104,7 @@ export function PwaInstallPrompt() {
           <X className="h-4 w-4" aria-hidden />
         </button>
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white shadow-sm">
-          <Image src="/images/brand/competence-icon-192-safe.png" alt="" width={54} height={54} priority />
+          <Image src="/images/brand/competence-notification-monogram-tile.svg" alt="" width={54} height={54} sizes="54px" />
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-[#B47C00]">Application Compétence</p>
         <h2 id="pwa-install-title" className="mt-2 text-2xl font-black tracking-tight text-[#111827]">Installez Compétence sur votre téléphone</h2>
