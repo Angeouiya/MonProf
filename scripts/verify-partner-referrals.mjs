@@ -197,15 +197,23 @@ const checks = [
     ],
   },
   {
+    file: "src/app/client/page.tsx",
+    patterns: [
+      /data-client-partnership-entry/,
+      /href="\/client\/partenariat"/,
+      /Partenariat · Gagnez 10 %/,
+    ],
+  },
+  {
     file: "src/components/layouts/client-layout.tsx",
     patterns: [
-      /data-client-partnership-link/,
-      /href: "\/client\/partenariat"/,
-      /label: "Partenariat"/,
-      /detail: "Gagnez 10 %"/,
-      /const mobileNavItems:[\s\S]*?href: "\/client\/partenariat"[\s\S]*?label: "Partenariat"/,
+      /const mobileNavItems/,
       /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
       /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+    ],
+    forbiddenPatterns: [
+      /data-client-partnership-link/,
+      /const mobileNavItems:[\s\S]*?href: "\/client\/partenariat"[\s\S]*?label: "Partenariat"/,
     ],
   },
   {

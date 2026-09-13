@@ -6,6 +6,7 @@ const clientPrimitivesPath = "src/components/shared/client-page-primitives.tsx";
 const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", clientPrimitivesPath];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
+const clientDashboardPath = "src/app/client/page.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicHomePath = "src/app/page.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
@@ -63,8 +64,8 @@ const layout = read(layoutPath);
 const primaryNavSource = layout.match(/const primaryNavItem:[\s\S]*?=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
 const desktopNavSource = layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
-const partnershipNavSource = layout.match(/const partnershipNavItem\s*=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
 const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const clientDashboard = read(clientDashboardPath);
 const publicLayout = read(publicLayoutPath);
 const publicHome = read(publicHomePath);
 const publicTeachersPage = read(publicTeachersPath);
@@ -264,28 +265,34 @@ record(
 );
 
 record(
-  "Client navigation keeps core destinations compact while exposing partnership",
+  "Client navigation keeps partnership outside the primary desktop navigation",
   countMatches(primaryNavSource, /href:/g) === 1
     && countMatches(desktopNavSource, /href:/g) === 4
-    && countMatches(partnershipNavSource, /href:/g) === 1
     && countMatches(accountNavSource, /href:/g) === 2
     && /label:\s*"Mon compte"/.test(accountNavSource)
-    && /label:\s*"Partenariat"/.test(partnershipNavSource)
-    && /href:\s*"\/client\/partenariat"/.test(partnershipNavSource)
     && /label:\s*"Cadeaux"/.test(desktopNavSource)
     && /href:\s*"\/client\/cadeaux"/.test(desktopNavSource)
+    && !/data-client-partnership-link/.test(layout)
+    && !/label:\s*"Partenariat"/.test(desktopNavSource)
     && !/label:\s*"Paramètres"/.test(accountNavSource),
 );
 
 record(
-  "Client mobile navigation contains the five visible connected actions",
-  countMatches(mobileNavSource, /href:/g) === 5
-    && /grid grid-cols-5 gap-1/.test(layout)
+  "Client mobile navigation contains four essential actions without partnership",
+  countMatches(mobileNavSource, /href:/g) === 4
+    && /grid grid-cols-4 gap-1/.test(layout)
     && /label:\s*"Accueil"/.test(mobileNavSource)
     && /label:\s*"Réserver"/.test(mobileNavSource)
     && /label:\s*"Cours"/.test(mobileNavSource)
     && /label:\s*"Paiements"/.test(mobileNavSource)
-    && /label:\s*"Partenariat"/.test(mobileNavSource),
+    && !/label:\s*"Partenariat"/.test(mobileNavSource),
+);
+
+record(
+  "Partnership remains immediately visible at the top of the client home",
+  /data-client-partnership-entry/.test(clientDashboard)
+    && /href="\/client\/partenariat"/.test(clientDashboard)
+    && clientDashboard.indexOf("data-client-partnership-entry") < clientDashboard.indexOf("data-client-dashboard-journeys"),
 );
 
 record(

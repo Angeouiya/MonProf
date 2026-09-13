@@ -9,6 +9,7 @@ const database = fs.readFileSync("src/lib/db.ts", "utf8");
 const policy = fs.readFileSync("src/lib/production-integration-policy.ts", "utf8");
 const webPushQueue = fs.readFileSync("src/lib/web-push-queue.ts", "utf8");
 const communicationQueue = fs.readFileSync("src/lib/communication-queue.ts", "utf8");
+const passwordEmailQueue = fs.readFileSync("src/lib/password-email-queue.ts", "utf8");
 const internalQueueRoute = fs.readFileSync("src/app/api/internal/cloudflare-queue/route.ts", "utf8");
 const cloudflareNextBuild = fs.readFileSync("scripts/run-cloudflare-next-build.mjs", "utf8");
 
@@ -20,6 +21,8 @@ assert.match(wrangler, /"workers_dev": false/);
 assert.match(wrangler, /"crons": \["\* \* \* \* \*"\]/);
 assert.match(wrangler, /WEB_PUSH_QUEUE/);
 assert.match(wrangler, /COMMUNICATION_QUEUE/);
+assert.match(wrangler, /PASSWORD_EMAIL_QUEUE/);
+assert.match(wrangler, /competence-password-email-dead-letter/);
 assert.match(wrangler, /"binding": "HYPERDRIVE"/);
 assert.match(wrangler, /"DATABASE_SCHEMA": "competence"/);
 
@@ -36,6 +39,7 @@ assert.match(cloudflareNextBuild, /\["build", "--webpack"\]/);
 assert.match(worker, /CLOUDFLARE_INTERNAL_SECRET/);
 assert.match(worker, /\/api\/cron\/jeko-reconciliation/);
 assert.match(worker, /\/api\/cron\/password-email-outbox/);
+assert.match(worker, /CRON_ROUTES\.passwordEmail/);
 assert.match(worker, /getUTCMinutes\(\) % 5 === 0[\s\S]*?notificationReminders/);
 
 assert.match(database, /new PrismaPg\(/);
@@ -53,7 +57,10 @@ assert.match(policy, /cloudflare-non-production/);
 assert.match(policy, /cloudflare-production/);
 assert.match(webPushQueue, /sendCloudflareQueueMessage\("WEB_PUSH_QUEUE"/);
 assert.match(communicationQueue, /sendCloudflareQueueMessage\("COMMUNICATION_QUEUE"/);
+assert.match(passwordEmailQueue, /PASSWORD_EMAIL_QUEUE/);
+assert.match(passwordEmailQueue, /FLUSH_PASSWORD_EMAIL_JOB/);
 assert.match(internalQueueRoute, /timingSafeEqual/);
+assert.match(internalQueueRoute, /processPasswordEmailQueueMessage/);
 assert.doesNotMatch(wrangler, /JEKO_API_KEY|DATABASE_URL|NEXTAUTH_SECRET|GMAIL_CLIENT_SECRET/);
 
 console.log("Cloudflare deployment verification passed: runtime isolation, Prisma adapter, queues, cron and secret boundaries.");

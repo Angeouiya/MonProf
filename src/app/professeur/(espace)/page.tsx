@@ -43,7 +43,9 @@ export default async function ProfesseurDashboardPage() {
     historicalSessionRetentions,
     historicalLegacyRetentions,
     draftPayoutAllocations,
-  ] = await db.$transaction([
+  // Les widgets du tableau de bord sont indépendants : leur parallélisation
+  // réduit le temps d'attente sans modifier la comptabilité.
+  ] = await Promise.all([
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere({ teacherId: teacher.id, status: { notIn: ["CANCELLED", "REFUNDED"] } }),
       include: {

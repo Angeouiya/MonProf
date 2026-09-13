@@ -32,6 +32,7 @@ const checks = [
   ["en-têtes anti-interprétation", worker.includes('"x-content-type-options"') && worker.includes('"nosniff"')],
   ["HSTS Next actif", nextConfig.includes("Strict-Transport-Security")],
   ["médias enseignants servis par KV", worker.includes("serveTeacherMediaFromKv") && wrangler.includes('"TEACHER_MEDIA_KV"')],
+  ["scanners WordPress et PHP rejetés avant Next.js", worker.includes("rejectObviousExploitProbe(request)") && worker.includes('"x-competence-edge-rejection": "exploit-probe"')],
 ];
 
 for (const [label, condition] of checks) {

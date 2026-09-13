@@ -6,6 +6,7 @@ import {
 } from "@/lib/password-email-outbox";
 import { normalizeAccountPhone } from "@/lib/account-phone";
 import { getPublicAppOrigin } from "@/lib/public-url";
+import { publishPasswordEmailJob } from "@/lib/password-email-queue";
 
 export const maxDuration = 30;
 
@@ -44,9 +45,16 @@ export async function POST(req: NextRequest) {
     appOrigin: getPublicAppOrigin(req),
   });
 
-  // Le cron durable reprendra un job existant. Ne pas lancer un nouveau flush
-  // pour chaque clic répété sur le même lien actif.
-  if (request.jobId && !request.reused) {
+  // Une demande répétée doit aussi réveiller un job encore actif. La
+  // file répond vite et l'outbox garde l'idempotence si plusieurs messages
+  // arrivent pour le même job.
+  if (request.jobId) {
+    const dispatch = await publishPasswordEmailJob(request.jobId);
+    if (dispatch.queued) {
+      return NextResponse.json(GENERIC_RESPONSE);
+    }
+
+    // Secours hors Cloudflare ou si la file est momentanément indisponible.
     after(async () => {
       try {
         await flushPasswordEmailOutbox({ jobIds: [request.jobId!], limit: 1 });

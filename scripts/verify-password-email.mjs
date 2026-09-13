@@ -61,6 +61,7 @@ assert.match(providerSource, /payload\.version === 2/);
 assert.match(providerSource, /payload\.version === 3[\s\S]*?emailSnapshot/);
 
 const forgotRoute = fs.readFileSync(new URL("../src/app/api/auth/forgot-password/route.ts", import.meta.url), "utf8");
+const queueSource = fs.readFileSync(new URL("../src/lib/password-email-queue.ts", import.meta.url), "utf8");
 const resetRoute = fs.readFileSync(new URL("../src/app/api/auth/reset-password/route.ts", import.meta.url), "utf8");
 const outboxSource = fs.readFileSync(new URL("../src/lib/password-email-outbox.ts", import.meta.url), "utf8");
 const forgotForm = fs.readFileSync(new URL("../src/app/mot-de-passe-oublie/forgot-password-form.tsx", import.meta.url), "utf8");
@@ -80,6 +81,10 @@ assert.match(outboxSource, /finalizeResetTokenDelivery/);
 assert.match(outboxSource, /isAcceptedPasswordEmailDelivery/);
 assert.match(forgotRoute, /after\(async \(\) =>/);
 assert.match(forgotRoute, /flushPasswordEmailOutbox/);
+assert.match(forgotRoute, /publishPasswordEmailJob\(request\.jobId\)/);
+assert.match(queueSource, /PASSWORD_EMAIL_QUEUE/);
+assert.match(queueSource, /FLUSH_PASSWORD_EMAIL_JOB/);
+assert.match(queueSource, /flushPasswordEmailOutbox\(\{ jobIds: \[message\.jobId\], limit: 1 \}\)/);
 assert.match(outboxSource, /passwordResetRequestAudit/);
 assert.match(outboxSource, /acceptedJob\.acceptedAt/);
 assert.match(outboxSource, /acceptedJob\.externalId/);

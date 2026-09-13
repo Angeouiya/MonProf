@@ -37,8 +37,13 @@ check("Client shell does not block navigation on database reads", !/from "@\/lib
 check("Client shell avoids dynamic route prefetch fan-out", /const CLIENT_NAV_PREFETCH\s*=\s*false/.test(clientShell) && !/CLIENT_PRIMARY_PREFETCH_ROUTES|requestIdleCallback/.test(clientShell));
 check("Client shell updates notification badges asynchronously", !/fetch\("\/api\/client\/notifications"/.test(clientShell) && /competence:notification-count/.test(clientShell) && /WebPushRealtime/.test(clientShell));
 check(
-  "Client dashboard uses one focused booking read without loading unrelated recommendations",
-  /const allClientBookings = await db\.booking\.findMany/.test(clientDashboard)
+  "Client dashboard uses bounded aggregates without loading all booking history",
+  /await Promise\.all\(\[/.test(clientDashboard)
+    && /db\.booking\.count/.test(clientDashboard)
+    && /db\.transaction\.aggregate/.test(clientDashboard)
+    && /take:\s*3/.test(clientDashboard)
+    && /<Suspense fallback=\{<ClientLoyaltyTeaserFallback/.test(clientDashboard)
+    && !/const allClientBookings = await db\.booking\.findMany/.test(clientDashboard)
     && !/db\.teacher\.findMany/.test(clientDashboard)
     && !/await db\.\$transaction\(\[/.test(clientDashboard),
 );
@@ -46,7 +51,7 @@ check("Client search consolidates filter catalogs before render", /getCachedTeac
 check("Client search catalogs remain available without published teachers", !/const \[subjects, levels, communes\] = total > 0/.test(clientSearch));
 check("Client payments batch transactions and pending bookings on one pooled connection", hasDatabaseTransaction(clientPayments));
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
-check("Admin dashboard batches operational indicators on one pooled connection", hasDatabaseTransaction(adminDashboard));
+check("Admin dashboard runs independent operational reads concurrently", hasParallelReads(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
 check(
   "Public home is a lightweight mini-app launcher without database fan-out",
@@ -82,7 +87,7 @@ check("Client courses batch tab, overview, and pending reads", hasDatabaseTransa
 check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
 check("Client support batches eligible bookings and disputes", hasDatabaseTransaction(clientSupport));
 check("Client settings batch profile and account indicators", hasDatabaseTransaction(clientSettings));
-check("Professor dashboard batches operational and accounting reads", hasDatabaseTransaction(professorDashboard));
+check("Professor dashboard runs independent operational and accounting reads concurrently", hasParallelReads(professorDashboard));
 check("Admin teacher list batches profiles, catalogs, and photo stats", hasDatabaseTransaction(adminTeachers));
 
 for (const result of checks) {
@@ -103,6 +108,10 @@ function read(filePath) {
 
 function hasDatabaseTransaction(source) {
   return /await db\.\$transaction\(\[/.test(source);
+}
+
+function hasParallelReads(source) {
+  return /await Promise\.all\(\[/.test(source) && !/await db\.\$transaction\(\[/.test(source);
 }
 
 function check(label, ok) {

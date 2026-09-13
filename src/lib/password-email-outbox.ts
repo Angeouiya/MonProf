@@ -128,10 +128,6 @@ export async function requestPasswordResetEmail(input: {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       return await db.$transaction(async (tx) => {
-        await tx.passwordResetRequestAudit.deleteMany({
-          where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
-        });
-
         const windowStart = new Date(now.getTime() - PASSWORD_RESET_REQUEST_WINDOW_MS);
         const [recentIpRequests, recentAccountRequests] = await Promise.all([
           tx.passwordResetRequestAudit.count({ where: { ipHash, createdAt: { gte: windowStart } } }),
@@ -272,10 +268,6 @@ export async function requestPasswordResetAssistanceByPhone(input: {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       return await db.$transaction(async (tx) => {
-        await tx.passwordResetRequestAudit.deleteMany({
-          where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
-        });
-
         const windowStart = new Date(now.getTime() - PASSWORD_RESET_REQUEST_WINDOW_MS);
         const [recentIpRequests, recentAccountRequests] = await Promise.all([
           tx.passwordResetRequestAudit.count({ where: { ipHash, createdAt: { gte: windowStart } } }),
@@ -563,6 +555,9 @@ export async function flushPasswordEmailOutbox(options: {
       expiresAt: { lt: new Date(now.getTime() - PASSWORD_RESET_TOKEN_RETENTION_MS) },
     },
   })).count;
+  await db.passwordResetRequestAudit.deleteMany({
+    where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
+  });
   return summary;
 }
 

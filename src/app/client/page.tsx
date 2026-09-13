@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { BookingStatus, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
@@ -15,10 +17,10 @@ import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { Button } from "@/components/ui/button";
 import { WebPushControl } from "@/components/shared/web-push-control";
 import { formatDate } from "@/lib/format";
-import { hasVerifiedClientPayment } from "@/lib/payment-security";
+import { verifiedClientPaymentBookingWhere } from "@/lib/payment-security";
 import {
   CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
-  ShieldCheck, BookOpen, Bell, Gift,
+  ShieldCheck, BookOpen, Bell, Gift, Handshake,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
@@ -47,58 +49,139 @@ const CLIENT_JOURNEY_HREFS = {
   professionnel: "/client/rechercher?journey=professionnel",
 } as const;
 
+const UPCOMING_BOOKING_STATUSES: BookingStatus[] = [
+  "PAID",
+  "PENDING_ADMIN_VALIDATION",
+  "CONFIRMED",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "PAYMENT_TO_RELEASE",
+];
+const NEXT_COURSE_STATUSES: BookingStatus[] = [
+  "PENDING_ADMIN_VALIDATION",
+  "PAID",
+  "CONFIRMED",
+  "ASSIGNED",
+  "IN_PROGRESS",
+];
+const COMPLETED_BOOKING_STATUSES: BookingStatus[] = ["TEACHER_PAID", "VALIDATED_BY_CLIENT"];
+
+const dashboardTeacherSelect = {
+  id: true,
+  fullName: true,
+  professionalName: true,
+  photoUrl: true,
+  jobTitle: true,
+  commune: true,
+  badgeVerified: true,
+} as const;
+
+const dashboardBookingSelect = {
+  id: true,
+  reference: true,
+  status: true,
+  subjectName: true,
+  levelName: true,
+  scheduledDate: true,
+  startDate: true,
+  scheduledTime: true,
+  preferredTime: true,
+  courseFormat: true,
+  totalClientPays: true,
+  totalPrice: true,
+  courseDoneAt: true,
+  createdAt: true,
+  updatedAt: true,
+  teacher: { select: dashboardTeacherSelect },
+} as const;
+
 export default async function ClientDashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
 
   const now = new Date();
+  const visibleBookingWhere = {
+    clientId: user.id,
+    OR: [
+      { cancellationReason: null },
+      { cancellationReason: { not: CLIENT_DELETED_DRAFT_REASON } },
+      { paymentStatus: { not: "FAILED" } },
+    ],
+  } satisfies Prisma.BookingWhereInput;
+  const verifiedBookingWhere = verifiedClientPaymentBookingWhere(visibleBookingWhere);
 
-  const allClientBookings = await db.booking.findMany({
-    where: {
-      clientId: user.id,
-      OR: [
-        { cancellationReason: null },
-        { cancellationReason: { not: CLIENT_DELETED_DRAFT_REASON } },
-        { paymentStatus: { not: "FAILED" } },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          jobTitle: true,
-          commune: true,
-          badgeVerified: true,
-        },
+  const [
+    totalBookings,
+    upcomingBookings,
+    completedBookings,
+    pendingValidation,
+    nextScheduledCourse,
+    nextRequestedCourse,
+    recentBookings,
+    blockedFunds,
+  ] = await Promise.all([
+    db.booking.count({ where: visibleBookingWhere }),
+    db.booking.count({
+      where: verifiedClientPaymentBookingWhere({
+        ...visibleBookingWhere,
+        status: { in: UPCOMING_BOOKING_STATUSES },
+      }),
+    }),
+    db.booking.count({
+      where: verifiedClientPaymentBookingWhere({
+        ...visibleBookingWhere,
+        status: { in: COMPLETED_BOOKING_STATUSES },
+      }),
+    }),
+    db.booking.findMany({
+      where: verifiedClientPaymentBookingWhere({
+        ...visibleBookingWhere,
+        status: "PENDING_CLIENT_VALIDATION",
+      }),
+      orderBy: [{ courseDoneAt: "desc" }, { updatedAt: "desc" }],
+      take: 5,
+      select: dashboardBookingSelect,
+    }),
+    db.booking.findFirst({
+      where: {
+        AND: [
+          verifiedBookingWhere,
+          { status: { in: NEXT_COURSE_STATUSES }, scheduledDate: { gte: now } },
+        ],
       },
-      transactions: {
-        where: { type: "CLIENT_PAYMENT" },
-        select: { type: true, status: true, amount: true },
+      orderBy: { scheduledDate: "asc" },
+      select: dashboardBookingSelect,
+    }),
+    db.booking.findFirst({
+      where: {
+        AND: [
+          verifiedBookingWhere,
+          { status: { in: NEXT_COURSE_STATUSES }, scheduledDate: null, startDate: { gte: now } },
+        ],
       },
-    },
-  });
-  const loyaltyOverview = await getClientLoyaltyOverview(user.id, now);
-  const totalBookings = allClientBookings.length;
-  const verifiedClientBookings = allClientBookings.filter(hasVerifiedClientPayment);
-  const upcomingBookings = verifiedClientBookings.filter((booking) => ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS", "PAYMENT_TO_RELEASE"].includes(booking.status)).length;
-  const completedBookings = verifiedClientBookings.filter((booking) => ["TEACHER_PAID", "VALIDATED_BY_CLIENT"].includes(booking.status)).length;
-  const pendingValidation = allClientBookings
-    .filter((booking) => booking.status === "PENDING_CLIENT_VALIDATION")
-    .sort((a, b) => compareDateDesc(a.courseDoneAt ?? a.updatedAt ?? a.createdAt, b.courseDoneAt ?? b.updatedAt ?? b.createdAt))
-    .slice(0, 5);
-  const nextCourse = allClientBookings
-    .filter((booking) => {
-      if (!hasVerifiedClientPayment(booking)) return false;
-      if (!["PENDING_ADMIN_VALIDATION", "PAID", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"].includes(booking.status)) return false;
-      const nextDate = booking.scheduledDate ?? booking.startDate;
-      return Boolean(nextDate && nextDate >= now);
-    })
+      orderBy: { startDate: "asc" },
+      select: dashboardBookingSelect,
+    }),
+    db.booking.findMany({
+      where: visibleBookingWhere,
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      select: dashboardBookingSelect,
+    }),
+    db.transaction.aggregate({
+      where: {
+        type: "CLIENT_PAYMENT",
+        status: "BLOCKED",
+        booking: { is: verifiedBookingWhere },
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+  const nextCourseCandidates = [nextScheduledCourse, nextRequestedCourse].filter(
+    (booking): booking is NonNullable<typeof nextScheduledCourse> => booking !== null,
+  );
+  const nextCourse = nextCourseCandidates
     .sort((a, b) => compareDateAsc(a.scheduledDate ?? a.startDate, b.scheduledDate ?? b.startDate))[0] ?? null;
-  const recentBookings = allClientBookings.slice(0, 3);
   const nextCourseDate = nextCourse
     ? nextCourse.scheduledDate
       ? formatDate(nextCourse.scheduledDate)
@@ -106,11 +189,7 @@ export default async function ClientDashboardPage() {
         ? formatDate(nextCourse.startDate)
         : "Date à confirmer"
     : null;
-  const blockedFundsAmount = allClientBookings
-    .filter(hasVerifiedClientPayment)
-    .flatMap((booking) => booking.transactions)
-    .filter((transaction) => transaction.status === "BLOCKED")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const blockedFundsAmount = blockedFunds._sum.amount ?? 0;
   const clientFirstName = getFirstName(user.name ?? "Client");
   const nextCourseTeacherName = nextCourse ? nextCourse.teacher.professionalName || nextCourse.teacher.fullName : "";
   const heroTitle = nextCourse ? "Votre prochain cours est prêt" : `Bonjour ${clientFirstName}`;
@@ -128,28 +207,29 @@ export default async function ClientDashboardPage() {
         }
       />
 
-      <WebPushControl audienceLabel="client" />
-
       <Link
-        href="/client/cadeaux"
-        className="group flex items-center justify-between gap-4 rounded-xl border border-[#E8D7A0] bg-white p-4 transition hover:border-[#C99820]"
-        data-client-gift-teaser
+        href="/client/partenariat"
+        prefetch={false}
+        className="group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-[#DDE6F7] bg-white p-4 transition hover:border-[#111B4D]"
+        data-client-partnership-entry
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF9E8] text-[#9A6A00]"><Gift className="h-5 w-5" /></span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+            <Handshake className="h-5 w-5" />
+          </span>
           <span className="min-w-0">
-            <strong className="block text-sm font-black text-[#111827]">
-              {loyaltyOverview.activeReward
-                ? `Votre cadeau de ${loyaltyOverview.activeReward.discountRate} % est prêt`
-                : loyaltyOverview.programCompleted
-                  ? "Votre route cadeaux est complète"
-                  : `Encore ${loyaltyOverview.paymentsUntilNextGift} paiement${loyaltyOverview.paymentsUntilNextGift > 1 ? "s" : ""} avant votre prochain cadeau`}
-            </strong>
-            <span className="mt-1 block text-xs font-semibold text-[#64748B]">Suivez votre route animée et vos dates d’utilisation.</span>
+            <strong className="block text-sm font-black text-[#111827]">Partenariat · Gagnez 10 %</strong>
+            <span className="mt-1 block text-xs font-semibold text-[#64748B]">Créez votre lien et recommandez Compétence.CI.</span>
           </span>
         </span>
         <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
       </Link>
+
+      <WebPushControl audienceLabel="client" />
+
+      <Suspense fallback={<ClientLoyaltyTeaserFallback />}>
+        <ClientLoyaltyTeaser clientId={user.id} now={now} />
+      </Suspense>
 
       <nav
         aria-label="Choisir une mini-application"
@@ -325,6 +405,50 @@ type DashboardTeacher = {
   badgeVerified: boolean;
   jobTitle?: string | null;
 };
+
+async function ClientLoyaltyTeaser({ clientId, now }: { clientId: string; now: Date }) {
+  const loyaltyOverview = await getClientLoyaltyOverview(clientId, now);
+  return (
+    <Link
+      href="/client/cadeaux"
+      prefetch={false}
+      className="group flex items-center justify-between gap-4 rounded-xl border border-[#E8D7A0] bg-white p-4 transition hover:border-[#C99820]"
+      data-client-gift-teaser
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF9E8] text-[#9A6A00]"><Gift className="h-5 w-5" /></span>
+        <span className="min-w-0">
+          <strong className="block text-sm font-black text-[#111827]">
+            {loyaltyOverview.activeReward
+              ? `Votre cadeau de ${loyaltyOverview.activeReward.discountRate} % est prêt`
+              : loyaltyOverview.programCompleted
+                ? "Votre route cadeaux est complète"
+                : `Encore ${loyaltyOverview.paymentsUntilNextGift} paiement${loyaltyOverview.paymentsUntilNextGift > 1 ? "s" : ""} avant votre prochain cadeau`}
+          </strong>
+          <span className="mt-1 block text-xs font-semibold text-[#64748B]">Suivez votre route animée et vos dates d’utilisation.</span>
+        </span>
+      </span>
+      <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
+    </Link>
+  );
+}
+
+function ClientLoyaltyTeaserFallback() {
+  return (
+    <div
+      className="flex min-h-[76px] items-center gap-3 rounded-xl border border-[#E8D7A0] bg-white p-4"
+      role="status"
+      aria-label="Chargement des cadeaux"
+      data-client-gift-teaser-loading
+    >
+      <span className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-[#FFF9E8]" />
+      <span className="min-w-0 flex-1 space-y-2">
+        <span className="block h-3 w-2/3 animate-pulse rounded bg-[#EEF1F6]" />
+        <span className="block h-2.5 w-1/2 animate-pulse rounded bg-[#F4F6F9]" />
+      </span>
+    </div>
+  );
+}
 
 type DashboardNextCourse = {
   id: string;

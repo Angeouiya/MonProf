@@ -6,7 +6,7 @@ import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, us
 import {
   LayoutDashboard, Search, BookOpen, WalletCards,
   LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, WifiOff, Handshake, Gift
+  ArrowRight, WifiOff, Gift
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -41,20 +41,11 @@ const accountNavItems: ClientNavItem[] = [
   { href: "/client/profil", label: "Mon compte", icon: User, matchPrefixes: ["/client/profil", "/client/parametres", "/client/avis"] },
 ];
 
-const partnershipNavItem = {
-  href: "/client/partenariat",
-  label: "Partenariat",
-  detail: "Gagnez 10 %",
-  icon: Handshake,
-  matchPrefixes: ["/client/partenariat", "/partenariat"],
-};
-
 const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/client/rechercher", label: "Réserver", icon: Search },
   { href: "/client/cours", label: "Cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
-  { href: "/client/partenariat", label: "Partenariat", icon: Handshake },
 ];
 
 const quickSearchItems = [
@@ -591,9 +582,6 @@ function SidebarContent({
   compactAccount?: boolean;
 }) {
   const primaryActive = isActive(primaryNavItem);
-  const partnershipActive = isActive(partnershipNavItem);
-  const PartnershipIcon = partnershipNavItem.icon;
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav data-client-sidebar-nav className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation principale client">
@@ -636,32 +624,6 @@ function SidebarContent({
             </Link>
           );
         })}
-        <Link
-          href={partnershipNavItem.href}
-          prefetch={false}
-          onClick={onNavigate}
-          aria-current={partnershipActive ? "page" : undefined}
-          data-active={partnershipActive ? "true" : "false"}
-          data-client-partnership-link
-          className={cn(
-            "mt-2 flex min-h-12 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm font-semibold transition",
-            partnershipActive ? "border-[#111B4D] bg-[#111B4D] text-white" : "border-[#DDE6F7] bg-white text-[#111B4D] hover:border-[#111B4D]",
-          )}
-        >
-          <span className="inline-flex min-w-0 items-center gap-3">
-            <span className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-              partnershipActive ? "bg-white text-[#111B4D]" : "bg-[#F8FAFC] text-[#111B4D]",
-            )}>
-              <PartnershipIcon className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate">{partnershipNavItem.label}</span>
-              <span className={cn("block truncate text-[11px] font-semibold", partnershipActive ? "text-white/80" : "text-[#64748B]")}>{partnershipNavItem.detail}</span>
-            </span>
-          </span>
-          <ArrowRight className="h-4 w-4 shrink-0" />
-        </Link>
         <div className="my-2 border-t border-[#E6EAF3]" />
         {accountNavItems.map((item) => {
           const active = isActive(item);
@@ -757,7 +719,7 @@ function MobileBottomNav({
       style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       aria-label="Navigation client mobile"
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {mobileNavItems.map((item) => {
           const active = isActive(item);
           return (

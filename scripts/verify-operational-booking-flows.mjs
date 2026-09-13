@@ -261,8 +261,10 @@ record(
   /statuses:\s*\["PAID",\s*"CONFIRMED",\s*"ASSIGNED",\s*"IN_PROGRESS",\s*"PENDING_ADMIN_VALIDATION",\s*"PAYMENT_TO_RELEASE"\]/.test(clientCoursesPage)
     && /verifiedClientPaymentBookingWhere/.test(clientCoursesPage)
     && /hasVerifiedClientPayment/.test(clientCoursesPage)
-    && /"PAID",\s*"PENDING_ADMIN_VALIDATION",\s*"CONFIRMED",\s*"ASSIGNED",\s*"IN_PROGRESS"/.test(clientDashboardPage)
-    && /const verifiedClientBookings\s*=\s*allClientBookings\.filter\(hasVerifiedClientPayment\)/.test(clientDashboardPage),
+    && ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"]
+      .every((status) => clientDashboardPage.match(/const NEXT_COURSE_STATUSES[\s\S]*?];/)?.[0].includes(`"${status}"`))
+    && /verifiedClientPaymentBookingWhere/.test(clientDashboardPage)
+    && /const verifiedBookingWhere = verifiedClientPaymentBookingWhere\(visibleBookingWhere\)/.test(clientDashboardPage),
 );
 
 record(

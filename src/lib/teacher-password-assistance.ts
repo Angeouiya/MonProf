@@ -4,7 +4,6 @@ import { normalizeTeacherPhone } from "@/lib/teacher-portal";
 import {
   isPasswordResetIpAllowed,
   isPasswordResetRequestAllowed,
-  PASSWORD_RESET_AUDIT_RETENTION_MS,
   PASSWORD_RESET_REQUEST_WINDOW_MS,
 } from "@/lib/password-reset-rate-limit";
 import { passwordEmailIdentifier } from "@/lib/password-email-outbox-crypto";
@@ -44,10 +43,6 @@ export async function requestTeacherPasswordAssistance(input: {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       return await db.$transaction(async (tx) => {
-        await tx.passwordResetRequestAudit.deleteMany({
-          where: { createdAt: { lt: new Date(now.getTime() - PASSWORD_RESET_AUDIT_RETENTION_MS) } },
-        });
-
         const windowStart = new Date(now.getTime() - PASSWORD_RESET_REQUEST_WINDOW_MS);
         const [recentIpRequests, recentAccountRequests] = await Promise.all([
           tx.passwordResetRequestAudit.count({ where: { ipHash, createdAt: { gte: windowStart } } }),

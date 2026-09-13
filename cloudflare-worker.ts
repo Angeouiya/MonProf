@@ -22,6 +22,7 @@ type AppEnvironment = {
   WEBHOOK_BURST_RATE_LIMITER?: RateLimitBinding;
   TEACHER_MEDIA_KV?: KvNamespaceBinding;
   WEB_PUSH_QUEUE?: QueueProducerBinding;
+  PASSWORD_EMAIL_QUEUE?: QueueProducerBinding;
 };
 
 type RateLimitBinding = {
@@ -85,6 +86,11 @@ const CRON_ROUTES = {
 
 const competenceWorker = {
   async fetch(request: Request, env: AppEnvironment, ctx: WorkerExecutionContext) {
+    // Les scanners WordPress représentent un trafic inutile important en
+    // production. Les couper à l'edge évite de charger Next.js et PostgreSQL.
+    const exploitProbeRejection = rejectObviousExploitProbe(request);
+    if (exploitProbeRejection) return withSecurityHeaders(exploitProbeRejection, request);
+
     const canonicalRedirect = redirectPublicNavigationToCanonicalHost(request);
     if (canonicalRedirect) return withSecurityHeaders(canonicalRedirect, request);
 
@@ -109,10 +115,14 @@ const competenceWorker = {
     ctx: WorkerExecutionContext,
   ) {
     const date = new Date(controller.scheduledTime);
-    const routes: string[] = [CRON_ROUTES.webPush, CRON_ROUTES.communication];
+    const routes: string[] = [
+      CRON_ROUTES.webPush,
+      CRON_ROUTES.communication,
+      CRON_ROUTES.passwordEmail,
+    ];
 
     if (date.getUTCMinutes() % 5 === 0) {
-      routes.push(CRON_ROUTES.passwordEmail, CRON_ROUTES.notificationReminders);
+      routes.push(CRON_ROUTES.notificationReminders);
     }
     if (date.getUTCMinutes() % 10 === 0) routes.push(CRON_ROUTES.jekoReconciliation);
     if (date.getUTCHours() === 2 && date.getUTCMinutes() === 35) routes.push(CRON_ROUTES.notificationRetention);
@@ -155,6 +165,35 @@ const competenceWorker = {
 };
 
 export default competenceWorker;
+
+const OBVIOUS_EXPLOIT_PATH_PREFIXES = [
+  "/wp-admin",
+  "/wp-content",
+  "/wp-includes",
+  "/wordpress",
+  "/phpmyadmin",
+  "/cgi-bin",
+  "/.git",
+  "/.env",
+] as const;
+
+function rejectObviousExploitProbe(request: Request) {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const pathname = new URL(request.url).pathname.toLowerCase();
+  const isProbe = pathname === "/xmlrpc.php"
+    || pathname.endsWith(".php")
+    || OBVIOUS_EXPLOIT_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (!isProbe) return null;
+
+  return new Response(request.method === "HEAD" ? null : "Not found", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+      "x-competence-edge-rejection": "exploit-probe",
+    },
+  });
+}
 
 async function invokeCronRoute(route: string, env: AppEnvironment, ctx: WorkerExecutionContext) {
   const response = await dispatchOpenNext(new Request(`https://competence.internal${route}`, {
@@ -204,9 +243,10 @@ function redirectPublicNavigationToCanonicalHost(request: Request) {
   return Response.redirect(url.toString(), 308);
 }
 
-function classifyQueue(queueName: string): "web-push" | "communication" {
+function classifyQueue(queueName: string): "web-push" | "communication" | "password-email" {
   if (queueName.includes("web-push")) return "web-push";
   if (queueName.includes("communication")) return "communication";
+  if (queueName.includes("password-email")) return "password-email";
   throw new Error(`File Cloudflare inconnue : ${queueName}`);
 }
 

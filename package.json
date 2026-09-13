@@ -58,6 +58,7 @@
     "verify:client-app-shell": "node scripts/verify-client-app-shell.mjs",
     "verify:booking-journey": "node scripts/verify-booking-journey-handoff.mjs",
     "verify:navigation-performance": "node scripts/verify-navigation-performance.mjs",
+    "verify:production-performance": "node scripts/verify-production-performance.mjs",
     "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs",
     "verify:web-push": "node scripts/verify-web-push.mjs",
     "verify:push-scale": "node scripts/verify-web-push-scale.mjs",
