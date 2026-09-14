@@ -4261,6 +4261,12 @@ b {
   letter-spacing: 0 !important;
 }
 
+/* Les titres globaux restent sombres, sauf sur une surface explicitement
+   marquée comme sombre. Ce garde-fou empêche le noir sur bleu nuit. */
+.public-shell [data-public-dark-cta] :where(h2) {
+  color: #FFFFFF !important;
+}
+
 :where(.client-shell, .professor-shell, .admin-shell) :where(
   [data-client-content],
   [data-professor-content],

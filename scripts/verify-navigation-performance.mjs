@@ -12,6 +12,7 @@ const clientPayments = read("src/app/client/paiements/page.tsx");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
 const publicHome = read("src/app/page.tsx");
+const globalCss = read("src/app/globals.css");
 const publicTeachers = read("src/app/professeurs/page.tsx");
 const rootLayout = read("src/app/layout.tsx");
 const publicLayout = read("src/components/layouts/public-layout.tsx");
@@ -59,6 +60,11 @@ check(
     && /data-home-centered-entry/.test(publicHome)
     && /data-home-journey-tabs/.test(publicHome)
     && /HOME_JOURNEY_HREFS/.test(publicHome),
+);
+check(
+  "Public dark call-to-action keeps its title readable",
+  /data-public-dark-cta/.test(publicHome)
+    && /\.public-shell \[data-public-dark-cta\] :where\(h2\)[\s\S]*?color: #FFFFFF !important/.test(globalCss),
 );
 check("Global shell avoids an unused React Query provider", !/<Providers>/.test(rootLayout) && !/@tanstack\/react-query/.test(publicLayout));
 check(

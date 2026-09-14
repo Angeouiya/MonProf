@@ -5,7 +5,7 @@ const baseUrl = (process.env.PERFORMANCE_BASE_URL || "https://www.competence.ci"
 const targets = [
   { path: "/", samples: 5, p95BudgetMs: 2_500 },
   { path: "/mot-de-passe-oublie", samples: 4, p95BudgetMs: 3_500 },
-  { path: "/api/health/production", samples: 3, p95BudgetMs: 4_000 },
+  { path: "/api/health", samples: 3, p95BudgetMs: 4_000 },
 ];
 
 const results = [];
@@ -15,7 +15,7 @@ for (const target of targets) {
     const startedAt = performance.now();
     const response = await fetch(`${baseUrl}${target.path}`, {
       redirect: "follow",
-      headers: { "user-agent": "Compétence-QA-Performance/1.0" },
+      headers: { "user-agent": "Competence-QA-Performance/1.0" },
     });
     const elapsedMs = Math.round(performance.now() - startedAt);
     await response.arrayBuffer();

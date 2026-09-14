@@ -95,7 +95,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="hidden bg-[#111B4D] text-white sm:block">
+      <section className="hidden bg-[#111B4D] text-white sm:block" data-public-dark-cta>
         <div className="mx-auto max-w-4xl px-4 py-14 text-center sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-white">Prêt à commencer ?</h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-[#DDE6F7]">Trois choix suffisent pour lancer votre recherche.</p>
