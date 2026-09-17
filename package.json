@@ -59,7 +59,7 @@
     "verify:booking-journey": "node scripts/verify-booking-journey-handoff.mjs",
     "verify:navigation-performance": "node scripts/verify-navigation-performance.mjs",
     "verify:production-performance": "node scripts/verify-production-performance.mjs",
-    "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs",
+    "verify:teacher-photo-storage": "node scripts/verify-teacher-photo-storage.mjs && node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-teacher-image-upload.ts",
     "verify:web-push": "node scripts/verify-web-push.mjs",
     "verify:push-scale": "node scripts/verify-web-push-scale.mjs",
     "verify:scale-readiness": "node scripts/verify-scale-readiness.mjs",

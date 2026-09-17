@@ -43,6 +43,10 @@ type RateLimitPolicy = {
 
 type KvNamespaceBinding = {
   get(key: string, options: { type: "arrayBuffer"; cacheTtl?: number }): Promise<ArrayBuffer | null>;
+  getWithMetadata<T = Record<string, unknown>>(
+    key: string,
+    options: { type: "arrayBuffer"; cacheTtl?: number },
+  ): Promise<{ value: ArrayBuffer | null; metadata: T | null }>;
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView,
@@ -638,19 +642,24 @@ async function serveTeacherMediaFromKv(request: Request, env: AppEnvironment) {
   if (!mediaId || !env.TEACHER_MEDIA_KV) return null;
 
   try {
-    const data = await env.TEACHER_MEDIA_KV.get(teacherMediaKey(mediaId), {
+    const stored = await env.TEACHER_MEDIA_KV.getWithMetadata<{ contentType?: string }>(teacherMediaKey(mediaId), {
       type: "arrayBuffer",
       cacheTtl: 86_400,
     });
+    const data = stored.value;
     if (!data) return null;
+    const contentType = isTeacherImageContentType(stored.metadata?.contentType)
+      ? stored.metadata.contentType
+      : "image/webp";
     return new Response(request.method === "HEAD" ? null : data, {
       status: 200,
       headers: {
-        "content-type": "image/webp",
+        "content-type": contentType,
         "content-length": String(data.byteLength),
         "cache-control": "public, max-age=31536000, immutable",
         "etag": `"teacher-media-${mediaId}"`,
         "x-competence-media": "cloudflare-kv",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (error) {
@@ -726,4 +735,8 @@ function teacherMediaIdFromPath(pathname: string) {
 
 function teacherMediaKey(mediaId: string) {
   return `teacher-photos/${mediaId}`;
+}
+
+function isTeacherImageContentType(value: unknown): value is "image/jpeg" | "image/png" | "image/webp" {
+  return value === "image/jpeg" || value === "image/png" || value === "image/webp";
 }

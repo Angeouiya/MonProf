@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { TEACHER_COVER_CATALOG, TEACHER_COVER_COLOR_CATALOG } from "@/lib/teacher-cover";
 import { isManagedTeacherMediaUrl } from "@/lib/teacher-photo";
+import { prepareTeacherImageUpload } from "@/lib/client/teacher-image-upload";
 
 type TeacherProfileMediaFormProps = {
   teacherName: string;
@@ -49,16 +50,24 @@ export function TeacherProfileMediaForm({
     }
   }
 
-  function upload(action: "profile-photo" | "custom-cover", file?: File) {
+  async function upload(action: "profile-photo" | "custom-cover", file?: File) {
     if (!file) return;
-    const formData = new FormData();
-    formData.set("action", action);
-    formData.set("file", file);
-    void send(
-      formData,
-      action,
-      action === "profile-photo" ? "Photo de profil mise à jour." : "Couverture envoyée pour validation. Elle restera privée jusqu'au contrôle Compétence.CI.",
-    );
+    setPending(action);
+    setNotice(null);
+    try {
+      const preparedFile = await prepareTeacherImageUpload(file, action === "custom-cover" ? "cover" : "profile");
+      const formData = new FormData();
+      formData.set("action", action);
+      formData.set("file", preparedFile);
+      await send(
+        formData,
+        action,
+        action === "profile-photo" ? "Photo de profil mise à jour." : "Couverture envoyée pour validation. Elle restera privée jusqu'au contrôle Compétence.CI.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Cette image ne peut pas être envoyée.");
+      setPending(null);
+    }
   }
 
   function selectCover(action: "catalog-cover" | "automatic-cover", nextCoverUrl?: string) {
@@ -92,12 +101,12 @@ export function TeacherProfileMediaForm({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => {
-          upload("profile-photo", event.target.files?.[0]);
+        <input ref={photoInput} type="file" accept="image/*" className="hidden" onChange={(event) => {
+          void upload("profile-photo", event.target.files?.[0]);
           event.currentTarget.value = "";
         }} />
-        <input ref={coverInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => {
-          upload("custom-cover", event.target.files?.[0]);
+        <input ref={coverInput} type="file" accept="image/*" className="hidden" onChange={(event) => {
+          void upload("custom-cover", event.target.files?.[0]);
           event.currentTarget.value = "";
         }} />
         <Button type="button" variant="outline" className="min-h-11 rounded-lg bg-white" disabled={Boolean(pending)} onClick={() => photoInput.current?.click()}>

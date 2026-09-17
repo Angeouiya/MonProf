@@ -34,6 +34,7 @@ import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { TEACHER_JOURNEY_CONFIG, TEACHER_JOURNEYS, type TeacherJourneyEligibility } from "@/lib/teacher-journeys";
+import { prepareTeacherImageUpload } from "@/lib/client/teacher-image-upload";
 import { cn } from "@/lib/utils";
 import {
   CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS,
@@ -265,8 +266,6 @@ type CvAnalysisResult = {
   cvUrl?: string;
 };
 
-const MAX_PHOTO_SIZE = 4 * 1024 * 1024;
-const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_CV_SIZE = 4 * 1024 * 1024;
 const CV_ACCEPT = ".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
 const CV_FIELD_LABELS: Partial<Record<keyof CvAnalysisFields, string>> = {
@@ -533,19 +532,11 @@ export function TeacherForm({
     setPhotoError(null);
     setPhotoSavedMessage("");
     if (!file) return;
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
-      setPhotoError("Format non autorisé. Utilisez JPG, JPEG, PNG ou WEBP.");
-      return;
-    }
-    if (file.size > MAX_PHOTO_SIZE) {
-      setPhotoError("Photo trop lourde. Taille maximale autorisée : 4 Mo.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
     setUploadingPhoto(true);
     try {
+      const preparedFile = await prepareTeacherImageUpload(file, "profile");
+      const formData = new FormData();
+      formData.append("file", preparedFile);
       const res = await fetch("/api/admin/uploads/teacher-photo", {
         method: "POST",
         body: formData,
@@ -902,7 +893,7 @@ export function TeacherForm({
                     <input
                       id="teacher-photo"
                       type="file"
-                      accept="image/jpeg,image/png,image/webp"
+                      accept="image/*"
                       className="hidden"
                       onChange={(event) => {
                         const file = event.currentTarget.files?.[0];
@@ -943,7 +934,7 @@ export function TeacherForm({
                         {uploadingPhoto ? "Import de la photo..." : photoUrl ? "Changer la photo du professeur" : "Ajouter la photo du professeur"}
                       </span>
                       <span className="max-w-md text-xs font-semibold leading-5 text-[#64748B]">
-                        JPG, PNG ou WEBP. Maximum 4 Mo. Cliquez ici ou glissez la photo dans cette zone.
+                        Choisissez la photo : elle est optimisée automatiquement avant l'envoi. Cliquez ici ou glissez-la dans cette zone.
                       </span>
                     </label>
                     <div className="flex flex-wrap gap-2">
