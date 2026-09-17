@@ -4988,6 +4988,36 @@ b {
     margin-inline: auto;
   }
 
+  .admin-shell [data-admin-mobile-item] {
+    min-height: 4.1rem !important;
+    overflow: visible !important;
+    touch-action: manipulation;
+  }
+
+  .admin-shell [data-admin-mobile-icon-shell] {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    min-width: 2.5rem !important;
+    min-height: 2.5rem !important;
+    overflow: visible !important;
+  }
+
+  .admin-shell [data-admin-mobile-icon-shell] svg {
+    display: block !important;
+    width: 1.22rem !important;
+    height: 1.22rem !important;
+    min-width: 1.22rem !important;
+    min-height: 1.22rem !important;
+    stroke-width: 2.35 !important;
+  }
+
+  .admin-shell [data-admin-mobile-label] {
+    display: block !important;
+    max-width: 100% !important;
+    color: currentColor !important;
+    line-height: 1.05 !important;
+  }
+
   .client-shell [data-client-tab-bar] {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

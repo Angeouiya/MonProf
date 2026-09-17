@@ -149,10 +149,13 @@ record(
     && /return \[\.\.\.priorityItems, \.\.\.fallbackItems\]\.slice\(0, 4\)/.test(layout)
     && /data-admin-mobile-nav/.test(layout)
     && /data-admin-mobile-item/.test(layout)
+    && /data-admin-mobile-icon-shell/.test(layout)
+    && /data-admin-mobile-label/.test(layout)
     && /className="admin-main-with-mobile-nav/.test(layout)
     && /\.admin-shell main\.admin-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.75rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
     && /\.admin-shell \[data-admin-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*max\(0\.75rem, env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?left:\s*0\.75rem\s*!important;[\s\S]*?right:\s*0\.75rem\s*!important;[\s\S]*?width:\s*auto\s*!important;[\s\S]*?border-radius:\s*1\.25rem\s*!important;[\s\S]*?\}/.test(css)
-    && /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+    && /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css)
+    && /\.admin-shell \[data-admin-mobile-icon-shell\] svg[^{]*\{[\s\S]*?width:\s*1\.22rem\s*!important;[\s\S]*?height:\s*1\.22rem\s*!important;[\s\S]*?\}/.test(css),
 );
 
 record(

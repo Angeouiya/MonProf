@@ -34,6 +34,7 @@ import { requiresTeacherHomeCommune } from "@/lib/teacher-home-delivery";
 import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { TEACHER_JOURNEY_CONFIG, TEACHER_JOURNEYS, type TeacherJourneyEligibility } from "@/lib/teacher-journeys";
+import { cn } from "@/lib/utils";
 import {
   CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS,
   IDENTITY_VERIFICATION_REFERENCE_MAX_LENGTH,
@@ -314,6 +315,7 @@ export function TeacherForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoDragActive, setPhotoDragActive] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoSavedMessage, setPhotoSavedMessage] = useState("");
   const [analyzingCv, setAnalyzingCv] = useState(false);
@@ -886,13 +888,15 @@ export function TeacherForm({
             <CardHeader><CardTitle className="text-base">Informations personnelles</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <div className="flex flex-col gap-4 rounded-lg border border-violet-100 bg-violet-50/45 p-4 sm:flex-row sm:items-center">
-                  <ProfessorImage photoUrl={photoUrl} name={previewName} size="lg" shape="circle" verified={Boolean(badgeVerified)} />
+                <div className="grid gap-4 rounded-lg border border-[#DDE3EE] bg-white p-3 sm:grid-cols-[112px_minmax(0,1fr)] sm:p-4">
+                  <div className="flex justify-center sm:justify-start">
+                    <ProfessorImage photoUrl={photoUrl} name={previewName} size="lg" shape="circle" verified={Boolean(badgeVerified)} />
+                  </div>
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
                       <Label>Photo réelle du professeur *</Label>
                       <p className="text-xs text-muted-foreground">
-                        Obligatoire pour créer ou activer un professeur visible. JPG, JPEG, PNG ou WEBP. Maximum 4 Mo, optimisée automatiquement.
+                        Importez la photo depuis le téléphone ou l'ordinateur. Elle est enregistrée automatiquement avant la création du professeur.
                       </p>
                     </div>
                     <input
@@ -906,16 +910,46 @@ export function TeacherForm({
                         void uploadPhoto(file);
                       }}
                     />
+                    <label
+                      htmlFor="teacher-photo"
+                      data-admin-teacher-photo-uploader
+                      data-drag-active={photoDragActive ? "true" : "false"}
+                      className={cn(
+                        "flex min-h-[8.5rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-[#F8FAFD] px-4 py-5 text-center transition",
+                        photoDragActive ? "border-[#111B4D] bg-[#F3F6FB]" : "border-[#B9C4D5] hover:border-[#111B4D] hover:bg-white",
+                      )}
+                      onDragEnter={(event) => {
+                        event.preventDefault();
+                        setPhotoDragActive(true);
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setPhotoDragActive(true);
+                      }}
+                      onDragLeave={(event) => {
+                        event.preventDefault();
+                        setPhotoDragActive(false);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setPhotoDragActive(false);
+                        void uploadPhoto(event.dataTransfer.files?.[0]);
+                      }}
+                    >
+                      <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#111B4D] shadow-sm">
+                        {uploadingPhoto ? <Loader2 className="h-5 w-5 animate-spin" /> : <UploadCloud className="h-5 w-5" />}
+                      </span>
+                      <span className="text-sm font-black text-[#111827]">
+                        {uploadingPhoto ? "Import de la photo..." : photoUrl ? "Changer la photo du professeur" : "Ajouter la photo du professeur"}
+                      </span>
+                      <span className="max-w-md text-xs font-semibold leading-5 text-[#64748B]">
+                        JPG, PNG ou WEBP. Maximum 4 Mo. Cliquez ici ou glissez la photo dans cette zone.
+                      </span>
+                    </label>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" asChild disabled={uploadingPhoto}>
-                        <label htmlFor="teacher-photo" className="cursor-pointer">
-                          {uploadingPhoto ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Camera className="mr-2 h-4 w-4" />
-                          )}
-                          {photoUrl ? "Changer la photo" : "Ajouter une photo"}
-                        </label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("teacher-photo")?.click()} disabled={uploadingPhoto}>
+                        {uploadingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                        {photoUrl ? "Choisir une autre photo" : "Choisir une photo"}
                       </Button>
                       {photoUrl && (
                         <Button
@@ -934,7 +968,10 @@ export function TeacherForm({
                         </Button>
                       )}
                     </div>
-                    <Input {...register("photoUrl")} placeholder="Photo enregistrée automatiquement après import" className="max-w-xl" />
+                    <details className="rounded-lg border border-[#E3E8F2] bg-[#F8FAFD] px-3 py-2" data-admin-teacher-photo-advanced-url>
+                      <summary className="cursor-pointer text-xs font-black text-[#111B4D]">Option avancée : coller une URL de photo</summary>
+                      <Input {...register("photoUrl")} placeholder="Photo enregistrée automatiquement après import" className="mt-2 max-w-xl bg-white" />
+                    </details>
                     {errors.photoUrl?.message && <p className="text-xs font-medium text-destructive">{errors.photoUrl.message}</p>}
                     {photoError && <p className="text-xs font-medium text-destructive">{photoError}</p>}
                     {photoSavedMessage && (

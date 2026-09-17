@@ -255,17 +255,17 @@ function AdminMobileBottomNav({
               data-admin-mobile-item
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex min-h-[3.85rem] min-w-0 flex-col items-center justify-center gap-1 rounded-[0.9rem] px-1 text-[10px] font-black leading-none transition-colors min-[370px]:text-[11px]",
+                "relative flex min-h-[4.1rem] min-w-0 flex-col items-center justify-center gap-1 rounded-[0.9rem] px-1 text-[10px] font-black leading-none transition-colors min-[370px]:text-[11px]",
                 active ? "bg-[#111B4D] text-white" : "text-[#64748B] hover:bg-[#F7F9FC] hover:text-[#111B4D]",
               )}
             >
               <span className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-xl min-[370px]:h-9 min-[370px]:w-9",
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl min-[370px]:h-10 min-[370px]:w-10",
                 active ? "bg-white/15" : "bg-[#F3F6FB]",
-              )}>
+              )} data-admin-mobile-icon-shell>
                 <item.icon className="h-[1.1rem] w-[1.1rem]" />
               </span>
-              <span className="max-w-full truncate px-0.5">{item.label}</span>
+              <span className="max-w-full truncate px-0.5" data-admin-mobile-label>{item.label}</span>
               {badge > 0 && (
                 <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
                   {badge > 99 ? "99+" : badge}
