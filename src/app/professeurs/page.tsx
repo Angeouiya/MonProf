@@ -58,7 +58,7 @@ function parseBookingJourney(value?: string): BookingJourney | "" {
 const PAGE_SIZE = 12;
 
 const getCachedPublicTeacherResults = unstable_cache(
-  async (where: any, orderBy: any, page: number) => db.$transaction([
+  async (where: any, orderBy: any, page: number) => Promise.all([
     db.teacher.count({ where }),
     db.teacher.findMany({
       where,
@@ -86,7 +86,7 @@ const getCachedPublicTeacherResults = unstable_cache(
       },
     }),
   ] as const),
-  ["public-teacher-results-v1"],
+  ["public-teacher-results-v2"],
   { revalidate: 45, tags: ["teachers"] },
 );
 

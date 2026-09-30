@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   TEACHER_JOURNEY_CONFIG,
@@ -36,6 +37,9 @@ export function JourneySwitcher({
   size = "regular",
   className,
 }: JourneySwitcherProps) {
+  const router = useRouter();
+  const warmedHrefs = useRef(new Set<string>());
+  const hoverWarmupTimer = useRef<number | null>(null);
   const firstJourney = journeys[0] ?? "ivoirien";
   const resolvedActive = activeJourney && journeys.includes(activeJourney)
     ? activeJourney
@@ -53,6 +57,32 @@ export function JourneySwitcher({
     "--journey-count": Math.max(1, journeys.length),
     "--journey-index": selectedIndex,
   };
+
+  const warmJourney = (href: string) => {
+    if (warmedHrefs.current.has(href)) return;
+    warmedHrefs.current.add(href);
+    router.prefetch(href);
+  };
+
+  const cancelHoverWarmup = () => {
+    if (hoverWarmupTimer.current === null) return;
+    window.clearTimeout(hoverWarmupTimer.current);
+    hoverWarmupTimer.current = null;
+  };
+
+  const scheduleHoverWarmup = (href: string) => {
+    cancelHoverWarmup();
+    hoverWarmupTimer.current = window.setTimeout(() => {
+      hoverWarmupTimer.current = null;
+      warmJourney(href);
+    }, 120);
+  };
+
+  useEffect(() => () => {
+    if (hoverWarmupTimer.current !== null) {
+      window.clearTimeout(hoverWarmupTimer.current);
+    }
+  }, []);
 
   return (
     <div
@@ -95,6 +125,13 @@ export function JourneySwitcher({
               data-active={active ? "true" : "false"}
               data-state={active ? "active" : "inactive"}
               className="journey-switcher__link"
+              onPointerEnter={() => scheduleHoverWarmup(href)}
+              onPointerLeave={cancelHoverWarmup}
+              onPointerDown={() => {
+                cancelHoverWarmup();
+                warmJourney(href);
+              }}
+              onFocus={() => warmJourney(href)}
               onClick={() => setPendingSelection({ source: resolvedActive, target: journey })}
             >
               <span className="journey-switcher__text">

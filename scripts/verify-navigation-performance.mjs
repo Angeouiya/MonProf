@@ -14,6 +14,7 @@ const adminDashboard = read("src/app/admin/page.tsx");
 const publicHome = read("src/app/page.tsx");
 const globalCss = read("src/app/globals.css");
 const publicTeachers = read("src/app/professeurs/page.tsx");
+const publicTeachersLoading = read("src/app/professeurs/loading.tsx");
 const rootLayout = read("src/app/layout.tsx");
 const publicLayout = read("src/components/layouts/public-layout.tsx");
 const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
@@ -71,6 +72,11 @@ check(
   "Public navigation avoids eager RSC fan-out",
   !/prefetch=\{true\}/.test(publicLayout)
     && /prefetch=\{false\}/.test(journeySwitcher)
+    && /router\.prefetch\(href\)/.test(journeySwitcher)
+    && /onPointerEnter=/.test(journeySwitcher)
+    && /onPointerLeave=/.test(journeySwitcher)
+    && /onPointerDown=/.test(journeySwitcher)
+    && /onFocus=/.test(journeySwitcher)
     && /prefetch=\{false\}/.test(teacherCard),
 );
 check("PWA install prompt loads only after the critical render", /PWA_PROMPT_AFTER_LOAD_MS\s*=\s*5_000/.test(deferredPwaPrompt) && /addEventListener\("load"/.test(deferredPwaPrompt) && /lazy\(\(\) => import/.test(deferredPwaPrompt) && /data-pwa-install-prompt/.test(pwaPrompt));
@@ -78,11 +84,24 @@ check("Immutable Next assets keep a one-year browser cache", /\/_next\/static\/\
 check("Header brand uses a right-sized logo asset", /competence-mark-112\.webp/.test(brandLogo));
 check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CACHE_SECONDS\s*=\s*300/.test(cloudflareWorker) && /caches\.default\.put/.test(cloudflareWorker));
 check(
+  "Anonymous public session probes stop at the Cloudflare edge",
+  /respondToAnonymousSessionProbe\(request\)/.test(cloudflareWorker)
+    && /x-competence-session-fast-path/.test(cloudflareWorker)
+    && /JSON\.stringify\(\{ user: null \}\)/.test(cloudflareWorker),
+);
+check(
   "Public teacher search batches and caches results with the consolidated catalog",
   /getCachedTeacherSearchCatalog/.test(publicTeachers)
     && /getCachedPublicTeacherResults/.test(publicTeachers)
     && /unstable_cache/.test(publicTeachers)
+    && /getCachedPublicTeacherResults[\s\S]*?Promise\.all\(\[/.test(publicTeachers)
+    && !/getCachedPublicTeacherResults[\s\S]*?db\.\$transaction\(\[/.test(publicTeachers)
     && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers),
+);
+check(
+  "Public teacher navigation renders an immediate loading surface",
+  /data-public-teachers-loading/.test(publicTeachersLoading)
+    && /TeacherCardSkeleton/.test(publicTeachersLoading),
 );
 check(
   "Client registration avoids unused catalog reads and booking reuses the consolidated catalog",

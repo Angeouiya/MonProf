@@ -28,6 +28,7 @@ const journeySwitcherPath = "src/components/shared/journey-switcher.tsx";
 const professorImagePath = "src/components/shared/professor-image.tsx";
 const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
+const teacherImageUploadPath = "src/lib/client/teacher-image-upload.ts";
 const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
 const bookingSessionLedgerPath = "src/components/shared/booking-session-ledger.tsx";
 const alertDialogPath = "src/components/ui/alert-dialog.tsx";
@@ -87,6 +88,7 @@ const journeySwitcher = read(journeySwitcherPath);
 const professorImage = read(professorImagePath);
 const professorMedia = read(professorMediaPath);
 const professorMediaApi = read(professorMediaApiPath);
+const teacherImageUpload = read(teacherImageUploadPath);
 const pricingBreakdown = read(pricingBreakdownPath);
 const bookingSessionLedger = read(bookingSessionLedgerPath);
 const alertDialog = read(alertDialogPath);
@@ -806,7 +808,10 @@ record(
     && /data-professor-cover-images/.test(professorMedia)
     && /Importer une couverture/.test(professorMedia)
     && /className="object-contain"/.test(professorMedia)
-    && /fit: action === "custom-cover" \? "contain" : "cover"/.test(professorMediaApi),
+    && /action === "custom-cover" \? 900 : 300/.test(professorMediaApi)
+    && /function coverGeometry/.test(teacherImageUpload)
+    && /Math\.min\(canvasWidth \/ sourceWidth, canvasHeight \/ sourceHeight\)/.test(teacherImageUpload)
+    && /x: Math\.round\(\(canvasWidth - width\) \/ 2\)/.test(teacherImageUpload),
 );
 
 record(

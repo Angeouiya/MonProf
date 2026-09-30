@@ -98,6 +98,12 @@ const competenceWorker = {
     const canonicalRedirect = redirectPublicNavigationToCanonicalHost(request);
     if (canonicalRedirect) return withSecurityHeaders(canonicalRedirect, request);
 
+    // La majorité des visiteurs publics n'a aucun cookie de session. Répondre
+    // directement à l'edge évite de démarrer Next.js et d'interroger la base
+    // uniquement pour afficher le bouton « Connexion » dans l'en-tête.
+    const anonymousSessionResponse = respondToAnonymousSessionProbe(request);
+    if (anonymousSessionResponse) return withSecurityHeaders(anonymousSessionResponse, request);
+
     const securityRejection = await protectPublicRequest(request, env);
     if (securityRejection) return withSecurityHeaders(securityRejection, request);
 
@@ -261,6 +267,23 @@ function requireSecret(value: string | undefined, name: string) {
 
 const PUBLIC_HOME_CACHE_SECONDS = 300;
 const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-v1";
+
+function respondToAnonymousSessionProbe(request: Request) {
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return null;
+
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/auth/me" || readSessionCookie(request.headers.get("cookie"))) return null;
+
+  return new Response(method === "HEAD" ? null : JSON.stringify({ user: null }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "private, no-store, max-age=0",
+      "x-competence-session-fast-path": "anonymous-edge",
+    },
+  });
+}
 
 async function readCachedPublicHome(request: Request) {
   const cacheKey = publicHomeCacheKey(request);
