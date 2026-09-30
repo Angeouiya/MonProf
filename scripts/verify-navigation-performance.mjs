@@ -84,6 +84,15 @@ check("Immutable Next assets keep a one-year browser cache", /\/_next\/static\/\
 check("Header brand uses a right-sized logo asset", /competence-mark-112\.webp/.test(brandLogo));
 check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CACHE_SECONDS\s*=\s*300/.test(cloudflareWorker) && /caches\.default\.put/.test(cloudflareWorker));
 check(
+  "Three standard teacher journeys use an anonymous edge cache without filter explosion",
+  /PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS\s*=\s*60/.test(cloudflareWorker)
+    && /readCachedPublicTeacherJourney\(request\)/.test(cloudflareWorker)
+    && /schedulePublicTeacherJourneyCache\(request/.test(cloudflareWorker)
+    && /key !== "journey" && key !== "_rsc"/.test(cloudflareWorker)
+    && /readSessionCookie\(request\.headers\.get\("cookie"\)\)/.test(cloudflareWorker)
+    && /x-competence-teacher-journey-cache/.test(cloudflareWorker),
+);
+check(
   "Anonymous public session probes stop at the Cloudflare edge",
   /respondToAnonymousSessionProbe\(request\)/.test(cloudflareWorker)
     && /x-competence-session-fast-path/.test(cloudflareWorker)
@@ -96,6 +105,7 @@ check(
     && /unstable_cache/.test(publicTeachers)
     && /getCachedPublicTeacherResults[\s\S]*?Promise\.all\(\[/.test(publicTeachers)
     && !/getCachedPublicTeacherResults[\s\S]*?db\.\$transaction\(\[/.test(publicTeachers)
+    && /revalidate:\s*300/.test(publicTeachers)
     && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers),
 );
 check(

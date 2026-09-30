@@ -87,7 +87,7 @@ const getCachedPublicTeacherResults = unstable_cache(
     }),
   ] as const),
   ["public-teacher-results-v2"],
-  { revalidate: 45, tags: ["teachers"] },
+  { revalidate: 300, tags: ["teachers"] },
 );
 
 const SORTS = [

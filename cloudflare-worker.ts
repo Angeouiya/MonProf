@@ -110,13 +110,18 @@ const competenceWorker = {
     const cachedPublicHome = await readCachedPublicHome(request);
     if (cachedPublicHome) return withSecurityHeaders(cachedPublicHome, request);
 
+    const cachedTeacherJourney = await readCachedPublicTeacherJourney(request);
+    if (cachedTeacherJourney) return withSecurityHeaders(cachedTeacherJourney, request);
+
     const storedTeacherMedia = await serveTeacherMediaFromKv(request, env);
     if (storedTeacherMedia) return withSecurityHeaders(storedTeacherMedia, request);
 
     const response = await dispatchOpenNext(request, env, ctx);
     scheduleTeacherMediaBackfill(request, response, env, ctx);
     scheduleImmediateWebPushWake(request, response, env, ctx);
-    return schedulePublicHomeCache(request, withSecurityHeaders(response, request), ctx);
+    const securedResponse = withSecurityHeaders(response, request);
+    const homeCachedResponse = schedulePublicHomeCache(request, securedResponse, ctx);
+    return schedulePublicTeacherJourneyCache(request, homeCachedResponse, ctx);
   },
 
   async scheduled(
@@ -267,6 +272,9 @@ function requireSecret(value: string | undefined, name: string) {
 
 const PUBLIC_HOME_CACHE_SECONDS = 300;
 const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-v1";
+const PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS = 60;
+const PUBLIC_TEACHER_JOURNEY_CACHE_PATH = "/__competence_edge_cache/public-teacher-journey-v1";
+const PUBLIC_TEACHER_JOURNEYS = new Set(["ivoirien", "francais", "professionnel"]);
 
 function respondToAnonymousSessionProbe(request: Request) {
   const method = request.method.toUpperCase();
@@ -283,6 +291,100 @@ function respondToAnonymousSessionProbe(request: Request) {
       "x-competence-session-fast-path": "anonymous-edge",
     },
   });
+}
+
+async function readCachedPublicTeacherJourney(request: Request) {
+  const cacheKey = publicTeacherJourneyCacheKey(request);
+  if (!cacheKey) return null;
+
+  try {
+    const cached = await caches.default.match(cacheKey);
+    if (!cached) return null;
+    const headers = new Headers(cached.headers);
+    headers.set("x-competence-teacher-journey-cache", "HIT");
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-teacher-journey-cache-read",
+      error: error instanceof Error ? error.message : "Cache indisponible.",
+    }));
+    return null;
+  }
+}
+
+function schedulePublicTeacherJourneyCache(
+  request: Request,
+  response: Response,
+  ctx: WorkerExecutionContext,
+) {
+  const cacheKey = publicTeacherJourneyCacheKey(request);
+  const contentType = response.headers.get("content-type") || "";
+  if (
+    !cacheKey
+    || response.status !== 200
+    || (!contentType.includes("text/html") && !contentType.includes("text/x-component"))
+    || response.headers.has("set-cookie")
+  ) {
+    return response;
+  }
+
+  const cacheCopy = response.clone();
+  const cacheHeaders = new Headers(cacheCopy.headers);
+  cacheHeaders.set("cache-control", `public, max-age=0, s-maxage=${PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS}`);
+  cacheHeaders.set("cache-tag", "competence-public-teacher-journeys");
+  cacheHeaders.set("x-competence-teacher-journey-cache", "HIT");
+  ctx.waitUntil(caches.default.put(cacheKey, new Response(cacheCopy.body, {
+    status: cacheCopy.status,
+    statusText: cacheCopy.statusText,
+    headers: cacheHeaders,
+  })).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-teacher-journey-cache-write",
+      error: error instanceof Error ? error.message : "Mise en cache impossible.",
+    }));
+  }));
+
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.set("x-competence-teacher-journey-cache", "MISS");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+  });
+}
+
+function publicTeacherJourneyCacheKey(request: Request) {
+  if (request.method !== "GET" || readSessionCookie(request.headers.get("cookie"))) return null;
+
+  const url = new URL(request.url);
+  if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/professeurs") return null;
+
+  const journey = url.searchParams.get("journey") || "";
+  if (!PUBLIC_TEACHER_JOURNEYS.has(journey)) return null;
+  if ([...url.searchParams.keys()].some((key) => key !== "journey" && key !== "_rsc")) return null;
+
+  const rscToken = url.searchParams.get("_rsc");
+  const isRsc = request.headers.get("rsc") === "1";
+  if (isRsc && rscToken && !request.headers.has("next-router-segment-prefetch")) {
+    const mode = request.headers.has("next-router-prefetch") ? "prefetch" : "navigation";
+    return new Request(
+      `${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${journey}/rsc/${mode}/${encodeURIComponent(rscToken)}`,
+      { method: "GET" },
+    );
+  }
+
+  if (rscToken || isRsc) return null;
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
+  const navigation = request.headers.get("sec-fetch-mode") === "navigate";
+  if (!acceptsHtml && !navigation) return null;
+
+  return new Request(`${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${journey}/html`, { method: "GET" });
 }
 
 async function readCachedPublicHome(request: Request) {
