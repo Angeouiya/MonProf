@@ -76,6 +76,7 @@ const paydunyaReconciliation = read("src/lib/paydunya-reconciliation.ts");
 const clientReservationDetail = read("src/app/client/reservations/[id]/page.tsx");
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
 const clientCoursesPage = read("src/app/client/cours/page.tsx");
+const clientCourseIndex = read("src/lib/client-course-index.ts");
 const clientDashboardPage = read("src/app/client/page.tsx");
 const professorMissionDetail = read("src/app/professeur/(espace)/missions/[id]/page.tsx");
 const professorMissionList = read("src/app/professeur/(espace)/missions/page.tsx");
@@ -258,8 +259,10 @@ record(
 
 record(
   "Paid Jèko bookings are visible in client courses immediately after webhook",
-  /statuses:\s*\["PAID",\s*"CONFIRMED",\s*"ASSIGNED",\s*"IN_PROGRESS",\s*"PENDING_ADMIN_VALIDATION",\s*"PAYMENT_TO_RELEASE"\]/.test(clientCoursesPage)
-    && /verifiedClientPaymentBookingWhere/.test(clientCoursesPage)
+  ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"]
+      .every((status) => clientCourseIndex.includes(`'${status}'`))
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientCourseIndex)
+    && /getClientCourseIndex/.test(clientCoursesPage)
     && /hasVerifiedClientPayment/.test(clientCoursesPage)
     && ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"]
       .every((status) => clientDashboardPage.match(/const NEXT_COURSE_STATUSES[\s\S]*?];/)?.[0].includes(`"${status}"`))

@@ -31,6 +31,7 @@ const staticHeaders = read("public/_headers");
 const clientBooking = read("src/app/client/reserver/page.tsx");
 const clientRegistration = read("src/app/inscription/page.tsx");
 const clientCourses = read("src/app/client/cours/page.tsx");
+const clientCourseIndex = read("src/lib/client-course-index.ts");
 const clientReviews = read("src/app/client/avis/page.tsx");
 const clientSupport = read("src/app/client/service-client/page.tsx");
 const clientSettings = read("src/app/client/parametres/page.tsx");
@@ -144,7 +145,15 @@ check(
   /getCachedTeacherSearchCatalog/.test(clientBooking)
     && !/getCachedTeacherSearchCatalog|@\/lib\/db/.test(clientRegistration),
 );
-check("Client courses batch tab, overview, and pending reads", hasDatabaseTransaction(clientCourses));
+check("Client courses paginate exact paid proofs without loading all history",
+  /getClientCourseIndex/.test(clientCourses)
+    && /hasVerifiedClientPayment/.test(clientCourses)
+    && /prefetch=\{false\}/.test(clientCourses)
+    && !/rawOverviewBookings|rawBookings|CourseListClient/.test(clientCourses)
+    && /CLIENT_COURSE_PAGE_SIZE = 20/.test(clientCourseIndex)
+    && /LIMIT \$\{CLIENT_COURSE_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientCourseIndex)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientCourseIndex)
+    && /WHERE b\."clientId" = \$\{input\.clientId\}/.test(clientCourseIndex));
 check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
 check("Client support summary avoids loading all bookings and disputes",
   hasDatabaseTransaction(clientSupport)
