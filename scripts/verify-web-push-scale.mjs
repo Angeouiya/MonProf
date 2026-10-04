@@ -94,6 +94,12 @@ record(
     && realtime.includes("visibilitychange")
     && realtime.includes('window.addEventListener("focus"'),
 );
+record(
+  "Focus et visibilité ne resynchronisent pas chaque fois le même appareil",
+  realtime.includes("PUSH_SUBSCRIPTION_RECHECK_MS = 6 * 60 * 60_000")
+    && realtime.includes("NOTIFICATION_STATE_RECHECK_MS = 60_000")
+    && realtime.includes("if (synchronizing || (!force && Date.now() - lastSubscriptionCheckAt < PUSH_SUBSCRIPTION_RECHECK_MS)) return"),
+);
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
 record(

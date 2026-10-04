@@ -47,6 +47,13 @@ record("Accueil public sans fan-out base", !publicHome.includes('from "@/lib/db"
 record("Catalogue professeurs mutualisé", teacherSearch.includes("getCachedTeacherSearchCatalog"));
 record("Paramètres runtime mis en cache et invalidables", settings.includes("unstable_cache") && settings.includes('tags: ["platform-settings"]'));
 record("Temps réel piloté par événements sans polling global", !realtime.includes("setInterval") && realtime.includes("COMPETENCE_PUSH_RECEIVED"));
+record(
+  "Retour dans l'application sans rafale de lectures et écritures push",
+  realtime.includes("NOTIFICATION_STATE_RECHECK_MS = 60_000")
+    && realtime.includes("PUSH_SUBSCRIPTION_RECHECK_MS = 6 * 60 * 60_000")
+    && realtime.includes("if (synchronizing || (!force && Date.now() - lastSubscriptionCheckAt < PUSH_SUBSCRIPTION_RECHECK_MS)) return")
+    && realtime.includes("lastStateCheckAt.current < NOTIFICATION_STATE_RECHECK_MS"),
+);
 record("Web Push traité par lots", /MAX_BATCH_SIZE\s*=\s*500/.test(webPush));
 record("Web Push publié dans une file durable", webPushQueue.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
 record(
