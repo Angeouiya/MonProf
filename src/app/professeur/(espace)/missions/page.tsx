@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 import { ArrowRight, CalendarDays, ChevronDown, MapPin, Phone } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
@@ -18,49 +19,90 @@ import {
 } from "@/components/professor/professor-ui";
 
 export const dynamic = "force-dynamic";
+const MISSION_PAGE_SIZE = 20;
 
-export default async function ProfesseurMissionsPage() {
+export default async function ProfesseurMissionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; page?: string }>;
+}) {
   const { teacher } = await requireTeacher();
-  const bookings = await db.booking.findMany({
-    where: verifiedPayDunyaBookingWhere({
-      OR: [
-        { teacherId: teacher.id },
-        { sessions: { some: { teacherId: teacher.id } } },
-      ],
-      status: { notIn: ["CANCELLED", "REFUNDED"] },
-    }),
-    include: {
+  const sp = await searchParams;
+  const view = sp.view === "attention" ? "attention" : "all";
+  const requestedPage = Number(sp.page ?? 1);
+  const page = Number.isFinite(requestedPage) ? Math.max(1, Math.min(10_000, Math.trunc(requestedPage))) : 1;
+  const now = new Date();
+  const teacherScope: Prisma.BookingWhereInput = {
+    OR: [
+      { teacherId: teacher.id },
+      { sessions: { some: { teacherId: teacher.id } } },
+    ],
+    status: { notIn: ["CANCELLED", "REFUNDED"] },
+  };
+  const activeMissionScope: Prisma.TeacherMissionLinkWhereInput = {
+    teacherId: teacher.id,
+    status: { in: ["PENDING_CONFIRMATION", "RELAUNCHED"] },
+    expiresAt: { gte: now },
+  };
+  const activeRescheduleScope: Prisma.BookingRescheduleRequestWhereInput = { teacherId: teacher.id, status: "AWAITING_TEACHER" };
+  const actionScope: Prisma.BookingWhereInput = {
+    OR: [
+      { missionLinks: { some: activeMissionScope } },
+      { rescheduleRequests: { some: activeRescheduleScope } },
+    ],
+  };
+  const where = verifiedPayDunyaBookingWhere(view === "attention"
+    ? { AND: [teacherScope, actionScope] }
+    : teacherScope);
+  const rows = await db.booking.findMany({
+    where,
+    select: {
+      id: true,
+      reference: true,
+      subjectName: true,
+      levelName: true,
+      objective: true,
+      needDescription: true,
+      courseFormat: true,
+      commune: true,
+      quartier: true,
+      addressHint: true,
+      scheduledDate: true,
+      scheduledTime: true,
+      startDate: true,
+      preferredTime: true,
+      createdAt: true,
+      status: true,
+      teacherNetAmount: true,
+      totalTeacherReceives: true,
+      paymentStatus: true,
+      paymentProvider: true,
+      providerPaymentStatus: true,
+      paymentVerifiedAt: true,
+      paydunyaStatus: true,
+      paydunyaVerifiedAt: true,
+      totalClientPays: true,
+      totalPrice: true,
       client: { select: { name: true, phone: true } },
-      transactions: { where: { type: "CLIENT_PAYMENT" } },
-      missionLinks: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 1 },
-      rescheduleRequests: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 3 },
+      transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
+      missionLinks: { where: activeMissionScope, orderBy: { createdAt: "desc" }, take: 1, select: { token: true, status: true, expiresAt: true } },
+      rescheduleRequests: { where: activeRescheduleScope, orderBy: { createdAt: "desc" }, take: 1, select: { id: true, status: true, proposedDate: true, proposedTime: true, feeWindow: true, feeTeacherAmount: true } },
       teacherTasks: {
         where: {
           teacherId: teacher.id,
           status: { in: ["TODO", "SENT_TO_TEACHER", "SEEN_BY_TEACHER", "IN_PROGRESS", "LATE"] },
         },
         take: 3,
+        select: { id: true, status: true },
       },
     },
-    orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
-    take: 80,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: (page - 1) * MISSION_PAGE_SIZE,
+    take: MISSION_PAGE_SIZE + 1,
   });
-  const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
-  const missionSortNow = new Date();
-  const orderedBookings = verifiedBookings.toSorted((left, right) => {
-    const leftAction = missionNeedsAttention(left, missionSortNow);
-    const rightAction = missionNeedsAttention(right, missionSortNow);
-    if (leftAction !== rightAction) return leftAction ? -1 : 1;
-
-    const leftDate = left.scheduledDate ?? left.startDate ?? left.createdAt;
-    const rightDate = right.scheduledDate ?? right.startDate ?? right.createdAt;
-    const leftUpcoming = leftDate >= missionSortNow;
-    const rightUpcoming = rightDate >= missionSortNow;
-    if (leftUpcoming !== rightUpcoming) return leftUpcoming ? -1 : 1;
-    return leftUpcoming
-      ? leftDate.getTime() - rightDate.getTime()
-      : rightDate.getTime() - leftDate.getTime();
-  });
+  const hasNext = rows.length > MISSION_PAGE_SIZE;
+  const verifiedBookings = rows.slice(0, MISSION_PAGE_SIZE).filter(hasVerifiedPayDunyaClientPayment);
+  const pageHref = (nextPage: number) => `/professeur/missions${view === "attention" ? "?view=attention" : ""}${nextPage > 1 ? `${view === "attention" ? "&" : "?"}page=${nextPage}` : ""}`;
 
   return (
     <div className="space-y-6">
@@ -69,22 +111,26 @@ export default async function ProfesseurMissionsPage() {
         description="Confirmez vos cours, consultez les détails et suivez les changements."
         rootTab
       />
+      <nav aria-label="Vues des missions" className="grid grid-cols-2 gap-2 rounded-lg border border-[#DDE6F7] bg-white p-1.5 text-sm font-semibold">
+        <Link prefetch={false} href="/professeur/missions" aria-current={view === "all" ? "page" : undefined} className={view === "all" ? "rounded-lg bg-[#111B4D] px-3 py-2.5 text-center text-white" : "rounded-lg px-3 py-2.5 text-center text-[#111B4D]"}>Toutes</Link>
+        <Link prefetch={false} href="/professeur/missions?view=attention" aria-current={view === "attention" ? "page" : undefined} className={view === "attention" ? "rounded-lg bg-[#111B4D] px-3 py-2.5 text-center text-white" : "rounded-lg px-3 py-2.5 text-center text-[#111B4D]"}>À traiter</Link>
+      </nav>
 
       {verifiedBookings.length === 0 ? (
         <EmptyProfessorState
-          title="Aucune mission pour le moment"
-          description="Dès qu'un paiement est confirmé par Jèko et qu'une commande vous est attribuée, elle apparaît ici avec les détails nécessaires."
+          title={view === "attention" ? "Rien à traiter" : "Aucune mission sur cette page"}
+          description={view === "attention" ? "Les nouvelles confirmations et demandes de changement apparaîtront ici." : "Dès qu'un paiement est confirmé par Jèko et qu'une commande vous est attribuée, elle apparaît ici."}
         />
       ) : (
         <div className="grid gap-4">
-          {orderedBookings.map((booking) => {
+          {verifiedBookings.map((booking) => {
             const mission = booking.missionLinks[0];
             const pendingReschedule = booking.rescheduleRequests.find((request) => request.status === "AWAITING_TEACHER");
             const missionTiming = getTeacherMissionTiming(booking);
             const canRespond = Boolean(
               mission
               && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
-              && mission.expiresAt >= new Date(),
+              && mission.expiresAt >= now,
             );
             const missionDate = booking.scheduledDate ?? booking.startDate ?? booking.createdAt;
             const missionTime = booking.scheduledTime || booking.preferredTime || "Heure à confirmer";
@@ -164,7 +210,7 @@ export default async function ProfesseurMissionsPage() {
                           {mission ? "Mission suivie." : "Aucune confirmation ouverte."}
                         </p>
                         <Button asChild className="w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                          <Link href={`/professeur/missions/${booking.id}`}>
+                          <Link prefetch={false} href={`/professeur/missions/${booking.id}`}>
                             Détail
                             <ArrowRight className="h-4 w-4" />
                           </Link>
@@ -173,7 +219,7 @@ export default async function ProfesseurMissionsPage() {
                     )}
                     {canRespond && (
                       <Button asChild variant="ghost" className="mt-2 w-full rounded-lg bg-white text-[#111B4D]">
-                        <Link href={`/professeur/missions/${booking.id}`}>
+                        <Link prefetch={false} href={`/professeur/missions/${booking.id}`}>
                           Détail
                           <ArrowRight className="h-4 w-4" />
                         </Link>
@@ -186,21 +232,15 @@ export default async function ProfesseurMissionsPage() {
           })}
         </div>
       )}
+      {(page > 1 || hasNext) && (
+        <nav aria-label="Pages des missions" className="flex items-center justify-between gap-3 text-sm font-semibold">
+          {page > 1 ? <Link prefetch={false} href={pageHref(page - 1)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Précédent</Link> : <span />}
+          <span className="text-[#64748B]">Page {page}</span>
+          {hasNext ? <Link prefetch={false} href={pageHref(page + 1)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Suivant</Link> : <span />}
+        </nav>
+      )}
     </div>
   );
-}
-
-function missionNeedsAttention(booking: {
-  missionLinks: Array<{ status: string; expiresAt: Date }>;
-  rescheduleRequests: Array<{ status: string }>;
-}, now: Date) {
-  const mission = booking.missionLinks[0];
-  return booking.rescheduleRequests.some((request) => request.status === "AWAITING_TEACHER")
-    || Boolean(
-      mission
-      && ["PENDING_CONFIRMATION", "RELAUNCHED"].includes(mission.status)
-      && mission.expiresAt >= now,
-    );
 }
 
 function MissionInfo({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {

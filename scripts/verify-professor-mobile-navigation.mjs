@@ -123,10 +123,15 @@ record(
 );
 
 record(
-  "Professor mission cards prioritize urgent work and reveal secondary details on demand",
-  /const orderedBookings = verifiedBookings\.toSorted/.test(missions)
-    && /missionNeedsAttention\(left, missionSortNow\)/.test(missions)
-    && /leftUpcoming \? -1 : 1/.test(missions)
+  "Professor mission cards paginate recent work and expose an urgent-only view",
+  /MISSION_PAGE_SIZE = 20/.test(missions)
+    && /take: MISSION_PAGE_SIZE \+ 1/.test(missions)
+    && /skip: \(page - 1\) \* MISSION_PAGE_SIZE/.test(missions)
+    && /orderBy: \[\{ createdAt: "desc" \}, \{ id: "desc" \}\]/.test(missions)
+    && /view === "attention"/.test(missions)
+    && /missionLinks: \{ some: activeMissionScope \}/.test(missions)
+    && /rescheduleRequests: \{ some: activeRescheduleScope \}/.test(missions)
+    && /prefetch=\{false\} href=\{`\/professeur\/missions\/\$\{booking\.id\}`\}/.test(missions)
     && /data-professor-mission-card/.test(missions)
     && /data-professor-mission-decision/.test(missions)
     && /data-professor-mission-snapshot/.test(missions)

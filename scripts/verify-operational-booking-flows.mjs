@@ -315,7 +315,10 @@ record(
 
 record(
   "Professor mission screens never leak another teacher's tasks, links or schedule proposals",
-  /missionLinks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionList)
+  /const activeMissionScope:[\s\S]*?teacherId:\s*teacher\.id/.test(professorMissionList)
+    && /missionLinks:\s*\{\s*where:\s*activeMissionScope/.test(professorMissionList)
+    && /const activeRescheduleScope:[\s\S]*?teacherId:\s*teacher\.id/.test(professorMissionList)
+    && /rescheduleRequests:\s*\{\s*where:\s*activeRescheduleScope/.test(professorMissionList)
     && /teacherTasks:\s*\{[\s\S]*?teacherId:\s*teacher\.id/.test(professorMissionList)
     && /missionLinks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionDetail)
     && /teacherTasks:\s*\{\s*where:\s*\{\s*teacherId:\s*teacher\.id\s*\}/.test(professorMissionDetail)
@@ -383,7 +386,7 @@ record(
     && /const teacher = booking\.teacher[\s\S]*?phone:\s*verifiedClientPayment\s*\?\s*booking\.teacher\.phone\s*\?\?\s*null\s*:\s*null/.test(bookingApi)
     && /verifiedPayDunyaBookingWhere/.test(professorMissionDetail)
     && /hasVerifiedPayDunyaClientPayment\(booking\)/.test(professorMissionDetail)
-    && /bookings\.filter\(hasVerifiedPayDunyaClientPayment\)/.test(professorMissionList),
+    && /rows\.slice\(0, MISSION_PAGE_SIZE\)\.filter\(hasVerifiedPayDunyaClientPayment\)/.test(professorMissionList),
 );
 
 record(
