@@ -307,10 +307,10 @@ record(
 );
 
 record(
-  "Client tab and filter labels are protected against vertical wrapping",
+  "Client reservation tabs stay readable without a second filter rail",
   /Final client readability guard/.test(css)
     && /\[data-client-tab-item\][\s\S]*?white-space:\s*nowrap\s*!important;[\s\S]*?word-break:\s*normal\s*!important;/.test(css)
-    && /\[data-client-reservation-filter-rail\]\s*button/.test(css),
+    && !/data-client-reservation-filter-rail/.test(clientReservationList),
 );
 
 record(
@@ -328,19 +328,19 @@ record(
 );
 
 record(
-  "Client reservation summary keeps its three financial facts readable",
-  /data-client-reservation-mobile-priority[\s\S]*?mt-3 grid grid-cols-3 gap-2/.test(clientReservationsPage),
+  "Client reservations present one priority action without competing KPI cards",
+  /data-client-reservation-priority/.test(clientReservationsPage)
+    && !/ClientMetricStrip|ReservationCommandCenter|ReservationMobilePriorityCard/.test(clientReservationsPage),
 );
 
 record(
-  "Client reservation cards keep mobile decisions visible while folding long details",
-  /data-client-reservation-mobile-snapshot/.test(clientReservationList)
-    && /data-client-reservation-mobile-status/.test(clientReservationList)
-    && /data-client-reservation-mobile-details/.test(clientReservationList)
-    && /Infos/.test(clientReservationList)
-    && /group-open:rotate-180/.test(clientReservationList)
-    && /hidden min-\[560px\]:block/.test(clientReservationList)
-    && /hidden min-\[620px\]:block/.test(clientReservationList),
+  "Client reservation cards show course, date, amount and one clear action",
+  /data-client-reservation-card/.test(clientReservationList)
+    && /reservation\.stepLabel/.test(clientReservationList)
+    && /reservation\.dateLabel/.test(clientReservationList)
+    && /reservation\.amountLabel/.test(clientReservationList)
+    && /href=\{`\/client\/reservations\/\$\{reservation\.id\}`\}/.test(clientReservationList)
+    && !/data-client-reservation-mobile-details/.test(clientReservationList),
 );
 
 record(
@@ -506,9 +506,10 @@ record(
 );
 
 record(
-  "Client app filter rails are swipeable on mobile without visible scrollbar noise",
-  /Client app polish guard/.test(css)
-    && /\[data-client-reservation-filter-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
+  "Client reservation search is optional instead of an always-visible filter wall",
+  /data-client-reservation-search-panel/.test(clientReservationsPage)
+    && /type="search"/.test(clientReservationsPage)
+    && !/data-client-reservation-filter-rail/.test(clientReservationList)
     && /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(css),
 );
 

@@ -10,6 +10,9 @@ const clientDashboard = read("src/app/client/page.tsx");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientPayments = read("src/app/client/paiements/page.tsx");
 const clientPaymentLedger = read("src/lib/client-payment-ledger.ts");
+const clientReservations = read("src/app/client/reservations/page.tsx");
+const clientReservationIndex = read("src/lib/client-reservation-index.ts");
+const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
 const publicHome = read("src/app/page.tsx");
@@ -60,6 +63,23 @@ check("Client payments load only a bounded ledger page and keep verified lifetim
     && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientPaymentLedger)
     && !/db\.transaction\.findMany\(\{[\s\S]*?booking:\s*\{ is: verifiedPayDunyaBookingWhere/.test(clientPayments));
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
+check("Client reservations page only loads 20 dossiers with exact verified counters",
+  /getClientReservationIndex\(/.test(clientReservations)
+    && /id:\s*\{ in: ids \}/.test(clientReservations)
+    && /CLIENT_RESERVATION_PAGE_SIZE\s*=\s*20/.test(clientReservationIndex)
+    && /LIMIT \$\{CLIENT_RESERVATION_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientReservationIndex)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientReservationIndex)
+    && /COALESCE\(\([\s\S]*?\), false\) AS "verified"/.test(clientReservationIndex)
+    && /WHERE b\."clientId" = \$\{input\.clientId\}/.test(clientReservationIndex)
+    && !/allBookings = await db\.booking\.findMany/.test(clientReservations));
+check("Client reservations use three simple views and an optional server-wide search",
+  /label: "Toutes"/.test(clientReservations)
+    && /label: "À faire"/.test(clientReservations)
+    && /label: "Historique"/.test(clientReservations)
+    && /data-client-reservation-search-panel/.test(clientReservations)
+    && /name="q"/.test(clientReservations)
+    && !/"use client"/.test(clientReservationList)
+    && !/data-client-reservation-filter-rail/.test(clientReservationList));
 check("Admin dashboard runs independent operational reads concurrently", hasParallelReads(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
 check(
