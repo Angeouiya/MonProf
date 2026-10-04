@@ -62,11 +62,14 @@ export default async function AdminPaiementsPage({
   const [
     rawTxs,
     rawFilteredStatusTotals,
-    cancelledCommissionBookings,
+    cancelledCommissionTransactions,
+    cancelledCommissionPenalties,
     teacherPayouts,
     financialBookings,
-    financialPayouts,
-    appliedTeacherAdjustments,
+    paidPayoutTotals,
+    payoutFeeMinorTotals,
+    payoutFeeLegacyTotals,
+    appliedTeacherAdjustmentTotals,
   ] = await db.$transaction([
     db.transaction.findMany({
       where,
@@ -109,18 +112,22 @@ export default async function AdminPaiementsPage({
       _count: { _all: true },
       _sum: { amount: true, commission: true },
     }),
-    db.booking.findMany({
-      where: verifiedPayDunyaBookingWhere({
-        status: { in: ["CANCELLED", "REFUNDED"] },
-        transactions: { some: transactionScope },
-      }),
-      select: {
-        cancellationPenaltyPlatformAmount: true,
-        transactions: {
-          where: transactionScope,
-          select: { commission: true },
+    db.transaction.aggregate({
+      where: {
+        ...transactionScope,
+        booking: {
+          is: verifiedPayDunyaBookingWhere({ status: { in: ["CANCELLED", "REFUNDED"] } }),
         },
       },
+      _sum: { commission: true },
+    }),
+    db.booking.aggregate({
+      where: verifiedPayDunyaBookingWhere({
+        status: { in: ["CANCELLED", "REFUNDED"] },
+        cancellationPenaltyPlatformAmount: { gt: 0 },
+        transactions: { some: transactionScope },
+      }),
+      _sum: { cancellationPenaltyPlatformAmount: true },
     }),
     db.teacherPayoutRecord.findMany({
       where: { status: "PAID" },
@@ -188,18 +195,28 @@ export default async function AdminPaiementsPage({
         },
       },
     }),
-    db.teacherPayoutRecord.findMany({
-      where: { status: { in: ["PAID", "CANCELLED"] } },
-      select: {
-        amount: true,
-        transferFeeCoveredByPlatform: true,
-        transferFeeCoveredByPlatformMinor: true,
-        status: true,
-      },
+    db.teacherPayoutRecord.aggregate({
+      where: { status: "PAID", amount: { gt: 0 } },
+      _sum: { amount: true },
     }),
-    db.teacherPaymentAdjustment.findMany({
-      where: { status: "APPLIED" },
-      select: { amount: true, status: true },
+    db.teacherPayoutRecord.aggregate({
+      where: {
+        status: { in: ["PAID", "CANCELLED"] },
+        transferFeeCoveredByPlatformMinor: { gt: 0 },
+      },
+      _sum: { transferFeeCoveredByPlatformMinor: true },
+    }),
+    db.teacherPayoutRecord.aggregate({
+      where: {
+        status: { in: ["PAID", "CANCELLED"] },
+        transferFeeCoveredByPlatformMinor: { lte: 0 },
+        transferFeeCoveredByPlatform: { gt: 0 },
+      },
+      _sum: { transferFeeCoveredByPlatform: true },
+    }),
+    db.teacherPaymentAdjustment.aggregate({
+      where: { status: "APPLIED", amount: { gt: 0 } },
+      _sum: { amount: true },
     }),
   ]);
   // Prisma perd la forme précise des agrégats groupBy dans le tuple
@@ -214,13 +231,10 @@ export default async function AdminPaiementsPage({
   const transactionCount = filteredStatusTotals.reduce((sum, row) => sum + row._count._all, 0);
   const receivedAmount = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
   const recordedCommission = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.commission ?? 0), 0);
-  const cancelledRecordedCommission = cancelledCommissionBookings.reduce(
-    (sum, booking) => sum + booking.transactions.reduce((bookingSum, transaction) => bookingSum + transaction.commission, 0),
+  const cancelledRecordedCommission = cancelledCommissionTransactions._sum.commission ?? 0;
+  const cancellationPenaltyCommission = Math.max(
     0,
-  );
-  const cancellationPenaltyCommission = cancelledCommissionBookings.reduce(
-    (sum, booking) => sum + Math.max(0, booking.cancellationPenaltyPlatformAmount),
-    0,
+    cancelledCommissionPenalties._sum.cancellationPenaltyPlatformAmount ?? 0,
   );
   const commissionAmount = Math.max(
     0,
@@ -260,8 +274,19 @@ export default async function AdminPaiementsPage({
         ...providerFeeFinancialFields(request.paymentAttempts),
       })),
     })),
-    financialPayouts,
-    appliedTeacherAdjustments,
+    [
+      {
+        status: "PAID" as const,
+        amount: paidPayoutTotals._sum.amount ?? 0,
+        transferFeeCoveredByPlatformMinor: payoutFeeMinorTotals._sum.transferFeeCoveredByPlatformMinor ?? 0,
+      },
+      {
+        status: "CANCELLED" as const,
+        amount: 0,
+        transferFeeCoveredByPlatform: payoutFeeLegacyTotals._sum.transferFeeCoveredByPlatform ?? 0,
+      },
+    ],
+    [{ amount: appliedTeacherAdjustmentTotals._sum.amount ?? 0, status: "APPLIED" }],
   );
   const providerFeesTotal = financialSummary.providerCollectionFees;
   const partnerCommissionTotal = financialBookings.reduce((sum, booking) => sum + Math.max(0, booking.partnerCommissionAmount), 0);
