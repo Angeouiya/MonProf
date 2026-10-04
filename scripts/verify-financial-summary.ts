@@ -416,7 +416,7 @@ assert.match(paymentsPageSource, /requireAdmin\("FINANCE_VIEW"\)/);
 assert.match(
   paymentsPageSource,
   /db\.transaction\.groupBy\([\s\S]*?_count:\s*\{\s*_all:\s*true\s*\}/,
-  "les totaux filtrés doivent couvrir toutes les lignes, pas seulement les 300 affichées",
+  "les totaux filtrés doivent couvrir toutes les lignes, pas seulement la page affichée",
 );
 assert.match(
   paymentsPageSource,
@@ -425,9 +425,13 @@ assert.match(
 );
 assert.match(
   paymentsPageSource,
-  /table affiche au maximum les 300 plus récentes/,
-  "la limite d'affichage doit être expliquée à l'administrateur",
+  /registre affiche 25 lignes par page/,
+  "la pagination du registre doit être expliquée à l'administrateur",
 );
+assert.match(paymentsPageSource, /take: TRANSACTION_PAGE_SIZE \+ 1/);
+assert.match(paymentsPageSource, /take: PAYOUT_PAGE_SIZE \+ 1/);
+assert.match(paymentsPageSource, /aria-label="Pages des paiements clients"/);
+assert.match(paymentsPageSource, /aria-label="Pages des reçus professeurs"/);
 assert.match(
   paymentsPageSource,
   /Aucun montant à traiter/,

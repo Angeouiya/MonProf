@@ -30,17 +30,26 @@ export const dynamic = "force-dynamic";
 
 const VALID_METHODS = ["WAVE","ORANGE_MONEY","MTN_MONEY","MOOV_MONEY","DJAMO"];
 const VALID_STATUSES = ["FAILED","RECEIVED","BLOCKED","VALIDATED","TO_PAY_TEACHER","TEACHER_PAID","DISPUTED","REFUND_PENDING","PARTIAL_REFUND_PENDING","REFUNDED","PARTIALLY_REFUNDED","RETAINED"];
+const TRANSACTION_PAGE_SIZE = 25;
+const PAYOUT_PAGE_SIZE = 15;
+
+function safePage(raw?: string) {
+  const value = Number(raw ?? 1);
+  return Number.isFinite(value) ? Math.max(1, Math.min(10_000, Math.trunc(value))) : 1;
+}
 
 export default async function AdminPaiementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ method?: string; status?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ method?: string; status?: string; from?: string; to?: string; page?: string; payoutPage?: string }>;
 }) {
   const pageStartedAt = Date.now();
   await requireAdmin("FINANCE_VIEW");
   const sp = await searchParams;
   const method = sp.method && VALID_METHODS.includes(sp.method) ? sp.method : undefined;
   const status = sp.status && VALID_STATUSES.includes(sp.status) ? sp.status : undefined;
+  const transactionPage = safePage(sp.page);
+  const payoutPage = safePage(sp.payoutPage);
   const fromCandidate = sp.from ? new Date(`${sp.from}T00:00:00.000Z`) : undefined;
   const toCandidate = sp.to ? new Date(`${sp.to}T00:00:00.000Z`) : undefined;
   const from = fromCandidate && !Number.isNaN(fromCandidate.getTime()) ? fromCandidate : undefined;
@@ -66,7 +75,7 @@ export default async function AdminPaiementsPage({
     rawFilteredStatusTotals,
     cancelledCommissionTransactions,
     cancelledCommissionPenalties,
-    teacherPayouts,
+    rawTeacherPayouts,
     financialBookings,
     paidPayoutTotals,
     payoutFeeMinorTotals,
@@ -75,7 +84,7 @@ export default async function AdminPaiementsPage({
   ] = await db.$transaction([
     db.transaction.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: {
         booking: {
           select: {
@@ -105,7 +114,8 @@ export default async function AdminPaiementsPage({
         },
         teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
       },
-      take: 300,
+      skip: (transactionPage - 1) * TRANSACTION_PAGE_SIZE,
+      take: TRANSACTION_PAGE_SIZE + 1,
     }),
     db.transaction.groupBy({
       by: ["status"],
@@ -133,7 +143,7 @@ export default async function AdminPaiementsPage({
     }),
     db.teacherPayoutRecord.findMany({
       where: { status: "PAID" },
-      orderBy: { paidAt: "desc" },
+      orderBy: [{ paidAt: "desc" }, { id: "desc" }],
       include: {
         teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, badgeVerified: true, phone: true } },
         createdBy: { select: { name: true } },
@@ -141,7 +151,8 @@ export default async function AdminPaiementsPage({
           include: { booking: { select: { id: true, reference: true, subjectName: true, levelName: true } } },
         },
       },
-      take: 100,
+      skip: (payoutPage - 1) * PAYOUT_PAGE_SIZE,
+      take: PAYOUT_PAGE_SIZE + 1,
     }),
     db.booking.findMany({
       where: verifiedPayDunyaBookingWhere(),
@@ -238,7 +249,19 @@ export default async function AdminPaiementsPage({
     _count: { _all: number };
     _sum: { amount: number | null; commission: number | null };
   }>;
-  const txs = rawTxs.filter((tx) => tx.booking && hasVerifiedPayDunyaClientPayment(tx.booking));
+  const hasNextTransactionPage = rawTxs.length > TRANSACTION_PAGE_SIZE;
+  const txs = rawTxs.slice(0, TRANSACTION_PAGE_SIZE).filter((tx) => tx.booking && hasVerifiedPayDunyaClientPayment(tx.booking));
+  const hasNextPayoutPage = rawTeacherPayouts.length > PAYOUT_PAGE_SIZE;
+  const teacherPayouts = rawTeacherPayouts.slice(0, PAYOUT_PAGE_SIZE);
+  const pageHref = (nextTransactionPage: number, nextPayoutPage: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries({ method, status, from: sp.from, to: sp.to })) {
+      if (value) params.set(key, value);
+    }
+    if (nextTransactionPage > 1) params.set("page", String(nextTransactionPage));
+    if (nextPayoutPage > 1) params.set("payoutPage", String(nextPayoutPage));
+    return `/admin/paiements${params.size ? `?${params.toString()}` : ""}`;
+  };
   const transactionCount = filteredStatusTotals.reduce((sum, row) => sum + row._count._all, 0);
   const receivedAmount = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
   const recordedCommission = filteredStatusTotals.reduce((sum, row) => sum + (row._sum.commission ?? 0), 0);
@@ -265,7 +288,6 @@ export default async function AdminPaiementsPage({
     .filter((row) => attentionStatuses.has(row.status))
     .reduce((sum, row) => sum + (row._sum.amount ?? 0), 0);
   const averageAmount = transactionCount > 0 ? Math.round(receivedAmount / transactionCount) : 0;
-  const hasTruncatedTransactions = transactionCount > txs.length;
   const financialSummary = buildPlatformFinancialSummary(
     financialBookings.filter(hasVerifiedPayDunyaClientPayment).map((booking) => ({
       ...booking,
@@ -321,7 +343,7 @@ export default async function AdminPaiementsPage({
     : heroHasTeacherRemaining
       ? "/admin/professeurs-a-payer"
       : "/admin/centre-operationnel";
-  const heroActionLabel = heroHasAttention ? "Contrôler" : heroHasTeacherRemaining ? "Payer les profs" : "Voir le contrôle";
+  const heroActionLabel = heroHasAttention ? "Contrôler" : heroHasTeacherRemaining ? "Voir les soldes professeurs" : "Voir le contrôle";
   const paymentHeroMetrics = [
     { key: "commission", show: commissionAmount > 0, label: "Commission", value: commissionAmount, detail: "Filtrée" },
     { key: "partner", show: partnerCommissionTotal > 0, label: "Partenaires", value: partnerCommissionTotal, detail: "À verser / versé" },
@@ -429,7 +451,7 @@ export default async function AdminPaiementsPage({
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#4F46E5]">Registre filtrable</p>
             <h2 className="mt-1 text-lg font-black text-[#111827]">Résultats des filtres</h2>
             <p className="mt-1 text-xs font-semibold text-[#64748B]">
-              Les totaux ci-dessous portent sur toutes les transactions correspondantes ; la table affiche au maximum les 300 plus récentes.
+              Les totaux portent sur toutes les transactions correspondantes ; le registre affiche 25 lignes par page.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -463,19 +485,17 @@ export default async function AdminPaiementsPage({
       )}
 
       {txs.length === 0 ? (
-        <EmptyState icon={Wallet} title="Aucun paiement" description="Aucune transaction ne correspond." />
+        <EmptyState icon={Wallet} title={transactionPage > 1 ? "Aucun paiement sur cette page" : "Aucun paiement"} description="Aucune transaction ne correspond." />
       ) : (
         <Card>
           <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
             <div>
               <CardTitle className="text-base">Paiements clients</CardTitle>
               <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                {hasTruncatedTransactions
-                  ? `${txs.length} lignes affichées sur ${transactionCount} ; les cartes ci-dessus couvrent bien la totalité.`
-                  : `${transactionCount} ligne${transactionCount > 1 ? "s" : ""} affichée${transactionCount > 1 ? "s" : ""}.`}
+                Page {transactionPage} · {txs.length} ligne{txs.length > 1 ? "s" : ""} affichée{txs.length > 1 ? "s" : ""} sur {transactionCount} transaction{transactionCount > 1 ? "s" : ""} filtrée{transactionCount > 1 ? "s" : ""}.
               </p>
             </div>
-            {hasTruncatedTransactions && <Badge variant="secondary">300 plus récentes</Badge>}
+            <Badge variant="secondary">25 par page</Badge>
           </CardHeader>
           <CardContent className="space-y-3 p-4 md:p-0">
             <div className="grid gap-3 md:hidden">
@@ -668,11 +688,19 @@ export default async function AdminPaiementsPage({
         </Card>
       )}
 
+      {(transactionPage > 1 || hasNextTransactionPage) && (
+        <nav aria-label="Pages des paiements clients" className="flex items-center justify-between gap-3 text-sm font-semibold">
+          {transactionPage > 1 ? <Link prefetch={false} href={pageHref(transactionPage - 1, payoutPage)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Précédent</Link> : <span />}
+          <span className="text-[#64748B]">Paiements · page {transactionPage}</span>
+          {hasNextTransactionPage ? <Link prefetch={false} href={pageHref(transactionPage + 1, payoutPage)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Suivant</Link> : <span />}
+        </nav>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Factures / reçus professeurs</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Registre interne des paiements réellement versés aux professeurs, avec allocations, numéro de paiement et document téléchargeable.
+            Versements réellement effectués · 15 reçus par page, avec détail et document téléchargeable.
           </p>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -842,6 +870,13 @@ export default async function AdminPaiementsPage({
           </div>
         </CardContent>
       </Card>
+      {(payoutPage > 1 || hasNextPayoutPage) && (
+        <nav aria-label="Pages des reçus professeurs" className="flex items-center justify-between gap-3 text-sm font-semibold">
+          {payoutPage > 1 ? <Link prefetch={false} href={pageHref(transactionPage, payoutPage - 1)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Précédent</Link> : <span />}
+          <span className="text-[#64748B]">Reçus · page {payoutPage}</span>
+          {hasNextPayoutPage ? <Link prefetch={false} href={pageHref(transactionPage, payoutPage + 1)} className="rounded-lg border border-[#DDE6F7] bg-white px-4 py-3 text-[#111B4D]">Suivant</Link> : <span />}
+        </nav>
+      )}
     </div>
   );
 }

@@ -17,6 +17,8 @@ const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
 const adminReservations = read("src/app/admin/reservations/page.tsx");
 const adminReservationFilters = read("src/app/admin/reservations/list-client.tsx");
+const adminPayments = read("src/app/admin/paiements/page.tsx");
+const adminPaymentFilters = read("src/app/admin/paiements/filters-client.tsx");
 const publicHome = read("src/app/page.tsx");
 const globalCss = read("src/app/globals.css");
 const publicTeachers = read("src/app/professeurs/page.tsx");
@@ -93,6 +95,15 @@ check("Admin reservations bound the page and avoid shipping the whole teacher ca
     && /Filtres avancés/.test(adminReservationFilters)
     && /params\.delete\("page"\)/.test(adminReservationFilters)
     && !/teachers\.map/.test(adminReservationFilters));
+check("Admin finance paginates both registers and folds secondary filters",
+  /TRANSACTION_PAGE_SIZE = 25/.test(adminPayments)
+    && /PAYOUT_PAGE_SIZE = 15/.test(adminPayments)
+    && /take: TRANSACTION_PAGE_SIZE \+ 1/.test(adminPayments)
+    && /take: PAYOUT_PAGE_SIZE \+ 1/.test(adminPayments)
+    && /aria-label="Pages des paiements clients"/.test(adminPayments)
+    && /aria-label="Pages des reçus professeurs"/.test(adminPayments)
+    && /Méthode et dates/.test(adminPaymentFilters)
+    && /params\.delete\("page"\)/.test(adminPaymentFilters));
 check(
   "Public home is a lightweight mini-app launcher without database fan-out",
   !/getCachedTeacherSearchCatalog|from "@\/lib\/db"|db\.teacher\.findMany|TeacherCard|featuredCards/.test(publicHome)
