@@ -138,6 +138,11 @@ checkDirectoryContainsSql("20261004000000_client_support_payment_read_indexes", 
   'Dispute_openedById_status_idx',
   'CREATE INDEX CONCURRENTLY',
 ]);
+checkDirectoryContainsSql("20261004010000_review_client_history_index", [
+  'Review_clientId_createdAt_idx',
+  'Review_clientId_bookingId_idx',
+  'CREATE INDEX CONCURRENTLY',
+]);
 
 const readinessScript = fs.readFileSync("scripts/check-database-readiness.mjs", "utf8");
 record(

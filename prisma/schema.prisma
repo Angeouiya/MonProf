@@ -1020,6 +1020,8 @@ model Review {
 
   @@index([adminStatus])
   @@index([teacherId, adminStatus])
+  @@index([clientId, createdAt])
+  @@index([clientId, bookingId])
 }
 
 enum ReviewAdminStatus {

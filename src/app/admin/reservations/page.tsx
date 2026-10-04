@@ -18,6 +18,7 @@ import { CLIENT_TYPES, COURSE_CATEGORIES, SCHOOL_SYSTEMS } from "@/lib/course-ca
 import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 40;
 
 const VALID_BOOKING_STATUSES = [
   "PENDING_PAYMENT","PAID","PENDING_ADMIN_VALIDATION","CONFIRMED","ASSIGNED","IN_PROGRESS",
@@ -39,12 +40,14 @@ export default async function AdminReservationsPage({
 }: {
   searchParams: Promise<{
     q?: string; status?: string; payment?: string; teacherId?: string; clientId?: string;
-    clientType?: string; courseCategory?: string; schoolSystem?: string;
+    clientType?: string; courseCategory?: string; schoolSystem?: string; page?: string;
   }>;
 }) {
   await requireAdmin("BOOKINGS_VIEW");
   const sp = await searchParams;
-  const q = sp.q?.trim();
+  const q = sp.q?.trim().slice(0, 100);
+  const parsedPage = Number(sp.page ?? 1);
+  const page = Number.isFinite(parsedPage) ? Math.max(1, Math.min(10_000, Math.trunc(parsedPage))) : 1;
   const status = sp.status && VALID_BOOKING_STATUSES.includes(sp.status) ? sp.status as any : undefined;
   const payment = sp.payment && VALID_PAYMENT_STATUSES.includes(sp.payment) ? sp.payment as any : undefined;
   const teacherId = sp.teacherId || undefined;
@@ -55,15 +58,16 @@ export default async function AdminReservationsPage({
 
   const where: any = {};
   if (q) {
+    const textMatch = { contains: q, mode: "insensitive" };
     where.OR = [
-      { reference: { contains: q } },
-      { subjectName: { contains: q } },
-      { levelName: { contains: q } },
-      { schoolProgram: { contains: q } },
-      { courseCatalogName: { contains: q } },
-      { preciseLevel: { contains: q } },
-      { client: { name: { contains: q } } },
-      { teacher: { OR: [{ fullName: { contains: q } }, { professionalName: { contains: q } }] } },
+      { reference: textMatch },
+      { subjectName: textMatch },
+      { levelName: textMatch },
+      { schoolProgram: textMatch },
+      { courseCatalogName: textMatch },
+      { preciseLevel: textMatch },
+      { client: { name: textMatch } },
+      { teacher: { OR: [{ fullName: textMatch }, { professionalName: textMatch }] } },
     ];
   }
   if (status) where.status = status;
@@ -74,19 +78,34 @@ export default async function AdminReservationsPage({
   if (courseCategory) where.courseCategory = courseCategory;
   if (schoolSystem) where.schoolSystem = schoolSystem;
 
-  const [bookings, teachers] = await db.$transaction([
+  const [totalCount, bookings] = await db.$transaction([
+    db.booking.count({ where }),
     db.booking.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: {
         client: { select: { id: true, name: true } },
         teacher: { select: { id: true, fullName: true, professionalName: true, photoUrl: true, phone: true, badgeVerified: true } },
         transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
       },
-      take: 200,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
-    db.teacher.findMany({ orderBy: { fullName: "asc" }, select: { id: true, fullName: true, professionalName: true } }),
   ]);
+  const selectedTeacher = teacherId ? await db.teacher.findUnique({
+    where: { id: teacherId },
+    select: { fullName: true, professionalName: true },
+  }) : null;
+  const teacherName = selectedTeacher?.professionalName || selectedTeacher?.fullName || null;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const pageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries({ q, status, payment, teacherId, clientId, clientType, courseCategory, schoolSystem })) {
+      if (value) params.set(key, value);
+    }
+    if (nextPage > 1) params.set("page", String(nextPage));
+    return `/admin/reservations${params.size ? `?${params.toString()}` : ""}`;
+  };
   const now = new Date();
   const verifiedPaymentBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
   const paidOrBlocked = verifiedPaymentBookings.filter((booking) => ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID", "REFUND_PENDING", "PARTIAL_REFUND_PENDING", "PARTIALLY_REFUNDED", "REFUNDED", "RETAINED"].includes(booking.paymentStatus));
@@ -98,42 +117,43 @@ export default async function AdminReservationsPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Réservations" description={`${bookings.length} réservation(s)`} rootPage />
+      <PageHeader title="Réservations" description={`${totalCount} dossier(s) · ${bookings.length} affiché(s)`} rootPage />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SignalCard
-          title="Volume sous contrôle"
+          title="Volume affiché"
           value={formatFCFA(totalPaidScope)}
-          description={`${paidOrBlocked.length} réservation(s) payées, bloquées, validées ou soldées.`}
+          description={`${paidOrBlocked.length} réservation(s) vérifiées sur cette page.`}
           tone="violet"
         />
         <SignalCard
           title="Fonds bloqués"
           value={`${blockedCount} dossier${blockedCount > 1 ? "s" : ""}`}
-          description="Réservations payées à suivre jusqu'à validation client."
+          description="Dossiers de cette page à suivre jusqu'à validation client."
           tone={blockedCount ? "amber" : "blue"}
         />
         <SignalCard
           title="Paiements prof"
           value={`${toPayCount} à libérer`}
-          description="Réservations prêtes pour comptabilité professeur."
+          description="Dossiers de cette page prêts pour la comptabilité."
           tone={toPayCount ? "violet" : "blue"}
         />
         <SignalCard
           title="Urgences"
           value={`${operationalUrgencies.length} signal${operationalUrgencies.length > 1 ? "aux" : ""}`}
-          description={`${disputedCount} litige(s) ou dossier(s) sensibles dans la liste.`}
+          description={`${disputedCount} litige(s) ou dossier(s) sensibles sur cette page.`}
           tone={operationalUrgencies.length ? "red" : "blue"}
         />
       </div>
 
       <ReservationsListClient
+        key={q ?? ""}
         filters={{
           q: q ?? "", status: status ?? "", payment: payment ?? "",
           teacherId: teacherId ?? "", clientId: clientId ?? "",
           clientType: clientType ?? "", courseCategory: courseCategory ?? "", schoolSystem: schoolSystem ?? "",
         }}
-        teachers={teachers.map((t) => ({ id: t.id, name: t.professionalName || t.fullName }))}
+        selectedTeacherName={teacherName}
       />
 
       {bookings.length === 0 ? (
@@ -314,6 +334,13 @@ export default async function AdminReservationsPage({
             </CardContent>
           </Card>
         </>
+      )}
+      {totalCount > PAGE_SIZE && (
+        <nav aria-label="Pages des réservations" className="flex items-center justify-between gap-3 text-sm font-semibold">
+          {page > 1 ? <Link prefetch={false} href={pageHref(page - 1)} className="rounded-lg border border-[#D8DEE9] bg-white px-4 py-3 text-[#111B4D]">Précédent</Link> : <span />}
+          <span className="text-[#52627A]">{page} / {totalPages}</span>
+          {page < totalPages ? <Link prefetch={false} href={pageHref(page + 1)} className="rounded-lg border border-[#D8DEE9] bg-white px-4 py-3 text-[#111B4D]">Suivant</Link> : <span />}
+        </nav>
       )}
     </div>
   );

@@ -15,6 +15,8 @@ const clientReservationIndex = read("src/lib/client-reservation-index.ts");
 const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
+const adminReservations = read("src/app/admin/reservations/page.tsx");
+const adminReservationFilters = read("src/app/admin/reservations/list-client.tsx");
 const publicHome = read("src/app/page.tsx");
 const globalCss = read("src/app/globals.css");
 const publicTeachers = read("src/app/professeurs/page.tsx");
@@ -83,6 +85,14 @@ check("Client reservations use three simple views and an optional server-wide se
     && !/data-client-reservation-filter-rail/.test(clientReservationList));
 check("Admin dashboard runs independent operational reads concurrently", hasParallelReads(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
+check("Admin reservations bound the page and avoid shipping the whole teacher catalog",
+  /PAGE_SIZE = 40/.test(adminReservations)
+    && /db\.booking\.count\(\{ where \}\)/.test(adminReservations)
+    && /take: PAGE_SIZE/.test(adminReservations)
+    && !/db\.teacher\.findMany/.test(adminReservations)
+    && /Filtres avancés/.test(adminReservationFilters)
+    && /params\.delete\("page"\)/.test(adminReservationFilters)
+    && !/teachers\.map/.test(adminReservationFilters));
 check(
   "Public home is a lightweight mini-app launcher without database fan-out",
   !/getCachedTeacherSearchCatalog|from "@\/lib\/db"|db\.teacher\.findMany|TeacherCard|featuredCards/.test(publicHome)
@@ -154,7 +164,13 @@ check("Client courses paginate exact paid proofs without loading all history",
     && /LIMIT \$\{CLIENT_COURSE_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientCourseIndex)
     && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientCourseIndex)
     && /WHERE b\."clientId" = \$\{input\.clientId\}/.test(clientCourseIndex));
-check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
+check("Client reviews paginate pending and history without a hydrated client-side filter wall",
+  hasDatabaseTransaction(clientReviews)
+    && /take: PENDING_PAGE_SIZE/.test(clientReviews)
+    && /take: HISTORY_PAGE_SIZE/.test(clientReviews)
+    && /db\.booking\.count/.test(clientReviews)
+    && /db\.review\.count/.test(clientReviews)
+    && !/ReviewHistoryClient|myReviews\.map/.test(clientReviews));
 check("Client support summary avoids loading all bookings and disputes",
   hasDatabaseTransaction(clientSupport)
     && /db\.booking\.count\(\{ where: eligibleBookingWhere\(user\.id\) \}\)/.test(clientSupport)
