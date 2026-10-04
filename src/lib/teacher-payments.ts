@@ -26,6 +26,20 @@ export type TeacherPaymentAdjustment = {
   bookingId?: string | null;
 };
 
+/** Index local au rendu : évite de reparcourir toutes les retenues pour chaque cours. */
+export function groupTeacherPaymentAdjustmentsByBooking<T extends TeacherPaymentAdjustment>(
+  adjustments: T[],
+) {
+  const byBooking = new Map<string, T[]>();
+  for (const adjustment of adjustments) {
+    if (!adjustment.bookingId) continue;
+    const rows = byBooking.get(adjustment.bookingId);
+    if (rows) rows.push(adjustment);
+    else byBooking.set(adjustment.bookingId, [adjustment]);
+  }
+  return byBooking;
+}
+
 export type TeacherRetentionEvidence = {
   bookingId: string;
   retainedAmount: number;

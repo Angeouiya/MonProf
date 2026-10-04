@@ -36,6 +36,7 @@ export default async function AdminPaiementsPage({
 }: {
   searchParams: Promise<{ method?: string; status?: string; from?: string; to?: string }>;
 }) {
+  const pageStartedAt = Date.now();
   await requireAdmin("FINANCE_VIEW");
   const sp = await searchParams;
   const method = sp.method && VALID_METHODS.includes(sp.method) ? sp.method : undefined;
@@ -59,6 +60,7 @@ export default async function AdminPaiementsPage({
     booking: { is: verifiedPayDunyaBookingWhere() },
   };
 
+  const financeReadStartedAt = Date.now();
   const [
     rawTxs,
     rawFilteredStatusTotals,
@@ -219,6 +221,15 @@ export default async function AdminPaiementsPage({
       _sum: { amount: true },
     }),
   ]);
+  const financeReadMs = Date.now() - financeReadStartedAt;
+  if (financeReadMs > 1500) {
+    console.warn("[performance] admin-payments slow read", {
+      pageMs: Date.now() - pageStartedAt,
+      financeReadMs,
+      financialBookingCount: financialBookings.length,
+      transactionCount: rawTxs.length,
+    });
+  }
   // Prisma perd la forme précise des agrégats groupBy dans le tuple
   // hétérogène de $transaction, bien que ces deux agrégats soient requis
   // explicitement ci-dessus.

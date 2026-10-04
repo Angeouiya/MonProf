@@ -7,8 +7,11 @@ import {
   type FinancialRescheduleLine,
 } from "../src/lib/financial-summary";
 import {
+  calculateTeacherPayoutAvailability,
+  getTeacherFinancialSettlement,
   getMaterializedTeacherGlobalRetention,
   getTeacherGlobalRetentionLedger,
+  groupTeacherPaymentAdjustmentsByBooking,
 } from "../src/lib/teacher-payments";
 
 const summary = buildPlatformFinancialSummary([
@@ -483,6 +486,82 @@ assert.match(
   professorPaymentsPageSource,
   /Les totaux ci-dessus couvrent toutes les périodes/,
   "la différence entre totaux exhaustifs et historique visible doit être expliquée",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /groupTeacherPaymentAdjustmentsByBooking\(adjustments\)/,
+  "les retenues professeur doivent être indexées une fois pour tous les cours",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /db\.bookingSession\.groupBy\(\{[\s\S]*?_sum:\s*\{\s*retainedAmount:\s*true\s*\}/,
+  "les retenues de séance doivent être regroupées dans PostgreSQL",
+);
+assert.match(
+  professorPaymentsPageSource,
+  /db\.teacherPayoutAllocation\.aggregate\(\{[\s\S]*?_sum:\s*\{\s*amount:\s*true\s*\}/,
+  "les transferts Jèko en cours doivent être sommés dans PostgreSQL",
+);
+
+const performanceAdjustments = [
+  ...Array.from({ length: 240 }, (_, index) => [
+    { bookingId: `booking-${index}`, amount: 50 + index, status: "APPLIED" },
+    { bookingId: `booking-${index}`, amount: 2_000, status: "PENDING" },
+  ]).flat(),
+  { bookingId: null, amount: 900, status: "APPLIED" },
+];
+const adjustmentsByBooking = groupTeacherPaymentAdjustmentsByBooking(performanceAdjustments);
+assert.equal(adjustmentsByBooking.size, 240);
+for (let index = 0; index < 240; index += 1) {
+  const booking = {
+    id: `booking-${index}`,
+    status: index % 10 === 0 ? "CANCELLED" : "CONFIRMED",
+    paymentStatus: index % 10 === 0 ? "RETAINED" : "TO_PAY_TEACHER",
+    teacherNetAmount: 10_000,
+    cancellationPenaltyTeacherAmount: 3_000,
+    teacherPaidAmount: index % 3 === 0 ? 1_000 : 0,
+  };
+  assert.deepEqual(
+    getTeacherFinancialSettlement(booking, adjustmentsByBooking.get(booking.id) ?? []),
+    getTeacherFinancialSettlement(booking, performanceAdjustments),
+    `le regroupement des retenues doit préserver le solde du dossier ${index}`,
+  );
+}
+
+const sessionRetentionRows = [
+  { bookingId: "booking-1", retainedAmount: 100 },
+  { bookingId: "booking-1", retainedAmount: 250 },
+  { bookingId: "booking-2", retainedAmount: 80 },
+];
+const legacyRetentionRows = [
+  { bookingId: "booking-3", retainedAmountSnapshot: 120 },
+  { bookingId: "booking-3", retainedAmountSnapshot: 90 },
+];
+const groupedRetentionLedger = getTeacherGlobalRetentionLedger(
+  [{ bookingId: null, amount: 500, status: "APPLIED" }],
+  [{ bookingId: "booking-1", retainedAmount: 350 }, { bookingId: "booking-2", retainedAmount: 80 }],
+  [{ bookingId: "booking-3", retainedAmountSnapshot: 120 }],
+);
+assert.deepEqual(
+  groupedRetentionLedger,
+  getTeacherGlobalRetentionLedger(
+    [{ bookingId: null, amount: 500, status: "APPLIED" }],
+    sessionRetentionRows,
+    legacyRetentionRows,
+  ),
+  "les retenues agrégées en SQL doivent préserver l'affectation par cours",
+);
+const draftBase = {
+  settlements: [{ bookingId: "booking-1", remaining: 600 }],
+  globalRetentionLedger: groupedRetentionLedger,
+};
+assert.deepEqual(
+  calculateTeacherPayoutAvailability({
+    ...draftBase,
+    draftReservations: [{ amount: 100 }, { amount: 200 }],
+  }),
+  calculateTeacherPayoutAvailability({ ...draftBase, draftReservations: [{ amount: 300 }] }),
+  "la somme SQL des transferts Jèko en cours doit préserver le solde demandable",
 );
 
 console.log("OK financial summary: gross/net cash, refunds, penalties, retentions, mixed payouts and provider fees verified.");
