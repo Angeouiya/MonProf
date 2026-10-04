@@ -369,17 +369,9 @@ function publicTeacherJourneyCacheKey(request: Request) {
   if (!PUBLIC_TEACHER_JOURNEYS.has(journey)) return null;
   if ([...url.searchParams.keys()].some((key) => key !== "journey" && key !== "_rsc")) return null;
 
-  const rscToken = url.searchParams.get("_rsc");
-  const isRsc = request.headers.get("rsc") === "1";
-  if (isRsc && rscToken && !request.headers.has("next-router-segment-prefetch")) {
-    const mode = request.headers.has("next-router-prefetch") ? "prefetch" : "navigation";
-    return new Request(
-      `${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${journey}/rsc/${mode}/${encodeURIComponent(rscToken)}`,
-      { method: "GET" },
-    );
-  }
-
-  if (rscToken || isRsc) return null;
+  // RSC payloads contain build-specific module references. Reusing one
+  // across Worker deployments can leave client navigation on a loading UI.
+  if (url.searchParams.has("_rsc") || request.headers.get("rsc") === "1") return null;
   const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
   const navigation = request.headers.get("sec-fetch-mode") === "navigate";
   if (!acceptsHtml && !navigation) return null;

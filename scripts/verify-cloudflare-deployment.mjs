@@ -44,7 +44,7 @@ assert.match(worker, /getUTCMinutes\(\) % 5 === 0[\s\S]*?notificationReminders/)
 
 assert.match(database, /new PrismaPg\(/);
 assert.doesNotMatch(database, /maxUses: 1/);
-assert.match(database, /max: 5/);
+assert.match(database, /max: 1/);
 assert.match(database, /connectionTimeoutMillis: 8_000/);
 assert.match(database, /query_timeout: 15_000/);
 assert.match(database, /statement_timeout: 15_000/);

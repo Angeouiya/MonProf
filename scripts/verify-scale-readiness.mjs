@@ -28,7 +28,7 @@ record(
   database.includes("Symbol.for('competence.prisma.request-context')")
     && database.includes("new AsyncLocalStorage<AppPrismaClient>()")
     && database.includes("runWithDatabaseRequestContext")
-    && database.includes("max: 5"),
+    && database.includes("max: 1"),
 );
 record(
   "Le pool Hyperdrive réutilise les connexions pendant la requête sans attente infinie",

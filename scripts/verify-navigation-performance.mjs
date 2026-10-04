@@ -99,11 +99,9 @@ check(
   "Public navigation avoids eager RSC fan-out",
   !/prefetch=\{true\}/.test(publicLayout)
     && /prefetch=\{false\}/.test(journeySwitcher)
-    && /router\.prefetch\(href\)/.test(journeySwitcher)
-    && /onPointerEnter=/.test(journeySwitcher)
-    && /onPointerLeave=/.test(journeySwitcher)
-    && /onPointerDown=/.test(journeySwitcher)
-    && /onFocus=/.test(journeySwitcher)
+    && /href\.startsWith\("\/professeurs"\)/.test(journeySwitcher)
+    && /return <a key=\{journey\} href=\{href\}/.test(journeySwitcher)
+    && !/router\.prefetch|onPointerEnter|onPointerDown/.test(journeySwitcher)
     && /prefetch=\{false\}/.test(teacherCard),
 );
 check("PWA install prompt loads only after the critical render", /PWA_PROMPT_AFTER_LOAD_MS\s*=\s*5_000/.test(deferredPwaPrompt) && /addEventListener\("load"/.test(deferredPwaPrompt) && /lazy\(\(\) => import/.test(deferredPwaPrompt) && /data-pwa-install-prompt/.test(pwaPrompt));
@@ -116,6 +114,7 @@ check(
     && /readCachedPublicTeacherJourney\(request\)/.test(cloudflareWorker)
     && /schedulePublicTeacherJourneyCache\(request/.test(cloudflareWorker)
     && /key !== "journey" && key !== "_rsc"/.test(cloudflareWorker)
+    && /url\.searchParams\.has\("_rsc"\) \|\| request\.headers\.get\("rsc"\) === "1"/.test(cloudflareWorker)
     && /readSessionCookie\(request\.headers\.get\("cookie"\)\)/.test(cloudflareWorker)
     && /x-competence-teacher-journey-cache/.test(cloudflareWorker),
 );

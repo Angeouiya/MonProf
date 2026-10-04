@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import {
   TEACHER_JOURNEY_CONFIG,
@@ -37,9 +36,6 @@ export function JourneySwitcher({
   size = "regular",
   className,
 }: JourneySwitcherProps) {
-  const router = useRouter();
-  const warmedHrefs = useRef(new Set<string>());
-  const hoverWarmupTimer = useRef<number | null>(null);
   const firstJourney = journeys[0] ?? "ivoirien";
   const resolvedActive = activeJourney && journeys.includes(activeJourney)
     ? activeJourney
@@ -57,32 +53,6 @@ export function JourneySwitcher({
     "--journey-count": Math.max(1, journeys.length),
     "--journey-index": selectedIndex,
   };
-
-  const warmJourney = (href: string) => {
-    if (warmedHrefs.current.has(href)) return;
-    warmedHrefs.current.add(href);
-    router.prefetch(href);
-  };
-
-  const cancelHoverWarmup = () => {
-    if (hoverWarmupTimer.current === null) return;
-    window.clearTimeout(hoverWarmupTimer.current);
-    hoverWarmupTimer.current = null;
-  };
-
-  const scheduleHoverWarmup = (href: string) => {
-    cancelHoverWarmup();
-    hoverWarmupTimer.current = window.setTimeout(() => {
-      hoverWarmupTimer.current = null;
-      warmJourney(href);
-    }, 120);
-  };
-
-  useEffect(() => () => {
-    if (hoverWarmupTimer.current !== null) {
-      window.clearTimeout(hoverWarmupTimer.current);
-    }
-  }, []);
 
   return (
     <div
@@ -109,40 +79,34 @@ export function JourneySwitcher({
           const href = hrefs[journey];
           const active = selectedJourney === journey;
           const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;
+          const content = (
+            <span className="journey-switcher__text">
+              <span className="journey-switcher__title">{config.shortLabel}</span>
+              {showMeta && <span className="journey-switcher__meta" data-journey-tab-meta>{tabMeta}</span>}
+            </span>
+          );
+          const commonProps = {
+            "aria-label": showMeta ? `${config.label} · ${tabMeta}` : config.label,
+            "aria-current": active ? "page" as const : undefined,
+            "aria-selected": active,
+            role: "tab" as const,
+            "data-journey-tab": journey,
+            "data-active": active ? "true" : "false",
+            "data-state": active ? "active" : "inactive",
+            className: "journey-switcher__link",
+            onClick: () => setPendingSelection({ source: resolvedActive, target: journey }),
+          };
 
           if (!href) return null;
 
+          // Public mini-app pages are edge-cached as HTML. A document
+          // navigation avoids multiple RSC prefetches and stale payloads.
+          if (href.startsWith("/professeurs")) {
+            return <a key={journey} href={href} {...commonProps}>{content}</a>;
+          }
+
           return (
-            <Link
-              key={journey}
-              href={href}
-              prefetch={false}
-              aria-label={showMeta ? `${config.label} · ${tabMeta}` : config.label}
-              aria-current={active ? "page" : undefined}
-              aria-selected={active}
-              role="tab"
-              data-journey-tab={journey}
-              data-active={active ? "true" : "false"}
-              data-state={active ? "active" : "inactive"}
-              className="journey-switcher__link"
-              onPointerEnter={() => scheduleHoverWarmup(href)}
-              onPointerLeave={cancelHoverWarmup}
-              onPointerDown={() => {
-                cancelHoverWarmup();
-                warmJourney(href);
-              }}
-              onFocus={() => warmJourney(href)}
-              onClick={() => setPendingSelection({ source: resolvedActive, target: journey })}
-            >
-              <span className="journey-switcher__text">
-                <span className="journey-switcher__title">{config.shortLabel}</span>
-                {showMeta && (
-                  <span className="journey-switcher__meta" data-journey-tab-meta>
-                    {tabMeta}
-                  </span>
-                )}
-              </span>
-            </Link>
+            <Link key={journey} href={href} prefetch={false} {...commonProps}>{content}</Link>
           );
         })}
       </div>
