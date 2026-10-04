@@ -131,6 +131,13 @@ checkDirectoryContainsSql("20260805000000_teacher_journey_strict_defaults", [
   'ALTER COLUMN "offersFrenchSystem" SET DEFAULT false',
   'ALTER COLUMN "offersProfessionalTraining" SET DEFAULT false',
 ]);
+checkDirectoryContainsSql("20261004000000_client_support_payment_read_indexes", [
+  'Booking_clientId_status_createdAt_idx',
+  'Transaction_bookingId_type_status_amount_idx',
+  'Dispute_openedById_createdAt_idx',
+  'Dispute_openedById_status_idx',
+  'CREATE INDEX CONCURRENTLY',
+]);
 
 const readinessScript = fs.readFileSync("scripts/check-database-readiness.mjs", "utf8");
 record(

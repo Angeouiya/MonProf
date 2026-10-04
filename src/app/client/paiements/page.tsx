@@ -4,7 +4,6 @@ import { getSessionUser } from "@/lib/session";
 import {
   CLIENT_COMMAND_CENTERS_ENABLED,
   ClientCompactFacts,
-  ClientFocusPanel,
   ClientInfoPill,
   ClientPageHeader,
   ClientProcessTracker,
@@ -18,24 +17,52 @@ import { PaymentMethodLogo } from "@/components/shared/payment-method-logo";
 import { Button } from "@/components/ui/button";
 import { formatFCFA, formatFCFAShort, formatDate } from "@/lib/format";
 import { ACTIVE_PAYMENT_METHODS } from "@/lib/payment-methods";
-import { ExternalLink, ReceiptText, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
-import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { ExternalLink, ShieldCheck, Search, LockKeyhole, CalendarCheck, Clock3, CheckCircle2 } from "lucide-react";
+import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
+import { CLIENT_PAYMENT_PAGE_SIZE, getClientPaymentLedgerPage } from "@/lib/client-payment-ledger";
 import { clientPaymentChannelLabel } from "@/lib/client-payment-display";
 import { PaymentHistoryClient, type ClientPaymentHistoryItem } from "./payment-history-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaiementsPage() {
+export default async function PaiementsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await getSessionUser();
   if (!user) return null;
+  const params = await searchParams;
+  const pageNumber = Math.max(1, Math.min(10000, Number.parseInt(params.page ?? "1", 10) || 1));
 
-  const [rawTransactions, pendingPaymentBookings] = await db.$transaction([
-    db.transaction.findMany({
-    where: {
-      booking: { is: verifiedPayDunyaBookingWhere({ clientId: user.id }) },
-      type: { in: ["CLIENT_PAYMENT", "RESCHEDULE_FEE", "REFUND"] },
-    },
-    orderBy: { createdAt: "desc" },
+  const [ledger, pendingPaymentBookings] = await Promise.all([
+    getClientPaymentLedgerPage(user.id, pageNumber),
+    db.booking.findMany({
+      where: {
+        clientId: user.id,
+        status: "PENDING_PAYMENT",
+        paymentStatus: "FAILED",
+        isQuoteOnly: false,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        reference: true,
+        subjectName: true,
+        levelName: true,
+        startDate: true,
+        scheduledDate: true,
+        totalClientPays: true,
+        totalPrice: true,
+        courseAmount: true,
+        transportFee: true,
+        paymentServiceFeeAmount: true,
+        paymentProvider: true,
+        paymentMethod: true,
+        paydunyaCheckoutUrl: true,
+        teacher: { select: { fullName: true, professionalName: true, photoUrl: true, badgeVerified: true } },
+      },
+    }),
+  ]);
+  const rawTransactions = ledger.ids.length ? await db.transaction.findMany({
+    where: { id: { in: ledger.ids } },
     include: {
       rescheduleRequest: {
         select: {
@@ -60,55 +87,16 @@ export default async function PaiementsPage() {
         },
       },
     },
-    }),
-    db.booking.findMany({
-    where: {
-      clientId: user.id,
-      status: "PENDING_PAYMENT",
-      paymentStatus: "FAILED",
-      isQuoteOnly: false,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-    select: {
-      id: true,
-      reference: true,
-      subjectName: true,
-      levelName: true,
-      startDate: true,
-      scheduledDate: true,
-      totalClientPays: true,
-      totalPrice: true,
-      courseAmount: true,
-      transportFee: true,
-      paymentServiceFeeAmount: true,
-      paymentProvider: true,
-      paymentMethod: true,
-      paydunyaCheckoutUrl: true,
-      teacher: {
-        select: {
-          fullName: true,
-          professionalName: true,
-          photoUrl: true,
-          badgeVerified: true,
-        },
-      },
-    },
-    }),
-  ]);
-  const transactions = rawTransactions.filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking));
+  }) : [];
+  const transactionOrder = new Map(ledger.ids.map((id, index) => [id, index]));
+  const transactions = rawTransactions
+    .filter((transaction) => hasVerifiedPayDunyaClientPayment(transaction.booking))
+    .sort((a, b) => (transactionOrder.get(a.id) ?? 0) - (transactionOrder.get(b.id) ?? 0));
 
-  const totalDepense = transactions
-    .filter((t) => t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const fondsBloques = transactions
-    .filter((t) => (t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE") && t.status === "BLOCKED")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalRembourse = transactions
-    .filter((t) => t.type === "REFUND")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const secureTransactions = transactions.filter((t) => (t.type === "CLIENT_PAYMENT" || t.type === "RESCHEDULE_FEE") && ["RECEIVED", "BLOCKED", "VALIDATED", "TO_PAY_TEACHER", "TEACHER_PAID"].includes(t.status));
-  const lastSecureTransactionSource = secureTransactions[0] ?? transactions[0] ?? null;
+  const totalDepense = ledger.totalSpent;
+  const fondsBloques = ledger.totalBlocked;
+  const totalRembourse = ledger.totalRefunded;
+  const lastSecureTransactionSource = transactions[0] ?? null;
   const lastSecureTransaction = lastSecureTransactionSource
     ? {
         ...lastSecureTransactionSource,
@@ -160,14 +148,16 @@ export default async function PaiementsPage() {
         showBack={false}
       />
 
-      <PaymentMobilePriorityCard
-        totalDepense={totalDepense}
-        fondsBloques={fondsBloques}
-        totalRembourse={totalRembourse}
-        pendingCount={pendingPaymentBookings.length}
-        priorityPendingBooking={priorityPendingBooking}
-        lastSecureTransaction={lastSecureTransaction}
-      />
+      {(pageNumber === 1 || priorityPendingBooking) && (
+        <PaymentMobilePriorityCard
+          totalDepense={totalDepense}
+          fondsBloques={fondsBloques}
+          totalRembourse={totalRembourse}
+          pendingCount={pendingPaymentBookings.length}
+          priorityPendingBooking={priorityPendingBooking}
+          lastSecureTransaction={lastSecureTransaction}
+        />
+      )}
 
       {CLIENT_COMMAND_CENTERS_ENABLED && (
       <div className="max-md:hidden">
@@ -186,28 +176,20 @@ export default async function PaiementsPage() {
         <PendingPaymentsPanel bookings={pendingPaymentBookings} />
       )}
 
-      {lastSecureTransaction && (
-        <ClientFocusPanel
-          className="max-md:hidden"
-          icon={ReceiptText}
-          eyebrow="Dernier mouvement"
-          title={<Money amount={lastSecureTransaction.amount} />}
-          description={`${formatDate(lastSecureTransaction.createdAt)} · ${paymentProviderLabel(lastSecureTransaction.effectivePaymentProvider)} · ${clientPaymentChannelLabel(lastSecureTransaction.method)} · ${lastSecureTransaction.booking.reference}`}
-          action={
-            <Button asChild className="min-h-11 w-full rounded-lg">
-              <Link href={`/client/reservations/${lastSecureTransaction.booking.id}`}>
-                Ouvrir le dossier
-                <ExternalLink className="ml-1.5 h-4 w-4" />
-              </Link>
-            </Button>
-          }
-        />
-      )}
-
-      {transactions.length === 0 && pendingPaymentBookings.length === 0 ? (
+      {ledger.totalCount === 0 && pendingPaymentBookings.length === 0 ? (
         <PaymentEmptyState />
-      ) : transactions.length > 0 ? (
-        <PaymentHistoryClient transactions={paymentHistory} />
+      ) : ledger.totalCount > 0 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-[#52627A]">Historique vérifié · page {pageNumber} sur {Math.ceil(ledger.totalCount / CLIENT_PAYMENT_PAGE_SIZE)}. La recherche filtre cette page.</p>
+          <PaymentHistoryClient transactions={paymentHistory} />
+          {ledger.totalCount > CLIENT_PAYMENT_PAGE_SIZE && (
+            <nav className="flex items-center justify-between gap-3 text-sm font-semibold text-[#111B4D]" aria-label="Pages des paiements">
+              {pageNumber > 1 ? <Link href={`/client/paiements?page=${pageNumber - 1}`}>Précédent</Link> : <span />}
+              <span>Page {pageNumber}</span>
+              {pageNumber * CLIENT_PAYMENT_PAGE_SIZE < ledger.totalCount ? <Link href={`/client/paiements?page=${pageNumber + 1}`}>Suivant</Link> : <span />}
+            </nav>
+          )}
+        </div>
       ) : (
         <ClientSurface compact className="p-4">
           <div className="flex min-w-0 flex-col gap-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
@@ -252,7 +234,7 @@ function PaymentMobilePriorityCard({
   const eyebrow = pendingBooking
     ? "À payer maintenant"
     : lastSecureTransaction
-      ? "Dernier paiement"
+      ? "Dernier mouvement"
       : "Caisse Jèko";
   const hint = pendingBooking
     ? `${pendingBooking.reference} · Boutique Compétence sur Jèko`
@@ -290,11 +272,14 @@ function PaymentMobilePriorityCard({
         <ClientInfoPill label="Attente" value={pendingCount} strong={pendingCount > 0} />
       </div>
 
-      <div className="flex min-w-0 gap-2 overflow-x-auto border-t border-white/15 bg-white px-4 py-3 sm:px-6" data-client-payment-method-rail aria-label="Moyens de paiement Jèko disponibles">
-        {ACTIVE_PAYMENT_METHODS.map((method) => (
-          <PaymentMethodLogo key={method} method={method} className="h-10 w-28 shrink-0 rounded-lg" />
-        ))}
-      </div>
+      <details className="border-t border-white/15 bg-white px-4 py-3 text-[#111B4D] sm:px-6">
+        <summary className="cursor-pointer text-sm font-semibold">Moyens de paiement acceptés</summary>
+        <div className="mt-3 flex min-w-0 gap-2 overflow-x-auto" data-client-payment-method-rail aria-label="Moyens de paiement Jèko disponibles">
+          {ACTIVE_PAYMENT_METHODS.map((method) => (
+            <PaymentMethodLogo key={method} method={method} className="h-10 w-28 shrink-0 rounded-lg" />
+          ))}
+        </div>
+      </details>
 
       {totalRembourse > 0 && (
         <p className="border-t border-white/15 px-4 py-3 text-xs font-semibold text-[#E0E7FF] sm:px-6">
@@ -514,49 +499,42 @@ function PendingPaymentsPanel({ bookings }: { bookings: PendingPaymentBooking[] 
                 </div>
               </div>
 
-              <ClientCompactFacts
-                className="mt-3"
-                items={[
-                  { label: "Date", value: requestedDate },
-                  { label: "Montant", value: <Money amount={getPendingBookingAmount(booking)} />, strong: true },
-                  { label: "Prestataire", value: paymentProviderLabel(booking.paymentProvider, Boolean(booking.paydunyaCheckoutUrl)), strong: true },
-                  { label: "État", value: "Brouillon non réservé", strong: true },
-                ]}
-              />
-
-              <ClientBookingAmountBreakdown
-                courseAmount={booking.courseAmount}
-                transportFee={booking.transportFee}
-                serviceFeeAmount={booking.paymentServiceFeeAmount}
-                totalAmount={getPendingBookingAmount(booking)}
-              />
-
-              <JekoHostedCheckoutPreview
-                amount={getPendingBookingAmount(booking)}
-                method={booking.paymentMethod}
-                merchantName="Boutique Compétence"
-                className="mt-3 bg-[#FAFBFF]"
-              />
-
-              <ClientRecordStatusLine
-                className="mt-3"
-                label="Action attendue"
-                hint="Payez via Jèko, puis utilisez la vérification serveur sur le dossier si vous revenez sur la plateforme."
-              />
-
-              <div className="mt-3 grid gap-2 min-[520px]:grid-cols-2">
-                <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href={`/client/reservations/${booking.id}`}>
-                    Dossier
-                    <ExternalLink className="ml-1.5 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                  <Link href={`/client/reservations/${booking.id}?payment=pending`}>
-                    Payer via Jèko
-                  </Link>
-                </Button>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#E3E8F2] pt-3">
+                <span className="text-sm text-[#52627A]">{requestedDate}</span>
+                <Money amount={getPendingBookingAmount(booking)} className="text-lg font-bold text-[#111827]" />
               </div>
+              <Button asChild className="mt-3 min-h-11 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
+                <Link href={`/client/reservations/${booking.id}?payment=pending`}>Payer via Jèko</Link>
+              </Button>
+              <details className="mt-3 border-t border-[#E3E8F2] pt-3">
+                <summary className="cursor-pointer text-sm font-semibold text-[#111B4D]">Voir le détail du paiement</summary>
+                <ClientCompactFacts
+                  className="mt-3"
+                  items={[
+                    { label: "Date", value: requestedDate },
+                    { label: "Montant", value: <Money amount={getPendingBookingAmount(booking)} />, strong: true },
+                    { label: "Prestataire", value: paymentProviderLabel(booking.paymentProvider, Boolean(booking.paydunyaCheckoutUrl)), strong: true },
+                    { label: "État", value: "Brouillon non réservé", strong: true },
+                  ]}
+                />
+                <ClientBookingAmountBreakdown
+                  courseAmount={booking.courseAmount}
+                  transportFee={booking.transportFee}
+                  serviceFeeAmount={booking.paymentServiceFeeAmount}
+                  totalAmount={getPendingBookingAmount(booking)}
+                />
+                <JekoHostedCheckoutPreview
+                  amount={getPendingBookingAmount(booking)}
+                  method={booking.paymentMethod}
+                  merchantName="Boutique Compétence"
+                  className="mt-3 bg-[#FAFBFF]"
+                />
+                <ClientRecordStatusLine
+                  className="mt-3"
+                  label="Action attendue"
+                  hint="Payez via Jèko, puis utilisez la vérification serveur sur le dossier si vous revenez sur la plateforme."
+                />
+              </details>
             </article>
           );
         })}

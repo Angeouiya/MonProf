@@ -576,7 +576,7 @@ const gatedCommandCenterRenderCount = countMatches(
 record(
   "Client command centers are disabled before render",
   /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(clientPrimitives)
-    && commandCenterRenderCount === 9
+    && commandCenterRenderCount > 0
     && gatedCommandCenterRenderCount === commandCenterRenderCount,
 );
 

@@ -116,7 +116,7 @@ export function PaymentHistoryClient({ transactions }: { transactions: ClientPay
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Rechercher professeur, référence, matière..."
+              placeholder="Rechercher dans cette page..."
               className="h-12 rounded-lg border-[#D8DEE9] bg-white pl-9 pr-10 text-sm font-medium focus:border-[#111B4D] focus:ring-[#111B4D]"
               data-client-payment-search
             />

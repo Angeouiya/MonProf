@@ -9,6 +9,7 @@ const clientShell = read("src/components/layouts/client-layout.tsx");
 const clientDashboard = read("src/app/client/page.tsx");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientPayments = read("src/app/client/paiements/page.tsx");
+const clientPaymentLedger = read("src/lib/client-payment-ledger.ts");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
 const publicHome = read("src/app/page.tsx");
@@ -51,7 +52,13 @@ check(
 );
 check("Client search consolidates filter catalogs before render", /getCachedTeacherSearchCatalog/.test(clientSearch));
 check("Client search catalogs remain available without published teachers", !/const \[subjects, levels, communes\] = total > 0/.test(clientSearch));
-check("Client payments batch transactions and pending bookings on one pooled connection", hasDatabaseTransaction(clientPayments));
+check("Client payments load only a bounded ledger page and keep verified lifetime totals in SQL",
+  /await Promise\.all\(\[/.test(clientPayments)
+    && /getClientPaymentLedgerPage\(user\.id, pageNumber\)/.test(clientPayments)
+    && /where:\s*\{ id:\s*\{ in: ledger\.ids \} \}/.test(clientPayments)
+    && /LIMIT \$\{CLIENT_PAYMENT_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientPaymentLedger)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientPaymentLedger)
+    && !/db\.transaction\.findMany\(\{[\s\S]*?booking:\s*\{ is: verifiedPayDunyaBookingWhere/.test(clientPayments));
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
 check("Admin dashboard runs independent operational reads concurrently", hasParallelReads(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
@@ -120,7 +127,11 @@ check(
 );
 check("Client courses batch tab, overview, and pending reads", hasDatabaseTransaction(clientCourses));
 check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
-check("Client support batches eligible bookings and disputes", hasDatabaseTransaction(clientSupport));
+check("Client support summary avoids loading all bookings and disputes",
+  hasDatabaseTransaction(clientSupport)
+    && /db\.booking\.count\(\{ where: eligibleBookingWhere\(user\.id\) \}\)/.test(clientSupport)
+    && /db\.dispute\.findFirst/.test(clientSupport)
+    && /take: PAGE_SIZE/.test(clientSupport));
 check("Client settings batch profile and account indicators", hasDatabaseTransaction(clientSettings));
 check("Professor dashboard runs independent operational and accounting reads concurrently", hasParallelReads(professorDashboard));
 check("Admin teacher list batches profiles, catalogs, and photo stats", hasDatabaseTransaction(adminTeachers));

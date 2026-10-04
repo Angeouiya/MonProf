@@ -484,6 +484,7 @@ model Booking {
   partnerCommissionAmount Int     @default(0)
 
   @@index([clientId])
+  @@index([clientId, status, createdAt])
   @@index([teacherId])
   @@index([status])
   @@index([paymentProvider, providerPaymentStatus, paymentVerifiedAt])
@@ -861,6 +862,8 @@ model Transaction {
   rescheduleRequest         BookingRescheduleRequest? @relation("RescheduleFeeTransaction", fields: [rescheduleRequestId], references: [id], onDelete: SetNull)
   refundedRescheduleRequest BookingRescheduleRequest? @relation("RescheduleRefundTransaction")
   paymentAttempt            PaymentAttempt?
+
+  @@index([bookingId, type, status, amount])
 }
 
 enum TransactionType {
@@ -1047,6 +1050,8 @@ model Dispute {
   openedBy       User            @relation("DisputeOpener", fields: [openedById], references: [id])
 
   @@index([bookingSessionId])
+  @@index([openedById, createdAt])
+  @@index([openedById, status])
 }
 
 enum DisputeStatus {
