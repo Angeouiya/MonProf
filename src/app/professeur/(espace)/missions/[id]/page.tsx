@@ -37,11 +37,11 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
     include: {
       client: { select: { name: true, phone: true, email: true, commune: true, quartier: true } },
       transactions: { where: { type: "CLIENT_PAYMENT" } },
-      missionLinks: { orderBy: { createdAt: "desc" }, take: 5 },
-      scheduleProposals: { orderBy: { createdAt: "desc" }, take: 5 },
-      rescheduleRequests: { orderBy: { createdAt: "desc" }, take: 5, include: { transaction: true } },
-      teacherTasks: { orderBy: [{ priority: "desc" }, { createdAt: "desc" }] },
-      teacherPaymentAdjustments: { orderBy: { createdAt: "desc" } },
+      missionLinks: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 5 },
+      scheduleProposals: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 5 },
+      rescheduleRequests: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" }, take: 5, include: { transaction: true } },
+      teacherTasks: { where: { teacherId: teacher.id }, orderBy: [{ priority: "desc" }, { createdAt: "desc" }] },
+      teacherPaymentAdjustments: { where: { teacherId: teacher.id }, orderBy: { createdAt: "desc" } },
       sessions: {
         where: { teacherId: teacher.id },
         include: {
@@ -64,6 +64,15 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
     .filter((request) => ["AWAITING_TEACHER", "APPLIED"].includes(request.status))
     .reduce((sum, request) => sum + request.feeTeacherAmount, 0);
   const missionTiming = getTeacherMissionTiming(booking);
+  const sessionDurations = Array.from(new Set(booking.sessions.map((session) => session.durationMinutes))).sort((a, b) => a - b);
+  const durationLabel = sessionDurations.length > 0
+    ? sessionDurations.map((minutes) => minutes === 60 ? "1h" : `${minutes / 60}h`).join(" ou ")
+    : "durée à confirmer";
+  const participantLabel = booking.participantsCount >= 13
+    ? `Grand groupe · ${booking.participantsCount} participants`
+    : booking.participantsCount >= 2
+      ? `Petit groupe · ${booking.participantsCount} participants`
+      : "Cours individuel";
 
   return (
     <div className="space-y-6">
@@ -109,8 +118,8 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
               <DetailTile icon={<CalendarDays className="h-4 w-4" />} label="Date prévue" value={formatDate(booking.scheduledDate ?? booking.startDate ?? booking.createdAt)} />
               <DetailTile label="Heure" value={booking.scheduledTime || booking.preferredTime} />
-              <DetailTile label="Nombre de séances" value={`${booking.sessionsCount} séance(s) de 2h`} />
-              <DetailTile label="Participants" value={`${booking.participantsCount} participant(s)`} />
+              <DetailTile label="Nombre de séances" value={`${booking.sessionsCount} séance(s) · ${durationLabel}`} />
+              <DetailTile label="Participants" value={participantLabel} />
               <DetailTile icon={<MapPin className="h-4 w-4" />} label="Lieu" value={booking.courseFormat === "ONLINE" ? "En ligne" : [booking.commune, booking.quartier, booking.addressHint].filter(Boolean).join(" · ") || "Adresse à confirmer"} />
               <DetailTile label="Lien en ligne" value={booking.onlineLink || "À transmettre si cours en ligne"} />
             </div>
@@ -121,9 +130,17 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
             <div className="mt-4 grid gap-3 min-[680px]:grid-cols-2">
               <DetailTile icon={<Phone className="h-4 w-4" />} label="Client" value={booking.client.name} />
               <DetailTile label="Contact client" value={booking.client.phone || "À confirmer par le service client"} />
+              <DetailTile label="Email client" value={booking.client.email || "Non renseigné"} />
               <DetailTile label="Commune client" value={[booking.client.commune, booking.client.quartier].filter(Boolean).join(" · ") || "Non renseignée"} />
               <DetailTile label="Objectif" value={booking.objective || "Objectif à préciser pendant le premier échange"} />
+              <DetailTile label="Programme / contexte" value={booking.schoolProgram || "Non renseigné"} />
             </div>
+            {(booking.needDescription || booking.message) && (
+              <div className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-4 text-sm font-semibold leading-6 text-[#475569]">
+                {booking.needDescription && <p><span className="text-[#111827]">Besoin :</span> {booking.needDescription}</p>}
+                {booking.message && <p className={booking.needDescription ? "mt-2" : ""}><span className="text-[#111827]">Message client :</span> {booking.message}</p>}
+              </div>
+            )}
             <div className="mt-4 rounded-lg border border-[#E6EAF3] bg-white p-4">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#111B4D]" />
@@ -270,7 +287,7 @@ export default async function ProfesseurMissionDetailPage({ params }: { params: 
               <InfoLine label="Statut paiement" value={<StatusPill status={booking.paymentStatus} />} />
             </div>
             <p className="mt-3 text-xs font-semibold leading-5 text-[#64748B]">
-              Les paiements restent enregistrés par le service client. Le professeur ne voit que son net opérationnel.
+              La comptabilité se met à jour automatiquement après la confirmation du cours. Votre retrait s'effectue directement via Jèko.
             </p>
           </PortalCard>
 

@@ -35,6 +35,9 @@ record(
 record(
   "Admin teacher onboarding confirms routine actions inline",
   /data-admin-teacher-photo-saved-state/.test(teacherForm)
+    && /data-admin-teacher-photo-uploader/.test(teacherForm)
+    && /data-admin-teacher-photo-advanced-url/.test(teacherForm)
+    && /onDrop=\{\(event\) =>/.test(teacherForm)
     && /data-admin-teacher-cv-saved-state/.test(teacherForm)
     && /data-admin-teacher-save-state/.test(teacherDetailPage)
     && /URLSearchParams/.test(teacherForm)

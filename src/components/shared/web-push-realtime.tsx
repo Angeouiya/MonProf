@@ -16,13 +16,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buildSubscriptionPayload, ensureCurrentPushSubscription } from "@/lib/web-push-client";
 
-const PUSH_PROMPT_DISMISSED_KEY = "competence_push_prompt_dismissed_for_session";
+const PUSH_PROMPT_DISMISSED_KEY = "competence:push-prompt-dismissed-on-device:v1";
 const PUSH_AUTOMATIC_TEST_ENDPOINT_KEY = "competence_push_automatic_test_endpoint_v10";
+const NOTIFICATION_STATE_RECHECK_MS = 60_000;
+const PUSH_SUBSCRIPTION_RECHECK_MS = 6 * 60 * 60_000;
 
 export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotificationCount?: number }) {
   const router = useRouter();
   const knownCount = useRef(initialNotificationCount);
   const checking = useRef(false);
+  const lastStateCheckAt = useRef(0);
   const [permissionPromptOpen, setPermissionPromptOpen] = useState(false);
   const [permissionSaving, setPermissionSaving] = useState(false);
   const [permissionError, setPermissionError] = useState("");
@@ -33,10 +36,15 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
 
   const refreshState = useCallback(async (force = false) => {
     if (checking.current || document.visibilityState !== "visible") return;
+    if (!force && Date.now() - lastStateCheckAt.current < NOTIFICATION_STATE_RECHECK_MS) return;
     checking.current = true;
+    lastStateCheckAt.current = Date.now();
     try {
       const response = await fetch("/api/push/state", { cache: "no-store", credentials: "same-origin" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        lastStateCheckAt.current = 0;
+        return;
+      }
       const data = await response.json() as { notificationCount?: number };
       const nextCount = Number(data.notificationCount ?? 0);
       if (force || nextCount !== knownCount.current) {
@@ -44,6 +52,9 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
         window.dispatchEvent(new CustomEvent("competence:notification-count", { detail: { count: nextCount } }));
         router.refresh();
       }
+    } catch {
+      // A transient network error should not suppress the next check.
+      lastStateCheckAt.current = 0;
     } finally {
       checking.current = false;
     }
@@ -115,7 +126,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
       }
 
       window.localStorage.setItem(PUSH_AUTOMATIC_TEST_ENDPOINT_KEY, endpoint);
-      window.sessionStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
+      window.localStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
       setPermissionPromptOpen(false);
       window.dispatchEvent(new CustomEvent("competence:push-enabled"));
     } catch (error) {
@@ -127,18 +138,25 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
   }, [synchronizePushSubscription]);
 
   const dismissPermissionPrompt = useCallback(() => {
-    window.sessionStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, "1");
+    window.localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, "1");
     setPermissionPromptOpen(false);
     setPermissionError("");
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    const synchronize = async () => {
+    let synchronizing = false;
+    let lastSubscriptionCheckAt = 0;
+    let lastSynchronizedEndpoint: string | null = null;
+    const synchronize = async (force = false) => {
+      if (synchronizing || (!force && Date.now() - lastSubscriptionCheckAt < PUSH_SUBSCRIPTION_RECHECK_MS)) return;
+      synchronizing = true;
+      lastSubscriptionCheckAt = Date.now();
       try {
         const endpoint = await synchronizePushSubscription();
         if (cancelled) return;
         if (endpoint) {
+          lastSynchronizedEndpoint = endpoint;
           await sendAutomaticDeviceTest(endpoint);
           if (cancelled) return;
           setPermissionError("");
@@ -146,18 +164,23 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
           return;
         }
 
-        if (window.sessionStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
+        if (window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
         if ("Notification" in window && Notification.permission === "denied") {
           setPermissionError("Les notifications sont bloquées sur cet appareil. Ouvrez le cadenas du navigateur, choisissez Notifications, puis Autoriser.");
         }
         setPermissionPromptOpen(true);
       } catch (error) {
+        // Retry a failed registration on a later focus, without a focus storm.
+        lastSubscriptionCheckAt = Date.now() - PUSH_SUBSCRIPTION_RECHECK_MS + NOTIFICATION_STATE_RECHECK_MS;
         if (cancelled) return;
+        if (window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === "1") return;
         setPermissionError(error instanceof Error ? error.message : "Cet appareil n'a pas pu être enregistré.");
         setPermissionPromptOpen(true);
+      } finally {
+        synchronizing = false;
       }
     };
-    void synchronize();
+    void synchronize(true);
 
     if (!("serviceWorker" in navigator)) {
       return () => { cancelled = true; };
@@ -166,15 +189,29 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "COMPETENCE_PUSH_RECEIVED") void refreshState(true);
     };
-    const onFocus = () => {
-      void synchronize();
+    const onResume = async () => {
+      if (cancelled || document.visibilityState !== "visible") return;
       void refreshState(false);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void synchronize();
-        void refreshState(false);
+      // A rotated or removed browser endpoint must be repaired immediately,
+      // even when the normal server-side heartbeat is throttled.
+      if (lastSynchronizedEndpoint && "Notification" in window && Notification.permission === "granted") {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const current = await registration.pushManager.getSubscription();
+          if (current?.endpoint !== lastSynchronizedEndpoint) {
+            void synchronize(true);
+            return;
+          }
+        } catch {
+          void synchronize(true);
+          return;
+        }
       }
+      void synchronize();
+    };
+    const onFocus = () => { void onResume(); };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void onResume();
     };
     navigator.serviceWorker.addEventListener("message", onMessage);
     window.addEventListener("focus", onFocus);
@@ -198,7 +235,7 @@ export function WebPushRealtime({ initialNotificationCount = 0 }: { initialNotif
         <AlertDialogHeader className="items-center px-5 pb-4 pt-6 text-center sm:px-7">
           <div className="mb-2 flex h-24 w-24 items-center justify-center rounded-3xl bg-white shadow-[0_12px_35px_rgba(17,27,77,0.14)] ring-1 ring-[#E3E8F2]">
             <Image
-              src="/images/brand/competence-notification-icon-outline-512.png"
+              src="/images/brand/competence-notification-monogram-tile-512.png?v=11"
               alt="Icône Compétence"
               width={84}
               height={84}

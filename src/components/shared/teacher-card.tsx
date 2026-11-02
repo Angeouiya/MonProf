@@ -53,6 +53,7 @@ export function TeacherCard({
     >
       <Link
         href={profileHref}
+        prefetch={false}
         aria-label={`Voir le profil de ${displayName}`}
         className="block min-w-0 outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-[#9AAAD0]"
       >
@@ -121,7 +122,7 @@ export function TeacherCard({
           <span className="mt-0.5 block text-sm font-bold leading-5 text-[#111B4D]">{priceLabel}</span>
         </div>
         <Button asChild className="h-full min-h-12 w-full rounded-xl bg-[#111B4D] px-3 text-sm text-white hover:bg-[#1E2A78] focus-visible:ring-4 focus-visible:ring-[#9AAAD0]">
-          <Link href={bookingHref}>Choisir</Link>
+          <Link href={bookingHref} prefetch={false}>Choisir</Link>
         </Button>
       </div>
     </article>

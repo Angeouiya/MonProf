@@ -9,19 +9,44 @@ type AppEnvironment = {
   CLOUDFLARE_INTERNAL_SECRET?: string;
   HYPERDRIVE?: { connectionString: string };
   AUTH_RATE_LIMITER?: RateLimitBinding;
+  AUTH_BURST_RATE_LIMITER?: RateLimitBinding;
   FINANCIAL_RATE_LIMITER?: RateLimitBinding;
+  FINANCIAL_BURST_RATE_LIMITER?: RateLimitBinding;
   API_WRITE_RATE_LIMITER?: RateLimitBinding;
+  API_WRITE_BURST_RATE_LIMITER?: RateLimitBinding;
+  API_READ_RATE_LIMITER?: RateLimitBinding;
+  API_READ_BURST_RATE_LIMITER?: RateLimitBinding;
   PUBLIC_READ_RATE_LIMITER?: RateLimitBinding;
+  PUBLIC_READ_BURST_RATE_LIMITER?: RateLimitBinding;
+  WEBHOOK_RATE_LIMITER?: RateLimitBinding;
+  WEBHOOK_BURST_RATE_LIMITER?: RateLimitBinding;
   TEACHER_MEDIA_KV?: KvNamespaceBinding;
   WEB_PUSH_QUEUE?: QueueProducerBinding;
+  PASSWORD_EMAIL_QUEUE?: QueueProducerBinding;
 };
 
 type RateLimitBinding = {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 };
 
+type ActiveRateLimitLayer = {
+  binding: RateLimitBinding;
+  name: "burst" | "sustained";
+  limit: number;
+  period: 10 | 60;
+};
+
+type RateLimitPolicy = {
+  scope: "auth" | "financial" | "write" | "read" | "public-read" | "webhook";
+  layers: ActiveRateLimitLayer[];
+};
+
 type KvNamespaceBinding = {
   get(key: string, options: { type: "arrayBuffer"; cacheTtl?: number }): Promise<ArrayBuffer | null>;
+  getWithMetadata<T = Record<string, unknown>>(
+    key: string,
+    options: { type: "arrayBuffer"; cacheTtl?: number },
+  ): Promise<{ value: ArrayBuffer | null; metadata: T | null }>;
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView,
@@ -66,11 +91,28 @@ const CRON_ROUTES = {
 
 const competenceWorker = {
   async fetch(request: Request, env: AppEnvironment, ctx: WorkerExecutionContext) {
+    // Les scanners WordPress représentent un trafic inutile important en
+    // production. Les couper à l'edge évite de charger Next.js et PostgreSQL.
+    const exploitProbeRejection = rejectObviousExploitProbe(request);
+    if (exploitProbeRejection) return withSecurityHeaders(exploitProbeRejection, request);
+
     const canonicalRedirect = redirectPublicNavigationToCanonicalHost(request);
     if (canonicalRedirect) return withSecurityHeaders(canonicalRedirect, request);
 
+    // La majorité des visiteurs publics n'a aucun cookie de session. Répondre
+    // directement à l'edge évite de démarrer Next.js et d'interroger la base
+    // uniquement pour afficher le bouton « Connexion » dans l'en-tête.
+    const anonymousSessionResponse = respondToAnonymousSessionProbe(request);
+    if (anonymousSessionResponse) return withSecurityHeaders(anonymousSessionResponse, request);
+
     const securityRejection = await protectPublicRequest(request, env);
     if (securityRejection) return withSecurityHeaders(securityRejection, request);
+
+    const cachedPublicHome = await readCachedPublicHome(request);
+    if (cachedPublicHome) return withSecurityHeaders(cachedPublicHome, request);
+
+    const cachedTeacherJourney = await readCachedPublicTeacherJourney(request);
+    if (cachedTeacherJourney) return withSecurityHeaders(cachedTeacherJourney, request);
 
     const storedTeacherMedia = await serveTeacherMediaFromKv(request, env);
     if (storedTeacherMedia) return withSecurityHeaders(storedTeacherMedia, request);
@@ -78,7 +120,9 @@ const competenceWorker = {
     const response = await dispatchOpenNext(request, env, ctx);
     scheduleTeacherMediaBackfill(request, response, env, ctx);
     scheduleImmediateWebPushWake(request, response, env, ctx);
-    return withSecurityHeaders(response, request);
+    const securedResponse = withSecurityHeaders(response, request);
+    const homeCachedResponse = schedulePublicHomeCache(request, securedResponse, ctx);
+    return schedulePublicTeacherJourneyCache(request, homeCachedResponse, ctx);
   },
 
   async scheduled(
@@ -87,12 +131,18 @@ const competenceWorker = {
     ctx: WorkerExecutionContext,
   ) {
     const date = new Date(controller.scheduledTime);
-    const routes: string[] = [CRON_ROUTES.webPush, CRON_ROUTES.communication, CRON_ROUTES.marketplaceOffers];
+    const routes: string[] = [
+      CRON_ROUTES.webPush,
+      CRON_ROUTES.communication,
+      CRON_ROUTES.passwordEmail,
+      CRON_ROUTES.marketplaceOffers,
+    ];
 
-    if (date.getUTCMinutes() % 5 === 0) routes.push(CRON_ROUTES.passwordEmail);
+    if (date.getUTCMinutes() % 5 === 0) {
+      routes.push(CRON_ROUTES.notificationReminders);
+    }
     if (date.getUTCMinutes() % 10 === 0) routes.push(CRON_ROUTES.jekoReconciliation);
     if (date.getUTCHours() === 2 && date.getUTCMinutes() === 35) routes.push(CRON_ROUTES.notificationRetention);
-    if (date.getUTCHours() === 8 && date.getUTCMinutes() === 0) routes.push(CRON_ROUTES.notificationReminders);
     if (date.getUTCHours() === 1 && date.getUTCMinutes() === 30) routes.push(CRON_ROUTES.partnerReferrals);
 
     ctx.waitUntil(Promise.all(routes.map((route) => invokeCronRoute(route, env, ctx))).then(() => undefined));
@@ -132,6 +182,35 @@ const competenceWorker = {
 };
 
 export default competenceWorker;
+
+const OBVIOUS_EXPLOIT_PATH_PREFIXES = [
+  "/wp-admin",
+  "/wp-content",
+  "/wp-includes",
+  "/wordpress",
+  "/phpmyadmin",
+  "/cgi-bin",
+  "/.git",
+  "/.env",
+] as const;
+
+function rejectObviousExploitProbe(request: Request) {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const pathname = new URL(request.url).pathname.toLowerCase();
+  const isProbe = pathname === "/xmlrpc.php"
+    || pathname.endsWith(".php")
+    || OBVIOUS_EXPLOIT_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  if (!isProbe) return null;
+
+  return new Response(request.method === "HEAD" ? null : "Not found", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=3600",
+      "x-competence-edge-rejection": "exploit-probe",
+    },
+  });
+}
 
 async function invokeCronRoute(route: string, env: AppEnvironment, ctx: WorkerExecutionContext) {
   const response = await dispatchOpenNext(new Request(`https://competence.internal${route}`, {
@@ -181,15 +260,203 @@ function redirectPublicNavigationToCanonicalHost(request: Request) {
   return Response.redirect(url.toString(), 308);
 }
 
-function classifyQueue(queueName: string): "web-push" | "communication" {
+function classifyQueue(queueName: string): "web-push" | "communication" | "password-email" {
   if (queueName.includes("web-push")) return "web-push";
   if (queueName.includes("communication")) return "communication";
+  if (queueName.includes("password-email")) return "password-email";
   throw new Error(`File Cloudflare inconnue : ${queueName}`);
 }
 
 function requireSecret(value: string | undefined, name: string) {
   if (value?.trim()) return value.trim();
   throw new Error(`${name} est obligatoire.`);
+}
+
+const PUBLIC_HOME_CACHE_SECONDS = 300;
+const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-v1";
+const PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS = 60;
+const PUBLIC_TEACHER_JOURNEY_CACHE_PATH = "/__competence_edge_cache/public-teacher-journey-v1";
+const PUBLIC_TEACHER_JOURNEYS = new Set(["ivoirien", "francais", "professionnel"]);
+
+function respondToAnonymousSessionProbe(request: Request) {
+  const method = request.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return null;
+
+  const url = new URL(request.url);
+  if (url.pathname !== "/api/auth/me" || readSessionCookie(request.headers.get("cookie"))) return null;
+
+  return new Response(method === "HEAD" ? null : JSON.stringify({ user: null }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "private, no-store, max-age=0",
+      "x-competence-session-fast-path": "anonymous-edge",
+    },
+  });
+}
+
+async function readCachedPublicTeacherJourney(request: Request) {
+  const cacheKey = publicTeacherJourneyCacheKey(request);
+  if (!cacheKey) return null;
+
+  try {
+    const cached = await caches.default.match(cacheKey);
+    if (!cached) return null;
+    const headers = new Headers(cached.headers);
+    headers.set("x-competence-teacher-journey-cache", "HIT");
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-teacher-journey-cache-read",
+      error: error instanceof Error ? error.message : "Cache indisponible.",
+    }));
+    return null;
+  }
+}
+
+function schedulePublicTeacherJourneyCache(
+  request: Request,
+  response: Response,
+  ctx: WorkerExecutionContext,
+) {
+  const cacheKey = publicTeacherJourneyCacheKey(request);
+  const contentType = response.headers.get("content-type") || "";
+  if (
+    !cacheKey
+    || response.status !== 200
+    || (!contentType.includes("text/html") && !contentType.includes("text/x-component"))
+    || response.headers.has("set-cookie")
+  ) {
+    return response;
+  }
+
+  const cacheCopy = response.clone();
+  const cacheHeaders = new Headers(cacheCopy.headers);
+  cacheHeaders.set("cache-control", `public, max-age=0, s-maxage=${PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS}`);
+  cacheHeaders.set("cache-tag", "competence-public-teacher-journeys");
+  cacheHeaders.set("x-competence-teacher-journey-cache", "HIT");
+  ctx.waitUntil(caches.default.put(cacheKey, new Response(cacheCopy.body, {
+    status: cacheCopy.status,
+    statusText: cacheCopy.statusText,
+    headers: cacheHeaders,
+  })).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-teacher-journey-cache-write",
+      error: error instanceof Error ? error.message : "Mise en cache impossible.",
+    }));
+  }));
+
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.set("x-competence-teacher-journey-cache", "MISS");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+  });
+}
+
+function publicTeacherJourneyCacheKey(request: Request) {
+  if (request.method !== "GET" || readSessionCookie(request.headers.get("cookie"))) return null;
+
+  const url = new URL(request.url);
+  if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/professeurs") return null;
+
+  const journey = url.searchParams.get("journey") || "";
+  if (!PUBLIC_TEACHER_JOURNEYS.has(journey)) return null;
+  if ([...url.searchParams.keys()].some((key) => key !== "journey" && key !== "_rsc")) return null;
+
+  // RSC payloads contain build-specific module references. Reusing one
+  // across Worker deployments can leave client navigation on a loading UI.
+  if (url.searchParams.has("_rsc") || request.headers.get("rsc") === "1") return null;
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
+  const navigation = request.headers.get("sec-fetch-mode") === "navigate";
+  if (!acceptsHtml && !navigation) return null;
+
+  return new Request(`${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${journey}/html`, { method: "GET" });
+}
+
+async function readCachedPublicHome(request: Request) {
+  const cacheKey = publicHomeCacheKey(request);
+  if (!cacheKey) return null;
+
+  try {
+    const cached = await caches.default.match(cacheKey);
+    if (!cached) return null;
+    const headers = new Headers(cached.headers);
+    headers.set("x-competence-edge-cache", "HIT");
+    return new Response(cached.body, {
+      status: cached.status,
+      statusText: cached.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-home-cache-read",
+      error: error instanceof Error ? error.message : "Cache indisponible.",
+    }));
+    return null;
+  }
+}
+
+function schedulePublicHomeCache(
+  request: Request,
+  response: Response,
+  ctx: WorkerExecutionContext,
+) {
+  const cacheKey = publicHomeCacheKey(request);
+  const contentType = response.headers.get("content-type") || "";
+  if (
+    !cacheKey
+    || response.status !== 200
+    || !contentType.includes("text/html")
+    || response.headers.has("set-cookie")
+  ) {
+    return response;
+  }
+
+  const cacheCopy = response.clone();
+  const cacheHeaders = new Headers(cacheCopy.headers);
+  cacheHeaders.delete("vary");
+  cacheHeaders.set("cache-control", `public, max-age=0, s-maxage=${PUBLIC_HOME_CACHE_SECONDS}`);
+  cacheHeaders.set("cache-tag", "competence-public-home");
+  cacheHeaders.set("x-competence-edge-cache", "HIT");
+  ctx.waitUntil(caches.default.put(cacheKey, new Response(cacheCopy.body, {
+    status: cacheCopy.status,
+    statusText: cacheCopy.statusText,
+    headers: cacheHeaders,
+  })).catch((error) => {
+    console.error(JSON.stringify({
+      level: "error",
+      scope: "cloudflare-public-home-cache-write",
+      error: error instanceof Error ? error.message : "Mise en cache impossible.",
+    }));
+  }));
+
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.set("x-competence-edge-cache", "MISS");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: responseHeaders,
+  });
+}
+
+function publicHomeCacheKey(request: Request) {
+  if (request.method !== "GET") return null;
+  const url = new URL(request.url);
+  if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/" || url.search) return null;
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
+  const navigation = request.headers.get("sec-fetch-mode") === "navigate";
+  if (!acceptsHtml && !navigation) return null;
+
+  return new Request(`${url.origin}${PUBLIC_HOME_CACHE_PATH}`, { method: "GET" });
 }
 
 async function protectPublicRequest(request: Request, env: AppEnvironment) {
@@ -209,43 +476,68 @@ async function protectPublicRequest(request: Request, env: AppEnvironment) {
   if (!policy) return null;
 
   const key = await buildRateLimitKey(request, url.pathname, policy.scope);
-  try {
-    const result = await policy.binding.limit({ key });
-    if (result.success) return null;
-    console.warn(JSON.stringify({
-      level: "warn",
-      scope: "cloudflare-rate-limit",
-      policy: policy.scope,
-      pathname: url.pathname,
-    }));
-    return new Response(JSON.stringify({
-      error: "Trop de tentatives. Patientez une minute puis réessayez.",
-      code: "RATE_LIMITED",
-    }), {
-      status: 429,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store",
-        "retry-after": "60",
-      },
-    });
-  } catch (error) {
-    // Une panne du compteur ne doit pas rendre la plateforme indisponible. Les
-    // contrôles d'authentification et de signature restent appliqués en aval.
+  const outcomes = await Promise.all(policy.layers.map(async (layer) => {
+    try {
+      return { layer, result: await layer.binding.limit({ key }), error: null };
+    } catch (error) {
+      return { layer, result: null, error };
+    }
+  }));
+
+  for (const outcome of outcomes) {
+    if (!outcome.error) continue;
+    // Une panne d'un compteur ne doit pas rendre la plateforme indisponible.
+    // Les autres couches et les contrôles métier restent actifs.
     console.error(JSON.stringify({
       level: "error",
       scope: "cloudflare-rate-limit-unavailable",
       policy: policy.scope,
-      error: error instanceof Error ? error.message : "Compteur indisponible.",
+      layer: outcome.layer.name,
+      cfRay: request.headers.get("cf-ray"),
+      error: outcome.error instanceof Error ? outcome.error.message : "Compteur indisponible.",
     }));
-    return null;
   }
+
+  const rejected = outcomes.filter((outcome) => outcome.result?.success === false);
+  if (rejected.length === 0) return null;
+
+  const retryAfter = Math.max(...rejected.map((outcome) => outcome.layer.period));
+  console.warn(JSON.stringify({
+    level: "warn",
+    scope: "cloudflare-rate-limit",
+    policy: policy.scope,
+    layers: rejected.map((outcome) => outcome.layer.name),
+    pathname: normalizeRateLimitRoute(url.pathname),
+    cfRay: request.headers.get("cf-ray"),
+  }));
+  return new Response(JSON.stringify({
+    error: retryAfter >= 60
+      ? "Trop de tentatives. Patientez une minute puis réessayez."
+      : "Trop d'actions rapprochées. Patientez quelques secondes puis réessayez.",
+    code: "RATE_LIMITED",
+    retryAfterSeconds: retryAfter,
+  }), {
+    status: 429,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "retry-after": String(retryAfter),
+      "ratelimit-policy": policy.layers.map((layer) => `${layer.limit};w=${layer.period}`).join(", "),
+      "x-competence-rate-limit": policy.scope,
+    },
+  });
 }
 
-function selectRateLimitPolicy(pathname: string, method: string, env: AppEnvironment) {
+function selectRateLimitPolicy(pathname: string, method: string, env: AppEnvironment): RateLimitPolicy | null {
   const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
   if (!pathname.startsWith("/api/")) return null;
-  if (pathname.startsWith("/api/webhooks/") || pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) {
+  if (pathname.startsWith("/api/webhooks/")) {
+    return createRateLimitPolicy("webhook", [
+      { binding: env.WEBHOOK_BURST_RATE_LIMITER, name: "burst", limit: 2_000, period: 10 },
+      { binding: env.WEBHOOK_RATE_LIMITER, name: "sustained", limit: 10_000, period: 60 },
+    ]);
+  }
+  if (pathname.startsWith("/api/internal/") || pathname.startsWith("/api/cron/")) {
     return null;
   }
 
@@ -253,8 +545,11 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     pathname.startsWith("/api/auth/")
     || pathname === "/api/professor/password-assistance"
   );
-  if (authSensitive && env.AUTH_RATE_LIMITER) {
-    return { binding: env.AUTH_RATE_LIMITER, scope: "auth" } as const;
+  if (authSensitive) {
+    return createRateLimitPolicy("auth", [
+      { binding: env.AUTH_BURST_RATE_LIMITER, name: "burst", limit: 6, period: 10 },
+      { binding: env.AUTH_RATE_LIMITER, name: "sustained", limit: 20, period: 60 },
+    ]);
   }
 
   const financialSensitive = isMutation && (
@@ -268,12 +563,18 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     || pathname.startsWith("/api/admin/transactions")
     || pathname.startsWith("/api/admin/refund")
   );
-  if (financialSensitive && env.FINANCIAL_RATE_LIMITER) {
-    return { binding: env.FINANCIAL_RATE_LIMITER, scope: "financial" } as const;
+  if (financialSensitive) {
+    return createRateLimitPolicy("financial", [
+      { binding: env.FINANCIAL_BURST_RATE_LIMITER, name: "burst", limit: 12, period: 10 },
+      { binding: env.FINANCIAL_RATE_LIMITER, name: "sustained", limit: 40, period: 60 },
+    ]);
   }
 
-  if (isMutation && env.API_WRITE_RATE_LIMITER) {
-    return { binding: env.API_WRITE_RATE_LIMITER, scope: "write" } as const;
+  if (isMutation) {
+    return createRateLimitPolicy("write", [
+      { binding: env.API_WRITE_BURST_RATE_LIMITER, name: "burst", limit: 45, period: 10 },
+      { binding: env.API_WRITE_RATE_LIMITER, name: "sustained", limit: 180, period: 60 },
+    ]);
   }
 
   const publicRead = method === "GET" && (
@@ -285,31 +586,111 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
     || pathname === "/api/levels"
     || pathname === "/api/communes"
   );
-  if (publicRead && env.PUBLIC_READ_RATE_LIMITER) {
-    return { binding: env.PUBLIC_READ_RATE_LIMITER, scope: "public-read" } as const;
+  if (publicRead) {
+    return createRateLimitPolicy("public-read", [
+      { binding: env.PUBLIC_READ_BURST_RATE_LIMITER, name: "burst", limit: 120, period: 10 },
+      { binding: env.PUBLIC_READ_RATE_LIMITER, name: "sustained", limit: 600, period: 60 },
+    ]);
+  }
+
+  if (method === "GET" || method === "HEAD") {
+    return createRateLimitPolicy("read", [
+      { binding: env.API_READ_BURST_RATE_LIMITER, name: "burst", limit: 75, period: 10 },
+      { binding: env.API_READ_RATE_LIMITER, name: "sustained", limit: 300, period: 60 },
+    ]);
   }
 
   return null;
 }
 
+function createRateLimitPolicy(
+  scope: RateLimitPolicy["scope"],
+  layers: Array<Omit<ActiveRateLimitLayer, "binding"> & { binding?: RateLimitBinding }>,
+): RateLimitPolicy | null {
+  const activeLayers = layers.flatMap((layer) => layer.binding ? [{ ...layer, binding: layer.binding }] : []);
+  return activeLayers.length > 0 ? { scope, layers: activeLayers } : null;
+}
+
 async function buildRateLimitKey(request: Request, pathname: string, scope: string) {
-  const ip = request.headers.get("cf-connecting-ip")
-    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || "unknown";
-  const userAgent = request.headers.get("user-agent")?.slice(0, 160) || "unknown";
   const route = normalizeRateLimitRoute(pathname);
-  const value = `${scope}|${route}|${ip}|${userAgent}`;
+  const identity = await resolveRateLimitIdentity(request, scope);
+  const value = `${scope}|${route}|${identity}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeRateLimitRoute(pathname: string) {
-  if (pathname.startsWith("/api/teacher-photos/")) return "/api/teacher-photos/:id";
-  if (pathname.startsWith("/api/teachers/")) return "/api/teachers/:id";
-  if (pathname.startsWith("/api/bookings/")) return "/api/bookings/:id";
-  if (pathname.startsWith("/api/marketplace/requests/")) return "/api/marketplace/requests/:id";
-  if (pathname.startsWith("/api/professor/marketplace/offers/")) return "/api/professor/marketplace/offers/:id";
-  return pathname;
+  return pathname
+    .replace(/\/c[a-z0-9]{20,}(?=\/|$)/gi, "/:id")
+    .replace(/\/[0-9a-f]{8}-[0-9a-f-]{27,}(?=\/|$)/gi, "/:id")
+    .replace(/\/\d{4,}(?=\/|$)/g, "/:id");
+}
+
+async function resolveRateLimitIdentity(request: Request, scope: string) {
+  if (scope === "auth") {
+    const accountIdentifier = await extractAuthAccountIdentifier(request);
+    if (accountIdentifier) return `account:${accountIdentifier}`;
+  }
+
+  const session = readSessionCookie(request.headers.get("cookie"));
+  if (session) return `session:${session}`;
+
+  const ip = request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
+  return `network:${ip}`;
+}
+
+async function extractAuthAccountIdentifier(request: Request) {
+  if (!['POST', 'PUT', 'PATCH'].includes(request.method.toUpperCase())) return null;
+  const contentType = request.headers.get("content-type")?.toLowerCase() || "";
+  const acceptedFields = ["email", "phone", "identifier", "username"];
+  try {
+    if (contentType.includes("application/json")) {
+      const body = await request.clone().json() as Record<string, unknown>;
+      for (const field of acceptedFields) {
+        const normalized = normalizeAccountIdentifier(body?.[field]);
+        if (normalized) return normalized;
+      }
+    } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      const form = await request.clone().formData();
+      for (const field of acceptedFields) {
+        const normalized = normalizeAccountIdentifier(form.get(field));
+        if (normalized) return normalized;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function normalizeAccountIdentifier(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().slice(0, 160);
+  if (!normalized) return null;
+  if (normalized.includes("@")) return normalized;
+  const phone = normalized.replace(/[^\d+]/g, "");
+  return phone.length >= 6 ? phone : normalized;
+}
+
+function readSessionCookie(cookieHeader: string | null) {
+  if (!cookieHeader) return null;
+  const sessionNames = new Set([
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+  ]);
+  for (const part of cookieHeader.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 1) continue;
+    const name = part.slice(0, separator).trim();
+    if (!sessionNames.has(name)) continue;
+    const value = part.slice(separator + 1).trim();
+    if (value) return value.slice(0, 1_024);
+  }
+  return null;
 }
 
 function maximumRequestBytes(pathname: string) {
@@ -384,19 +765,24 @@ async function serveTeacherMediaFromKv(request: Request, env: AppEnvironment) {
   if (!mediaId || !env.TEACHER_MEDIA_KV) return null;
 
   try {
-    const data = await env.TEACHER_MEDIA_KV.get(teacherMediaKey(mediaId), {
+    const stored = await env.TEACHER_MEDIA_KV.getWithMetadata<{ contentType?: string }>(teacherMediaKey(mediaId), {
       type: "arrayBuffer",
       cacheTtl: 86_400,
     });
+    const data = stored.value;
     if (!data) return null;
+    const contentType = isTeacherImageContentType(stored.metadata?.contentType)
+      ? stored.metadata.contentType
+      : "image/webp";
     return new Response(request.method === "HEAD" ? null : data, {
       status: 200,
       headers: {
-        "content-type": "image/webp",
+        "content-type": contentType,
         "content-length": String(data.byteLength),
         "cache-control": "public, max-age=31536000, immutable",
         "etag": `"teacher-media-${mediaId}"`,
         "x-competence-media": "cloudflare-kv",
+        "x-content-type-options": "nosniff",
       },
     });
   } catch (error) {
@@ -472,4 +858,8 @@ function teacherMediaIdFromPath(pathname: string) {
 
 function teacherMediaKey(mediaId: string) {
   return `teacher-photos/${mediaId}`;
+}
+
+function isTeacherImageContentType(value: unknown): value is "image/jpeg" | "image/png" | "image/webp" {
+  return value === "image/jpeg" || value === "image/png" || value === "image/webp";
 }

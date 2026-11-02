@@ -54,7 +54,7 @@ export function BrandLogo({
         )}
       >
         <Image
-          src="/images/brand/competence-mark.webp"
+          src="/images/brand/competence-mark-112.webp"
           alt="Logo Compétence"
           width={56}
           height={56}

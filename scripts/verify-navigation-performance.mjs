@@ -9,13 +9,33 @@ const clientShell = read("src/components/layouts/client-layout.tsx");
 const clientDashboard = read("src/app/client/page.tsx");
 const clientSearch = read("src/app/client/rechercher/page.tsx");
 const clientPayments = read("src/app/client/paiements/page.tsx");
+const clientPaymentLedger = read("src/lib/client-payment-ledger.ts");
+const clientReservations = read("src/app/client/reservations/page.tsx");
+const clientReservationIndex = read("src/lib/client-reservation-index.ts");
+const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
 const clientNotifications = read("src/app/client/notifications/page.tsx");
 const adminDashboard = read("src/app/admin/page.tsx");
+const adminReservations = read("src/app/admin/reservations/page.tsx");
+const adminReservationFilters = read("src/app/admin/reservations/list-client.tsx");
+const adminPayments = read("src/app/admin/paiements/page.tsx");
+const adminPaymentFilters = read("src/app/admin/paiements/filters-client.tsx");
 const publicHome = read("src/app/page.tsx");
+const globalCss = read("src/app/globals.css");
 const publicTeachers = read("src/app/professeurs/page.tsx");
+const publicTeachersLoading = read("src/app/professeurs/loading.tsx");
+const rootLayout = read("src/app/layout.tsx");
+const publicLayout = read("src/components/layouts/public-layout.tsx");
+const journeySwitcher = read("src/components/shared/journey-switcher.tsx");
+const teacherCard = read("src/components/shared/teacher-card.tsx");
+const brandLogo = read("src/components/shared/brand-logo.tsx");
+const pwaPrompt = read("src/components/shared/pwa-install-prompt.tsx");
+const deferredPwaPrompt = read("src/components/shared/deferred-pwa-install-prompt.tsx");
+const cloudflareWorker = read("cloudflare-worker.ts");
+const staticHeaders = read("public/_headers");
 const clientBooking = read("src/app/client/reserver/page.tsx");
 const clientRegistration = read("src/app/inscription/page.tsx");
 const clientCourses = read("src/app/client/cours/page.tsx");
+const clientCourseIndex = read("src/lib/client-course-index.ts");
 const clientReviews = read("src/app/client/avis/page.tsx");
 const clientSupport = read("src/app/client/service-client/page.tsx");
 const clientSettings = read("src/app/client/parametres/page.tsx");
@@ -28,17 +48,62 @@ check("Client shell does not block navigation on database reads", !/from "@\/lib
 check("Client shell avoids dynamic route prefetch fan-out", /const CLIENT_NAV_PREFETCH\s*=\s*false/.test(clientShell) && !/CLIENT_PRIMARY_PREFETCH_ROUTES|requestIdleCallback/.test(clientShell));
 check("Client shell updates notification badges asynchronously", !/fetch\("\/api\/client\/notifications"/.test(clientShell) && /competence:notification-count/.test(clientShell) && /WebPushRealtime/.test(clientShell));
 check(
-  "Client dashboard uses one focused booking read without loading unrelated recommendations",
-  /const allClientBookings = await db\.booking\.findMany/.test(clientDashboard)
+  "Client dashboard uses bounded aggregates without loading all booking history",
+  /await Promise\.all\(\[/.test(clientDashboard)
+    && /db\.booking\.count/.test(clientDashboard)
+    && /db\.transaction\.aggregate/.test(clientDashboard)
+    && /take:\s*3/.test(clientDashboard)
+    && /<Suspense fallback=\{<ClientLoyaltyTeaserFallback/.test(clientDashboard)
+    && !/const allClientBookings = await db\.booking\.findMany/.test(clientDashboard)
     && !/db\.teacher\.findMany/.test(clientDashboard)
     && !/await db\.\$transaction\(\[/.test(clientDashboard),
 );
 check("Client search consolidates filter catalogs before render", /getCachedTeacherSearchCatalog/.test(clientSearch));
 check("Client search catalogs remain available without published teachers", !/const \[subjects, levels, communes\] = total > 0/.test(clientSearch));
-check("Client payments batch transactions and pending bookings on one pooled connection", hasDatabaseTransaction(clientPayments));
+check("Client payments load only a bounded ledger page and keep verified lifetime totals in SQL",
+  /await Promise\.all\(\[/.test(clientPayments)
+    && /getClientPaymentLedgerPage\(user\.id, pageNumber\)/.test(clientPayments)
+    && /where:\s*\{ id:\s*\{ in: ledger\.ids \} \}/.test(clientPayments)
+    && /LIMIT \$\{CLIENT_PAYMENT_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientPaymentLedger)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientPaymentLedger)
+    && !/db\.transaction\.findMany\(\{[\s\S]*?booking:\s*\{ is: verifiedPayDunyaBookingWhere/.test(clientPayments));
 check("Client notifications load messages and reservations in one joined query", /FROM competence\."Notification" n/.test(clientNotifications) && /LEFT JOIN competence\."Booking" b/.test(clientNotifications));
-check("Admin dashboard batches operational indicators on one pooled connection", hasDatabaseTransaction(adminDashboard));
+check("Client reservations page only loads 20 dossiers with exact verified counters",
+  /getClientReservationIndex\(/.test(clientReservations)
+    && /id:\s*\{ in: ids \}/.test(clientReservations)
+    && /CLIENT_RESERVATION_PAGE_SIZE\s*=\s*20/.test(clientReservationIndex)
+    && /LIMIT \$\{CLIENT_RESERVATION_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientReservationIndex)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientReservationIndex)
+    && /COALESCE\(\([\s\S]*?\), false\) AS "verified"/.test(clientReservationIndex)
+    && /WHERE b\."clientId" = \$\{input\.clientId\}/.test(clientReservationIndex)
+    && !/allBookings = await db\.booking\.findMany/.test(clientReservations));
+check("Client reservations use three simple views and an optional server-wide search",
+  /label: "Toutes"/.test(clientReservations)
+    && /label: "À faire"/.test(clientReservations)
+    && /label: "Historique"/.test(clientReservations)
+    && /data-client-reservation-search-panel/.test(clientReservations)
+    && /name="q"/.test(clientReservations)
+    && !/"use client"/.test(clientReservationList)
+    && !/data-client-reservation-filter-rail/.test(clientReservationList));
+check("Admin dashboard runs independent operational reads concurrently", hasParallelReads(adminDashboard));
 check("Admin dashboard no longer serializes its first metric queries", !/const totalClients = await/.test(adminDashboard) && !/const totalTeachers = await/.test(adminDashboard));
+check("Admin reservations bound the page and avoid shipping the whole teacher catalog",
+  /PAGE_SIZE = 40/.test(adminReservations)
+    && /db\.booking\.count\(\{ where \}\)/.test(adminReservations)
+    && /take: PAGE_SIZE/.test(adminReservations)
+    && !/db\.teacher\.findMany/.test(adminReservations)
+    && /Filtres avancés/.test(adminReservationFilters)
+    && /params\.delete\("page"\)/.test(adminReservationFilters)
+    && !/teachers\.map/.test(adminReservationFilters));
+check("Admin finance paginates both registers and folds secondary filters",
+  /TRANSACTION_PAGE_SIZE = 25/.test(adminPayments)
+    && /PAYOUT_PAGE_SIZE = 15/.test(adminPayments)
+    && /take: TRANSACTION_PAGE_SIZE \+ 1/.test(adminPayments)
+    && /take: PAYOUT_PAGE_SIZE \+ 1/.test(adminPayments)
+    && /aria-label="Pages des paiements clients"/.test(adminPayments)
+    && /aria-label="Pages des reçus professeurs"/.test(adminPayments)
+    && /Méthode et dates/.test(adminPaymentFilters)
+    && /params\.delete\("page"\)/.test(adminPaymentFilters));
 check(
   "Public home is a lightweight mini-app launcher without database fan-out",
   !/getCachedTeacherSearchCatalog|from "@\/lib\/db"|db\.teacher\.findMany|TeacherCard|featuredCards/.test(publicHome)
@@ -47,22 +112,83 @@ check(
     && /HOME_JOURNEY_HREFS/.test(publicHome),
 );
 check(
+  "Public dark call-to-action keeps its title readable",
+  /data-public-dark-cta/.test(publicHome)
+    && /\.public-shell \[data-public-dark-cta\] :where\(h2\)[\s\S]*?color: #FFFFFF !important/.test(globalCss),
+);
+check("Global shell avoids an unused React Query provider", !/<Providers>/.test(rootLayout) && !/@tanstack\/react-query/.test(publicLayout));
+check(
+  "Public navigation avoids eager RSC fan-out",
+  !/prefetch=\{true\}/.test(publicLayout)
+    && /prefetch=\{false\}/.test(journeySwitcher)
+    && /href\.startsWith\("\/professeurs"\)/.test(journeySwitcher)
+    && /return <a key=\{journey\} href=\{href\}/.test(journeySwitcher)
+    && !/router\.prefetch|onPointerEnter|onPointerDown/.test(journeySwitcher)
+    && /prefetch=\{false\}/.test(teacherCard),
+);
+check("PWA install prompt loads only after the critical render", /PWA_PROMPT_AFTER_LOAD_MS\s*=\s*5_000/.test(deferredPwaPrompt) && /addEventListener\("load"/.test(deferredPwaPrompt) && /lazy\(\(\) => import/.test(deferredPwaPrompt) && /data-pwa-install-prompt/.test(pwaPrompt));
+check("Immutable Next assets keep a one-year browser cache", /\/_next\/static\/\*/.test(staticHeaders) && /max-age=31536000,immutable/.test(staticHeaders));
+check("Header brand uses a right-sized logo asset", /competence-mark-112\.webp/.test(brandLogo));
+check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CACHE_SECONDS\s*=\s*300/.test(cloudflareWorker) && /caches\.default\.put/.test(cloudflareWorker));
+check(
+  "Three standard teacher journeys use an anonymous edge cache without filter explosion",
+  /PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS\s*=\s*60/.test(cloudflareWorker)
+    && /readCachedPublicTeacherJourney\(request\)/.test(cloudflareWorker)
+    && /schedulePublicTeacherJourneyCache\(request/.test(cloudflareWorker)
+    && /key !== "journey" && key !== "_rsc"/.test(cloudflareWorker)
+    && /url\.searchParams\.has\("_rsc"\) \|\| request\.headers\.get\("rsc"\) === "1"/.test(cloudflareWorker)
+    && /readSessionCookie\(request\.headers\.get\("cookie"\)\)/.test(cloudflareWorker)
+    && /x-competence-teacher-journey-cache/.test(cloudflareWorker),
+);
+check(
+  "Anonymous public session probes stop at the Cloudflare edge",
+  /respondToAnonymousSessionProbe\(request\)/.test(cloudflareWorker)
+    && /x-competence-session-fast-path/.test(cloudflareWorker)
+    && /JSON\.stringify\(\{ user: null \}\)/.test(cloudflareWorker),
+);
+check(
   "Public teacher search batches and caches results with the consolidated catalog",
   /getCachedTeacherSearchCatalog/.test(publicTeachers)
     && /getCachedPublicTeacherResults/.test(publicTeachers)
     && /unstable_cache/.test(publicTeachers)
+    && /getCachedPublicTeacherResults[\s\S]*?Promise\.all\(\[/.test(publicTeachers)
+    && !/getCachedPublicTeacherResults[\s\S]*?db\.\$transaction\(\[/.test(publicTeachers)
+    && /revalidate:\s*300/.test(publicTeachers)
     && !/Promise\.all\(\[\s*getCachedSubjects/.test(publicTeachers),
+);
+check(
+  "Public teacher navigation renders an immediate loading surface",
+  /data-public-teachers-loading/.test(publicTeachersLoading)
+    && /TeacherCardSkeleton/.test(publicTeachersLoading),
 );
 check(
   "Client registration avoids unused catalog reads and booking reuses the consolidated catalog",
   /getCachedTeacherSearchCatalog/.test(clientBooking)
     && !/getCachedTeacherSearchCatalog|@\/lib\/db/.test(clientRegistration),
 );
-check("Client courses batch tab, overview, and pending reads", hasDatabaseTransaction(clientCourses));
-check("Client reviews batch pending and historical reads", hasDatabaseTransaction(clientReviews));
-check("Client support batches eligible bookings and disputes", hasDatabaseTransaction(clientSupport));
+check("Client courses paginate exact paid proofs without loading all history",
+  /getClientCourseIndex/.test(clientCourses)
+    && /hasVerifiedClientPayment/.test(clientCourses)
+    && /prefetch=\{false\}/.test(clientCourses)
+    && !/rawOverviewBookings|rawBookings|CourseListClient/.test(clientCourses)
+    && /CLIENT_COURSE_PAGE_SIZE = 20/.test(clientCourseIndex)
+    && /LIMIT \$\{CLIENT_COURSE_PAGE_SIZE\} OFFSET \$\{offset\}/.test(clientCourseIndex)
+    && /proof\."amount" = CASE WHEN b\."totalClientPays" > 0/.test(clientCourseIndex)
+    && /WHERE b\."clientId" = \$\{input\.clientId\}/.test(clientCourseIndex));
+check("Client reviews paginate pending and history without a hydrated client-side filter wall",
+  hasDatabaseTransaction(clientReviews)
+    && /take: PENDING_PAGE_SIZE/.test(clientReviews)
+    && /take: HISTORY_PAGE_SIZE/.test(clientReviews)
+    && /db\.booking\.count/.test(clientReviews)
+    && /db\.review\.count/.test(clientReviews)
+    && !/ReviewHistoryClient|myReviews\.map/.test(clientReviews));
+check("Client support summary avoids loading all bookings and disputes",
+  hasDatabaseTransaction(clientSupport)
+    && /db\.booking\.count\(\{ where: eligibleBookingWhere\(user\.id\) \}\)/.test(clientSupport)
+    && /db\.dispute\.findFirst/.test(clientSupport)
+    && /take: PAGE_SIZE/.test(clientSupport));
 check("Client settings batch profile and account indicators", hasDatabaseTransaction(clientSettings));
-check("Professor dashboard batches operational and accounting reads", hasDatabaseTransaction(professorDashboard));
+check("Professor dashboard runs independent operational and accounting reads concurrently", hasParallelReads(professorDashboard));
 check("Admin teacher list batches profiles, catalogs, and photo stats", hasDatabaseTransaction(adminTeachers));
 
 for (const result of checks) {
@@ -83,6 +209,10 @@ function read(filePath) {
 
 function hasDatabaseTransaction(source) {
   return /await db\.\$transaction\(\[/.test(source);
+}
+
+function hasParallelReads(source) {
+  return /await Promise\.all\(\[/.test(source) && !/await db\.\$transaction\(\[/.test(source);
 }
 
 function check(label, ok) {

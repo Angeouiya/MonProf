@@ -17,6 +17,10 @@ import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { markPartnerReferralPaymentConfirmedInTransaction } from "@/lib/partner-referrals";
 import { confirmPromotionPaymentInTransaction } from "@/lib/loyalty-program";
 import {
+  ensureJekoPaymentStakeholderNotificationsInTransaction,
+  ensureTeacherMissionActivationInTransaction,
+} from "@/lib/teacher-mission-activation";
+import {
   findTeacherScheduleConflictForBooking,
   formatTeacherScheduleConflictMessage,
   lockTeacherSchedule,
@@ -512,6 +516,18 @@ export async function reconcileJekoWebhook(input: ReconcileJekoInput): Promise<R
         await confirmPromotionPaymentInTransaction(tx, {
           bookingId: current.booking.id,
           clientId: current.booking.clientId,
+          now,
+        });
+        await ensureTeacherMissionActivationInTransaction(tx, {
+          bookingId: current.booking.id,
+          teacherId: current.booking.teacherId,
+          now,
+          priority: "URGENT",
+          sourceLabel: "Paiement Jèko confirmé par le serveur",
+        });
+        await ensureJekoPaymentStakeholderNotificationsInTransaction(tx, {
+          bookingId: current.booking.id,
+          providerReference: reference,
           now,
         });
       }

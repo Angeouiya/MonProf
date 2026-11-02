@@ -10,6 +10,7 @@ import {
   calculateTeacherPayoutAvailability,
   getTeacherFinancialSettlement,
   getTeacherGlobalRetentionLedger,
+  groupTeacherPaymentAdjustmentsByBooking,
   isCancellationPenaltyPayout,
 } from "@/lib/teacher-payments";
 import { TeacherPayoutReceiptActions } from "@/components/admin/teacher-payout-receipt-actions";
@@ -25,8 +26,10 @@ import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurPaiementsPage() {
+  const pageStartedAt = Date.now();
   const { teacher } = await requireTeacher();
   const platformSettings = await getPlatformRuntimeSettings();
+  const financeReadStartedAt = Date.now();
   const [
     bookings,
     adjustments,
@@ -135,37 +138,58 @@ export default async function ProfesseurPaiementsPage() {
       where: { teacherId: teacher.id, status: "PENDING" },
       _sum: { amount: true },
     }),
-    db.bookingSession.findMany({
+    db.bookingSession.groupBy({
+      by: ["bookingId"],
+      orderBy: { bookingId: "asc" },
       where: { teacherId: teacher.id, retainedAmount: { gt: 0 } },
-      select: { bookingId: true, retainedAmount: true },
+      _sum: { retainedAmount: true },
     }),
-    db.teacherPayoutAllocation.findMany({
+    db.teacherPayoutAllocation.groupBy({
+      by: ["bookingId"],
+      orderBy: { bookingId: "asc" },
       where: {
         bookingSessionId: null,
         retainedAmountSnapshot: { gt: 0 },
         payout: { teacherId: teacher.id, status: { in: ["DRAFT", "PAID"] } },
       },
-      select: { bookingId: true, retainedAmountSnapshot: true },
+      _max: { retainedAmountSnapshot: true },
     }),
-    db.teacherPayoutAllocation.findMany({
-      where: { payout: { teacherId: teacher.id, provider: "JEKO", status: "DRAFT" } },
-      select: {
-        amount: true,
-        payout: { select: { payoutRequest: { select: { status: true } } } },
+    db.teacherPayoutAllocation.aggregate({
+      where: {
+        amount: { gt: 0 },
+        payout: { teacherId: teacher.id, provider: "JEKO", status: "DRAFT" },
       },
+      _sum: { amount: true },
     }),
   ]);
 
+  const financeReadMs = Date.now() - financeReadStartedAt;
+  if (financeReadMs > 1500) {
+    console.warn("[performance] professor-payments slow read", {
+      pageMs: Date.now() - pageStartedAt,
+      financeReadMs,
+      bookingCount: bookings.length,
+      adjustmentCount: adjustments.length,
+    });
+  }
+
   const verifiedBookings = bookings.filter(hasVerifiedPayDunyaClientPayment);
+  const adjustmentsByBooking = groupTeacherPaymentAdjustmentsByBooking(adjustments);
   const settlementRows = verifiedBookings.map((booking) => ({
     booking,
-    settlement: getTeacherFinancialSettlement(booking, adjustments),
+    settlement: getTeacherFinancialSettlement(booking, adjustmentsByBooking.get(booking.id) ?? []),
   }));
   const visibleSettlementRows = settlementRows.slice(0, 100);
   const globalRetentionLedger = getTeacherGlobalRetentionLedger(
     adjustments,
-    historicalSessionRetentions,
-    historicalLegacyRetentions,
+    historicalSessionRetentions.map((row) => ({
+      bookingId: row.bookingId,
+      retainedAmount: row._sum?.retainedAmount ?? 0,
+    })),
+    historicalLegacyRetentions.map((row) => ({
+      bookingId: row.bookingId,
+      retainedAmountSnapshot: row._max?.retainedAmountSnapshot ?? 0,
+    })),
   );
   const availability = calculateTeacherPayoutAvailability({
     settlements: settlementRows.map(({ booking, settlement }) => ({
@@ -175,10 +199,7 @@ export default async function ProfesseurPaiementsPage() {
     })),
     globalRetentionLedger,
     pendingRequestedAmount: pendingRequestSummary._sum.amount,
-    draftReservations: draftAllocations.map((allocation) => ({
-      amount: allocation.amount,
-      payoutRequestStatus: allocation.payout.payoutRequest?.status ?? null,
-    })),
+    draftReservations: [{ amount: draftAllocations._sum.amount ?? 0 }],
   });
   const totalNet = settlementRows.reduce((sum, row) => sum + row.settlement.expectedAmount, 0);
   const totalReleased = settlementRows.reduce((sum, row) => sum + row.settlement.released, 0);

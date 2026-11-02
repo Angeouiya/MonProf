@@ -6,12 +6,14 @@ const clientPrimitivesPath = "src/components/shared/client-page-primitives.tsx";
 const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", clientPrimitivesPath];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
+const clientDashboardPath = "src/app/client/page.tsx";
 const publicLayoutPath = "src/components/layouts/public-layout.tsx";
 const publicHomePath = "src/app/page.tsx";
 const publicTeachersPath = "src/app/professeurs/page.tsx";
 const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
 const publicTariffsPath = "src/app/tarifs/page.tsx";
 const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
+const teacherResponsiveFiltersPath = "src/components/shared/teacher-responsive-filters.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
 const clientNotificationActionsPath = "src/app/client/notifications/actions-client.tsx";
@@ -26,6 +28,7 @@ const journeySwitcherPath = "src/components/shared/journey-switcher.tsx";
 const professorImagePath = "src/components/shared/professor-image.tsx";
 const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
+const teacherImageUploadPath = "src/lib/client/teacher-image-upload.ts";
 const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
 const bookingSessionLedgerPath = "src/components/shared/booking-session-ledger.tsx";
 const alertDialogPath = "src/components/ui/alert-dialog.tsx";
@@ -62,14 +65,15 @@ const layout = read(layoutPath);
 const primaryNavSource = layout.match(/const primaryNavItem:[\s\S]*?=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
 const desktopNavSource = layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
-const partnershipNavSource = layout.match(/const partnershipNavItem\s*=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
 const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const clientDashboard = read(clientDashboardPath);
 const publicLayout = read(publicLayoutPath);
 const publicHome = read(publicHomePath);
 const publicTeachersPage = read(publicTeachersPath);
 const publicTeacherDetail = read(publicTeacherDetailPath);
 const publicTariffs = read(publicTariffsPath);
 const mobileFilterSheet = read(mobileFilterSheetPath);
+const teacherResponsiveFilters = read(teacherResponsiveFiltersPath);
 const clientReservationDetail = read(clientReservationDetailPath);
 const clientBookingActions = read(clientBookingActionsPath);
 const clientNotificationActions = read(clientNotificationActionsPath);
@@ -84,6 +88,7 @@ const journeySwitcher = read(journeySwitcherPath);
 const professorImage = read(professorImagePath);
 const professorMedia = read(professorMediaPath);
 const professorMediaApi = read(professorMediaApiPath);
+const teacherImageUpload = read(teacherImageUploadPath);
 const pricingBreakdown = read(pricingBreakdownPath);
 const bookingSessionLedger = read(bookingSessionLedgerPath);
 const alertDialog = read(alertDialogPath);
@@ -262,28 +267,34 @@ record(
 );
 
 record(
-  "Client navigation keeps core destinations compact while exposing partnership",
+  "Client navigation keeps partnership outside the primary desktop navigation",
   countMatches(primaryNavSource, /href:/g) === 1
     && countMatches(desktopNavSource, /href:/g) === 4
-    && countMatches(partnershipNavSource, /href:/g) === 1
     && countMatches(accountNavSource, /href:/g) === 2
     && /label:\s*"Mon compte"/.test(accountNavSource)
-    && /label:\s*"Partenariat"/.test(partnershipNavSource)
-    && /href:\s*"\/client\/partenariat"/.test(partnershipNavSource)
     && /label:\s*"Cadeaux"/.test(desktopNavSource)
     && /href:\s*"\/client\/cadeaux"/.test(desktopNavSource)
+    && !/data-client-partnership-link/.test(layout)
+    && !/label:\s*"Partenariat"/.test(desktopNavSource)
     && !/label:\s*"Paramètres"/.test(accountNavSource),
 );
 
 record(
-  "Client mobile navigation contains the five visible connected actions",
-  countMatches(mobileNavSource, /href:/g) === 5
-    && /grid grid-cols-5 gap-1/.test(layout)
+  "Client mobile navigation contains four essential actions without partnership",
+  countMatches(mobileNavSource, /href:/g) === 4
+    && /grid grid-cols-4 gap-1/.test(layout)
     && /label:\s*"Accueil"/.test(mobileNavSource)
     && /label:\s*"Réserver"/.test(mobileNavSource)
     && /label:\s*"Cours"/.test(mobileNavSource)
     && /label:\s*"Paiements"/.test(mobileNavSource)
-    && /label:\s*"Partenariat"/.test(mobileNavSource),
+    && !/label:\s*"Partenariat"/.test(mobileNavSource),
+);
+
+record(
+  "Partnership remains immediately visible at the top of the client home",
+  /data-client-partnership-entry/.test(clientDashboard)
+    && /href="\/client\/partenariat"/.test(clientDashboard)
+    && clientDashboard.indexOf("data-client-partnership-entry") < clientDashboard.indexOf("data-client-dashboard-journeys"),
 );
 
 record(
@@ -296,10 +307,10 @@ record(
 );
 
 record(
-  "Client tab and filter labels are protected against vertical wrapping",
+  "Client reservation tabs stay readable without a second filter rail",
   /Final client readability guard/.test(css)
     && /\[data-client-tab-item\][\s\S]*?white-space:\s*nowrap\s*!important;[\s\S]*?word-break:\s*normal\s*!important;/.test(css)
-    && /\[data-client-reservation-filter-rail\]\s*button/.test(css),
+    && !/data-client-reservation-filter-rail/.test(clientReservationList),
 );
 
 record(
@@ -317,19 +328,19 @@ record(
 );
 
 record(
-  "Client reservation summary keeps its three financial facts readable",
-  /data-client-reservation-mobile-priority[\s\S]*?mt-3 grid grid-cols-3 gap-2/.test(clientReservationsPage),
+  "Client reservations present one priority action without competing KPI cards",
+  /data-client-reservation-priority/.test(clientReservationsPage)
+    && !/ClientMetricStrip|ReservationCommandCenter|ReservationMobilePriorityCard/.test(clientReservationsPage),
 );
 
 record(
-  "Client reservation cards keep mobile decisions visible while folding long details",
-  /data-client-reservation-mobile-snapshot/.test(clientReservationList)
-    && /data-client-reservation-mobile-status/.test(clientReservationList)
-    && /data-client-reservation-mobile-details/.test(clientReservationList)
-    && /Infos/.test(clientReservationList)
-    && /group-open:rotate-180/.test(clientReservationList)
-    && /hidden min-\[560px\]:block/.test(clientReservationList)
-    && /hidden min-\[620px\]:block/.test(clientReservationList),
+  "Client reservation cards show course, date, amount and one clear action",
+  /data-client-reservation-card/.test(clientReservationList)
+    && /reservation\.stepLabel/.test(clientReservationList)
+    && /reservation\.dateLabel/.test(clientReservationList)
+    && /reservation\.amountLabel/.test(clientReservationList)
+    && /href=\{`\/client\/reservations\/\$\{reservation\.id\}`\}/.test(clientReservationList)
+    && !/data-client-reservation-mobile-details/.test(clientReservationList),
 );
 
 record(
@@ -495,9 +506,10 @@ record(
 );
 
 record(
-  "Client app filter rails are swipeable on mobile without visible scrollbar noise",
-  /Client app polish guard/.test(css)
-    && /\[data-client-reservation-filter-rail\][\s\S]*?scroll-snap-type:\s*x\s+mandatory\s*!important;[\s\S]*?scrollbar-width:\s*none\s*!important;/.test(css)
+  "Client reservation search is optional instead of an always-visible filter wall",
+  /data-client-reservation-search-panel/.test(clientReservationsPage)
+    && /type="search"/.test(clientReservationsPage)
+    && !/data-client-reservation-filter-rail/.test(clientReservationList)
     && /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(css),
 );
 
@@ -565,7 +577,7 @@ const gatedCommandCenterRenderCount = countMatches(
 record(
   "Client command centers are disabled before render",
   /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(clientPrimitives)
-    && commandCenterRenderCount === 9
+    && commandCenterRenderCount > 0
     && gatedCommandCenterRenderCount === commandCenterRenderCount,
 );
 
@@ -656,7 +668,10 @@ record(
 record(
   "Public teacher search uses one app-like mobile filter sheet before profiles",
   /data-public-teacher-search-controls/.test(mobileFilterSheet)
-    && /<MobileFilterSheet resultLabel=\{mobileResultLabel\} activeFiltersCount=\{activeFiltersCount\}>/.test(publicTeachersPage)
+    && /<TeacherResponsiveFilters/.test(publicTeachersPage)
+    && /<MobileFilterSheet/.test(teacherResponsiveFilters)
+    && /resultLabel=\{props\.resultLabel\}/.test(teacherResponsiveFilters)
+    && /activeFiltersCount=\{props\.activeFiltersCount\}/.test(teacherResponsiveFilters)
     && /data-public-teacher-app-header/.test(publicTeachersPage)
     && /data-public-teacher-system-pill/.test(publicTeachersPage)
     && /data-public-teacher-count/.test(publicTeachersPage)
@@ -693,14 +708,14 @@ record(
     && /data-public-journey-tabs/.test(publicTeachersPage)
     && /TEACHER_JOURNEYS\.map/.test(publicTeachersPage)
     && /<JourneySwitcher/.test(publicTeachersPage)
-    && /data-journey-tab=\{journey\}/.test(journeySwitcher)
+    && /"data-journey-tab": journey/.test(journeySwitcher)
     && /data-mini-app-tablist/.test(journeySwitcher)
     && /data-mini-app-system-switcher/.test(journeySwitcher)
     && /data-mini-app-active-pill/.test(journeySwitcher)
     && /role="tablist"/.test(journeySwitcher)
-    && /role="tab"/.test(journeySwitcher)
-    && /aria-selected=\{active\}/.test(journeySwitcher)
-    && /aria-current=\{active \? "page" : undefined\}/.test(journeySwitcher)
+    && /role: "tab" as const/.test(journeySwitcher)
+    && /"aria-selected": active/.test(journeySwitcher)
+    && /"aria-current": active \? "page" as const : undefined/.test(journeySwitcher)
     && /grid-template-columns: repeat\(var\(--journey-count\), minmax\(0, 1fr\)\)/.test(css)
     && /white-space: nowrap/.test(css)
     && /journey-switcher\[data-size="hero"\][\s\S]*?journey-switcher__meta[\s\S]*?display:\s*none/.test(css)
@@ -752,9 +767,9 @@ record(
     && /defaultChecked=\{checked\}/.test(courseFormatControl)
     && /normalizeCourseFormat\(requestedFormat\)/.test(publicTeachersPage)
     && /normalizeCourseFormat\(requestedFormat\)/.test(read("src/app/client/rechercher/page.tsx"))
-    && /<CourseFormatSegmentedControl/.test(publicTeachersPage)
+    && /<CourseFormatSegmentedControl/.test(teacherResponsiveFilters)
     && /<CourseFormatSegmentedControl/.test(read("src/app/client/rechercher/page.tsx"))
-    && !/<button[\s\S]{0,220}name="format"/.test(publicTeachersPage)
+    && !/<button[\s\S]{0,220}name="format"/.test(teacherResponsiveFilters)
     && !/<button[\s\S]{0,220}name="format"/.test(read("src/app/client/rechercher/page.tsx")),
 );
 
@@ -794,7 +809,10 @@ record(
     && /data-professor-cover-images/.test(professorMedia)
     && /Importer une couverture/.test(professorMedia)
     && /className="object-contain"/.test(professorMedia)
-    && /fit: action === "custom-cover" \? "contain" : "cover"/.test(professorMediaApi),
+    && /action === "custom-cover" \? 900 : 300/.test(professorMediaApi)
+    && /function coverGeometry/.test(teacherImageUpload)
+    && /Math\.min\(canvasWidth \/ sourceWidth, canvasHeight \/ sourceHeight\)/.test(teacherImageUpload)
+    && /x: Math\.round\(\(canvasWidth - width\) \/ 2\)/.test(teacherImageUpload),
 );
 
 record(

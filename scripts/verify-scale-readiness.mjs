@@ -28,7 +28,14 @@ record(
   database.includes("Symbol.for('competence.prisma.request-context')")
     && database.includes("new AsyncLocalStorage<AppPrismaClient>()")
     && database.includes("runWithDatabaseRequestContext")
-    && database.includes("max: 5"),
+    && database.includes("max: 1"),
+);
+record(
+  "Le pool Hyperdrive réutilise les connexions pendant la requête sans attente infinie",
+  !database.includes("maxUses: 1")
+    && database.includes("connectionTimeoutMillis: 8_000")
+    && database.includes("query_timeout: 15_000")
+    && database.includes("statement_timeout: 15_000"),
 );
 record("Connexion runtime via pooler Supabase", /pooler\.supabase\.com:6543/.test(envExample));
 record("PgBouncer activé", /pgbouncer=true/.test(envExample));
@@ -40,6 +47,13 @@ record("Accueil public sans fan-out base", !publicHome.includes('from "@/lib/db"
 record("Catalogue professeurs mutualisé", teacherSearch.includes("getCachedTeacherSearchCatalog"));
 record("Paramètres runtime mis en cache et invalidables", settings.includes("unstable_cache") && settings.includes('tags: ["platform-settings"]'));
 record("Temps réel piloté par événements sans polling global", !realtime.includes("setInterval") && realtime.includes("COMPETENCE_PUSH_RECEIVED"));
+record(
+  "Retour dans l'application sans rafale de lectures et écritures push",
+  realtime.includes("NOTIFICATION_STATE_RECHECK_MS = 60_000")
+    && realtime.includes("PUSH_SUBSCRIPTION_RECHECK_MS = 6 * 60 * 60_000")
+    && realtime.includes("if (synchronizing || (!force && Date.now() - lastSubscriptionCheckAt < PUSH_SUBSCRIPTION_RECHECK_MS)) return")
+    && realtime.includes("lastStateCheckAt.current < NOTIFICATION_STATE_RECHECK_MS"),
+);
 record("Web Push traité par lots", /MAX_BATCH_SIZE\s*=\s*500/.test(webPush));
 record("Web Push publié dans une file durable", webPushQueue.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
 record(

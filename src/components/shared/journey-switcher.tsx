@@ -79,33 +79,34 @@ export function JourneySwitcher({
           const href = hrefs[journey];
           const active = selectedJourney === journey;
           const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;
+          const content = (
+            <span className="journey-switcher__text">
+              <span className="journey-switcher__title">{config.shortLabel}</span>
+              {showMeta && <span className="journey-switcher__meta" data-journey-tab-meta>{tabMeta}</span>}
+            </span>
+          );
+          const commonProps = {
+            "aria-label": showMeta ? `${config.label} · ${tabMeta}` : config.label,
+            "aria-current": active ? "page" as const : undefined,
+            "aria-selected": active,
+            role: "tab" as const,
+            "data-journey-tab": journey,
+            "data-active": active ? "true" : "false",
+            "data-state": active ? "active" : "inactive",
+            className: "journey-switcher__link",
+            onClick: () => setPendingSelection({ source: resolvedActive, target: journey }),
+          };
 
           if (!href) return null;
 
+          // Public mini-app pages are edge-cached as HTML. A document
+          // navigation avoids multiple RSC prefetches and stale payloads.
+          if (href.startsWith("/professeurs")) {
+            return <a key={journey} href={href} {...commonProps}>{content}</a>;
+          }
+
           return (
-            <Link
-              key={journey}
-              href={href}
-              prefetch
-              aria-label={showMeta ? `${config.label} · ${tabMeta}` : config.label}
-              aria-current={active ? "page" : undefined}
-              aria-selected={active}
-              role="tab"
-              data-journey-tab={journey}
-              data-active={active ? "true" : "false"}
-              data-state={active ? "active" : "inactive"}
-              className="journey-switcher__link"
-              onClick={() => setPendingSelection({ source: resolvedActive, target: journey })}
-            >
-              <span className="journey-switcher__text">
-                <span className="journey-switcher__title">{config.shortLabel}</span>
-                {showMeta && (
-                  <span className="journey-switcher__meta" data-journey-tab-meta>
-                    {tabMeta}
-                  </span>
-                )}
-              </span>
-            </Link>
+            <Link key={journey} href={href} prefetch={false} {...commonProps}>{content}</Link>
           );
         })}
       </div>

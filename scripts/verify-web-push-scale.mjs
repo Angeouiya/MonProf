@@ -17,6 +17,7 @@ const subscriptionRoute = read("src/app/api/push/subscriptions/route.ts");
 const realtime = read("src/components/shared/web-push-realtime.tsx");
 const control = read("src/components/shared/web-push-control.tsx");
 const webPushClient = read("src/lib/web-push-client.ts");
+const webPushTest = read("src/lib/web-push-test.ts");
 const serviceWorker = read("public/sw.js");
 const cloudflareWorker = read("cloudflare-worker.ts");
 const wranglerConfig = read("wrangler.jsonc");
@@ -52,6 +53,12 @@ record("Livraisons suivies par abonnement", webPush.includes("db.webPushDelivery
 record("Endpoints 404/410 révoqués automatiquement", webPush.includes("statusCode === 404 || statusCode === 410") && webPush.includes('enabled: false'));
 record("Accepté provider n'est pas assimilé à lu", webPush.includes('status: "ACCEPTED"') && !webPush.includes("read: true"));
 record("Retry PARTIAL sans redoubler ACCEPTED/REVOKED", webPush.includes("'PARTIAL'") && webPush.includes("alreadyFinalBySubscription"));
+record(
+  "Paire VAPID atomique sans mélange environnement/base",
+  webPush.includes("const hasRuntimePair = Boolean(envPublicKey && envPrivateKey)")
+    && webPush.includes("hasRuntimePair ? envPublicKey : databasePublicKey")
+    && webPush.includes("hasRuntimePair ? envPrivateKey : databasePrivateKey"),
+);
 
 record("Topic queue web-push-events défini", queueLib.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
 record("Publication queue avec idempotence", queueLib.includes("idempotencyKey") && queueLib.includes("DuplicateMessageError"));
@@ -87,9 +94,35 @@ record(
     && realtime.includes("visibilitychange")
     && realtime.includes('window.addEventListener("focus"'),
 );
+record(
+  "Focus et visibilité ne resynchronisent pas chaque fois le même appareil",
+  realtime.includes("PUSH_SUBSCRIPTION_RECHECK_MS = 6 * 60 * 60_000")
+    && realtime.includes("NOTIFICATION_STATE_RECHECK_MS = 60_000")
+    && realtime.includes("if (synchronizing || (!force && Date.now() - lastSubscriptionCheckAt < PUSH_SUBSCRIPTION_RECHECK_MS)) return"),
+);
 record("Contrôle push compact avec test appareil", control.includes("data-web-push-control") && control.includes("Tester sur cet appareil"));
 record("Guide installation PWA retiré du bandeau", !control.includes("data-pwa-install-guide") && !control.includes("Installer l’application Compétence"));
+record(
+  "Plus tard masque durablement l'invite push sur cet appareil",
+  realtime.includes('PUSH_PROMPT_DISMISSED_KEY = "competence:push-prompt-dismissed-on-device:v1"')
+    && realtime.includes("window.localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY")
+    && realtime.includes("window.localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY")
+    && !realtime.includes("window.sessionStorage.setItem(PUSH_PROMPT_DISMISSED_KEY"),
+);
 record("Client envoie capacités appareil", control.includes("buildSubscriptionPayload") && webPushClient.includes("supportsVibration") && webPushClient.includes("supportsBadging"));
+record(
+  "Ancien endpoint du même appareil révoqué après rotation VAPID",
+  subscriptionRoute.includes("id: { not: saved.id }")
+    && subscriptionRoute.includes("deviceId: normalizedDeviceId")
+    && subscriptionRoute.includes("enabled: false, revokedAt: now"),
+);
+record(
+  "Test appareil attend la livraison spécifique même si la queue gagne la course",
+  webPushTest.includes("waitForNotificationDelivery")
+    && webPushTest.includes("teacherNotificationId: notification.id")
+    && webPushTest.includes("notificationId: notification.id")
+    && webPushTest.includes('item.status === "ACCEPTED"'),
+);
 record(
   "Abonnements VAPID anciens sont remplacés automatiquement",
   webPushClient.includes("ensureCurrentPushSubscription")
@@ -110,12 +143,12 @@ record(
     && control.includes("const current = await inspect()")
     && control.includes("current.status !== \"enabled\""),
 );
-record("Icône complète Compétence disponible", exists("public/images/brand/competence-notification-icon-outline-512.png"));
-record("Badge complet Compétence transparent disponible", exists("public/images/brand/competence-notification-badge-outline-192.png"));
-record("Icône notification utilise le symbole complet Compétence", serviceWorker.includes("competence-notification-icon-outline-512.png?v=10"));
-record("Badge système utilise le symbole complet transparent", serviceWorker.includes("competence-notification-badge-outline-192.png?v=10"));
+record("Icône C Compétence disponible", exists("public/images/brand/competence-notification-monogram-tile-512.png"));
+record("Badge C Compétence transparent disponible", exists("public/images/brand/competence-notification-monogram-badge-192.png"));
+record("Icône notification utilise le grand C Compétence", serviceWorker.includes("competence-notification-monogram-tile-512.png?v=11"));
+record("Badge système utilise le C transparent", serviceWorker.includes("competence-notification-monogram-badge-192.png?v=11"));
 record("Service Worker icône Compétence + badge + vibration", [
-  "competence-notification-icon-outline-512.png?v=10",
+  "competence-notification-monogram-tile-512.png?v=11",
   "setAppBadge",
   "vibrate",
   "renotify",
@@ -128,7 +161,7 @@ record(
   realtime.includes("Recevez les alertes Compétence")
     && realtime.includes("Notification.requestPermission()")
     && realtime.includes('fetch("/api/push/test"')
-    && realtime.includes("competence-notification-icon-outline-512.png"),
+    && realtime.includes("competence-notification-monogram-tile-512.png?v=11"),
 );
 record(
   "Appareil accordé auto-réparé et testé sans silence",

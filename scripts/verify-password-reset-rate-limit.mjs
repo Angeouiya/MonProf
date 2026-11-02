@@ -30,8 +30,14 @@ assert.ok(
 );
 assert.match(
   forgotRouteSource,
-  /if \(request\.jobId && !request\.reused\)/,
-  "Un reset actif réutilisé doit attendre le cron au lieu de relancer un flush par requête.",
+  /if \(request\.jobId\)[\s\S]*?publishPasswordEmailJob\(request\.jobId\)/,
+  "Toute demande acceptée, y compris un reset actif réutilisé, doit réveiller la file idempotente.",
+);
+assert.doesNotMatch(forgotRouteSource, /request\.jobId && !request\.reused/);
+assert.doesNotMatch(
+  outboxSource.slice(0, outboxSource.indexOf("export async function flushPasswordEmailOutbox")),
+  /passwordResetRequestAudit\.deleteMany/,
+  "Le nettoyage de rétention ne doit pas ralentir la transaction de demande utilisateur.",
 );
 
 console.log("Password reset throttling verification passed.");

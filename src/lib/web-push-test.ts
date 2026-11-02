@@ -24,7 +24,7 @@ export async function runCurrentActorWebPushTest() {
   }
 
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await enqueueNotificationEvent({
+  const notification = await enqueueNotificationEvent({
     title: "Test notification Compétence",
     message: "Si vous voyez cette alerte, les notifications push Compétence sont bien actives sur cet appareil.",
     type: "WEB_PUSH_DEVICE_TEST",
@@ -41,7 +41,16 @@ export async function runCurrentActorWebPushTest() {
   });
 
   const flush = await flushWebPushOutbox(50);
-  const delivered = flush.deliveriesAccepted > 0 || flush.sent > 0;
+  // The Cloudflare Queue can claim and deliver this row before the direct
+  // flush below. Read the specific outbox row instead of treating claimed=0 as
+  // an error; otherwise the UI can report failure after a successful push.
+  const delivery = await waitForNotificationDelivery(
+    actor.kind === "TEACHER"
+      ? { teacherNotificationId: notification.id }
+      : { notificationId: notification.id },
+  );
+  const delivered = delivery?.status === "SENT"
+    || delivery?.deliveries.some((item) => item.status === "ACCEPTED") === true;
   return {
     ok: delivered,
     status: 200,
@@ -51,4 +60,23 @@ export async function runCurrentActorWebPushTest() {
       ? "Notification test envoyée. Elle doit apparaître via le système du téléphone ou du navigateur."
       : "Notification test créée, mais aucun provider push ne l'a encore acceptée. Consultez Santé push pour le détail.",
   };
+}
+
+async function waitForNotificationDelivery(where: { notificationId?: string; teacherNotificationId?: string }) {
+  let result: { status: string; deliveries: Array<{ status: string }> } | null = null;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    result = await db.webPushOutbox.findFirst({
+      where,
+      select: {
+        status: true,
+        deliveries: { select: { status: true } },
+      },
+    });
+    if (result?.status === "SENT" || result?.deliveries.some((item) => item.status === "ACCEPTED")) {
+      return result;
+    }
+    if (result && ["DEAD", "NO_SUBSCRIPTION"].includes(result.status)) return result;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return result;
 }

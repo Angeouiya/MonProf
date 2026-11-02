@@ -23,13 +23,13 @@ const checks = [
       && home.includes('id="parcours"')
       && home.includes('data-home-journey-tabs')
       && home.includes('<JourneySwitcher')
-      && journeySwitcher.includes('data-journey-tab={journey}')
+      && journeySwitcher.includes('"data-journey-tab": journey')
       && journeySwitcher.includes('data-mini-app-tablist')
       && journeySwitcher.includes('data-mini-app-system-switcher')
       && journeySwitcher.includes('data-mini-app-active-pill')
       && journeySwitcher.includes('role="tablist"')
-      && journeySwitcher.includes('role="tab"')
-      && journeySwitcher.includes('aria-selected={active}')
+      && journeySwitcher.includes('role: "tab" as const')
+      && journeySwitcher.includes('"aria-selected": active')
       && journeySwitcher.includes('data-journey-tab-meta')
       && home.includes('showMeta')
       && journeyModel.includes('priceLabel: "Dès 15 000 F"')
@@ -62,13 +62,13 @@ const checks = [
   ],
   [
     "Public navigation resolves client, admin and teacher sessions without blocking first render",
-    publicLayout.includes('queryKey: ["public-session-role"]')
-      && publicLayout.includes('enabled: !hideFooter')
-      && publicLayout.includes('staleTime: 60_000')
+    publicLayout.includes('const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null)')
+      && publicLayout.includes('const controller = new AbortController()')
+      && publicLayout.includes('readPublicSessionRole(controller.signal)')
       && publicLayout.includes('CLIENT: { href: "/client"')
       && publicLayout.includes('ADMIN: { href: "/admin"')
       && publicLayout.includes('TEACHER: { href: "/professeur"')
-      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store" })'),
+      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store", signal })'),
   ],
   [
     "Public teacher search preserves the selected journey through search, filters, pagination and cards",

@@ -8,13 +8,18 @@ import {
   processWebPushQueueMessage,
   type WebPushQueueMessage,
 } from "@/lib/web-push-queue";
+import {
+  processPasswordEmailQueueMessage,
+  type PasswordEmailQueueMessage,
+} from "@/lib/password-email-queue";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 type CloudflareQueueEnvelope =
   | { queue: "web-push"; message: WebPushQueueMessage; attempts?: number }
-  | { queue: "communication"; message: CommunicationCampaignQueueMessage; attempts?: number };
+  | { queue: "communication"; message: CommunicationCampaignQueueMessage; attempts?: number }
+  | { queue: "password-email"; message: PasswordEmailQueueMessage; attempts?: number };
 
 export async function POST(request: Request) {
   if (!hasValidInternalAuthorization(request)) {
@@ -37,6 +42,11 @@ export async function POST(request: Request) {
     if (envelope.queue === "communication") {
       const result = await processCommunicationCampaignBatch(envelope.message);
       if (!result?.ok) throw new Error("Dispatch campagne communication incomplet.");
+      return NextResponse.json({ ok: true, result });
+    }
+
+    if (envelope.queue === "password-email") {
+      const result = await processPasswordEmailQueueMessage(envelope.message);
       return NextResponse.json({ ok: true, result });
     }
 

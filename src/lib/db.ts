@@ -32,13 +32,15 @@ function createPrismaClient() {
     ? new PrismaClient({
         adapter: new PrismaPg({
           connectionString: cloudflareDatabase!.connectionString,
-          // A single authenticated dashboard renders several independent
-          // queries. Cloudflare recommends at most five connections per
-          // Worker invocation; Hyperdrive pools the origin connections.
-          max: 5,
-          maxUses: 1,
+          // Each Worker request uses one origin connection at a time. A
+          // larger per-request pool exhausts the shared Hyperdrive origin
+          // limit quickly when many users navigate concurrently.
+          max: 1,
           idleTimeoutMillis: 10_000,
-          connectionTimeoutMillis: 10_000,
+          connectionTimeoutMillis: 8_000,
+          query_timeout: 15_000,
+          statement_timeout: 15_000,
+          idle_in_transaction_session_timeout: 15_000,
         }, cloudflareDatabase!.schema ? { schema: cloudflareDatabase!.schema } : undefined),
         log: [...log],
       })

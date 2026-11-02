@@ -17,6 +17,7 @@ import {
   lockTeacherSchedule,
   TEACHER_SCHEDULE_CONFLICT_CODE,
 } from "@/lib/teacher-schedule-conflicts";
+import { ensureTeacherMissionActivationInTransaction } from "@/lib/teacher-mission-activation";
 
 type PortalRole = "CLIENT" | "ADMIN" | "TEACHER";
 
@@ -331,6 +332,17 @@ export async function PATCH(
           sentAt: now,
           link: "/admin/reservations/" + bookingId + "#seances",
           actionLabel: "Voir la comptabilité",
+        },
+      });
+      await tx.teacherNotification.create({
+        data: {
+          teacherId: courseSession.teacherId,
+          bookingId,
+          title: `Fonds libérés - ${courseSession.booking.reference}`,
+          message: `${courseSession.booking.reference} · ${sessionLabel}. Le client a confirmé la réalisation du cours. ${current.teacherNetAmount.toLocaleString("fr-FR")} FCFA sont maintenant libérables dans votre portefeuille, sous réserve d'un litige déjà ouvert.`,
+          channel: "INTERNAL",
+          status: "SENT",
+          sent: true,
         },
       });
       await syncBookingSessionAggregates(tx as any, bookingId);
@@ -656,16 +668,17 @@ export async function PATCH(
         },
       });
       if (accepted) {
-        await tx.teacherNotification.create({
-          data: {
-            teacherId: proposedTeacherId,
-            bookingId,
-            title: "Nouvelle séance attribuée",
-            message: `${courseSession.booking.reference} · ${sessionLabel}. Le client a accepté votre profil. Consultez la mission et confirmez rapidement votre disponibilité.`,
-            channel: "INTERNAL",
-            status: "PENDING",
-            sent: false,
-          },
+        await ensureTeacherMissionActivationInTransaction(tx, {
+          bookingId,
+          teacherId: proposedTeacherId,
+          now,
+          priority: "URGENT",
+          sourceLabel: "Le client a accepté votre profil comme professeur remplaçant",
+          scopeLabel: sessionLabel,
+          scheduledDate: current.scheduledDate,
+          scheduledTime: current.scheduledTime,
+          teacherNetAmount: current.teacherNetAmount,
+          instructions: "Confirmez rapidement cette séance de remplacement ou signalez un problème depuis votre espace.",
         });
       } else if (nextReplacement) {
         await tx.notification.create({

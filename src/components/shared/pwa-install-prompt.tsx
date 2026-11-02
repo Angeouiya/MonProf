@@ -10,7 +10,7 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v1";
+const DISMISSED_AT_KEY = "competence:pwa-install-dismissed-at:v2";
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function PwaInstallPrompt() {
@@ -38,12 +38,12 @@ export function PwaInstallPrompt() {
     const showTimer = window.setTimeout(() => {
       setIsIos(ios);
       setOpen(true);
-    }, ios ? 700 : 1_400);
+    }, 0);
+
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       deferredPrompt.current = event as InstallPromptEvent;
       setNativePromptAvailable(true);
-      setOpen(true);
     };
     const onInstalled = () => {
       deferredPrompt.current = null;
@@ -97,7 +97,7 @@ export function PwaInstallPrompt() {
           <X className="h-4 w-4" aria-hidden />
         </button>
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#DDE6F7] bg-white shadow-sm">
-          <Image src="/images/brand/competence-icon-192-safe.png" alt="" width={54} height={54} priority />
+          <Image src="/images/brand/competence-notification-monogram-tile.svg" alt="" width={54} height={54} sizes="54px" />
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-[#B47C00]">Application Compétence</p>
         <h2 id="pwa-install-title" className="mt-2 text-2xl font-black tracking-tight text-[#111827]">Installez Compétence sur votre téléphone</h2>

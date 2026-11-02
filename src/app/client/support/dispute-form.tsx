@@ -107,7 +107,7 @@ export function DisputeForm({
       }
       toast.success("Litige ouvert. Le service client vous recontacte sous 24-48h.");
       resetDraft();
-      router.refresh();
+      router.push("/client/service-client?vue=historique");
     } catch {
       toast.error("Erreur réseau");
     } finally {

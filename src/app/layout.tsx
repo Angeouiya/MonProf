@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import { Providers } from "@/components/providers";
-import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
+import { DeferredPwaInstallPrompt } from "@/components/shared/deferred-pwa-install-prompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -92,11 +91,9 @@ export default function RootLayout({
       <body
         className="font-sans antialiased bg-background text-foreground"
       >
-        <Providers>
-          {children}
-          <PwaInstallPrompt />
-          <SonnerToaster position="top-right" richColors />
-        </Providers>
+        {children}
+        <DeferredPwaInstallPrompt />
+        <SonnerToaster position="top-right" richColors />
       </body>
     </html>
   );

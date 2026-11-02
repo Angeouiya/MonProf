@@ -46,7 +46,9 @@ export default async function AdminDashboard() {
     financialBookings,
     financialPayouts,
     appliedTeacherAdjustments,
-  ] = await db.$transaction([
+  // Ces lectures sont indépendantes. Les exécuter en parallèle évite
+  // qu'un indicateur lent bloque toute la page d'accueil administrateur.
+  ] = await Promise.all([
     db.dispute.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
     db.booking.count({
       where: verifiedPayDunyaBookingWhere({

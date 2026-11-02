@@ -1,6 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { dispatchPendingTeacherNotifications } from "@/lib/notification-delivery";
 import { hasVerifiedPayDunyaClientPayment, verifiedPayDunyaBookingWhere } from "@/lib/payment-security";
+import { ensureTeacherMissionActivationInTransaction } from "@/lib/teacher-mission-activation";
 
 const ACTIVE_IMMINENT_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED"] as const;
 
@@ -21,6 +23,7 @@ export async function runNotificationScheduler(actor: SchedulerActor) {
       adminAlerts: 0,
       replacementTasks: 0,
       imminentCourseAlerts: 0,
+      missionBackfills: 0,
       delivery: { total: 0, sent: 0, skipped: 0, failed: 0, pendingConfiguration: 0 },
     };
   }
@@ -29,6 +32,8 @@ export async function runNotificationScheduler(actor: SchedulerActor) {
   const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+  const missionBackfills = await backfillVerifiedPaidTeacherMissions(now);
 
   await db.teacherMissionLink.updateMany({
     where: {
@@ -121,8 +126,75 @@ export async function runNotificationScheduler(actor: SchedulerActor) {
     adminAlerts,
     replacementTasks,
     imminentCourseAlerts,
+    missionBackfills,
     delivery,
   };
+}
+
+async function backfillVerifiedPaidTeacherMissions(now: Date) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const candidates = await db.booking.findMany({
+    where: verifiedPayDunyaBookingWhere({
+      status: { in: ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"] },
+      missionLinks: { none: {} },
+      teacherTasks: { none: { type: "CONFIRM_AVAILABILITY" } },
+      OR: [
+        { scheduledDate: { gte: today } },
+        { scheduledDate: null, startDate: { gte: today } },
+        { scheduledDate: null, startDate: null, createdAt: { gte: ninetyDaysAgo } },
+      ],
+    }),
+    include: { transactions: { where: { type: "CLIENT_PAYMENT" } } },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  let repaired = 0;
+  for (const candidate of candidates) {
+    if (!hasVerifiedPayDunyaClientPayment(candidate)) continue;
+    const created = await db.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`
+        SELECT "id"
+        FROM competence."Booking"
+        WHERE "id" = ${candidate.id}
+        FOR UPDATE
+      `);
+      const current = await tx.booking.findUnique({
+        where: { id: candidate.id },
+        include: {
+          transactions: { where: { type: "CLIENT_PAYMENT" } },
+          missionLinks: { take: 1 },
+          teacherTasks: { where: { type: "CONFIRM_AVAILABILITY" }, take: 1 },
+        },
+      });
+      if (!current || current.missionLinks.length > 0 || current.teacherTasks.length > 0) return false;
+      if (!["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED"].includes(current.status)) return false;
+      if (!hasVerifiedPayDunyaClientPayment(current)) return false;
+
+      await ensureTeacherMissionActivationInTransaction(tx, {
+        bookingId: current.id,
+        teacherId: current.teacherId,
+        now,
+        priority: "URGENT",
+        sourceLabel: "Réparation automatique d'une commande déjà payée et vérifiée",
+      });
+      await tx.adminActionLog.create({
+        data: {
+          action: "Mission professeur réparée automatiquement",
+          entityType: "Booking",
+          entityId: current.id,
+          detail: `La commande payée ${current.reference} ne possédait aucune mission ni tâche professeur. Le workflow professeur a été recréé sans modifier le paiement.`,
+          oldStatus: current.status,
+          newStatus: current.status,
+        },
+      });
+      return true;
+    }, { isolationLevel: "Serializable" });
+    if (created) repaired += 1;
+  }
+  return repaired;
 }
 
 async function relaunchTeacherTasks({
