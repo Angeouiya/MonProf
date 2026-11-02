@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, MapPin, Search, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Clock3, Home, MonitorPlay, Search, SlidersHorizontal, Star } from "lucide-react";
+import { MarketplaceMap } from "@/components/marketplace/marketplace-map";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import type { MarketplaceCandidate } from "@/lib/marketplace-search";
 import type { TeacherJourney } from "@/lib/teacher-journeys";
@@ -44,8 +45,9 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
   const requestKey = useRef("");
   const catalog = catalogs[journey];
   const selectedTeacher = useMemo(() => candidates?.find((item) => item.teacherId === selected) ?? candidates?.[0] ?? null, [candidates, selected]);
-  const minDate = new Date().toISOString().slice(0, 10);
+  const minDate = new Date().toLocaleDateString("en-CA");
   const payload = { journey, subjectId, levelId, date, time, durationMinutes, format, commune, quartier, addressHint, objective };
+  const areaLabel = format === "ONLINE" ? "Cours en ligne" : commune ? `${quartier ? `${quartier}, ` : ""}${commune}` : "Abidjan · choisissez votre quartier";
 
   function nextStep() {
     setError("");
@@ -105,149 +107,60 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl bg-white px-4 pb-12 pt-5 text-[#12243A] sm:px-7 sm:pt-8" data-marketplace-client>
-      {candidates === null ? (
-        <div className="mx-auto max-w-3xl">
-          <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#9A6A10]">Compétence<span className="hidden sm:inline"> · votre prochain cours</span></p><span className="whitespace-nowrap text-xs font-semibold text-[#526174]">0{step + 1} / 03</span></div>
-          <h1 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-[-0.035em] sm:text-5xl">{step === 0 ? "Quel cours vous faut-il ?" : step === 1 ? "À quel moment ?" : "Où se déroule le cours ?"}</h1>
-          <p className="mt-3 text-sm leading-6 text-[#526174]">{step === 0 ? "Choisissez votre système, la matière et le niveau." : step === 1 ? "Fixez la date et l’heure qui vous conviennent." : "Une dernière précision, puis découvrez les professeurs disponibles."}</p>
-          <div aria-label="Progression de la recherche" className="mt-7 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((item) => <span key={item} className={`h-1 rounded-full ${item <= step ? "bg-[#092A55]" : "bg-[#E3E7EB]"}`} />)}</div>
+    <div className="mx-auto max-w-[86rem] pb-10 text-[#12243A]" data-marketplace-client>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 px-1">
+        <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#966B24]">Compétence · Trouver un professeur</p><h1 className="mt-1 text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">Un cours, simplement.</h1></div>
+        <Link href="/client/demandes" className="inline-flex min-h-11 items-center gap-1 rounded-full border border-[#DCE2E8] bg-white px-4 text-sm font-semibold text-[#092A55] hover:border-[#8DA4BF]">Mes demandes <ChevronRight className="h-4 w-4" /></Link>
+      </div>
 
-          {step === 0 && <div className="mt-8">
-            <span className="text-sm font-semibold">Système</span>
-            <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl border border-[#DCE2E8] bg-[#F6F7F6] p-1" role="group" aria-label="Système d’enseignement">
-              {SYSTEMS.map((system) => (
-                <button key={system.value} type="button" aria-pressed={journey === system.value}
-                  onClick={() => { setJourney(system.value); setSubjectId(""); setLevelId(""); }}
-                  className={`min-h-12 rounded-xl px-2 text-xs font-semibold transition sm:text-sm ${journey === system.value ? "bg-white text-[#092A55] shadow-sm" : "text-[#526174] hover:text-[#092A55]"}`}>
-                  {system.label}
-                </button>
-              ))}
-            </div>
-          </div>}
-
-          {step === 0 && <div className="mt-8 grid gap-x-5 gap-y-5 sm:grid-cols-2">
-            <Field label={journey === "professionnel" ? "Compétence" : "Matière"}>
-              <select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className={fieldClass} required>
-                <option value="">Choisir</option>
-                {catalog.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
-              </select>
-            </Field>
-            <Field label={journey === "professionnel" ? "Profil" : "Niveau / classe"}>
-              <select value={levelId} onChange={(event) => setLevelId(event.target.value)} className={fieldClass} required>
-                <option value="">Choisir</option>
-                {catalog.levels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}
-              </select>
-            </Field>
-          </div>}
-          {step === 1 && <div className="mt-8 grid gap-x-5 gap-y-5 sm:grid-cols-2">
-            <Field label="Date">
-              <input type="date" min={minDate} value={date} onChange={(event) => setDate(event.target.value)} className={fieldClass} required />
-            </Field>
-            <Field label="Heure">
-              <input type="time" min="08:00" max="21:00" step={1800} value={time} onChange={(event) => setTime(event.target.value)} className={fieldClass} required />
-            </Field>
-            <Field label="Durée">
-              <select value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value) as 60 | 120)} className={fieldClass}>
-                <option value={120}>2 heures</option><option value={60}>1 heure · même tarif</option>
-              </select>
-            </Field>
-          </div>}
-          {step === 2 && <div className="mt-8 grid gap-x-5 gap-y-5 sm:grid-cols-2">
-            <Field label="Format">
-              <select value={format} onChange={(event) => setFormat(event.target.value as "HOME" | "ONLINE")} className={fieldClass}>
-                <option value="HOME">À domicile</option><option value="ONLINE">En ligne</option>
-              </select>
-            </Field>
-            {format === "HOME" && (
-              <>
-                <Field label="Commune du cours">
-                  <select value={commune} onChange={(event) => { setCommune(event.target.value); setQuartier(""); }} className={fieldClass} required>
-                    <option value="">Choisir</option>
-                    {communes.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
-                  </select>
-                </Field>
-                <Field label="Quartier du cours">
-                  <input value={quartier} onChange={(event) => setQuartier(event.target.value)} maxLength={100} placeholder="Ex. Angré" className={fieldClass} required />
-                </Field>
-                <Field label="Adresse ou repère" optional>
-                  <input value={addressHint} onChange={(event) => setAddressHint(event.target.value)} maxLength={240} placeholder="Précision donnée après acceptation" className={fieldClass} />
-                </Field>
-              </>
-            )}
-            <Field label="Votre besoin" optional>
-              <input value={objective} onChange={(event) => setObjective(event.target.value)} maxLength={800} placeholder="Ex. Préparer le prochain devoir" className={fieldClass} />
-            </Field>
-          </div>
-          }
-          {error && <p role="alert" className="mt-5 rounded-xl border border-[#E5C1C1] bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            {step > 0 && <button type="button" onClick={() => { setStep(step === 2 ? 1 : 0); setError(""); }} className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-[#DCE2E8] px-5 text-sm font-semibold text-[#092A55]"><ArrowLeft className="h-4 w-4" />Retour</button>}
-            <button type="button" onClick={step === 2 ? search : nextStep} disabled={loading} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#092A55] px-6 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60 sm:flex-none">
-              {step === 2 ? <Search className="h-4 w-4" /> : null}{loading ? "Recherche en cours…" : step === 2 ? "Voir les professeurs" : "Continuer"}{step < 2 && <ArrowRight className="h-4 w-4" />}
-            </button>
-          </div>
+      <div className="mb-5 rounded-2xl border border-[#E2E7EA] bg-[#F4F6F8] p-1.5 shadow-[0_4px_22px_rgba(12,36,60,0.04)]" role="group" aria-label="Système d’enseignement">
+        <div className="grid grid-cols-3 gap-1.5">
+          {SYSTEMS.map((system) => <button key={system.value} type="button" aria-pressed={journey === system.value} onClick={() => { setJourney(system.value); setSubjectId(""); setLevelId(""); setCandidates(null); setStep(0); setError(""); }} className={`min-h-12 rounded-xl px-2 text-xs font-semibold transition sm:text-sm ${journey === system.value ? "bg-white text-[#092A55] shadow-[0_2px_10px_rgba(9,42,85,0.12)]" : "bg-transparent text-[#40516A] hover:bg-white"}`}>{system.label}</button>)}
         </div>
-      ) : (
-        <div>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <button type="button" onClick={() => { setCandidates(null); setError(""); }} className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#526174] hover:text-[#092A55]"><ArrowLeft className="h-4 w-4" />Modifier la recherche</button>
-              <h1 className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">Vos professeurs disponibles</h1>
-              <p className="mt-2 text-sm text-[#526174]">{candidates.length} profil{candidates.length > 1 ? "s" : ""} compatible{candidates.length > 1 ? "s" : ""} · {SYSTEMS.find((item) => item.value === journey)?.label} · {format === "HOME" ? `${quartier}, ${commune}` : "En ligne"}</p>
-            </div>
-            <Link href="/client/demandes" className="text-sm font-semibold text-[#092A55] underline underline-offset-4">Mes demandes</Link>
-          </div>
+      </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-            <div className="space-y-2">
-              {candidates.length === 0 ? (
-                <div className="rounded-2xl border border-[#DCE2E8] p-6 text-sm text-[#526174]">
-                  Aucun professeur disponible à cet horaire. Essayez une autre heure ou un autre quartier.
-                </div>
-              ) : candidates.map((teacher, index) => (
-                <button key={teacher.teacherId} type="button" aria-pressed={selectedTeacher?.teacherId === teacher.teacherId}
-                  onClick={() => setSelected(teacher.teacherId)}
-                  className={`flex min-h-24 w-full items-center gap-3 rounded-xl border bg-white p-3 text-left transition hover:border-[#8DA4BF] ${selectedTeacher?.teacherId === teacher.teacherId ? "border-[#092A55] shadow-[0_4px_16px_rgba(9,42,85,0.08)]" : "border-[#E3E7EB]"}`}>
-                  <ProfessorImage photoUrl={teacher.photoUrl} name={teacher.name} size={54} />
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-sm font-semibold">{teacher.name}</strong>
-                    <span className="mt-1 block text-xs text-[#526174]">{teacher.proximity === "quartier" ? "Même quartier" : teacher.proximity === "commune" ? "Même commune" : teacher.proximity === "en_ligne" ? "En ligne" : "Autre commune"}</span>
-                    <span className="mt-1 flex items-center gap-1 text-xs text-[#9A6A10]"><Star className="h-3.5 w-3.5 fill-current" />{teacher.ratingCount ? `${teacher.rating.toFixed(1)} · ${teacher.ratingCount} avis` : "Nouveau professeur"}</span>
-                  </span>
-                  <span className="shrink-0 text-right"><span className="block text-sm font-semibold">{money(teacher.totalClientPrice)}</span><span className="mt-1 block text-[11px] text-[#526174]">{index === 0 ? "Recommandé" : "Disponible"}</span></span>
-                </button>
-              ))}
-            </div>
-
-            <div className="lg:sticky lg:top-5 lg:self-start">
-              <div className="relative min-h-52 overflow-hidden rounded-2xl border border-[#DCE2E8] bg-[#F1F4F1] p-5 sm:min-h-60">
-                <div className="relative z-10 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-[#395364]"><MapPin className="h-4 w-4" />Secteur du cours</div>
-                <div className="relative z-10 mt-7 text-2xl font-semibold tracking-[-0.03em]">{format === "HOME" ? quartier : "Cours en ligne"}</div>
-                <div className="relative z-10 mt-1 text-sm text-[#526174]">{format === "HOME" ? commune : "Aucun déplacement"}</div>
-                <div className="relative z-10 mt-5 inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#395364]">Position exacte du professeur non affichée</div>
-                <span aria-hidden="true" className="absolute -bottom-20 -right-10 h-56 w-56 rounded-full border-[30px] border-white/75" />
-                <span aria-hidden="true" className="absolute -right-14 top-6 h-40 w-96 rotate-[-23deg] border-y-[9px] border-white/75" />
-              </div>
-              {selectedTeacher && (
-                <div className="mt-4 rounded-2xl border border-[#DCE2E8] bg-white p-5 sm:p-6">
-                  <div className="flex items-center gap-3"><ProfessorImage photoUrl={selectedTeacher.photoUrl} name={selectedTeacher.name} size={52} /><div><strong className="block text-base">{selectedTeacher.name}</strong><span className="text-xs text-[#526174]">Votre professeur proposé</span></div></div>
-                  <div className="mt-5 space-y-3 border-t border-[#E3E7EB] pt-5 text-sm">
-                    <PriceLine label="Cours" amount={selectedTeacher.courseAmount} />
-                    <PriceLine label="Déplacement" amount={selectedTeacher.transportFee} />
-                    <PriceLine label="Total estimé à régler au professeur" amount={selectedTeacher.totalClientPrice} strong />
-                  </div>
-                  <p className="mt-4 text-xs leading-5 text-[#526174]">Le professeur reçoit votre demande et choisit de l’accepter ou de la refuser. En cas de refus, nous proposons le cours à un autre profil sans augmenter ce total.</p>
-                  {error && <p role="alert" className="mt-4 rounded-xl bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}
-                  <button type="button" onClick={propose} disabled={submitting} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#092A55] px-4 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60">
-                    {submitting ? "Envoi en cours…" : "Proposer ce cours"}<ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="overflow-hidden rounded-[1.75rem] border border-[#DCE2E8] bg-[#F4F6F7] shadow-[0_14px_50px_rgba(10,39,68,0.09)] lg:grid lg:min-h-[690px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
+        <div className="relative h-[310px] sm:h-[410px] lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-[690px]">
+          <MarketplaceMap key={format} format={format} areaLabel={areaLabel} />
+          {candidates !== null && format === "HOME" && <p className="absolute bottom-4 left-4 right-4 w-fit max-w-[calc(100%-2rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-medium text-[#33485E] shadow-sm">Les profils sont classés par zone, disponibilité et adéquation. Leur position en direct n’est pas partagée.</p>}
         </div>
-      )}
+
+        <section className="relative z-10 -mt-8 rounded-t-[1.75rem] bg-white px-5 pb-7 pt-5 shadow-[0_-8px_24px_rgba(10,39,68,0.08)] sm:px-7 lg:col-start-2 lg:row-start-1 lg:mt-0 lg:rounded-none lg:border-l lg:border-[#E2E7EA] lg:pb-8 lg:shadow-none" aria-label={candidates === null ? "Préparer mon cours" : "Professeurs compatibles"}>
+          <div aria-hidden="true" className="mx-auto mb-5 h-1 w-11 rounded-full bg-[#D6DDE4] lg:hidden" />
+          {candidates === null ? <>
+            <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#966B24]">Étape {step + 1} sur 3</p><h2 className="mt-1 text-2xl font-semibold leading-tight tracking-[-0.035em]">{step === 0 ? "Quel cours cherchez-vous ?" : step === 1 ? "Quand souhaitez-vous apprendre ?" : "Où aura lieu le cours ?"}</h2></div><span className="rounded-full bg-[#F1F4F7] p-2.5 text-[#092A55]">{step === 0 ? <Search className="h-5 w-5" /> : step === 1 ? <CalendarDays className="h-5 w-5" /> : <SlidersHorizontal className="h-5 w-5" />}</span></div>
+            <div aria-label="Progression de la recherche" className="mt-5 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((item) => <span key={item} className={`h-1 rounded-full ${item <= step ? "bg-[#092A55]" : "bg-[#E3E7EB]"}`} />)}</div>
+            <div className="mt-6 grid grid-cols-2 gap-2" role="group" aria-label="Format du cours">
+              <button type="button" aria-pressed={format === "HOME"} onClick={() => setFormat("HOME")} className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-2 text-sm font-semibold ${format === "HOME" ? "border-[#092A55] bg-[#EDF3F7] text-[#092A55]" : "border-[#DCE2E8] bg-white text-[#536278]"}`}><Home className="h-4 w-4" /> À domicile</button>
+              <button type="button" aria-pressed={format === "ONLINE"} onClick={() => setFormat("ONLINE")} className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-2 text-sm font-semibold ${format === "ONLINE" ? "border-[#092A55] bg-[#EDF3F7] text-[#092A55]" : "border-[#DCE2E8] bg-white text-[#536278]"}`}><MonitorPlay className="h-4 w-4" /> En ligne</button>
+            </div>
+            {step === 0 && <div className="mt-6 space-y-4">
+              <Field label={journey === "professionnel" ? "Compétence recherchée" : "Matière"}><select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className={fieldClass} required><option value="">Choisir une matière</option>{catalog.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></Field>
+              <Field label={journey === "professionnel" ? "Profil" : "Niveau / classe"}><select value={levelId} onChange={(event) => setLevelId(event.target.value)} className={fieldClass} required><option value="">Choisir un niveau</option>{catalog.levels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select></Field>
+            </div>}
+            {step === 1 && <div className="mt-6 space-y-4">
+              <Field label="Date du cours"><input type="date" min={minDate} value={date} onChange={(event) => setDate(event.target.value)} className={fieldClass} required /></Field>
+              <div className="grid grid-cols-2 gap-3"><Field label="Heure"><input type="time" min="08:00" max="21:00" step={1800} value={time} onChange={(event) => setTime(event.target.value)} className={fieldClass} required /></Field><Field label="Durée"><select value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value) as 60 | 120)} className={fieldClass}><option value={120}>2 heures</option><option value={60}>1 heure</option></select></Field></div>
+              <p className="flex items-center gap-2 text-xs text-[#536278]"><Clock3 className="h-4 w-4" /> 1 ou 2 heures : le prix du cours reste identique.</p>
+            </div>}
+            {step === 2 && <div className="mt-6 space-y-4">
+              {format === "HOME" && <><Field label="Commune du cours"><select value={commune} onChange={(event) => { setCommune(event.target.value); setQuartier(""); }} className={fieldClass} required><option value="">Choisir la commune</option>{communes.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></Field><Field label="Quartier du cours"><input value={quartier} onChange={(event) => setQuartier(event.target.value)} maxLength={100} placeholder="Ex. Angré" className={fieldClass} required /></Field><Field label="Adresse ou repère" optional><input value={addressHint} onChange={(event) => setAddressHint(event.target.value)} maxLength={240} placeholder="Ex. près de la pharmacie" className={fieldClass} /></Field></>}
+              <Field label="Votre objectif" optional><input value={objective} onChange={(event) => setObjective(event.target.value)} maxLength={800} placeholder="Ex. préparer le prochain devoir" className={fieldClass} /></Field>
+            </div>}
+            {error && <p role="alert" className="mt-5 rounded-xl border border-[#E5C1C1] bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}
+            <div className="mt-7 flex gap-2">{step > 0 && <button type="button" onClick={() => { setStep(step === 2 ? 1 : 0); setError(""); }} className="inline-flex min-h-12 items-center gap-1 rounded-xl border border-[#DCE2E8] px-4 text-sm font-semibold text-[#092A55]"><ArrowLeft className="h-4 w-4" /> Retour</button>}<button type="button" onClick={step === 2 ? search : nextStep} disabled={loading} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60">{loading ? "Recherche en cours…" : step === 2 ? "Rechercher un professeur" : "Continuer"}{!loading && <ArrowRight className="h-4 w-4" />}</button></div>
+            <p className="mt-4 text-center text-xs text-[#617083]">{format === "HOME" ? "Le lieu exact se partage après acceptation du cours." : "Les modalités du cours en ligne se conviennent après acceptation."}</p>
+          </> : <>
+            <button type="button" onClick={() => { setCandidates(null); setError(""); }} className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#526174] hover:text-[#092A55]"><ArrowLeft className="h-4 w-4" /> Modifier ma recherche</button>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">{candidates.length ? "Professeurs pour vous" : "Aucun professeur disponible"}</h2>
+            <p className="mt-1 text-sm text-[#526174]">{SYSTEMS.find((item) => item.value === journey)?.label} · {areaLabel} · {date} à {time}</p>
+            {candidates.length === 0 ? <div className="mt-6 rounded-xl border border-[#DCE2E8] bg-[#F7F9FA] p-5 text-sm leading-6 text-[#526174]">Essayez une autre heure ou un autre quartier. Vous pouvez modifier votre recherche sans tout recommencer.</div> : <>
+              <div className="mt-5 max-h-[300px] space-y-2 overflow-y-auto pr-1" aria-label="Liste des professeurs compatibles">{candidates.map((teacher, index) => <button key={teacher.teacherId} type="button" aria-pressed={selectedTeacher?.teacherId === teacher.teacherId} onClick={() => setSelected(teacher.teacherId)} className={`flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedTeacher?.teacherId === teacher.teacherId ? "border-[#092A55] bg-[#F1F5F8]" : "border-[#E3E7EB] bg-white hover:border-[#8DA4BF]"}`}><ProfessorImage photoUrl={teacher.photoUrl} name={teacher.name} size={50} /><span className="min-w-0 flex-1"><strong className="block truncate text-sm font-semibold">{teacher.name}</strong><span className="mt-1 block text-xs text-[#526174]">{teacher.proximity === "quartier" ? "Dans votre quartier" : teacher.proximity === "commune" ? "Dans votre commune" : teacher.proximity === "en_ligne" ? "Cours en ligne" : "Autre commune"}</span><span className="mt-1 flex items-center gap-1 text-xs text-[#9A6A10]"><Star className="h-3.5 w-3.5 fill-current" />{teacher.ratingCount ? `${teacher.rating.toFixed(1)} · ${teacher.ratingCount} avis` : "Nouveau profil"}</span></span><span className="shrink-0 text-right"><span className="block text-sm font-bold text-[#092A55]">{money(teacher.totalClientPrice)}</span><span className="mt-1 block text-[11px] text-[#526174]">{index === 0 ? "Recommandé" : "Disponible"}</span></span></button>)}</div>
+              {selectedTeacher && <div className="mt-5 rounded-2xl border border-[#DCE2E8] bg-white p-4"><div className="flex items-center gap-3"><ProfessorImage photoUrl={selectedTeacher.photoUrl} name={selectedTeacher.name} size={48} /><div><strong className="block text-sm">{selectedTeacher.name}</strong><span className="text-xs text-[#526174]">Votre choix · réponse du professeur attendue</span></div></div><div className="mt-4 space-y-2 border-t border-[#E3E7EB] pt-4 text-sm"><PriceLine label="Cours" amount={selectedTeacher.courseAmount} /><PriceLine label="Déplacement" amount={selectedTeacher.transportFee} /><PriceLine label="Total estimé à régler" amount={selectedTeacher.totalClientPrice} strong /></div><p className="mt-3 text-xs leading-5 text-[#526174]">Le professeur peut accepter ou refuser. En cas de refus, un autre profil compatible pourra être sollicité.</p>{error && <p role="alert" className="mt-3 rounded-xl bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}<button type="button" onClick={propose} disabled={submitting} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#092A55] px-4 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60">{submitting ? "Envoi en cours…" : "Proposer le cours"}<ArrowRight className="h-4 w-4" /></button></div>}
+            </>}
+          </>}
+        </section>
+      </div>
     </div>
   );
 }
