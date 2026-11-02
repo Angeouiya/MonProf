@@ -6,6 +6,8 @@ import { getJekoServerConfig } from "@/lib/jeko-config";
 import { verifyJekoTeacherPayoutRecord } from "@/lib/jeko-payout-reconciliation";
 import { reconcileJekoPaymentAttempt } from "@/lib/jeko-reconciliation";
 import { reconcileJekoReschedulePaymentAttempt } from "@/lib/jeko-reschedule-reconciliation";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { verifyTeacherWalletTopUpByProvider } from "@/lib/marketplace-wallet";
 
 const DEFAULT_BATCH_SIZE = 20;
 const MAX_BATCH_SIZE = 50;
@@ -13,7 +15,7 @@ const CONCURRENCY = 4;
 
 type SweepItemResult = {
   id: string;
-  kind: "booking" | "reschedule" | "payout";
+  kind: "booking" | "reschedule" | "payout" | "wallet";
   action: string;
   ok: boolean;
   error?: string;
@@ -40,7 +42,7 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
   const staleBefore = new Date(Date.now() - 2 * 60 * 1000);
   const startedAt = new Date();
 
-  const [attempts, payouts] = await Promise.all([
+  const [attempts, payouts, walletTopUps] = await Promise.all([
     claimJekoPaymentAttemptSweepCandidates({
       batchSize,
       staleBefore,
@@ -51,6 +53,9 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
       staleBefore,
       claimedAt: startedAt,
     }),
+    marketplaceEnabled()
+      ? claimTeacherWalletTopUpCandidates({ batchSize, staleBefore, claimedAt: startedAt })
+      : Promise.resolve([] as Array<{ id: string }>),
   ]);
 
   const attemptJobs: SweepJob[] = attempts.map((attempt) => ({
@@ -77,6 +82,14 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
       };
     },
   }));
+  const walletJobs: SweepJob[] = walletTopUps.map((topUp) => ({
+    id: topUp.id,
+    kind: "wallet" as const,
+    run: async () => {
+      const result = await verifyTeacherWalletTopUpByProvider(topUp.id, config);
+      return { action: result.action, ok: !["rejected", "failed"].includes(result.action) };
+    },
+  }));
 
   // Les appels de paiement client et les retraits disposent chacun de workers
   // réservés. Ainsi, une série de tentatives lentes ne place jamais tous les
@@ -84,11 +97,12 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
   const bothQueuesHaveJobs = attemptJobs.length > 0 && payoutJobs.length > 0;
   const attemptConcurrency = bothQueuesHaveJobs ? Math.ceil(CONCURRENCY / 2) : CONCURRENCY;
   const payoutConcurrency = bothQueuesHaveJobs ? Math.floor(CONCURRENCY / 2) : CONCURRENCY;
-  const [attemptResults, payoutResults] = await Promise.all([
+  const [attemptResults, payoutResults, walletResults] = await Promise.all([
     runLimited(attemptJobs, attemptConcurrency),
     runLimited(payoutJobs, payoutConcurrency),
+    runLimited(walletJobs, 2),
   ]);
-  const results = [...attemptResults, ...payoutResults];
+  const results = [...attemptResults, ...payoutResults, ...walletResults];
   const failures = results.filter((result) => !result.ok);
   return {
     ok: failures.length === 0,
@@ -97,6 +111,7 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
     scanned: {
       paymentAttempts: attempts.length,
       payouts: payouts.length,
+      walletTopUps: walletTopUps.length,
     },
     processed: results.length,
     succeeded: results.length - failures.length,
@@ -104,6 +119,30 @@ export async function runJekoReconciliationSweep(input: { batchSize?: number } =
     actions: countActions(results),
     failures: failures.slice(0, 10),
   };
+}
+
+async function claimTeacherWalletTopUpCandidates(input: {
+  batchSize: number;
+  staleBefore: Date;
+  claimedAt: Date;
+}) {
+  return db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    WITH "eligibleTopUps" AS (
+      SELECT topup."id"
+      FROM "TeacherWalletTopUp" AS topup
+      WHERE topup."status" = 'PENDING'::"TeacherWalletTopUpStatus"
+        AND topup."jekoRequestId" IS NOT NULL
+        AND COALESCE(topup."lastCheckedAt", topup."createdAt") <= ${input.staleBefore}
+      ORDER BY COALESCE(topup."lastCheckedAt", topup."createdAt") ASC, topup."id" ASC
+      FOR UPDATE SKIP LOCKED
+      LIMIT ${input.batchSize}
+    )
+    UPDATE "TeacherWalletTopUp" AS topup
+    SET "lastCheckedAt" = ${input.claimedAt}
+    FROM "eligibleTopUps" AS candidate
+    WHERE topup."id" = candidate."id"
+    RETURNING topup."id"
+  `);
 }
 
 /**

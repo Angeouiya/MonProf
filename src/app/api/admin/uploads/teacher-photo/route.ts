@@ -108,7 +108,13 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, size: true, width: true, height: true },
     });
-    await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
+    // La base est la source durable. Une panne KV ne doit pas faire croire que
+    // la photo a échoué après sa sauvegarde ; le premier GET la recopiera en KV.
+    try {
+      await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
+    } catch (kvError) {
+      console.error("[teacher-photo-kv-backfill-pending]", asset.id, kvError);
+    }
 
     return NextResponse.json({
       photoUrl: `/api/teacher-photos/${asset.id}`,

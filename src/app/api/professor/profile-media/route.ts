@@ -117,7 +117,11 @@ export async function POST(request: NextRequest) {
       },
       select: { id: true },
     });
-    await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
+    try {
+      await persistTeacherMediaToKv(asset.id, Uint8Array.from(data));
+    } catch (kvError) {
+      console.error("[teacher-media-kv-backfill-pending]", asset.id, kvError);
+    }
     const mediaUrl = `/api/teacher-photos/${asset.id}`;
     const update = action === "custom-cover" ? { pendingCoverUrl: mediaUrl } : { photoUrl: mediaUrl };
     await updateTeacherMedia(

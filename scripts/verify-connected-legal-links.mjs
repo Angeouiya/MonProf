@@ -8,8 +8,8 @@ const checks = [
       /data-client-connected-legal-links/,
       /href: "\/conditions-utilisation", label: "CGU"/,
       /href: "\/politique-confidentialite", label: "Confidentialité"/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} marketplaceV2=\{marketplaceV2\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount marketplaceV2=\{marketplaceV2\} \/>/,
     ],
   },
   {

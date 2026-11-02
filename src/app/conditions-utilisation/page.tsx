@@ -6,10 +6,11 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "1er septembre 2026";
+const version = "2 novembre 2026 · projet de mise à jour avant activation du nouveau parcours";
 
 const highlights = [
-  "Paiement serveur exact obligatoire : sans confirmation Jèko vérifiée, aucun cours, aucune commande et aucun partage de numéro ne sont activés.",
+  "Deux parcours peuvent coexister : les réservations historiques restent soumises à la confirmation du paiement Jèko ; le nouveau parcours de mise en relation prévoit un règlement direct entre client et professeur.",
+  "Dans le nouveau parcours, seule la recharge du portefeuille professeur passe par Jèko et exige une confirmation serveur avant crédit.",
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Chaque professeur dispose automatiquement d'un lien public Compétence.CI, partageable sur les réseaux sociaux et contrôlé par la plateforme.",
@@ -23,11 +24,22 @@ const highlights = [
 
 const sections: LegalSection[] = [
   {
+    title: "Nouveau parcours de mise en relation, lorsqu’il est activé",
+    body: [
+      "Le nouveau parcours présente au client des professeurs compatibles avec le système, la matière, le niveau, la disponibilité et la zone de cours. Le client précise la date, l’heure, la durée, le format et le lieu. Le tarif du cours, le déplacement éventuel et le total annoncé sont visibles avant l’envoi de la demande.",
+      "Le professeur reçoit une proposition limitée dans le temps et peut l’accepter ou la refuser. En cas de refus ou d’annulation avant démarrage, Compétence peut proposer la demande à un autre professeur sans augmenter le total annoncé ; à défaut, le client est invité à relancer la recherche. Le professeur doit maintenir ses disponibilités exactes et ne peut assurer deux cours incompatibles dans le même créneau, compte tenu du temps de déplacement.",
+      "Dans ce parcours, le client règle le professeur directement par le moyen convenu entre eux. Compétence ne reçoit pas, ne vérifie pas et ne garantit pas ce règlement direct. Le client et le professeur conservent les preuves de leur accord et de leur paiement. Les règles du parcours historique avec encaissement Jèko par Compétence continuent à s’appliquer uniquement aux réservations créées dans ce parcours historique.",
+      "Pour pouvoir accepter une mission du nouveau parcours, le professeur doit disposer d’un solde suffisant dans son portefeuille Compétence. Ce portefeuille est rechargé via Jèko et crédité seulement après vérification serveur du paiement exact. La commission affichée au professeur est réservée lorsqu’il accepte, libérée si la mission est annulée avant démarrage, puis prélevée au démarrage confirmé par le code communiqué par le client. La confirmation de fin de cours n’est pas une preuve de paiement direct.",
+      "Avant le démarrage, le client ou le professeur peut annuler depuis son espace ; les notifications et réserves de commission sont mises à jour. Après démarrage, les parties doivent signaler tout incident au service client. Compétence peut examiner les traces de mission et les éléments fournis, mais ne peut pas rembourser automatiquement un paiement direct qu’elle n’a pas encaissé.",
+      "Les offres de partenariat, réductions et cadeaux rattachées aux paiements Jèko vérifiés du parcours historique ne s’appliquent pas automatiquement à un paiement direct du nouveau parcours. Toute nouvelle offre de fidélité propre à ce parcours doit être annoncée séparément avant son application.",
+    ],
+  },
+  {
     title: "Résumé opposable",
     body: [
       "Ce résumé facilite la lecture, mais ne remplace pas les articles détaillés. En cas de contradiction apparente, les règles les plus protectrices de la sécurité, du paiement vérifié, de la protection des apprenants et des droits de Compétence s'appliquent dans la limite de la loi.",
       "Compétence.CI est une plateforme organisée autour d'un moteur interne : l'utilisateur voit un parcours simple, mais les contrôles de compatibilité, prix, paiement, déplacement, remplacement, retrait, fraude et preuve restent traités par le serveur.",
-      "Les présentes conditions, la politique de confidentialité, les règles affichées avant paiement et les preuves enregistrées dans le dossier forment ensemble le cadre contractuel applicable au service.",
+      "Les présentes conditions, la politique de confidentialité, les règles affichées dans chaque parcours et les preuves enregistrées dans le dossier forment ensemble le cadre contractuel applicable au service. Les articles relatifs à l’encaissement Jèko du cours, aux retraits et aux remboursements opérés par Compétence ne concernent que le parcours historique ; ils ne transforment pas un paiement direct au professeur en paiement reçu par Compétence.",
     ],
   },
   {
@@ -58,7 +70,7 @@ const sections: LegalSection[] = [
       "Le lien ne transfère aucun droit sur le domaine, la marque, l'interface, les clients ou les données de Compétence. Il ne crée ni exclusivité, ni rémunération, ni commission, ni priorité de réservation en dehors d'un programme partenaire expressément validé par Compétence.",
       "Le professeur doit partager son lien sans spam, usurpation, promesse mensongère, faux résultat, tarif non officiel, publicité illicite ou contenu susceptible de nuire à Compétence.CI. Toute communication réalisée autour du lien demeure sous la responsabilité de son auteur.",
       "Compétence peut corriger la prévisualisation, rediriger, limiter, suspendre ou désactiver le lien lorsque le profil est incomplet, inactif, suspendu, blacklisté, frauduleux, trompeur, litigieux ou contraire à la qualité et à la réputation de la plateforme.",
-      "Toute réservation provenant d'un lien reste soumise aux contrôles ordinaires de système, catalogue, disponibilité, déplacement, prix et paiement Jèko. Le partage du lien ne contourne aucune règle serveur et ne donne accès à aucune coordonnée privée avant le paiement vérifié.",
+      "Toute réservation provenant d’un lien reste soumise aux contrôles ordinaires de système, catalogue, disponibilité, déplacement, prix et aux règles de paiement du parcours choisi. Le partage du lien ne contourne aucune règle serveur. Dans le parcours historique, les coordonnées restent masquées avant le paiement vérifié ; dans le nouveau parcours, elles sont communiquées après acceptation de la mission.",
     ],
   },
   {
@@ -98,8 +110,8 @@ const sections: LegalSection[] = [
   {
     title: "Réservations et paiement client",
     body: [
-      "Une réservation n'est pas active tant que le paiement n'est pas effectué et confirmé côté serveur par Jèko. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
-      "Aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n'est pas validé par le serveur de Compétence à partir d'une réponse API, webhook ou transaction vérifiable.",
+      "Dans le parcours historique avec encaissement par Compétence, une réservation n’est pas active tant que le paiement n’est pas confirmé côté serveur par Jèko. Avant cette vérification, la demande reste une intention ou un brouillon de réservation.",
+      "Dans ce parcours historique, aucune notification opérationnelle ne doit être envoyée au professeur et aucune mission ne doit être considérée comme confirmée si le paiement n’est pas validé par le serveur de Compétence à partir d’une réponse API, webhook ou transaction vérifiable. Dans le nouveau parcours, une offre est notifiée au professeur avant tout paiement direct, selon les règles spécifiques exposées plus haut.",
       "Le client choisit un professeur, une matière, un niveau, un format, un lieu et un créneau. La réservation appartient au professeur choisi, sauf remplacement, indisponibilité, annulation, litige ou décision du service client.",
       "Avant d'ouvrir Jèko, Compétence peut recalculer la compatibilité du professeur avec le système choisi. Si le professeur n'est pas autorisé dans ce système ou si son catalogue ne couvre pas la demande, le paiement doit être bloqué afin d'éviter une commande impossible à exécuter.",
       "Un brouillon créé avant paiement apparaît dans l'espace client. Le client peut reprendre le paiement sécurisé ou supprimer définitivement le brouillon tant qu'aucun paiement vérifié, aucune mission et aucun historique opérationnel protégé ne lui sont rattachés.",
@@ -109,10 +121,10 @@ const sections: LegalSection[] = [
     bullets: [
       "Les créneaux standards sont organisés par blocs de 2 heures. Dans « Autre horaire », le client peut choisir 1 heure ou 2 heures ; le tarif de la séance reste identique.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
-      "Pour les nouvelles réservations, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Les anciens dossiers de paiement restent conservés uniquement dans l'historique.",
+      "Pour les nouvelles réservations du parcours historique avec encaissement par Compétence, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Le nouveau parcours de mise en relation prévoit, lui, un règlement direct au professeur selon les modalités convenues entre les parties.",
       "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
       "Les frais de service Compétence, fixés à 3 %, sont affichés séparément avant paiement. Ils ne remplacent pas les frais de paiement Jèko : le client paie aussi les frais Jèko correspondant au moyen choisi, lorsqu'ils s'appliquent.",
-      "Tout paiement direct hors plateforme est interdit et peut faire perdre les garanties Compétence.",
+      "Dans le parcours historique avec encaissement sécurisé, un paiement direct hors plateforme ne remplace pas le règlement Jèko et peut faire perdre les garanties attachées à ce parcours. Le nouveau parcours de mise en relation suit ses propres règles de règlement direct exposées plus haut.",
     ],
   },
   {
@@ -287,7 +299,7 @@ const sections: LegalSection[] = [
       "Avant l'ouverture du paiement, le serveur recalcule le cours, le transport, le matériel, les frais de service, les frais Jèko, la commission, le net professeur et le total. Toute incohérence, même issue d'un formulaire ou d'un ancien brouillon, bloque l'opération et impose un nouveau calcul.",
       "Les retraits font l'objet de contrôles de mot de passe, de solde, d'allocation, de destination, de montant, de fréquence, d'identifiant unique et de preuve Jèko. Une nouvelle tentative peut être temporairement limitée lorsqu'un volume anormal est détecté, sans doubler un transfert déjà enregistré.",
       "Compétence peut geler une réservation, un remboursement, un retrait ou un compte pendant le temps strictement nécessaire à une vérification anti-fraude, à un rapprochement financier ou à la préservation de preuves.",
-      "Les coordonnées directes du client et du professeur ne sont partagées entre eux qu'après confirmation serveur d'un paiement exact et rattaché à la réservation concernée.",
+      "Dans le parcours historique, les coordonnées directes ne sont partagées qu’après confirmation serveur du paiement exact. Dans le nouveau parcours de mise en relation, elles sont partagées seulement après acceptation de la mission par le professeur concerné.",
     ],
   },
   {

@@ -204,8 +204,8 @@ const checks = [
       /label: "Partenariat"/,
       /detail: "Gagnez 10 %"/,
       /const mobileNavItems:[\s\S]*?href: "\/client\/partenariat"[\s\S]*?label: "Partenariat"/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} marketplaceV2=\{marketplaceV2\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount marketplaceV2=\{marketplaceV2\} \/>/,
     ],
   },
   {

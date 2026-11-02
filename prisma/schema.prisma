@@ -68,6 +68,8 @@ model User {
   partnerAttribution            ClientPartnerAttribution?
   loyaltyPurchases              ClientLoyaltyPurchase[]
   clientRewards                 ClientReward[]
+  marketplaceRequests           MarketplaceRequest[]
+  marketplaceReviews            MarketplaceReview[]
 
   @@index([role])
   @@index([adminTeamRole, adminAccountStatus])
@@ -243,30 +245,36 @@ model Teacher {
   createdAt                       DateTime           @default(now())
   updatedAt                       DateTime           @updatedAt
 
-  subjects             TeacherSubject[]
-  levels               TeacherLevel[]
-  zones                TeacherZone[]
-  bookings             Booking[]
-  reviews              Review[]
-  transactions         Transaction[]
-  notifications        TeacherNotification[]
-  missionLinks         TeacherMissionLink[]
-  scheduleProposals    BookingScheduleProposal[]
-  rescheduleRequests   BookingRescheduleRequest[]
-  tasks                TeacherTask[]
-  warnings             TeacherWarning[]
-  sanctions            TeacherSanction[]
-  oldReplacements      TeacherReplacement[]        @relation("OldTeacherReplacement")
-  newReplacements      TeacherReplacement[]        @relation("NewTeacherReplacement")
-  paymentAdjustments   TeacherPaymentAdjustment[]
-  payoutRecords        TeacherPayoutRecord[]
-  payoutRequests       TeacherPayoutRequest[]
-  adminMessages        TeacherAdminMessage[]
-  webPushSubscriptions WebPushSubscription[]
-  bookingSessions      BookingSession[]            @relation("BookingSessionTeacher")
-  proposedSessions     BookingSession[]            @relation("BookingSessionProposedTeacher")
-  passwordResetTokens  TeacherPasswordResetToken[]
-  partnerReferrals     PartnerReferral[]
+  subjects               TeacherSubject[]
+  levels                 TeacherLevel[]
+  zones                  TeacherZone[]
+  bookings               Booking[]
+  reviews                Review[]
+  transactions           Transaction[]
+  notifications          TeacherNotification[]
+  missionLinks           TeacherMissionLink[]
+  scheduleProposals      BookingScheduleProposal[]
+  rescheduleRequests     BookingRescheduleRequest[]
+  tasks                  TeacherTask[]
+  warnings               TeacherWarning[]
+  sanctions              TeacherSanction[]
+  oldReplacements        TeacherReplacement[]        @relation("OldTeacherReplacement")
+  newReplacements        TeacherReplacement[]        @relation("NewTeacherReplacement")
+  paymentAdjustments     TeacherPaymentAdjustment[]
+  payoutRecords          TeacherPayoutRecord[]
+  payoutRequests         TeacherPayoutRequest[]
+  adminMessages          TeacherAdminMessage[]
+  webPushSubscriptions   WebPushSubscription[]
+  bookingSessions        BookingSession[]            @relation("BookingSessionTeacher")
+  proposedSessions       BookingSession[]            @relation("BookingSessionProposedTeacher")
+  passwordResetTokens    TeacherPasswordResetToken[]
+  partnerReferrals       PartnerReferral[]
+  marketplaceOffers      MarketplaceOffer[]
+  marketplaceAssignments MarketplaceRequest[]        @relation("MarketplaceAssignedTeacher")
+  wallet                 TeacherWallet?
+  walletEntries          TeacherWalletEntry[]
+  walletTopUps           TeacherWalletTopUp[]
+  marketplaceReviews     MarketplaceReview[]
 
   @@index([status])
   @@index([featured])
@@ -551,6 +559,189 @@ model BookingSessionHistory {
 
   @@index([bookingSessionId, createdAt])
   @@index([actorType, actorId])
+}
+
+// Nouveau parcours de mise en relation. Les Booking/Jèko historiques restent
+// intacts et ne sont jamais convertis implicitement en demandes marketplace.
+model MarketplaceRequest {
+  id                 String                   @id @default(cuid())
+  reference          String                   @unique
+  clientId           String
+  clientKey          String?
+  assignedTeacherId  String?
+  journey            String
+  subjectId          String
+  subjectName        String
+  levelId            String
+  levelName          String
+  courseFormat       CourseFormat
+  commune            String?
+  quartier           String?
+  addressHint        String?
+  objective          String?
+  scheduledDate      DateTime
+  scheduledTime      String
+  durationMinutes    Int                      @default(120)
+  courseAmount       Int
+  transportFee       Int                      @default(0)
+  totalClientPrice   Int
+  commissionRateBps  Int
+  commissionAmount   Int
+  status             MarketplaceRequestStatus @default(SEARCHING)
+  startCodeAttempts  Int                      @default(0)
+  offerExpiresAt     DateTime?
+  acceptedAt         DateTime?
+  startedAt          DateTime?
+  dueAt              DateTime?
+  teacherEndedAt     DateTime?
+  clientConfirmedAt  DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+  disputeReason      String?
+  disputeResolution  String?
+  disputeResolvedAt  DateTime?
+  disputeResolvedBy  String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  client          User                 @relation(fields: [clientId], references: [id])
+  assignedTeacher Teacher?             @relation("MarketplaceAssignedTeacher", fields: [assignedTeacherId], references: [id])
+  offers          MarketplaceOffer[]
+  walletEntries   TeacherWalletEntry[]
+  review          MarketplaceReview?
+
+  @@unique([clientId, clientKey])
+  @@index([clientId, createdAt])
+  @@index([assignedTeacherId, status, scheduledDate])
+  @@index([status, offerExpiresAt])
+}
+
+enum MarketplaceRequestStatus {
+  SEARCHING
+  OFFERED
+  ACCEPTED
+  IN_PROGRESS
+  AWAITING_CLIENT
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  DISPUTED
+}
+
+model MarketplaceReview {
+  id        String   @id @default(cuid())
+  requestId String   @unique
+  clientId  String
+  teacherId String
+  rating    Int
+  comment   String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  request MarketplaceRequest @relation(fields: [requestId], references: [id])
+  client  User               @relation(fields: [clientId], references: [id])
+  teacher Teacher            @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, published])
+}
+
+model MarketplaceOffer {
+  id               String                 @id @default(cuid())
+  requestId        String
+  teacherId        String
+  rank             Int
+  transportFee     Int
+  totalClientPrice Int
+  status           MarketplaceOfferStatus @default(PENDING)
+  offeredAt        DateTime               @default(now())
+  expiresAt        DateTime
+  respondedAt      DateTime?
+
+  request MarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  teacher Teacher            @relation(fields: [teacherId], references: [id])
+
+  @@unique([requestId, teacherId])
+  @@index([teacherId, status, expiresAt])
+  @@index([requestId, rank])
+}
+
+enum MarketplaceOfferStatus {
+  QUEUED
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+// balance = crédits confirmés moins commissions prélevées.
+// reserved = partie indisponible des crédits, jamais un débit à lui seul.
+model TeacherWallet {
+  teacherId String   @id
+  balance   Int      @default(0)
+  reserved  Int      @default(0)
+  available Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+}
+
+model TeacherWalletEntry {
+  id             String                 @id @default(cuid())
+  teacherId      String
+  requestId      String?
+  topUpId        String?                @unique
+  kind           TeacherWalletEntryKind
+  balanceDelta   Int                    @default(0)
+  reservedDelta  Int                    @default(0)
+  idempotencyKey String                 @unique
+  createdAt      DateTime               @default(now())
+
+  teacher Teacher             @relation(fields: [teacherId], references: [id])
+  request MarketplaceRequest? @relation(fields: [requestId], references: [id])
+  topUp   TeacherWalletTopUp? @relation(fields: [topUpId], references: [id])
+
+  @@index([teacherId, createdAt])
+  @@index([requestId, kind])
+}
+
+enum TeacherWalletEntryKind {
+  TOPUP
+  RESERVE
+  RELEASE
+  COMMISSION
+  ADJUSTMENT
+}
+
+model TeacherWalletTopUp {
+  id                String                   @id @default(cuid())
+  reference         String                   @unique
+  clientKey         String                   @unique
+  teacherId         String
+  amount            Int
+  paymentMethod     PaymentMethod
+  jekoRequestId     String?                  @unique
+  jekoStoreId       String?
+  jekoTransactionId String?                  @unique
+  checkoutUrl       String?
+  status            TeacherWalletTopUpStatus @default(PENDING)
+  verifiedAt        DateTime?
+  lastCheckedAt     DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  teacher     Teacher             @relation(fields: [teacherId], references: [id])
+  walletEntry TeacherWalletEntry?
+
+  @@index([teacherId, status, createdAt])
+  @@index([status, lastCheckedAt, createdAt])
+}
+
+enum TeacherWalletTopUpStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  CANCELLED
 }
 
 enum BookingSessionStatus {

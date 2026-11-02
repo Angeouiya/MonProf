@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { ProfessorLayout } from "@/components/layouts/professor-layout";
 import { TemporaryPasswordGate } from "@/components/professor/temporary-password-gate";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,7 @@ export default async function ProfesseurProtectedLayout({ children }: { children
 
   return (
     <ProfessorLayout
+      marketplaceV2={marketplaceEnabled()}
       teacherName={teacherName}
       photoUrl={teacher.photoUrl}
       notificationCount={notificationCount}

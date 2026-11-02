@@ -53,8 +53,8 @@ assert.match(sweeper, /attempt\."failureCode" IS DISTINCT FROM 'JEKO_PAYMENT_FAI
 assert.doesNotMatch(sweeper, /paymentAttempt\.findMany/);
 assert.equal(
   sweeper.match(/FOR UPDATE SKIP LOCKED/g)?.length,
-  2,
-  "les tentatives et les retraits doivent tous deux être réclamés atomiquement",
+  3,
+  "les tentatives, retraits et recharges portefeuille doivent être réclamés atomiquement",
 );
 
 assert.ok(
@@ -77,7 +77,8 @@ assert.doesNotMatch(
 );
 assert.match(sweeper, /runLimited\(attemptJobs, attemptConcurrency\)/);
 assert.match(sweeper, /runLimited\(payoutJobs, payoutConcurrency\)/);
-assert.match(sweeper, /const \[attemptResults, payoutResults\] = await Promise\.all/);
+assert.match(sweeper, /const \[attemptResults, payoutResults, walletResults\] = await Promise\.all/);
+assert.match(sweeper, /runLimited\(walletJobs, 2\)/);
 assert.doesNotMatch(
   sweeper,
   /const jobs:[\s\S]*?\.\.\.attempts[\s\S]*?\.\.\.payouts/,

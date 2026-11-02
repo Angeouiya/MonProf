@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
 import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import {
@@ -48,6 +50,7 @@ const CLIENT_JOURNEY_HREFS = {
 } as const;
 
 export default async function ClientDashboardPage() {
+  if (marketplaceEnabled()) redirect("/client/trouver");
   const user = await getSessionUser();
   if (!user) return null;
 

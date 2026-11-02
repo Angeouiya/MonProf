@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
 import { ArrowRight, BookOpenCheck, CalendarClock, ClipboardList, CreditCard, MessageSquareText, ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatDate, formatFCFA } from "@/lib/format";
@@ -22,6 +24,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurDashboardPage() {
+  if (marketplaceEnabled()) redirect("/professeur/marche");
   const { teacher } = await requireTeacher();
   const teacherName = teacher.professionalName || teacher.fullName;
   const todayStart = new Date();

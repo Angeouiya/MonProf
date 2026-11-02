@@ -200,10 +200,11 @@ const sweeper = readFileSync(
 assert.match(sweeper, /attempt\."status" = 'REQUESTING'/);
 assert.match(sweeper, /attempt\."providerOrderId" IS NOT NULL/);
 assert.match(sweeper, /claimJekoPaymentAttemptSweepCandidates/);
-assert.equal(sweeper.match(/FOR UPDATE SKIP LOCKED/g)?.length, 2);
+assert.equal(sweeper.match(/FOR UPDATE SKIP LOCKED/g)?.length, 3);
 assert.match(sweeper, /reconcileJekoPaymentAttempt/);
 assert.match(sweeper, /reconcileJekoReschedulePaymentAttempt/);
 assert.match(sweeper, /verifyJekoTeacherPayoutRecord/);
+assert.match(sweeper, /verifyTeacherWalletTopUpByProvider/);
 
 const jekoClient = readFileSync(
   new URL("../src/lib/jeko.ts", import.meta.url),

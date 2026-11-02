@@ -57,6 +57,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/admin/paiements", label: "Finances", icon: Wallet, permission: "FINANCE_VIEW" },
       { href: "/admin/partenariats", label: "Partenariats", icon: Handshake, permission: "FINANCE_VIEW" },
+      { href: "/admin/marketplace", label: "Missions & portefeuilles", icon: ClipboardList, permission: "FINANCE_VIEW" },
       { href: "/admin/messages", label: "Messages", icon: MessageSquare, permission: "COMMUNICATIONS_VIEW" },
       { href: "/admin/communication", label: "Communication", icon: Bell, permission: "COMMUNICATIONS_VIEW" },
       { href: "/admin/parametres", label: "Réglages", icon: Settings, permission: "SETTINGS_MANAGE" },

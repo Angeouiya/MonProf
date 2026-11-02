@@ -61,6 +61,7 @@ const CRON_ROUTES = {
   notificationRetention: "/api/cron/notification-retention",
   notificationReminders: "/api/cron/notification-reminders",
   partnerReferrals: "/api/cron/partner-referrals",
+  marketplaceOffers: "/api/cron/marketplace-offers",
 } as const;
 
 const competenceWorker = {
@@ -86,7 +87,7 @@ const competenceWorker = {
     ctx: WorkerExecutionContext,
   ) {
     const date = new Date(controller.scheduledTime);
-    const routes: string[] = [CRON_ROUTES.webPush, CRON_ROUTES.communication];
+    const routes: string[] = [CRON_ROUTES.webPush, CRON_ROUTES.communication, CRON_ROUTES.marketplaceOffers];
 
     if (date.getUTCMinutes() % 5 === 0) routes.push(CRON_ROUTES.passwordEmail);
     if (date.getUTCMinutes() % 10 === 0) routes.push(CRON_ROUTES.jekoReconciliation);
@@ -258,6 +259,10 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
 
   const financialSensitive = isMutation && (
     pathname.startsWith("/api/bookings")
+    || pathname.startsWith("/api/marketplace/search")
+    || pathname.startsWith("/api/marketplace/requests")
+    || pathname.startsWith("/api/professor/marketplace")
+    || pathname.startsWith("/api/admin/marketplace")
     || pathname.startsWith("/api/professor/payout-requests")
     || pathname.startsWith("/api/admin/teacher-payout")
     || pathname.startsWith("/api/admin/transactions")
@@ -302,6 +307,8 @@ function normalizeRateLimitRoute(pathname: string) {
   if (pathname.startsWith("/api/teacher-photos/")) return "/api/teacher-photos/:id";
   if (pathname.startsWith("/api/teachers/")) return "/api/teachers/:id";
   if (pathname.startsWith("/api/bookings/")) return "/api/bookings/:id";
+  if (pathname.startsWith("/api/marketplace/requests/")) return "/api/marketplace/requests/:id";
+  if (pathname.startsWith("/api/professor/marketplace/offers/")) return "/api/professor/marketplace/offers/:id";
   return pathname;
 }
 

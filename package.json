@@ -67,6 +67,7 @@
     "verify:platform-settings": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-platform-settings-locations.ts",
     "verify:session-accounting": "node scripts/verify-booking-session-accounting.mjs",
     "verify:pricing-engine": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-pricing-engine.ts",
+    "verify:marketplace-v2": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-marketplace-v2.ts",
     "verify:loyalty-gifts": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-loyalty-gifts.ts",
     "verify:multi-date-booking": "node -r tsconfig-paths/register ./node_modules/jiti/lib/jiti-cli.mjs scripts/verify-multi-date-booking.ts",
     "verify:official-pricing-surfaces": "node scripts/verify-official-pricing-surfaces.mjs",
