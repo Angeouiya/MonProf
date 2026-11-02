@@ -61,7 +61,8 @@ record(
 
 record(
   "Professor mobile navigation contains exactly four essential destinations",
-  /const mobileNavItems = \[[\s\S]*?label: "Accueil"[\s\S]*?label: "Missions"[\s\S]*?label: "Dispos"[\s\S]*?label: "Paiements"[\s\S]*?\];/.test(layout)
+  /const mobileNavItems(?:: ProfessorNavItem\[\])? = \[[\s\S]*?label: "Accueil"[\s\S]*?label: "Missions"[\s\S]*?label: "Dispos"[\s\S]*?label: "Paiements"[\s\S]*?\];/.test(layout)
+    && /const marketplaceMobileNavItems: ProfessorNavItem\[\] = \[[\s\S]*?label: "Missions"[\s\S]*?label: "Solde"[\s\S]*?label: "Dispos"[\s\S]*?label: "Profil"[\s\S]*?\];/.test(layout)
     && /grid grid-cols-4 gap-1/.test(layout)
     && !/label: "Msgs"/.test(layout),
 );

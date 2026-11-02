@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getJekoServerConfig } from "@/lib/jeko-config";
 import { reconcileJekoPayoutWebhook } from "@/lib/jeko-payout-reconciliation";
 import { reconcileJekoWebhook } from "@/lib/jeko-reconciliation";
+import { reconcileTeacherWalletTopUp } from "@/lib/marketplace-wallet";
 import {
   jekoPayloadSha256,
   parseJekoWebhookPayload,
@@ -101,6 +102,15 @@ export async function POST(request: NextRequest) {
         reference: result.reference,
         message: result.message,
       }, { status: httpStatus });
+    }
+
+    if (webhook.transaction.transactionDetails?.reference?.startsWith("TW-")) {
+      const result = await reconcileTeacherWalletTopUp(webhook, webhookConfig);
+      return NextResponse.json({
+        received: true,
+        providerFlow: "teacher_wallet_topup",
+        ...result,
+      }, { status: ["not_found", "pending"].includes(result.action) ? 503 : 200 });
     }
 
     // Le rapprochement historique des encaissements reste inchangé. Seuls les

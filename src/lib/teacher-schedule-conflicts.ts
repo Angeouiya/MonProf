@@ -251,7 +251,7 @@ export async function findTeacherScheduleConflict(
       scheduledTime: { not: null },
       status: { in: [...SCHEDULE_BLOCKING_SESSION_STATUSES] as BookingSessionStatus[] },
       OR: dateFilters,
-      booking: verifiedJekoScheduleBlockingBookingWhere(),
+      booking: verifiedScheduleBlockingBookingWhere(),
     },
     select: {
       id: true,
@@ -317,7 +317,7 @@ export async function findTeacherScheduleConflict(
       sessions: { none: {} },
       scheduledDate: { not: null },
       OR: dateFilters,
-      ...verifiedJekoScheduleBlockingBookingWhere(),
+      ...verifiedScheduleBlockingBookingWhere(),
     },
     select: {
       id: true,
@@ -370,6 +370,45 @@ export async function findTeacherScheduleConflict(
     }
   }
 
+  // Le nouveau parcours partage le même verrou de professeur que le checkout
+  // historique : aucun paiement Jèko tardif ne peut écraser une mission acceptée.
+  if (process.env.MARKETPLACE_V2_ENABLED === "true") {
+    const marketplaceRows = await client.marketplaceRequest.findMany({
+      where: {
+        assignedTeacherId: teacherId,
+        status: { in: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"] },
+        OR: dateFilters,
+      },
+      select: {
+        id: true, reference: true, scheduledDate: true, scheduledTime: true,
+        durationMinutes: true, courseFormat: true, commune: true, quartier: true, status: true,
+      },
+      orderBy: { scheduledDate: "asc" },
+      take: 50,
+    });
+    for (const mission of marketplaceRows) {
+      const existingSlot = normalizeScheduleSlot(mission);
+      if (!existingSlot) continue;
+      const conflict = requestedSlots
+        .map((slot) => scheduleSlotsConflict(slot, existingSlot, input.scheduleBuffers, conflictContext))
+        .find((item): item is NonNullable<typeof item> => Boolean(item));
+      if (conflict) return {
+        teacherId,
+        bookingId: mission.id,
+        bookingReference: mission.reference,
+        bookingSessionId: null,
+        sequence: null,
+        scheduledDate: mission.scheduledDate,
+        scheduledTime: mission.scheduledTime,
+        status: mission.status,
+        paymentStatus: "DIRECT_CLIENT_TEACHER",
+        kind: conflict.kind,
+        requiredBufferMinutes: conflict.requiredBufferMinutes,
+        gapMinutes: conflict.gapMinutes,
+      };
+    }
+  }
+
   return null;
 }
 
@@ -382,16 +421,19 @@ export function formatTeacherScheduleConflictMessage(conflict: TeacherScheduleCo
       : "le temps de déplacement configuré";
     return `Déplacement insuffisant : ce professeur a déjà un cours payé (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Il faut au moins ${bufferLabel} entre les deux cours. Choisissez une autre heure ou un autre professeur.`;
   }
-  return `Ce créneau est déjà réservé et payé pour ce professeur (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Choisissez un autre créneau ou un autre professeur.`;
+  return `Ce créneau est déjà réservé pour ce professeur (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Choisissez un autre créneau ou un autre professeur.`;
 }
 
-function verifiedJekoScheduleBlockingBookingWhere(): Prisma.BookingWhereInput {
+function verifiedScheduleBlockingBookingWhere(): Prisma.BookingWhereInput {
   return {
     status: { in: [...SCHEDULE_BLOCKING_BOOKING_STATUSES] },
     paymentStatus: { in: [...SCHEDULE_BLOCKING_PAYMENT_STATUSES] },
-    paymentProvider: "JEKO",
-    providerPaymentStatus: "SUCCESS",
-    paymentVerifiedAt: { not: null },
+    OR: [
+      { paymentProvider: "JEKO", providerPaymentStatus: "SUCCESS", paymentVerifiedAt: { not: null } },
+      // Les anciens cours PayDunya déjà vérifiés restent bloquants, même si
+      // aucun nouveau paiement de ce type n'est proposé.
+      { paymentProvider: "PAYDUNYA", paydunyaStatus: "COMPLETED", paydunyaVerifiedAt: { not: null } },
+    ],
     transactions: {
       some: {
         type: "CLIENT_PAYMENT",

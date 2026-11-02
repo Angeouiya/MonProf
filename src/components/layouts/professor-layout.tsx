@@ -60,11 +60,31 @@ const navGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
   },
 ];
 
-const mobileNavItems = [
+const mobileNavItems: ProfessorNavItem[] = [
   { href: "/professeur", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/professeur/missions", label: "Missions", icon: BookOpenCheck },
   { href: "/professeur/disponibilites", label: "Dispos", icon: CalendarClock },
   { href: "/professeur/paiements", label: "Paiements", icon: CreditCard },
+];
+const marketplaceNavGroups: Array<{ label: string; items: ProfessorNavItem[] }> = [
+  { label: "Enseigner", items: [
+    { href: "/professeur/marche", label: "Missions", icon: BookOpenCheck },
+    { href: "/professeur/portefeuille", label: "Portefeuille", icon: CreditCard },
+    { href: "/professeur/missions", label: "Anciennes missions", icon: ClipboardList },
+    { href: "/professeur/disponibilites", label: "Disponibilités", icon: CalendarClock },
+  ] },
+  { label: "Compte", items: [
+    { href: "/professeur/notifications", label: "Notifications", icon: Bell },
+    { href: "/professeur/messages", label: "Service client", icon: MessageSquareText },
+    { href: "/professeur/profil", label: "Profil", icon: User },
+    { href: "/professeur/parametres", label: "Paramètres", icon: Settings },
+  ] },
+];
+const marketplaceMobileNavItems: ProfessorNavItem[] = [
+  { href: "/professeur/marche", label: "Missions", icon: BookOpenCheck },
+  { href: "/professeur/portefeuille", label: "Solde", icon: CreditCard },
+  { href: "/professeur/disponibilites", label: "Dispos", icon: CalendarClock },
+  { href: "/professeur/profil", label: "Profil", icon: User },
 ];
 
 export function ProfessorLayout({
@@ -75,6 +95,7 @@ export function ProfessorLayout({
   missionCount = 0,
   taskCount = 0,
   messageCount = 0,
+  marketplaceV2 = false,
 }: {
   children: React.ReactNode;
   teacherName: string;
@@ -83,6 +104,7 @@ export function ProfessorLayout({
   missionCount?: number;
   taskCount?: number;
   messageCount?: number;
+  marketplaceV2?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -180,6 +202,7 @@ export function ProfessorLayout({
             missionCount={missionCount}
             taskCount={taskCount}
             messageCount={messageCount}
+            marketplaceV2={marketplaceV2}
           />
         </aside>
 
@@ -206,6 +229,7 @@ export function ProfessorLayout({
                 missionCount={missionCount}
                 taskCount={taskCount}
                 messageCount={messageCount}
+                marketplaceV2={marketplaceV2}
                 onNavigate={() => setOpen(false)}
               />
             </aside>
@@ -219,7 +243,7 @@ export function ProfessorLayout({
         </main>
       </div>
 
-      {!open && <MobileBottomNav pathname={pathname} notificationCount={notificationCount} messageCount={messageCount} />}
+      {!open && <MobileBottomNav pathname={pathname} notificationCount={notificationCount} messageCount={messageCount} marketplaceV2={marketplaceV2} />}
     </div>
   );
 }
@@ -233,6 +257,7 @@ function SidebarContent({
   taskCount,
   messageCount,
   onNavigate,
+  marketplaceV2 = false,
 }: {
   teacherName: string;
   photoUrl?: string | null;
@@ -242,6 +267,7 @@ function SidebarContent({
   taskCount: number;
   messageCount: number;
   onNavigate?: () => void;
+  marketplaceV2?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -287,7 +313,7 @@ function SidebarContent({
           </div>
         </div>
 
-        {navGroups.map((group) => (
+        {(marketplaceV2 ? marketplaceNavGroups : navGroups).map((group) => (
           <div key={group.label} className="space-y-1">
             <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
               {group.label}
@@ -374,10 +400,12 @@ function MobileBottomNav({
   pathname,
   notificationCount,
   messageCount,
+  marketplaceV2 = false,
 }: {
   pathname: string | null;
   notificationCount: number;
   messageCount: number;
+  marketplaceV2?: boolean;
 }) {
   return (
     <nav
@@ -387,7 +415,7 @@ function MobileBottomNav({
       aria-label="Navigation professeur mobile"
     >
       <div className="grid grid-cols-4 gap-1">
-        {mobileNavItems.map((item) => {
+        {(marketplaceV2 ? marketplaceMobileNavItems : mobileNavItems).map((item) => {
           const active = item.exact ? pathname === item.href : pathname?.startsWith(item.href);
           return (
             <Link

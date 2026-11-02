@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
 import { Suspense } from "react";
 import { BookingStatus, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -96,6 +98,7 @@ const dashboardBookingSelect = {
 } as const;
 
 export default async function ClientDashboardPage() {
+  if (marketplaceEnabled()) redirect("/client/trouver");
   const user = await getSessionUser();
   if (!user) return null;
 

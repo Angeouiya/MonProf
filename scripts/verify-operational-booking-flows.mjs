@@ -513,9 +513,9 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /3 septembre 2026/.test(termsPage)
+  /(3 septembre 2026|2 novembre 2026)/.test(termsPage)
     && /Résumé opposable/.test(termsPage)
-    && /Paiement serveur exact obligatoire/.test(termsPage)
+    && /réservations historiques restent soumises à la confirmation du paiement Jèko/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
     && /L'acceptation est prouvée/.test(termsPage)
     && /À moins de 24 heures/.test(termsPage)
@@ -542,10 +542,11 @@ record(
     && /Toute boutique tierce, inconnue ou non autorisée bloque la commande/.test(termsPage)
     && !legacyForbiddenStorePattern.test(termsPage)
     && !legacyForbiddenStorePattern.test(privacyPage)
-    && /coordonnées directes du client et du professeur/.test(termsPage)
+    && /Dans le parcours historique, les coordonnées directes/.test(termsPage)
+    && /règles de règlement direct exposées plus haut/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
-    && /3 septembre 2026/.test(privacyPage)
+    && /(3 septembre 2026|2 novembre 2026)/.test(privacyPage)
     && /Entre 24 heures et 6 heures[\s\S]*?25 %/.test(termsPage)
     && /À moins de 6 heures, 50 %/.test(termsPage)
     && /répartition est de 70 % pour le professeur et 30 % pour la plateforme/.test(termsPage)

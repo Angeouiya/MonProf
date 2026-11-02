@@ -28,6 +28,11 @@ const primaryNavItem: ClientNavItem = {
   label: "Réserver un cours",
   icon: Search,
 };
+const marketplacePrimaryNavItem: ClientNavItem = { href: "/client/trouver", label: "Trouver un professeur", icon: Search };
+const marketplaceNavItems: ClientNavItem[] = [
+  { href: "/client/demandes", label: "Mes demandes", icon: BookOpen },
+  { href: "/client/cours", label: "Anciens cours", icon: WalletCards },
+];
 
 const navItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
@@ -46,6 +51,12 @@ const mobileNavItems: ClientNavItem[] = [
   { href: "/client/rechercher", label: "Réserver", icon: Search },
   { href: "/client/cours", label: "Cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
+];
+const marketplaceMobileNavItems: ClientNavItem[] = [
+  { href: "/client/trouver", label: "Trouver", icon: Search },
+  { href: "/client/demandes", label: "Demandes", icon: BookOpen },
+  { href: "/client/cours", label: "Historique", icon: WalletCards },
+  { href: "/client/profil", label: "Compte", icon: User },
 ];
 
 const quickSearchItems = [
@@ -67,7 +78,7 @@ const CLIENT_NAV_PREFETCH = false;
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 18;
 const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 340;
 
-export function ClientLayout({ children, userName, notificationCount: initialNotificationCount = 0 }: { children: React.ReactNode; userName?: string | null; notificationCount?: number }) {
+export function ClientLayout({ children, userName, notificationCount: initialNotificationCount = 0, marketplaceV2 = false }: { children: React.ReactNode; userName?: string | null; notificationCount?: number; marketplaceV2?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -492,7 +503,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
       <div className="flex flex-1">
         {/* Sidebar desktop */}
         <aside data-client-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
-          <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} />
+          <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} marketplaceV2={marketplaceV2} />
         </aside>
 
         {/* Sidebar mobile (drawer) */}
@@ -541,7 +552,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
                   )}
                 </div>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} compactAccount />
+              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} compactAccount marketplaceV2={marketplaceV2} />
             </aside>
           </div>
         )}
@@ -562,7 +573,7 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
         </main>
       </div>
       {shouldRenderMobileBottomNav && (
-        <MobileBottomNav isActive={isActive} onNavigate={closeMobileSurfaces} />
+        <MobileBottomNav isActive={isActive} onNavigate={closeMobileSurfaces} marketplaceV2={marketplaceV2} />
       )}
     </div>
   );
@@ -574,14 +585,17 @@ function SidebarContent({
   onNavigate,
   notificationCount = 0,
   compactAccount = false,
+  marketplaceV2 = false,
 }: {
   userName?: string | null;
   isActive: (item: ClientNavItem) => boolean;
   onNavigate?: () => void;
   notificationCount?: number;
   compactAccount?: boolean;
+  marketplaceV2?: boolean;
 }) {
-  const primaryActive = isActive(primaryNavItem);
+  const selectedPrimaryNavItem = marketplaceV2 ? marketplacePrimaryNavItem : primaryNavItem;
+  const primaryActive = isActive(selectedPrimaryNavItem);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav data-client-sidebar-nav className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation principale client">
@@ -589,7 +603,7 @@ function SidebarContent({
           Espace client
         </p>
         <Link
-          href={primaryNavItem.href}
+          href={selectedPrimaryNavItem.href}
           prefetch={CLIENT_NAV_PREFETCH}
           onClick={onNavigate}
           aria-current={primaryActive ? "page" : undefined}
@@ -599,11 +613,11 @@ function SidebarContent({
         >
           <span className="inline-flex items-center gap-2">
             <Search className="h-4 w-4" />
-            {primaryNavItem.label}
+            {selectedPrimaryNavItem.label}
           </span>
           <ArrowRight className="h-4 w-4" />
         </Link>
-        {navItems.map((item) => {
+        {(marketplaceV2 ? marketplaceNavItems : navItems).map((item) => {
           const active = isActive(item);
           return (
             <Link
@@ -708,9 +722,11 @@ function SidebarContent({
 function MobileBottomNav({
   isActive,
   onNavigate,
+  marketplaceV2 = false,
 }: {
   isActive: (item: ClientNavItem) => boolean;
   onNavigate: () => void;
+  marketplaceV2?: boolean;
 }) {
   return (
     <nav
@@ -720,7 +736,7 @@ function MobileBottomNav({
       aria-label="Navigation client mobile"
     >
       <div className="grid grid-cols-4 gap-1">
-        {mobileNavItems.map((item) => {
+        {(marketplaceV2 ? marketplaceMobileNavItems : mobileNavItems).map((item) => {
           const active = isActive(item);
           return (
             <Link
@@ -763,6 +779,8 @@ function getCurrentSection(pathname: string | null) {
   if (pathname.startsWith("/client/reserver")) {
     return { label: "Réserver", hint: "Parcours sécurisé" };
   }
+  if (pathname.startsWith("/client/trouver")) return { label: "Trouver", hint: "Professeurs disponibles" };
+  if (pathname.startsWith("/client/demandes")) return { label: "Mes demandes", hint: "Suivi de vos cours" };
   if (pathname.startsWith("/client/rechercher")) {
     return { label: "Professeurs", hint: "Recherche rapide" };
   }

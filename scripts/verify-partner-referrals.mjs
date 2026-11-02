@@ -208,8 +208,8 @@ const checks = [
     file: "src/components/layouts/client-layout.tsx",
     patterns: [
       /const mobileNavItems/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} marketplaceV2=\{marketplaceV2\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount marketplaceV2=\{marketplaceV2\} \/>/,
     ],
     forbiddenPatterns: [
       /data-client-partnership-link/,

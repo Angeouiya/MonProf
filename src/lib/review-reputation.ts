@@ -43,6 +43,7 @@ type ReviewReputationInput = {
   rating: number;
   comment?: string | null;
   adminStatus?: string | null;
+  allowDirectPayment?: boolean;
 };
 
 export type ReviewReputationRisk = {
@@ -58,7 +59,8 @@ export type ReviewReputationRisk = {
 
 export function detectReviewReputationRisk(input: ReviewReputationInput): ReviewReputationRisk {
   const rating = Math.round(Number(input.rating));
-  const matchedTerms = findReputationTerms(input.comment);
+  const matchedTerms = findReputationTerms(input.comment).filter((term) => !input.allowDirectPayment
+    || !["paiement direct", "payer directement", "hors plateforme"].includes(term));
   const reasons: string[] = [];
 
   if (rating <= 2) {

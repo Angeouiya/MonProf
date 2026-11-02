@@ -3,6 +3,7 @@ import { ClientTemporaryPasswordGate } from "@/components/client/temporary-passw
 import { ClientLayout } from "@/components/layouts/client-layout";
 import { isOwnerAdminAccount } from "@/lib/owner-account";
 import { getSessionUser } from "@/lib/session";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
 
 export const dynamic = "force-dynamic";
 
@@ -18,5 +19,5 @@ export default async function ClientRootLayout({ children }: { children: React.R
     return <ClientTemporaryPasswordGate clientName={sessionUser.name} />;
   }
 
-  return <ClientLayout userName={sessionUser.name}>{children}</ClientLayout>;
+  return <ClientLayout userName={sessionUser.name} marketplaceV2={marketplaceEnabled()}>{children}</ClientLayout>;
 }

@@ -86,6 +86,7 @@ const CRON_ROUTES = {
   notificationRetention: "/api/cron/notification-retention",
   notificationReminders: "/api/cron/notification-reminders",
   partnerReferrals: "/api/cron/partner-referrals",
+  marketplaceOffers: "/api/cron/marketplace-offers",
 } as const;
 
 const competenceWorker = {
@@ -134,6 +135,7 @@ const competenceWorker = {
       CRON_ROUTES.webPush,
       CRON_ROUTES.communication,
       CRON_ROUTES.passwordEmail,
+      CRON_ROUTES.marketplaceOffers,
     ];
 
     if (date.getUTCMinutes() % 5 === 0) {
@@ -552,6 +554,10 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
 
   const financialSensitive = isMutation && (
     pathname.startsWith("/api/bookings")
+    || pathname.startsWith("/api/marketplace/search")
+    || pathname.startsWith("/api/marketplace/requests")
+    || pathname.startsWith("/api/professor/marketplace")
+    || pathname.startsWith("/api/admin/marketplace")
     || pathname.startsWith("/api/professor/payout-requests")
     || pathname.startsWith("/api/admin/teacher-payout")
     || pathname.startsWith("/api/admin/transactions")

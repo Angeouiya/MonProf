@@ -6,22 +6,31 @@ export const metadata: Metadata = {
   description: "Politique de confidentialité et protection des données personnelles de la plateforme Compétence.CI.",
 };
 
-const version = "3 septembre 2026";
+const version = "2 novembre 2026 · projet de mise à jour avant activation du nouveau parcours";
 
 const highlights = [
   "Compétence ne vend pas les données personnelles et limite l'accès aux personnes ou prestataires nécessaires au service.",
-  "Les numéros client et professeur restent masqués jusqu'à la confirmation serveur du paiement exact.",
+  "Dans le parcours historique, les coordonnées restent masquées jusqu’au paiement Jèko vérifié ; dans le nouveau parcours, elles sont partagées après acceptation de la mission par le professeur.",
   "Les paiements et retraits Jèko conservent des preuves techniques afin d'empêcher les faux paiements et les doubles validations.",
   "Les horaires multi-dates et les lieux de cours sont utilisés pour empêcher les chevauchements et calculer le temps de déplacement entre deux cours confirmés.",
   "Les notifications push ne sont activées qu'avec l'autorisation de l'appareil et peuvent être désactivées à tout moment.",
   "Les brouillons supprimés retirent les données opérationnelles inutiles, sauf trace minimale nécessaire à la sécurité ou à la preuve.",
   "Les données partenariat sont limitées à la déclaration, la vérification, la commission et la preuve de dépôt nécessaire.",
   "Les CV, photos, couvertures et mini-CV professeurs sont structurés, modérés ou remplacés lorsque l'image de Compétence.CI l'exige.",
-  "Chaque lien professeur expose uniquement le profil public autorisé ; les coordonnées privées restent masquées jusqu'au paiement vérifié.",
+  "Chaque lien professeur expose uniquement le profil public autorisé ; les coordonnées privées sont communiquées selon les règles du parcours choisi.",
   "Les demandes sensibles exigent une vérification d'identité avant divulgation, correction ou suppression lorsque la sécurité l'impose.",
 ];
 
 const sections: LegalSection[] = [
+  {
+    title: "Données du nouveau parcours de mise en relation",
+    body: [
+      "Lorsque ce parcours est activé, Compétence traite le système choisi, la matière, le niveau, le format, le lieu de cours, la date et l’heure, les disponibilités et zones des professeurs, les propositions envoyées et leurs réponses, le tarif annoncé, le code de démarrage, les horodatages de séance, les annulations et les signalements. Ces données servent à proposer un professeur compatible, éviter les conflits d’horaire, suivre la mission et traiter les incidents.",
+      "Le nom et le numéro du client ne sont communiqués qu’au professeur qui accepte la mission ; le client reçoit alors les coordonnées nécessaires du professeur. Les candidats non retenus ne reçoivent pas le numéro privé du client. Les données de localisation utilisées par cette version sont les communes et quartiers déclarés, et non un suivi GPS continu.",
+      "Le paiement du cours est convenu directement entre le client et le professeur : Compétence n’enregistre pas les coordonnées de paiement utilisées entre eux et ne peut confirmer ce règlement. Elle conserve en revanche les preuves techniques des recharges du portefeuille professeur via Jèko, le solde, les réserves et les écritures de commission pour prévenir les doubles crédits et assurer la traçabilité.",
+      "Les parties peuvent transmettre des justificatifs au service client en cas de litige. L’accès à ces informations est limité aux personnes habilitées, dans les conditions de conservation et d’exercice des droits précisées dans les autres sections de cette politique.",
+    ],
+  },
   {
     title: "Résumé de protection",
     body: [
@@ -176,7 +185,7 @@ const sections: LegalSection[] = [
     body: [
       "Compétence met en place des mesures raisonnables de sécurité : mots de passe chiffrés, règle client minimale de 6 caractères avec une lettre et un chiffre, liens de réinitialisation temporaires pour les clients, mots de passe temporaires professeurs à renouveler, accès différenciés par rôle, vérification serveur des paiements, journaux d'action, limitation des informations visibles selon le profil et contrôle du service client sur les actions sensibles.",
       "Les opérations financières et promotionnelles utilisent des clés d'idempotence, des transactions serveur, des rapprochements Jèko et des journaux d'audit afin de limiter les doubles paiements, doubles commissions, doubles cadeaux et doubles retraits.",
-      "Les coordonnées entre client et professeur restent masquées tant qu'une réservation n'est pas confirmée par un paiement serveur exact. Cette séparation protège les utilisateurs et réduit le contournement, les faux paiements et les prises de contact non autorisées.",
+      "Dans le parcours historique, les coordonnées entre client et professeur restent masquées tant qu’une réservation n’est pas confirmée par un paiement serveur exact. Dans le nouveau parcours, elles sont communiquées au professeur acceptant et au client après acceptation de la mission. Les candidats non retenus ne reçoivent pas le numéro privé du client.",
       "L'utilisateur reste responsable de la confidentialité de ses identifiants. Tout accès suspect, perte de téléphone, erreur de numéro de paiement ou tentative de fraude doit être signalé rapidement au service client.",
       "Compétence se réserve le droit de suspendre temporairement une action, un paiement, une réservation ou un accès lorsqu'un risque de sécurité ou de fraude est détecté.",
     ],
