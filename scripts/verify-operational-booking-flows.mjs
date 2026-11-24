@@ -513,7 +513,7 @@ record(
 
 record(
   "Legal documents describe the current payout, draft, replacement and transport rules",
-  /(3 septembre 2026|2 novembre 2026)/.test(termsPage)
+  /(3 septembre 2026|2 novembre 2026|4 novembre 2026)/.test(termsPage)
     && /Résumé opposable/.test(termsPage)
     && /réservations historiques restent soumises à la confirmation du paiement Jèko/.test(termsPage)
     && /brouillon créé avant paiement/.test(termsPage)
@@ -531,7 +531,7 @@ record(
     && /système décoché/.test(termsPage)
     && /mot de passe client doit contenir au moins 6 caractères/.test(termsPage)
     && /CP1 à CM1 15 000 FCFA/.test(termsPage)
-    && /Professionnel : 40 000 FCFA/.test(termsPage)
+    && /[Pp]rofessionnel : 40 000 FCFA/.test(termsPage)
     && /net professeur déjà validé/.test(termsPage)
     && /Réservations multi-dates et packs/.test(termsPage)
     && /dernier cours confirmé du professeur puis cours demandé/.test(termsPage)
@@ -546,7 +546,7 @@ record(
     && /règles de règlement direct exposées plus haut/.test(termsPage)
     && /loi n°2013-546/.test(termsPage)
     && /loi n°2013-450/.test(termsPage)
-    && /(3 septembre 2026|2 novembre 2026)/.test(privacyPage)
+    && /(3 septembre 2026|2 novembre 2026|4 novembre 2026)/.test(privacyPage)
     && /Entre 24 heures et 6 heures[\s\S]*?25 %/.test(termsPage)
     && /À moins de 6 heures, 50 %/.test(termsPage)
     && /répartition est de 70 % pour le professeur et 30 % pour la plateforme/.test(termsPage)

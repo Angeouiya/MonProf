@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireTeacher } from "@/lib/teacher-auth";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { formatMarketplaceDuration } from "@/lib/marketplace-pricing";
 
 const money = (value: number) => `${new Intl.NumberFormat("fr-FR").format(value)} F`;
 
@@ -18,6 +19,7 @@ export default async function MarcheProfesseurPage() {
         id: true, subjectName: true, levelName: true, journey: true, courseFormat: true,
         commune: true, quartier: true, scheduledDate: true, scheduledTime: true,
         durationMinutes: true, commissionAmount: true, status: true,
+        series: { select: { _count: { select: { requests: true } } } },
       } } },
     }),
     db.teacherWallet.findUnique({ where: { teacherId: teacher.id } }),
@@ -31,8 +33,8 @@ export default async function MarcheProfesseurPage() {
       <div className="divide-y divide-[#E3E7EB] border-y border-[#E3E7EB]">
         {offers.length ? offers.map((offer) => (
           <Link href={`/professeur/marche/${offer.requestId}`} key={offer.id} className="flex flex-wrap items-center justify-between gap-4 py-5 transition hover:bg-[#F8FAFB]">
-            <span><span className="text-xs font-semibold text-[#9A6A10]">{offer.status === "PENDING" ? "Nouvelle proposition" : "Mission acceptée"}</span><strong className="mt-1 block text-base">{offer.request.subjectName} · {offer.request.levelName}</strong><span className="mt-1 block text-xs text-[#526174]">{offer.request.scheduledDate.toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "long" })} à {offer.request.scheduledTime} · {offer.request.courseFormat === "ONLINE" ? "En ligne" : `${offer.request.quartier}, ${offer.request.commune}`}</span></span>
-            <span className="text-right"><strong className="block text-sm">{money(offer.totalClientPrice)}</strong><span className="mt-1 block text-xs text-[#526174]">Commission : {money(offer.request.commissionAmount)}</span></span>
+            <span><span className="text-xs font-semibold text-[#9A6A10]">{offer.status === "PENDING" ? offer.request.series ? `Suivi de ${offer.request.series._count.requests} dates à confirmer` : "Nouvelle proposition" : "Mission acceptée"}</span><strong className="mt-1 block text-base">{offer.request.subjectName} · {offer.request.levelName}</strong><span className="mt-1 block text-xs text-[#526174]">{offer.request.scheduledDate.toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "long" })} à {offer.request.scheduledTime} · {formatMarketplaceDuration(offer.request.durationMinutes)} · {offer.request.courseFormat === "ONLINE" ? "En ligne" : `${offer.request.quartier}, ${offer.request.commune}`}</span></span>
+            <span className="text-right"><strong className="block text-sm">{offer.request.series && offer.status === "PENDING" ? "Voir le total du suivi" : money(offer.totalClientPrice)}</strong><span className="mt-1 block text-xs text-[#526174]">{offer.request.series && offer.status === "PENDING" ? "Prix et commissions par date" : `Commission : ${money(offer.request.commissionAmount)}`}</span></span>
           </Link>
         )) : <div className="py-14 text-center text-sm text-[#526174]">Aucune proposition active pour le moment.</div>}
       </div>

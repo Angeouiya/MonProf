@@ -31,7 +31,7 @@ const primaryNavItem: ClientNavItem = {
 const marketplacePrimaryNavItem: ClientNavItem = { href: "/client/trouver", label: "Trouver un professeur", icon: Search };
 const marketplaceNavItems: ClientNavItem[] = [
   { href: "/client/demandes", label: "Mes demandes", icon: BookOpen },
-  { href: "/client/cours", label: "Anciens cours", icon: WalletCards },
+  { href: "/client/historique", label: "Historique", icon: WalletCards },
 ];
 
 const navItems: ClientNavItem[] = [
@@ -55,7 +55,7 @@ const mobileNavItems: ClientNavItem[] = [
 const marketplaceMobileNavItems: ClientNavItem[] = [
   { href: "/client/trouver", label: "Trouver", icon: Search },
   { href: "/client/demandes", label: "Demandes", icon: BookOpen },
-  { href: "/client/cours", label: "Historique", icon: WalletCards },
+  { href: "/client/historique", label: "Historique", icon: WalletCards },
   { href: "/client/profil", label: "Compte", icon: User },
 ];
 
@@ -781,6 +781,7 @@ function getCurrentSection(pathname: string | null) {
   }
   if (pathname.startsWith("/client/trouver")) return { label: "Trouver", hint: "Professeurs disponibles" };
   if (pathname.startsWith("/client/demandes")) return { label: "Mes demandes", hint: "Suivi de vos cours" };
+  if (pathname.startsWith("/client/historique")) return { label: "Historique", hint: "Cours et demandes passés" };
   if (pathname.startsWith("/client/rechercher")) {
     return { label: "Professeurs", hint: "Recherche rapide" };
   }

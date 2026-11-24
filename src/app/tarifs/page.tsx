@@ -1,11 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
+import { ManagedTariffs } from "@/components/managed/landing";
+import { ArrowRight, Clock3, GraduationCap, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { formatFCFA } from "@/lib/format";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { formatMarketplaceDuration, marketplaceCourseAmount } from "@/lib/marketplace-pricing";
 import { paymentServiceFeeDescription } from "@/lib/payment-service-fees";
 import { TRANSPORT_FEES } from "@/lib/pricing";
 import { parseTeacherJourney, type TeacherJourney } from "@/lib/teacher-journeys";
+export const dynamic = "force-dynamic";
 
 const PRICE_GRIDS: Array<{
   journey: TeacherJourney;
@@ -77,13 +82,15 @@ export default async function TarifsPage({
 }: {
   searchParams: Promise<{ journey?: string }>;
 }) {
+  if (managedCoursesEnabled()) return <ManagedTariffs />;
   const sp = await searchParams;
   const activeJourney = parseTeacherJourney(sp.journey) ?? "ivoirien";
+  if (marketplaceEnabled()) return <MarketplaceTariffsPage activeJourney={activeJourney} />;
   const activeGrid = PRICE_GRIDS.find((grid) => grid.journey === activeJourney) ?? PRICE_GRIDS[0];
   const teacherHref = `/professeurs?journey=${activeJourney}`;
 
   return (
-    <PublicLayout activeJourney={activeJourney}>
+    <PublicLayout activeJourney={activeJourney} marketplaceMode={false}>
       <section className="border-b border-[#E3E8F2] bg-white">
         <div className="mx-auto max-w-5xl px-4 py-10 text-center sm:px-6 lg:px-8 lg:py-16">
           <p className="mx-auto inline-flex items-center gap-2 rounded-full bg-[#F1F4FF] px-3 py-2 text-xs font-semibold text-[#111B4D]">
@@ -188,4 +195,87 @@ export default async function TarifsPage({
       </section>
     </PublicLayout>
   );
+}
+
+const MARKETPLACE_LEVELS: Record<TeacherJourney, ReadonlyArray<readonly [string, string]>> = {
+  ivoirien: [
+    ["CP1 à CM1", "CP1"],
+    ["CM2 à 4e", "CM2"],
+    ["3e à 1re", "3e"],
+    ["Terminale", "Terminale"],
+  ],
+  francais: [
+    ["CP à CM1", "CP"],
+    ["CM2 à 4e", "CM2"],
+    ["3e à 1re", "3e"],
+    ["Terminale", "Terminale"],
+  ],
+  professionnel: [["Formation professionnelle", "Formation adulte"]],
+};
+
+function MarketplaceTariffsPage({ activeJourney }: { activeJourney: TeacherJourney }) {
+  const rows = MARKETPLACE_LEVELS[activeJourney];
+  const firstLevel = rows[0][1];
+
+  return (
+    <PublicLayout activeJourney={activeJourney} marketplaceMode>
+      <section className="border-b border-[#E3E8F2] bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-10 text-center sm:px-6 lg:py-16">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#966B24]">Tarif officiel · nouveau parcours</p>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[#111827] sm:text-5xl">Une heure pour commencer.</h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#475569] sm:text-base">Choisissez la durée qui vous convient. Le prix du cours évolue par pas de 5 minutes et le total est affiché avant d’envoyer votre demande.</p>
+        </div>
+      </section>
+
+      <section className="bg-[#F8FAFD] px-4 py-8 sm:px-6 lg:py-12">
+        <div className="mx-auto max-w-5xl">
+          <JourneySwitcher activeJourney={activeJourney} hrefs={TARIFF_JOURNEY_HREFS} label="Système" showLabel size="regular" />
+          <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <article className="overflow-hidden rounded-2xl border border-[#DCE2E8] bg-white" data-tariff-active-grid={activeJourney}>
+              <div className="border-b border-[#E8ECF3] p-5 sm:p-6">
+                <h2 className="text-xl font-semibold text-[#111827]">{activeJourney === "ivoirien" ? "Système ivoirien" : activeJourney === "francais" ? "Système français" : "Professionnel"}</h2>
+                <p className="mt-1 text-sm text-[#526174]">Prix par séance individuelle, pour un élève. Le déplacement éventuel s’ajoute uniquement à domicile.</p>
+              </div>
+              <div className="divide-y divide-[#E8ECF3]">
+                {rows.map(([label, level]) => (
+                  <div key={label} className="p-5 sm:px-6" data-marketplace-tariff-level={label}>
+                    <h3 className="text-sm font-semibold text-[#12243A]">{label}</h3>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                      {(["ONLINE", "HOME"] as const).flatMap((format) => ([60, 120] as const).map((minutes) => (
+                        <div key={`${format}-${minutes}`} className="rounded-xl bg-[#F6F8FB] p-3">
+                          <p className="text-xs text-[#526174]">{format === "ONLINE" ? "En ligne" : "À domicile"} · {minutes / 60} h</p>
+                          <p className="mt-1 font-bold tabular-nums text-[#092A55]">{formatFCFA(marketplaceCourseAmount(activeJourney, level, format, minutes))}</p>
+                        </div>
+                      )))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <aside className="h-fit rounded-2xl border border-[#DCE2E8] bg-white p-5">
+              <Clock3 className="h-6 w-6 text-[#092A55]" />
+              <h2 className="mt-3 text-lg font-semibold text-[#12243A]">Plus de temps, prix ajusté</h2>
+              <p className="mt-2 text-sm leading-6 text-[#526174]">Exemple à domicile pour {rows[0][0]} :</p>
+              <div className="mt-4 space-y-2 text-sm">
+                {[60, 75, 80, 95, 120, 150, 180].map((duration) => (
+                  <TariffExample key={duration} label={formatMarketplaceDuration(duration)} amount={marketplaceCourseAmount(activeJourney, firstLevel, "HOME", duration)} />
+                ))}
+              </div>
+              <p className="mt-4 text-xs leading-5 text-[#526174]">En ligne : aucun déplacement. À domicile : déplacement éventuel indiqué après le choix du professeur. Le cours peut durer de 1 h à 6 h et se termine au plus tard à 22 h.</p>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-4 py-12 text-center sm:px-6">
+        <h2 className="text-2xl font-semibold text-[#12243A]">Choisissez votre durée.</h2>
+        <Link href={`/trouver?journey=${activeJourney}`} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#092A55] px-6 text-sm font-semibold text-white">Trouver un professeur <ArrowRight className="h-4 w-4" /></Link>
+      </section>
+    </PublicLayout>
+  );
+}
+
+function TariffExample({ label, amount }: { label: string; amount: number }) {
+  return <div className="flex items-center justify-between gap-4 border-b border-[#E8ECF3] py-2 last:border-0"><span>{label}</span><strong className="tabular-nums text-[#092A55]">{formatFCFA(amount)}</strong></div>;
 }

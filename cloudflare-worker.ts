@@ -273,9 +273,9 @@ function requireSecret(value: string | undefined, name: string) {
 }
 
 const PUBLIC_HOME_CACHE_SECONDS = 300;
-const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-v1";
+const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-managed-20261124";
 const PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS = 60;
-const PUBLIC_TEACHER_JOURNEY_CACHE_PATH = "/__competence_edge_cache/public-teacher-journey-v1";
+const PUBLIC_TEACHER_JOURNEY_CACHE_PATH = "/__competence_edge_cache/public-teacher-journey-managed-20261124";
 const PUBLIC_TEACHER_JOURNEYS = new Set(["ivoirien", "francais", "professionnel"]);
 
 function respondToAnonymousSessionProbe(request: Request) {
@@ -553,9 +553,13 @@ function selectRateLimitPolicy(pathname: string, method: string, env: AppEnviron
   }
 
   const financialSensitive = isMutation && (
-    pathname.startsWith("/api/bookings")
+    pathname.startsWith("/api/managed-courses")
+    || pathname.startsWith("/api/admin/managed-")
+    || pathname.startsWith("/api/professor/managed-")
+    || pathname.startsWith("/api/bookings")
     || pathname.startsWith("/api/marketplace/search")
     || pathname.startsWith("/api/marketplace/requests")
+    || pathname.startsWith("/api/marketplace/series")
     || pathname.startsWith("/api/professor/marketplace")
     || pathname.startsWith("/api/admin/marketplace")
     || pathname.startsWith("/api/professor/payout-requests")

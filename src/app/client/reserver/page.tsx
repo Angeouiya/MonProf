@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
 import { notFound, redirect } from "next/navigation";
 import { ReserverForm } from "./reserver-form";
@@ -24,6 +25,7 @@ export default async function ReserverPage({
 }: {
   searchParams: Promise<{ teacherId?: string; journey?: string; ref?: string; partnerRef?: string }>;
 }) {
+  if (managedCoursesEnabled()) redirect("/demande-cours");
   const { teacherId, journey: requestedJourney, ref, partnerRef } = await searchParams;
   const session = await getServerSession(authOptions);
   if (!session?.user || (session.user as { role?: string }).role !== "CLIENT") redirect("/connexion");

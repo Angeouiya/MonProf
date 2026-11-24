@@ -1,13 +1,24 @@
 import Link from "next/link";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
+import { ManagedLanding } from "@/components/managed/landing";
 import { ArrowRight, Check, Handshake, MapPin, ShieldCheck, WalletCards } from "lucide-react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { JourneySwitcher } from "@/components/shared/journey-switcher";
 import { formatFCFA } from "@/lib/format";
+import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { marketplaceCourseAmount } from "@/lib/marketplace-pricing";
+export const dynamic = "force-dynamic";
 
 const HOME_JOURNEY_HREFS = {
   ivoirien: "/professeurs?journey=ivoirien",
   francais: "/professeurs?journey=francais",
   professionnel: "/professeurs?journey=professionnel",
+} as const;
+
+const MARKETPLACE_JOURNEY_HREFS = {
+  ivoirien: "/trouver?journey=ivoirien",
+  francais: "/trouver?journey=francais",
+  professionnel: "/trouver?journey=professionnel",
 } as const;
 
 const IVORIAN_RATES = [
@@ -17,9 +28,21 @@ const IVORIAN_RATES = [
   ["Terminale", 30_000],
 ] as const;
 
+const IVORIAN_MARKETPLACE_RATES = [
+  ["CP1 à CM1", "CP1"],
+  ["CM2 à 4e", "CM2"],
+  ["3e à 1re", "3e"],
+  ["Terminale", "Terminale"],
+] as const;
+
 export default function HomePage() {
+  if (managedCoursesEnabled()) return <ManagedLanding />;
+  const marketplaceMode = marketplaceEnabled();
+  const rateRows: ReadonlyArray<readonly [string, number]> = marketplaceMode
+    ? IVORIAN_MARKETPLACE_RATES.map(([level, className]) => [level, marketplaceCourseAmount("ivoirien", className, "ONLINE", 60)] as const)
+    : IVORIAN_RATES;
   return (
-    <PublicLayout activeJourney="ivoirien">
+    <PublicLayout activeJourney="ivoirien" marketplaceMode={marketplaceMode}>
       <section
         className="flex items-center border-b border-[#E3E8F2] bg-white"
         style={{ minHeight: "calc(100dvh - var(--app-topbar-height) - 7.25rem)" }}
@@ -34,7 +57,7 @@ export default function HomePage() {
           >
             <JourneySwitcher
               activeJourney="ivoirien"
-              hrefs={HOME_JOURNEY_HREFS}
+              hrefs={marketplaceMode ? MARKETPLACE_JOURNEY_HREFS : HOME_JOURNEY_HREFS}
               label="Système"
               showLabel
               showMeta
@@ -47,28 +70,28 @@ export default function HomePage() {
             <span className="hidden sm:inline">Professeurs vérifiés en Côte d'Ivoire</span>
           </p>
           <h1 className="mx-auto mt-4 max-w-2xl text-[2.15rem] font-black leading-[1.04] tracking-tight text-[#111827] sm:mt-6 sm:text-5xl lg:text-6xl">
-            Choisissez. Payez. Commencez.
+            {marketplaceMode ? "Choisissez. Trouvez. Apprenez." : "Choisissez. Payez. Commencez."}
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-sm font-semibold leading-6 text-[#64748B] sm:mt-5 sm:text-lg sm:leading-7">
-            Un parcours. Un prix clair. Un professeur vérifié.
+            {marketplaceMode ? "Un cours dès 1 heure. Un prix clair. Un professeur vérifié." : "Un parcours. Un prix clair. Un professeur vérifié."}
           </p>
           <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-[#F8FAFD] px-3 py-2 text-xs font-semibold text-[#475569] sm:hidden">
             <Check className="h-4 w-4 shrink-0 text-[#111B4D]" />
-            <span>Prix clair · Paiement sécurisé</span>
+            <span>{marketplaceMode ? "Prix connu avant la demande" : "Prix clair · Paiement sécurisé"}</span>
           </div>
           <div className="mx-auto mt-6 hidden max-w-2xl flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-semibold text-[#64748B] sm:flex">
-            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-[#111B4D]" /> Prix affiché avant paiement</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#111B4D]" /> Transport calculé automatiquement</span>
-            <span className="inline-flex items-center gap-1.5"><WalletCards className="h-4 w-4 text-[#111B4D]" /> Paiement Jèko sécurisé</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-[#111B4D]" /> {marketplaceMode ? "Prix affiché avant la demande" : "Prix affiché avant paiement"}</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#111B4D]" /> {marketplaceMode ? "Déplacement annoncé avant confirmation" : "Transport calculé automatiquement"}</span>
+            <span className="inline-flex items-center gap-1.5"><WalletCards className="h-4 w-4 text-[#111B4D]" /> {marketplaceMode ? "Règlement direct au professeur" : "Paiement Jèko sécurisé"}</span>
           </div>
-          <Link
+          {!marketplaceMode && <Link
             href="/partenariat"
             prefetch={false}
             className="mx-auto mt-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-[#DDE6F7] bg-white px-5 text-sm font-semibold text-[#111B4D] shadow-sm hover:border-[#111B4D]"
           >
             <Handshake className="h-4 w-4" />
             10 % pour votre client · 10 % pour vous
-          </Link>
+          </Link>}
         </div>
       </section>
 
@@ -76,19 +99,21 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:px-8 lg:py-16">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Tarifs officiels</p>
-            <h2 className="mt-3 text-3xl font-semibold text-[#111827]">Le niveau fixe le cours. Le trajet fixe le transport.</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-[#111827]">{marketplaceMode ? "Une heure pour commencer. Un prix adapté à votre durée." : "Le niveau fixe le cours. Le trajet fixe le transport."}</h2>
             <p className="mt-4 max-w-lg text-sm leading-6 text-[#64748B]">
-              Le professeur ne change pas le prix. Le moteur ajoute le déplacement éventuel, les frais de service Compétence de 3 % et les frais de paiement Jèko du moyen choisi, puis affiche le total avant paiement.
+              {marketplaceMode
+                ? "Choisissez votre classe, le format et la durée. Le cours est calculé dès 1 heure, le déplacement éventuel est annoncé avant votre demande et vous réglez directement le professeur selon le moyen convenu."
+                : "Le professeur ne change pas le prix. Le moteur ajoute le déplacement éventuel, les frais de service Compétence de 3 % et les frais de paiement Jèko du moyen choisi, puis affiche le total avant paiement."}
             </p>
             <Link href="/tarifs" prefetch={false} className="mt-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#111B4D]">
               Voir toute la grille <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
           <div className="overflow-hidden rounded-3xl border border-[#DDE3EE] bg-white">
-            {IVORIAN_RATES.map(([level, rate]) => (
+            {rateRows.map(([level, rate]) => (
               <div key={level} className="flex items-center justify-between gap-4 border-b border-[#E8ECF3] px-5 py-4 last:border-0 sm:px-6">
                 <span className="text-sm font-semibold text-[#111827]">{level}</span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-[#111B4D]">{formatFCFA(rate)}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-[#111B4D]">{formatFCFA(rate)}{marketplaceMode ? " / 1 h en ligne" : ""}</span>
               </div>
             ))}
           </div>

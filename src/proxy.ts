@@ -16,6 +16,9 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   if (pathname.startsWith("/api/auth/")) return NextResponse.next();
+  // Guest intake/contract actions do not use the connected client's account.
+  // Their own origin, token, payload and rate guards remain mandatory.
+  if (pathname === "/api/managed-courses" || pathname === "/api/managed-courses/accord") return NextResponse.next();
   if (pathname === "/api/client/profile" && request.method === "PATCH") {
     return NextResponse.next();
   }

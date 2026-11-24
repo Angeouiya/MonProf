@@ -1,5 +1,7 @@
 import webPush from "web-push";
 import { db } from "@/lib/db";
+import { webPushTopicForOutbox } from "@/lib/web-push-topic";
+import { teacherPushMayBeDelivered } from "@/lib/web-push-expiry";
 
 const MAX_ATTEMPTS = 5;
 const DEFAULT_BATCH_SIZE = 500;
@@ -21,6 +23,7 @@ type WebPushConfiguration = {
 
 type OutboxRow = {
   id: string;
+  teacherNotificationId: string | null;
   recipientType: "CLIENT" | "TEACHER" | "ADMIN";
   targetUserId: string | null;
   targetTeacherId: string | null;
@@ -127,6 +130,7 @@ export async function flushWebPushOutbox(limit = DEFAULT_BATCH_SIZE): Promise<We
     WHERE outbox."id" = candidates."id"
     RETURNING
       outbox."id",
+      outbox."teacherNotificationId",
       outbox."recipientType",
       outbox."targetUserId",
       outbox."targetTeacherId",
@@ -154,6 +158,24 @@ export async function flushWebPushOutbox(limit = DEFAULT_BATCH_SIZE): Promise<We
 }
 
 async function deliverOutboxItem(item: OutboxRow) {
+  // Offers are intentionally short-lived. Never surface an expired or deleted
+  // teacher alert after a queue backlog or provider outage.
+  if (item.teacherNotificationId) {
+    const notification = await db.teacherNotification.findUnique({
+      where: { id: item.teacherNotificationId },
+      select: { expiresAt: true, deletedAt: true },
+    });
+    if (!teacherPushMayBeDelivered(notification)) {
+      await db.webPushOutbox.update({
+        where: { id: item.id },
+        data: { status: "DEAD", processedAt: new Date(), lastError: "Notification professeur expirée ou supprimée." },
+      });
+      return {
+        sent: 0, partial: 0, failed: 0, noSubscription: 0,
+        deliveriesAccepted: 0, deliveriesFailed: 0, deliveriesRevoked: 0,
+      };
+    }
+  }
   const subscriptions = await findSubscriptions(item);
   if (subscriptions.length === 0) {
     await db.webPushOutbox.update({
@@ -256,7 +278,7 @@ async function deliverOutboxItem(item: OutboxRow) {
         {
           TTL: item.priority === "CRITICAL" ? 60 * 60 * 24 : 60 * 60 * 12,
           urgency: item.priority === "CRITICAL" || item.priority === "URGENT" ? "high" : "normal",
-          topic: topicFor(item),
+          topic: webPushTopicForOutbox(item.id),
         },
       );
       sent += 1;
@@ -398,10 +420,6 @@ function safeDestination(link: string | null, recipientType: OutboxRow["recipien
       : "/admin/communication";
   if (!link || !link.startsWith("/") || link.startsWith("//")) return fallback;
   return link;
-}
-
-function topicFor(item: OutboxRow) {
-  return `${item.recipientType.toLowerCase()}-${item.priority.toLowerCase()}`.slice(0, 32);
 }
 
 async function getBadgeCount(item: OutboxRow) {

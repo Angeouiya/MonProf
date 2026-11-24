@@ -96,11 +96,27 @@ const mobileNavPriorityHrefs = [
   "/admin/clients",
 ] as const;
 
-function buildAdminMobileNavItems(permissions: AdminPermission[]) {
-  const availableItems = navSections
+function adminNavigation(managedMode: boolean) {
+  if (!managedMode) return { sections: navSections, secondary: secondaryNavItems };
+  const sections = navSections.map((section) => ({ ...section, items: section.items
+    .filter((item) => !["/admin/marketplace", "/admin/centre-operationnel"].includes(item.href))
+    .map((item): NavItem => item.href === "/admin/reservations"
+      ? { ...item, href: "/admin/accompagnement", label: "Demandes et séances" }
+      : item.href === "/admin/paiements"
+        ? { ...item, href: "/admin/accompagnement/comptabilite", label: "Comptabilité" }
+        : item.href === "/admin/partenariats" ? { ...item, label: "Partenariats historiques" } : item) }));
+  const history = navSections.flatMap((section) => section.items)
+    .filter((item) => ["/admin/reservations", "/admin/paiements", "/admin/marketplace", "/admin/centre-operationnel"].includes(item.href))
+    .map((item) => ({ ...item, label: `Historique · ${item.label}` }));
+  return { sections, secondary: [...history, ...secondaryNavItems] };
+}
+
+function buildAdminMobileNavItems(permissions: AdminPermission[], managedMode = false) {
+  const availableItems = adminNavigation(managedMode).sections
     .flatMap((section) => section.items)
     .filter((item) => !item.hideInList && hasAdminPermission(permissions, item.permission));
-  const priorityItems = mobileNavPriorityHrefs
+  const priority: readonly string[] = managedMode ? ["/admin", "/admin/accompagnement", "/admin/professeurs", "/admin/accompagnement/comptabilite", "/admin/communication", "/admin/clients"] : mobileNavPriorityHrefs;
+  const priorityItems = priority
     .map((href) => availableItems.find((item) => item.href === href))
     .filter((item): item is NavItem => Boolean(item));
   const fallbackItems = availableItems.filter((item) => !priorityItems.some((priority) => priority.href === item.href));
@@ -114,6 +130,7 @@ export function AdminLayout({
   notificationSummary,
   permissions = [],
   teamRole,
+  managedMode = false,
 }: {
   children: React.ReactNode;
   userName?: string | null;
@@ -121,13 +138,15 @@ export function AdminLayout({
   notificationSummary?: AdminNotificationSummary;
   permissions?: AdminPermission[];
   teamRole?: string | null;
+  managedMode?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const summary = notificationSummary ?? { total: notificationCount, urgent: 0, teacher: 0, payment: 0 };
-  const mobileNavItems = buildAdminMobileNavItems(permissions);
+  const mobileNavItems = buildAdminMobileNavItems(permissions, managedMode);
 
   const isActive = (href: string, exact?: boolean) => {
+    if (href === "/admin/accompagnement") return pathname?.startsWith(href) && !pathname?.startsWith(`${href}/comptabilite`);
     if (href === "/admin/communication") {
       return pathname?.startsWith("/admin/communication") || pathname?.startsWith("/admin/notifications");
     }
@@ -190,7 +209,7 @@ export function AdminLayout({
 
       <div className="flex flex-1">
         <aside data-admin-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
-          <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} />
+          <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} managedMode={managedMode} />
         </aside>
 
         {open && (
@@ -203,7 +222,7 @@ export function AdminLayout({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} onNavigate={() => setOpen(false)} />
+              <SidebarContent userName={userName} isActive={isActive} notificationCount={summary.total} notificationSummary={summary} permissions={permissions} teamRole={teamRole} managedMode={managedMode} onNavigate={() => setOpen(false)} />
             </aside>
           </div>
         )}
@@ -266,7 +285,7 @@ function AdminMobileBottomNav({
               )} data-admin-mobile-icon-shell>
                 <item.icon className="h-[1.1rem] w-[1.1rem]" />
               </span>
-              <span className="max-w-full truncate px-0.5" data-admin-mobile-label>{item.label}</span>
+              <span className="max-w-full truncate px-0.5" data-admin-mobile-label>{item.href === "/admin/accompagnement" ? "Demandes" : item.label}</span>
               {badge > 0 && (
                 <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
                   {badge > 99 ? "99+" : badge}
@@ -288,6 +307,7 @@ function SidebarContent({
   onNavigate,
   permissions,
   teamRole,
+  managedMode = false,
 }: {
   userName?: string | null;
   isActive: (href: string, exact?: boolean) => boolean;
@@ -296,9 +316,11 @@ function SidebarContent({
   onNavigate?: () => void;
   permissions: AdminPermission[];
   teamRole?: string | null;
+  managedMode?: boolean;
 }) {
   const summary = notificationSummary ?? { total: notificationCount ?? 0, urgent: 0, teacher: 0, payment: 0 };
-  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => hasAdminPermission(permissions, item.permission));
+  const navigation = adminNavigation(managedMode);
+  const visibleSecondaryNavItems = navigation.secondary.filter((item) => hasAdminPermission(permissions, item.permission));
   const secondaryActive = visibleSecondaryNavItems.some((item) => isActive(item.href, item.exact));
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -321,7 +343,7 @@ function SidebarContent({
             </div>
           </div>
         )}
-        {navSections.map((section) => (
+        {navigation.sections.map((section) => (
           <div key={section.title}>
             <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">
               {section.title}

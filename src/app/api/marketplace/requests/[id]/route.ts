@@ -20,10 +20,19 @@ export async function GET(_request: NextRequest, context: Context) {
     },
   });
   if (!request) return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
+  const seriesSessions = request.seriesId ? await db.marketplaceRequest.findMany({
+    where: { seriesId: request.seriesId, clientId: user.id },
+    orderBy: { seriesPosition: "asc" },
+    select: {
+      id: true, reference: true, scheduledDate: true, scheduledTime: true, durationMinutes: true,
+      courseAmount: true, transportFee: true, totalClientPrice: true, status: true,
+    },
+  }) : [];
   const { startCodeAttempts: _attempts, ...publicRequest } = request;
   const contactVisible = ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"].includes(request.status);
   return NextResponse.json({
     request: { ...publicRequest, assignedTeacher: contactVisible ? request.assignedTeacher : null },
+    seriesSessions,
     startCode: request.status === "ACCEPTED" ? marketplaceStartCode(request.id) : null,
     paymentNotice: "Le règlement du cours se fait directement auprès du professeur. Compétence ne confirme pas ce paiement.",
   }, { headers: { "Cache-Control": "no-store" } });

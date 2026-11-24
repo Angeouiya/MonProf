@@ -19,6 +19,7 @@ import {
   teacherJourneyCatalogIssueMessage,
   teacherJourneyCatalogIssues,
 } from "@/lib/teacher-journey-validation";
+import { validateTeacherPreciseLevels } from "@/lib/teacher-precise-levels";
 
 function validateTeacherRelations(subjects: unknown, levels: unknown) {
   if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
       pricePerHour, pricePerSession, pricePack4, pricePack8,
       commissionRate, pricingTier,
       availability,
-      subjects, levels, zones,
+      subjects, levels, preciseLevels, zones,
     } = body;
 
     if (!fullName || !phone || !jobTitle || !bio) {
@@ -152,6 +153,15 @@ export async function POST(req: NextRequest) {
     if (journeyCatalogError) {
       return NextResponse.json({ error: journeyCatalogError }, { status: 400 });
     }
+    let validatedPreciseLevels;
+    try {
+      validatedPreciseLevels = validateTeacherPreciseLevels(
+        preciseLevels ?? [], journeyEligibility, journeyLevels, journeySubjects,
+        { requireForMarketplace: enablePortal && nextStatus === "ACTIVE" },
+      );
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    }
     const normalizedAvailability = normalizeAvailability(availability);
     if (isPublicVisibleTeacherStatus(nextStatus) && countAvailabilitySlots(normalizedAvailability) === 0) {
       return NextResponse.json({
@@ -232,6 +242,7 @@ export async function POST(req: NextRequest) {
         commissionRate: appliedCommission,
         pricingTier: pricingTier || "STANDARD",
         availability: availability ? JSON.stringify(normalizedAvailability) : null,
+        preciseLevels: { create: validatedPreciseLevels },
       },
     });
 

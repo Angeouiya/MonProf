@@ -28,10 +28,22 @@ const navLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
-const trustSignals = [
+const legacyTrustSignals = [
   { icon: ShieldCheck, label: "Professeurs vérifiés" },
   { icon: CalendarCheck, label: "Séances de 2h" },
   { icon: WalletCards, label: "Paiement sécurisé" },
+];
+
+const marketplaceTrustSignals = [
+  { icon: ShieldCheck, label: "Professeurs vérifiés" },
+  { icon: CalendarCheck, label: "Cours dès 1h" },
+  { icon: WalletCards, label: "Règlement direct au professeur" },
+];
+
+const neutralTrustSignals = [
+  { icon: ShieldCheck, label: "Professeurs vérifiés" },
+  { icon: CalendarCheck, label: "Cours en ligne ou à domicile" },
+  { icon: WalletCards, label: "Prix annoncé avant confirmation" },
 ];
 
 const mobileNavBase = [
@@ -54,21 +66,26 @@ export function PublicLayout({
   children,
   backFallbackHref = "/",
   activeJourney,
+  marketplaceMode,
 }: {
   children: React.ReactNode;
   backFallbackHref?: string;
   activeJourney?: TeacherJourney | "";
+  marketplaceMode?: boolean;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const hideGlobalBookingAction = isPublicTeacherDetail(pathname);
   const hideMobileNav = shouldHidePublicMobileNav(pathname);
   const hideFooter = shouldHidePublicFooter(pathname);
-  const professorListHref = buildPublicJourneyHref("/professeurs", activeJourney);
+  const professorListHref = marketplaceMode
+    ? buildMarketplaceJourneyHref(activeJourney)
+    : buildPublicJourneyHref("/professeurs", activeJourney);
   const tariffsHref = buildPublicJourneyHref("/tarifs", activeJourney);
-  const journeyAwareNavLinks = navLinks.map((link) => ({
+  const trustSignals = marketplaceMode === true ? marketplaceTrustSignals : marketplaceMode === false ? legacyTrustSignals : neutralTrustSignals;
+  const journeyAwareNavLinks = navLinks.filter((link) => !marketplaceMode || link.href !== "/partenariat").map((link) => ({
     ...link,
-    href: buildPublicJourneyHref(link.href, activeJourney),
+    href: marketplaceMode && link.href === "/professeurs" ? professorListHref : buildPublicJourneyHref(link.href, activeJourney),
     baseHref: link.href,
   }));
   const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null);
@@ -276,7 +293,7 @@ export function PublicLayout({
       </footer>
       )}
       {!hideMobileNav && !mobileOpen && (
-        <PublicMobileNav pathname={pathname} sessionRole={sessionRole} activeJourney={activeJourney} />
+        <PublicMobileNav pathname={pathname} sessionRole={sessionRole} activeJourney={activeJourney} marketplaceMode={marketplaceMode} />
       )}
     </div>
   );
@@ -306,10 +323,12 @@ function PublicMobileNav({
   pathname,
   sessionRole,
   activeJourney,
+  marketplaceMode,
 }: {
   pathname: string | null;
   sessionRole: PublicSessionRole | null;
   activeJourney?: TeacherJourney | "";
+  marketplaceMode?: boolean;
 }) {
   const accountLink = sessionRole
     ? {
@@ -321,7 +340,7 @@ function PublicMobileNav({
   const items = [
     ...mobileNavBase.map((item) => ({
       ...item,
-      href: buildPublicJourneyHref(item.href, activeJourney),
+      href: marketplaceMode && item.href === "/professeurs" ? buildMarketplaceJourneyHref(activeJourney) : buildPublicJourneyHref(item.href, activeJourney),
       baseHref: item.href,
     })),
     { ...accountLink, baseHref: accountLink.href },
@@ -373,6 +392,10 @@ function buildPublicJourneyHref(href: string, activeJourney?: TeacherJourney | "
   params.set("journey", activeJourney);
   const serialized = params.toString();
   return serialized ? `${path}?${serialized}` : path;
+}
+
+function buildMarketplaceJourneyHref(activeJourney?: TeacherJourney | "") {
+  return activeJourney ? `/trouver?journey=${activeJourney}` : "/trouver";
 }
 
 function isPublicTeacherDetail(pathname: string | null) {

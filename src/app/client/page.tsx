@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { redirect } from "next/navigation";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
 import { Suspense } from "react";
@@ -98,6 +99,7 @@ const dashboardBookingSelect = {
 } as const;
 
 export default async function ClientDashboardPage() {
+  if (managedCoursesEnabled()) redirect("/demande-cours");
   if (marketplaceEnabled()) redirect("/client/trouver");
   const user = await getSessionUser();
   if (!user) return null;

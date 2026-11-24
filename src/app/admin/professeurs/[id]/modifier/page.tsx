@@ -56,6 +56,7 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
     include: {
       subjects: { include: { subject: true } },
       levels: { include: { level: true } },
+      preciseLevels: { select: { journey: true, className: true, subjectId: true } },
       zones: { include: { commune: true } },
     },
   });
@@ -72,6 +73,7 @@ export default async function ModifierProfesseurPage({ params }: { params: Promi
     hasPortalPassword: Boolean(portalPasswordHash),
     subjects: teacher.subjects.map((s) => ({ subjectId: s.subject.id, isPrimary: s.isPrimary })),
     levels: teacher.levels.map((l) => ({ levelId: l.level.id })),
+    preciseLevels: teacher.preciseLevels.map((item) => ({ journey: item.journey, className: item.className, subjectId: item.subjectId })),
     zones: teacher.zones.map((z) => ({ communeId: z.commune.id })),
     availability: teacher.availability ? JSON.parse(teacher.availability) : null,
   };

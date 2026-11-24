@@ -20,6 +20,15 @@ export async function GET(_request: NextRequest, context: Context) {
     },
   });
   if (!offer) return NextResponse.json({ error: "Mission introuvable." }, { status: 404 });
+  const seriesSessions = offer.request.seriesId ? await db.marketplaceRequest.findMany({
+    where: { seriesId: offer.request.seriesId, offers: { some: { teacherId: teacher.id } } },
+    orderBy: { seriesPosition: "asc" },
+    select: {
+      id: true, reference: true, scheduledDate: true, scheduledTime: true, durationMinutes: true,
+      courseFormat: true, commune: true, quartier: true,
+      courseAmount: true, transportFee: true, totalClientPrice: true, commissionAmount: true, status: true,
+    },
+  }) : [];
   const isAssigned = offer.status === "ACCEPTED" && offer.request.assignedTeacherId === teacher.id
     && ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"].includes(offer.request.status);
   const { clientId: _clientId, startCodeAttempts: _attempts, ...safeRequest } = offer.request;
@@ -28,6 +37,7 @@ export async function GET(_request: NextRequest, context: Context) {
       id: offer.id, status: offer.status, expiresAt: offer.expiresAt,
       totalClientPrice: offer.totalClientPrice, transportFee: offer.transportFee,
     },
+    seriesSessions,
     request: {
       ...safeRequest,
       addressHint: isAssigned ? offer.request.addressHint : null,

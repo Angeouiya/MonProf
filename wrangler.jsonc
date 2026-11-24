@@ -20,6 +20,7 @@
         "APP_DEPLOYMENT_PLATFORM": "cloudflare",
         "APP_DEPLOYMENT_ENV": "staging",
         "CLOUDFLARE_ENV": "staging",
+        "MANAGED_LESSONS_ENABLED": "false",
         "DATABASE_SCHEMA": "competence"
       },
       "hyperdrive": [
@@ -75,6 +76,7 @@
         "APP_DEPLOYMENT_PLATFORM": "cloudflare",
         "APP_DEPLOYMENT_ENV": "production",
         "CLOUDFLARE_ENV": "production",
+        "MANAGED_LESSONS_ENABLED": "true",
         "DATABASE_SCHEMA": "competence"
       },
       "hyperdrive": [

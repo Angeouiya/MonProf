@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Clock3, MapPin, Phone, RefreshCw } from "lucide-react";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
+import { formatMarketplaceDuration } from "@/lib/marketplace-pricing";
 
 type Mission = {
   offer: { status: string; expiresAt: string; totalClientPrice: number; transportFee: number };
@@ -15,10 +16,12 @@ type Mission = {
     client: { name: string; phone: string | null };
   };
 };
+type SeriesSession = { id: string; reference: string; scheduledDate: string; scheduledTime: string; durationMinutes: number; courseFormat: string; commune: string | null; quartier: string | null; totalClientPrice: number; commissionAmount: number; status: string };
 const money = (value: number) => `${new Intl.NumberFormat("fr-FR").format(value)} F`;
 
 export function ProfessorMarketplaceMission({ requestId }: { requestId: string }) {
   const [mission, setMission] = useState<Mission | null>(null);
+  const [seriesSessions, setSeriesSessions] = useState<SeriesSession[]>([]);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,6 +32,7 @@ export function ProfessorMarketplaceMission({ requestId }: { requestId: string }
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Mission indisponible.");
       setMission(data);
+      setSeriesSessions(Array.isArray(data.seriesSessions) ? data.seriesSessions : []);
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Mission indisponible.");
@@ -71,10 +75,22 @@ export function ProfessorMarketplaceMission({ requestId }: { requestId: string }
             <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9A6A10]">{mission.request.reference}</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">{mission.request.subjectName}</h1><p className="mt-2 text-sm text-[#526174]">{mission.request.levelName} · {mission.request.journey}</p></div>
             <span className="rounded-full bg-[#EAF1F7] px-3 py-2 text-xs font-semibold text-[#092A55]">{mission.offer.status === "PENDING" ? "Réponse attendue" : mission.request.status === "IN_PROGRESS" ? "Cours en cours" : mission.request.status === "AWAITING_CLIENT" ? "Fin à confirmer" : mission.request.status === "COMPLETED" ? "Terminé" : mission.offer.status === "ACCEPTED" ? "Accepté" : mission.offer.status}</span>
           </div>
+          {seriesSessions.length > 1 && <section className="mt-6 rounded-2xl border border-[#C9D8E7] bg-[#F7F9FB] p-4 sm:p-5" aria-label="Dates du suivi proposé">
+            <h2 className="text-base font-semibold">Suivi · {seriesSessions.length} cours avec le même professeur</h2>
+            <p className="mt-1 text-xs leading-5 text-[#526174]">Accepter cette proposition confirme toutes les dates ensemble. La somme des commissions est réservée immédiatement ; chaque commission est débitée seulement au démarrage de sa séance.</p>
+            <div className="mt-3 space-y-2">{seriesSessions.map((session) => {
+              const content = <><span className="block font-semibold">{new Date(session.scheduledDate).toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "short" })} · {session.scheduledTime} · {formatMarketplaceDuration(session.durationMinutes)}</span><span className="mt-1 block text-xs text-[#526174]">{session.courseFormat === "ONLINE" ? "En ligne" : `${session.quartier}, ${session.commune}`} · Prix {money(session.totalClientPrice)} · Commission {money(session.commissionAmount)} · {session.status}</span></>;
+              const cardClass = `block rounded-xl border bg-white p-3 text-sm ${session.id === mission.request.id ? "border-[#092A55]" : "border-[#E2E7EA]"}`;
+              return mission.offer.status === "PENDING" && session.id !== mission.request.id
+                ? <div key={session.id} className={cardClass}>{content}</div>
+                : <Link key={session.id} href={`/professeur/marche/${session.id}`} aria-current={session.id === mission.request.id ? "page" : undefined} className={cardClass}>{content}</Link>;
+            })}</div>
+            <p className="mt-3 text-sm font-semibold text-[#092A55]">Total annoncé : {money(seriesSessions.reduce((sum, session) => sum + session.totalClientPrice, 0))} · Commissions à réserver : {money(seriesSessions.reduce((sum, session) => sum + session.commissionAmount, 0))}</p>
+          </section>}
           <div className="mt-7 rounded-2xl border border-[#DCE2E8] p-5">
             <div className="grid gap-4 text-sm sm:grid-cols-2">
               <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#526174]" />{new Date(mission.request.scheduledDate).toLocaleDateString("fr-FR", { timeZone: "UTC", dateStyle: "full" })}</p>
-              <p className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#526174]" />{mission.request.scheduledTime} · {mission.request.durationMinutes / 60} h</p>
+              <p className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#526174]" />{mission.request.scheduledTime} · {formatMarketplaceDuration(mission.request.durationMinutes)}</p>
               <p className="flex items-center gap-2 sm:col-span-2"><MapPin className="h-4 w-4 text-[#526174]" />{mission.request.courseFormat === "ONLINE" ? "En ligne" : `${mission.request.quartier}, ${mission.request.commune}`}</p>
             </div>
             {mission.request.objective && <p className="mt-5 border-t border-[#E3E7EB] pt-4 text-sm text-[#526174]">{mission.request.objective}</p>}
@@ -83,9 +99,9 @@ export function ProfessorMarketplaceMission({ requestId }: { requestId: string }
 
           {mission.offer.status === "PENDING" && (
             <div className="mt-5 rounded-2xl border border-[#DCE2E8] p-5">
-              <p className="text-sm leading-6 text-[#526174]">Acceptez seulement si ce créneau vous convient. La commission sera réservée sur votre portefeuille, puis débitée uniquement lorsque le client vous donnera son code au début réel du cours.</p>
+              <p className="text-sm leading-6 text-[#526174]">{seriesSessions.length > 1 ? "Acceptez seulement si toutes les dates vous conviennent. Toutes les commissions seront réservées ensemble sur votre portefeuille, puis chacune débitée au démarrage réel de son cours avec le code du client." : "Acceptez seulement si ce créneau vous convient. La commission sera réservée sur votre portefeuille, puis débitée uniquement lorsque le client vous donnera son code au début réel du cours."}</p>
               <p className="mt-2 text-xs text-[#526174]">Offre valable jusqu’à {new Date(mission.offer.expiresAt).toLocaleTimeString("fr-FR", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" })}.</p>
-              <div className="mt-5 flex flex-wrap gap-3"><button disabled={busy} onClick={() => act("accept")} className="min-h-12 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white disabled:opacity-60">Accepter la mission</button><button disabled={busy} onClick={() => act("decline")} className="min-h-12 rounded-xl border border-[#DCE2E8] px-5 text-sm font-semibold text-[#526174] disabled:opacity-60">Refuser</button></div>
+              <div className="mt-5 flex flex-wrap gap-3"><button disabled={busy} onClick={() => act("accept")} className="min-h-12 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white disabled:opacity-60">{seriesSessions.length > 1 ? "Accepter toutes les dates" : "Accepter la mission"}</button><button disabled={busy} onClick={() => act("decline")} className="min-h-12 rounded-xl border border-[#DCE2E8] px-5 text-sm font-semibold text-[#526174] disabled:opacity-60">Refuser</button></div>
             </div>
           )}
           {mission.offer.status === "ACCEPTED" && (
@@ -102,7 +118,7 @@ export function ProfessorMarketplaceMission({ requestId }: { requestId: string }
               <p className="mt-2 text-sm leading-6 text-[#526174]">Demandez le code à six chiffres au client lorsque la séance commence. Sa saisie déclenche le compte à rebours et le prélèvement de la commission réservée.</p>
               <label className="mt-4 block text-sm font-medium">Code du client<input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} className="mt-2 min-h-12 w-full max-w-56 rounded-xl border border-[#DCE2E8] bg-white px-4 font-mono text-lg tracking-[0.2em] outline-none focus:border-[#092A55]" /></label>
               <button disabled={busy || code.length !== 6} onClick={() => act("start")} className="mt-4 min-h-12 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white disabled:opacity-60">Démarrer avec le code</button>
-              <div className="mt-5"><ImportantActionConfirm trigger={<button type="button" disabled={busy} className="text-sm font-semibold text-[#8B2727] underline underline-offset-4 disabled:opacity-60">Je ne peux plus assurer ce cours</button>} title="Annuler votre mission ?" description="Le client sera informé, votre commission réservée sera libérée et la demande sera proposée au professeur suivant si possible." confirmLabel="Annuler la mission" danger onConfirm={() => act("cancel")} /></div>
+              <div className="mt-5"><ImportantActionConfirm trigger={<button type="button" disabled={busy} className="text-sm font-semibold text-[#8B2727] underline underline-offset-4 disabled:opacity-60">Je ne peux plus assurer ce cours</button>} title="Annuler votre mission ?" description={seriesSessions.length > 1 ? "Seule cette date sera annulée. Le client sera informé, votre commission réservée pour cette séance sera libérée et les autres dates resteront confirmées." : "Le client sera informé, votre commission réservée sera libérée et la demande sera proposée au professeur suivant si possible."} confirmLabel="Annuler la mission" danger onConfirm={() => act("cancel")} /></div>
             </div>
           )}
           {mission.request.status === "IN_PROGRESS" && remaining !== null && (

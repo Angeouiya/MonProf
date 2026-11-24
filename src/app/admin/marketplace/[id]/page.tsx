@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hasAdminPermission } from "@/lib/admin-permissions";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { formatMarketplaceDuration } from "@/lib/marketplace-pricing";
 import { AdminMarketplaceDisputeActions } from "@/components/marketplace/admin-marketplace-dispute-actions";
 import { AdminMarketplaceReviewAction } from "@/components/marketplace/admin-marketplace-review-action";
 
@@ -36,7 +37,7 @@ export default async function AdminMarketplaceMissionPage({ params }: Context) {
   if (!mission) notFound();
   return <main className="mx-auto max-w-4xl space-y-6 bg-white px-4 py-6 text-[#12243A] sm:px-7">
     <Link href="/admin/marketplace" className="text-sm font-semibold text-[#092A55]">← Toutes les missions</Link>
-    <header><p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#9A6A10]">Mission {mission.reference}</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">{mission.subjectName} · {mission.levelName}</h1><p className="mt-2 text-sm text-[#526174]">{mission.journey} · {statusLabels[mission.status] || mission.status} · {mission.scheduledDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })} à {mission.scheduledTime} · {mission.durationMinutes} min</p></header>
+    <header><p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#9A6A10]">Mission {mission.reference}</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">{mission.subjectName} · {mission.levelName}</h1><p className="mt-2 text-sm text-[#526174]">{mission.journey} · {statusLabels[mission.status] || mission.status} · {mission.scheduledDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })} à {mission.scheduledTime} · {formatMarketplaceDuration(mission.durationMinutes)}</p></header>
     <section className="grid gap-3 sm:grid-cols-3" aria-label="Montants de la mission">
       {[["Cours", mission.courseAmount], ["Transport prévu", mission.transportFee], ["Commission Compétence", mission.commissionAmount]].map(([label, value]) => <div key={label} className="rounded-2xl border border-[#DCE2E8] p-5"><p className="text-xs font-semibold uppercase tracking-wider text-[#526174]">{label}</p><strong className="mt-2 block text-xl text-[#092A55]">{money(Number(value))}</strong></div>)}
     </section>

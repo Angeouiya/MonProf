@@ -35,6 +35,7 @@ import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
 import { filterLevelsForJourney, filterSubjectsForJourney } from "@/lib/catalog-journey";
 import { TEACHER_JOURNEY_CONFIG, TEACHER_JOURNEYS, type TeacherJourneyEligibility } from "@/lib/teacher-journeys";
 import { prepareTeacherImageUpload } from "@/lib/client/teacher-image-upload";
+import { SCHOOL_JOURNEYS, teacherPreciseLevelOptions } from "@/lib/teacher-precise-levels";
 import { cn } from "@/lib/utils";
 import {
   CLIENT_IDENTITY_VERIFICATION_METHOD_OPTIONS,
@@ -330,6 +331,7 @@ export function TeacherForm({
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, boolean>>({});
   const [primarySubject, setPrimarySubject] = useState<string | null>(null);
   const [selectedLevels, setSelectedLevels] = useState<Record<string, boolean>>({});
+  const [selectedPreciseLevels, setSelectedPreciseLevels] = useState<Record<string, boolean>>({});
   const [selectedZones, setSelectedZones] = useState<Record<string, boolean>>({});
   const [subjectQuery, setSubjectQuery] = useState("");
   const [levelQuery, setLevelQuery] = useState("");
@@ -403,6 +405,13 @@ export function TeacherForm({
       const sLvl: Record<string, boolean> = {};
       for (const l of initial.levels ?? []) sLvl[l.levelId || l.id] = true;
       setSelectedLevels(sLvl);
+      const sPrecise: Record<string, boolean> = {};
+      for (const item of initial.preciseLevels ?? []) {
+        if (item.journey && item.className && item.subjectId) {
+          sPrecise[`${item.journey}:${item.className}:${item.subjectId}`] = true;
+        }
+      }
+      setSelectedPreciseLevels(sPrecise);
       const sZ: Record<string, boolean> = {};
       for (const z of initial.zones ?? []) sZ[z.communeId || z.id] = true;
       setSelectedZones(sZ);
@@ -501,6 +510,9 @@ export function TeacherForm({
     () => levels.filter((level) => selectedLevels[level.id]),
     [levels, selectedLevels],
   );
+  const preciseLevelOptions = useMemo(() => Object.fromEntries(
+    SCHOOL_JOURNEYS.map((journey) => [journey, teacherPreciseLevelOptions(journey, selectedLevelItems)]),
+  ) as Record<(typeof SCHOOL_JOURNEYS)[number], string[]>, [selectedLevelItems]);
   const journeyCatalogStates = useMemo(() => {
     const eligibility: TeacherJourneyEligibility = {
       offersIvorianSystem: Boolean(offersIvorianSystem),
@@ -710,6 +722,25 @@ export function TeacherForm({
       toast.error("Sélectionnez au moins un niveau enseigné");
       return;
     }
+    const preciseLevels = SCHOOL_JOURNEYS.flatMap((journey) => {
+      const enabled = journey === "ivoirien" ? values.offersIvorianSystem : values.offersFrenchSystem;
+      return enabled ? filterSubjectsForJourney(selectedSubjectItems, journey).flatMap((subject) => (
+        preciseLevelOptions[journey]
+          .filter((className) => selectedPreciseLevels[`${journey}:${className}:${subject.id}`])
+          .map((className) => ({ journey, className, subjectId: subject.id }))
+      )) : [];
+    });
+    if (values.status === "ACTIVE" && values.portalAccessEnabled) {
+      const missing = SCHOOL_JOURNEYS.find((journey) => {
+        const enabled = journey === "ivoirien" ? values.offersIvorianSystem : values.offersFrenchSystem;
+        return enabled && !preciseLevels.some((item) => item.journey === journey);
+      });
+      if (missing) {
+        setActiveTab("matieres");
+        toast.error(`Associez au moins une matière à une classe exacte dans le système ${missing === "ivoirien" ? "ivoirien" : "français"}.`);
+        return;
+      }
+    }
     if (values.status === "ACTIVE" && countAvailabilitySlots(availability) === 0) {
       toast.error("Un professeur actif doit avoir au moins un créneau de 2h disponible.");
       return;
@@ -759,6 +790,7 @@ export function TeacherForm({
           .filter(([, v]) => v)
           .map(([id]) => ({ subjectId: id, isPrimary: id === primarySubject })),
         levels: Object.entries(selectedLevels).filter(([, v]) => v).map(([id]) => ({ levelId: id })),
+        preciseLevels,
         zones: Object.entries(selectedZones).filter(([, v]) => v).map(([id]) => ({ communeId: id })),
         availability,
       };
@@ -1651,6 +1683,61 @@ export function TeacherForm({
                       Aucun niveau ne correspond à cette recherche.
                     </div>
                   )}
+                </div>
+                <div className="mt-5 rounded-xl border border-[#CBD7EC] bg-[#F8FAFD] p-4" data-teacher-precise-levels>
+                  <p className="text-sm font-black text-[#111B4D]">Matière et classe exactes autorisées pour les missions</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-[#475569]">
+                    Cochez la classe sous chaque matière réellement enseignée. Une matière et une classe cochées
+                    séparément plus haut ne créent pas de mission à elles seules. Les profils historiques restent
+                    enregistrés, mais leurs combinaisons doivent être validées ici pour la V2.
+                  </p>
+                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    {SCHOOL_JOURNEYS.map((journey) => {
+                      const enabled = journey === "ivoirien" ? offersIvorianSystem : offersFrenchSystem;
+                      const options = preciseLevelOptions[journey];
+                      const eligibleSubjects = filterSubjectsForJourney(selectedSubjectItems, journey);
+                      const selectedCount = eligibleSubjects.reduce((count, subject) => count + options.filter((className) => (
+                        selectedPreciseLevels[`${journey}:${className}:${subject.id}`]
+                      )).length, 0);
+                      return (
+                        <div key={journey} className="rounded-lg border border-[#DDE6F7] bg-white p-3">
+                          <p className="text-sm font-bold text-[#111B4D]">
+                            Système {journey === "ivoirien" ? "ivoirien" : "français"} · {enabled ? `${selectedCount} combinaison(s)` : "désactivé"}
+                          </p>
+                          {!enabled ? (
+                            <p className="mt-2 text-xs text-[#64748B]">Activez ce système pour choisir ses classes.</p>
+                          ) : options.length === 0 || eligibleSubjects.length === 0 ? (
+                            <p className="mt-2 text-xs font-medium text-amber-800">Sélectionnez d’abord une matière et des niveaux scolaires ci-dessus.</p>
+                          ) : (
+                            <div className="mt-3 space-y-3">
+                              {eligibleSubjects.map((subject) => (
+                                <div key={subject.id} className="rounded-lg border border-[#E3E8F2] bg-[#F8FAFD] p-2">
+                                  <p className="text-xs font-black text-[#111B4D]">{subject.name}</p>
+                                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    {options.map((className) => {
+                                      const key = `${journey}:${className}:${subject.id}`;
+                                      return (
+                                        <label key={key} className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-[#E3E8F2] bg-white px-2 py-1.5 text-xs font-semibold text-[#111B4D]">
+                                          <Checkbox
+                                            checked={Boolean(selectedPreciseLevels[key])}
+                                            onCheckedChange={(checked) => setSelectedPreciseLevels((current) => ({ ...current, [key]: checked === true }))}
+                                          />
+                                          <span>{className}</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {enabled && selectedCount === 0 && (
+                            <p className="mt-2 text-xs font-semibold text-amber-800">À revalider : aucune combinaison matière-classe autorisée.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </CardContent>

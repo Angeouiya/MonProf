@@ -2,6 +2,9 @@ import { AdminLayout } from "@/components/layouts/admin-layout";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import Link from "next/link";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
+import { hasAdminPermission } from "@/lib/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +71,14 @@ export default async function AdminRootLayout({ children }: { children: React.Re
       }}
       permissions={sessionUser.adminPermissions}
       teamRole={sessionUser.adminTeamRole}
+      managedMode={managedCoursesEnabled()}
     >
+      {managedCoursesEnabled() && <nav aria-label="Service accompagné" className="flex flex-wrap gap-4 border-b border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#092A55]">
+        {hasAdminPermission(sessionUser.adminPermissions, "BOOKINGS_VIEW") && <Link href="/admin/accompagnement">Demandes et séances</Link>}
+        {hasAdminPermission(sessionUser.adminPermissions, "FINANCE_VIEW") && <Link href="/admin/accompagnement/comptabilite">Comptabilité</Link>}
+        {hasAdminPermission(sessionUser.adminPermissions, "TEACHERS_VIEW") && <Link href="/admin/professeurs">Professeurs et habilitations</Link>}
+        {hasAdminPermission(sessionUser.adminPermissions, "BOOKINGS_MANAGE") && <Link href="/admin/accompagnement/nouveau" className="underline">Nouvelle fiche parent</Link>}
+      </nav>}
       {children}
     </AdminLayout>
   );

@@ -5011,6 +5011,16 @@ b {
     stroke-width: 2.35 !important;
   }
 
+  .admin-shell [data-admin-mobile-item][aria-current="page"] [data-admin-mobile-icon-shell] {
+    background-color: transparent !important;
+    color: #fff !important;
+  }
+
+  .admin-shell [data-admin-mobile-icon-shell] svg {
+    stroke: currentColor !important;
+    fill: none !important;
+  }
+
   .admin-shell [data-admin-mobile-label] {
     display: block !important;
     max-width: 100% !important;

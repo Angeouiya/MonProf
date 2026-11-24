@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { unstable_cache } from "next/cache";
 import {
   ChevronLeft,
@@ -101,6 +103,7 @@ export default async function TeachersPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  if (managedCoursesEnabled()) redirect("/demande-cours");
   const sp = await searchParams;
 
   const journey = parseBookingJourney(sp.journey?.trim()) || "ivoirien";

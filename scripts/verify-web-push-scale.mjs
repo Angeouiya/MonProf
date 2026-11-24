@@ -161,7 +161,7 @@ record(
   realtime.includes("Recevez les alertes Compétence")
     && realtime.includes("Notification.requestPermission()")
     && realtime.includes('fetch("/api/push/test"')
-    && realtime.includes("competence-notification-monogram-tile-512.png?v=11"),
+      && realtime.includes('src="/images/brand/competence-notification-monogram-tile-512.png"'),
 );
 record(
   "Appareil accordé auto-réparé et testé sans silence",

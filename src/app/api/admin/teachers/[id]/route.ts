@@ -41,6 +41,7 @@ import {
   teacherJourneyCatalogIssueMessage,
   teacherJourneyCatalogIssues,
 } from "@/lib/teacher-journey-validation";
+import { validateTeacherPreciseLevels } from "@/lib/teacher-precise-levels";
 
 const ACTIVE_BOOKING_STATUSES = ["PAID", "PENDING_ADMIN_VALIDATION", "CONFIRMED", "ASSIGNED", "IN_PROGRESS"] as const;
 const RESTRICTIVE_TEACHER_STATUSES = ["SUSPENDED", "TEMPORARILY_SUSPENDED", "PERMANENTLY_SUSPENDED", "BLACKLISTED", "INACTIVE"] as const;
@@ -163,6 +164,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const {
     subjects,
     levels,
+    preciseLevels,
     zones,
     availability,
     statusChangeReason,
@@ -206,6 +208,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             level: { select: { id: true, name: true, order: true } },
           },
         },
+        preciseLevels: { select: { journey: true, className: true, subjectId: true } },
         availability: true,
         status: true,
         qualityScore: true,
@@ -342,6 +345,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }));
     if (journeyCatalogError) {
       return NextResponse.json({ error: journeyCatalogError }, { status: 400 });
+    }
+    let validatedPreciseLevels;
+    try {
+      validatedPreciseLevels = validateTeacherPreciseLevels(
+        preciseLevels === undefined ? existingTeacher.preciseLevels : preciseLevels,
+        journeyEligibility,
+        journeyLevels,
+        journeySubjects,
+        { requireForMarketplace: preciseLevels !== undefined
+          && ("portalAccessEnabled" in data ? Boolean(data.portalAccessEnabled) : existingTeacher.portalAccessEnabled)
+          && ("status" in data ? data.status : existingTeacher.status) === "ACTIVE" },
+      );
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 400 });
     }
     if ("portalPhone" in data || "portalAccessEnabled" in data || "phone" in data) {
       const normalizedPortalPhone = normalizeTeacherPhone(data.portalPhone || data.phone || existingTeacher.phone);
@@ -482,6 +499,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     let passwordEmailJobId: string | null = null;
     await db.$transaction(async (tx) => {
       await tx.teacher.update({ where: { id }, data });
+      if (preciseLevels !== undefined) {
+        await tx.teacherPreciseLevel.deleteMany({ where: { teacherId: id } });
+        if (validatedPreciseLevels.length) {
+          await tx.teacherPreciseLevel.createMany({
+            data: validatedPreciseLevels.map((item) => ({ teacherId: id, ...item })),
+          });
+        }
+      }
       if (passwordWasChanged && passwordChangedAt) {
         await tx.teacherPasswordResetToken.updateMany({
           where: { teacherId: id, usedAt: null },

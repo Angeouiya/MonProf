@@ -1,5 +1,8 @@
-import { calculatePriceTier, derivePricingContext, PRICE_TIERS } from "@/lib/pricing";
-import type { TeacherJourney } from "@/lib/teacher-journeys";
+import {
+  MARKETPLACE_DURATION_STEP_MINUTES,
+  MARKETPLACE_MAX_DURATION_MINUTES,
+  MARKETPLACE_MIN_DURATION_MINUTES,
+} from "@/lib/marketplace-pricing";
 import { parseAvailability, WEEK_DAYS } from "@/lib/scheduling";
 
 export const MARKETPLACE_OFFER_TTL_MS = 3 * 60_000;
@@ -8,11 +11,11 @@ export const MARKETPLACE_COMMISSION_BPS = 3_000;
 export type MarketplaceSlot = {
   scheduledDate: Date;
   scheduledTime: string;
-  durationMinutes: 60 | 120;
+  durationMinutes: number;
 };
 
 export function marketplaceEnabled() {
-  return process.env.MARKETPLACE_V2_ENABLED === "true";
+  return process.env.MARKETPLACE_V2_ENABLED === "true" && process.env.MANAGED_LESSONS_ENABLED !== "true";
 }
 
 export function parseMarketplaceSlot(dateValue: unknown, timeValue: unknown, durationValue: unknown, now = new Date()): MarketplaceSlot {
@@ -22,8 +25,12 @@ export function parseMarketplaceSlot(dateValue: unknown, timeValue: unknown, dur
   if (typeof timeValue !== "string" || !/^(0[8-9]|1\d|2[01]):(00|30)$/.test(timeValue)) {
     throw new Error("Choisissez une heure entre 08 h et 22 h, par tranche de 30 minutes.");
   }
-  if (durationValue !== 60 && durationValue !== 120) {
-    throw new Error("Choisissez une séance d’une ou de deux heures.");
+  if (typeof durationValue !== "number"
+    || !Number.isInteger(durationValue)
+    || durationValue < MARKETPLACE_MIN_DURATION_MINUTES
+    || durationValue > MARKETPLACE_MAX_DURATION_MINUTES
+    || durationValue % MARKETPLACE_DURATION_STEP_MINUTES !== 0) {
+    throw new Error("Choisissez une durée de 1 à 6 heures, par tranche de 5 minutes.");
   }
   const scheduledDate = new Date(`${dateValue}T00:00:00.000Z`);
   if (!Number.isFinite(scheduledDate.getTime()) || scheduledDate.toISOString().slice(0, 10) !== dateValue) {
@@ -41,17 +48,6 @@ export function parseMarketplaceSlot(dateValue: unknown, timeValue: unknown, dur
     throw new Error("Les demandes sont ouvertes sur les 60 prochains jours.");
   }
   return { scheduledDate, scheduledTime: timeValue, durationMinutes: durationValue };
-}
-
-export function marketplaceCourseAmount(journey: TeacherJourney, levelName: string): number {
-  if (journey === "professionnel") return PRICE_TIERS.PROFESSIONNEL_40000.amount;
-  const context = derivePricingContext({
-    category: "soutien_scolaire",
-    schoolSystem: journey,
-    levelName,
-    deliveryMode: "en_ligne",
-  });
-  return PRICE_TIERS[calculatePriceTier(context)].amount;
 }
 
 export function marketplaceCommission(courseAmount: number, rateBps = MARKETPLACE_COMMISSION_BPS) {

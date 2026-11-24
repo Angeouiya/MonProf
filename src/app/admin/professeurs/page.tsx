@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { PageHeader, EmptyState } from "@/components/shared/page-header";
 import { TeacherStatusBadge } from "@/components/shared/status-badge";
-import { Money } from "@/components/shared/money";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +17,6 @@ import { ProfesseursListClient } from "./list-client";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ProfessorTrustBadges } from "@/components/shared/professor-trust-badges";
 import { computeTeacherQualityScore } from "@/lib/teacher-operations";
-import { getTeacherAdjustedPayable, getTeacherPaidAmount, getTeacherRemainingAmount, isTeacherPayableStatus } from "@/lib/teacher-payments";
-import { hasVerifiedPayDunyaClientPayment } from "@/lib/payment-security";
 import { getReviewReputationPrismaWhere, isOpenReputationReview } from "@/lib/review-reputation";
 import { getTeacherDisplayRating } from "@/lib/teacher-display-rating";
 import {
@@ -28,22 +25,25 @@ import {
   teacherSupportsJourney,
   type TeacherJourneyEligibility,
 } from "@/lib/teacher-journeys";
+import { teacherNeedsPreciseLevelReview } from "@/lib/teacher-precise-levels";
 
 export const dynamic = "force-dynamic";
+const TEACHERS_PER_PAGE = 30;
 
 export default async function AdminProfesseursPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; subject?: string; commune?: string; badge?: string; photo?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; subject?: string; commune?: string; badge?: string; photo?: string; page?: string }>;
 }) {
   const admin = await requireAdmin("TEACHERS_VIEW");
   const sp = await searchParams;
-  const q = sp.q?.trim();
+  const q = sp.q?.trim().slice(0, 100);
   const status = sp.status && sp.status !== "all" ? sp.status : undefined;
   const subject = sp.subject && sp.subject !== "all" ? sp.subject : undefined;
   const commune = sp.commune && sp.commune !== "all" ? sp.commune : undefined;
   const badge = sp.badge && sp.badge !== "all" ? sp.badge : undefined;
   const photo = sp.photo && sp.photo !== "all" ? sp.photo : undefined;
+  const page = sp.page && /^[1-9]\d{0,4}$/.test(sp.page) ? Number(sp.page) : 1;
 
   const where: any = {};
   const andFilters: any[] = [];
@@ -73,32 +73,21 @@ export default async function AdminProfesseursPage({
   }
   if (andFilters.length) where.AND = andFilters;
 
-  const [teachers, subjects, communes, photoStatsRows] = await db.$transaction([
+  const [teachers, totalFilteredTeachers, subjects, communes, photoStatsRows] = await db.$transaction([
   db.teacher.findMany({
     where,
-    orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ featured: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    skip: (page - 1) * TEACHERS_PER_PAGE,
+    take: TEACHERS_PER_PAGE,
     include: {
       subjects: { include: { subject: true } },
+      levels: { select: { level: { select: { name: true } } } },
+      preciseLevels: { select: { journey: true, className: true, subjectId: true } },
       zones: { include: { commune: true } },
       bookings: {
         orderBy: { createdAt: "desc" },
         take: 200,
-        select: {
-          id: true,
-          status: true,
-          paymentStatus: true,
-          totalPrice: true,
-          totalClientPays: true,
-          teacherNetAmount: true,
-          teacherPaidAmount: true,
-          cancellationPenaltyTeacherAmount: true,
-          paydunyaStatus: true,
-          paydunyaVerifiedAt: true,
-          paymentProvider: true,
-          providerPaymentStatus: true,
-          paymentVerifiedAt: true,
-          transactions: { where: { type: "CLIENT_PAYMENT" }, select: { type: true, status: true, amount: true } },
-        },
+        select: { status: true, paymentStatus: true },
       },
       tasks: { orderBy: { createdAt: "desc" }, take: 50 },
       reviews: {
@@ -110,10 +99,10 @@ export default async function AdminProfesseursPage({
       warnings: { orderBy: { createdAt: "desc" }, take: 50 },
       sanctions: { orderBy: { createdAt: "desc" }, take: 50 },
       oldReplacements: { orderBy: { createdAt: "desc" }, take: 50 },
-      paymentAdjustments: { orderBy: { createdAt: "desc" }, take: 50 },
       _count: { select: { bookings: true, reviews: true } },
     },
   }),
+  db.teacher.count({ where }),
   db.subject.findMany({ orderBy: { name: "asc" } }),
   db.commune.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
   db.$queryRaw<Array<{
@@ -137,6 +126,16 @@ export default async function AdminProfesseursPage({
   const totalTeachersCount = photoStats?.totalTeachersCount ?? 0;
   const missingPhotoCount = photoStats?.missingPhotoCount ?? 0;
   const activeMissingPhotoCount = photoStats?.activeMissingPhotoCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredTeachers / TEACHERS_PER_PAGE));
+  const pageHref = (targetPage: number) => {
+    const params = new URLSearchParams();
+    for (const key of ["q", "status", "subject", "commune", "badge", "photo"] as const) {
+      const value = sp[key];
+      if (value && value !== "all") params.set(key, value);
+    }
+    params.set("page", String(targetPage));
+    return `/admin/professeurs?${params.toString()}`;
+  };
 
   // Compute totals per teacher
   const teacherIds = teachers.map((t) => t.id);
@@ -153,17 +152,7 @@ export default async function AdminProfesseursPage({
     const communeName = (t.zones[0]?.commune as any)?.name ?? t.commune ?? "—";
     const displayName = t.professionalName || t.fullName;
     const hasPhoto = Boolean(t.photoUrl?.trim());
-    const verifiedBookings = t.bookings.filter(hasVerifiedPayDunyaClientPayment);
-    const totalGenerated = verifiedBookings.reduce((sum, booking) => sum + (booking.totalClientPays || booking.totalPrice), 0);
     const realized = realizedMap.get(t.id) ?? 0;
-    const blocked = verifiedBookings
-      .filter((booking) => booking.paymentStatus === "BLOCKED")
-      .reduce((sum, booking) => sum + booking.teacherNetAmount, 0);
-    const paid = verifiedBookings.reduce((sum, booking) => sum + getTeacherPaidAmount(booking), 0);
-    const grossToPay = verifiedBookings
-      .filter(isTeacherPayableStatus)
-      .reduce((sum, booking) => sum + getTeacherRemainingAmount(booking, t.paymentAdjustments), 0);
-    const toPay = getTeacherAdjustedPayable(grossToPay, t.paymentAdjustments);
     const lateTasks = t.tasks.filter((task) => task.status === "LATE").length;
     const criticalTasks = t.tasks.filter((task) => task.priority === "CRITICAL" && !["DONE", "CANCELLED"].includes(task.status)).length;
     const incidents = lateTasks + criticalTasks + t.warnings.length + t.sanctions.length + t.oldReplacements.length;
@@ -178,17 +167,14 @@ export default async function AdminProfesseursPage({
     const displayRating = getTeacherDisplayRating(t);
     const visibleRating = displayRating.average;
     const ratingSource = displayRating.sourceLabel;
+    const needsClassReview = teacherNeedsPreciseLevelReview(t);
     return {
       teacher: t,
       primary,
       communeName,
       displayName,
       hasPhoto,
-      totalGenerated,
       realized,
-      blocked,
-      paid,
-      toPay,
       lateTasks,
       criticalTasks,
       incidents: incidents + reputationAlerts,
@@ -196,12 +182,15 @@ export default async function AdminProfesseursPage({
       score,
       visibleRating,
       ratingSource,
+      needsClassReview,
     };
   });
 
+  const schoolProfilesToReview = teacherRows.filter((row) => row.needsClassReview).length;
+
   return (
     <div className="space-y-5">
-      <PageHeader title="Professeurs" description={`${teachers.length} professeur(s)`} rootPage>
+      <PageHeader title="Professeurs" description={`${totalFilteredTeachers} professeur(s) · page ${page}/${totalPages}`} rootPage>
         {admin.adminPermissions?.includes("TEACHERS_MANAGE") && (
           <Button asChild>
             <Link href="/admin/professeurs/nouveau">
@@ -210,6 +199,13 @@ export default async function AdminProfesseursPage({
           </Button>
         )}
       </PageHeader>
+
+      {schoolProfilesToReview > 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+          {schoolProfilesToReview} profil(s) affiché(s) à revalider par combinaison matière-classe pour les missions scolaires V2.
+          Les anciennes matières et classes indépendantes ne créent pas d’habilitation V2 automatique.
+        </p>
+      )}
 
       <ProfesseursListClient
         filters={{ q: q ?? "", status: status ?? "", subject: subject ?? "", commune: commune ?? "", badge: badge ?? "", photo: photo ?? "" }}
@@ -260,13 +256,13 @@ export default async function AdminProfesseursPage({
         <EmptyState
           icon={GraduationCap}
           title="Aucun professeur"
-          description="Aucun professeur ne correspond à vos filtres."
+          description={totalFilteredTeachers > 0 ? "Aucun professeur sur cette page. Revenez à la page précédente." : "Aucun professeur ne correspond à vos filtres."}
           action={<Button asChild><Link href="/admin/professeurs/nouveau"><Plus className="mr-2 h-4 w-4" /> Ajouter un professeur</Link></Button>}
         />
       ) : (
         <>
           <div className="grid gap-3 md:hidden">
-            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, totalGenerated, realized, blocked, paid, toPay, lateTasks, criticalTasks, incidents, reputationAlerts, score, visibleRating, ratingSource }) => {
+            {teacherRows.map(({ teacher: t, primary, communeName, displayName, hasPhoto, realized, lateTasks, criticalTasks, incidents, reputationAlerts, score, visibleRating, ratingSource, needsClassReview }) => {
 
               return (
                 <Card key={t.id} className="border-violet-100 bg-white">
@@ -323,6 +319,7 @@ export default async function AdminProfesseursPage({
                       />
                       {t.featured && <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">Mis en avant</Badge>}
                       {!hasPhoto && <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">Photo manquante</Badge>}
+                      {needsClassReview && <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-950">Matière × classe à valider</Badge>}
                       {reputationAlerts > 0 && (
                         <Badge variant="outline" className="border-red-200 bg-red-50 text-red-800">
                           Risque réputation · {reputationAlerts}
@@ -353,25 +350,12 @@ export default async function AdminProfesseursPage({
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{realized}</p>
                       </div>
                       <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
-                        <p className="text-[11px] font-medium text-muted-foreground">Total généré</p>
-                        <Money amount={totalGenerated} className="mt-1 text-xs font-black" />
-                      </div>
-                      <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Réservations</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.bookings}</p>
                       </div>
                       <div className="rounded-lg border border-violet-100 bg-white px-3 py-2">
                         <p className="text-[11px] font-medium text-muted-foreground">Avis</p>
                         <p className="mt-1 text-lg font-black tabular-nums text-foreground">{t._count.reviews}</p>
-                      </div>
-                      <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2">
-                        <p className="text-[11px] font-medium text-blue-900/70">Fonds bloqués</p>
-                        <Money amount={blocked} className="mt-1 text-xs font-black" />
-                      </div>
-                      <div className="rounded-lg border border-amber-100 bg-amber-50/70 px-3 py-2">
-                        <p className="text-[11px] font-medium text-amber-900/70">Reste à payer</p>
-                        <Money amount={toPay} className="mt-1 text-xs font-black" />
-                        {paid > 0 && <p className="mt-1 text-[11px] text-amber-900/70">Payé: {paid.toLocaleString("fr-FR")} FCFA</p>}
                       </div>
                       <div className="rounded-lg border border-red-100 bg-red-50/55 px-3 py-2">
                         <p className="text-[11px] font-medium text-red-900/70">Tâches urgentes</p>
@@ -416,14 +400,11 @@ export default async function AdminProfesseursPage({
                   <TableHead>Statut</TableHead>
                   <TableHead className="hidden xl:table-cell text-right">Alertes</TableHead>
                   <TableHead className="hidden md:table-cell text-right">Cours réalisés</TableHead>
-                  <TableHead className="hidden xl:table-cell text-right">Fonds bloqués</TableHead>
-                  <TableHead className="hidden xl:table-cell text-right">À payer</TableHead>
-                  <TableHead className="hidden lg:table-cell text-right">Total généré</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, blocked, toPay, paid, totalGenerated, realized, criticalTasks, lateTasks, incidents, reputationAlerts, score, visibleRating, ratingSource }) => {
+                {teacherRows.map(({ teacher: t, primary, communeName, hasPhoto, realized, criticalTasks, lateTasks, incidents, reputationAlerts, score, visibleRating, ratingSource, needsClassReview }) => {
                   return (
                     <TableRow key={t.id}>
                       <TableCell>
@@ -452,6 +433,7 @@ export default async function AdminProfesseursPage({
                               className="mt-1"
                             />
                             {!hasPhoto && <Badge variant="outline" className="mt-1 border-red-200 bg-red-50 text-red-800">Photo manquante</Badge>}
+                            {needsClassReview && <Badge variant="outline" className="mt-1 border-amber-200 bg-amber-50 text-amber-950">Matière × classe à valider</Badge>}
                             {reputationAlerts > 0 && (
                               <Badge variant="outline" className="mt-1 border-red-200 bg-red-50 text-red-800">
                                 Risque réputation · {reputationAlerts}
@@ -484,12 +466,6 @@ export default async function AdminProfesseursPage({
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-right text-sm tabular-nums">{realized}</TableCell>
-                      <TableCell className="hidden xl:table-cell text-right"><Money amount={blocked} className="text-sm" /></TableCell>
-                      <TableCell className="hidden xl:table-cell text-right">
-                        <Money amount={toPay} className="text-sm font-semibold" />
-                        {paid > 0 && <p className="text-[11px] text-muted-foreground">Payé: {paid.toLocaleString("fr-FR")}</p>}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-right"><Money amount={totalGenerated} className="text-sm" /></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -528,6 +504,15 @@ export default async function AdminProfesseursPage({
             </CardContent>
           </Card>
         </>
+      )}
+      {totalFilteredTeachers > TEACHERS_PER_PAGE && (
+        <nav aria-label="Pages des professeurs" className="flex items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-sm">
+          <span className="font-medium text-[#34445A]">Page {page} sur {totalPages} · {totalFilteredTeachers} résultat(s)</span>
+          <div className="flex gap-2">
+            {page > 1 && <Button asChild variant="outline" size="sm"><Link href={pageHref(page - 1)}>Précédent</Link></Button>}
+            {page < totalPages && <Button asChild variant="outline" size="sm"><Link href={pageHref(page + 1)}>Suivant</Link></Button>}
+          </div>
+        </nav>
       )}
     </div>
   );

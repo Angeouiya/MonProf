@@ -4,6 +4,7 @@ import { requireTeacher } from "@/lib/teacher-auth";
 import { ProfessorLayout } from "@/components/layouts/professor-layout";
 import { TemporaryPasswordGate } from "@/components/professor/temporary-password-gate";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,7 @@ export default async function ProfesseurProtectedLayout({ children }: { children
 
   return (
     <ProfessorLayout
+      managedMode={managedCoursesEnabled()}
       marketplaceV2={marketplaceEnabled()}
       teacherName={teacherName}
       photoUrl={teacher.photoUrl}

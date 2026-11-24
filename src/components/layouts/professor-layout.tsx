@@ -96,6 +96,7 @@ export function ProfessorLayout({
   taskCount = 0,
   messageCount = 0,
   marketplaceV2 = false,
+  managedMode = false,
 }: {
   children: React.ReactNode;
   teacherName: string;
@@ -105,6 +106,7 @@ export function ProfessorLayout({
   taskCount?: number;
   messageCount?: number;
   marketplaceV2?: boolean;
+  managedMode?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -117,6 +119,23 @@ export function ProfessorLayout({
     return () => window.clearTimeout(timer);
   }, [pathname]);
 
+  if (managedMode) return <div data-managed-professor-shell className="min-h-screen bg-white pb-28 text-slate-900">
+    <WebPushRealtime initialNotificationCount={notificationCount} />
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+      <Link href="/professeur/accompagnement" className="flex min-w-0 items-center gap-3"><BrandLogo size="sm" /><span className="truncate text-sm font-semibold">{teacherName}</span></Link>
+      <div className="flex items-center gap-2"><Link href="/professeur/notifications" className="relative flex h-11 w-11 items-center justify-center rounded-xl border" aria-label={`Notifications : ${notificationCount} non lues`}><Bell className="h-5 w-5" />{notificationCount > 0 && <span className="absolute -right-1 -top-1 rounded-full border bg-white px-1 text-xs">{notificationCount > 99 ? "99+" : notificationCount}</span>}</Link>
+        <ImportantActionConfirm title="Vous déconnecter ?" description="Vos missions, messages et écritures restent conservés." confirmLabel="Me déconnecter" onConfirm={() => secureSignOut("/professeur/connexion")} trigger={<Button variant="outline" aria-label="Déconnexion professeur" className="h-11 w-11 bg-white text-slate-900"><LogOut className="h-5 w-5" /></Button>} />
+      </div>
+    </header>
+    <main>{children}</main>
+    <footer className="mx-auto flex max-w-6xl flex-wrap gap-5 border-t p-5 text-sm text-slate-700"><Link className="underline" href="/conditions-utilisation">CGU</Link><Link className="underline" href="/politique-confidentialite">Confidentialité</Link><Link className="underline" href="/engagements-accompagnement">Engagements</Link><Link className="underline" href="/professeur/missions">Historique des anciennes missions</Link><Link className="underline" href="/professeur/paiements">Ancienne comptabilité</Link></footer>
+    <nav aria-label="Navigation professeur" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 text-center text-xs font-semibold">{[
+      { href: "/professeur/accompagnement", label: "Missions & solde", icon: BookOpenCheck },
+      { href: "/professeur/disponibilites", label: "Disponibilités", icon: CalendarClock },
+      { href: "/professeur/messages", label: "Messages", icon: MessageSquareText },
+      { href: "/professeur/profil", label: "Profil", icon: User },
+    ].map(({ href, label, icon: Icon }) => <Link key={href} className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[#092A55] aria-[current=page]:ring-1 aria-[current=page]:ring-slate-300" aria-current={pathname === href ? "page" : undefined} href={href}><Icon className="h-5 w-5" /><span>{label}</span></Link>)}</nav>
+  </div>;
   return (
     <div data-professor-layout data-mobile-menu-open={open ? "true" : "false"} className="professor-shell flex min-h-screen flex-col bg-white text-[#111827] antialiased">
       <WebPushRealtime initialNotificationCount={notificationCount} />

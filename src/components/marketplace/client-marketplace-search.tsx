@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Clock3, Home, MonitorPlay, Search, SlidersHorizontal, Star } from "lucide-react";
 import { MarketplaceMap } from "@/components/marketplace/marketplace-map";
 import { ProfessorImage } from "@/components/shared/professor-image";
+import { formatMarketplaceDuration, marketplaceCourseAmount, marketplacePreciseLevels } from "@/lib/marketplace-pricing";
 import type { MarketplaceCandidate } from "@/lib/marketplace-search";
+import type { MarketplaceSeriesCandidate } from "@/lib/marketplace-series-search";
 import type { TeacherJourney } from "@/lib/teacher-journeys";
 
 type Catalog = { subjects: { id: string; name: string }[]; levels: { id: string; name: string }[] };
 type Props = {
+  initialJourney: TeacherJourney;
   catalogs: Record<TeacherJourney, Catalog>;
   communes: { name: string }[];
 };
@@ -22,41 +25,55 @@ const SYSTEMS: { value: TeacherJourney; label: string }[] = [
 ];
 
 const money = (value: number) => `${new Intl.NumberFormat("fr-FR").format(value)} F`;
+const EMPTY_CANDIDATES: MarketplaceCandidate[] = [];
+type SearchCandidate = MarketplaceCandidate | MarketplaceSeriesCandidate;
+type ExtraSession = { key: string; date: string; time: string; durationMinutes: number };
+function isSeriesCandidate(candidate: SearchCandidate): candidate is MarketplaceSeriesCandidate {
+  return "sessions" in candidate && Array.isArray(candidate.sessions);
+}
 
-export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
+export function ClientMarketplaceSearch({ initialJourney, catalogs, communes }: Props) {
   const router = useRouter();
-  const [journey, setJourney] = useState<TeacherJourney>("ivoirien");
+  const [journey, setJourney] = useState<TeacherJourney>(initialJourney);
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [subjectId, setSubjectId] = useState("");
   const [levelId, setLevelId] = useState("");
+  const [preciseLevel, setPreciseLevel] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("16:00");
-  const [durationMinutes, setDurationMinutes] = useState<60 | 120>(120);
+  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [extraSessions, setExtraSessions] = useState<ExtraSession[]>([]);
   const [format, setFormat] = useState<"HOME" | "ONLINE">("HOME");
   const [commune, setCommune] = useState("");
   const [quartier, setQuartier] = useState("");
   const [addressHint, setAddressHint] = useState("");
   const [objective, setObjective] = useState("");
-  const [candidates, setCandidates] = useState<MarketplaceCandidate[] | null>(null);
+  const [candidates, setCandidates] = useState<SearchCandidate[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const requestKey = useRef("");
   const catalog = catalogs[journey];
+  const selectedLevel = catalog.levels.find((level) => level.id === levelId);
+  const preciseLevelOptions = selectedLevel && journey !== "professionnel" ? marketplacePreciseLevels(journey, selectedLevel.name) : [];
+  const pricedLevel = journey === "professionnel" ? selectedLevel?.name : preciseLevel;
+  const coursePreview = pricedLevel ? marketplaceCourseAmount(journey, pricedLevel, format, durationMinutes) : null;
+  const coursePreviewTotal = pricedLevel ? [durationMinutes, ...extraSessions.map((session) => session.durationMinutes)]
+    .reduce((sum, minutes) => sum + marketplaceCourseAmount(journey, pricedLevel, format, minutes), 0) : null;
   const selectedTeacher = useMemo(() => candidates?.find((item) => item.teacherId === selected) ?? candidates?.[0] ?? null, [candidates, selected]);
   const minDate = new Date().toLocaleDateString("en-CA");
-  const payload = { journey, subjectId, levelId, date, time, durationMinutes, format, commune, quartier, addressHint, objective };
+  const payload = { journey, subjectId, levelId, preciseLevel, date, time, durationMinutes, format, commune, quartier, addressHint, objective };
+  const sessionPayload = [{ date, time, durationMinutes }, ...extraSessions.map(({ date: sessionDate, time: sessionTime, durationMinutes: minutes }) => ({ date: sessionDate, time: sessionTime, durationMinutes: minutes }))];
   const areaLabel = format === "ONLINE" ? "Cours en ligne" : commune ? `${quartier ? `${quartier}, ` : ""}${commune}` : "Abidjan · choisissez votre quartier";
 
   function nextStep() {
     setError("");
-    if (step === 0 && (!subjectId || !levelId)) {
-      setError("Choisissez la matière et le niveau du cours.");
+    if (step === 0 && (!subjectId || !levelId || (journey !== "professionnel" && !preciseLevel))) {
+      setError("Choisissez la matière et la classe exacte du cours.");
       return;
     }
-    if (step === 1 && !date) {
-      setError("Choisissez la date et l’heure du cours.");
+    if (step === 1 && !sessionsAreValid(sessionPayload, setError)) {
       return;
     }
     setStep(step === 0 ? 1 : 2);
@@ -64,14 +81,18 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
 
   async function search() {
     setError("");
-    if (!subjectId || !levelId || !date || (format === "HOME" && (!commune || !quartier.trim()))) {
-      setError("Renseignez la matière, le niveau, la date et le lieu du cours.");
+    if (!subjectId || !levelId || (journey !== "professionnel" && !preciseLevel) || !date || (format === "HOME" && (!commune || !quartier.trim()))) {
+      setError("Renseignez la matière, la classe, la date et le lieu du cours.");
+      return;
+    }
+    if (!sessionsAreValid(sessionPayload, setError)) {
       return;
     }
     setLoading(true);
     try {
-      const response = await fetch("/api/marketplace/search", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
+      const response = await fetch(extraSessions.length ? "/api/marketplace/search-series" : "/api/marketplace/search", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(extraSessions.length ? { ...payload, sessions: sessionPayload } : payload),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Recherche impossible.");
@@ -91,10 +112,10 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/marketplace/requests", {
+      const response = await fetch(extraSessions.length ? "/api/marketplace/series" : "/api/marketplace/requests", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...payload, teacherId: selectedTeacher.teacherId, clientKey: requestKey.current }),
+        body: JSON.stringify({ ...payload, ...(extraSessions.length ? { sessions: sessionPayload } : {}), teacherId: selectedTeacher.teacherId, quotedTotalClientPrice: selectedTeacher.totalClientPrice, clientKey: requestKey.current }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Demande impossible.");
@@ -115,14 +136,13 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
 
       <div className="mb-5 rounded-2xl border border-[#E2E7EA] bg-[#F4F6F8] p-1.5 shadow-[0_4px_22px_rgba(12,36,60,0.04)]" role="group" aria-label="Système d’enseignement">
         <div className="grid grid-cols-3 gap-1.5">
-          {SYSTEMS.map((system) => <button key={system.value} type="button" aria-pressed={journey === system.value} onClick={() => { setJourney(system.value); setSubjectId(""); setLevelId(""); setCandidates(null); setStep(0); setError(""); }} className={`min-h-12 rounded-xl px-2 text-xs font-semibold transition sm:text-sm ${journey === system.value ? "bg-white text-[#092A55] shadow-[0_2px_10px_rgba(9,42,85,0.12)]" : "bg-transparent text-[#40516A] hover:bg-white"}`}>{system.label}</button>)}
+          {SYSTEMS.map((system) => <button key={system.value} type="button" aria-pressed={journey === system.value} onClick={() => { setJourney(system.value); setSubjectId(""); setLevelId(""); setPreciseLevel(""); setCandidates(null); setStep(0); setError(""); }} className={`min-h-12 rounded-xl px-2 text-xs font-semibold transition sm:text-sm ${journey === system.value ? "bg-white text-[#092A55] shadow-[0_2px_10px_rgba(9,42,85,0.12)]" : "bg-transparent text-[#40516A] hover:bg-white"}`}>{system.label}</button>)}
         </div>
       </div>
 
       <div className="overflow-hidden rounded-[1.75rem] border border-[#DCE2E8] bg-[#F4F6F7] shadow-[0_14px_50px_rgba(10,39,68,0.09)] lg:grid lg:min-h-[690px] lg:grid-cols-[minmax(0,1fr)_minmax(360px,420px)]">
         <div className="relative h-[310px] sm:h-[410px] lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-[690px]">
-          <MarketplaceMap key={format} format={format} areaLabel={areaLabel} />
-          {candidates !== null && format === "HOME" && <p className="absolute bottom-4 left-4 right-4 w-fit max-w-[calc(100%-2rem)] rounded-xl bg-white/95 px-3 py-2 text-xs font-medium text-[#33485E] shadow-sm">Les profils sont classés par zone, disponibilité et adéquation. Leur position en direct n’est pas partagée.</p>}
+          <MarketplaceMap key={format} format={format} areaLabel={areaLabel} commune={commune} candidates={candidates ?? EMPTY_CANDIDATES} selectedTeacherId={selectedTeacher?.teacherId} onSelectTeacher={setSelected} />
         </div>
 
         <section className="relative z-10 -mt-8 rounded-t-[1.75rem] bg-white px-5 pb-7 pt-5 shadow-[0_-8px_24px_rgba(10,39,68,0.08)] sm:px-7 lg:col-start-2 lg:row-start-1 lg:mt-0 lg:rounded-none lg:border-l lg:border-[#E2E7EA] lg:pb-8 lg:shadow-none" aria-label={candidates === null ? "Préparer mon cours" : "Professeurs compatibles"}>
@@ -136,12 +156,24 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
             </div>
             {step === 0 && <div className="mt-6 space-y-4">
               <Field label={journey === "professionnel" ? "Compétence recherchée" : "Matière"}><select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className={fieldClass} required><option value="">Choisir une matière</option>{catalog.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></Field>
-              <Field label={journey === "professionnel" ? "Profil" : "Niveau / classe"}><select value={levelId} onChange={(event) => setLevelId(event.target.value)} className={fieldClass} required><option value="">Choisir un niveau</option>{catalog.levels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select></Field>
+              <Field label={journey === "professionnel" ? "Profil" : "Niveau"}><select value={levelId} onChange={(event) => { const id = event.target.value; const level = catalog.levels.find((item) => item.id === id); const options = level && journey !== "professionnel" ? marketplacePreciseLevels(journey, level.name) : []; setLevelId(id); setPreciseLevel(options.length === 1 ? options[0] : ""); }} className={fieldClass} required><option value="">Choisir un niveau</option>{catalog.levels.filter((level) => journey === "professionnel" || marketplacePreciseLevels(journey, level.name).length > 0).map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select></Field>
+              {preciseLevelOptions.length > 1 && <Field label="Classe exacte"><select value={preciseLevel} onChange={(event) => setPreciseLevel(event.target.value)} className={fieldClass} required><option value="">Choisir la classe</option>{preciseLevelOptions.map((level) => <option key={level} value={level}>{level}</option>)}</select></Field>}
             </div>}
             {step === 1 && <div className="mt-6 space-y-4">
               <Field label="Date du cours"><input type="date" min={minDate} value={date} onChange={(event) => setDate(event.target.value)} className={fieldClass} required /></Field>
-              <div className="grid grid-cols-2 gap-3"><Field label="Heure"><input type="time" min="08:00" max="21:00" step={1800} value={time} onChange={(event) => setTime(event.target.value)} className={fieldClass} required /></Field><Field label="Durée"><select value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value) as 60 | 120)} className={fieldClass}><option value={120}>2 heures</option><option value={60}>1 heure</option></select></Field></div>
-              <p className="flex items-center gap-2 text-xs text-[#536278]"><Clock3 className="h-4 w-4" /> 1 ou 2 heures : le prix du cours reste identique.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Heure"><input type="time" min="08:00" max="21:00" step={1800} value={time} onChange={(event) => setTime(event.target.value)} className={fieldClass} required /></Field>
+                <SessionDurationSelect value={durationMinutes} onChange={setDurationMinutes} label="Durée du cours" />
+              </div>
+              <p className="flex items-center gap-2 text-xs text-[#536278]"><Clock3 className="h-4 w-4" /> Base d’une heure. Le prix évolue par tranche de 5 minutes.</p>
+              {extraSessions.map((session, index) => <div key={session.key} className="rounded-xl border border-[#DCE2E8] bg-[#FAFBFC] p-3">
+                <div className="flex items-center justify-between gap-2"><strong className="text-sm text-[#12243A]">Date {index + 2}</strong><button type="button" onClick={() => setExtraSessions((current) => current.filter((item) => item.key !== session.key))} className="min-h-10 text-xs font-semibold text-[#8B2727]">Retirer</button></div>
+                <div className="mt-2 grid grid-cols-2 gap-3"><Field label="Date"><input type="date" min={minDate} value={session.date} onChange={(event) => setExtraSessions((current) => current.map((item) => item.key === session.key ? { ...item, date: event.target.value } : item))} className={fieldClass} required /></Field><Field label="Heure"><input type="time" min="08:00" max="21:00" step={1800} value={session.time} onChange={(event) => setExtraSessions((current) => current.map((item) => item.key === session.key ? { ...item, time: event.target.value } : item))} className={fieldClass} required /></Field></div>
+                <div className="mt-3"><SessionDurationSelect value={session.durationMinutes} onChange={(minutes) => setExtraSessions((current) => current.map((item) => item.key === session.key ? { ...item, durationMinutes: minutes } : item))} label={`Durée de la date ${index + 2}`} /></div>
+              </div>)}
+              {extraSessions.length < 5 && <button type="button" onClick={() => setExtraSessions((current) => [...current, { key: crypto.randomUUID(), date: "", time, durationMinutes }])} className="min-h-11 w-full rounded-xl border border-dashed border-[#A9B9C7] bg-white px-3 text-sm font-semibold text-[#092A55]">+ Ajouter une autre date</button>}
+              {extraSessions.length > 0 && <p className="text-xs leading-5 text-[#526174]">Un seul professeur devra accepter toutes les dates. Tarif normal de chaque séance, sans remise de pack.</p>}
+              {coursePreviewTotal !== null && <div className="rounded-xl border border-[#DCE2E8] bg-[#F7F9FA] p-4" aria-live="polite"><div className="flex items-baseline justify-between gap-3"><span className="text-sm font-medium text-[#40516A]">{extraSessions.length ? `${extraSessions.length + 1} cours` : `Cours · ${formatMarketplaceDuration(durationMinutes)}`}</span><strong className="text-lg tabular-nums text-[#092A55]">{money(extraSessions.length ? coursePreviewTotal : coursePreview ?? 0)}</strong></div><p className="mt-1 text-xs text-[#617083]">{format === "HOME" ? "Hors déplacements éventuels, calculés après le choix du professeur." : "En ligne · aucun déplacement."}</p></div>}
             </div>}
             {step === 2 && <div className="mt-6 space-y-4">
               {format === "HOME" && <><Field label="Commune du cours"><select value={commune} onChange={(event) => { setCommune(event.target.value); setQuartier(""); }} className={fieldClass} required><option value="">Choisir la commune</option>{communes.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}</select></Field><Field label="Quartier du cours"><input value={quartier} onChange={(event) => setQuartier(event.target.value)} maxLength={100} placeholder="Ex. Angré" className={fieldClass} required /></Field><Field label="Adresse ou repère" optional><input value={addressHint} onChange={(event) => setAddressHint(event.target.value)} maxLength={240} placeholder="Ex. près de la pharmacie" className={fieldClass} /></Field></>}
@@ -153,10 +185,24 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
           </> : <>
             <button type="button" onClick={() => { setCandidates(null); setError(""); }} className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#526174] hover:text-[#092A55]"><ArrowLeft className="h-4 w-4" /> Modifier ma recherche</button>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">{candidates.length ? "Professeurs pour vous" : "Aucun professeur disponible"}</h2>
-            <p className="mt-1 text-sm text-[#526174]">{SYSTEMS.find((item) => item.value === journey)?.label} · {areaLabel} · {date} à {time}</p>
+            <p className="mt-1 text-sm text-[#526174]">{SYSTEMS.find((item) => item.value === journey)?.label} · {areaLabel} · {extraSessions.length ? `${extraSessions.length + 1} dates` : `${date} à ${time} · ${formatMarketplaceDuration(durationMinutes)}`}</p>
             {candidates.length === 0 ? <div className="mt-6 rounded-xl border border-[#DCE2E8] bg-[#F7F9FA] p-5 text-sm leading-6 text-[#526174]">Essayez une autre heure ou un autre quartier. Vous pouvez modifier votre recherche sans tout recommencer.</div> : <>
-              <div className="mt-5 max-h-[300px] space-y-2 overflow-y-auto pr-1" aria-label="Liste des professeurs compatibles">{candidates.map((teacher, index) => <button key={teacher.teacherId} type="button" aria-pressed={selectedTeacher?.teacherId === teacher.teacherId} onClick={() => setSelected(teacher.teacherId)} className={`flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedTeacher?.teacherId === teacher.teacherId ? "border-[#092A55] bg-[#F1F5F8]" : "border-[#E3E7EB] bg-white hover:border-[#8DA4BF]"}`}><ProfessorImage photoUrl={teacher.photoUrl} name={teacher.name} size={50} /><span className="min-w-0 flex-1"><strong className="block truncate text-sm font-semibold">{teacher.name}</strong><span className="mt-1 block text-xs text-[#526174]">{teacher.proximity === "quartier" ? "Dans votre quartier" : teacher.proximity === "commune" ? "Dans votre commune" : teacher.proximity === "en_ligne" ? "Cours en ligne" : "Autre commune"}</span><span className="mt-1 flex items-center gap-1 text-xs text-[#9A6A10]"><Star className="h-3.5 w-3.5 fill-current" />{teacher.ratingCount ? `${teacher.rating.toFixed(1)} · ${teacher.ratingCount} avis` : "Nouveau profil"}</span></span><span className="shrink-0 text-right"><span className="block text-sm font-bold text-[#092A55]">{money(teacher.totalClientPrice)}</span><span className="mt-1 block text-[11px] text-[#526174]">{index === 0 ? "Recommandé" : "Disponible"}</span></span></button>)}</div>
-              {selectedTeacher && <div className="mt-5 rounded-2xl border border-[#DCE2E8] bg-white p-4"><div className="flex items-center gap-3"><ProfessorImage photoUrl={selectedTeacher.photoUrl} name={selectedTeacher.name} size={48} /><div><strong className="block text-sm">{selectedTeacher.name}</strong><span className="text-xs text-[#526174]">Votre choix · réponse du professeur attendue</span></div></div><div className="mt-4 space-y-2 border-t border-[#E3E7EB] pt-4 text-sm"><PriceLine label="Cours" amount={selectedTeacher.courseAmount} /><PriceLine label="Déplacement" amount={selectedTeacher.transportFee} /><PriceLine label="Total estimé à régler" amount={selectedTeacher.totalClientPrice} strong /></div><p className="mt-3 text-xs leading-5 text-[#526174]">Le professeur peut accepter ou refuser. En cas de refus, un autre profil compatible pourra être sollicité.</p>{error && <p role="alert" className="mt-3 rounded-xl bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}<button type="button" onClick={propose} disabled={submitting} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#092A55] px-4 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60">{submitting ? "Envoi en cours…" : "Proposer le cours"}<ArrowRight className="h-4 w-4" /></button></div>}
+              <div className="mt-5 max-h-[300px] space-y-2 overflow-y-auto pr-1" aria-label="Liste des professeurs compatibles">
+                {candidates.map((teacher, index) => <button key={teacher.teacherId} type="button" aria-pressed={selectedTeacher?.teacherId === teacher.teacherId} onClick={() => setSelected(teacher.teacherId)} className={`flex min-h-20 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedTeacher?.teacherId === teacher.teacherId ? "border-[#092A55] bg-[#F1F5F8]" : "border-[#E3E7EB] bg-white hover:border-[#8DA4BF]"}`}>
+                  <ProfessorImage photoUrl={teacher.photoUrl} name={teacher.name} size={50} />
+                  <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-semibold">{teacher.name}</strong><span className="mt-1 block text-xs text-[#526174]">{teacher.proximity === "quartier" ? "Zone déclarée : même quartier" : teacher.proximity === "commune" ? "Zone déclarée : même commune" : teacher.proximity === "en_ligne" ? "Cours en ligne" : `Zone déclarée : ${teacher.commune || "autre commune"}`}</span><span className="mt-1 flex items-center gap-1 text-xs text-[#9A6A10]"><Star className="h-3.5 w-3.5 fill-current" />{teacher.ratingCount ? `${teacher.rating.toFixed(1)} · ${teacher.ratingCount} avis` : "Nouveau profil"}</span></span>
+                  <span className="shrink-0 text-right"><span className="block text-sm font-bold text-[#092A55]">{money(teacher.totalClientPrice)}</span><span className="mt-1 block text-[11px] text-[#526174]">{index === 0 ? "Recommandé" : "Disponible"}</span></span>
+                </button>)}
+              </div>
+              {selectedTeacher && <div className="mt-5 rounded-2xl border border-[#DCE2E8] bg-white p-4">
+                <div className="flex items-center gap-3"><ProfessorImage photoUrl={selectedTeacher.photoUrl} name={selectedTeacher.name} size={48} /><div><strong className="block text-sm">{selectedTeacher.name}</strong><span className="text-xs text-[#526174]">Votre choix · réponse du professeur attendue</span></div></div>
+                {isSeriesCandidate(selectedTeacher) && <div className="mt-4 space-y-1 rounded-xl bg-[#F7F9FA] p-3 text-xs text-[#526174]" aria-label="Dates du suivi">{selectedTeacher.sessions.map((session) => <p key={session.date} className="flex justify-between gap-2"><span>{new Date(`${session.date}T00:00:00.000Z`).toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "short" })} · {session.time} · {formatMarketplaceDuration(session.durationMinutes)}</span><span className="shrink-0 font-semibold text-[#12243A]">{money(session.totalClientPrice)}</span></p>)}</div>}
+                <div className="mt-4 space-y-2 border-t border-[#E3E7EB] pt-4 text-sm"><PriceLine label={extraSessions.length ? `Cours · ${extraSessions.length + 1} séances` : `Cours · ${formatMarketplaceDuration(durationMinutes)}`} amount={selectedTeacher.courseAmount} /><PriceLine label="Déplacement" amount={selectedTeacher.transportFee} /><PriceLine label="Total estimé à régler" amount={selectedTeacher.totalClientPrice} strong /></div>
+                {format === "HOME" && <p className="mt-2 text-xs leading-5 text-[#526174]">{selectedTeacher.transportOriginLabel}</p>}
+                <p className="mt-3 text-xs leading-5 text-[#526174]">{extraSessions.length ? "Le professeur accepte toutes les dates ensemble ou les refuse. Le tarif est la somme des séances au prix normal, sans remise de pack." : "Le professeur peut accepter ou refuser. En cas de refus, un autre profil compatible pourra être sollicité."}</p>
+                {error && <p role="alert" className="mt-3 rounded-xl bg-[#FFF8F8] p-3 text-sm text-[#8B2727]">{error}</p>}
+                <button type="button" onClick={propose} disabled={submitting} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#092A55] px-4 text-sm font-semibold text-white transition hover:bg-[#123B72] disabled:opacity-60">{submitting ? "Envoi en cours…" : extraSessions.length ? "Proposer ces dates" : "Proposer le cours"}<ArrowRight className="h-4 w-4" /></button>
+              </div>}
             </>}
           </>}
         </section>
@@ -166,6 +212,46 @@ export function ClientMarketplaceSearch({ catalogs, communes }: Props) {
 }
 
 const fieldClass = "mt-2 min-h-12 w-full rounded-xl border border-[#DCE2E8] bg-white px-3.5 text-base text-[#12243A] outline-none transition focus:border-[#092A55] focus:ring-2 focus:ring-[#CFDAE5]";
+const durationSelectClass = "min-h-12 min-w-0 flex-1 rounded-xl border border-[#DCE2E8] bg-white px-2 text-sm text-[#12243A] outline-none focus:border-[#092A55] focus:ring-2 focus:ring-[#CFDAE5]";
+
+function SessionDurationSelect({ value, onChange, label }: { value: number; onChange: (minutes: number) => void; label: string }) {
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  return <div>
+    <p className="text-sm font-medium text-[#12243A]">{label}</p>
+    <div className="mt-2 flex items-center gap-1.5">
+      <select aria-label={`${label} · heures`} value={hours} onChange={(event) => { const selected = Number(event.target.value); onChange(selected * 60 + (selected === 6 ? 0 : minutes)); }} className={durationSelectClass}>
+        {[1, 2, 3, 4, 5, 6].map((option) => <option key={option} value={option}>{option} h</option>)}
+      </select>
+      <select aria-label={`${label} · minutes`} value={minutes} onChange={(event) => onChange(hours * 60 + Number(event.target.value))} className={durationSelectClass}>
+        {Array.from({ length: hours === 6 ? 1 : 12 }, (_, index) => index * 5).map((option) => <option key={option} value={option}>{String(option).padStart(2, "0")} min</option>)}
+      </select>
+    </div>
+  </div>;
+}
+
+function sessionsAreValid(sessions: { date: string; time: string; durationMinutes: number }[], setError: (message: string) => void) {
+  if (sessions.some((session) => !session.date || !session.time)) {
+    setError("Choisissez la date et l'heure de chaque cours.");
+    return false;
+  }
+  if (new Set(sessions.map((session) => session.date)).size !== sessions.length) {
+    setError("Choisissez une date différente pour chaque cours du suivi.");
+    return false;
+  }
+  if (sessions.some((session) => !endsBeforeClosing(session.time, session.durationMinutes))) {
+    setError("Chaque cours doit commencer à l'heure ou à la demi-heure et finir avant 22 h.");
+    return false;
+  }
+  return true;
+}
+
+function endsBeforeClosing(time: string, durationMinutes: number) {
+  const match = /^(\d{2}):(00|30)$/.exec(time);
+  if (!match) return false;
+  const start = Number(match[1]) * 60 + Number(match[2]);
+  return start >= 8 * 60 && start + durationMinutes <= 22 * 60;
+}
 
 function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-[#12243A]">{label}{optional && <span className="ml-1 font-normal text-[#6A7786]">· facultatif</span>}{children}</label>;

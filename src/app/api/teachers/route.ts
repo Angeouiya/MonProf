@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { buildTeacherSearchClauses } from "@/lib/teacher-search";
 import { parseTeacherJourney, TEACHER_JOURNEY_CONFIG, teacherJourneyWhere } from "@/lib/teacher-journeys";
 import { getCachedTeacherSearchCatalog } from "@/lib/catalog-cache";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/catalog-journey";
 
 export async function GET(req: NextRequest) {
+  if (managedCoursesEnabled()) return NextResponse.json({ error: "L'attribution est assurée par Compétence." }, { status: 410 });
   const { searchParams } = new URL(req.url);
   const requestedSubject = searchParams.get("subject")?.trim() ?? "";
   const requestedLevel = searchParams.get("level")?.trim() ?? "";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { redirect } from "next/navigation";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
 import { ArrowRight, BookOpenCheck, CalendarClock, ClipboardList, CreditCard, MessageSquareText, ShieldCheck } from "lucide-react";
@@ -24,6 +25,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ProfesseurDashboardPage() {
+  if (managedCoursesEnabled()) redirect("/professeur/accompagnement");
   if (marketplaceEnabled()) redirect("/professeur/marche");
   const { teacher } = await requireTeacher();
   const teacherName = teacher.professionalName || teacher.fullName;

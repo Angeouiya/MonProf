@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { cache } from "react";
 import {
   BadgeCheck,
@@ -73,6 +74,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ journey?: string }>;
 }): Promise<Metadata> {
+  if (managedCoursesEnabled()) return { title: "Accompagnement Compétence", robots: { index: false, follow: false } };
   const { id } = await params;
   const requestedJourney = parseTeacherJourney((await searchParams).journey);
   const teacher = await getPublicTeacherProfile(id, requestedJourney ?? undefined);
@@ -114,6 +116,7 @@ export default async function TeacherDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ journey?: string; ref?: string; partnerRef?: string }>;
 }) {
+  if (managedCoursesEnabled()) redirect("/demande-cours");
   const { id } = await params;
   const { journey: requestedJourney, ref, partnerRef } = await searchParams;
   const journey = parseTeacherJourney(requestedJourney) ?? "";

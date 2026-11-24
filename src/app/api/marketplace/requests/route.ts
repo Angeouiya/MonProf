@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       ...input,
       clientKey: typeof body.clientKey === "string" ? body.clientKey : "",
       preferredTeacherId: typeof body.teacherId === "string" ? body.teacherId : null,
+      quotedTotalClientPrice: body.quotedTotalClientPrice,
       addressHint: typeof body.addressHint === "string" ? body.addressHint : null,
       objective: typeof body.objective === "string" ? body.objective : null,
     });

@@ -48,6 +48,7 @@ supabase/.temp/
 
 # typescript
 *.tsbuildinfo
+.next-managed-qa/
 next-env.d.ts
 local-*
 db/*.db

@@ -29,8 +29,8 @@ const checks = [
       /data-admin-connected-legal-links/,
       /href: "\/conditions-utilisation", label: "CGU"/,
       /href: "\/politique-confidentialite", label: "Confidentialité"/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} onNavigate=\{\(\) => setOpen\(false\)\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} managedMode=\{managedMode\} \/>/,
+      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} managedMode=\{managedMode\} onNavigate=\{\(\) => setOpen\(false\)\} \/>/,
     ],
   },
 ];

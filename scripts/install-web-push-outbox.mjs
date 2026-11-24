@@ -58,7 +58,14 @@ const statements = [
         "link", "priority", "status", "nextAttemptAt", "createdAt", "updatedAt"
       ) VALUES (
         gen_random_uuid(), NEW."id", 'TEACHER', NEW."teacherId", NEW."title", NEW."message",
-        '/professeur/notifications', 'IMPORTANT', 'PENDING', NOW(), NOW(), NOW()
+        CASE
+          WHEN NEW."link" LIKE '/professeur/%'
+            AND POSITION('//' IN NEW."link") = 0
+            AND POSITION(CHR(92) IN NEW."link") = 0
+          THEN NEW."link"
+          ELSE '/professeur/notifications'
+        END,
+        'IMPORTANT', 'PENDING', NOW(), NOW(), NOW()
       ) ON CONFLICT ("teacherNotificationId") DO NOTHING;
       RETURN NEW;
     END;

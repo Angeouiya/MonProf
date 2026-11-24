@@ -1,6 +1,7 @@
 import { Prisma, type NotificationChannel, type NotificationPriority, type NotificationRecipientType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { publishWebPushFlushEvent } from "@/lib/web-push-queue";
+import { safeTeacherNotificationLink } from "@/lib/teacher-notification-link";
 
 type NotificationEventClient = Prisma.TransactionClient | typeof db;
 
@@ -38,6 +39,7 @@ export async function enqueueNotificationEvent(
           campaignId: event.campaignId || undefined,
           title: event.title,
           message: event.message,
+          link: safeTeacherNotificationLink(event.link),
           channel,
           sent: channel !== "INTERNAL",
           status: "SENT",

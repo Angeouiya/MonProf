@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Clock3, MapPin, Phone, RefreshCw } from "lucide-react";
 import { ProfessorImage } from "@/components/shared/professor-image";
 import { ImportantActionConfirm } from "@/components/shared/important-action-confirm";
+import { isMarketplaceArchived } from "@/lib/marketplace-client-history";
+import { formatMarketplaceDuration } from "@/lib/marketplace-pricing";
 
 type RequestDetail = {
-  id: string; reference: string; status: string; journey: string; subjectName: string; levelName: string;
+  id: string; reference: string; seriesId: string | null; status: string; journey: string; subjectName: string; levelName: string;
   courseFormat: "HOME" | "ONLINE"; commune: string | null; quartier: string | null;
   scheduledDate: string; scheduledTime: string; durationMinutes: number;
   courseAmount: number; transportFee: number; totalClientPrice: number;
@@ -15,6 +17,7 @@ type RequestDetail = {
   assignedTeacher: { fullName: string; professionalName: string | null; photoUrl: string | null; phone: string; rating: number; ratingCount: number } | null;
   review: { id: string; rating: number; comment: string | null } | null;
 };
+type SeriesSession = { id: string; reference: string; scheduledDate: string; scheduledTime: string; durationMinutes: number; totalClientPrice: number; status: string };
 
 const STATUS: Record<string, string> = {
   OFFERED: "En attente d’une réponse", SEARCHING: "Recherche en cours", ACCEPTED: "Professeur confirmé",
@@ -26,6 +29,7 @@ const money = (value: number) => `${new Intl.NumberFormat("fr-FR").format(value)
 
 export function ClientMarketplaceRequest({ requestId }: { requestId: string }) {
   const [detail, setDetail] = useState<RequestDetail | null>(null);
+  const [seriesSessions, setSeriesSessions] = useState<SeriesSession[]>([]);
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,6 +43,7 @@ export function ClientMarketplaceRequest({ requestId }: { requestId: string }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Demande indisponible.");
       setDetail(data.request);
+      setSeriesSessions(Array.isArray(data.seriesSessions) ? data.seriesSessions : []);
       setCode(data.startCode);
       setError("");
     } catch (cause) {
@@ -89,18 +94,27 @@ export function ClientMarketplaceRequest({ requestId }: { requestId: string }) {
   const remaining = detail?.dueAt ? Math.max(0, Math.ceil((new Date(detail.dueAt).getTime() - now) / 1_000)) : null;
   return (
     <main className="mx-auto max-w-3xl bg-white px-4 pb-14 pt-6 text-[#12243A] sm:px-7">
-      <Link href="/client/demandes" className="inline-flex items-center gap-2 text-sm text-[#526174] hover:text-[#092A55]"><ArrowLeft className="h-4 w-4" />Mes demandes</Link>
+      <Link href={detail && isMarketplaceArchived(detail.status) ? "/client/historique" : "/client/demandes"} className="inline-flex items-center gap-2 text-sm text-[#526174] hover:text-[#092A55]"><ArrowLeft className="h-4 w-4" />{detail && isMarketplaceArchived(detail.status) ? "Historique" : "Mes demandes"}</Link>
       {!detail ? <div className="mt-10 text-sm text-[#526174]">{error || "Chargement…"}</div> : (
         <>
           <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
             <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9A6A10]">{detail.reference}</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em]">{detail.subjectName}</h1><p className="mt-2 text-sm text-[#526174]">{detail.levelName} · {detail.journey}</p></div>
             <span className="rounded-full bg-[#EAF1F7] px-3 py-2 text-xs font-semibold text-[#092A55]">{STATUS[detail.status] || detail.status}</span>
           </div>
+          {seriesSessions.length > 1 && <section className="mt-6 rounded-2xl border border-[#DCE2E8] bg-[#F8FAFB] p-4 sm:p-5" aria-label="Dates de votre suivi">
+            <h2 className="text-base font-semibold">Votre suivi · {seriesSessions.length} dates</h2>
+            <p className="mt-1 text-xs leading-5 text-[#526174]">Même professeur pour toutes les dates acceptées ensemble. Tarif normal de chaque séance, sans remise de pack. Chaque cours a son propre code de démarrage.</p>
+            <p className="mt-2 text-sm font-semibold text-[#092A55]">Total estimé du suivi : {money(seriesSessions.reduce((sum, session) => sum + session.totalClientPrice, 0))}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">{seriesSessions.map((session) => <Link key={session.id} href={`/client/demandes/${session.id}`} aria-current={session.id === detail.id ? "page" : undefined} className={`rounded-xl border bg-white p-3 text-sm ${session.id === detail.id ? "border-[#092A55]" : "border-[#E2E7EA]"}`}>
+              <span className="block font-semibold">{new Date(session.scheduledDate).toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "short" })} · {session.scheduledTime}</span>
+              <span className="mt-1 block text-xs text-[#526174]">{formatMarketplaceDuration(session.durationMinutes)} · {STATUS[session.status] || session.status} · {money(session.totalClientPrice)}</span>
+            </Link>)}</div>
+          </section>}
           <div className="mt-8 grid gap-5 sm:grid-cols-2">
             <div className="rounded-2xl border border-[#DCE2E8] p-5">
               <h2 className="text-base font-semibold">Votre cours</h2>
               <p className="mt-4 flex items-center gap-2 text-sm"><CalendarDays className="h-4 w-4 text-[#526174]" />{new Date(detail.scheduledDate).toLocaleDateString("fr-FR", { timeZone: "UTC", dateStyle: "full" })}</p>
-              <p className="mt-3 flex items-center gap-2 text-sm"><Clock3 className="h-4 w-4 text-[#526174]" />{detail.scheduledTime} · {detail.durationMinutes / 60} h</p>
+              <p className="mt-3 flex items-center gap-2 text-sm"><Clock3 className="h-4 w-4 text-[#526174]" />{detail.scheduledTime} · {formatMarketplaceDuration(detail.durationMinutes)}</p>
               <p className="mt-3 flex items-center gap-2 text-sm"><MapPin className="h-4 w-4 text-[#526174]" />{detail.courseFormat === "ONLINE" ? "En ligne" : `${detail.quartier}, ${detail.commune}`}</p>
               <div className="mt-5 border-t border-[#E3E7EB] pt-4 text-sm">
                 <Price label="Cours" value={detail.courseAmount} />
@@ -112,7 +126,9 @@ export function ClientMarketplaceRequest({ requestId }: { requestId: string }) {
               <h2 className="text-base font-semibold">Professeur</h2>
               {detail.assignedTeacher ? (
                 <div className="mt-4 flex items-center gap-3"><ProfessorImage photoUrl={detail.assignedTeacher.photoUrl} name={detail.assignedTeacher.professionalName || detail.assignedTeacher.fullName} size={52} /><div><strong className="block text-sm">{detail.assignedTeacher.professionalName || detail.assignedTeacher.fullName}</strong><span className="text-xs text-[#526174]">Mission acceptée</span></div></div>
-              ) : <p className="mt-4 text-sm leading-6 text-[#526174]">Nous attendons la réponse d’un professeur compatible. En cas de refus, la demande passe au suivant sans augmentation du total.</p>}
+              ) : <p className="mt-4 text-sm leading-6 text-[#526174]">{seriesSessions.length > 1
+                ? "Nous attendons la réponse du professeur pour toutes les dates. S'il refuse, ce suivi se termine et vous pouvez relancer une recherche."
+                : "Nous attendons la réponse d’un professeur compatible. En cas de refus, la demande passe au suivant sans augmentation du total."}</p>}
               {detail.assignedTeacher && ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED"].includes(detail.status) && (
                 <a href={`tel:${detail.assignedTeacher.phone}`} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#DCE2E8] px-4 text-sm font-semibold text-[#092A55]"><Phone className="h-4 w-4" />Appeler le professeur</a>
               )}
@@ -136,7 +152,7 @@ export function ClientMarketplaceRequest({ requestId }: { requestId: string }) {
           {detail.status === "AWAITING_CLIENT" && <div className="mt-5 rounded-2xl border border-[#DCE2E8] p-5"><p className="text-sm">Le professeur a déclaré le cours terminé. Confirmez uniquement si la séance a bien eu lieu.</p><ImportantActionConfirm trigger={<button type="button" disabled={busy} className="mt-4 min-h-11 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white disabled:opacity-60">Confirmer la fin du cours</button>} title="Le cours a-t-il bien eu lieu ?" description="Votre confirmation clôturera la mission. Compétence ne valide ni n’encaisse le paiement convenu directement avec le professeur." confirmLabel="Oui, confirmer" onConfirm={() => act("confirm")} /></div>}
           {detail.status === "COMPLETED" && <div className="mt-5 rounded-2xl border border-[#DCE2E8] p-5"><h2 className="text-base font-semibold">Votre avis</h2>{detail.review ? <p className="mt-2 text-sm text-[#526174]">Merci pour votre note de {detail.review.rating}/5.</p> : <><p className="mt-2 text-sm text-[#526174]">Votre expérience aide les prochaines familles à choisir.</p><div className="mt-4 flex gap-1" role="group" aria-label="Note du professeur">{[1,2,3,4,5].map((value) => <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} étoile${value > 1 ? "s" : ""}`} aria-pressed={rating === value} className={`h-11 w-11 rounded-lg text-2xl ${value <= rating ? "text-[#B37A16]" : "text-[#A8B4BF]"}`}>★</button>)}</div><label htmlFor="review-comment" className="mt-4 block text-xs font-medium text-[#526174]">Commentaire {rating <= 3 ? "(20 caractères minimum)" : "facultatif"}</label><textarea id="review-comment" rows={3} maxLength={900} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} className="mt-2 w-full rounded-xl border border-[#DCE2E8] p-3 text-sm" /><button type="button" disabled={busy || rating < 1 || (rating <= 3 && reviewComment.trim().length < 20)} onClick={() => void submitReview()} className="mt-3 min-h-11 rounded-xl bg-[#092A55] px-5 text-sm font-semibold text-white disabled:opacity-50">Publier mon avis</button></>}</div>}
           {["IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED"].includes(detail.status) && <div className="mt-5 rounded-2xl border border-[#E8DBB7] bg-[#FFFBF2] p-5"><h2 className="text-sm font-semibold">Signaler un problème</h2><label htmlFor="marketplace-dispute" className="mt-2 block text-xs text-[#526174]">Expliquez les faits pour l’équipe Compétence (20 caractères minimum).</label><textarea id="marketplace-dispute" value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} maxLength={1000} rows={3} className="mt-3 w-full rounded-xl border border-[#DCE2E8] bg-white p-3 text-sm outline-none focus:border-[#092A55]" /><ImportantActionConfirm trigger={<button type="button" disabled={busy || disputeReason.trim().length < 20} className="mt-3 min-h-11 rounded-xl border border-[#D7AE68] px-4 text-sm font-semibold text-[#6E4A13] disabled:opacity-60">Envoyer le signalement</button>} title="Signaler un litige ?" description="L’équipe vérifiera les faits. Aucun remboursement du paiement direct ne peut être déclenché automatiquement par Compétence." confirmLabel="Envoyer" onConfirm={() => act("dispute")} /></div>}
-          {["SEARCHING", "OFFERED", "ACCEPTED"].includes(detail.status) && <ImportantActionConfirm trigger={<button type="button" disabled={busy} className="mt-6 text-sm font-medium text-[#8B2727] underline underline-offset-4 disabled:opacity-60">Annuler cette demande</button>} title="Annuler ce cours ?" description="Avant le démarrage, la mission sera annulée et la commission réservée du professeur libérée. Le professeur sera informé." confirmLabel="Annuler la demande" danger onConfirm={() => act("cancel")} />}
+          {["SEARCHING", "OFFERED", "ACCEPTED"].includes(detail.status) && <ImportantActionConfirm trigger={<button type="button" disabled={busy} className="mt-6 text-sm font-medium text-[#8B2727] underline underline-offset-4 disabled:opacity-60">{seriesSessions.length > 1 && detail.status === "OFFERED" ? "Annuler toutes les dates" : "Annuler cette demande"}</button>} title="Annuler ce cours ?" description={seriesSessions.length > 1 && detail.status === "OFFERED" ? "Avant acceptation, cette proposition de suivi sera retirée pour toutes les dates et le professeur sera informé." : "Avant le démarrage, cette séance sera annulée et la commission réservée du professeur libérée. Le professeur sera informé."} confirmLabel="Annuler la demande" danger onConfirm={() => act("cancel")} />}
           <div className="mt-7 flex items-center justify-between gap-3 border-t border-[#E3E7EB] pt-5">
             <p className="max-w-lg text-xs leading-5 text-[#526174]">Le cours est réglé directement au professeur, par le moyen convenu entre vous. Compétence ne marque pas ce règlement comme vérifié.</p>
             <button type="button" onClick={() => void load()} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-[#092A55]"><RefreshCw className="h-3.5 w-3.5" />Actualiser</button>

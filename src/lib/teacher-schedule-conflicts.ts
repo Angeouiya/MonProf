@@ -274,7 +274,6 @@ export async function findTeacherScheduleConflict(
       },
     },
     orderBy: [{ scheduledDate: "asc" }, { sequence: "asc" }],
-    take: 50,
   });
 
   for (const session of activeSessionRows) {
@@ -316,8 +315,9 @@ export async function findTeacherScheduleConflict(
       ...(input.excludeBookingId ? { id: { not: input.excludeBookingId } } : {}),
       sessions: { none: {} },
       scheduledDate: { not: null },
-      OR: dateFilters,
-      ...verifiedScheduleBlockingBookingWhere(),
+      // Preserve both predicates: spreading the payment proof's OR over the
+      // date OR silently removed the requested dates from this query.
+      AND: [{ OR: dateFilters }, verifiedScheduleBlockingBookingWhere()],
     },
     select: {
       id: true,
@@ -333,7 +333,6 @@ export async function findTeacherScheduleConflict(
       paymentStatus: true,
     },
     orderBy: [{ scheduledDate: "asc" }, { createdAt: "asc" }],
-    take: 50,
   });
 
   for (const booking of legacyBookingRows) {
@@ -370,45 +369,58 @@ export async function findTeacherScheduleConflict(
     }
   }
 
-  // Le nouveau parcours partage le même verrou de professeur que le checkout
-  // historique : aucun paiement Jèko tardif ne peut écraser une mission acceptée.
-  if (process.env.MARKETPLACE_V2_ENABLED === "true") {
-    const marketplaceRows = await client.marketplaceRequest.findMany({
-      where: {
-        assignedTeacherId: teacherId,
-        status: { in: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"] },
-        OR: dateFilters,
-      },
-      select: {
-        id: true, reference: true, scheduledDate: true, scheduledTime: true,
-        durationMinutes: true, courseFormat: true, commune: true, quartier: true, status: true,
-      },
-      orderBy: { scheduledDate: "asc" },
-      take: 50,
-    });
-    for (const mission of marketplaceRows) {
-      const existingSlot = normalizeScheduleSlot(mission);
-      if (!existingSlot) continue;
-      const conflict = requestedSlots
-        .map((slot) => scheduleSlotsConflict(slot, existingSlot, input.scheduleBuffers, conflictContext))
-        .find((item): item is NonNullable<typeof item> => Boolean(item));
-      if (conflict) return {
-        teacherId,
-        bookingId: mission.id,
-        bookingReference: mission.reference,
-        bookingSessionId: null,
-        sequence: null,
-        scheduledDate: mission.scheduledDate,
-        scheduledTime: mission.scheduledTime,
-        status: mission.status,
-        paymentStatus: "DIRECT_CLIENT_TEACHER",
-        kind: conflict.kind,
-        requiredBufferMinutes: conflict.requiredBufferMinutes,
-        gapMinutes: conflict.gapMinutes,
-      };
-    }
+  // Une mission acceptée reste bloquante même si le nouveau parcours est
+  // ensuite désactivé : le flag contrôle la création, pas les engagements pris.
+  const marketplaceRows = await client.marketplaceRequest.findMany({
+    where: {
+      assignedTeacherId: teacherId,
+      status: { in: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"] },
+      OR: dateFilters,
+    },
+    select: {
+      id: true, reference: true, scheduledDate: true, scheduledTime: true,
+      durationMinutes: true, courseFormat: true, commune: true, quartier: true, status: true,
+    },
+    orderBy: { scheduledDate: "asc" },
+  });
+  for (const mission of marketplaceRows) {
+    const existingSlot = normalizeScheduleSlot(mission);
+    if (!existingSlot) continue;
+    const conflict = requestedSlots
+      .map((slot) => scheduleSlotsConflict(slot, existingSlot, input.scheduleBuffers, conflictContext))
+      .find((item): item is NonNullable<typeof item> => Boolean(item));
+    if (conflict) return {
+      teacherId,
+      bookingId: mission.id,
+      bookingReference: mission.reference,
+      bookingSessionId: null,
+      sequence: null,
+      scheduledDate: mission.scheduledDate,
+      scheduledTime: mission.scheduledTime,
+      status: mission.status,
+      paymentStatus: "DIRECT_CLIENT_TEACHER",
+      kind: conflict.kind,
+      requiredBufferMinutes: conflict.requiredBufferMinutes,
+      gapMinutes: conflict.gapMinutes,
+    };
   }
 
+  // Accepted assisted lessons also block the shared agenda, regardless of
+  // feature flags. Turning off an intake must never erase commitments.
+  const managedRows = await client.managedCourseSession.findMany({
+    where: { teacherId, status: { in: ["PLANNED", "DONE", "VALIDATED"] }, OR: dateFilters },
+    select: { id: true, sequence: true, scheduledDate: true, scheduledTime: true, durationMinutes: true, status: true,
+      dossier: { select: { reference: true, courseFormat: true, commune: true, quartier: true } } },
+  });
+  for (const session of managedRows) {
+    const slot = normalizeScheduleSlot({ ...session, ...session.dossier });
+    if (!slot) continue;
+    const conflict = requestedSlots.map((requested) => scheduleSlotsConflict(requested, slot, input.scheduleBuffers, conflictContext)).find(Boolean);
+    if (conflict) return { teacherId, bookingId: session.id, bookingReference: session.dossier.reference, bookingSessionId: null,
+      sequence: session.sequence, scheduledDate: session.scheduledDate, scheduledTime: session.scheduledTime,
+      status: session.status, paymentStatus: "MANUAL_COMPETENCE", kind: conflict.kind,
+      requiredBufferMinutes: conflict.requiredBufferMinutes, gapMinutes: conflict.gapMinutes };
+  }
   return null;
 }
 
@@ -419,9 +431,9 @@ export function formatTeacherScheduleConflictMessage(conflict: TeacherScheduleCo
     const bufferLabel = conflict.requiredBufferMinutes
       ? `${conflict.requiredBufferMinutes} min`
       : "le temps de déplacement configuré";
-    return `Déplacement insuffisant : ce professeur a déjà un cours payé (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Il faut au moins ${bufferLabel} entre les deux cours. Choisissez une autre heure ou un autre professeur.`;
+    return `Déplacement insuffisant : ce professeur a déjà un cours confirmé (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}). Il faut au moins ${bufferLabel} entre les deux cours. Choisissez une autre heure ou un autre professeur.`;
   }
-  return `Ce créneau est déjà réservé pour ce professeur (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}, dossier ${conflict.bookingReference}). Choisissez un autre créneau ou un autre professeur.`;
+  return `Ce créneau est déjà réservé pour ce professeur (${dateLabel} · ${conflict.scheduledTime}${sessionLabel}). Choisissez un autre créneau ou un autre professeur.`;
 }
 
 function verifiedScheduleBlockingBookingWhere(): Prisma.BookingWhereInput {

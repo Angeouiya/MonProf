@@ -311,6 +311,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (process.env.MANAGED_LESSONS_ENABLED === "true") return NextResponse.json({ error: "Les nouvelles demandes passent par le formulaire d'accompagnement Compétence.", destination: "/demande-cours" }, { status: 409 });
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const userId = (session.user as any).id;

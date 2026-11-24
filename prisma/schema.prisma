@@ -69,6 +69,7 @@ model User {
   loyaltyPurchases              ClientLoyaltyPurchase[]
   clientRewards                 ClientReward[]
   marketplaceRequests           MarketplaceRequest[]
+  marketplaceSeries             MarketplaceSeries[]
   marketplaceReviews            MarketplaceReview[]
 
   @@index([role])
@@ -108,6 +109,7 @@ model Subject {
   createdAt DateTime @default(now())
 
   teachers TeacherSubject[]
+  preciseTeacherLevels TeacherPreciseLevel[]
 }
 
 model Level {
@@ -247,6 +249,7 @@ model Teacher {
 
   subjects               TeacherSubject[]
   levels                 TeacherLevel[]
+  preciseLevels          TeacherPreciseLevel[]
   zones                  TeacherZone[]
   bookings               Booking[]
   reviews                Review[]
@@ -272,6 +275,9 @@ model Teacher {
   marketplaceOffers      MarketplaceOffer[]
   marketplaceAssignments MarketplaceRequest[]        @relation("MarketplaceAssignedTeacher")
   wallet                 TeacherWallet?
+  managedOffers          ManagedCourseOffer[]
+  managedSessions        ManagedCourseSession[]
+  managedLedger          ManagedTeacherLedgerEntry[]
   walletEntries          TeacherWalletEntry[]
   walletTopUps           TeacherWalletTopUp[]
   marketplaceReviews     MarketplaceReview[]
@@ -343,6 +349,7 @@ model TeacherSubject {
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@id([teacherId, subjectId])
+  @@index([subjectId, teacherId])
 }
 
 model TeacherLevel {
@@ -352,6 +359,23 @@ model TeacherLevel {
   level     Level   @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
   @@id([teacherId, levelId])
+  @@index([levelId, teacherId])
+}
+
+// Triplets système / classe / matière validés par l'administration pour V2.
+// Les anciennes listes indépendantes de matières et niveaux restent intactes,
+// mais leur produit croisé ne constitue jamais une habilitation V2.
+model TeacherPreciseLevel {
+  teacherId String
+  journey   String
+  className String
+  subjectId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, journey, className, subjectId])
+  @@index([journey, className, subjectId, teacherId])
+  @@index([subjectId, teacherId])
 }
 
 model TeacherZone {
@@ -361,6 +385,7 @@ model TeacherZone {
   commune   Commune @relation(fields: [communeId], references: [id], onDelete: Cascade)
 
   @@id([teacherId, communeId])
+  @@index([communeId, teacherId])
 }
 
 // ============================================================
@@ -494,6 +519,7 @@ model Booking {
   @@index([clientId])
   @@index([clientId, status, createdAt])
   @@index([teacherId])
+  @@index([teacherId, scheduledDate])
   @@index([status])
   @@index([paymentProvider, providerPaymentStatus, paymentVerifiedAt])
 }
@@ -564,11 +590,26 @@ model BookingSessionHistory {
 
 // Nouveau parcours de mise en relation. Les Booking/Jèko historiques restent
 // intacts et ne sont jamais convertis implicitement en demandes marketplace.
+model MarketplaceSeries {
+  id        String   @id @default(cuid())
+  clientId  String
+  clientKey String
+  createdAt DateTime @default(now())
+
+  client   User                 @relation(fields: [clientId], references: [id])
+  requests MarketplaceRequest[]
+
+  @@unique([clientId, clientKey])
+  @@index([clientId, createdAt])
+}
+
 model MarketplaceRequest {
   id                 String                   @id @default(cuid())
   reference          String                   @unique
   clientId           String
   clientKey          String?
+  seriesId           String?
+  seriesPosition     Int?
   assignedTeacherId  String?
   journey            String
   subjectId          String
@@ -606,15 +647,19 @@ model MarketplaceRequest {
   updatedAt          DateTime                 @updatedAt
 
   client          User                 @relation(fields: [clientId], references: [id])
+  series          MarketplaceSeries?   @relation(fields: [seriesId], references: [id])
   assignedTeacher Teacher?             @relation("MarketplaceAssignedTeacher", fields: [assignedTeacherId], references: [id])
   offers          MarketplaceOffer[]
   walletEntries   TeacherWalletEntry[]
   review          MarketplaceReview?
 
   @@unique([clientId, clientKey])
+  @@unique([seriesId, seriesPosition])
   @@index([clientId, createdAt])
+  @@index([seriesId, scheduledDate])
   @@index([assignedTeacherId, status, scheduledDate])
   @@index([status, offerExpiresAt])
+  @@index([status, createdAt, id])
 }
 
 enum MarketplaceRequestStatus {
@@ -677,6 +722,143 @@ enum MarketplaceOfferStatus {
 
 // balance = crédits confirmés moins commissions prélevées.
 // reserved = partie indisponible des crédits, jamais un débit à lui seul.
+// Service accompagné. Aucun solde/rechargement historique n'est converti.
+model ManagedCourseDossier {
+  id                      String   @id @default(cuid())
+  reference               String   @unique
+  clientKey               String   @unique
+  source                  String
+  parentName              String
+  phone                   String
+  journey                 String
+  className               String
+  subjectId               String
+  subjectName             String
+  courseFormat            CourseFormat
+  commune                 String?
+  quartier                String?
+  addressHint             String?
+  objective               String?
+  cadence                 String
+  unitPrice               Int
+  totalPrice              Int
+  receivedAmount          Int      @default(0)
+  cancelledAmount         Int      @default(0)
+  onHold                  Boolean  @default(false)
+  revision                Int      @default(1)
+  termsVersion            String
+  acceptedRevision        Int?
+  acceptedAt              DateTime?
+  acceptanceEvidence      Json?
+  contractTokenHash       String?  @unique
+  contractTokenExpiresAt  DateTime?
+  status                  String   @default("NEW")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  sessions                ManagedCourseSession[]
+  offers                  ManagedCourseOffer[]
+  receipts                ManagedParentReceipt[]
+  events                  ManagedCourseEvent[]
+  @@index([status, createdAt, id])
+  @@index([phone, createdAt])
+}
+
+model ManagedCourseOffer {
+  id             String   @id @default(cuid())
+  dossierId      String
+  teacherId      String
+  revision       Int
+  commissionRateBps Int
+  status         String   @default("OFFERED")
+  termsVersion   String
+  offeredAt      DateTime @default(now())
+  respondedAt    DateTime?
+  reason         String?
+  dossier        ManagedCourseDossier @relation(fields: [dossierId], references: [id])
+  teacher        Teacher @relation(fields: [teacherId], references: [id])
+  sessions       ManagedCourseSession[]
+  @@index([teacherId, status, offeredAt])
+  @@index([dossierId, status])
+}
+
+model ManagedCourseSession {
+  id                     String   @id @default(cuid())
+  dossierId              String
+  sequence               Int
+  scheduledDate          DateTime
+  scheduledTime          String
+  durationMinutes        Int      @default(120)
+  amount                 Int
+  commissionRateBps      Int?
+  fundedAmount           Int      @default(0)
+  creditedTeacherAmount  Int      @default(0)
+  teacherId              String?
+  offerId                String?
+  status                 String   @default("PLANNED")
+  completedAt            DateTime?
+  validatedAt            DateTime?
+  validatedBy            String?
+  dossier                ManagedCourseDossier @relation(fields: [dossierId], references: [id])
+  teacher                Teacher? @relation(fields: [teacherId], references: [id])
+  offer                  ManagedCourseOffer? @relation(fields: [offerId], references: [id])
+  ledger                 ManagedTeacherLedgerEntry[]
+  @@unique([dossierId, sequence])
+  @@index([teacherId, scheduledDate, status])
+}
+
+model ManagedParentReceipt {
+  id             String   @id @default(cuid())
+  dossierId      String
+  amount         Int
+  kind           String   @default("RECEIPT")
+  reversesId     String?  @unique
+  note           String   @default("")
+  method         String
+  reference      String
+  idempotencyKey String   @unique
+  receivedAt     DateTime
+  recordedBy     String
+  allocations    Json
+  createdAt      DateTime @default(now())
+  dossier        ManagedCourseDossier @relation(fields: [dossierId], references: [id])
+  original       ManagedParentReceipt? @relation("ManagedReceiptReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal       ManagedParentReceipt? @relation("ManagedReceiptReversal")
+  @@unique([method, reference])
+  @@index([dossierId, createdAt])
+}
+
+model ManagedTeacherLedgerEntry {
+  id             String   @id @default(cuid())
+  teacherId      String
+  sessionId      String?
+  kind           String
+  reversesId     String?  @unique
+  amountDelta    Int
+  method         String?
+  reference      String?
+  note           String
+  actorId        String
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+  teacher        Teacher @relation(fields: [teacherId], references: [id])
+  session        ManagedCourseSession? @relation(fields: [sessionId], references: [id])
+  original       ManagedTeacherLedgerEntry? @relation("ManagedPaymentReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal       ManagedTeacherLedgerEntry? @relation("ManagedPaymentReversal")
+  @@unique([kind, method, reference])
+  @@index([teacherId, createdAt])
+}
+
+model ManagedCourseEvent {
+  id        String @id @default(cuid())
+  dossierId String
+  actorId   String
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+  dossier   ManagedCourseDossier @relation(fields: [dossierId], references: [id])
+  @@index([dossierId, createdAt])
+}
+
 model TeacherWallet {
   teacherId String   @id
   balance   Int      @default(0)
@@ -1505,6 +1687,7 @@ model TeacherNotification {
   campaignId String?
   title      String
   message    String
+  link       String?
   channel    String // SMS, WHATSAPP, EMAIL
   sent       Boolean                    @default(false)
   status     NotificationDeliveryStatus @default(SENT)

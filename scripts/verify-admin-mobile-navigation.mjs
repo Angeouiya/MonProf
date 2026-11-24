@@ -140,7 +140,9 @@ record(
     && /title: "Personnes"[\s\S]*?label: "Professeurs"[\s\S]*?label: "Clients"/.test(layout)
     && /title: "Argent & support"[\s\S]*?label: "Finances"[\s\S]*?label: "Messages"[\s\S]*?label: "Réglages"[\s\S]*?label: "Mon compte"/.test(layout)
     && /const secondaryNavItems:[\s\S]*?<details open=\{secondaryActive \|\| undefined\}[\s\S]*?<span className="flex-1">Plus<\/span>/.test(layout)
-    && /secondaryNavItems\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout),
+    && /navigation\.secondary\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout)
+    && /function adminNavigation\(managedMode: boolean\)/.test(layout)
+    && /secondary: \[\.\.\.history, \.\.\.secondaryNavItems\]/.test(layout),
 );
 
 record(

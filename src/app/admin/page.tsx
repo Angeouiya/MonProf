@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import {
   ArrowRight,
   Banknote,
@@ -30,6 +32,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   const user = await requireAdmin();
+  if (managedCoursesEnabled()) {
+    if (hasAdminPermission(user.adminPermissions, "BOOKINGS_VIEW")) redirect("/admin/accompagnement");
+    if (hasAdminPermission(user.adminPermissions, "FINANCE_VIEW")) redirect("/admin/accompagnement/comptabilite");
+  }
   const canViewFinance = hasAdminPermission(user.adminPermissions, "FINANCE_VIEW");
   const now = new Date();
 

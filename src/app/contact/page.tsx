@@ -41,10 +41,10 @@ const SUBJECTS = [
 const CONTACT_PATHS = [
   {
     icon: CalendarCheck,
-    title: "Réserver plus vite",
-    text: "Trouvez un professeur vérifié et lancez directement une réservation guidée.",
-    href: "/professeurs",
-    action: "Voir les professeurs",
+    title: "Organiser votre accompagnement",
+    text: "Précisez le niveau, la matière et vos dates. Notre équipe organise votre demande.",
+    href: "/demande-cours",
+    action: "Demander un cours",
   },
   {
     icon: Phone,

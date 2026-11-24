@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
+export const dynamic = "force-dynamic";
+import { ManagedLegal } from "@/components/managed/legal";
 import { LegalDocumentPage, type LegalSection } from "@/components/legal/legal-document-page";
 
 export const metadata: Metadata = {
@@ -6,7 +9,7 @@ export const metadata: Metadata = {
   description: "Conditions générales d'utilisation de la plateforme Compétence.CI.",
 };
 
-const version = "2 novembre 2026 · projet de mise à jour avant activation du nouveau parcours";
+const version = "4 novembre 2026 · projet de mise à jour avant activation du nouveau parcours";
 
 const highlights = [
   "Deux parcours peuvent coexister : les réservations historiques restent soumises à la confirmation du paiement Jèko ; le nouveau parcours de mise en relation prévoit un règlement direct entre client et professeur.",
@@ -14,7 +17,7 @@ const highlights = [
   "Boutique autorisée uniquement : la fenêtre de paiement doit afficher Compétence.CI ou Boutique Compétence. Toute boutique tierce, inconnue ou non autorisée bloque la commande.",
   "La fiche professeur administrée par Compétence est la source de vérité : système non coché = recherche, profil, réservation, paiement et remplacement verrouillés.",
   "Chaque professeur dispose automatiquement d'un lien public Compétence.CI, partageable sur les réseaux sociaux et contrôlé par la plateforme.",
-  "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant le paiement.",
+  "Les tarifs sont officiels : le professeur ne remplace pas la grille Compétence, et le total exact est recalculé avant la demande ou le paiement selon le parcours.",
   "Chaque date et chaque heure sont contrôlées côté serveur : un créneau payé, son chevauchement et son temps de déplacement deviennent indisponibles pour tout autre client.",
   "Avant d'annuler, le client peut demander une alternative professeur : la réservation reste active pendant que le moteur propose un profil compatible ou signale le dossier au service client.",
   "Le professeur déclenche son retrait dans son espace ; Jèko l'exécute automatiquement après les contrôles de solde, de litige et d'identité, sans validation manuelle de l'administration.",
@@ -26,12 +29,13 @@ const sections: LegalSection[] = [
   {
     title: "Nouveau parcours de mise en relation, lorsqu’il est activé",
     body: [
-      "Le nouveau parcours présente au client des professeurs compatibles avec le système, la matière, le niveau, la disponibilité et la zone de cours. Le client précise la date, l’heure, la durée, le format et le lieu. Le tarif du cours, le déplacement éventuel et le total annoncé sont visibles avant l’envoi de la demande.",
+      "Le nouveau parcours présente au client des professeurs compatibles avec le système, la matière, le niveau, la disponibilité et la zone de cours. Le client précise la date, l’heure, la durée, le format et le lieu. Une heure constitue la durée de base ; le client peut ajouter du temps par tranches de cinq minutes, dans les limites affichées par le formulaire. Le tarif du cours évolue avec la durée choisie et le format, selon la grille du nouveau parcours. Le déplacement éventuel et le total annoncé sont visibles avant l’envoi de la demande.",
       "Le professeur reçoit une proposition limitée dans le temps et peut l’accepter ou la refuser. En cas de refus ou d’annulation avant démarrage, Compétence peut proposer la demande à un autre professeur sans augmenter le total annoncé ; à défaut, le client est invité à relancer la recherche. Le professeur doit maintenir ses disponibilités exactes et ne peut assurer deux cours incompatibles dans le même créneau, compte tenu du temps de déplacement.",
       "Dans ce parcours, le client règle le professeur directement par le moyen convenu entre eux. Compétence ne reçoit pas, ne vérifie pas et ne garantit pas ce règlement direct. Le client et le professeur conservent les preuves de leur accord et de leur paiement. Les règles du parcours historique avec encaissement Jèko par Compétence continuent à s’appliquer uniquement aux réservations créées dans ce parcours historique.",
       "Pour pouvoir accepter une mission du nouveau parcours, le professeur doit disposer d’un solde suffisant dans son portefeuille Compétence. Ce portefeuille est rechargé via Jèko et crédité seulement après vérification serveur du paiement exact. La commission affichée au professeur est réservée lorsqu’il accepte, libérée si la mission est annulée avant démarrage, puis prélevée au démarrage confirmé par le code communiqué par le client. La confirmation de fin de cours n’est pas une preuve de paiement direct.",
       "Avant le démarrage, le client ou le professeur peut annuler depuis son espace ; les notifications et réserves de commission sont mises à jour. Après démarrage, les parties doivent signaler tout incident au service client. Compétence peut examiner les traces de mission et les éléments fournis, mais ne peut pas rembourser automatiquement un paiement direct qu’elle n’a pas encaissé.",
       "Les offres de partenariat, réductions et cadeaux rattachées aux paiements Jèko vérifiés du parcours historique ne s’appliquent pas automatiquement à un paiement direct du nouveau parcours. Toute nouvelle offre de fidélité propre à ce parcours doit être annoncée séparément avant son application.",
+      "Un suivi du nouveau parcours peut réunir plusieurs dates avec le même professeur lorsque celui-ci accepte l’ensemble des créneaux proposés. Chaque séance conserve sa durée, son tarif normal annoncé, son code de démarrage, sa commission et son suivi propres. Aucune remise des anciens packs n’est appliquée automatiquement à ce suivi.",
     ],
   },
   {
@@ -119,7 +123,7 @@ const sections: LegalSection[] = [
       "Si le marchand affiché, le montant, le moyen, le statut serveur ou la référence ne correspondent pas au dossier attendu, Compétence peut bloquer l'activation, demander un contrôle manuel, rejeter le webhook ou demander au client de relancer un paiement propre.",
     ],
     bullets: [
-      "Les créneaux standards sont organisés par blocs de 2 heures. Dans « Autre horaire », le client peut choisir 1 heure ou 2 heures ; le tarif de la séance reste identique.",
+      "Dans le parcours historique, les créneaux standards sont organisés par blocs de 2 heures. Dans « Autre horaire », le client peut choisir 1 heure ou 2 heures au tarif historique de la séance ; cette règle ne s'applique pas aux nouvelles missions dont le prix dépend de la durée choisie.",
       "La réservation doit être faite au moins 24 heures avant le cours.",
       "Pour les nouvelles réservations du parcours historique avec encaissement par Compétence, le paiement se fait exclusivement via Jèko. Le client choisit son moyen de paiement dans la fenêtre sécurisée Jèko. Le nouveau parcours de mise en relation prévoit, lui, un règlement direct au professeur selon les modalités convenues entre les parties.",
       "La fenêtre de paiement officielle doit identifier Compétence.CI ou la Boutique Compétence comme marchand ou bénéficiaire attendu. Si un autre nom de boutique apparaît, notamment une boutique étrangère au service Compétence, le client doit fermer la fenêtre et reprendre le paiement depuis la plateforme.",
@@ -130,18 +134,19 @@ const sections: LegalSection[] = [
   {
     title: "Tarifs officiels et participants",
     body: [
-      "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Les montants visibles pendant la navigation sont indicatifs tant que le dossier n'est pas recalculé par le serveur avec le parcours, le niveau, le format, le nombre de séances, les participants, le déplacement et les frais applicables.",
-      "Le prix définitif est celui présenté avant paiement ou confirmé par le service client dans le dossier de réservation. Le client doit vérifier le montant total avant de payer.",
+      "Le prix du cours est fixé par la grille officielle du parcours et de la classe. Les montants visibles pendant la navigation sont indicatifs tant que le dossier n'est pas recalculé par le serveur avec le parcours, le niveau, la durée et le format ; dans le parcours historique, le nombre de séances, les participants et les frais applicables entrent également dans ce calcul.",
+      "Le prix définitif est celui présenté avant l'envoi de la demande du nouveau parcours, avant le paiement du parcours historique ou confirmé par le service client dans le dossier. Le client doit vérifier le montant total avant de s'engager.",
       "Aucun professeur ne peut remplacer la grille officielle par son propre prix public. Une exception commerciale ou un accord particulier doit être validé par Compétence et apparaître dans le dossier avant paiement.",
       "L'affichage “dès” sur un profil professeur dépend du système actif et des niveaux réellement couverts. Un profil professionnel doit afficher la base professionnelle lorsqu'il est consulté dans la mini-application Pro, tandis qu'un profil scolaire affiche la base du système ivoirien ou français concerné.",
       "Le petit groupe comprend de 2 à 12 participants : chaque participant après le premier ajoute 50 % du prix de base. Le grand groupe commence à 13 participants : les participants 2 à 12 suivent la règle de 50 %, puis chaque participant au-delà de 12 ajoute 40 % du prix de base.",
       "Un professeur ne peut être réservé que pour les parcours, matières, classes, niveaux ou formations validés sur sa fiche. Le serveur refuse une combinaison incompatible et demande au client de choisir un autre profil.",
     ],
     bullets: [
-      "Système ivoirien : CP1 à CM1 15 000 FCFA, CM2 à 4e 20 000 FCFA, 3e à 1ère 25 000 FCFA, Terminale 30 000 FCFA par séance de 2 heures.",
-      "Système français : CP1 à CM1 37 500 FCFA, CM2 à 4e 50 000 FCFA, 3e à 1ère 62 500 FCFA, Terminale 75 000 FCFA par séance de 2 heures.",
-      "Professionnel : 40 000 FCFA par séance de 2 heures, sauf accord écrit spécifique validé par Compétence.",
-      "Les frais de déplacement, frais de service Compétence et frais de paiement Jèko applicables sont affichés séparément avant paiement et ne remplacent pas la grille officielle du cours.",
+      "Nouveau parcours de missions : tarif de départ pour 1 heure, ajusté par tranche de 5 minutes jusqu'à 6 heures. Le tarif de 2 heures à domicile conserve la remise de durée affichée dans la grille du nouveau parcours. Le prix du cours, le déplacement éventuel et le total sont confirmés avant l'envoi de la demande.",
+      "Parcours historique, système ivoirien : CP1 à CM1 15 000 FCFA, CM2 à 4e 20 000 FCFA, 3e à 1ère 25 000 FCFA, Terminale 30 000 FCFA par séance de 2 heures.",
+      "Parcours historique, système français : CP1 à CM1 37 500 FCFA, CM2 à 4e 50 000 FCFA, 3e à 1ère 62 500 FCFA, Terminale 75 000 FCFA par séance de 2 heures.",
+      "Parcours historique, professionnel : 40 000 FCFA par séance de 2 heures, sauf accord écrit spécifique validé par Compétence.",
+      "Dans le parcours historique, les frais de déplacement, frais de service Compétence et frais de paiement Jèko applicables sont affichés séparément avant paiement. Dans le nouveau parcours, seul le déplacement éventuel s'ajoute au prix du cours annoncé ; la commission Compétence est prélevée sur le portefeuille du professeur.",
     ],
   },
   {
@@ -219,7 +224,7 @@ const sections: LegalSection[] = [
     title: "Obligations du client",
     body: [
       "Le client doit être joignable, fournir une adresse claire, respecter les horaires, traiter le professeur avec respect, ne pas contourner la plateforme et confirmer le cours après réalisation.",
-      "Le client ne doit pas proposer au professeur un paiement direct, une mission hors plateforme, une modification non déclarée ou une relation commerciale parallèle visant à éviter les règles Compétence.",
+      "Dans le parcours historique encaissé via Jèko par Compétence, le client ne doit pas proposer un paiement direct destiné à contourner la réservation. Dans le nouveau parcours de mise en relation, le règlement direct annoncé dans la demande est autorisé ; la mission, l'horaire et le suivi doivent rester déclarés sur Compétence. Une mission cachée ou une modification non déclarée visant à éviter les règles Compétence reste interdite.",
       "Le client reconnaît que l'apprenant doit disposer du matériel nécessaire à sa formation, notamment pour les formations professionnelles, techniques, artistiques ou pratiques. Compétence ne fournit pas ce matériel sauf accord écrit spécifique.",
     ],
   },
@@ -228,7 +233,7 @@ const sections: LegalSection[] = [
     body: [
       "Le professeur doit respecter les créneaux confirmés, informer rapidement le service client de toute indisponibilité, répondre aux notifications, préparer son cours, adopter une conduite professionnelle et ne pas contourner la plateforme.",
       "À moins de 24 heures, le professeur ne peut pas annuler directement : il propose en priorité un autre créneau ou signale une urgence. Le moteur cherche alors un remplaçant compatible et le client garde le choix d'accepter, de refuser ou de demander une autre solution.",
-      "Le professeur ne doit pas demander un paiement direct au client, modifier un tarif hors plateforme, récupérer une mission sans validation du service client ou utiliser les coordonnées client en dehors du cadre du cours.",
+      "Dans le parcours historique encaissé via Jèko par Compétence, le professeur ne doit pas demander un paiement direct pour contourner l'encaissement. Dans le nouveau parcours, il peut recevoir le règlement direct prévu dans la demande, sans modifier unilatéralement le tarif annoncé ni cacher la mission à Compétence. Il ne doit pas utiliser les coordonnées client en dehors du cadre du cours.",
       "Le professeur accepte le contrôle qualité, les avis, les notes du service client, les avertissements, les sanctions, les suspensions, les remplacements et les décisions de paiement interne lorsque les faits le justifient.",
     ],
   },
@@ -254,7 +259,7 @@ const sections: LegalSection[] = [
       "Les clients peuvent laisser des avis et notes lorsque le cours le permet. Le service client peut également attribuer une note qualité interne ou publique selon son contrôle opérationnel.",
       "Compétence peut masquer, corriger, refuser ou modérer un avis abusif, injurieux, mensonger, non pertinent, frauduleux ou contraire à l'intérêt du service.",
       "Les notes et avis servent à améliorer la qualité, orienter les décisions du service client, détecter les litiges et protéger les clients.",
-      "Une note très faible ou un commentaire signalant une absence, une menace, un faux profil, un paiement direct, un cours non assuré ou un autre risque grave peut placer automatiquement le profil en observation et créer une alerte prioritaire. La suspension ou la sanction définitive reste soumise à l'examen de Compétence.",
+      "Une note très faible ou un commentaire signalant une absence, une menace, un faux profil, un paiement visant à contourner le parcours applicable, un cours non assuré ou un autre risque grave peut placer automatiquement le profil en observation et créer une alerte prioritaire. La suspension ou la sanction définitive reste soumise à l'examen de Compétence.",
     ],
   },
   {
@@ -280,7 +285,7 @@ const sections: LegalSection[] = [
   {
     title: "Interdictions et sanctions",
     body: [
-      "Sont interdits : faux paiement, usurpation d'identité, photo professeur non réelle, information mensongère, contournement de plateforme, paiement direct, harcèlement, injure, fraude, abus de remboursement, manipulation d'avis, tentative d'accès non autorisé ou usage contraire à la loi.",
+      "Sont interdits : faux paiement, usurpation d'identité, photo professeur non réelle, information mensongère, contournement de plateforme, paiement direct utilisé pour contourner l'encaissement du parcours historique, dissimulation d'une mission du nouveau parcours, harcèlement, injure, fraude, abus de remboursement, manipulation d'avis, tentative d'accès non autorisé ou usage contraire à la loi. Le règlement direct expressément prévu dans le nouveau parcours reste autorisé.",
       "Compétence peut appliquer des mesures proportionnées : avertissement, suspension, désactivation, annulation, remboursement, retenue manuelle justifiée, remplacement, blocage de paiement, suppression de contenu, limitation d'accès ou signalement aux autorités compétentes.",
     ],
   },
@@ -371,6 +376,7 @@ const sections: LegalSection[] = [
 ];
 
 export default function ConditionsUtilisationPage() {
+  if (managedCoursesEnabled()) return <ManagedLegal />;
   return (
     <LegalDocumentPage
       eyebrow="Règles de plateforme"

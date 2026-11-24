@@ -1,12 +1,15 @@
 import { createHmac, timingSafeEqual, randomUUID } from "node:crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, type MarketplaceRequest } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isTeacherQualifiedForPreciseLevel } from "@/lib/teacher-precise-levels";
 import { enqueueNotificationEvent } from "@/lib/notification-events";
 import { publishWebPushFlushEvent } from "@/lib/web-push-queue";
-import { MARKETPLACE_COMMISSION_BPS, MARKETPLACE_OFFER_TTL_MS, isWithinStartWindow, teacherAvailableInGrid } from "@/lib/marketplace-core";
+import { MARKETPLACE_COMMISSION_BPS, MARKETPLACE_OFFER_TTL_MS, isWithinStartWindow, marketplaceCommission, teacherAvailableInGrid } from "@/lib/marketplace-core";
 import { findMarketplaceCandidates, type MarketplaceSearchInput } from "@/lib/marketplace-search";
+import { findMarketplaceSeriesCandidates } from "@/lib/marketplace-series-search";
 import { assertTeacherScheduleAvailable, lockTeacherSchedule } from "@/lib/teacher-schedule-conflicts";
 import { scheduleSlotsConflict } from "@/lib/schedule-conflict-core";
+import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
 import { teacherSupportsJourney } from "@/lib/teacher-journeys";
 
 export class MarketplaceError extends Error {
@@ -48,24 +51,33 @@ async function notifyNextTeacher(teacherId: string, requestId: string, expiresAt
 export async function createMarketplaceRequest(clientId: string, input: MarketplaceSearchInput & {
   clientKey: string;
   preferredTeacherId?: string | null;
+  quotedTotalClientPrice: number;
   addressHint?: string | null;
   objective?: string | null;
 }) {
   if (!/^[a-zA-Z0-9_-]{12,100}$/.test(input.clientKey)) throw new MarketplaceError("Identifiant de demande invalide.");
+  if (!Number.isSafeInteger(input.quotedTotalClientPrice) || input.quotedTotalClientPrice <= 0) {
+    throw new MarketplaceError("Confirmez le prix affiché avant d'envoyer votre demande.");
+  }
   const existing = await db.marketplaceRequest.findUnique({
     where: { clientId_clientKey: { clientId, clientKey: input.clientKey } },
   });
   if (existing) return existing;
-  const recent = await db.marketplaceRequest.count({
-    where: { clientId, createdAt: { gte: new Date(Date.now() - 60 * 60_000) } },
-  });
-  if (recent >= 5) throw new MarketplaceError("Vous avez déjà envoyé plusieurs demandes. Réessayez plus tard.", 429);
+  const since = new Date(Date.now() - 60 * 60_000);
+  const [singleRequests, seriesRequests] = await Promise.all([
+    db.marketplaceRequest.count({ where: { clientId, seriesId: null, createdAt: { gte: since } } }),
+    db.marketplaceSeries.count({ where: { clientId, createdAt: { gte: since } } }),
+  ]);
+  if (singleRequests + seriesRequests >= 5) throw new MarketplaceError("Vous avez déjà envoyé plusieurs demandes. Réessayez plus tard.", 429);
   const candidates = await findMarketplaceCandidates(input);
   if (!candidates.length) throw new MarketplaceError("Aucun professeur disponible pour ce créneau. Essayez un autre horaire ou une autre zone.", 409);
   const preferred = input.preferredTeacherId
     ? candidates.find((item) => item.teacherId === input.preferredTeacherId)
     : candidates[0];
   if (!preferred) throw new MarketplaceError("Ce professeur n’est plus disponible. Relancez la recherche.", 409);
+  if (preferred.totalClientPrice > input.quotedTotalClientPrice) {
+    throw new MarketplaceError("Le prix de ce cours a changé. Relancez la recherche pour voir et confirmer le nouveau total.", 409);
+  }
   // Une réattribution automatique ne peut jamais augmenter le prix annoncé.
   const ordered = [preferred, ...candidates.filter((item) => item.teacherId !== preferred.teacherId && item.totalClientPrice <= preferred.totalClientPrice)];
   const expiresAt = new Date(Date.now() + MARKETPLACE_OFFER_TTL_MS);
@@ -123,6 +135,122 @@ export async function createMarketplaceRequest(clientId: string, input: Marketpl
   return request;
 }
 
+export async function createMarketplaceSeriesRequest(
+  clientId: string,
+  inputs: MarketplaceSearchInput[],
+  options: {
+    clientKey: string;
+    preferredTeacherId: string;
+    quotedTotalClientPrice: number;
+    addressHint?: string | null;
+    objective?: string | null;
+  },
+) {
+  const platformSettings = await getPlatformRuntimeSettings();
+  if (inputs.length < 2 || inputs.length > 6) throw new MarketplaceError("Choisissez entre 2 et 6 dates de cours.");
+  if (!/^[a-zA-Z0-9_-]{12,100}$/.test(options.clientKey) || !options.preferredTeacherId) {
+    throw new MarketplaceError("Choisissez un professeur et confirmez le suivi.");
+  }
+  if (!Number.isSafeInteger(options.quotedTotalClientPrice) || options.quotedTotalClientPrice <= 0) {
+    throw new MarketplaceError("Confirmez le total affiché avant d'envoyer votre demande.");
+  }
+  const proposedSlots = inputs.map((input) => ({
+    scheduledDate: input.scheduledDate, scheduledTime: input.scheduledTime,
+    durationMinutes: input.durationMinutes, courseFormat: input.courseFormat,
+    commune: input.commune, quartier: input.quartier,
+  }));
+  for (let index = 0; index < proposedSlots.length; index++) {
+    for (let other = index + 1; other < proposedSlots.length; other++) {
+      if (inputs[index].scheduledDate.getTime() === inputs[other].scheduledDate.getTime()
+        || scheduleSlotsConflict(proposedSlots[index], proposedSlots[other], platformSettings.scheduleBuffers)) {
+        throw new MarketplaceError("Choisissez des dates distinctes et des horaires compatibles pour le suivi.");
+      }
+    }
+  }
+  const prior = await db.marketplaceSeries.findUnique({
+    where: { clientId_clientKey: { clientId, clientKey: options.clientKey } },
+    include: { requests: { orderBy: { seriesPosition: "asc" }, take: 1 } },
+  });
+  if (prior?.requests[0]) return prior.requests[0];
+  const since = new Date(Date.now() - 60 * 60_000);
+  const [singleRequests, seriesRequests] = await Promise.all([
+    db.marketplaceRequest.count({ where: { clientId, seriesId: null, createdAt: { gte: since } } }),
+    db.marketplaceSeries.count({ where: { clientId, createdAt: { gte: since } } }),
+  ]);
+  if (singleRequests + seriesRequests >= 5) throw new MarketplaceError("Vous avez déjà envoyé plusieurs demandes. Réessayez plus tard.", 429);
+  const candidates = await findMarketplaceSeriesCandidates(inputs);
+  const chosen = candidates.find((candidate) => candidate.teacherId === options.preferredTeacherId);
+  if (!chosen) throw new MarketplaceError("Ce professeur ne peut plus assurer toutes les dates. Relancez la recherche.", 409);
+  if (chosen.totalClientPrice > options.quotedTotalClientPrice) {
+    throw new MarketplaceError("Le total de ce suivi a changé. Relancez la recherche avant de confirmer.", 409);
+  }
+  const expiresAt = new Date(Date.now() + MARKETPLACE_OFFER_TTL_MS);
+  let lead;
+  try {
+    lead = await db.$transaction(async (tx) => {
+      const series = await tx.marketplaceSeries.create({ data: { clientId, clientKey: options.clientKey } });
+      const created: MarketplaceRequest[] = [];
+      for (const [index, input] of inputs.entries()) {
+        const price = chosen.sessions[index];
+        const request = await tx.marketplaceRequest.create({ data: {
+          reference: `MC-${randomUUID().slice(0, 8).toUpperCase()}`,
+          clientId,
+          clientKey: `${options.clientKey}-${index}`,
+          seriesId: series.id,
+          seriesPosition: index,
+          journey: input.journey,
+          subjectId: input.subjectId,
+          subjectName: input.subjectName,
+          levelId: input.levelId,
+          levelName: input.levelName,
+          courseFormat: input.courseFormat,
+          commune: input.commune,
+          quartier: input.quartier,
+          addressHint: options.addressHint?.trim().slice(0, 240) || null,
+          objective: options.objective?.trim().slice(0, 800) || null,
+          scheduledDate: input.scheduledDate,
+          scheduledTime: input.scheduledTime,
+          durationMinutes: input.durationMinutes,
+          courseAmount: price.courseAmount,
+          transportFee: price.transportFee,
+          totalClientPrice: price.totalClientPrice,
+          commissionRateBps: MARKETPLACE_COMMISSION_BPS,
+          commissionAmount: marketplaceCommission(price.courseAmount),
+          status: "OFFERED",
+          offerExpiresAt: index === 0 ? expiresAt : null,
+          offers: { create: {
+            teacherId: chosen.teacherId,
+            rank: 0,
+            transportFee: price.transportFee,
+            totalClientPrice: price.totalClientPrice,
+            status: index === 0 ? "PENDING" : "QUEUED",
+            expiresAt,
+          } },
+        } });
+        created.push(request);
+      }
+      await enqueueNotificationEvent({
+        title: `Suivi de ${created.length} cours proposé`,
+        message: "Le client souhaite réserver plusieurs dates avec vous. Consultez tous les horaires avant d'accepter.",
+        type: "MARKETPLACE_OFFER", recipientType: "TEACHER", teacherId: chosen.teacherId,
+        link: `/professeur/marche/${created[0].id}`, priority: "IMPORTANT", expiresAt,
+      }, tx);
+      return created[0];
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const existing = await db.marketplaceSeries.findUnique({
+        where: { clientId_clientKey: { clientId, clientKey: options.clientKey } },
+        include: { requests: { orderBy: { seriesPosition: "asc" }, take: 1 } },
+      });
+      if (existing?.requests[0]) return existing.requests[0];
+    }
+    throw error;
+  }
+  await publishWebPushFlushEvent("outbox_created");
+  return lead;
+}
+
 async function lockRequest(tx: Prisma.TransactionClient, requestId: string) {
   await tx.$queryRaw`SELECT "id" FROM "MarketplaceRequest" WHERE "id" = ${requestId} FOR UPDATE`;
   const request = await tx.marketplaceRequest.findUnique({
@@ -133,7 +261,182 @@ async function lockRequest(tx: Prisma.TransactionClient, requestId: string) {
   return request;
 }
 
+async function lockSeriesRequests(tx: Prisma.TransactionClient, seriesId: string) {
+  const series = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "MarketplaceSeries" WHERE "id" = ${seriesId} FOR UPDATE
+  `;
+  if (series.length !== 1) throw new MarketplaceError("Suivi introuvable.", 404);
+  await tx.$queryRaw`
+    SELECT "id" FROM "MarketplaceRequest" WHERE "seriesId" = ${seriesId} ORDER BY "id" FOR UPDATE
+  `;
+  const requests = await tx.marketplaceRequest.findMany({
+    where: { seriesId }, orderBy: { seriesPosition: "asc" },
+    include: { offers: { orderBy: { rank: "asc" } } },
+  });
+  if (requests.length < 2 || requests.length > 6 || requests.some((item, index) => item.seriesPosition !== index)) {
+    throw new MarketplaceError("Les dates de ce suivi sont incohérentes. Contactez l'assistance.", 409);
+  }
+  return requests;
+}
+
+async function advanceMarketplaceSeriesOffer(requestId: string, seriesId: string, teacherId?: string) {
+  const result = await db.$transaction(async (tx) => {
+    const requests = await lockSeriesRequests(tx, seriesId);
+    const lead = requests[0];
+    if (requestId !== lead.id || requests.some((item) => item.status !== "OFFERED")) {
+      throw new MarketplaceError("Ce suivi n'attend plus de réponse.", 409);
+    }
+    const active = lead.offers.find((offer) => offer.status === "PENDING");
+    if (!active || (teacherId && active.teacherId !== teacherId)) throw new MarketplaceError("Cette offre n'est plus active.", 409);
+    const now = new Date();
+    if (!teacherId && active.expiresAt > now) return { status: "waiting" as const };
+    await tx.marketplaceOffer.updateMany({
+      where: { requestId: { in: requests.map((item) => item.id) }, status: { in: ["PENDING", "QUEUED"] } },
+      data: { status: teacherId ? "DECLINED" : "EXPIRED", respondedAt: now },
+    });
+    await tx.marketplaceRequest.updateMany({
+      where: { seriesId, status: "OFFERED" },
+      data: { status: "EXPIRED", offerExpiresAt: null },
+    });
+    await enqueueNotificationEvent({
+      title: "Suivi de cours sans professeur",
+      message: "Le professeur n'a pas accepté l'ensemble des dates. Modifiez votre recherche pour un autre suivi.",
+      type: "MARKETPLACE_NO_MATCH", recipientType: "CLIENT", userId: lead.clientId, clientId: lead.clientId,
+      link: `/client/demandes/${lead.id}`,
+    }, tx);
+    return { status: "expired" as const };
+  });
+  if (result.status !== "waiting") await publishWebPushFlushEvent("outbox_created");
+  return result;
+}
+
+async function acceptMarketplaceSeriesOffer(requestId: string, seriesId: string, teacherId: string) {
+  const platformSettings = await getPlatformRuntimeSettings();
+  const accepted = await db.$transaction(async (tx) => {
+    const requests = await lockSeriesRequests(tx, seriesId);
+    const lead = requests[0];
+    const pending = lead.offers.find((item) => item.teacherId === teacherId && item.status === "PENDING");
+    if (requestId !== lead.id || !pending || pending.expiresAt <= new Date()
+      || requests.some((item) => item.status !== "OFFERED"
+        || !item.offers.some((offer) => offer.teacherId === teacherId && ["PENDING", "QUEUED"].includes(offer.status)))) {
+      throw new MarketplaceError("Une des dates du suivi n'est plus disponible.", 409);
+    }
+    await lockTeacherSchedule(tx, teacherId);
+    const teacher = await tx.teacher.findUnique({
+      where: { id: teacherId },
+      include: {
+        subjects: true,
+        levels: { select: { levelId: true, level: { select: { name: true } } } },
+        preciseLevels: { select: { journey: true, className: true, subjectId: true } },
+      },
+    });
+    if (!teacher || teacher.status !== "ACTIVE" || !teacher.portalAccessEnabled || teacher.portalPasswordMustChange || !teacher.photoUrl
+      || requests.some((request) => !teacherSupportsJourney(teacher, request.journey as "ivoirien" | "francais" | "professionnel")
+        || !teacher.subjects.some((subject) => subject.subjectId === request.subjectId)
+        || (request.journey === "professionnel"
+          ? !teacher.levels.some((level) => level.levelId === request.levelId)
+          : !isTeacherQualifiedForPreciseLevel(
+            request.journey as "ivoirien" | "francais", request.levelName,
+            request.subjectId, teacher.preciseLevels,
+          ))
+        || (request.courseFormat === "HOME" ? !teacher.offersHome : !teacher.offersOnline)
+        || !teacherAvailableInGrid(teacher.availability, request))) {
+      throw new MarketplaceError("Votre profil ne correspond plus à toutes les dates du suivi.", 409);
+    }
+    const slots = requests.map((request) => ({
+      scheduledDate: request.scheduledDate, scheduledTime: request.scheduledTime,
+      durationMinutes: request.durationMinutes, courseFormat: request.courseFormat,
+      commune: request.commune, quartier: request.quartier,
+    }));
+    for (let index = 0; index < slots.length; index++) {
+      for (let other = index + 1; other < slots.length; other++) {
+        if (scheduleSlotsConflict(slots[index], slots[other], platformSettings.scheduleBuffers)) {
+          throw new MarketplaceError("Deux dates du suivi se chevauchent. Le suivi n'a pas été accepté.", 409);
+        }
+      }
+    }
+    // The teacher row is locked above. Query each date after the lock: both
+    // historical paid bookings and V2 missions must still be conflict-free.
+    await assertTeacherScheduleAvailable(tx, { teacherId, slots, scheduleBuffers: platformSettings.scheduleBuffers });
+    const others = await tx.marketplaceRequest.findMany({
+      where: {
+        assignedTeacherId: teacherId,
+        scheduledDate: { in: requests.map((item) => item.scheduledDate) },
+        status: { in: ["ACCEPTED", "IN_PROGRESS", "AWAITING_CLIENT", "COMPLETED", "DISPUTED"] },
+        id: { notIn: requests.map((item) => item.id) },
+      },
+      select: { scheduledDate: true, scheduledTime: true, durationMinutes: true, courseFormat: true, commune: true, quartier: true },
+    });
+    if (slots.some((slot) => others.some((other) => scheduleSlotsConflict(slot, other, platformSettings.scheduleBuffers)))) {
+      throw new MarketplaceError("Au moins une date est maintenant occupée. Le suivi n'a pas été accepté.", 409);
+    }
+    const commissionTotal = requests.reduce((sum, item) => sum + item.commissionAmount, 0);
+    const wallet = await tx.teacherWallet.updateMany({
+      where: { teacherId, available: { gte: commissionTotal } },
+      data: { available: { decrement: commissionTotal }, reserved: { increment: commissionTotal } },
+    });
+    if (wallet.count !== 1) throw new MarketplaceError("Rechargez votre portefeuille pour accepter toutes les dates.", 409);
+    const now = new Date();
+    for (const request of requests) {
+      await tx.teacherWalletEntry.create({ data: {
+        teacherId, requestId: request.id, kind: "RESERVE", reservedDelta: request.commissionAmount,
+        idempotencyKey: `marketplace-reserve:${request.id}:${teacherId}`,
+      } });
+      const offer = request.offers.find((item) => item.teacherId === teacherId);
+      if (!offer) throw new MarketplaceError("Offre du suivi introuvable.", 409);
+      await tx.marketplaceOffer.update({ where: { id: offer.id }, data: { status: "ACCEPTED", respondedAt: now } });
+      await tx.marketplaceRequest.update({ where: { id: request.id }, data: {
+        status: "ACCEPTED", assignedTeacherId: teacherId, acceptedAt: now,
+        offerExpiresAt: null, transportFee: offer.transportFee, totalClientPrice: offer.totalClientPrice,
+      } });
+    }
+    await enqueueNotificationEvent({
+      title: `${requests.length} cours confirmés avec le même professeur`,
+      message: `${teacher.professionalName || teacher.fullName} a accepté toutes les dates. Chaque séance possède son propre code de démarrage.`,
+      type: "MARKETPLACE_ACCEPTED", recipientType: "CLIENT", userId: lead.clientId, clientId: lead.clientId,
+      link: `/client/demandes/${lead.id}`, priority: "IMPORTANT",
+    }, tx);
+    return tx.marketplaceRequest.findUniqueOrThrow({ where: { id: lead.id } });
+  });
+  await publishWebPushFlushEvent("outbox_created");
+  return accepted;
+}
+
+async function cancelPendingMarketplaceSeries(requestId: string, seriesId: string, clientId: string) {
+  const cancelled = await db.$transaction(async (tx) => {
+    const requests = await lockSeriesRequests(tx, seriesId);
+    const lead = requests[0];
+    if (!requests.some((item) => item.id === requestId) || requests.some((item) => item.clientId !== clientId)) {
+      throw new MarketplaceError("Suivi introuvable.", 404);
+    }
+    if (requests.some((item) => item.status !== "OFFERED")) {
+      throw new MarketplaceError("Le professeur a déjà accepté ce suivi. Actualisez et annulez les dates souhaitées séparément.", 409);
+    }
+    const teacherId = lead.offers.find((offer) => offer.status === "PENDING")?.teacherId;
+    const now = new Date();
+    await tx.marketplaceOffer.updateMany({
+      where: { requestId: { in: requests.map((item) => item.id) }, status: { in: ["PENDING", "QUEUED"] } },
+      data: { status: "REVOKED", respondedAt: now },
+    });
+    await tx.marketplaceRequest.updateMany({
+      where: { seriesId, status: "OFFERED" },
+      data: { status: "CANCELLED", cancelledAt: now, cancellationReason: "client", offerExpiresAt: null },
+    });
+    if (teacherId) await enqueueNotificationEvent({
+      title: "Suivi annulé par le client",
+      message: "Le client a retiré la proposition portant sur plusieurs dates.",
+      type: "MARKETPLACE_CANCELLED", recipientType: "TEACHER", teacherId,
+      link: `/professeur/marche/${lead.id}`,
+    }, tx);
+    return tx.marketplaceRequest.findUniqueOrThrow({ where: { id: lead.id } });
+  });
+  await publishWebPushFlushEvent("outbox_created");
+  return cancelled;
+}
+
 export async function advanceMarketplaceOffer(requestId: string, teacherId?: string) {
+  const seriesTarget = await db.marketplaceRequest.findUnique({ where: { id: requestId }, select: { seriesId: true } });
+  if (seriesTarget?.seriesId) return advanceMarketplaceSeriesOffer(requestId, seriesTarget.seriesId, teacherId);
   const result = await db.$transaction(async (tx) => {
     const request = await lockRequest(tx, requestId);
     if (request.status !== "OFFERED") throw new MarketplaceError("Cette demande n’attend plus de réponse.", 409);
@@ -173,6 +476,9 @@ export async function advanceMarketplaceOffer(requestId: string, teacherId?: str
 }
 
 export async function acceptMarketplaceOffer(requestId: string, teacherId: string) {
+  const seriesTarget = await db.marketplaceRequest.findUnique({ where: { id: requestId }, select: { seriesId: true } });
+  if (seriesTarget?.seriesId) return acceptMarketplaceSeriesOffer(requestId, seriesTarget.seriesId, teacherId);
+  const platformSettings = await getPlatformRuntimeSettings();
   const accepted = await db.$transaction(async (tx) => {
     const request = await lockRequest(tx, requestId);
     const offer = request.offers.find((item) => item.teacherId === teacherId && item.status === "PENDING");
@@ -182,17 +488,29 @@ export async function acceptMarketplaceOffer(requestId: string, teacherId: strin
     await lockTeacherSchedule(tx, teacherId);
     const teacher = await tx.teacher.findUnique({
       where: { id: teacherId },
-      include: { subjects: true, levels: true, wallet: true },
+      include: {
+        subjects: true,
+        levels: { select: { levelId: true, level: { select: { name: true } } } },
+        preciseLevels: { select: { journey: true, className: true, subjectId: true } },
+        wallet: true,
+      },
     });
-    if (!teacher || teacher.status !== "ACTIVE" || !teacher.portalAccessEnabled || !teacher.photoUrl
+    if (!teacher || teacher.status !== "ACTIVE" || !teacher.portalAccessEnabled || teacher.portalPasswordMustChange || !teacher.photoUrl
       || !teacherSupportsJourney(teacher, request.journey as "ivoirien" | "francais" | "professionnel")
       || !teacher.subjects.some((subject) => subject.subjectId === request.subjectId)
-      || !teacher.levels.some((level) => level.levelId === request.levelId)
+      || (request.journey === "professionnel"
+        ? !teacher.levels.some((level) => level.levelId === request.levelId)
+        : !isTeacherQualifiedForPreciseLevel(
+          request.journey as "ivoirien" | "francais",
+          request.levelName,
+          request.subjectId,
+          teacher.preciseLevels,
+        ))
       || (request.courseFormat === "HOME" ? !teacher.offersHome : !teacher.offersOnline)
       || !teacherAvailableInGrid(teacher.availability, {
         scheduledDate: request.scheduledDate,
         scheduledTime: request.scheduledTime,
-        durationMinutes: request.durationMinutes as 60 | 120,
+        durationMinutes: request.durationMinutes,
       })) {
       throw new MarketplaceError("Votre profil ou votre disponibilité ne correspond plus à la mission.", 409);
     }
@@ -201,7 +519,7 @@ export async function acceptMarketplaceOffer(requestId: string, teacherId: strin
       durationMinutes: request.durationMinutes, courseFormat: request.courseFormat,
       commune: request.commune, quartier: request.quartier,
     };
-    await assertTeacherScheduleAvailable(tx, { teacherId, slots: [slot] });
+    await assertTeacherScheduleAvailable(tx, { teacherId, slots: [slot], scheduleBuffers: platformSettings.scheduleBuffers });
     const other = await tx.marketplaceRequest.findMany({
       where: {
         assignedTeacherId: teacherId,
@@ -211,7 +529,7 @@ export async function acceptMarketplaceOffer(requestId: string, teacherId: strin
       },
       select: { scheduledDate: true, scheduledTime: true, durationMinutes: true, courseFormat: true, commune: true, quartier: true },
     });
-    if (other.some((item) => scheduleSlotsConflict(slot, item))) {
+    if (other.some((item) => scheduleSlotsConflict(slot, item, platformSettings.scheduleBuffers))) {
       throw new MarketplaceError("Ce créneau est déjà pris. Refusez l’offre pour proposer le prochain professeur.", 409);
     }
     const wallet = await tx.teacherWallet.updateMany({
@@ -350,6 +668,10 @@ export async function confirmMarketplaceLesson(requestId: string, clientId: stri
 }
 
 export async function cancelMarketplaceRequest(requestId: string, clientId: string) {
+  const seriesTarget = await db.marketplaceRequest.findUnique({ where: { id: requestId }, select: { seriesId: true, status: true } });
+  if (seriesTarget?.seriesId && seriesTarget.status === "OFFERED") {
+    return cancelPendingMarketplaceSeries(requestId, seriesTarget.seriesId, clientId);
+  }
   const cancelled = await db.$transaction(async (tx) => {
     const request = await lockRequest(tx, requestId);
     if (request.clientId !== clientId) throw new MarketplaceError("Demande introuvable.", 404);

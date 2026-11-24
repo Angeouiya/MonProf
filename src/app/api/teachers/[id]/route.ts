@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { filterLevelsForJourney, filterSubjectsForJourney, subjectNameMatchesJourney } from "@/lib/catalog-journey";
 import {
   parseTeacherJourney,
@@ -9,6 +10,7 @@ import {
 import { teacherCatalogEligibleJourneys } from "@/lib/teacher-journey-validation";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (managedCoursesEnabled()) return NextResponse.json({ error: "L'attribution est assurée par Compétence." }, { status: 410 });
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const requestedJourney = searchParams.get("journey");
