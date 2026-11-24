@@ -96,6 +96,14 @@ remettre `MANAGED_LESSONS_ENABLED=false` et redéployer, sans supprimer les tabl
 Les dossiers existants, accords privés, fonctions de suivi et contraintes planning
 restent accessibles avec leurs autorisations, y compris après désactivation.
 
+`npm run deploy:cloudflare:production` charge le paquet OpenNext déjà compilé et
+le publie par Wrangler. Le wrapper vérifie que le cache OpenNext ne demande aucune
+initialisation distante et que la protection de version ne demande pas de mapping.
+Il évite ainsi l'émulation locale Hyperdrive inutile du helper de déploiement,
+sans ajouter une fausse URL PostgreSQL ni copier de secret production. Si une
+configuration de cache ou de protection de version est ajoutée, il refuse le
+déploiement jusqu'à adaptation explicite de la procédure.
+
 Les professeurs historiques doivent être habilités explicitement par système,
 classe et matière dans l'admin. Les compétences ne sont pas inventées ou déduites
 d'une ancienne catégorie générique. Les anciens comptes, cours, paiements et
