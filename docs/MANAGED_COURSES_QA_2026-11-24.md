@@ -33,6 +33,9 @@
 
 ## HTTP et interface
 
+`npm run build:quality` a réussi après les correctifs : typage, lint et ensemble
+des vérifications métier, sécurité, navigation, notifications et stockage médias.
+
 - Refus des écritures finance/professeur non authentifiées et des origines tierces.
 - Lien privé invalide refusé ; création anonyme et consultation privée réelles.
 - Navigateur Edge mobile isolé : six séances ivoiriennes de 6e = 75 000 FCFA,

@@ -20,6 +20,10 @@ const pending = source.filter((item) => !finished.has(item.name));
 assert.ok(pending.every((item) => item.name >= "20260901"), "Never replay an old baseline over existing data");
 console.log(JSON.stringify({ mode: apply ? "apply" : "dry-run", projectRef: MANAGED_PRODUCTION_REF, schema: "competence", before: state.counts, pending: pending.map((item) => item.name), managedSecurity: state.managedSecurity, maintenanceRoleOptions: state.maintenanceRoleOptions }, null, 2));
 if (!apply) process.exit(0);
+if (pending.length === 0) {
+  console.log("All migrations are already applied; no data or role changes required.");
+  process.exit(0);
+}
 const backup = JSON.parse(readFileSync("output/managed-qa/backups/latest-metadata.json", "utf8"));
 const qa = JSON.parse(readFileSync("output/managed-qa/postgres-results.json", "utf8"));
 assert.equal(backup.projectRef, MANAGED_PRODUCTION_REF); assert.equal(backup.schema, "competence");
@@ -34,12 +38,14 @@ for (const migration of pending) {
 }
 const audit = [];
 mkdirSync("output/managed-qa", { recursive: true });
-const [membership] = await linkedSql("SELECT m.inherit_option, m.set_option, m.admin_option FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid JOIN pg_roles u ON u.oid=m.member WHERE r.rolname='competence_migrator' AND u.rolname='postgres'");
-assert.equal(membership?.admin_option, true, "The maintenance login must already administer the dedicated migration role");
+const memberships = await linkedSql("SELECT m.inherit_option, m.set_option, m.admin_option, m.grantor::regrole::text AS grantor FROM pg_auth_members m JOIN pg_roles r ON r.oid=m.roleid JOIN pg_roles u ON u.oid=m.member WHERE r.rolname='competence_migrator' AND u.rolname='postgres'");
+assert.ok(memberships.some((entry) => entry.admin_option), "The maintenance login must already administer the dedicated migration role");
+const ownedMembership = memberships.find((entry) => entry.grantor === "postgres");
+const membership = ownedMembership ?? { inherit_option: false, set_option: false };
 // Supabase deliberately creates this existing DBA membership with SET/INHERIT
 // disabled. Enable it only for this bounded maintenance operation, then restore
 // its exact prior options even if a DDL statement fails. Runtime is not elevated.
-writeFileSync("output/managed-qa/migration-role-restore.json", JSON.stringify(membership));
+writeFileSync("output/managed-qa/migration-role-restore.json", JSON.stringify({ memberships, createdOwnGrant: !ownedMembership }));
 await linkedSql("GRANT competence_migrator TO postgres WITH INHERIT TRUE, SET TRUE; SELECT true AS ready;");
 try {
 for (const migration of pending) {
@@ -71,7 +77,9 @@ for (const migration of pending) {
   console.log(`APPLIED ${migration.name}`);
 }
 } finally {
-  await linkedSql(`GRANT competence_migrator TO postgres WITH INHERIT ${membership.inherit_option ? "TRUE" : "FALSE"}, SET ${membership.set_option ? "TRUE" : "FALSE"}; SELECT true AS restored;`);
+  await linkedSql(ownedMembership
+    ? `GRANT competence_migrator TO postgres WITH INHERIT ${membership.inherit_option ? "TRUE" : "FALSE"}, SET ${membership.set_option ? "TRUE" : "FALSE"}; SELECT true AS restored;`
+    : "REVOKE competence_migrator FROM postgres GRANTED BY postgres; SELECT true AS restored;");
 }
 const [afterRow] = await linkedSql(readFileSync("scripts/sql/managed-production-state.sql", "utf8"));
 for (const key of ["users", "teachers", "bookings", "transactions"]) assert.ok(afterRow.state.counts[key] >= state.counts[key], `Historical ${key} count decreased`);
