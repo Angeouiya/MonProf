@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assertHostedCloud, percentile } from "../load/cloud-actors.mjs";
+import { assertHostedCloud, percentile, cpuCorePercent } from "../load/cloud-actors.mjs";
 assert.throws(()=>assertHostedCloud({},"win32"));
 assert.throws(()=>assertHostedCloud({GITHUB_ACTIONS:"true"},"linux"));
 const env={GITHUB_ACTIONS:"true",RUNNER_ENVIRONMENT:"github-hosted",GITHUB_REPOSITORY:"Angeouiya/MonProf",CAPACITY_PUBLIC_REPOSITORY:"true",GITHUB_RUN_ID:"synthetic-unit"};
@@ -9,4 +9,7 @@ assert.throws(()=>assertHostedCloud({...env,RUNNER_ENVIRONMENT:"self-hosted"},"l
 assert.equal(percentile(new Uint32Array([0,90,5,5]),.95),2);
 assert.equal(percentile(new Uint32Array([0,90,5,5]),.99),3);
 assert.equal(percentile(new Uint32Array(5),.95),null);
+assert.equal(cpuCorePercent(1000,10000,100),100);
+assert.equal(cpuCorePercent(500,10000,100),50);
+assert.equal(cpuCorePercent(2000,10000,100),200);
 console.log("PASS cloud capacity safety: owner PC/private/paid/self-hosted contexts rejected; histogram percentiles are exact, no averaged p95.");

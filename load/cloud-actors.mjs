@@ -27,6 +27,10 @@ export function percentile(histogram, fraction) {
   return histogram.length - 1;
 }
 
+export function cpuCorePercent(deltaTicks, elapsedMs, ticksPerSecond) {
+  return Math.round(deltaTicks * 1_000_000 / ticksPerSecond / elapsedMs) / 10;
+}
+
 class MinHeap {
   values = [];
   push(value) {

@@ -6,7 +6,7 @@ import { mkdirSync, writeFileSync, readFileSync, createWriteStream, appendFileSy
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { encode } from "next-auth/jwt";
-import { assertHostedCloud } from "../../load/cloud-actors.mjs";
+import { assertHostedCloud, cpuCorePercent } from "../../load/cloud-actors.mjs";
 import { createCloudReadGateway } from "../../load/cloud-read-gateway.mjs";
 
 export async function verifyCloudCapacity({ client, check }) {
@@ -68,7 +68,7 @@ export async function verifyCloudCapacity({ client, check }) {
     for(const port of ports)for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){const r=await fetch("http://127.0.0.1:"+port+route,{headers:{Cookie:users[0].cookie,Host:"127.0.0.1:3334"}});assert.equal(r.status,200);await r.arrayBuffer();}
     console.log("CLOUD_CAPACITY_READY: 100000 distinct authenticated owners, 100000 course dossiers, read-only PostgreSQL, three warmed production-build processes; no production credentials.");
     let previousCpu=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks),previousAt=performance.now();
-    telemetryTimer=setInterval(async()=>{const now=performance.now();const current=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks);const cpu=current.map((value,i)=>Math.round((value-previousCpu[i])/ticksPerSecond/(now-previousAt)*100000)/10);previousCpu=current;previousAt=now;
+    telemetryTimer=setInterval(async()=>{const now=performance.now();const current=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks);const cpu=current.map((value,i)=>cpuCorePercent(value-previousCpu[i],now-previousAt,ticksPerSecond));previousCpu=current;previousAt=now;
       const stats=await client.query("SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname=current_database()").catch(()=>null);
       infrastructure.push({at:new Date().toISOString(),proxyCorePercent:cpu[0],serverCorePercent:cpu.slice(1),connections:stats?.rows[0]?.connections??null});
       console.log("CLOUD_CAPACITY_INFRA "+JSON.stringify(infrastructure.at(-1)));
