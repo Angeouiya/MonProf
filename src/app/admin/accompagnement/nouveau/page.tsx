@@ -3,12 +3,12 @@ import { requireAdmin } from "@/lib/session";
 import { db } from "@/lib/db";
 import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { ManagedRequestForm } from "@/components/managed/request-form";
-import { managedSchoolSubjectNames, managedSchoolSubjectOptions } from "@/lib/managed-school-subjects";
+import { managedSchoolSubjectWhere, managedSchoolSubjectOptions } from "@/lib/managed-school-subjects";
 export default async function ManagedNewAdminPage() {
   await requireAdmin("BOOKINGS_MANAGE");
   if (!managedCoursesEnabled()) notFound();
   const subjects = managedSchoolSubjectOptions(await db.subject.findMany({
-    where: { name: { in: managedSchoolSubjectNames } },
+    where: managedSchoolSubjectWhere,
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   }));

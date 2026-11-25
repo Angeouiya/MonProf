@@ -86,6 +86,35 @@ des vérifications métier, sécurité, navigation, notifications et stockage m�
 - Captures locales : `output/playwright/refined-home-desktop.png`,
   `refined-home-mobile.png`, `refined-request-mobile.png` (hors Git).
 
+## Matières et moteur hebdomadaire — 25 novembre
+
+- Le filtre Prisma est insensible à la casse : `Bac français` du catalogue
+  retrouve `BAC français` déjà enregistré, sans modification de la base.
+- Préparation BAC générale ivoirienne ajoutée au catalogue lycée, matières
+  générales françaises complétées ; les options sont classées en matières et
+  préparation aux examens. Les IDs des matières existantes sont conservés.
+- Les deux systèmes restent isolés côté formulaire et serveur. Le BAC n'est pas
+  proposé au collège ; le BEPC reste disponible dans son parcours ivoirien.
+- Mode hebdomadaire : semaine type explicite (jours/heures), 1–8 créneaux,
+  1–8 semaines, maximum 64 séances, total non éditable dérivé du produit.
+- Mode ponctuel : nombre libre et toutes les dates éditables, sans fréquence
+  hebdomadaire ambiguë. Aller-retour entre modes conserve les dates saisies.
+- Même moteur de génération/tri/anti-chevauchement dans l'UI et le serveur.
+  Le serveur compare les dates reçues au résultat calculé de la récurrence et
+  refuse notamment une série de huit dates annoncée comme quatre fois quatre.
+- Prix = tarif unitaire × nombre exact ; échéancier de paiement distinct.
+  Les engagements v3 explicitent 4 semaines = 28 jours, sans renouvellement.
+  Les huit articles historiques v2 restent inchangés et consultables.
+- Tests unitaires : 4×4=16, 4×2=8, 8×4=32, 8×8=64, année bissextile,
+  passage d'année, mauvais jours/heures, doublons, chevauchements et falsification.
+- PostgreSQL local : 14 scénarios métier, dont récupération des BAC existants,
+  refus d'un BAC de l'autre système, création réelle de 16 séances à 200 000 F
+  (6e ivoirienne), acceptation professeur et refus des huit dates falsifiées.
+- Edge local : Terminale française/BAC, 4×2 à 300 000 F puis 4×4 à 600 000 F,
+  chevauchement bloquant, nombre ponctuel effaçable puis réécrit, huit dates
+  conservées après retour au mode hebdomadaire. Envoi final 16 séances HTTP 200.
+- Aucun changement de schéma ni écriture du catalogue en production.
+
 ## Limites explicites
 
 Les textes légaux nécessitent une revue professionnelle et la vérification de

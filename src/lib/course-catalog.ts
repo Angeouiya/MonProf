@@ -83,6 +83,12 @@ export const FRENCH_LYCEE_SPECIALTIES = [
   "Enseignement scientifique",
 ] as const;
 
+// A lycée request is not restricted to specialties: common subjects remain
+// selectable too. Reuse the existing Subject records rather than adding aliases.
+export const FRENCH_LYCEE_COMMON_SUBJECTS = [
+  "Français", "Histoire-Géographie", "Anglais", "Espagnol", "Allemand", "Méthodologie",
+] as const;
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -160,7 +166,7 @@ const lyceeIvorianSubjects = [
   "Mathématiques", "Physique-Chimie", "SVT", "Français", "Philosophie", "Littérature",
   "Anglais", "Espagnol", "Allemand", "Histoire-Géographie", "EDHC", "TICE",
   "Comptabilité", "Économie", "Droit", "Gestion", "Informatique", "Électricité", "Mécanique",
-  "Dessin technique", "Préparation BAC A", "Préparation BAC C", "Préparation BAC D", "Préparation BAC E",
+  "Dessin technique", "BAC ivoirien", "Préparation BAC A", "Préparation BAC C", "Préparation BAC D", "Préparation BAC E",
   "Préparation BAC technique",
 ];
 
@@ -565,7 +571,7 @@ export const COURSE_CATALOG: CourseCatalogItem[] = [
     sous_categorie: "lycee_francais",
     systeme: "francais",
     niveaux: LYCEE_LEVEL_OPTIONS.francais,
-    matieres: [...FRENCH_LYCEE_SPECIALTIES],
+    matieres: [...new Set([...FRENCH_LYCEE_COMMON_SUBJECTS, ...FRENCH_LYCEE_SPECIALTIES])],
     prix: [15000, 20000],
     publicCible: "Lycéens du système français",
     objectif: "Soutien, spécialités et préparation BAC français",

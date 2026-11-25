@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { MANAGED_MAX_SESSIONS, MANAGED_MAX_WEEKS, MANAGED_MAX_WEEKLY_SLOTS, managedWeeklySessions, orderedManagedSessions } from "./managed-course-schedule";
 
-export const MANAGED_TERMS_VERSION = "managed-2026-11-24-v2";
+export const MANAGED_TERMS_VERSION = "managed-2026-11-25-v3";
 export const MANAGED_DURATION_MINUTES = 120;
 export const MANAGED_MIN_COMMISSION_BPS = 2_000;
 export const MANAGED_MAX_COMMISSION_BPS = 3_000;
@@ -41,6 +42,15 @@ export const managedRequestSchema = z
     addressHint: z.string().trim().max(240).default(""),
     objective: z.string().trim().max(500).default(""),
     cadence: z.enum(["WEEKLY", "FORTNIGHTLY", "MONTHLY"]),
+    schedule: z.discriminatedUnion("mode", [
+      z.object({ mode: z.literal("DATES") }).strict(),
+      z.object({
+        mode: z.literal("WEEKLY"),
+        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        weeks: z.number().int().min(1).max(MANAGED_MAX_WEEKS),
+        weeklySlots: z.array(z.object({ dayOfWeek: z.number().int().min(0).max(6), time: z.string().regex(/^(?:(?:0[8-9]|1\d):(?:00|30)|20:00)$/) }).strict()).min(1).max(MANAGED_MAX_WEEKLY_SLOTS),
+      }).strict(),
+    ]).optional(),
     sessions: z
       .array(
         z.object({
@@ -49,7 +59,7 @@ export const managedRequestSchema = z
         }),
       )
       .min(1)
-      .max(24),
+      .max(MANAGED_MAX_SESSIONS),
     accepted: z.boolean(),
     quotedTotal: z.number().int().positive(),
     website: z.string().max(0).optional(),
@@ -65,7 +75,7 @@ export function managedPrice(
   const index = MANAGED_CLASSES.indexOf(
     className as (typeof MANAGED_CLASSES)[number],
   );
-  if (index < 0 || !Number.isSafeInteger(count) || count < 1 || count > 24)
+  if (index < 0 || !Number.isSafeInteger(count) || count < 1 || count > MANAGED_MAX_SESSIONS)
     throw new Error("Classe ou nombre de séances invalide.");
   const monthly = MANAGED_MONTHLY_PRICES[journey][index];
   const perSession = monthly / 4;
@@ -106,12 +116,24 @@ export function managedPayableCredit(session: {
   return earned - session.creditedTeacherAmount;
 }
 export function managedSlots(
-  input: Pick<ManagedRequestInput, "sessions">,
+  input: Pick<ManagedRequestInput, "sessions" | "schedule">,
   now = new Date(),
 ) {
   managedRequestSchema.shape.sessions.parse(input.sessions);
-  const seen = new Set<string>();
-  return input.sessions
+  if (input.schedule) {
+    const rule = managedRequestSchema.shape.schedule.parse(input.schedule);
+    if (rule?.mode === "WEEKLY") {
+      try {
+        const calculated = managedWeeklySessions(rule);
+        const received = [...input.sessions].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+        if (JSON.stringify(calculated) !== JSON.stringify(received))
+          throw new Error("Le nombre et les dates ne correspondent pas à la répétition hebdomadaire. Recalculez le planning.");
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : "Planning invalide.");
+      }
+    }
+  }
+  const slots = orderedManagedSessions(input.sessions)
     .map((slot) => {
       const date = new Date(`${slot.date}T00:00:00.000Z`);
       const start = new Date(`${slot.date}T${slot.time}:00.000Z`);
@@ -124,16 +146,13 @@ export function managedSlots(
         throw new Error(
           "Choisissez des dates futures, dans les douze prochains mois.",
         );
-      if (seen.has(slot.date))
-        throw new Error("Une seule séance par date pour ce dossier.");
-      seen.add(slot.date);
       return {
         scheduledDate: date,
         scheduledTime: slot.time,
         durationMinutes: MANAGED_DURATION_MINUTES,
       };
-    })
-    .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
+    });
+  return slots;
 }
 
 export function managedInstallments(
@@ -178,7 +197,7 @@ export function managedInstallments(
   return [...groups.values()];
 }
 
-export const MANAGED_PARENT_TERMS = [
+const MANAGED_PARENT_TERMS_V2 = [
   "Chaque séance dure deux heures. Le montant du dossier correspond au tarif par séance multiplié par le nombre de séances, sans renouvellement implicite.",
   "Le parent règle Compétence hors ligne, selon l'échéancier accepté (hebdomadaire, toutes les deux semaines ou mensuel). Aucun paiement n'est demandé sur ce formulaire.",
   "La demande reste soumise à la vérification de Compétence et à l'acceptation d'un professeur compatible. Tout changement du prix ou des séances nécessite un nouvel accord du parent.",
@@ -188,13 +207,18 @@ export const MANAGED_PARENT_TERMS = [
   "Le lien privé du dossier permet aussi de transmettre une demande d'annulation ou une réclamation. L'équipe examine la demande avec les parties. Une réclamation retient les sommes encore disponibles du dossier ; elle ne récupère pas automatiquement un versement déjà exécuté.",
   "Une séance non effectuée annulée par l'équipe est déduite des cours restant dus. Les fonds correspondants déjà reçus font l'objet d'un rapprochement puis, s'il y a lieu, d'un remboursement manuel vérifié. Une séance contestée déjà déclarée effectuée est traitée séparément, sans annulation rétroactive automatique ni pénalité non convenue.",
 ];
+export const MANAGED_PARENT_TERMS = [
+  ...MANAGED_PARENT_TERMS_V2,
+  "Le planning peut être répété sur un nombre défini de semaines ou composé de dates ponctuelles. Quatre semaines représentent une période de 28 jours, pas nécessairement un mois civil. Le total facturé est toujours le nombre exact de séances affichées multiplié par le tarif unitaire, sans abonnement ni renouvellement automatique.",
+];
 export const MANAGED_TEACHER_TERMS =
   "La commission Compétence est fixée entre 20 % et 30 % pour chaque mission avant son acceptation ; le professeur reçoit la part restante, entre 70 % et 80 %. Le taux exact affiché est conservé pour les séances attribuées. La rémunération est payable après encaissement du parent et validation des séances. Le professeur s'engage à la ponctualité, à la qualité pédagogique, à la confidentialité, au respect de la vie privée de la famille et à la sécurité de l'élève. Il signale immédiatement tout empêchement à Compétence et ne sous-traite pas la mission sans autorisation.";
 // Retain past versions when adding conditions. Accepted evidence stores its
 // own verbatim snapshot and must never be silently rewritten.
 const parentTermsHistory: Record<string, readonly string[]> = {
-  "managed-2026-11-24-v1": MANAGED_PARENT_TERMS.slice(0, 6),
-  "managed-2026-11-24-v2": MANAGED_PARENT_TERMS,
+  "managed-2026-11-24-v1": MANAGED_PARENT_TERMS_V2.slice(0, 6),
+  "managed-2026-11-24-v2": MANAGED_PARENT_TERMS_V2,
+  "managed-2026-11-25-v3": MANAGED_PARENT_TERMS,
 };
 export function managedParentTermsForVersion(version: string) {
   const terms = parentTermsHistory[version];

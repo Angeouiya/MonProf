@@ -75,6 +75,20 @@ try {
   await db.teacherPreciseLevel.createMany({ data: ["ivoirien", "francais"].map((journey) => ({ teacherId: teacher.id, subjectId: subject.id, journey, className: "6e" })) });
   const service = await jiti.import("../src/lib/managed-courses.ts");
   const core = await jiti.import("../src/lib/managed-courses-core.ts");
+  const subjectCatalog = await jiti.import("../src/lib/managed-school-subjects.ts");
+  await db.subject.createMany({ data: [
+    { name: "BAC français", slug: "qa-bac-francais" },
+    { name: "BAC ivoirien", slug: "qa-bac-ivoirien" },
+    { name: "Préparation BEPC", slug: "qa-bepc" },
+    { name: "Anglais", slug: "qa-anglais" },
+  ] });
+  const choices = subjectCatalog.managedSchoolSubjectOptions(await db.subject.findMany({ where: subjectCatalog.managedSchoolSubjectWhere, select: { id: true, name: true } }));
+  const bacFr = choices.find((item) => item.name === "BAC français");
+  assert.equal(bacFr?.label, "Préparation BAC");
+  assert.ok(bacFr.programmes.includes("francais:Terminale"));
+  assert.ok(!bacFr.programmes.includes("ivoirien:Terminale"));
+  assert.ok(choices.find((item) => item.name === "Anglais").programmes.includes("francais:Terminale"));
+  check("Case-insensitive Subject lookup exposes existing BAC rows, common lycée subjects and system-isolated exam choices");
   const futureDate = (offset) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
   const input = (offset, phone = "0700000002") => ({ termsVersion: core.MANAGED_TERMS_VERSION, clientKey: randomUUID(), parentName: "QA Parent", phone, journey: "ivoirien", className: "6e", subjectId: subject.id, courseFormat: "ONLINE", cadence: "FORTNIGHTLY", sessions: [{ date: futureDate(offset), time: "10:00" }], accepted: true, quotedTotal: 12_500 });
   const firstInput = input(20);
@@ -177,6 +191,29 @@ try {
   assert.equal((await db.managedCourseSession.findUniqueOrThrow({ where: { id: acceptedSession.id } })).commissionRateBps, 2500);
   check("Reschedule releases only the changed session and requires new parent/professor consent");
   assert.equal(core.managedPrice("ivoirien", "6e", 6).total, 75000);
+  const bacInput = { ...input(50, "0700000088"), journey: "francais", className: "Terminale", subjectId: bacFr.id, quotedTotal: 37_500 };
+  const bacDossier = await service.createManagedDossier(bacInput);
+  assert.ok(bacDossier.id);
+  await assert.rejects(service.createManagedDossier({ ...bacInput, clientKey: randomUUID(), journey: "ivoirien", quotedTotal: 30_000 }), /matière|classe|système/i);
+  check("BAC request persists its existing Subject ID and the server refuses a BAC from another system");
+  const scheduling = await jiti.import("../src/lib/managed-course-schedule.ts");
+  const repeatRule = { mode: "WEEKLY", startDate: futureDate(60), weeks: 4, weeklySlots: scheduling.defaultManagedWeeklySlots(4, futureDate(60)) };
+  const repeatedDates = scheduling.managedWeeklySessions(repeatRule);
+  const repeatInput = { ...input(60, "0700000089"), schedule: repeatRule, sessions: repeatedDates, quotedTotal: 200_000 };
+  const repeatDossier = await service.createManagedDossier(repeatInput);
+  assert.equal(await db.managedCourseSession.count({ where: { dossierId: repeatDossier.id } }), 16);
+  const savedRepeat = await db.managedCourseDossier.findUniqueOrThrow({ where: { id: repeatDossier.id } });
+  assert.equal(savedRepeat.totalPrice, 200_000);
+  assert.equal(savedRepeat.acceptanceEvidence.schedule.weeks, 4);
+  const repeatOffer = await service.offerManagedDossier(repeatDossier.id, teacher.id, 25, "qa-admin");
+  await service.respondManagedOffer(repeatOffer.id, teacher.id, true, "");
+  const repeatSessions = await db.managedCourseSession.findMany({ where: { dossierId: repeatDossier.id }, orderBy: { sequence: "asc" } });
+  const secondDate = repeatSessions[1].scheduledDate.toISOString().slice(0, 10);
+  await assert.rejects(service.rescheduleManagedSession(repeatDossier.id, repeatSessions[0].id, secondDate, "17:00", "QA conflicting report", "qa-admin"), /chevauche/i);
+  await service.rescheduleManagedSession(repeatDossier.id, repeatSessions[0].id, secondDate, "10:00", "QA non-overlapping report on the same date", "qa-admin");
+  assert.equal((await db.managedCourseSession.findUniqueOrThrow({ where: { id: repeatSessions[0].id } })).scheduledTime, "10:00");
+  await assert.rejects(service.createManagedDossier({ ...repeatInput, clientKey: randomUUID(), sessions: repeatedDates.slice(0, 8), quotedTotal: 100_000 }), /correspondent|planning/i);
+  check("Four weekly slots over four weeks persist exactly 16 priced sessions, teacher accepts, and tampered date counts are rejected");
   mkdirSync("output/managed-qa", { recursive: true });
   writeFileSync("output/managed-qa/postgres-results.json", JSON.stringify({ passed: true, testedAt: new Date().toISOString(), postgres: "17", checks, historicalDataPreserved: true, remoteDatabaseUsed: false, migrationHashes: Object.fromEntries(migrationNames.map((name) => [name, createHash("sha256").update(readFileSync(`prisma/migrations/${name}/migration.sql`)).digest("hex")])) }, null, 2));
   console.log(`PASS ${checks.length} PostgreSQL integration scenarios; local cluster retained at ${directory}`);

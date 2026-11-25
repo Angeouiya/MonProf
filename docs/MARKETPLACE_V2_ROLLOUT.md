@@ -11,9 +11,16 @@ Il est prioritaire sur la marketplace V2 pour les nouvelles demandes :
   doivent passer par le formulaire accompagné. Les dossiers historiques restent conservés.
 - Séances de **120 minutes**. La grille fournie pour huit séances est divisée
   par deux pour afficher la base initiale de quatre séances. Calcul exact :
-  `prix de quatre séances / 4 × nombre choisi`, de 1 à 24 séances par dossier.
-  Le formulaire propose quatre séances par défaut ; huit séances proposent deux
-  dates par semaine. Chaque date reste modifiable avant l'accord.
+  `prix de quatre séances / 4 × nombre exact`, de 1 à 64 séances par dossier.
+  Depuis le 25 novembre, le mode hebdomadaire propose 1 à 8 créneaux par semaine
+  répétés sur 1 à 8 semaines, avec calcul automatique du total et des dates.
+  Quatre semaines signifient 28 jours, pas un mois civil. Le mode ponctuel permet
+  un nombre éditable et des dates libres ; il n'affiche pas de fréquence
+  contradictoire. Le serveur recalcule la récurrence et refuse tout écart.
+  Une personnalisation convertit explicitement la série en dates ponctuelles.
+  Les séances restent de deux heures et ne peuvent pas se chevaucher.
+  Les engagements v3 sont conservés avec l'accord ; les versions v1/v2 restent
+  lisibles à l'identique pour les anciens dossiers.
 - Le parent paie Compétence hors ligne. Les échéances proposées sont hebdomadaires,
   par période de 14 jours ou par mois calendaire à partir du premier cours.
   Elles sont explicitement affichées et acceptées. Aucun débit ni rappel bancaire

@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { isManagedSchoolSubject, managedSchoolSubjectOptions, managedSchoolSubjectNames } from "../src/lib/managed-school-subjects";
 import { isManagedRequestOriginAllowed } from "../src/lib/managed-courses-origin";
 import { readFileSync } from "node:fs";
-import { MANAGED_CLASSES, MANAGED_MONTHLY_PRICES, MANAGED_DURATION_MINUTES, MANAGED_TERMS_VERSION, managedInstallments, managedPayableCredit, managedPrice, managedRequestSchema, managedSlots, managedSplit } from "../src/lib/managed-courses-core";
+import { MANAGED_CLASSES, MANAGED_MONTHLY_PRICES, MANAGED_DURATION_MINUTES, MANAGED_TERMS_VERSION, managedInstallments, managedPayableCredit, managedPrice, managedRequestSchema, managedSlots, managedSplit, managedParentTermsForVersion } from "../src/lib/managed-courses-core";
+import { defaultManagedWeeklySlots, managedWeeklySessions, MANAGED_MAX_SESSIONS } from "../src/lib/managed-course-schedule";
 const expectedEight = {
   ivoirien: [100_000, 120_000, 140_000, 170_000, 180_000, 200_000, 240_000],
   francais: [150_000, 150_000, 150_000, 200_000, 260_000, 290_000, 300_000],
@@ -13,6 +14,23 @@ assert.equal(isManagedSchoolSubject("Accessoires de mode", "ivoirien", "6e"), fa
 assert.equal(isManagedSchoolSubject("Philosophie", "ivoirien", "6e"), false);
 assert.equal(isManagedSchoolSubject("HGGSP", "francais", "Terminale"), true);
 assert.equal(isManagedSchoolSubject("HGGSP", "ivoirien", "Terminale"), false);
+for (const level of ["Seconde", "Première", "Terminale"]) {
+  assert.equal(isManagedSchoolSubject("BAC ivoirien", "ivoirien", level), true);
+  assert.equal(isManagedSchoolSubject("BAC français", "francais", level), true);
+  assert.equal(isManagedSchoolSubject("BAC français", "ivoirien", level), false);
+  assert.equal(isManagedSchoolSubject("BAC ivoirien", "francais", level), false);
+  for (const subject of ["Anglais", "Espagnol", "Allemand", "Histoire-Géographie", "Méthodologie"])
+    assert.equal(isManagedSchoolSubject(subject, "francais", level), true, `${subject} disponible au lycée français`);
+}
+assert.equal(isManagedSchoolSubject("BAC français", "francais", "6e"), false);
+assert.equal(isManagedSchoolSubject("BAC ivoirien", "ivoirien", "3e"), false);
+const exams = managedSchoolSubjectOptions([
+  { id: "bac-fr", name: "BAC français" }, { id: "bac-ci", name: "BAC ivoirien" },
+  { id: "bepc", name: "Préparation BEPC" }, { id: "bac-a", name: "Préparation BAC A" },
+]);
+assert.deepEqual(exams.filter((subject) => subject.programmes.includes("francais:Terminale")).map((subject) => [subject.id, subject.label, subject.kind]), [["bac-fr", "Préparation BAC", "EXAM"]]);
+assert.equal(exams.filter((subject) => subject.programmes.includes("ivoirien:Terminale")).length, 2);
+assert.equal(exams.find((subject) => subject.id === "bepc")?.kind, "EXAM");
 const catalogWithLateMaths = [...Array.from({ length: 590 }, (_, index) => ({ id: String(index), name: `Métier ${index}` })), { id: "maths", name: "Mathématiques" }];
 assert.deepEqual(managedSchoolSubjectOptions(catalogWithLateMaths).map((subject) => subject.id), ["maths"], "Une matière scolaire au-delà du 250e élément reste disponible sans catalogue professionnel");
 assert.equal(isManagedRequestOriginAllowed("http://localhost:3315/api/managed-courses", "http://127.0.0.1:3315", ["http://127.0.0.1:3315"]), true);
@@ -23,7 +41,7 @@ for (const journey of ["ivoirien", "francais"] as const) {
   for (const [index, level] of MANAGED_CLASSES.entries()) {
     assert.equal(managedPrice(journey, level, 4).total, expectedEight[journey][index] / 2);
     assert.equal(managedPrice(journey, level, 8).total, expectedEight[journey][index]);
-    for (let count = 1; count <= 24; count++) {
+    for (let count = 1; count <= MANAGED_MAX_SESSIONS; count++) {
       const price = managedPrice(journey, level, count);
       assert.equal(price.total, MANAGED_MONTHLY_PRICES[journey][index] * count / 4);
       const split = managedSplit(price.total, 2_000);
@@ -58,6 +76,23 @@ for (let percent = 20; percent <= 30; percent++) {
 const input = managedRequestSchema.parse({ termsVersion: MANAGED_TERMS_VERSION, clientKey: "b62a3950-f5e4-4f1e-a74f-36adb039067e", parentName: "Parent test", phone: "0700000000", journey: "ivoirien", className: "6e", subjectId: "maths", courseFormat: "ONLINE", cadence: "WEEKLY", sessions: [{ date: "2027-01-01", time: "16:00" }], accepted: true, quotedTotal: 12_500 });
 assert.equal(managedSlots(input, new Date("2026-12-01"))[0].durationMinutes, 120);
 assert.throws(() => managedSlots({ ...input, sessions: [...input.sessions, ...input.sessions] }, new Date("2026-12-01")));
+const weekly = { mode: "WEEKLY" as const, startDate: "2027-01-01", weeks: 4, weeklySlots: defaultManagedWeeklySlots(4, "2027-01-01") };
+const sixteen = managedWeeklySessions(weekly);
+assert.equal(sixteen.length, 16);
+assert.equal(new Set(sixteen.map((item) => `${item.date}T${item.time}`)).size, 16);
+for (const slot of weekly.weeklySlots) assert.equal(sixteen.filter((item) => new Date(`${item.date}T00:00:00Z`).getUTCDay() === slot.dayOfWeek && item.time === slot.time).length, 4);
+assert.equal(managedPrice("ivoirien", "6e", sixteen.length).total, 200_000);
+assert.equal(managedSlots({ sessions: sixteen, schedule: weekly }, new Date("2026-12-01")).length, 16);
+assert.throws(() => managedSlots({ sessions: sixteen.slice(0, 8), schedule: weekly }, new Date("2026-12-01")), /correspondent|planning/i);
+const thirtyTwo = managedWeeklySessions({ ...weekly, weeklySlots: defaultManagedWeeklySlots(8, weekly.startDate) });
+assert.equal(thirtyTwo.length, 32);
+assert.equal(managedSlots({ sessions: thirtyTwo }, new Date("2026-12-01")).length, 32);
+assert.equal(managedWeeklySessions({ ...weekly, weeks: 8, weeklySlots: defaultManagedWeeklySlots(8, weekly.startDate) }).length, 64);
+for (const invalid of [{ ...weekly, startDate: "2027-02-30" }, { ...weekly, weeks: 0 }, { ...weekly, weeks: 9 }, { ...weekly, weeklySlots: [] }, { ...weekly, weeklySlots: [{ dayOfWeek: 1, time: "16:15" }] }, { ...weekly, weeklySlots: [{ dayOfWeek: 1, time: "16:00" }, { dayOfWeek: 1, time: "17:00" }] }]) assert.throws(() => managedWeeklySessions(invalid));
+assert.equal(managedWeeklySessions({ ...weekly, startDate: "2028-02-28", weeks: 2, weeklySlots: [{ dayOfWeek: 2, time: "08:00" }] })[0].date, "2028-02-29");
+assert.throws(() => managedSlots({ sessions: [{ date: "2027-01-01", time: "10:00" }, { date: "2027-01-01", time: "11:00" }] }, new Date("2026-12-01")), /chevauchent/);
+assert.equal(managedParentTermsForVersion("managed-2026-11-24-v2").length, 8, "Les engagements historiques restent inchangés");
+assert.equal(managedParentTermsForVersion(MANAGED_TERMS_VERSION).length, 9);
 assert.equal(managedRequestSchema.safeParse({ ...input, age: 12 }).success, false);
 assert.equal(managedRequestSchema.safeParse({ ...input, sessions: [{ date: "2027-01-01", time: "20:30" }] }).success, false);
 const schedule = [{ date: "2027-01-01", amount: 15_000 }, { date: "2027-01-08", amount: 15_000 }, { date: "2027-01-15", amount: 15_000 }, { date: "2027-01-22", amount: 15_000 }];
@@ -81,13 +116,14 @@ assert.match(migration, /managed_ledger_append_only/);
 assert.match(service, /commissionRateBps: offer.commissionRateBps/);
 assert.match(migration, /managed_offer_rate_immutable/);
 assert.match(migration, /managed_session_rate_immutable/);
-console.log("Service accompagné : 14 grilles 4/8 séances, prorata 1–24, 2 h, commission 20–30 % par mission, échéances, financement partiel, rejeu, droits et migration additive vérifiés.");
+console.log("Service accompagné : matières/BAC, 14 grilles, prorata 1–64, récurrence 1–8 semaines, calendrier 2 h sans chevauchement, calcul serveur, commissions, échéances et historique vérifiés.");
 const clientShell = readFileSync("src/components/managed/public-shell.tsx", "utf8");
 assert.doesNotMatch(clientShell, /from "next\/link"/, "Le parcours public utilise la navigation HTML native sans fan-out RSC");
 assert.doesNotMatch(clientShell, /href=["']\/(?:professeur|admin)(?:\/|["'])/, "L'espace principal parent/client ne doit pas exposer les accès professionnels");
 assert.match(clientShell, /href="\/client"/);
 assert.doesNotMatch(readFileSync("src/components/shared/web-push-realtime.tsx", "utf8"), /src="\/images\/[^"\n]+\?/, "L'icône locale de permission doit respecter la configuration next/image sans recherche");
 assert.equal(managedRequestSchema.safeParse({ ...input, termsVersion: "managed-2026-11-24-v1" }).success, false, "Un formulaire ancien doit être rechargé avant le nouvel accord");
+assert.equal(managedRequestSchema.safeParse({ ...input, termsVersion: "managed-2026-11-24-v2" }).success, false);
 const managedForm = readFileSync("src/components/managed/request-form.tsx", "utf8");
 assert.match(managedForm, /key="continue" type="button"/, "La transition ne doit jamais réutiliser le bouton d'envoi");
 assert.match(managedForm, /key="send" type="submit"/, "L'envoi final doit avoir une identité DOM distincte");

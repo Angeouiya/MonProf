@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 import { ManagedPublicShell } from "@/components/managed/public-shell";
 import { ManagedRequestForm } from "@/components/managed/request-form";
-import { managedSchoolSubjectNames, managedSchoolSubjectOptions } from "@/lib/managed-school-subjects";
+import { managedSchoolSubjectWhere, managedSchoolSubjectOptions } from "@/lib/managed-school-subjects";
 import styles from "@/components/managed/managed-public.module.css";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function ManagedCoursePage({ searchParams }: { searchParams
   if (!managedCoursesEnabled()) notFound();
   const [params, rows] = await Promise.all([
     searchParams,
-    db.subject.findMany({ where: { name: { in: managedSchoolSubjectNames } }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.subject.findMany({ where: managedSchoolSubjectWhere, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   const subjects = managedSchoolSubjectOptions(rows);
   return (

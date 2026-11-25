@@ -196,6 +196,7 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
               version: MANAGED_TERMS_VERSION,
               total: price.total,
               sessions: input.sessions,
+              schedule: input.schedule ?? { mode: "DATES" },
               cadence: input.cadence,
             },
         sessions: {
@@ -933,16 +934,19 @@ export async function rescheduleManagedSession(
       throw new ManagedCourseError(
         "Seule une séance non effectuée, hors litige, peut être reprogrammée.",
       );
+    const requestedStart = new Date(`${date}T${time}:00Z`).getTime();
     if (
       dossier.sessions.some(
-        (item) =>
-          item.id !== sessionId &&
-          item.status !== "CANCELLED" &&
-          item.scheduledDate.toISOString().slice(0, 10) === date,
+        (item) => {
+          if (item.id === sessionId || item.status === "CANCELLED") return false;
+          const existingStart = new Date(`${item.scheduledDate.toISOString().slice(0, 10)}T${item.scheduledTime}:00Z`).getTime();
+          return requestedStart < existingStart + item.durationMinutes * 60_000
+            && existingStart < requestedStart + slot.durationMinutes * 60_000;
+        },
       )
     )
       throw new ManagedCourseError(
-        "Une autre séance est déjà prévue ce jour dans ce dossier.",
+        "Cet horaire chevauche une autre séance du dossier.",
       );
     if (session.teacherId) await lockTeacherSchedule(tx, session.teacherId);
     await tx.managedCourseSession.update({
