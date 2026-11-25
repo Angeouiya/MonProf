@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createJiti } from "jiti";
+import ts from "typescript";
+import { runInNewContext } from "node:vm";
 
 const jiti = createJiti(import.meta.url, { alias: { "@": path.resolve("src") } });
 const { normalizeTeacherPhone } = await jiti.import("../src/lib/teacher-portal.ts");
@@ -63,4 +65,25 @@ for (const file of ["src/app/connexion/page.tsx", "src/app/(public-admin)/admin/
   assert.match(source, /window\.location\.replace/);
   assert.doesNotMatch(source, /router\.prefetch|signOut/);
 }
+// Exercise the actual edge helpers without booting the generated OpenNext
+// worker or giving a unit test any production credentials/bindings.
+const worker = readFileSync("cloudflare-worker.ts", "utf8");
+const ast = ts.createSourceFile("worker.ts", worker, ts.ScriptTarget.ESNext, true);
+const names = ["readSessionCookie", "redirectPublicNavigationToCanonicalHost", "respondToAnonymousSessionProbe"];
+const helpers = ast.statements.filter((statement) => ts.isFunctionDeclaration(statement) && names.includes(statement.name?.text)).map((statement) => statement.getText(ast)).join("\n");
+assert.equal(ast.statements.filter((statement) => ts.isFunctionDeclaration(statement) && names.includes(statement.name?.text)).length, names.length);
+const javascript = ts.transpileModule(helpers, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+const edge = runInNewContext(`${javascript}\n({ ${names.join(", ")} });`, { Request, Response, URL });
+for (const cookie of ["__Secure-next-auth.session-token=qa-token", "__Secure-next-auth.session-token.0=qa-first; __Secure-next-auth.session-token.1=qa-second", "next-auth.session-token.0=qa-local"]) {
+  assert.ok(edge.readSessionCookie(cookie));
+  const navigation = new Request("https://competence.ci/admin", { headers: { Accept: "text/html", Cookie: cookie } });
+  assert.equal(edge.redirectPublicNavigationToCanonicalHost(navigation), null);
+  assert.equal(edge.respondToAnonymousSessionProbe(new Request("https://competence.ci/api/auth/me", { headers: { Cookie: cookie } })), null);
+}
+assert.equal(edge.readSessionCookie("next-auth.csrf-token=qa-csrf"), null);
+const anonymousNavigation = new Request("https://competence.ci/connexion", { headers: { Accept: "text/html" } });
+assert.equal(edge.redirectPublicNavigationToCanonicalHost(anonymousNavigation).status, 308);
+assert.equal(edge.redirectPublicNavigationToCanonicalHost(new Request("https://competence.ci/api/auth/csrf")), null);
+assert.equal((await edge.respondToAnonymousSessionProbe(new Request("https://competence.ci/api/auth/me")).json()).user, null);
 console.log("PASS legacy phone formats, exact role routing, safe return paths, technical-error distinction and unchanged login password policy");
+console.log("PASS host-only sessions survive canonical navigation and chunked admin JWTs are never treated as anonymous");

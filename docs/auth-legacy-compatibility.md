@@ -11,6 +11,8 @@ Les identifiants existants ne sont ni réinitialisés ni soumis rétroactivement
 - Les anciens appels sans `accountRole` restent compatibles ; ils ne peuvent pas changer le rôle du compte.
 - Les formats téléphoniques local, `+225`, `225` et `00225` convergent vers le même identifiant canonique.
 - Une navigation complète après connexion évite de réutiliser un préchargement anonyme d’une page protégée.
+- Une session historique sur `competence.ci` conserve son domaine : elle n’est pas redirigée vers `www.competence.ci` en perdant son cookie. Cette exception de navigation ne remplace jamais la validation du JWT ou des permissions.
+- Les cookies JWT découpés par NextAuth (`session-token.0`, `.1`, etc.) sont reconnus à l’edge, notamment pour les administrateurs ayant beaucoup de permissions. Ils ne passent plus par le raccourci « utilisateur anonyme » ; NextAuth vérifie toujours leur signature.
 - Les erreurs de service, session/cookies, mauvais espace et accès temporaire expiré sont distinctes des identifiants invalides.
 - Les comptes désactivés et mots de passe temporaires expirés restent refusés. La récupération contrôlée existante reste obligatoire.
 

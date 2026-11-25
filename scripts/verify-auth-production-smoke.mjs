@@ -38,5 +38,19 @@ for (const origin of ["https://competence.ci", "https://www.competence.ci"]) {
   assert.equal(denied.status, 401, "Invalid credentials must not cause a CSRF redirect or service failure");
   assert.equal(new URL(result.url, origin).searchParams.get("error"), "CredentialsSignin");
   const final = await request("/api/auth/me"); assert.equal((await final.json()).user, null);
+  if (origin === "https://competence.ci") {
+    const canonical = await request("/connexion", { headers: { Accept: "text/html" } });
+    assert.equal(canonical.status, 308);
+    assert.equal(new URL(canonical.headers.get("location")).hostname, "www.competence.ci");
+    // A forged cookie must skip the cross-host redirect, but must NEVER grant
+    // access. No valid personal session/token is used for this negative test.
+    const privateRoute = await request("/admin/accompagnement", { headers: { Accept: "text/html", Cookie: "__Secure-next-auth.session-token=qa-invalid-session" } });
+    assert.equal(privateRoute.status, 307);
+    const login = new URL(privateRoute.headers.get("location"), origin);
+    assert.equal(login.hostname, "competence.ci"); assert.equal(login.pathname, "/admin/connexion");
+    const chunkedProbe = await request("/api/auth/me", { headers: { Cookie: "__Secure-next-auth.session-token.0=qa-invalid-chunk" } });
+    assert.equal(chunkedProbe.headers.get("x-competence-session-fast-path"), null, "Chunked cookies must reach NextAuth instead of anonymous edge shortcut");
+    assert.equal((await chunkedProbe.json()).user, null, "Forged chunked cookie must not authenticate");
+  }
   console.log(`PASS ${origin}: health, three login routes, host cookies/CSRF and invalid-login refusal; no account modified`);
 }

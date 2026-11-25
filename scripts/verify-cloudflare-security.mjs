@@ -28,6 +28,7 @@ const checks = [
   ["clé de compteur non réversible", worker.includes('crypto.subtle.digest("SHA-256"')],
   ["taille des requêtes bornée", worker.includes("maximumRequestBytes") && worker.includes("413")],
   ["origine des mutations contrôlée", worker.includes("isAllowedMutationOrigin")],
+  ["sessions historiques conservées sur leur domaine", /function redirectPublicNavigationToCanonicalHost[\s\S]*?if \(readSessionCookie\(request\.headers\.get\("cookie"\)\)\) return null;[\s\S]*?Response\.redirect/.test(worker)],
   ["CSP minimale appliquée", worker.includes('"content-security-policy"') && worker.includes("object-src 'none'")],
   ["en-têtes anti-interprétation", worker.includes('"x-content-type-options"') && worker.includes('"nosniff"')],
   ["HSTS Next actif", nextConfig.includes("Strict-Transport-Security")],

@@ -252,6 +252,11 @@ function redirectPublicNavigationToCanonicalHost(request: Request) {
   // API requests remain on their current host so a stale, already-open page
   // can finish authentication without losing its host-only CSRF cookie.
   if (url.pathname.startsWith("/api/")) return null;
+  // Existing sessions are host-only too. Keep their navigation on this host:
+  // redirecting an authenticated document to www would drop its session. Cookie
+  // presence only skips canonicalization; NextAuth still validates the token
+  // and every private route still enforces its role/permissions.
+  if (readSessionCookie(request.headers.get("cookie"))) return null;
   const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
   const navigation = request.headers.get("sec-fetch-mode") === "navigate";
   if (!acceptsHtml && !navigation) return null;
@@ -690,7 +695,9 @@ function readSessionCookie(cookieHeader: string | null) {
     const separator = part.indexOf("=");
     if (separator < 1) continue;
     const name = part.slice(0, separator).trim();
-    if (!sessionNames.has(name)) continue;
+    // NextAuth splits large JWT cookies into .0, .1, ... chunks (notably
+    // permission-rich admin sessions). They are not anonymous requests.
+    if (!sessionNames.has(name.replace(/\.\d+$/, ""))) continue;
     const value = part.slice(separator + 1).trim();
     if (value) return value.slice(0, 1_024);
   }
