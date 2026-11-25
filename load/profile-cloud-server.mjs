@@ -1,7 +1,8 @@
-const assert = require("node:assert/strict");
-const inspector = require("node:inspector");
-const fs = require("node:fs");
-const path = require("node:path");
+import assert from "node:assert/strict";
+import inspector from "node:inspector";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 assert.equal(process.platform, "linux");
 assert.equal(process.env.GITHUB_ACTIONS, "true");
 assert.equal(process.env.GITHUB_REPOSITORY, "Angeouiya/MonProf");
@@ -26,7 +27,7 @@ process.on("message", async message => {
         const frame = nodes.get(id).callFrame;
         let excerpt = "";
         try {
-          const filename = frame.url.startsWith("file:") ? require("node:url").fileURLToPath(frame.url) : frame.url;
+          const filename = frame.url.startsWith("file:") ? fileURLToPath(frame.url) : frame.url;
           if (filename.includes(".next/") || filename.includes(".next\\")) {
             const line = fs.readFileSync(filename,"utf8").split(/\r?\n/)[frame.lineNumber] || "";
             excerpt = line.slice(Math.max(0,frame.columnNumber-40),frame.columnNumber+180);
@@ -39,4 +40,4 @@ process.on("message", async message => {
     }
   } catch (error) { process.send({ type:message.command+":done", error:error.message }); }
 });
-require(path.resolve(".next/standalone/server.js"));
+await import(pathToFileURL(path.resolve(".next/standalone/server.js")).href);

@@ -35,7 +35,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: node scripts/verify-cloud-capacity-safety.mjs
       - run: node scripts/verify-cloud-gateway.mjs
-      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/profile-cloud-server.cjs scripts/lib/capacity-cloud-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-managed-postgres.mjs
+      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/profile-cloud-server.mjs scripts/lib/capacity-cloud-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-managed-postgres.mjs
       - run: npm run build
       - name: Install pinned ephemeral PostgreSQL
         run: npm install --prefix "$RUNNER_TEMP/competence-pg" --no-audit --no-fund embedded-postgres@17.12.0-beta.19

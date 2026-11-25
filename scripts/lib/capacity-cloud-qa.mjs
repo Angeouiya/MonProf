@@ -59,7 +59,7 @@ export async function verifyCloudCapacity({ client, check }) {
   try {
     for (const port of ports) {
       const log = createWriteStream(path.join(directory,"application-"+port+".log"));logs.push(log);
-      const server = spawn(process.execPath,[diagnosticOnly?"load/profile-cloud-server.cjs":".next/standalone/server.js"],{env:{...env,PORT:String(port),CAPACITY_PROFILE_DIR:directory},stdio:diagnosticOnly?["ignore","pipe","pipe","ipc"]:["ignore","pipe","pipe"]});servers.push(server);server.stdout.pipe(log);server.stderr.pipe(log);
+      const server = spawn(process.execPath,[diagnosticOnly?"load/profile-cloud-server.mjs":".next/standalone/server.js"],{env:{...env,PORT:String(port),CAPACITY_PROFILE_DIR:directory},stdio:diagnosticOnly?["ignore","pipe","pipe","ipc"]:["ignore","pipe","pipe"]});servers.push(server);server.stdout.pipe(log);server.stderr.pipe(log);
     }
     await new Promise(resolve=>gateway.server.listen(3334,"127.0.0.1",resolve));
     for (let attempt=0;attempt<90;attempt++) {
