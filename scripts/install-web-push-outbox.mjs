@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
-const ddlDatabaseUrl = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
+const ddlDatabaseUrl =
+  process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
 if (!ddlDatabaseUrl) {
-  throw new Error("DIRECT_URL or DATABASE_URL is required to install the Web Push outbox.");
+  throw new Error(
+    "DIRECT_URL or DATABASE_URL is required to install the Web Push outbox.",
+  );
 }
 
 // Creating functions and triggers requires the migration role. Production keeps
@@ -15,7 +18,7 @@ const statements = [
     RETURNS trigger
     LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = competence, public
+    SET search_path = pg_catalog, competence
     AS $$
     BEGIN
       IF NEW."recipientType" = 'CLIENT' AND COALESCE(NEW."userId", NEW."clientId") IS NOT NULL THEN
@@ -50,7 +53,7 @@ const statements = [
     RETURNS trigger
     LANGUAGE plpgsql
     SECURITY DEFINER
-    SET search_path = competence, public
+    SET search_path = pg_catalog, competence
     AS $$
     BEGIN
       INSERT INTO competence."WebPushOutbox" (
@@ -77,12 +80,33 @@ const statements = [
     AFTER INSERT ON competence."TeacherNotification"
     FOR EACH ROW EXECUTE FUNCTION competence.enqueue_teacher_web_push_notification()
   `,
+  `DO $hardening$
+   DECLARE fn text; role_name text;
+   BEGIN
+     FOREACH fn IN ARRAY ARRAY['enqueue_web_push_notification', 'enqueue_teacher_web_push_notification'] LOOP
+       EXECUTE format('REVOKE EXECUTE ON FUNCTION competence.%I() FROM PUBLIC', fn);
+       FOREACH role_name IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
+           EXECUTE format('REVOKE EXECUTE ON FUNCTION competence.%I() FROM %I', fn, role_name);
+         END IF;
+       END LOOP;
+       FOREACH role_name IN ARRAY ARRAY['competence_runtime', 'competence_app', 'service_role'] LOOP
+         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
+           EXECUTE format('GRANT EXECUTE ON FUNCTION competence.%I() TO %I', fn, role_name);
+         END IF;
+       END LOOP;
+     END LOOP;
+   END;
+   $hardening$`,
 ];
 
 try {
-  for (const statement of statements) {
-    await db.$executeRawUnsafe(statement);
-  }
+  await db.$transaction(
+    async (tx) => {
+      for (const statement of statements) await tx.$executeRawUnsafe(statement);
+    },
+    { timeout: 30_000 },
+  );
 
   const installed = await db.$queryRaw`
     SELECT trigger_name
@@ -96,7 +120,9 @@ try {
   `;
 
   if (installed.length !== 2) {
-    throw new Error(`Installation incomplète : ${installed.length}/2 déclencheur(s).`);
+    throw new Error(
+      `Installation incomplète : ${installed.length}/2 déclencheur(s).`,
+    );
   }
 
   console.log("Web Push outbox : 2 déclencheurs PostgreSQL installés.");

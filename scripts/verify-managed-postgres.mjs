@@ -225,6 +225,8 @@ try {
   check(
     "Additive migration preserves historical clients and professors byte-for-byte",
   );
+  const hardeningQa = await import("./lib/sql-hardening-qa.mjs");
+  await hardeningQa.verifySqlHardening({ client, db, teacher, oldClient, check });
   await db.teacherPreciseLevel.createMany({
     data: ["ivoirien", "francais"].map((journey) => ({
       teacherId: teacher.id,
@@ -824,6 +826,10 @@ try {
     futureDate,
     check,
   });
+  if (process.env.MANAGED_QA_LOAD === "true") {
+    const capacityQa = await import("./lib/capacity-local-qa.mjs");
+    await capacityQa.verifyLocalCapacity({ client, check });
+  }
   mkdirSync("output/managed-qa", { recursive: true });
   writeFileSync(
     "output/managed-qa/postgres-results.json",

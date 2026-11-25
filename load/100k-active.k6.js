@@ -1,10 +1,18 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
+import { assertLoadTarget, assertLoadProof } from "./target-policy.mjs";
 
 const baseUrl = (__ENV.BASE_URL || "").replace(/\/$/, "");
-if (!baseUrl) throw new Error("BASE_URL est obligatoire.");
-if (/https:\/\/(www\.)?competence\.ci$/i.test(baseUrl) && __ENV.ALLOW_PRODUCTION !== "true") {
-  throw new Error("Le test 100k est bloqué sur la production. Utilisez un environnement de charge dédié.");
+assertLoadTarget(baseUrl, {
+  distributed: __ENV.EXECUTE_DISTRIBUTED_100K === "true",
+  runId: __ENV.CAPACITY_RUN_ID,
+});
+
+export function setup() {
+  const response = http.get(`${baseUrl}/__load/identity`, { redirects: 0 });
+  if (response.status !== 200)
+    throw new Error("No isolated environment proof.");
+  assertLoadProof(response.json(), __ENV.CAPACITY_RUN_ID);
 }
 
 export const options = {
@@ -39,13 +47,15 @@ const publicJourneys = [
 ];
 
 export default function activeUserJourney() {
-  const route = publicJourneys[Math.floor(Math.random() * publicJourneys.length)];
+  const route =
+    publicJourneys[Math.floor(Math.random() * publicJourneys.length)];
   const response = http.get(`${baseUrl}${route}`, {
     headers: { "User-Agent": "Competence-Distributed-Capacity-Test/1.0" },
     tags: { route },
   });
   check(response, {
-    "statut HTTP acceptable": (result) => result.status >= 200 && result.status < 400,
+    "statut HTTP acceptable": (result) =>
+      result.status >= 200 && result.status < 400,
     "réponse non vide": (result) => result.body?.length > 0,
   });
   sleep(2 + Math.random() * 6);

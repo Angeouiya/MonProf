@@ -106,7 +106,7 @@ export async function flushWebPushOutbox(limit = DEFAULT_BATCH_SIZE): Promise<We
     WITH candidates AS (
       SELECT "id"
       FROM competence."WebPushOutbox"
-      WHERE (
+      WHERE "status" IN ('PENDING', 'FAILED', 'PARTIAL', 'PROCESSING') AND (
         ("status" IN ('PENDING', 'FAILED', 'PARTIAL') AND "nextAttemptAt" <= NOW())
         OR ("status" = 'PROCESSING' AND "updatedAt" < NOW() - INTERVAL '5 minutes')
       )

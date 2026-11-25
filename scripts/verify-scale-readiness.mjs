@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 
 const root = process.cwd();
 const checks = [];
@@ -18,10 +19,12 @@ const clientLayout = read("src/app/client/layout.tsx");
 const publicHome = read("src/app/page.tsx");
 const teacherSearch = read("src/app/professeurs/page.tsx");
 const settings = read("src/lib/platform-settings.ts");
-const vercelConfig = JSON.parse(read("vercel.json"));
+const workerConfig = ts.parseConfigFileTextToJson("wrangler.jsonc", read("wrangler.jsonc"));
+if (workerConfig.error) throw new Error("Invalid Cloudflare configuration");
 
 record("Objectif de charge versionné", fs.existsSync(path.join(root, "docs", "SCALE_100K.md")));
 record("Profil k6 distribué 100k versionné", fs.existsSync(path.join(root, "load", "100k-active.k6.js")));
+record("Protocole 500k et profil distincts de la certification", fs.existsSync(path.join(root, "docs", "SCALE_500K.md")) && fs.existsSync(path.join(root, "load", "500k-active.k6.js")));
 record("Contrôle de capacité inclus dans build:quality", packageJson.scripts?.["build:quality"]?.includes("verify:scale-readiness"));
 record(
   "Prisma est isolé par requête Cloudflare",
@@ -55,11 +58,15 @@ record(
     && realtime.includes("lastStateCheckAt.current < NOTIFICATION_STATE_RECHECK_MS"),
 );
 record("Web Push traité par lots", /MAX_BATCH_SIZE\s*=\s*500/.test(webPush));
-record("Web Push publié dans une file durable", webPushQueue.includes('WEB_PUSH_QUEUE_TOPIC = "web-push-events"'));
+record("Web Push publié dans une file durable Cloudflare", webPushQueue.includes('sendCloudflareQueueMessage("WEB_PUSH_QUEUE", message)'));
 record(
-  "Consommateurs de files configurés dans Vercel",
-  JSON.stringify(vercelConfig.functions ?? {}).includes("web-push-events")
-    && JSON.stringify(vercelConfig.functions ?? {}).includes("communication-campaigns"),
+  "Consommateurs Cloudflare présents et concurrence bornée",
+  ["production", "staging"].every(environment => {
+    const consumers = workerConfig.config.env?.[environment]?.queues?.consumers ?? [];
+    return consumers.length === 3
+      && ["web-push-events", "communication-campaigns", "password-email-events"].every(suffix => consumers.some(consumer => consumer.queue.endsWith(suffix)))
+      && consumers.every(consumer => consumer.max_batch_size === 1 && Number.isInteger(consumer.max_concurrency) && consumer.max_concurrency <= 4);
+  }),
 );
 
 for (const check of checks) {
@@ -68,8 +75,8 @@ for (const check of checks) {
 
 const failed = checks.filter((check) => !check.ok);
 if (failed.length > 0) {
-  console.error(`FAIL Prêt pour charge 100k : ${failed.length} garde-fou(s) absent(s).`);
+  console.error(`FAIL Capacité : ${failed.length} garde-fou(s) absent(s).`);
   process.exitCode = 1;
 } else {
-  console.log("OK Architecture applicative prête pour un essai de charge distribué à 100 000 actifs.");
+  console.log("OK Garde-fous de capacité présents. Aucun résultat statique ne certifie 100k/500k utilisateurs simultanés.");
 }

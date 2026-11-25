@@ -1,4 +1,6 @@
-# Capacité cible : plus de 100 000 utilisateurs actifs
+# Ancien objectif 100 000 — remplacé par la cible 500 000
+
+Voir [le protocole actuel 500 000](SCALE_500K.md). Ce document décrit l'ancien objectif, pas une certification de capacité. Les instructions Vercel ci-dessous sont historiques ; la production utilise désormais Cloudflare et Hyperdrive. Le profil 100k exige maintenant une preuve d'isolation et ne permet plus l'option `ALLOW_PRODUCTION`.
 
 ## Architecture verrouillée dans le code
 

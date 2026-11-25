@@ -53,9 +53,9 @@
           { "binding": "PASSWORD_EMAIL_QUEUE", "queue": "competence-staging-password-email-events" }
         ],
         "consumers": [
-          { "queue": "competence-staging-web-push-events", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 6 },
-          { "queue": "competence-staging-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
-          { "queue": "competence-staging-password-email-events", "max_batch_size": 1, "max_batch_timeout": 1, "max_retries": 10, "dead_letter_queue": "competence-staging-password-email-dead-letter" }
+          { "queue": "competence-staging-web-push-events", "max_batch_size": 1, "max_concurrency": 4, "max_batch_timeout": 1, "max_retries": 6 },
+          { "queue": "competence-staging-communication-campaigns", "max_batch_size": 1, "max_concurrency": 2, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-staging-password-email-events", "max_batch_size": 1, "max_concurrency": 2, "max_batch_timeout": 1, "max_retries": 10, "dead_letter_queue": "competence-staging-password-email-dead-letter" }
         ]
       }
     },
@@ -109,9 +109,9 @@
           { "binding": "PASSWORD_EMAIL_QUEUE", "queue": "competence-password-email-events" }
         ],
         "consumers": [
-          { "queue": "competence-web-push-events", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 6 },
-          { "queue": "competence-communication-campaigns", "max_batch_size": 10, "max_batch_timeout": 5, "max_retries": 6 },
-          { "queue": "competence-password-email-events", "max_batch_size": 1, "max_batch_timeout": 1, "max_retries": 10, "dead_letter_queue": "competence-password-email-dead-letter" }
+          { "queue": "competence-web-push-events", "max_batch_size": 1, "max_concurrency": 4, "max_batch_timeout": 1, "max_retries": 6 },
+          { "queue": "competence-communication-campaigns", "max_batch_size": 1, "max_concurrency": 2, "max_batch_timeout": 5, "max_retries": 6 },
+          { "queue": "competence-password-email-events", "max_batch_size": 1, "max_concurrency": 2, "max_batch_timeout": 1, "max_retries": 10, "dead_letter_queue": "competence-password-email-dead-letter" }
         ]
       }
     }
