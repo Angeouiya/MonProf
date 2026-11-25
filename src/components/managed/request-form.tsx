@@ -14,8 +14,8 @@ import {
 import styles from "./managed-public.module.css";
 import { ManagedCountryFlag } from "./country-flag";
 import { defaultManagedWeeklySlots, managedWeeklySessions, orderedManagedSessions, MANAGED_MAX_SESSIONS, MANAGED_MAX_WEEKS, MANAGED_MAX_WEEKLY_SLOTS, MANAGED_WEEK_DAYS, type ManagedScheduleRule, type ManagedWeeklySlot } from "@/lib/managed-course-schedule";
+import { managedMoney as money, managedScheduleDate, managedDueDate } from "@/lib/managed-display-format";
 
-const money = (value: number) => `${value.toLocaleString("fr-FR")} F CFA`;
 const steps = ["Cours", "Séances", "Contact"];
 type ValidatedControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
@@ -31,6 +31,9 @@ export function ManagedRequestForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
+  // Mount a step only when first reached, then retain its uncontrolled fields
+  // for back/forward navigation and the final FormData submission.
+  const [visitedSteps, setVisitedSteps] = useState(1);
   const [journey, setJourney] = useState(initialJourney);
   const [className, setClassName] = useState("6e");
   const [subjectId, setSubjectId] = useState("");
@@ -100,6 +103,7 @@ export function ManagedRequestForm({
   }
 
   function showStep(next: number) {
+    setVisitedSteps((visited) => visited | (1 << next));
     setStep(next);
     setError("");
     requestAnimationFrame(() => {
@@ -209,7 +213,7 @@ export function ManagedRequestForm({
             </div>
           </div>
         </section>
-        <section data-form-step="1" hidden={step !== 1} aria-labelledby="managed-sessions-heading">
+        {(visitedSteps & 2) !== 0 && <section data-form-step="1" hidden={step !== 1} aria-labelledby="managed-sessions-heading">
           <div className={styles.stepHeading}><h2 id="managed-sessions-heading" tabIndex={-1}>À votre rythme.</h2><p>Chaque séance dure 2 heures.</p></div>
           <div className={styles.fields}>
             <div className={`${styles.choices} ${styles.full}`} role="group" aria-label="Organisation des séances">
@@ -227,7 +231,7 @@ export function ManagedRequestForm({
               <output className={`${styles.full} ${styles.scheduleMath}`} aria-live="polite">{frequency} séance{frequency > 1 ? "s" : ""} × {weeks} semaine{weeks > 1 ? "s" : ""}<strong>{number} séances</strong><small>4 semaines = 28 jours. Le règlement mensuel reste distinct.</small></output>
               {sessions.length > 0 && <details className={`${styles.disclosure} ${styles.full}`}>
                 <summary>Voir les {sessions.length} dates calculées<ChevronDown size={15} aria-hidden="true" /></summary>
-                <div className={styles.calculatedDates}>{sessions.map((session, index) => <div key={`${session.date}:${session.time}`}><span>{index + 1}</span><span>{new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${session.date}T00:00:00Z`))}</span><strong>{session.time} · 2 h</strong></div>)}</div>
+                <div className={styles.calculatedDates}>{sessions.map((session, index) => <div key={`${session.date}:${session.time}`}><span>{index + 1}</span><span>{managedScheduleDate(session.date)}</span><strong>{session.time} · 2 h</strong></div>)}</div>
                 <button type="button" className={styles.secondaryButton} onClick={() => chooseScheduleMode("DATES", true)}>Personnaliser ces dates</button>
               </details>}
             </> : <>
@@ -237,8 +241,8 @@ export function ManagedRequestForm({
             {scheduleError && <p className={`${styles.full} ${styles.scheduleError}`} role="alert">{scheduleError}</p>}
             <label className={`${styles.field} ${styles.full}`}>Fréquence de paiement<select className={styles.input} value={cadence} onChange={(event) => setCadence(event.target.value)}><option value="WEEKLY">Chaque semaine</option><option value="FORTNIGHTLY">Toutes les deux semaines</option><option value="MONTHLY">Chaque mois</option></select></label>
           </div>
-        </section>
-        <section data-form-step="2" hidden={step !== 2} aria-labelledby="managed-contact-heading">
+        </section>}
+        {(visitedSteps & 4) !== 0 && <section data-form-step="2" hidden={step !== 2} aria-labelledby="managed-contact-heading">
           <div className={styles.stepHeading}><h2 id="managed-contact-heading" tabIndex={-1}>On vous rappelle.</h2><p>Un dernier détail pour vous accompagner.</p></div>
           <div className={styles.recap}><BookOpen size={21} aria-hidden="true" /><div>{journey === "ivoirien" ? "Ivoirien" : "Français"} · {className} · {selectedSubject?.label}<small>{sessions.length} séances de 2 h · {format === "HOME" ? "À domicile" : "En ligne"}</small></div></div>
           <div className={styles.fields}>
@@ -254,11 +258,11 @@ export function ManagedRequestForm({
           <details className={styles.disclosure} style={{ marginTop: 22 }}>
             <summary>Échéancier et engagements<ChevronDown size={15} aria-hidden="true" /></summary>
             <p>Vous réglez Compétence hors ligne. Aucun supplément sans votre accord.</p>
-            {installments.map((item) => <div className={styles.installment} key={item.dueDate}><span>{new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${item.dueDate}T00:00:00Z`))}</span><strong>{money(item.amount)}</strong></div>)}
+            {installments.map((item) => <div className={styles.installment} key={item.dueDate}><span>{managedDueDate(item.dueDate)}</span><strong>{money(item.amount)}</strong></div>)}
             <ol className={styles.termsList}>{MANAGED_PARENT_TERMS.map((term) => <li key={term}>{term}</li>)}</ol>
           </details>
           {!admin ? <label className={styles.consent}><input name="accepted" type="checkbox" required /><span>J'accepte les dates, le montant, l'échéancier et les <a href="/engagements-accompagnement" target="_blank" rel="noopener noreferrer">conditions d'accompagnement</a>. J'ai lu la <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer">confidentialité</a>.</span></label> : <p className={styles.consent}>L'accord du parent sera recueilli par lien privé avant attribution.</p>}
-        </section>
+        </section>}
       </fieldset>
       <div className={styles.summary} aria-live="polite" aria-atomic="true"><div><p>{validCount ? number : "—"} séances · 2 h chacune</p><small>{money(price.perSession)} / séance</small></div><strong>{validCount ? money(price.total) : "—"}</strong></div>
       <input name="website" aria-hidden="true" tabIndex={-1} autoComplete="off" hidden />

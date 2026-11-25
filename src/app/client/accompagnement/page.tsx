@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requireClient } from "@/lib/session";
 import { ManagedAction } from "@/components/managed/action";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
+import { managedMoney as money, managedSessionDate } from "@/lib/managed-display-format";
 import styles from "@/components/managed/workspace.module.css";
-const money = (n: number) => `${n.toLocaleString("fr-FR")} F CFA`;
 export const dynamic = "force-dynamic";
 export default async function ManagedClientCourses({
   searchParams,
@@ -119,9 +119,7 @@ export default async function ManagedClientCourses({
               <div className={styles.session} key={s.id}>
                 <strong>
                   Séance {s.sequence} ·{" "}
-                  {s.scheduledDate.toLocaleDateString("fr-FR", {
-                    timeZone: "Africa/Abidjan",
-                  })}{" "}
+                  {managedSessionDate(s.scheduledDate)}{" "}
                   à {s.scheduledTime} · 2 h
                 </strong>
                 <p className={styles.muted}>

@@ -573,8 +573,12 @@ assert.match(
 assert.equal(
   (managedForm.match(/data-form-step="[012]" hidden=/g) || []).length,
   3,
-  "Les trois étapes restent montées pour préserver les champs et FormData",
+  "Les trois étapes conservent leur visibilité explicite",
 );
+assert.match(managedForm, /setVisitedSteps\(\(visited\) => visited \| \(1 << next\)\)/,
+  "Une étape déjà visitée reste montée pour préserver les champs et FormData");
+assert.match(managedForm, /\(visitedSteps & 2\) !== 0 && <section data-form-step="1"/);
+assert.match(managedForm, /\(visitedSteps & 4\) !== 0 && <section data-form-step="2"/);
 assert.match(
   managedForm,
   /control\.checkValidity\(\)/,

@@ -1,4 +1,4 @@
-name: Compétence cloud CPU diagnostic
+name: Compétence isolated cloud 100k
 on:
   push:
     branches: [codex/cloud-capacity-100k]
@@ -22,7 +22,6 @@ jobs:
       MANAGED_LESSONS_ENABLED: 'true'
       WEB_PUSH_QUEUE_DISABLED: 'true'
       CAPACITY_PUBLIC_REPOSITORY: 'true'
-      CAPACITY_DIAGNOSTIC_ONLY: 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,15 +34,22 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: node scripts/verify-cloud-capacity-safety.mjs
       - run: node scripts/verify-cloud-gateway.mjs
-      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/profile-cloud-server.mjs scripts/lib/capacity-cloud-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-managed-postgres.mjs
+      - run: npx tsx scripts/verify-managed-display-format.ts
+      - run: npm run build:quality
+      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/profile-cloud-server.mjs scripts/lib/capacity-cloud-qa.mjs scripts/lib/managed-form-browser-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-managed-postgres.mjs
       - run: npm run build
       - name: Install pinned ephemeral PostgreSQL
         run: npm install --prefix "$RUNNER_TEMP/competence-pg" --no-audit --no-fund embedded-postgres@17.12.0-beta.19
+      - name: Install pinned functional browser (not used during load)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/competence-browser" --no-audit --no-fund playwright@1.65.1
+          node "$RUNNER_TEMP/competence-browser/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Real isolated SQL and cloud HTTP capacity
         env:
           MANAGED_QA_CLOUD_LOAD: 'true'
         run: |
           export MANAGED_QA_PG_MODULE="$RUNNER_TEMP/competence-pg/node_modules/embedded-postgres/dist/index.js"
+          export CAPACITY_PLAYWRIGHT_MODULE="$RUNNER_TEMP/competence-browser/node_modules/playwright/index.mjs"
           npm run verify:managed-postgres
       # No upload-artifact/cache actions: reports stay in free workflow logs and
       # the job summary. No production secrets, paid runners, or deployments.
