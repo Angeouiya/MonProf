@@ -98,24 +98,28 @@ const mobileNavPriorityHrefs = [
 
 function adminNavigation(managedMode: boolean) {
   if (!managedMode) return { sections: navSections, secondary: secondaryNavItems };
-  const sections = navSections.map((section) => ({ ...section, items: section.items
-    .filter((item) => !["/admin/marketplace", "/admin/centre-operationnel"].includes(item.href))
-    .map((item): NavItem => item.href === "/admin/reservations"
-      ? { ...item, href: "/admin/accompagnement", label: "Demandes et séances" }
-      : item.href === "/admin/paiements"
-        ? { ...item, href: "/admin/accompagnement/comptabilite", label: "Comptabilité" }
-        : item.href === "/admin/partenariats" ? { ...item, label: "Partenariats historiques" } : item) }));
+  const sections: { title: string; items: NavItem[] }[] = [
+    { title: "Accompagnement", items: [
+      { href: "/admin/accompagnement", label: "Demandes", icon: CalendarRange, permission: "BOOKINGS_VIEW" },
+      ...navSections[1].items,
+    ] },
+    { title: "Gestion", items: [
+      { href: "/admin/accompagnement/comptabilite", label: "Comptabilité", icon: Wallet, permission: "FINANCE_VIEW" },
+      ...navSections[2].items.filter((item) => ["/admin/communication", "/admin/parametres"].includes(item.href)),
+    ] },
+  ];
   const history = navSections.flatMap((section) => section.items)
     .filter((item) => ["/admin/reservations", "/admin/paiements", "/admin/marketplace", "/admin/centre-operationnel"].includes(item.href))
     .map((item) => ({ ...item, label: `Historique · ${item.label}` }));
-  return { sections, secondary: [...history, ...secondaryNavItems] };
+  const additional = navSections[2].items.filter((item) => ["/admin/messages", "/admin/partenariats", "/admin/mon-compte"].includes(item.href)).map((item) => item.href === "/admin/partenariats" ? { ...item, label: "Partenariats historiques" } : item);
+  return { sections, secondary: [...additional, ...history, ...secondaryNavItems] };
 }
 
 function buildAdminMobileNavItems(permissions: AdminPermission[], managedMode = false) {
   const availableItems = adminNavigation(managedMode).sections
     .flatMap((section) => section.items)
     .filter((item) => !item.hideInList && hasAdminPermission(permissions, item.permission));
-  const priority: readonly string[] = managedMode ? ["/admin", "/admin/accompagnement", "/admin/professeurs", "/admin/accompagnement/comptabilite", "/admin/communication", "/admin/clients"] : mobileNavPriorityHrefs;
+  const priority: readonly string[] = managedMode ? ["/admin/accompagnement", "/admin/professeurs", "/admin/accompagnement/comptabilite", "/admin/communication", "/admin/clients"] : mobileNavPriorityHrefs;
   const priorityItems = priority
     .map((href) => availableItems.find((item) => item.href === href))
     .filter((item): item is NavItem => Boolean(item));
@@ -285,7 +289,7 @@ function AdminMobileBottomNav({
               )} data-admin-mobile-icon-shell>
                 <item.icon className="h-[1.1rem] w-[1.1rem]" />
               </span>
-              <span className="max-w-full truncate px-0.5" data-admin-mobile-label>{item.href === "/admin/accompagnement" ? "Demandes" : item.label}</span>
+              <span className="max-w-full truncate px-0.5" data-admin-mobile-label>{item.href === "/admin/accompagnement" ? "Cours" : item.href === "/admin/professeurs" ? "Profs" : item.href === "/admin/accompagnement/comptabilite" ? "Finances" : item.href === "/admin/communication" ? "Alertes" : item.label}</span>
               {badge > 0 && (
                 <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">
                   {badge > 99 ? "99+" : badge}
@@ -325,7 +329,7 @@ function SidebarContent({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav data-admin-sidebar-nav className="admin-sidebar-main-nav min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
-        {(summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
+        {!managedMode && (summary.total > 0 || summary.urgent > 0 || summary.teacher > 0 || summary.payment > 0) && (
           <div className="rounded-lg border border-[#E6EAF3] bg-white p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">Radar admin</p>

@@ -11,10 +11,12 @@ const methods = [
 const reason = {
   name: "reason",
   label: "Motif détaillé et décision convenue avec les parties",
+  minLength: 10,
 };
 const note = {
   name: "note",
   label: "Motif détaillé et justificatif de rapprochement",
+  minLength: 10,
 };
 export async function ManagedAdminOperations({
   dossier,

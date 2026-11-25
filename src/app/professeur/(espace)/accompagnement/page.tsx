@@ -1,39 +1,57 @@
 import Link from "next/link";
+import { CalendarDays, Phone, ArrowUpRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireTeacher } from "@/lib/teacher-auth";
-import {
-  managedSplit,
-  managedTeacherTerms,
-} from "@/lib/managed-courses-core";
+import { managedSplit, managedTeacherTerms } from "@/lib/managed-courses-core";
 import { ManagedAction } from "@/components/managed/action";
 import { WebPushControl } from "@/components/shared/web-push-control";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
+import {
+  managedAvailableBalance,
+  managedCanDeclareDone,
+  managedProfessorOfferWhere,
+  managedStartsInFuture,
+} from "@/lib/managed-workspace";
+import styles from "@/components/managed/workspace.module.css";
+
 const money = (amount: number) => `${amount.toLocaleString("fr-FR")} F CFA`;
+const dateLabel = (date: Date) =>
+  date.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Abidjan",
+  });
 export default async function ManagedProfessorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ after?: string }>;
+  searchParams: Promise<{ after?: string; vue?: string }>;
 }) {
   const { teacher } = await requireTeacher();
-  const { after } = await searchParams;
+  const { after, vue } = await searchParams;
+  const history = vue === "historique";
+  const where = managedProfessorOfferWhere(teacher.id, history);
   const cursor = after
     ? await db.managedCourseOffer.findFirst({
-        where: { id: after, teacherId: teacher.id },
+        where: { ...where, id: after },
         select: { offeredAt: true, id: true },
       })
     : null;
   const [offers, total, ledger, held] = await Promise.all([
     db.managedCourseOffer.findMany({
       where: {
-        teacherId: teacher.id,
-        ...(cursor
-          ? {
-              OR: [
-                { offeredAt: { lt: cursor.offeredAt } },
-                { offeredAt: cursor.offeredAt, id: { lt: cursor.id } },
-              ],
-            }
-          : {}),
+        AND: [
+          where,
+          ...(cursor
+            ? [
+                {
+                  OR: [
+                    { offeredAt: { lt: cursor.offeredAt } },
+                    { offeredAt: cursor.offeredAt, id: { lt: cursor.id } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: [{ offeredAt: "desc" }, { id: "desc" }],
       take: 21,
@@ -45,7 +63,7 @@ export default async function ManagedProfessorPage({
     }),
     db.managedTeacherLedgerEntry.findMany({
       where: { teacherId: teacher.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 30,
     }),
     db.managedCourseSession.aggregate({
@@ -53,79 +71,197 @@ export default async function ManagedProfessorPage({
       _sum: { creditedTeacherAmount: true },
     }),
   ]);
+  const balance = total._sum.amountDelta ?? 0;
+  const retained = Math.min(
+    Math.max(0, balance),
+    held._sum.creditedTeacherAmount ?? 0,
+  );
   const page = offers.slice(0, 20);
   const endpoint = "/api/professor/managed-courses";
   return (
-    <main className="mx-auto max-w-5xl space-y-7 bg-white p-4 text-slate-900 sm:p-7">
-      <header>
-        <h1 className="text-3xl font-semibold">Mon accompagnement</h1>
-        <p className="mt-2 leading-7 text-slate-600">
-          Vos missions confiées par Compétence et votre rémunération. Aucun
-          rechargement nécessaire.
-        </p>
+    <div className={styles.page}>
+      <header className={styles.heading}>
+        <div>
+          <p className={styles.eyebrow}>Espace professeur</p>
+          <h1>Bonjour {teacher.fullName.split(" ")[0]}</h1>
+          <p className={`${styles.muted} mt-2`}>
+            Vos missions, votre planning et votre rémunération.
+          </p>
+        </div>
+        <Link className={styles.button} href="/professeur/disponibilites">
+          <CalendarDays size={17} /> Mon planning
+        </Link>
       </header>
-      <div className="rounded-2xl border border-slate-300 p-6">
-        <p className="text-sm text-slate-600">Reste à vous payer</p>
-        <strong className="mt-2 block text-3xl">
-          {money(total._sum.amountDelta ?? 0)}
-        </strong>
-        <p className="mt-3 text-sm leading-6">
-          Séances validées, financées par le règlement du parent, moins les
-          paiements déjà enregistrés par Compétence.
+      <section className={styles.stats} aria-label="Votre rémunération">
+        <div className={styles.stat}>
+          <p>Disponible après retenues</p>
+          <strong>{money(managedAvailableBalance(balance, retained))}</strong>
+        </div>
+        <div className={styles.stat}>
+          <p>Reste total à vous payer</p>
+          <strong>{money(balance)}</strong>
+        </div>
+      </section>
+      {retained > 0 && (
+        <aside className={styles.notice}>
+          Litige en cours : {money(retained)} retenus. Compétence vous
+          contactera pour examiner la situation.
+        </aside>
+      )}
+      <details className={styles.disclosure}>
+        <summary>Comprendre mon solde</summary>
+        <p className={styles.muted}>
+          Votre rémunération devient acquise après validation de la séance et
+          réception du paiement parent. Les versements enregistrés par
+          Compétence diminuent ce solde. Aucun rechargement ni retrait à
+          demander ici.
         </p>
-      </div>
+        <Link
+          className={`${styles.muted} underline`}
+          href="/professeur/paiements"
+        >
+          Consulter l’ancienne comptabilité
+        </Link>
+      </details>
       <WebPushControl audienceLabel="vos missions Compétence" />
-      <p className="text-sm leading-6 text-slate-600">Ce solde concerne les nouveaux accompagnements. Vos anciens cours et rémunérations restent conservés dans <Link className="font-semibold underline" href="/professeur/paiements">l'ancienne comptabilité</Link>.</p>
+      <nav className={styles.tabs} aria-label="Filtrer mes missions">
+        <Link
+          aria-current={!history ? "page" : undefined}
+          href="/professeur/accompagnement"
+        >
+          En cours
+        </Link>
+        <Link
+          aria-current={history ? "page" : undefined}
+          href="/professeur/accompagnement?vue=historique"
+        >
+          Historique
+        </Link>
+      </nav>
       {page.map((offer) => {
+        const offeredSessions = offer.sessions.filter(
+          (session) => session.status === "PLANNED",
+        );
+        const canAccept =
+          offeredSessions.length > 0 &&
+          offeredSessions.every((session) => managedStartsInFuture(session));
         const accepted = [
           "ACCEPTED",
           "CANCEL_REQUESTED",
           "PARTIAL_CANCELLED",
         ].includes(offer.status);
+        const next = offer.sessions.find(
+          (session) =>
+            session.status === "PLANNED" || session.status === "DONE",
+        );
+        const expected = offer.sessions
+          .filter((s) => s.status !== "CANCELLED")
+          .reduce(
+            (sum, session) =>
+              sum +
+              managedSplit(
+                session.amount,
+                session.commissionRateBps ?? offer.commissionRateBps,
+              ).teacher,
+            0,
+          );
         return (
-          <article
-            className="space-y-4 rounded-2xl border border-slate-200 p-5"
-            key={offer.id}
-          >
-            <header>
-              <h2 className="text-xl font-semibold">
-                {offer.dossier.subjectName} · {offer.dossier.className}
-              </h2>
-              <p className="mt-1 text-sm">
-                {offer.dossier.reference} · {managedStatusLabel(offer.status)} · Votre part{" "}
-                {100 - offer.commissionRateBps / 100} % (Compétence{" "}
-                {offer.commissionRateBps / 100} %) ·{" "}
-                {offer.dossier.courseFormat === "HOME"
-                  ? offer.dossier.commune
-                  : "En ligne"}
-              </p>
+          <article className={styles.card} key={offer.id}>
+            <header className={styles.cardHeader}>
+              <div>
+                <p className={styles.eyebrow}>{offer.dossier.reference}</p>
+                <h2>
+                  {offer.dossier.subjectName} · {offer.dossier.className}
+                </h2>
+                <p className={styles.muted}>
+                  {offer.dossier.courseFormat === "HOME"
+                    ? `${offer.dossier.commune} · ${offer.dossier.quartier}`
+                    : "Cours en ligne"}
+                </p>
+              </div>
+              <span
+                className={styles.badge}
+                data-tone={offer.status === "OFFERED" ? "attention" : undefined}
+              >
+                {managedStatusLabel(offer.status)}
+              </span>
             </header>
-            {accepted && (
-              <p>
-                {offer.dossier.parentName} · {offer.dossier.phone}
+            <div className={styles.cardHeader}>
+              <p className={styles.muted}>
+                {offer.sessions.filter((s) => s.status !== "CANCELLED").length}{" "}
+                séance
+                {offer.sessions.filter((s) => s.status !== "CANCELLED")
+                  .length !== 1
+                  ? "s"
+                  : ""}{" "}
+                · 2 h
                 <br />
-                {offer.dossier.quartier} {offer.dossier.addressHint}
+                {next
+                  ? `Prochaine : ${dateLabel(next.scheduledDate)} à ${next.scheduledTime}`
+                  : "Toutes les séances sont traitées"}
+              </p>
+              <div className={styles.amount}>
+                <strong>{money(expected)}</strong>
+                <p className={styles.muted}>Votre part prévue</p>
+              </div>
+            </div>
+            {offer.dossier.onHold && (
+              <p className={styles.notice}>
+                Dossier en litige. La déclaration et la validation des séances
+                sont suspendues.
               </p>
             )}
-            <p className="text-sm">{offer.dossier.objective}</p>
-            <div className="space-y-3">
+            {accepted && (
+              <div className={styles.contact}>
+                <div>
+                  <strong className="text-sm">
+                    {offer.dossier.parentName}
+                  </strong>
+                  <p className={styles.muted}>{offer.dossier.addressHint}</p>
+                </div>
+                <a
+                  className={styles.button}
+                  href={`tel:${offer.dossier.phone}`}
+                >
+                  <Phone size={16} /> Appeler le parent
+                </a>
+              </div>
+            )}
+            {offer.dossier.objective && (
+              <details className={styles.disclosure}>
+                <summary>Besoin du parent</summary>
+                <p className={styles.muted}>{offer.dossier.objective}</p>
+              </details>
+            )}
+            <details className={styles.disclosure}>
+              <summary>
+                Dates et suivi · {offer.sessions.length} séance
+                {offer.sessions.length !== 1 ? "s" : ""}
+              </summary>
               {offer.sessions.map((session) => (
-                <div className="rounded-xl border p-3" key={session.id}>
-                  <p>
-                    {session.scheduledDate.toISOString().slice(0, 10)} ·{" "}
-                    {session.scheduledTime} · 2 h · {managedStatusLabel(session.status)}
-                  </p>
-                  <p className="mt-1 text-sm">
-                    Votre part prévue :{" "}
+                <div className={styles.session} key={session.id}>
+                  <div className={styles.cardHeader}>
+                    <strong className="text-sm">
+                      {session.sequence}. {dateLabel(session.scheduledDate)} ·{" "}
+                      {session.scheduledTime} · 2 h
+                    </strong>
+                    <span className={styles.badge}>
+                      {managedStatusLabel(session.status)}
+                    </span>
+                  </div>
+                  <p className={styles.muted}>
+                    Part prévue :{" "}
                     {money(
                       managedSplit(
                         session.amount,
                         session.commissionRateBps ?? offer.commissionRateBps,
                       ).teacher,
                     )}{" "}
-                    · Crédit payable : {money(session.creditedTeacherAmount)}
+                    · Rémunération acquise :{" "}
+                    {money(session.creditedTeacherAmount)}
                   </p>
-                  {accepted && session.status === "PLANNED" && (
+                  {accepted &&
+                  managedCanDeclareDone(session, offer.dossier.onHold) ? (
                     <ManagedAction
                       endpoint={endpoint}
                       payload={{
@@ -136,54 +272,91 @@ export default async function ManagedProfessorPage({
                       label="Déclarer la séance effectuée"
                       confirmText="Confirmez que cette séance de deux heures a réellement été effectuée. Compétence vérifiera la séance ; aucun crédit n'est acquis sur cette seule déclaration."
                     />
+                  ) : accepted &&
+                    session.status === "PLANNED" &&
+                    !offer.dossier.onHold ? (
+                    <p className={styles.muted}>
+                      Déclaration disponible après la fin des deux heures. Si
+                      l’heure vient de passer, actualisez cette page.
+                    </p>
+                  ) : null}
+                  {session.status === "DONE" && (
+                    <p className={styles.muted}>
+                      En attente de vérification par Compétence.
+                    </p>
                   )}
                 </div>
               ))}
-            </div>
-            {offer.status === "OFFERED" && (
-              <>
-                <p className="text-sm leading-7">
-                  {managedTeacherTerms(offer.commissionRateBps, offer.termsVersion)}
-                </p>
-                <ManagedAction
-                  endpoint={endpoint}
-                  payload={{
-                    action: "RESPOND",
-                    offerId: offer.id,
-                    accept: true,
-                  }}
-                  fields={[
-                    {
-                      name: "acceptedTerms",
-                      label:
-                        "J'accepte les séances et les engagements ci-dessus",
-                      type: "checkbox",
-                    },
-                  ]}
-                  label="Accepter la mission"
-                  confirmText="Vous vous engagez sur les horaires proposés. Aucune somme ne sera prélevée sur un portefeuille de recharge."
-                />
-                <ManagedAction
-                  endpoint={endpoint}
-                  payload={{
-                    action: "RESPOND",
-                    offerId: offer.id,
-                    accept: false,
-                    acceptedTerms: false,
-                  }}
-                  fields={[{ name: "reason", label: "Motif du refus" }]}
-                  label="Refuser la proposition"
-                />
-              </>
+            </details>
+            {offer.status === "OFFERED" && !offer.dossier.onHold && (
+              <div className={styles.actions}>
+                <details className={styles.disclosure}>
+                  <summary>
+                    Engagements et rémunération · votre part{" "}
+                    {100 - offer.commissionRateBps / 100} %
+                  </summary>
+                  <p className={styles.muted}>
+                    {managedTeacherTerms(
+                      offer.commissionRateBps,
+                      offer.termsVersion,
+                    )}
+                  </p>
+                </details>
+                {canAccept ? (
+                  <ManagedAction
+                    endpoint={endpoint}
+                    payload={{
+                      action: "RESPOND",
+                      offerId: offer.id,
+                      accept: true,
+                    }}
+                    fields={[
+                      {
+                        name: "acceptedTerms",
+                        label:
+                          "J’ai lu et j’accepte les horaires et les engagements de cette mission",
+                        type: "checkbox",
+                      },
+                    ]}
+                    label="Accepter la mission"
+                    confirmText="Vous vous engagez sur les horaires proposés. Votre rémunération sera acquise après validation des séances et règlement du parent."
+                  />
+                ) : (
+                  <p className={styles.notice}>
+                    Un horaire de cette proposition est déjà passé. Contactez
+                    Compétence pour recevoir un planning actualisé ; cette
+                    proposition ne peut plus être acceptée.
+                  </p>
+                )}
+                <details className={styles.disclosure}>
+                  <summary>Je ne suis pas disponible</summary>
+                  <ManagedAction
+                    endpoint={endpoint}
+                    payload={{
+                      action: "RESPOND",
+                      offerId: offer.id,
+                      accept: false,
+                      acceptedTerms: false,
+                    }}
+                    fields={[{ name: "reason", label: "Motif du refus" }]}
+                    label="Refuser la proposition"
+                    confirmText="Cette proposition sera refusée et Compétence pourra la confier à un autre professeur."
+                  />
+                </details>
+              </div>
             )}
             {offer.status === "ACCEPTED" && (
-              <details>
-                <summary className="text-sm">Signaler un empêchement</summary>
+              <details className={styles.disclosure}>
+                <summary>Signaler un empêchement</summary>
                 <ManagedAction
                   endpoint={endpoint}
                   payload={{ action: "CANCEL", offerId: offer.id }}
                   fields={[
-                    { name: "reason", label: "Expliquez votre empêchement" },
+                    {
+                      name: "reason",
+                      label: "Expliquez votre empêchement",
+                      minLength: 10,
+                    },
                   ]}
                   label="Prévenir Compétence"
                   confirmText="Les séances restent engagées jusqu'au traitement de votre demande par Compétence. Votre message sera transmis à l'équipe pour réattribution."
@@ -193,63 +366,48 @@ export default async function ManagedProfessorPage({
           </article>
         );
       })}
-      {(held._sum.creditedTeacherAmount ?? 0) > 0 && (
-        <aside className="rounded-xl border border-amber-400 p-5 text-sm text-amber-950">
-          <strong>
-            Retenue pour litige :{" "}
-            {money(
-              Math.min(
-                total._sum.amountDelta ?? 0,
-                held._sum.creditedTeacherAmount ?? 0,
-              ),
-            )}
-          </strong>
-          <p className="mt-2">
-            Disponible après retenues :{" "}
-            {money(
-              Math.max(
-                0,
-                (total._sum.amountDelta ?? 0) -
-                  (held._sum.creditedTeacherAmount ?? 0),
-              ),
-            )}
+      {!page.length && (
+        <div className={styles.empty}>
+          <p className="font-semibold text-[#102b4c]">
+            {history
+              ? "Aucune mission dans l’historique"
+              : "Aucune mission en cours"}
           </p>
-          <p className="mt-2">
-            Compétence vous contactera pour examiner la situation. Aucun
-            versement déjà exécuté n'est récupéré automatiquement.
+          <p>
+            {history
+              ? "Vos missions traitées apparaîtront ici."
+              : "Les nouvelles propositions de Compétence apparaîtront ici."}
           </p>
-        </aside>
-      )}
-      {!offers.length && (
-        <p className="rounded-2xl border p-6">
-          Aucune mission proposée pour le moment.
-        </p>
+        </div>
       )}
       {offers.length > 20 && (
         <Link
-          className="inline-block rounded-xl border p-3"
-          href={`/professeur/accompagnement?after=${page.at(-1)!.id}`}
+          className={styles.button}
+          href={`/professeur/accompagnement?vue=${history ? "historique" : "en-cours"}&after=${page.at(-1)!.id}`}
         >
-          Missions suivantes
+          Missions suivantes <ArrowUpRight size={16} />
         </Link>
       )}
-      <details className="rounded-2xl border p-5">
-        <summary className="font-semibold">
-          Derniers mouvements comptables
-        </summary>
-        {ledger.map((entry) => (
-          <div className="mt-3 border-t pt-3 text-sm" key={entry.id}>
-            <strong>
-              {managedStatusLabel(entry.kind)} ·{" "}
-              {money(entry.amountDelta)}
-            </strong>
-            <p>
-              {entry.createdAt.toISOString().slice(0, 10)} ·{" "}
-              {entry.reference || entry.note}
-            </p>
-          </div>
-        ))}
+      <details className={styles.disclosure}>
+        <summary>Derniers mouvements comptables</summary>
+        {ledger.length ? (
+          ledger.map((entry) => (
+            <div className={styles.session} key={entry.id}>
+              <div className={styles.cardHeader}>
+                <strong className="text-sm">
+                  {managedStatusLabel(entry.kind)}
+                </strong>
+                <strong className="text-sm">{money(entry.amountDelta)}</strong>
+              </div>
+              <p className={styles.muted}>
+                {dateLabel(entry.createdAt)} · {entry.reference || entry.note}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p className={styles.muted}>Aucun mouvement enregistré.</p>
+        )}
       </details>
-    </main>
+    </div>
   );
 }

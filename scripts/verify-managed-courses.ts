@@ -4,6 +4,19 @@ import { isManagedRequestOriginAllowed } from "../src/lib/managed-courses-origin
 import { readFileSync } from "node:fs";
 import { MANAGED_CLASSES, MANAGED_MONTHLY_PRICES, MANAGED_DURATION_MINUTES, MANAGED_TERMS_VERSION, managedInstallments, managedPayableCredit, managedPrice, managedRequestSchema, managedSlots, managedSplit, managedParentTermsForVersion } from "../src/lib/managed-courses-core";
 import { defaultManagedWeeklySlots, managedWeeklySessions, MANAGED_MAX_SESSIONS } from "../src/lib/managed-course-schedule";
+import { managedAvailableBalance, managedCanDeclareDone, managedProfessorOfferWhere, managedStartsInFuture } from "../src/lib/managed-workspace";
+const completionTest = { scheduledDate: new Date("2027-01-01T00:00:00Z"), scheduledTime: "16:00", status: "PLANNED" };
+assert.equal(managedCanDeclareDone(completionTest, false, Date.parse("2027-01-01T17:59:59Z")), false);
+assert.equal(managedStartsInFuture(completionTest, Date.parse("2027-01-01T15:59:59Z")), true);
+assert.equal(managedStartsInFuture(completionTest, Date.parse("2027-01-01T16:00:00Z")), false);
+assert.equal(managedCanDeclareDone(completionTest, false, Date.parse("2027-01-01T18:00:00Z")), true);
+assert.equal(managedCanDeclareDone(completionTest, true, Date.parse("2027-01-01T18:00:00Z")), false);
+assert.equal(managedCanDeclareDone({ ...completionTest, status: "DONE" }, false, Date.parse("2027-01-02T00:00:00Z")), false);
+assert.equal(managedAvailableBalance(30_000, 12_000), 18_000);
+assert.equal(managedAvailableBalance(10_000, 25_000), 0);
+assert.equal(managedAvailableBalance(-500, 0), 0);
+assert.equal(managedProfessorOfferWhere("teacher-owned", false).teacherId, "teacher-owned");
+assert.ok(managedProfessorOfferWhere("teacher-owned", true).NOT);
 const expectedEight = {
   ivoirien: [100_000, 120_000, 140_000, 170_000, 180_000, 200_000, 240_000],
   francais: [150_000, 150_000, 150_000, 200_000, 260_000, 290_000, 300_000],
@@ -130,3 +143,6 @@ assert.match(managedForm, /key="send" type="submit"/, "L'envoi final doit avoir 
 assert.equal((managedForm.match(/data-form-step="[012]" hidden=/g) || []).length, 3, "Les trois étapes restent montées pour préserver les champs et FormData");
 assert.match(managedForm, /control\.checkValidity\(\)/, "Chaque étape valide ses propres champs avant de continuer");
 assert.doesNotMatch(readFileSync("src/components/managed/managed-public.module.css", "utf8"), /(?:linear|radial|conic)-gradient/, "Le design public reste blanc sans dégradé");
+const warningCard = readFileSync("src/components/ui/alert-dialog.tsx", "utf8");
+assert.match(warningCard, /max-h-\[calc\(100dvh-2rem\)\]/, "Une carte d'avertissement longue reste dans l'écran mobile");
+assert.match(warningCard, /overflow-y-auto/, "Les actions d'une longue confirmation restent accessibles par défilement");

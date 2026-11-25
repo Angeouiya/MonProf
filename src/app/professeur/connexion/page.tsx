@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import { ArrowRight, CheckCircle2, Info, Loader2, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
-import { PublicLayout } from "@/components/layouts/public-layout";
-import { BrandLogo } from "@/components/shared/brand-logo";
+import { PrivateAccessShell } from "@/components/managed/private-access-shell";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,41 +129,12 @@ function ProfesseurConnexionContent() {
   }
 
   return (
-    <PublicLayout>
+    <PrivateAccessShell>
       <section className="bg-white">
-        <div className="mx-auto grid min-h-[calc(100vh-90px)] max-w-6xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_430px] lg:items-center lg:py-16">
-          <div className="hidden lg:block">
-            <div className="max-w-xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#DDE6F7] bg-white px-3 py-1 text-xs font-bold text-[#111B4D]">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Plateforme professeur légère
-              </span>
-              <h1 className="mt-5 text-4xl font-semibold tracking-normal text-[#111827] text-balance">
-                Gérez vos missions sans dashboard compliqué.
-              </h1>
-              <p className="mt-4 max-w-lg text-base leading-7 text-[#475569]">
-                Consultez vos cours, confirmez vos disponibilités, suivez vos paiements et recevez les consignes du service client Compétence depuis une interface mobile-first.
-              </p>
-              <div className="mt-8 grid gap-3">
-                {[
-                  "Connexion directe par téléphone + mot de passe d'accès.",
-                  "Aucune inscription publique professeur.",
-                  "Les tarifs, sanctions et paiements restent contrôlés par le service client.",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">✓</span>
-                    <p className="text-sm font-semibold text-[#111827]">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div data-private-login-layout>
 
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center">
-              <Link href="/" className="inline-flex justify-center">
-                <BrandLogo priority />
-              </Link>
               <div className="mx-auto mt-5 flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                 <Phone className="h-6 w-6" />
               </div>
@@ -305,7 +275,8 @@ function ProfesseurConnexionContent() {
                 </section>
               )}
 
-              <div className="mt-5 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
+              <details className="mt-5 rounded-lg border border-[#DDE6F7] bg-white p-3 text-xs leading-5 text-[#64748B]">
+                <summary className="cursor-pointer font-semibold">Accès et mot de passe temporaire</summary>
                 <p className="font-semibold uppercase tracking-wide text-[#111B4D]">Important</p>
                 <p className="mt-1">
                   Ce portail ne permet pas de créer un compte professeur. Aucun code SMS n'est envoyé : le numéro sert uniquement d'identifiant et l'accès est activé ou désactivé par le service client.
@@ -324,12 +295,12 @@ function ProfesseurConnexionContent() {
                   </Link>
                   .
                 </p>
-              </div>
+              </details>
             </div>
           </div>
         </div>
       </section>
-    </PublicLayout>
+    </PrivateAccessShell>
   );
 }
 

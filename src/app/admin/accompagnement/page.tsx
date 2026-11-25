@@ -3,31 +3,63 @@ import { requireAdmin } from "@/lib/session";
 import { hasAdminPermission } from "@/lib/admin-permissions";
 import { db } from "@/lib/db";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
+import { ArrowUpRight, Plus } from "lucide-react";
+import type { Prisma } from "@prisma/client";
+import styles from "@/components/managed/workspace.module.css";
 const money = (value: number) => `${value.toLocaleString("fr-FR")} F`;
 export const dynamic = "force-dynamic";
 export default async function ManagedAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ after?: string }>;
+  searchParams: Promise<{ after?: string; filtre?: string }>;
 }) {
   const admin = await requireAdmin("BOOKINGS_VIEW");
-  const { after } = await searchParams;
+  const { after, filtre } = await searchParams;
+  const filter = ["nouveaux", "en-cours"].includes(filtre ?? "")
+    ? filtre
+    : "tous";
+  const where: Prisma.ManagedCourseDossierWhereInput =
+    filter === "nouveaux"
+      ? { status: "NEW" }
+      : filter === "en-cours"
+        ? { status: { in: ["OFFERED", "ACTIVE"] } }
+        : {};
+  const canManage = hasAdminPermission(
+    admin.adminPermissions,
+    "BOOKINGS_MANAGE",
+  );
   const cursor = after
-    ? await db.managedCourseDossier.findUnique({
-        where: { id: after },
+    ? await db.managedCourseDossier.findFirst({
+        where: { ...where, id: after },
         select: { id: true, createdAt: true },
       })
     : null;
-  const [rows, count] = await Promise.all([
+  const financePromise = hasAdminPermission(
+    admin.adminPermissions,
+    "FINANCE_VIEW",
+  )
+    ? Promise.all([
+        db.managedParentReceipt.aggregate({ _sum: { amount: true } }),
+        db.managedTeacherLedgerEntry.aggregate({ _sum: { amountDelta: true } }),
+        db.managedCourseSession.aggregate({
+          where: { status: "VALIDATED" },
+          _sum: { fundedAmount: true, creditedTeacherAmount: true },
+        }),
+      ])
+    : null;
+  const [rows, count, finance] = await Promise.all([
     db.managedCourseDossier.findMany({
-      where: cursor
-        ? {
-            OR: [
-              { createdAt: { lt: cursor.createdAt } },
-              { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-            ],
-          }
-        : {},
+      where: {
+        ...where,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: cursor.createdAt } },
+                { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 31,
       select: {
@@ -40,92 +72,130 @@ export default async function ManagedAdminPage({
         receivedAmount: true,
         cancelledAmount: true,
         status: true,
+        onHold: true,
       },
     }),
-    db.managedCourseDossier.count(),
+    db.managedCourseDossier.count({ where }),
+    financePromise,
   ]);
   const page = rows.slice(0, 30);
-  const finance = hasAdminPermission(admin.adminPermissions, "FINANCE_VIEW")
-    ? await Promise.all([
-        db.managedParentReceipt.aggregate({ _sum: { amount: true } }),
-        db.managedTeacherLedgerEntry.aggregate({ _sum: { amountDelta: true } }),
-        db.managedCourseSession.aggregate({
-          where: { status: "VALIDATED" },
-          _sum: { fundedAmount: true, creditedTeacherAmount: true },
-        }),
-      ])
-    : null;
   return (
-    <main className="mx-auto max-w-6xl space-y-6 bg-white p-4 text-slate-900 sm:p-7">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+    <div className={styles.page}>
+      <header className={styles.heading}>
         <div>
-          <h1 className="text-3xl font-semibold">Accompagnement</h1>
-          <p className="mt-2 text-slate-600">
-            {count} dossiers · attribution et suivi des séances
+          <p className={styles.eyebrow}>Espace administration</p>
+          <h1>Demandes de cours</h1>
+          <p className={`${styles.muted} mt-2`}>
+            Attribuez les demandes et suivez les séances.
           </p>
         </div>
-        <Link
-          className="rounded-xl border-2 border-[#092A55] px-5 py-3 font-semibold"
-          href="/admin/accompagnement/nouveau"
-        >
-          Saisir une demande parent
-        </Link>
+        {canManage && (
+          <Link className={styles.button} href="/admin/accompagnement/nouveau">
+            <Plus size={17} /> Nouvelle demande
+          </Link>
+        )}
       </header>
       {finance && (
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className={styles.stats} aria-label="Synthèse comptable">
           {[
-            ["Encaissements parents enregistrés", finance[0]._sum.amount ?? 0],
+            ["Encaissements parents", finance[0]._sum.amount ?? 0],
             ["Reste à payer aux professeurs", finance[1]._sum.amountDelta ?? 0],
             [
-              "Part Compétence · séances validées et financées",
+              "Part Compétence acquise",
               (finance[2]._sum.fundedAmount ?? 0) -
                 (finance[2]._sum.creditedTeacherAmount ?? 0),
             ],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-xl border border-slate-300 p-5">
-              <p className="text-sm text-slate-600">{label}</p>
-              <strong className="mt-2 block text-2xl">
-                {money(Number(value))}
-              </strong>
+            <div key={label} className={styles.stat}>
+              <p>{label}</p>
+              <strong>{money(Number(value))}</strong>
             </div>
           ))}
         </section>
       )}
-      <div className="divide-y rounded-2xl border border-slate-200">
+      <div className={styles.heading}>
+        <nav className={styles.tabs} aria-label="Filtrer les demandes">
+          {[
+            ["tous", "Toutes"],
+            ["nouveaux", "À attribuer"],
+            ["en-cours", "En cours"],
+          ].map(([value, label]) => (
+            <Link
+              key={value}
+              aria-current={filter === value ? "page" : undefined}
+              href={`/admin/accompagnement?filtre=${value}`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <p className={styles.muted}>
+          {count} dossier{count !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <div className={styles.list}>
         {page.map((dossier) => (
           <Link
-            className="grid gap-2 p-5 sm:grid-cols-[1fr_auto]"
+            className={styles.row}
             href={`/admin/accompagnement/${dossier.id}`}
             key={dossier.id}
           >
             <div>
-              <strong>
-                {dossier.reference} · {dossier.parentName}
-              </strong>
-              <p className="mt-1 text-sm text-slate-600">
-                {dossier.className} · {dossier.subjectName} · {managedStatusLabel(dossier.status)}
+              <strong>{dossier.parentName}</strong>
+              <p className={`${styles.muted} mt-1`}>
+                {dossier.className} · {dossier.subjectName}
               </p>
+              <p className={`${styles.muted} mt-1`}>{dossier.reference}</p>
+              <span
+                className={`${styles.badge} mt-2`}
+                data-tone={
+                  dossier.onHold || dossier.status === "NEW"
+                    ? "attention"
+                    : undefined
+                }
+              >
+                {dossier.onHold
+                  ? "Litige ouvert"
+                  : managedStatusLabel(dossier.status)}
+              </span>
             </div>
-            <div className="text-sm">
-              <strong>{money(dossier.totalPrice - dossier.cancelledAmount)}</strong>
-              <p>Encaissé : {money(dossier.receivedAmount)}</p>
-              <p>
-                Reste parent :{" "}
-                {money(Math.max(0, dossier.totalPrice - dossier.cancelledAmount - dossier.receivedAmount))}
+            <div className={styles.amount}>
+              <strong>
+                {money(dossier.totalPrice - dossier.cancelledAmount)}
+              </strong>
+              <p className={`${styles.muted} mt-1`}>
+                Reçu : {money(dossier.receivedAmount)}
               </p>
+              <p className={styles.muted}>
+                Dû :{" "}
+                {money(
+                  Math.max(
+                    0,
+                    dossier.totalPrice -
+                      dossier.cancelledAmount -
+                      dossier.receivedAmount,
+                  ),
+                )}
+              </p>
+              <ArrowUpRight size={16} className="ml-auto mt-3" aria-hidden />
             </div>
           </Link>
         ))}
-        {!rows.length && <p className="p-6">Aucune demande pour le moment.</p>}
+        {!rows.length && (
+          <p className={styles.empty}>
+            Aucune demande dans cette vue. Les anciens dossiers restent
+            accessibles dans les historiques.
+          </p>
+        )}
       </div>
       {rows.length > 30 && (
         <Link
-          className="inline-block rounded-xl border p-3"
-          href={`/admin/accompagnement?after=${page.at(-1)!.id}`}
+          className={styles.button}
+          href={`/admin/accompagnement?filtre=${filter}&after=${page.at(-1)!.id}`}
         >
           Dossiers suivants
         </Link>
       )}
-    </main>
+    </div>
   );
 }

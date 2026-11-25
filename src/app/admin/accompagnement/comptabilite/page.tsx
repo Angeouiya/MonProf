@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-const money = (value: number) => `${value.toLocaleString("fr-FR")} F CFA`;
+import styles from "@/components/managed/workspace.module.css";
+const money = (value: number) =>
+  `${(value === 0 ? 0 : value).toLocaleString("fr-FR")} F CFA`;
 const kinds: Record<string, string> = {
   EARNED: "Rémunération acquise",
   PAYMENT: "Règlement professeur",
@@ -105,25 +107,23 @@ export default async function ManagedAccounting({
   ] as const;
   const page = ledger.slice(0, 30);
   return (
-    <main className="mx-auto max-w-6xl space-y-7 bg-white p-4 text-slate-900 sm:p-7">
-      <Link className="underline" href="/admin/accompagnement">
-        Accompagnement
+    <div className={styles.page}>
+      <Link
+        className={`${styles.muted} underline`}
+        href="/admin/accompagnement"
+      >
+        Retour aux demandes
       </Link>
       <header>
-        <h1 className="text-3xl font-semibold">Comptabilité du service</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          Encaissements et versements manuels rapprochés par l'équipe. Chaque
-          rémunération exige une séance validée et un règlement parent. Les
-          retenues pour litige restent non payables. Ces indicateurs ne sont pas
-          un relevé bancaire ; les soldes historiques ne sont pas convertis.
+        <p className={styles.eyebrow}>Accompagnement</p>
+        <h1 className="text-3xl font-semibold">Comptabilité</h1>
+        <p className={`${styles.muted} mt-2`}>
+          Encaissements parents et versements professeurs vérifiés.
         </p>
       </header>
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map(([label, value]) => (
-          <div
-            className="rounded-2xl border border-slate-300 bg-white p-5"
-            key={label}
-          >
+      <section className={styles.stats} aria-label="Principaux montants">
+        {metrics.slice(0, 4).map(([label, value]) => (
+          <div className={styles.stat} key={label}>
             <p className="text-sm leading-6 text-slate-600">{label}</p>
             <strong className="mt-3 block text-2xl tracking-tight text-slate-950">
               {money(value)}
@@ -131,21 +131,35 @@ export default async function ManagedAccounting({
           </div>
         ))}
       </section>
+      <details className={styles.disclosure}>
+        <summary>Répartition, remboursements et fonds en attente</summary>
+        <div className={styles.stats}>
+          {metrics.slice(4).map(([label, value]) => (
+            <div className={styles.stat} key={label}>
+              <p>{label}</p>
+              <strong>{money(value)}</strong>
+            </div>
+          ))}
+        </div>
+        <p className={styles.muted}>
+          Le reste à payer inclut les éventuelles retenues pour litige, qui ne
+          sont pas versables avant résolution. La rémunération exige une séance
+          validée et financée. Ces chiffres sont des écritures de gestion, pas
+          un relevé bancaire. Les soldes historiques restent séparés.
+        </p>
+      </details>
       <section>
         <h2 className="mb-4 text-xl font-semibold">Écritures professeurs</h2>
-        <div className="divide-y rounded-2xl border">
+        <div className={styles.list}>
           {page.map((entry) => (
-            <article
-              key={entry.id}
-              className="grid gap-3 p-4 sm:grid-cols-[1fr_auto]"
-            >
+            <article key={entry.id} className={styles.row}>
               <div>
                 <strong>{entry.teacher.fullName}</strong>
                 <p className="mt-1 text-sm">
                   {kinds[entry.kind] || entry.kind} ·{" "}
                   {entry.createdAt.toISOString().slice(0, 10)}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className={`${styles.muted} mt-1`}>
                   {entry.reference || entry.note}
                 </p>
                 {entry.session && (
@@ -157,7 +171,7 @@ export default async function ManagedAccounting({
                   </Link>
                 )}
               </div>
-              <strong className="text-lg">
+              <strong className={styles.amount}>
                 {entry.amountDelta > 0 ? "+" : ""}
                 {money(entry.amountDelta)}
               </strong>
@@ -176,15 +190,13 @@ export default async function ManagedAccounting({
           </Link>
         )}
       </section>
-      <section>
-        <h2 className="mb-4 text-xl font-semibold">
-          20 dernières écritures parents
-        </h2>
-        <div className="divide-y rounded-2xl border">
+      <details className={styles.disclosure}>
+        <summary>20 dernières écritures parents</summary>
+        <div className={styles.list}>
           {receipts.map((entry) => (
             <Link
               key={entry.id}
-              className="grid gap-2 p-4 sm:grid-cols-[1fr_auto]"
+              className={styles.row}
               href={`/admin/accompagnement/${entry.dossierId}`}
             >
               <div>
@@ -205,7 +217,7 @@ export default async function ManagedAccounting({
             </p>
           )}
         </div>
-      </section>
-    </main>
+      </details>
+    </div>
   );
 }

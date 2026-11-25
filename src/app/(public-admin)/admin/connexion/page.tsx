@@ -3,10 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { signIn, signOut } from "next-auth/react";
 import { ArrowRight, Info, Lock, Mail, ShieldCheck } from "lucide-react";
-import { PublicLayout } from "@/components/layouts/public-layout";
+import { PrivateAccessShell } from "@/components/managed/private-access-shell";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,46 +78,20 @@ function AdminConnexionContent() {
   }
 
   return (
-    <PublicLayout>
+    <PrivateAccessShell>
       <section className="bg-white">
-        <div className="mx-auto grid min-h-[calc(100vh-6rem)] max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-center lg:py-12">
-          <div className="hidden lg:block">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#111B4D]">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Accès administrateur sécurisé
-            </span>
-            <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-normal text-[#111827] text-balance">
-              Console de contrôle Compétence.
-            </h1>
-            <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-[#64748B]">
-              Gérez les professeurs, réservations, paiements Jèko, historiques de paiement, remboursements, notifications, litiges et actions opérationnelles depuis un espace protégé.
-            </p>
-            <div className="mt-6 grid max-w-xl gap-3">
-              {[
-                "Accès réservé aux comptes administrateurs",
-                "Aucune clé de paiement n'est exposée côté client",
-                "Réservations activées uniquement après preuve serveur",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white p-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111B4D] text-white">
-                    <ShieldCheck className="h-4 w-4" />
-                  </span>
-                  <p className="text-sm font-semibold text-[#111827]">{item}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div data-private-login-layout>
 
           <div className="mx-auto w-full max-w-md">
             <div className="mb-6 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-[#111B4D] text-white">
                 <ShieldCheck className="h-6 w-6" />
               </div>
-              <h2 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[#111827] sm:text-3xl">
                 Connexion admin
-              </h2>
+              </h1>
               <p className="mt-2 text-sm font-medium leading-6 text-[#64748B]">
-                Accédez au dashboard administrateur et au centre opérationnel.
+                Retrouvez les demandes, les professeurs et la comptabilité.
               </p>
             </div>
 
@@ -202,7 +175,7 @@ function AdminConnexionContent() {
           </div>
         </div>
       </section>
-    </PublicLayout>
+    </PrivateAccessShell>
   );
 }
 

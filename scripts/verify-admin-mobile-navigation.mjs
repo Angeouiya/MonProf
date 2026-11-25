@@ -142,7 +142,8 @@ record(
     && /const secondaryNavItems:[\s\S]*?<details open=\{secondaryActive \|\| undefined\}[\s\S]*?<span className="flex-1">Plus<\/span>/.test(layout)
     && /navigation\.secondary\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout)
     && /function adminNavigation\(managedMode: boolean\)/.test(layout)
-    && /secondary: \[\.\.\.history, \.\.\.secondaryNavItems\]/.test(layout),
+    && /secondary: \[\.\.\.additional, \.\.\.history, \.\.\.secondaryNavItems\]/.test(layout)
+    && /managedMode \? \["\/admin\/accompagnement", "\/admin\/professeurs", "\/admin\/accompagnement\/comptabilite"/.test(layout),
 );
 
 record(

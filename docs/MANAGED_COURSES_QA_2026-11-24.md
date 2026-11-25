@@ -115,6 +115,49 @@ des vérifications métier, sécurité, navigation, notifications et stockage m�
   conservées après retour au mode hebdomadaire. Envoi final 16 séances HTTP 200.
 - Aucun changement de schéma ni écriture du catalogue en production.
 
+## Espaces admin et professeur — simplicité et restrictions
+
+- Navigation admin du service accompagné sans double accueil ni barre de liens
+  répétée. Quatre raccourcis mobiles : Cours, Profs, Finances et Alertes.
+  Les outils secondaires et historiques restent accessibles dans « Plus ».
+- Liste des demandes : filtres, droit de création respecté, indicateurs
+  comptables conservés, état de litige explicite. Les agrégats indépendants
+  s'exécutent en parallèle avec la liste paginée.
+- Fiche dossier : prochaine étape, accord parent, séances à vérifier et
+  attribution priorisés ; planning, encaissements, versements et corrections
+  repliables. Pas de proposition impossible avant accord, pendant litige ou
+  sans séance libre / professeur habilité. Les contrôles serveur sont conservés.
+- Espace professeur : missions en cours séparées de l'historique, sans perte ni
+  doublon entre vues ; solde total distingué du disponible après retenues.
+  Le crédit d'une séance est nommé « rémunération acquise », pas « crédit payable ».
+- Déclaration de séance masquée avant la fin des deux heures et pendant litige.
+  Le serveur refuse toujours la déclaration anticipée, même par appel direct.
+- Horaires passés non attribuables et offres périmées non acceptables côté UI ;
+  instruction de reprogrammation explicite. Les reçus restent lisibles lorsque
+  le nouvel accord parent est en attente ; un accès privé perdu peut être renouvelé.
+- Les formulaires d'opération figent les valeurs confirmées, empêchent les
+  doubles clics concurrents et affichent un récapitulatif dans la carte centrale.
+  Les champs financiers sont réinitialisés uniquement après succès serveur.
+  Les cartes longues sont bornées à la hauteur de l'écran et défilables, afin
+  de garder leurs boutons accessibles sur les petits téléphones.
+- Connexions admin/professeur : une seule colonne, aide et liens légaux, sans
+  navigation de réservation client. Les mécanismes d'authentification et
+  d'assistance sécurisée ne sont pas remplacés.
+- Recette Edge locale : connexion admin, filtre « À attribuer », proposition à
+  25 %, annulation puis confirmation d'encaissement de 1 000 F, réponse HTTP 200,
+  champs vidés et net parent de 1 000 F. Aucune transaction réelle.
+- Connexion professeur, acceptation HTTP 200, contact parent visible après accord,
+  refus d'une autre mission HTTP 200, déplacement du refus dans l'historique.
+  Une mission acceptée encore active n'apparaît pas dans cet historique.
+  Tentative d'écriture financière admin depuis le professeur : HTTP 403.
+- Géométrie professeur : aucun débordement horizontal à 320, 390, 768 et
+  1 440 px ; comptabilité admin vérifiée à 320 px et sur desktop. Libellés mobiles
+  raccourcis et affichage « −0 F » corrigé. Captures dans `output/playwright/`.
+- PostgreSQL isolé : 15 scénarios dont partition exhaustive des missions par
+  professeur ; tests HTTP d'intake et de refus d'accès non autorisé en complément.
+- Cette passe n'ajoute aucune table ni colonne, ne réécrit aucun ancien compte,
+  cours, reçu ou ledger, et ne déclenche aucun paiement / email / push réel.
+
 ## Limites explicites
 
 Les textes légaux nécessitent une revue professionnelle et la vérification de

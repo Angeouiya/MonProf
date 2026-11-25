@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import styles from "./workspace.module.css";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -17,6 +18,7 @@ type Field = {
   value?: string;
   min?: number;
   max?: number;
+  minLength?: number;
   options?: { value: string; label: string }[];
   required?: boolean;
 };
@@ -35,6 +37,11 @@ export function ManagedAction({
 }) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
+  const inFlight = useRef(false);
+  const prepared = useRef<Record<string, unknown> | null>(null);
+  const [summary, setSummary] = useState<{ label: string; value: string }[]>(
+    [],
+  );
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState(false);
   const [error, setError] = useState("");
@@ -42,21 +49,13 @@ export function ManagedAction({
   const [link, setLink] = useState("");
   const [key, setKey] = useState(() => crypto.randomUUID());
   async function send() {
-    if (busy || !form.current) return;
+    if (inFlight.current || !prepared.current) return;
+    inFlight.current = true;
     setBusy(true);
     setMessage("");
     setDialog(false);
     try {
-      const body: Record<string, unknown> = { ...payload };
-      for (const field of fields) {
-        const value = new FormData(form.current).get(field.name);
-        body[field.name] =
-          field.type === "number"
-            ? Number(value)
-            : field.type === "checkbox"
-              ? value === "on"
-              : String(value ?? "");
-      }
+      const body = { ...prepared.current };
       if (
         ["RECEIPT", "REFUND", "REVERSE_RECEIPT"].includes(
           String(payload.action),
@@ -64,78 +63,128 @@ export function ManagedAction({
         endpoint === "/api/admin/managed-teacher-payments"
       ) {
         body.idempotencyKey = key;
-        if (payload.action === "RECEIPT")
-          body.receivedAt = new Date(String(body.receivedAt)).toISOString();
+        if (payload.action === "RECEIPT") {
+          const date = new Date(String(body.receivedAt));
+          if (!Number.isFinite(date.getTime()))
+            throw new Error("Vérifiez la date et l’heure de réception.");
+          body.receivedAt = date.toISOString();
+        }
       }
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || "Opération non confirmée.");
-      setMessage("Enregistré et confirmé par le serveur.");
+      const result = await response.json().catch(() => null);
+      if (
+        !response.ok ||
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      )
+        throw new Error(
+          result?.error ||
+            "Le serveur n’a pas confirmé l’opération. Vérifiez le dossier avant de réessayer.",
+        );
+      setMessage("Enregistré.");
       if (result.path)
         setLink(new URL(result.path, window.location.origin).href);
       setKey(crypto.randomUUID());
+      if (body.idempotencyKey) form.current?.reset();
       router.refresh();
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : "Opération impossible.",
+        failure instanceof TypeError
+          ? "Connexion interrompue. Vérifiez le dossier avant de réessayer."
+          : failure instanceof Error
+            ? failure.message
+            : "Opération impossible.",
       );
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
   return (
     <form
       ref={form}
-      className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-slate-900"
+      className={styles.actionForm}
+      aria-busy={busy}
+      onChange={() => {
+        setMessage("");
+        setError("");
+      }}
       onSubmit={(event) => {
         event.preventDefault();
+        if (inFlight.current || !form.current) return;
+        const data = new FormData(form.current);
+        prepared.current = { ...payload };
+        const preview: { label: string; value: string }[] = [];
+        for (const field of fields) {
+          const value = data.get(field.name);
+          prepared.current[field.name] =
+            field.type === "number"
+              ? Number(value)
+              : field.type === "checkbox"
+                ? value === "on"
+                : String(value ?? "");
+          if (field.type !== "checkbox" && value)
+            preview.push({
+              label: field.label,
+              value:
+                field.options?.find((option) => option.value === value)
+                  ?.label ?? String(value),
+            });
+        }
+        setSummary(preview);
         if (confirmText) setDialog(true);
         else void send();
       }}
     >
-      {fields.map((field) => (
-        <label className="block text-sm" key={field.name}>
-          {field.label}
-          {field.options ? (
-            <select
-              className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
-              name={field.name}
-              required={field.required !== false}
-              defaultValue={field.value ?? ""}
-            >
-              {!field.value && <option value="">Choisir</option>}
-              {field.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              className={
-                field.type === "checkbox"
-                  ? "ml-3 h-5 w-5 align-middle"
-                  : "mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
-              }
-              name={field.name}
-              type={field.type || "text"}
-              defaultValue={field.value}
-              min={field.type === "number" ? (field.min ?? 1) : undefined}
-              max={field.max}
-              step={field.type === "number" ? 1 : undefined}
-              required={field.required !== false}
-            />
-          )}
-        </label>
-      ))}
+      <fieldset disabled={busy}>
+        {fields.map((field) => (
+          <label key={field.name}>
+            {field.type !== "checkbox" && field.label}
+            {field.options ? (
+              <select
+                className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+                name={field.name}
+                required={field.required !== false}
+                defaultValue={field.value ?? ""}
+              >
+                {!field.value && <option value="">Choisir</option>}
+                {field.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={
+                  field.type === "checkbox"
+                    ? "ml-3 h-5 w-5 align-middle"
+                    : "mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+                }
+                name={field.name}
+                type={field.type || "text"}
+                defaultValue={field.value}
+                min={field.type === "number" ? (field.min ?? 1) : undefined}
+                max={field.max}
+                minLength={field.minLength}
+                step={field.type === "number" ? 1 : undefined}
+                required={field.required !== false}
+              />
+            )}
+            {field.type === "checkbox" && field.label}
+          </label>
+        ))}
+      </fieldset>
       <button
-        disabled={busy}
-        className="min-h-11 rounded-xl border border-[#092A55] bg-white px-4 font-semibold text-[#092A55] disabled:opacity-50"
+        disabled={
+          busy || fields.some((field) => field.options && !field.options.length)
+        }
+        className={styles.button}
       >
         {busy ? "En cours…" : label}
       </button>
@@ -163,6 +212,16 @@ export function ManagedAction({
         <AlertDialogContent>
           <AlertDialogTitle>Confirmer cette opération</AlertDialogTitle>
           <AlertDialogDescription>{confirmText}</AlertDialogDescription>
+          {summary.length > 0 && (
+            <dl className={styles.confirmation}>
+              {summary.map((item) => (
+                <div key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={() => void send()}>

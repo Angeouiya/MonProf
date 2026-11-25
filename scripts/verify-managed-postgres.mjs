@@ -117,6 +117,7 @@ try {
   const responses = await Promise.allSettled(offers.map((item) => service.respondManagedOffer(item.id, teacher.id, true, "")));
   assert.equal(responses.filter((result) => result.status === "fulfilled").length, 1);
   check("Two simultaneous acceptances cannot reserve the same professor slot");
+  await assert.rejects(service.completeManagedSession(first.id, acceptedSession.id, teacher.id, false), /pas encore terminée/);
   // Move only this synthetic QA session into the past to exercise completion.
   await db.managedCourseSession.update({ where: { id: acceptedSession.id }, data: { scheduledDate: new Date(`${futureDate(-1)}T00:00:00Z`) } });
   await service.completeManagedSession(first.id, acceptedSession.id, teacher.id, false);
@@ -214,6 +215,16 @@ try {
   assert.equal((await db.managedCourseSession.findUniqueOrThrow({ where: { id: repeatSessions[0].id } })).scheduledTime, "10:00");
   await assert.rejects(service.createManagedDossier({ ...repeatInput, clientKey: randomUUID(), sessions: repeatedDates.slice(0, 8), quotedTotal: 100_000 }), /correspondent|planning/i);
   check("Four weekly slots over four weeks persist exactly 16 priced sessions, teacher accepts, and tampered date counts are rejected");
+  const workspace = await jiti.import("../src/lib/managed-workspace.ts");
+  const currentOffers = await db.managedCourseOffer.findMany({ where: workspace.managedProfessorOfferWhere(teacher.id, false) });
+  const oldOffers = await db.managedCourseOffer.findMany({ where: workspace.managedProfessorOfferWhere(teacher.id, true) });
+  const allOffers = await db.managedCourseOffer.findMany({ where: { teacherId: teacher.id } });
+  assert.equal(currentOffers.length + oldOffers.length, allOffers.length);
+  assert.equal(new Set([...currentOffers, ...oldOffers].map((offer) => offer.id)).size, allOffers.length);
+  assert.ok(currentOffers.some((offer) => offer.id === repeatOffer.id));
+  assert.ok(oldOffers.length > 0);
+  assert.equal((await db.managedCourseOffer.findMany({ where: workspace.managedProfessorOfferWhere("unrelated-teacher", false) })).length, 0);
+  check("Active and historical teacher missions are disjoint, exhaustive and teacher-owned");
   mkdirSync("output/managed-qa", { recursive: true });
   writeFileSync("output/managed-qa/postgres-results.json", JSON.stringify({ passed: true, testedAt: new Date().toISOString(), postgres: "17", checks, historicalDataPreserved: true, remoteDatabaseUsed: false, migrationHashes: Object.fromEntries(migrationNames.map((name) => [name, createHash("sha256").update(readFileSync(`prisma/migrations/${name}/migration.sql`)).digest("hex")])) }, null, 2));
   console.log(`PASS ${checks.length} PostgreSQL integration scenarios; local cluster retained at ${directory}`);
@@ -268,3 +279,7 @@ try {
 } finally {
   await db?.$disconnect(); await client?.end(); if (started) await cluster.stop();
 }
+// Framework/provider imports can keep idle handles alive after all assertions
+// and the isolated cluster have closed. End this CLI only after cleanup; a
+// failed assertion retains its non-zero exit code.
+process.exit(Number(process.exitCode ?? 0));
