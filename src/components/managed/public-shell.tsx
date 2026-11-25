@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BrandLogo } from "@/components/shared/brand-logo";
 export function ManagedPublicShell({
   children,
@@ -9,25 +8,25 @@ export function ManagedPublicShell({
     <div className="min-h-screen bg-white text-[#12243A]">
       <header className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Link href="/">
+          <a href="/">
             <BrandLogo />
-          </Link>
+          </a>
           <nav aria-label="Navigation parents et clients" className="flex flex-wrap gap-4 text-sm font-semibold">
-            <Link href="/demande-cours">Demander un cours</Link>
-            <Link href="/tarifs">Tarifs</Link>
-            <Link href="/contact">Nous contacter</Link>
-            <Link href="/client">Mon espace client</Link>
+            <a href="/demande-cours">Demander un cours</a>
+            <a href="/tarifs">Tarifs</a>
+            <a href="/contact">Nous contacter</a>
+            <a href="/client">Mon espace client</a>
           </nav>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-9 sm:py-14">{children}</main>
       <footer className="mx-auto flex max-w-6xl flex-wrap gap-5 border-t border-slate-200 px-4 py-7 text-sm">
-        <Link href="/engagements-accompagnement">
+        <a href="/engagements-accompagnement">
           Conditions d'accompagnement
-        </Link>
-        <Link href="/conditions-utilisation">CGU</Link>
-        <Link href="/politique-confidentialite">Confidentialité</Link>
-        <Link href="/client/reservations">Mes anciens cours</Link>
+        </a>
+        <a href="/conditions-utilisation">CGU</a>
+        <a href="/politique-confidentialite">Confidentialité</a>
+        <a href="/client/reservations">Mes anciens cours</a>
       </footer>
     </div>
   );

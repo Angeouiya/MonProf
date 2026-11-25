@@ -1,7 +1,7 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ManagedSchoolSubject } from "@/lib/managed-school-subjects";
 import {
   MANAGED_CLASSES,
   MANAGED_PARENT_TERMS,
@@ -16,7 +16,7 @@ export function ManagedRequestForm({
   subjects,
   admin = false,
 }: {
-  subjects: { id: string; name: string }[];
+  subjects: ManagedSchoolSubject[];
   admin?: boolean;
 }) {
   const router = useRouter();
@@ -135,13 +135,13 @@ export function ManagedRequestForm({
           formulaire.
         </p>
         {contractPath && (
-          <Link className="mt-4 block underline" href={contractPath}>
+          <a className="mt-4 block underline" href={contractPath}>
             Consulter et conserver mon récapitulatif privé
-          </Link>
+          </a>
         )}
-        <Link className="mt-5 inline-block underline" href="/contact">
+        <a className="mt-5 inline-block underline" href="/contact">
           Contacter Compétence
-        </Link>
+        </a>
       </section>
     );
   return (
@@ -181,13 +181,14 @@ export function ManagedRequestForm({
           <select
             className={inputClass}
             name="subjectId"
+            key={`${journey}:${className}`}
             required
             defaultValue=""
           >
             <option value="" disabled>
               Choisir une matière
             </option>
-            {subjects.map((subject) => (
+            {subjects.filter((subject) => subject.programmes.includes(`${journey}:${className}`)).map((subject) => (
               <option key={subject.id} value={subject.id}>
                 {subject.name}
               </option>
@@ -452,21 +453,23 @@ export function ManagedRequestForm({
           <span>
             J'accepte les dates, le montant et l'échéancier ci-dessus ainsi que
             les{" "}
-            <Link
+            <a
               className="underline"
               href="/engagements-accompagnement"
               target="_blank"
+              rel="noopener noreferrer"
             >
               conditions d'accompagnement
-            </Link>
+            </a>
             . J'ai lu la{" "}
-            <Link
+            <a
               className="underline"
               href="/politique-confidentialite"
               target="_blank"
+              rel="noopener noreferrer"
             >
               confidentialité
-            </Link>
+            </a>
             .
           </span>
         </label>

@@ -273,7 +273,7 @@ function requireSecret(value: string | undefined, name: string) {
 }
 
 const PUBLIC_HOME_CACHE_SECONDS = 300;
-const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-managed-20261124";
+const PUBLIC_HOME_CACHE_PATH = "/__competence_edge_cache/public-home-managed-20261125";
 const PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS = 60;
 const PUBLIC_TEACHER_JOURNEY_CACHE_PATH = "/__competence_edge_cache/public-teacher-journey-managed-20261124";
 const PUBLIC_TEACHER_JOURNEYS = new Set(["ivoirien", "francais", "professionnel"]);

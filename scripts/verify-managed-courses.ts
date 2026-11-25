@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { isManagedSchoolSubject, managedSchoolSubjectOptions, managedSchoolSubjectNames } from "../src/lib/managed-school-subjects";
 import { isManagedRequestOriginAllowed } from "../src/lib/managed-courses-origin";
 import { readFileSync } from "node:fs";
 import { MANAGED_CLASSES, MANAGED_MONTHLY_PRICES, MANAGED_DURATION_MINUTES, MANAGED_TERMS_VERSION, managedInstallments, managedPayableCredit, managedPrice, managedRequestSchema, managedSlots, managedSplit } from "../src/lib/managed-courses-core";
@@ -6,6 +7,14 @@ const expectedEight = {
   ivoirien: [100_000, 120_000, 140_000, 170_000, 180_000, 200_000, 240_000],
   francais: [150_000, 150_000, 150_000, 200_000, 260_000, 290_000, 300_000],
 };
+for (const journey of ["ivoirien", "francais"]) for (const className of MANAGED_CLASSES) assert.ok(isManagedSchoolSubject("Mathématiques", journey, className));
+assert.ok(managedSchoolSubjectNames.includes("Mathématiques"));
+assert.equal(isManagedSchoolSubject("Accessoires de mode", "ivoirien", "6e"), false);
+assert.equal(isManagedSchoolSubject("Philosophie", "ivoirien", "6e"), false);
+assert.equal(isManagedSchoolSubject("HGGSP", "francais", "Terminale"), true);
+assert.equal(isManagedSchoolSubject("HGGSP", "ivoirien", "Terminale"), false);
+const catalogWithLateMaths = [...Array.from({ length: 590 }, (_, index) => ({ id: String(index), name: `Métier ${index}` })), { id: "maths", name: "Mathématiques" }];
+assert.deepEqual(managedSchoolSubjectOptions(catalogWithLateMaths).map((subject) => subject.id), ["maths"], "Une matière scolaire au-delà du 250e élément reste disponible sans catalogue professionnel");
 assert.equal(isManagedRequestOriginAllowed("http://localhost:3315/api/managed-courses", "http://127.0.0.1:3315", ["http://127.0.0.1:3315"]), true);
 assert.equal(isManagedRequestOriginAllowed("http://localhost:3000/api/managed-courses", "https://www.competence.ci", ["https://www.competence.ci"]), true);
 for (const origin of [null, "https://evil.example", "http://www.competence.ci", "https://www.competence.ci.evil.example"]) assert.equal(isManagedRequestOriginAllowed("http://localhost:3000/api/managed-courses", origin, ["https://www.competence.ci"]), false);
@@ -74,6 +83,7 @@ assert.match(migration, /managed_offer_rate_immutable/);
 assert.match(migration, /managed_session_rate_immutable/);
 console.log("Service accompagné : 14 grilles 4/8 séances, prorata 1–24, 2 h, commission 20–30 % par mission, échéances, financement partiel, rejeu, droits et migration additive vérifiés.");
 const clientShell = readFileSync("src/components/managed/public-shell.tsx", "utf8");
+assert.doesNotMatch(clientShell, /from "next\/link"/, "Le parcours public utilise la navigation HTML native sans fan-out RSC");
 assert.doesNotMatch(clientShell, /href=["']\/(?:professeur|admin)(?:\/|["'])/, "L'espace principal parent/client ne doit pas exposer les accès professionnels");
 assert.match(clientShell, /href="\/client"/);
 assert.doesNotMatch(readFileSync("src/components/shared/web-push-realtime.tsx", "utf8"), /src="\/images\/[^"\n]+\?/, "L'icône locale de permission doit respecter la configuration next/image sans recherche");

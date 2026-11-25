@@ -1,5 +1,22 @@
 # Recette du service accompagné — 24 novembre 2026
 
+## Complément de publication — 25 novembre 2026
+
+Le catalogue réel contient 590 matières. Le formulaire ne charge plus les 250
+premières entrées alphabétiques : il sélectionne les matières scolaires du
+catalogue pédagogique existant, puis les filtre par système et classe. Le serveur
+contrôle la même compatibilité avant toute nouvelle demande, sans réécrire les
+anciens dossiers. Une régression vérifie les mathématiques après le 590e élément
+et l'exclusion des matières professionnelles. Les 11 scénarios PostgreSQL ont
+été réexécutés avec succès après cette correction.
+
+La navigation du nouveau parcours public utilise les liens HTML directs, sans
+préchargements RSC de pages privées ou de formulaires. Les grilles et formulaires
+restent interactifs une fois ouverts. Le schéma historique de la recette est
+épinglé au commit prépublication `631bbeec436ac2b0512eaeaa2b5150e43498f110` :
+le test reste reproductible après publication, même lorsque HEAD contient les
+nouvelles tables. Aucun nouveau changement de schéma production n'est requis.
+
 ## Données et migration
 
 - Base PostgreSQL 17 locale isolée : schéma historique recréé, dix migrations

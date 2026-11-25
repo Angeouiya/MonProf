@@ -32,7 +32,10 @@ try {
   process.env.WEB_PUSH_QUEUE_DISABLED = "true";
   process.env.MANAGED_LESSONS_ENABLED = "true";
   delete process.env.APP_DEPLOYMENT_PLATFORM; delete process.env.CLOUDFLARE_ENV;
-  let legacySchema = execFileSync("git", ["show", "HEAD:prisma/schema.prisma"], { encoding: "utf8" });
+  // Pin the pre-rollout schema: HEAD contains the new tables after publication.
+  // A mutable baseline would test an already-migrated database on the next run.
+  const legacyBaseline = "631bbeec436ac2b0512eaeaa2b5150e43498f110";
+  let legacySchema = execFileSync("git", ["show", `${legacyBaseline}:prisma/schema.prisma`], { encoding: "utf8" });
   const newModels = ["MarketplaceRequest", "MarketplaceOffer", "MarketplaceReview", "TeacherWallet", "TeacherWalletEntry", "TeacherWalletTopUp"];
   const newEnums = ["MarketplaceRequestStatus", "MarketplaceOfferStatus", "TeacherWalletEntryKind", "TeacherWalletTopUpStatus"];
   for (const name of newModels) legacySchema = legacySchema.replace(new RegExp(`^model ${name} \\{[\\s\\S]*?^\\}`, "gm"), "");
@@ -52,7 +55,7 @@ try {
   const oldClient = await db.user.create({ data: { name: "Historical QA client", email: "historical@example.invalid", passwordHash: "not-a-real-login" } });
   const availability = JSON.stringify(Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => [day, Object.fromEntries(["08-10", "10-12", "12-14", "14-16", "16-18", "18-20", "20-22"].map((slot) => [slot, true]))])));
   const teacher = await db.teacher.create({ data: { fullName: "Managed QA professor", jobTitle: "Professeur de mathématiques", bio: "Synthetic local integration fixture", availability, phone: "+2250700000001", status: "ACTIVE", portalAccessEnabled: true, portalPasswordHash: "not-a-real-login", offersIvorianSystem: true, offersFrenchSystem: true, offersHome: true, offersOnline: true } });
-  const subject = await db.subject.create({ data: { name: "QA Mathematics", slug: "qa-mathematics" } });
+  const subject = await db.subject.create({ data: { name: "Mathématiques", slug: "qa-mathematics" } });
   const snapshot = JSON.stringify(await client.query('SELECT row_to_json(u) AS data FROM "User" u ORDER BY id').then((result) => result.rows));
   const migrationNames = readdirSync("prisma/migrations").filter((name) => /^\d/.test(name) && name >= "20260901").sort();
   for (const name of migrationNames) {

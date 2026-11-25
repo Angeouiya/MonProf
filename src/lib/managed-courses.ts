@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isManagedSchoolSubject } from "@/lib/managed-school-subjects";
 import { enqueueNotificationEvent } from "@/lib/notification-events";
 import { publishWebPushFlushEvent } from "@/lib/web-push-queue";
 import { getPlatformRuntimeSettings } from "@/lib/platform-settings";
@@ -144,6 +145,8 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
         );
       return { id: existing.id, reference: existing.reference };
     }
+    if (!isManagedSchoolSubject(subject.name, input.journey, input.className))
+      throw new ManagedCourseError("Choisissez une matière du système et de la classe sélectionnés.", 400);
     if (
       !actorId &&
       (await tx.managedCourseDossier.count({

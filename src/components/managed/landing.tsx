@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ManagedPublicShell } from "./public-shell";
 import {
   MANAGED_CLASSES,
@@ -20,12 +19,12 @@ export function ManagedLanding() {
           Décrivez votre besoin en quelques instants. Notre équipe vous contacte
           et vous attribue un professeur adapté.
         </p>
-        <Link
+        <a
           className="mt-8 inline-flex min-h-14 items-center justify-center rounded-2xl border-2 border-[#092A55] bg-white px-7 font-semibold text-[#092A55]"
           href="/demande-cours"
         >
           Demander un cours
-        </Link>
+        </a>
         <p className="mt-4 text-sm text-slate-600">
           Sans compte · Sans paiement en ligne · Séances de 2 heures
         </p>
@@ -111,17 +110,17 @@ export function ManagedTariffs() {
         Le parent règle Compétence hors ligne. Tout supplément ou tarif
         particulier doit être proposé et accepté avant engagement. Pour le
         primaire ou une formation professionnelle,{" "}
-        <Link className="underline" href="/contact">
+        <a className="underline" href="/contact">
           contactez notre équipe
-        </Link>
+        </a>
         .
       </p>
-      <Link
+      <a
         className="mt-6 inline-block rounded-xl border-2 border-[#092A55] px-6 py-3 font-semibold"
         href="/demande-cours"
       >
         Préparer ma demande
-      </Link>
+      </a>
     </ManagedPublicShell>
   );
 }
