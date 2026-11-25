@@ -1,32 +1,49 @@
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { BookOpen, Menu, MessageCircle, UserRound, WalletCards } from "lucide-react";
+import styles from "./managed-public.module.css";
 export function ManagedPublicShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white text-[#12243A]">
-      <header className="border-b border-slate-200">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <a href="/">
-            <BrandLogo />
+    <div className={styles.shell}>
+      <a className="sr-only focus:not-sr-only" href="#contenu">Aller au contenu</a>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <a href="/" className={styles.brand} aria-label="Compétence — Accueil">
+            <BrandLogo size="sm" priority />
           </a>
-          <nav aria-label="Navigation parents et clients" className="flex flex-wrap gap-4 text-sm font-semibold">
-            <a href="/demande-cours">Demander un cours</a>
+          <nav aria-label="Navigation parents et clients" className={styles.desktopNav}>
+            <a href="/demande-cours">Les cours</a>
             <a href="/tarifs">Tarifs</a>
-            <a href="/contact">Nous contacter</a>
-            <a href="/client">Mon espace client</a>
+            <a href="/contact">Contact</a>
+            <a href="/client" className={styles.account}><UserRound size={16} aria-hidden="true" />Mon espace</a>
           </nav>
+          <div className={styles.mobileActions}>
+            <a href="/client" aria-label="Mon espace client" className={styles.iconButton}><UserRound size={19} aria-hidden="true" /></a>
+            <details className={styles.mobileMenu}>
+              <summary className={styles.iconButton} aria-label="Ouvrir le menu"><Menu size={20} aria-hidden="true" /></summary>
+              <nav aria-label="Menu parents et clients">
+                <a href="/demande-cours"><BookOpen size={18} aria-hidden="true" />Demander un cours</a>
+                <a href="/tarifs"><WalletCards size={18} aria-hidden="true" />Les tarifs</a>
+                <a href="/contact"><MessageCircle size={18} aria-hidden="true" />Nous contacter</a>
+              </nav>
+            </details>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-9 sm:py-14">{children}</main>
-      <footer className="mx-auto flex max-w-6xl flex-wrap gap-5 border-t border-slate-200 px-4 py-7 text-sm">
-        <a href="/engagements-accompagnement">
-          Conditions d'accompagnement
-        </a>
-        <a href="/conditions-utilisation">CGU</a>
-        <a href="/politique-confidentialite">Confidentialité</a>
-        <a href="/client/reservations">Mes anciens cours</a>
+      <main id="contenu" className={styles.main}>{children}</main>
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <span className={styles.footerBrand}>Compétence.CI · L'essentiel, bien accompagné.</span>
+          <nav className={styles.footerLinks} aria-label="Informations légales">
+            <a href="/engagements-accompagnement">Engagements</a>
+            <a href="/conditions-utilisation">CGU</a>
+            <a href="/politique-confidentialite">Confidentialité</a>
+            <a href="/client/reservations">Mes anciens cours</a>
+          </nav>
+        </div>
       </footer>
     </div>
   );

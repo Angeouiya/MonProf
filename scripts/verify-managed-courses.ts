@@ -88,3 +88,9 @@ assert.doesNotMatch(clientShell, /href=["']\/(?:professeur|admin)(?:\/|["'])/, "
 assert.match(clientShell, /href="\/client"/);
 assert.doesNotMatch(readFileSync("src/components/shared/web-push-realtime.tsx", "utf8"), /src="\/images\/[^"\n]+\?/, "L'icône locale de permission doit respecter la configuration next/image sans recherche");
 assert.equal(managedRequestSchema.safeParse({ ...input, termsVersion: "managed-2026-11-24-v1" }).success, false, "Un formulaire ancien doit être rechargé avant le nouvel accord");
+const managedForm = readFileSync("src/components/managed/request-form.tsx", "utf8");
+assert.match(managedForm, /key="continue" type="button"/, "La transition ne doit jamais réutiliser le bouton d'envoi");
+assert.match(managedForm, /key="send" type="submit"/, "L'envoi final doit avoir une identité DOM distincte");
+assert.equal((managedForm.match(/data-form-step="[012]" hidden=/g) || []).length, 3, "Les trois étapes restent montées pour préserver les champs et FormData");
+assert.match(managedForm, /control\.checkValidity\(\)/, "Chaque étape valide ses propres champs avant de continuer");
+assert.doesNotMatch(readFileSync("src/components/managed/managed-public.module.css", "utf8"), /(?:linear|radial|conic)-gradient/, "Le design public reste blanc sans dégradé");

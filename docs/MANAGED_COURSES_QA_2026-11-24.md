@@ -65,6 +65,27 @@ des vérifications métier, sécurité, navigation, notifications et stockage m�
   planter le dashboard ; navigation admin adaptée au nouveau service et liens
   historiques conservés. Accès professionnels retirés du shell public client.
 
+## Passe visuelle du 25 novembre — accueil et demande
+
+- En-tête desktop aligné ; sur mobile, logo et deux commandes de 44 px, menu
+  repliable natif. Aucun lien professeur/admin dans le parcours parent.
+- Accueil raccourci, cartes de parcours bordées, ombres légères, fond blanc,
+  icônes vectorielles (y compris les drapeaux, sans dépendance aux emojis).
+- Formulaire en trois étapes conservées dans le DOM : cours, séances, contact.
+  Prix toujours visible, détails facultatifs repliés, validation par étape,
+  focus sur le titre ou le champ invalide et navigation clavier.
+- Edge isolé : lien français prérempli, matière obligatoire, six séances
+  françaises de 6e à 112 500 FCFA, choix en ligne, coordonnées et consentement,
+  retour puis progression sans envoi automatique, envoi explicite HTTP 200 et
+  confirmation « Bien reçu. ». Données synthétiques dans PostgreSQL local.
+- Tests sur 320 et 390 px sans débordement horizontal ; accueil desktop
+  1440 × 1000 ; menu mobile utilisable ; pas d'erreur console sur navigation
+  fraîche. Première étape complète visible en 390 × 844.
+- Onze scénarios PostgreSQL et contrôles HTTP réexécutés avec succès ;
+  `build:quality` réussi. Les règles et les tables métier ne changent pas.
+- Captures locales : `output/playwright/refined-home-desktop.png`,
+  `refined-home-mobile.png`, `refined-request-mobile.png` (hors Git).
+
 ## Limites explicites
 
 Les textes légaux nécessitent une revue professionnelle et la vérification de
