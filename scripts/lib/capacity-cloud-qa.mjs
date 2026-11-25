@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { createServer, request } from "node:http";
+import { execFileSync } from "node:child_process";
+import { performance } from "node:perf_hooks";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync, readFileSync, createWriteStream, appendFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { encode } from "next-auth/jwt";
 import { assertHostedCloud } from "../../load/cloud-actors.mjs";
+import { createCloudReadGateway } from "../../load/cloud-read-gateway.mjs";
 
 export async function verifyCloudCapacity({ client, check }) {
   assertHostedCloud();
@@ -44,22 +46,18 @@ export async function verifyCloudCapacity({ client, check }) {
   await client.query("ALTER ROLE competence_runtime SET default_transaction_read_only=on");
   const env = { ...process.env, NODE_ENV:"production", HOSTNAME:"127.0.0.1", NEXTAUTH_URL:origin, NEXTAUTH_SECRET:secret, NEXT_PUBLIC_APP_URL:origin, APP_URL:origin, APP_DEPLOYMENT_PLATFORM:"local", APP_DEPLOYMENT_ENV:"load", CLOUDFLARE_ENV:"", NODE_OPTIONS:"--max-old-space-size=1536", NEXT_TELEMETRY_DISABLED:"1" };
   const servers = [], logs = [];
-  const upstreamAgent = new (await import("node:http")).Agent({ keepAlive: true, maxSockets: 2048 });
-  let nextServer = 0;
-  const gateway = createServer((req,res) => {
-    if (req.method !== "GET") { res.writeHead(405);res.end();return; }
-    if (req.url === "/__load/identity") { res.setHeader("Content-Type","application/json");res.end(JSON.stringify({ runId, accounts:count, dataset:"synthetic", productionDataPresent:false, writesBlocked:true, databaseReadOnly:true }));return; }
-    if (!["/api/client/notifications","/client/accompagnement","/demande-cours"].includes(req.url)) { res.writeHead(404);res.end();return; }
-    const upstream = request({ hostname:"127.0.0.1", port:3335+(nextServer++%2), path:req.url, method:"GET", agent:upstreamAgent, headers:{...req.headers,host:"127.0.0.1:3334"} }, reply => { res.writeHead(reply.statusCode,reply.headers);reply.pipe(res); });
-    upstream.on("error",()=>{if (!res.headersSent) res.writeHead(502);if (!res.writableEnded)res.end();});
-    res.on("close",()=>upstream.destroy());upstream.end();
-  });
+  const ports=[3335,3336,3337];
+  const gateway=createCloudReadGateway({ports,proof:{ runId, accounts:count, dataset:"synthetic", productionDataPresent:false, writesBlocked:true, databaseReadOnly:true }});
+  const ticksPerSecond=Number(execFileSync("getconf",["CLK_TCK"],{encoding:"utf8"}).trim());
+  const cpuTicks=pid=>{try{const s=readFileSync("/proc/"+pid+"/stat","utf8");const f=s.slice(s.lastIndexOf(")")+2).split(" ");return Number(f[11])+Number(f[12]);}catch{return 0;}};
+  let telemetryTimer;
+  const infrastructure=[];
   try {
-    for (const port of [3335,3336]) {
+    for (const port of ports) {
       const log = createWriteStream(path.join(directory,"application-"+port+".log"));logs.push(log);
       const server = spawn(process.execPath,[".next/standalone/server.js"],{env:{...env,PORT:String(port)},stdio:["ignore","pipe","pipe"]});servers.push(server);server.stdout.pipe(log);server.stderr.pipe(log);
     }
-    await new Promise(resolve=>gateway.listen(3334,"127.0.0.1",resolve));
+    await new Promise(resolve=>gateway.server.listen(3334,"127.0.0.1",resolve));
     for (let attempt=0;attempt<90;attempt++) {
       try { const response=await fetch(origin+"/demande-cours",{signal:AbortSignal.timeout(2000)});await response.body?.cancel();if(response.ok)break; } catch {}
       if(attempt===89)throw new Error("Cloud production-build server did not become ready");
@@ -67,16 +65,28 @@ export async function verifyCloudCapacity({ client, check }) {
     }
     const notification=await fetch(origin+"/api/client/notifications",{headers:{Cookie:users[0].cookie}});assert.equal(notification.status,200);assert.equal((await notification.json()).unreadCount,1);
     const course=await fetch(origin+"/client/accompagnement",{headers:{Cookie:users[0].cookie}});assert.equal(course.status,200);const html=await course.text();assert.ok(html.includes("QA-CAPACITY-1"));assert.equal(html.includes("QA-CAPACITY-100000"),false);
-    console.log("CLOUD_CAPACITY_READY: 100000 distinct authenticated owners, 100000 course dossiers, read-only PostgreSQL, two real production-build processes; no production credentials.");
+    for(const port of ports)for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){const r=await fetch("http://127.0.0.1:"+port+route,{headers:{Cookie:users[0].cookie,Host:"127.0.0.1:3334"}});assert.equal(r.status,200);await r.arrayBuffer();}
+    console.log("CLOUD_CAPACITY_READY: 100000 distinct authenticated owners, 100000 course dossiers, read-only PostgreSQL, three warmed production-build processes; no production credentials.");
+    let previousCpu=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks),previousAt=performance.now();
+    telemetryTimer=setInterval(async()=>{const now=performance.now();const current=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks);const cpu=current.map((value,i)=>Math.round((value-previousCpu[i])/ticksPerSecond/(now-previousAt)*100000)/10);previousCpu=current;previousAt=now;
+      const stats=await client.query("SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname=current_database()").catch(()=>null);
+      infrastructure.push({at:new Date().toISOString(),proxyCorePercent:cpu[0],serverCorePercent:cpu.slice(1),connections:stats?.rows[0]?.connections??null});
+      console.log("CLOUD_CAPACITY_INFRA "+JSON.stringify(infrastructure.at(-1)));
+    },10000);
     const generator=spawn(process.execPath,["load/cloud-actors.mjs"],{env:{...env,BASE_URL:origin,CAPACITY_USERS_FILE:usersFile,CAPACITY_RUN_ID:runId,CAPACITY_SUMMARY_FILE:reportFile},stdio:["ignore","pipe","pipe"]});
     generator.stdout.pipe(process.stdout);generator.stderr.pipe(process.stderr);
     const exitCode=await new Promise((resolve,reject)=>{generator.on("error",reject);generator.on("close",resolve);});
     const report=JSON.parse(readFileSync(reportFile,"utf8"));
+    clearInterval(telemetryTimer);report.infrastructure=infrastructure;report.backendProcesses=ports.length;
+    report.databaseTables=(await client.query("SELECT relname,seq_scan,idx_scan FROM pg_stat_user_tables WHERE schemaname='competence' AND relname IN ('User','Notification','ManagedCourseDossier','ManagedCourseSession')")).rows;
+    writeFileSync(reportFile,JSON.stringify(report,null,2));
+    console.log("CLOUD_CAPACITY_SERVER_SUMMARY "+JSON.stringify({backendProcesses:ports.length,infrastructure,databaseTables:report.databaseTables}));
+    if(!report.passed)for(const port of ports){const lines=readFileSync(path.join(directory,"application-"+port+".log"),"utf8").split(/\r?\n/).filter(line=>/prisma:error|Error:|timed out|P2024|P2037/.test(line));console.log("CLOUD_SERVER_ERRORS "+port+" "+JSON.stringify(lines.slice(-15).map(line=>line.replace(/postgres(?:ql)?:\/\/\S+/g,"[synthetic-db-url]"))));}
     if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Compétence — cloud 100k\n\nStatus: **"+(report.passed?"PASS":"FAIL")+"**\n\n```json\n"+JSON.stringify(report,null,2)+"\n```\n\nThis is a read-only Node/PostgreSQL cloud CI experiment, not Cloudflare production certification. No artifacts/caches or paid runners are provisioned.\n");
     assert.equal(exitCode,0,"Cloud load failed: "+report.failures.join("; "));
     check("100k cloud resident client sessions measured against real isolated APIs and PostgreSQL; exact workload and limits recorded");
   } finally {
-    upstreamAgent.destroy();gateway.closeAllConnections();await new Promise(resolve=>gateway.close(resolve));
+    clearInterval(telemetryTimer);await gateway.close();
     for(const server of servers)if(server.exitCode===null)server.kill();
     for(const log of logs)log.end();
     await client.query("ALTER ROLE competence_runtime RESET default_transaction_read_only");
