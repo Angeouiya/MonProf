@@ -16,9 +16,10 @@ import {
 } from "@/lib/admin-permissions";
 import { isCurrentSessionVersion } from "@/lib/session-revocation";
 import { isTemporaryPasswordUsable } from "@/lib/temporary-password-policy";
+import { AUTH_FAILURE, authenticationBoundary } from "@/lib/auth-feedback";
 
-// Même coût bcrypt pour un identifiant absent ou non autorisé afin de ne pas
-// révéler par le temps de réponse si un email ou un téléphone est enregistré.
+// Toujours vérifier bcrypt, même pour un identifiant absent. Les comptes
+// désactivés restent refusés après vérification, sans changer leur ancien hash.
 const DUMMY_PASSWORD_HASH = "$2b$12$Zit1ny6PYbY/3pK30skDi.b3iiR3ko3dVwMH7jhP6xAh0MfeabUkG";
 
 export const authOptions: NextAuthOptions = {
@@ -31,8 +32,10 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         phone: { label: "Téléphone", type: "tel" },
         password: { label: "Mot de passe", type: "password" },
+        accountRole: { label: "Espace", type: "text" },
       },
       async authorize(credentials) {
+        return authenticationBoundary("credentials", async () => {
         const identifier = credentials?.identifier || credentials?.email || credentials?.phone || "";
         if (!identifier || !credentials?.password) return null;
         const emailLogin = isEmailAccountIdentifier(identifier);
@@ -54,16 +57,19 @@ export const authOptions: NextAuthOptions = {
         );
         const ok = await bcrypt.compare(
           credentials.password,
-          accountAllowed && user ? user.passwordHash : DUMMY_PASSWORD_HASH,
+          user ? user.passwordHash : DUMMY_PASSWORD_HASH,
         );
-        if (!user || !accountAllowed || !ok) return null;
+        if (!user || !ok) return null;
+        if (!accountAllowed) throw new Error(AUTH_FAILURE.disabled);
+        const expectedRole = credentials?.accountRole;
+        if (expectedRole && (expectedRole !== user.role || !["CLIENT", "ADMIN"].includes(expectedRole))) throw new Error(AUTH_FAILURE.wrongSpace);
 
         let sessionVersion = user.sessionVersion;
         if (user.role === "CLIENT" && user.passwordMustChange) {
           // Le mot de passe temporaire est consommé atomiquement à la première
           // connexion. La session gagnante reste limitée au changement forcé;
           // toute autre tentative avec le même secret est refusée.
-          if (!isTemporaryPasswordUsable(user.temporaryPasswordIssuedAt)) return null;
+          if (!isTemporaryPasswordUsable(user.temporaryPasswordIssuedAt)) throw new Error(AUTH_FAILURE.temporaryExpired);
           const claimed = await db.user.updateMany({
             where: {
               id: user.id,
@@ -97,6 +103,7 @@ export const authOptions: NextAuthOptions = {
           adminAccountStatus: user.adminAccountStatus,
           sessionVersion,
         } as any;
+        });
       },
     }),
     CredentialsProvider({
@@ -107,6 +114,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Mot de passe d'accès", type: "password" },
       },
       async authorize(credentials) {
+        return authenticationBoundary("teacher-phone", async () => {
         const normalizedPhone = normalizeTeacherPhone(credentials?.phone);
         if (!credentials?.password) return null;
         if (!normalizedPhone) {
@@ -122,11 +130,12 @@ export const authOptions: NextAuthOptions = {
         const portalAllowed = Boolean(teacher && canTeacherUsePortal(teacher));
         const ok = await bcrypt.compare(
           credentials.password,
-          portalAllowed && teacher?.portalPasswordHash
+          teacher?.portalPasswordHash
             ? teacher.portalPasswordHash
             : DUMMY_PASSWORD_HASH,
         );
-        if (!teacher || !portalAllowed || !ok) return null;
+        if (!teacher || !ok) return null;
+        if (!portalAllowed) throw new Error(AUTH_FAILURE.disabled);
 
         const now = new Date();
         let sessionVersion = teacher.sessionVersion;
@@ -135,7 +144,7 @@ export const authOptions: NextAuthOptions = {
           // Le couple horodatage/version rend la première connexion atomique :
           // une seule requête gagne, toutes les concurrentes sont refusées.
           if (!isTemporaryPasswordUsable(teacher.portalTemporaryPasswordIssuedAt, now)) {
-            return null;
+            throw new Error(AUTH_FAILURE.temporaryExpired);
           }
           const claimed = await db.teacher.updateMany({
             where: {
@@ -170,6 +179,7 @@ export const authOptions: NextAuthOptions = {
           portalPasswordMustChange: teacher.portalPasswordMustChange,
           sessionVersion,
         } as any;
+        });
       },
     }),
   ],
@@ -216,7 +226,9 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: getNextAuthSecret(),
+  // Read bindings when used, not during an eager module import before the
+  // Cloudflare request environment is installed.
+  get secret() { return getNextAuthSecret(); },
 };
 
 async function isPersistedSessionCurrent(token: Record<string, unknown>) {

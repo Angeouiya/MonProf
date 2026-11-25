@@ -60,8 +60,10 @@ assert.match(auth, /temporaryPasswordIssuedAt: user\.temporaryPasswordIssuedAt/)
 assert.match(auth, /temporaryPasswordIssuedAt: null,[\s\S]*sessionVersion: \{ increment: 1 \}/);
 assert.match(auth, /passwordMustChange: user\.role === "CLIENT" && user\.passwordMustChange/);
 assert.match(auth, /const DUMMY_PASSWORD_HASH = "\$2b\$12\$/);
-assert.match(auth, /accountAllowed && user \? user\.passwordHash : DUMMY_PASSWORD_HASH/);
-assert.match(auth, /portalAllowed && teacher\?\.portalPasswordHash[\s\S]*DUMMY_PASSWORD_HASH/);
+assert.match(auth, /user \? user\.passwordHash : DUMMY_PASSWORD_HASH/);
+assert.match(auth, /teacher\?\.portalPasswordHash[\s\S]*DUMMY_PASSWORD_HASH/);
+assert.match(auth, /if \(!accountAllowed\) throw new Error\(AUTH_FAILURE\.disabled\)/);
+assert.match(auth, /if \(!portalAllowed\) throw new Error\(AUTH_FAILURE\.disabled\)/);
 
 const forgotRoute = read("../src/app/api/auth/forgot-password/route.ts");
 assert.match(forgotRoute, /requestPasswordResetAssistanceByPhone/);

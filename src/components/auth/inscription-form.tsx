@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CLIENT_PASSWORD_MIN_LENGTH, isClientPasswordCompliant } from "@/lib/password-policy";
+import { loginDestination, loginResultError, readLoginSession } from "@/lib/auth-feedback";
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white pl-10 text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE3EE] bg-white text-sm focus-visible:border-[#111B4D] focus-visible:ring-[#111B4D]";
@@ -113,17 +114,17 @@ export function InscriptionForm({ returnTo }: { returnTo?: string | null }) {
       const signed = await signIn("credentials", {
         email: normalizedEmail || normalizedPhone,
         password: form.password,
+        accountRole: "CLIENT",
         redirect: false,
       });
-      if (!signed || signed.error) {
+      if (loginResultError(signed, "CLIENT")) {
         toast.success("Compte créé. Connectez-vous pour continuer.");
         router.push(returnTo ? `/connexion?from=${encodeURIComponent(returnTo)}` : "/connexion");
         return;
       }
-
+      await readLoginSession("CLIENT");
       toast.success("Votre compte est prêt.");
-      router.push(returnTo ?? "/client");
-      router.refresh();
+      window.location.replace(loginDestination("CLIENT", returnTo));
     } catch (caught: unknown) {
       setError(caught instanceof Error ? caught.message : "Réessayez dans un instant.");
     } finally {

@@ -95,7 +95,7 @@ const checks = [
     "Public teacher cards preserve the exact booking destination across authentication",
     teacherCard.includes('`/connexion?from=${encodeURIComponent(directBookingHref)}`')
       && (publicTeachers.includes('`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}') || publicTeachers.includes('`/connexion?from=${encodeURIComponent(buildBookingHref(t.id, journey, referralCode))}`'))
-      && login.includes('router.replace(from ?? "/client")'),
+      && login.includes('window.location.replace(loginDestination(expectedRole, from, user.passwordMustChange))'),
   ],
   [
     "Booking page redirects a teacherless entry and passes a validated initial journey",
@@ -123,7 +123,7 @@ const checks = [
       && safeReturnPath.includes('url.origin !== LOCAL_ORIGIN')
       && login.includes('getSafeInternalReturnPath(searchParams.get("from"))')
       && registrationPage.includes('returnTo={getSafeInternalReturnPath(from)}')
-      && registrationForm.includes('router.push(returnTo ?? "/client")'),
+      && registrationForm.includes('window.location.replace(loginDestination("CLIENT", returnTo))'),
   ],
 ];
 

@@ -234,6 +234,8 @@ try {
     await db.user.create({ data: { name: "QA Administrator", email: "qa-admin@example.invalid", passwordHash, role: "ADMIN", adminTeamRole: "SUPER_ADMIN", adminAccountStatus: "ACTIVE", adminAccessEnabled: true } });
     await db.teacher.update({ where: { id: teacher.id }, data: { portalPhone: "+2250700000001", portalPasswordHash: passwordHash } });
     const origin = "http://127.0.0.1:3315";
+    const authQa = await import("./lib/auth-local-qa.mjs");
+    const authFixtures = await authQa.createLegacyAuthFixtures(db, origin);
     const env = { ...process.env, NEXT_DIST_DIR: ".next-managed-qa", NEXTAUTH_URL: origin, NEXTAUTH_SECRET: randomBytes(32).toString("hex"), NEXT_PUBLIC_APP_URL: origin, NEXT_TELEMETRY_DISABLED: "1" };
     const logs = createWriteStream("output/managed-qa/browser-server.log");
     const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "--webpack", "--hostname", "127.0.0.1", "-p", "3315"], { env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -245,6 +247,7 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       assert.ok(ready, "Local Next server must become ready");
+      await authQa.verifyLegacyAuthHttp({ db, sql: client, origin, fixtures: authFixtures, check });
       const post = (route, body, source = origin) => fetch(`${origin}${route}`, { method: "POST", headers: { "Content-Type": "application/json", Origin: source }, body: JSON.stringify(body) });
       assert.equal((await post("/api/admin/managed-teacher-payments", {})).status, 403);
       assert.ok([401,403].includes((await post("/api/professor/managed-courses", {})).status));

@@ -76,7 +76,9 @@ check(
   "Return-to-booking handoff stays preserved",
   /getSafeInternalReturnPath\(from\)/.test(page)
     && /router\.push\(returnTo \?/.test(form)
-    && /router\.push\(returnTo \?\? "\/client"\)/.test(form),
+    && /window\.location\.replace\(loginDestination\("CLIENT", returnTo\)\)/.test(form)
+    && /accountRole: "CLIENT"/.test(form)
+    && /readLoginSession\("CLIENT"\)/.test(form),
 );
 
 const failed = checks.filter((item) => !item.condition);

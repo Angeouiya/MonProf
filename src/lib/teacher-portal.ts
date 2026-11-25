@@ -1,3 +1,5 @@
+import { normalizeAccountPhone } from "@/lib/account-phone";
+
 export const TEACHER_PORTAL_BLOCKED_STATUSES = [
   "INACTIVE",
   "SUSPENDED",
@@ -7,11 +9,7 @@ export const TEACHER_PORTAL_BLOCKED_STATUSES = [
 ] as const;
 
 export function normalizeTeacherPhone(phone?: string | null) {
-  const digits = (phone ?? "").replace(/[^\d]/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("225")) return `+${digits}`;
-  if (digits.length === 10) return `+225${digits}`;
-  return `+${digits}`;
+  return normalizeAccountPhone(phone) ?? "";
 }
 
 export function canTeacherUsePortal(teacher: {

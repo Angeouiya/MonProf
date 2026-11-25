@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { ArrowRight, CheckCircle2, Info, Loader2, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
 import { PrivateAccessShell } from "@/components/managed/private-access-shell";
 import { PasswordInput } from "@/components/shared/password-input";
@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TEMPORARY_PASSWORD_TTL_HOURS } from "@/lib/temporary-password-policy";
+import { AUTH_FAILURE, loginDestination, loginErrorMessage, loginResultError, readLoginSession } from "@/lib/auth-feedback";
 
 function ProfesseurConnexionContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/professeur";
   const denied = searchParams.get("error") === "access";
@@ -32,22 +32,19 @@ function ProfesseurConnexionContent() {
   );
 
   useEffect(() => {
-    router.prefetch("/professeur");
-
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.user?.role === "TEACHER") router.replace("/professeur");
-      })
+    let active = true;
+    readLoginSession("TEACHER")
+      .then((user) => { if (active) window.location.replace(loginDestination("TEACHER", from, user.portalPasswordMustChange)); })
       .catch(() => {});
-  }, [router]);
+    return () => { active = false; };
+  }, [from]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (loading) return;
     setError(null);
 
-    if (!phone.trim() || !password.trim()) {
+    if (!phone.trim() || !password) {
       setError("Saisissez votre numéro de téléphone et votre mot de passe d'accès.");
       return;
     }
@@ -60,30 +57,17 @@ function ProfesseurConnexionContent() {
         redirect: false,
       });
 
-      if (!result || result.error) {
-        setError("Téléphone ou mot de passe professeur incorrect.");
-        setLoading(false);
+      const failure = loginResultError(result, "TEACHER");
+      if (failure) {
+        setError(failure);
+        if (result?.error === AUTH_FAILURE.temporaryExpired) openPasswordAssistance();
         return;
       }
-
-      const me = await fetch("/api/auth/me", { cache: "no-store" }).then((res) => (
-        res.ok ? res.json() : null
-      ));
-
-      if (me?.user?.role !== "TEACHER") {
-        await signOut({ redirect: false });
-        setError("Cet accès n'est pas un accès professeur.");
-        setLoading(false);
-        return;
-      }
-
-      const target = me?.user?.portalPasswordMustChange
-        ? "/professeur/parametres?motDePasseTemporaire=1"
-        : from.startsWith("/professeur") ? from : "/professeur";
-      router.replace(target);
-      router.refresh();
-    } catch {
-      setError("Connexion impossible. Vérifiez votre accès ou contactez le service client.");
+      const user = await readLoginSession("TEACHER");
+      window.location.replace(loginDestination("TEACHER", from, user.portalPasswordMustChange));
+    } catch (err: unknown) {
+      setError(loginErrorMessage(err instanceof Error ? err.message : undefined, "TEACHER"));
+    } finally {
       setLoading(false);
     }
   }
@@ -159,7 +143,7 @@ function ProfesseurConnexionContent() {
                 </div>
               )}
               {error && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
+                <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -172,6 +156,7 @@ function ProfesseurConnexionContent() {
                     <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
                       id="teacher-phone"
+                      name="username"
                       type="tel"
                       autoComplete="tel"
                       required
@@ -189,6 +174,7 @@ function ProfesseurConnexionContent() {
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <PasswordInput
                       id="teacher-password"
+                      name="password"
                       autoComplete="current-password"
                       required
                       value={password}

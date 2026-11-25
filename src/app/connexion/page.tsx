@@ -2,15 +2,16 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { GraduationCap, Lock, Mail, ArrowRight, Info, ShieldCheck, WalletCards, CalendarCheck, Users, ClipboardCheck, Bell } from "lucide-react";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { PublicLayout } from "@/components/layouts/public-layout";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getSafeInternalReturnPath } from "@/lib/safe-return-path";
+import { loginDestination, loginErrorMessage, loginResultError, readLoginSession } from "@/lib/auth-feedback";
 
 const ACCOUNT_BENEFITS = [
   { icon: CalendarCheck, title: "Réservations suivies", text: "Dates, créneaux, professeur choisi et statut restent centralisés." },
@@ -28,11 +29,10 @@ const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm foc
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
 
 function ConnexionContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const from = getSafeInternalReturnPath(searchParams.get("from"));
-  const isAdminAuth = from?.startsWith("/admin") ?? false;
-  const isClientAuth = from?.startsWith("/client") ?? false;
+  const isAdminAuth = /^\/admin(?:\/|\?|$)/.test(from ?? "");
+  const expectedRole = isAdminAuth ? "ADMIN" : "CLIENT";
   const passwordChanged = searchParams.get("passwordChanged") === "1";
 
   const [email, setEmail] = useState("");
@@ -42,32 +42,14 @@ function ConnexionContent() {
 
   // Si déjà connecté, rediriger selon le rôle
   useEffect(() => {
-    router.prefetch("/client");
-    router.prefetch("/admin");
-    router.prefetch("/professeur");
-
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const role = data?.user?.role;
-        if (!role) return;
-
-        if (isAdminAuth) {
-          if (role === "ADMIN") router.replace(from ?? "/admin");
-          return;
-        }
-
-        if (isClientAuth) {
-          if (role === "CLIENT") router.replace(from ?? "/client");
-          return;
-        }
-
-        if (role === "ADMIN") router.replace("/admin");
-        else if (role === "TEACHER") router.replace("/professeur");
-        else if (role === "CLIENT") router.replace("/client");
+    let active = true;
+    readLoginSession(expectedRole)
+      .then((user) => {
+        if (active) window.location.replace(loginDestination(expectedRole, from, user.passwordMustChange));
       })
       .catch(() => {});
-  }, [from, isAdminAuth, isClientAuth, router]);
+    return () => { active = false; };
+  }, [from, expectedRole]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,42 +68,20 @@ function ConnexionContent() {
       const res = await signIn("credentials", {
         email,
         password,
+        accountRole: expectedRole,
         redirect: false,
       });
-      if (!res || res.error) {
-        setError(isAdminAuth
-          ? "Email administrateur ou mot de passe incorrect."
-          : "Email, téléphone ou mot de passe incorrect.");
-        setLoading(false);
+      const failure = loginResultError(res, expectedRole);
+      if (failure) {
+        setError(failure);
         return;
       }
-
-      // Récupérer le rôle pour rediriger
-      const me = await fetch("/api/auth/me", { cache: "no-store" }).then((r) =>
-        r.ok ? r.json() : null
-      );
-
-      const role = me?.user?.role;
-      if (isAdminAuth && role !== "ADMIN") {
-        await signOut({ redirect: false });
-        setError("Accès administrateur refusé. Utilisez un compte administrateur.");
-        setLoading(false);
-        return;
-      }
-
-      const target = from
-        ? from
-        : role === "ADMIN"
-          ? "/admin"
-          : role === "CLIENT"
-            ? "/client"
-            : role === "TEACHER"
-              ? "/professeur"
-              : "/";
-      router.replace(target);
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue. Réessayez.");
+      const user = await readLoginSession(expectedRole);
+      // Fresh document request: do not reuse an anonymous protected RSC prefetch.
+      window.location.replace(loginDestination(expectedRole, from, user.passwordMustChange));
+    } catch (err: unknown) {
+      setError(loginErrorMessage(err instanceof Error ? err.message : undefined, expectedRole));
+    } finally {
       setLoading(false);
     }
   }
@@ -197,7 +157,7 @@ function ConnexionContent() {
               </div>
             )}
             {error && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
+              <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -210,6 +170,7 @@ function ConnexionContent() {
                   <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <Input
                     id="email"
+                    name="username"
                     type={isAdminAuth ? "email" : "text"}
                     autoComplete="username"
                     required
@@ -234,6 +195,7 @@ function ConnexionContent() {
                   <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                   <PasswordInput
                     id="password"
+                    name="password"
                     autoComplete="current-password"
                     required
                     value={password}

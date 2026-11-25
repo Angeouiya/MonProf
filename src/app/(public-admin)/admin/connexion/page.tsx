@@ -1,21 +1,20 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { ArrowRight, Info, Lock, Mail, ShieldCheck } from "lucide-react";
 import { PrivateAccessShell } from "@/components/managed/private-access-shell";
 import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { loginDestination, loginErrorMessage, loginResultError, readLoginSession } from "@/lib/auth-feedback";
 
 const FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 text-sm focus-visible:ring-[#9AAAD0]";
 const PASSWORD_FIELD_CLASS = "h-12 rounded-lg border-[#DDE6F7] bg-white pl-10 pr-14 text-sm focus-visible:ring-[#9AAAD0]";
 
 function AdminConnexionContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const passwordChanged = searchParams.get("passwordChanged") === "1";
   const [email, setEmail] = useState("");
@@ -24,15 +23,12 @@ function AdminConnexionContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    router.prefetch("/admin");
-
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        if (data?.user?.role === "ADMIN") router.replace("/admin");
-      })
+    let active = true;
+    readLoginSession("ADMIN")
+      .then(() => { if (active) window.location.replace("/admin"); })
       .catch(() => {});
-  }, [router]);
+    return () => { active = false; };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -49,30 +45,20 @@ function AdminConnexionContent() {
       const result = await signIn("credentials", {
         email: email.trim().toLowerCase(),
         password,
+        accountRole: "ADMIN",
         redirect: false,
       });
 
-      if (!result || result.error) {
-        setError("Identifiants administrateur incorrects.");
-        setLoading(false);
+      const failure = loginResultError(result, "ADMIN");
+      if (failure) {
+        setError(failure);
         return;
       }
-
-      const me = await fetch("/api/auth/me", { cache: "no-store" }).then((response) =>
-        response.ok ? response.json() : null,
-      );
-
-      if (me?.user?.role !== "ADMIN") {
-        await signOut({ redirect: false });
-        setError("Accès administrateur refusé. Utilisez un compte administrateur.");
-        setLoading(false);
-        return;
-      }
-
-      router.replace("/admin");
-      router.refresh();
-    } catch (err: any) {
-      setError(err?.message || "Connexion impossible. Réessayez.");
+      await readLoginSession("ADMIN");
+      window.location.replace(loginDestination("ADMIN"));
+    } catch (err: unknown) {
+      setError(loginErrorMessage(err instanceof Error ? err.message : undefined, "ADMIN"));
+    } finally {
       setLoading(false);
     }
   }
@@ -108,7 +94,7 @@ function AdminConnexionContent() {
                 </div>
               )}
               {error && (
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
+                <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm font-semibold text-red-700">
                   <Info className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -121,8 +107,9 @@ function AdminConnexionContent() {
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <Input
                       id="admin-email"
+                      name="username"
                       type="email"
-                      autoComplete="email"
+                      autoComplete="username"
                       required
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
@@ -138,6 +125,7 @@ function AdminConnexionContent() {
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
                     <PasswordInput
                       id="admin-password"
+                      name="password"
                       autoComplete="current-password"
                       required
                       value={password}
