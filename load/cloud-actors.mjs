@@ -64,7 +64,7 @@ class MinHeap {
   }
 }
 
-export async function runCloudActors({ origin, users, runId, rampSeconds = 120, holdSeconds = 600, thinkSeconds = 180 }) {
+export async function runCloudActors({ origin, users, runId, rampSeconds = 120, holdSeconds = 600, thinkSeconds = 180, diagnosticOnly = false }) {
   assertHostedCloud();
   assertLoadTarget(origin, { local: true, runId });
   assert.equal(users.length, 100_000);
@@ -163,7 +163,7 @@ export async function runCloudActors({ origin, users, runId, rampSeconds = 120, 
     routes: Object.fromEntries(routes.map(route => [route.name, summarize(route)])),
     generator: { maxInFlight, queueSaturated, abortReason, maxGeneratorCorePercent, eventLoopP95Ms: loopDelay.percentile(95) / 1e6, minFreeMemoryGiB: minFreeMemory / 1024 ** 3, cpuCount: os.availableParallelism(), totalMemoryGiB: os.totalmem() / 1024 ** 3, sharesHostWithServer: true },
     samples, cloud: "GitHub Actions standard public runner", runId: process.env.GITHUB_RUN_ID,
-    productionTraffic: false, productionCapacityCertified: false,
+    productionTraffic: false, productionCapacityCertified: false, diagnosticOnly,
   };
   report.failures = [
     distinct !== users.length && "100k distinct users were not reached",
@@ -177,14 +177,16 @@ export async function runCloudActors({ origin, users, runId, rampSeconds = 120, 
     maxGeneratorCorePercent >= 80 && "Generator CPU saturation: result cannot certify the server",
     report.generator.eventLoopP95Ms >= 100 && "Generator event-loop delay exceeds 100ms",
     abortReason,
+    diagnosticOnly && "CPU diagnostic only: the ten-minute capacity target was not tested",
   ].filter(Boolean);
   report.passed = report.failures.length === 0;
   return report;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const report = await runCloudActors({ origin: process.env.BASE_URL, users: JSON.parse(readFileSync(process.env.CAPACITY_USERS_FILE, "utf8")), runId: process.env.CAPACITY_RUN_ID });
+  const diagnosticOnly = process.env.CAPACITY_DIAGNOSTIC_ONLY === "true";
+  const report = await runCloudActors({ origin: process.env.BASE_URL, users: JSON.parse(readFileSync(process.env.CAPACITY_USERS_FILE, "utf8")), runId: process.env.CAPACITY_RUN_ID, diagnosticOnly, holdSeconds: diagnosticOnly ? 30 : 600 });
   writeFileSync(process.env.CAPACITY_SUMMARY_FILE, JSON.stringify(report, null, 2));
   console.log("CLOUD_CAPACITY_RESULT " + JSON.stringify(report));
-  if (!report.passed) process.exitCode = 1;
+  if (!report.passed && !diagnosticOnly) process.exitCode = 1;
 }

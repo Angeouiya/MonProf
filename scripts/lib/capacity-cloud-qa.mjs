@@ -46,6 +46,10 @@ export async function verifyCloudCapacity({ client, check }) {
   await client.query("ALTER ROLE competence_runtime SET default_transaction_read_only=on");
   const env = { ...process.env, NODE_ENV:"production", HOSTNAME:"127.0.0.1", NEXTAUTH_URL:origin, NEXTAUTH_SECRET:secret, NEXT_PUBLIC_APP_URL:origin, APP_URL:origin, APP_DEPLOYMENT_PLATFORM:"local", APP_DEPLOYMENT_ENV:"load", CLOUDFLARE_ENV:"", NODE_OPTIONS:"--max-old-space-size=1536", NEXT_TELEMETRY_DISABLED:"1" };
   const servers = [], logs = [];
+  const diagnosticOnly=process.env.CAPACITY_DIAGNOSTIC_ONLY === "true";
+  const cpuProfiles=[];
+  let profileTimer;
+  const control=(server,command)=>new Promise((resolve,reject)=>{const timer=setTimeout(()=>{server.off("message",receive);reject(new Error("CPU profiler IPC deadline"));},30000);const receive=message=>{if(message?.type===command+":done"){clearTimeout(timer);server.off("message",receive);if(message.error)reject(new Error(message.error));else resolve(message);}};server.on("message",receive);server.send({command});});
   const ports=[3335,3336,3337];
   const gateway=createCloudReadGateway({ports,proof:{ runId, accounts:count, dataset:"synthetic", productionDataPresent:false, writesBlocked:true, databaseReadOnly:true }});
   const ticksPerSecond=Number(execFileSync("getconf",["CLK_TCK"],{encoding:"utf8"}).trim());
@@ -55,7 +59,7 @@ export async function verifyCloudCapacity({ client, check }) {
   try {
     for (const port of ports) {
       const log = createWriteStream(path.join(directory,"application-"+port+".log"));logs.push(log);
-      const server = spawn(process.execPath,[".next/standalone/server.js"],{env:{...env,PORT:String(port)},stdio:["ignore","pipe","pipe"]});servers.push(server);server.stdout.pipe(log);server.stderr.pipe(log);
+      const server = spawn(process.execPath,[diagnosticOnly?"load/profile-cloud-server.cjs":".next/standalone/server.js"],{env:{...env,PORT:String(port),CAPACITY_PROFILE_DIR:directory},stdio:diagnosticOnly?["ignore","pipe","pipe","ipc"]:["ignore","pipe","pipe"]});servers.push(server);server.stdout.pipe(log);server.stderr.pipe(log);
     }
     await new Promise(resolve=>gateway.server.listen(3334,"127.0.0.1",resolve));
     for (let attempt=0;attempt<90;attempt++) {
@@ -67,6 +71,7 @@ export async function verifyCloudCapacity({ client, check }) {
     const course=await fetch(origin+"/client/accompagnement",{headers:{Cookie:users[0].cookie}});assert.equal(course.status,200);const html=await course.text();assert.ok(html.includes("QA-CAPACITY-1"));assert.equal(html.includes("QA-CAPACITY-100000"),false);
     for(const port of ports)for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){const r=await fetch("http://127.0.0.1:"+port+route,{headers:{Cookie:users[0].cookie,Host:"127.0.0.1:3334"}});assert.equal(r.status,200);await r.arrayBuffer();}
     console.log("CLOUD_CAPACITY_READY: 100000 distinct authenticated owners, 100000 course dossiers, read-only PostgreSQL, three warmed production-build processes; no production credentials.");
+    if(diagnosticOnly){await Promise.all(servers.map(server=>control(server,"profile-start")));profileTimer=setTimeout(()=>Promise.all(servers.map(server=>control(server,"profile-stop"))).then(results=>{cpuProfiles.push(...results);for(const result of results)console.log("CLOUD_CPU_PROFILE "+JSON.stringify(result));}).catch(error=>console.log("CLOUD_CPU_PROFILE_ERROR "+error.message)),90000);}
     let previousCpu=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks),previousAt=performance.now();
     telemetryTimer=setInterval(async()=>{const now=performance.now();const current=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks);const cpu=current.map((value,i)=>cpuCorePercent(value-previousCpu[i],now-previousAt,ticksPerSecond));previousCpu=current;previousAt=now;
       const stats=await client.query("SELECT count(*)::int AS connections FROM pg_stat_activity WHERE datname=current_database()").catch(()=>null);
@@ -77,16 +82,17 @@ export async function verifyCloudCapacity({ client, check }) {
     generator.stdout.pipe(process.stdout);generator.stderr.pipe(process.stderr);
     const exitCode=await new Promise((resolve,reject)=>{generator.on("error",reject);generator.on("close",resolve);});
     const report=JSON.parse(readFileSync(reportFile,"utf8"));
-    clearInterval(telemetryTimer);report.infrastructure=infrastructure;report.backendProcesses=ports.length;
+    clearInterval(telemetryTimer);report.infrastructure=infrastructure;report.backendProcesses=ports.length;report.cpuProfiles=cpuProfiles;
     report.databaseTables=(await client.query("SELECT relname,seq_scan,idx_scan FROM pg_stat_user_tables WHERE schemaname='competence' AND relname IN ('User','Notification','ManagedCourseDossier','ManagedCourseSession')")).rows;
     writeFileSync(reportFile,JSON.stringify(report,null,2));
     console.log("CLOUD_CAPACITY_SERVER_SUMMARY "+JSON.stringify({backendProcesses:ports.length,infrastructure,databaseTables:report.databaseTables}));
     if(!report.passed)for(const port of ports){const lines=readFileSync(path.join(directory,"application-"+port+".log"),"utf8").split(/\r?\n/).filter(line=>/prisma:error|Error:|timed out|P2024|P2037/.test(line));console.log("CLOUD_SERVER_ERRORS "+port+" "+JSON.stringify(lines.slice(-15).map(line=>line.replace(/postgres(?:ql)?:\/\/\S+/g,"[synthetic-db-url]"))));}
-    if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Compétence — cloud 100k\n\nStatus: **"+(report.passed?"PASS":"FAIL")+"**\n\n```json\n"+JSON.stringify(report,null,2)+"\n```\n\nThis is a read-only Node/PostgreSQL cloud CI experiment, not Cloudflare production certification. No artifacts/caches or paid runners are provisioned.\n");
+    if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Compétence — cloud 100k\n\nStatus: **"+(diagnosticOnly?"CPU DIAGNOSTIC ONLY — NOT A CAPACITY PASS":report.passed?"PASS":"FAIL")+"**\n\n```json\n"+JSON.stringify(report,null,2)+"\n```\n\nThis is a read-only Node/PostgreSQL cloud CI experiment, not Cloudflare production certification. No artifacts/caches or paid runners are provisioned.\n");
+    if(diagnosticOnly){assert.equal(cpuProfiles.length,3,"All three CPU profiles must be captured");check("Cloud CPU diagnosis captured; not a capacity validation");return;}
     assert.equal(exitCode,0,"Cloud load failed: "+report.failures.join("; "));
     check("100k cloud resident client sessions measured against real isolated APIs and PostgreSQL; exact workload and limits recorded");
   } finally {
-    clearInterval(telemetryTimer);await gateway.close();
+    clearInterval(telemetryTimer);clearTimeout(profileTimer);await gateway.close();
     for(const server of servers)if(server.exitCode===null)server.kill();
     for(const log of logs)log.end();
     await client.query("ALTER ROLE competence_runtime RESET default_transaction_read_only");
