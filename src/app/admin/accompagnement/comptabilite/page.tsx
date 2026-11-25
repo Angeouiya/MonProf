@@ -38,6 +38,8 @@ export default async function ManagedAccounting({
     ledger,
     receipts,
     dues,
+    partnerIncome,
+    partnerPayments,
   ] = await Promise.all([
     db.managedParentReceipt.aggregate({ _sum: { amount: true } }),
     db.managedParentReceipt.aggregate({
@@ -87,6 +89,10 @@ export default async function ManagedAccounting({
     db.$queryRaw<
       { amount: bigint }[]
     >`SELECT COALESCE(SUM(GREATEST(0, "totalPrice" - "cancelledAmount" - "receivedAmount")),0)::bigint AS amount FROM "ManagedCourseDossier"`,
+    db.$queryRaw<
+      { amount: bigint }[]
+    >`SELECT COALESCE(sum(round(s."fundedAmount"::numeric*d."partnerRateBps"/10000)),0)::bigint AS amount FROM "ManagedCourseSession" s JOIN "ManagedCourseDossier" d ON d.id=s."dossierId" WHERE s.status='VALIDATED' AND d."partnerId" IS NOT NULL`,
+    db.managedPartnerPayment.aggregate({ _sum: { amountDelta: true } }),
   ]);
   const metrics = [
     ["Encaissements parents nets", parents._sum.amount ?? 0],
@@ -99,11 +105,19 @@ export default async function ManagedAccounting({
     [
       "Part Compétence acquise",
       (validated._sum.fundedAmount ?? 0) -
-        (validated._sum.creditedTeacherAmount ?? 0),
+        (validated._sum.creditedTeacherAmount ?? 0) -
+        Number(partnerIncome[0]?.amount ?? 0),
     ],
     ["Fonds reçus · cours non encore validés", pending._sum.fundedAmount ?? 0],
     ["Séances annulées · fonds à rapprocher", cancelled._sum.fundedAmount ?? 0],
     ["Remboursements parents enregistrés", -(refunds._sum.amount ?? 0)],
+    ["Commissions partenaires acquises", Number(partnerIncome[0]?.amount ?? 0)],
+    ["Partenaires déjà réglés", -(partnerPayments._sum.amountDelta ?? 0)],
+    [
+      "Reste à payer aux partenaires",
+      Number(partnerIncome[0]?.amount ?? 0) +
+        (partnerPayments._sum.amountDelta ?? 0),
+    ],
   ] as const;
   const page = ledger.slice(0, 30);
   return (

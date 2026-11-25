@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { MANAGED_MAX_SESSIONS, MANAGED_MAX_WEEKS, MANAGED_MAX_WEEKLY_SLOTS, managedWeeklySessions, orderedManagedSessions } from "./managed-course-schedule";
+import {
+  MANAGED_MAX_SESSIONS,
+  MANAGED_MAX_WEEKS,
+  MANAGED_MAX_WEEKLY_SLOTS,
+  managedWeeklySessions,
+  orderedManagedSessions,
+} from "./managed-course-schedule";
 
-export const MANAGED_TERMS_VERSION = "managed-2026-11-25-v3";
+export const MANAGED_TERMS_VERSION = "managed-2026-11-25-v4";
 export const MANAGED_DURATION_MINUTES = 120;
-export const MANAGED_MIN_COMMISSION_BPS = 2_000;
-export const MANAGED_MAX_COMMISSION_BPS = 3_000;
+export const MANAGED_MIN_COMMISSION_BPS = 0;
+export const MANAGED_MAX_COMMISSION_BPS = 10_000;
 export const MANAGED_CLASSES = [
   "6e",
   "5e",
@@ -23,7 +29,9 @@ export function managedCoursesEnabled() {
 }
 export const managedRequestSchema = z
   .object({
-    termsVersion: z.literal(MANAGED_TERMS_VERSION, { error: "La version du formulaire a changé. Actualisez avant d'accepter." }),
+    termsVersion: z.literal(MANAGED_TERMS_VERSION, {
+      error: "La version du formulaire a changé. Actualisez avant d'accepter.",
+    }),
     clientKey: z.string().uuid(),
     parentName: z.string().trim().min(2).max(100),
     phone: z
@@ -42,15 +50,31 @@ export const managedRequestSchema = z
     addressHint: z.string().trim().max(240).default(""),
     objective: z.string().trim().max(500).default(""),
     cadence: z.enum(["WEEKLY", "FORTNIGHTLY", "MONTHLY"]),
-    schedule: z.discriminatedUnion("mode", [
-      z.object({ mode: z.literal("DATES") }).strict(),
-      z.object({
-        mode: z.literal("WEEKLY"),
-        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        weeks: z.number().int().min(1).max(MANAGED_MAX_WEEKS),
-        weeklySlots: z.array(z.object({ dayOfWeek: z.number().int().min(0).max(6), time: z.string().regex(/^(?:(?:0[8-9]|1\d):(?:00|30)|20:00)$/) }).strict()).min(1).max(MANAGED_MAX_WEEKLY_SLOTS),
-      }).strict(),
-    ]).optional(),
+    schedule: z
+      .discriminatedUnion("mode", [
+        z.object({ mode: z.literal("DATES") }).strict(),
+        z
+          .object({
+            mode: z.literal("WEEKLY"),
+            startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            weeks: z.number().int().min(1).max(MANAGED_MAX_WEEKS),
+            weeklySlots: z
+              .array(
+                z
+                  .object({
+                    dayOfWeek: z.number().int().min(0).max(6),
+                    time: z
+                      .string()
+                      .regex(/^(?:(?:0[8-9]|1\d):(?:00|30)|20:00)$/),
+                  })
+                  .strict(),
+              )
+              .min(1)
+              .max(MANAGED_MAX_WEEKLY_SLOTS),
+          })
+          .strict(),
+      ])
+      .optional(),
     sessions: z
       .array(
         z.object({
@@ -75,7 +99,12 @@ export function managedPrice(
   const index = MANAGED_CLASSES.indexOf(
     className as (typeof MANAGED_CLASSES)[number],
   );
-  if (index < 0 || !Number.isSafeInteger(count) || count < 1 || count > MANAGED_MAX_SESSIONS)
+  if (
+    index < 0 ||
+    !Number.isSafeInteger(count) ||
+    count < 1 ||
+    count > MANAGED_MAX_SESSIONS
+  )
     throw new Error("Classe ou nombre de séances invalide.");
   const monthly = MANAGED_MONTHLY_PRICES[journey][index];
   const perSession = monthly / 4;
@@ -87,12 +116,9 @@ export function managedSplit(amount: number, commissionRateBps: number) {
   if (
     !Number.isInteger(commissionRateBps) ||
     commissionRateBps < MANAGED_MIN_COMMISSION_BPS ||
-    commissionRateBps > MANAGED_MAX_COMMISSION_BPS ||
-    commissionRateBps % 100 !== 0
+    commissionRateBps > MANAGED_MAX_COMMISSION_BPS
   )
-    throw new Error(
-      "La commission Compétence doit être comprise entre 20 % et 30 %, par pourcentage entier.",
-    );
+    throw new Error("La répartition doit être comprise entre 0 % et 100 %.");
   const platform = Math.round((amount * commissionRateBps) / 10_000);
   return { platform, teacher: amount - platform };
 }
@@ -125,33 +151,38 @@ export function managedSlots(
     if (rule?.mode === "WEEKLY") {
       try {
         const calculated = managedWeeklySessions(rule);
-        const received = [...input.sessions].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+        const received = [...input.sessions].sort((a, b) =>
+          `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`),
+        );
         if (JSON.stringify(calculated) !== JSON.stringify(received))
-          throw new Error("Le nombre et les dates ne correspondent pas à la répétition hebdomadaire. Recalculez le planning.");
+          throw new Error(
+            "Le nombre et les dates ne correspondent pas à la répétition hebdomadaire. Recalculez le planning.",
+          );
       } catch (error) {
-        throw new Error(error instanceof Error ? error.message : "Planning invalide.");
+        throw new Error(
+          error instanceof Error ? error.message : "Planning invalide.",
+        );
       }
     }
   }
-  const slots = orderedManagedSessions(input.sessions)
-    .map((slot) => {
-      const date = new Date(`${slot.date}T00:00:00.000Z`);
-      const start = new Date(`${slot.date}T${slot.time}:00.000Z`);
-      if (
-        !Number.isFinite(date.getTime()) ||
-        date.toISOString().slice(0, 10) !== slot.date ||
-        start.getTime() < now.getTime() + 30 * 60_000 ||
-        start.getTime() > now.getTime() + 366 * 86_400_000
-      )
-        throw new Error(
-          "Choisissez des dates futures, dans les douze prochains mois.",
-        );
-      return {
-        scheduledDate: date,
-        scheduledTime: slot.time,
-        durationMinutes: MANAGED_DURATION_MINUTES,
-      };
-    });
+  const slots = orderedManagedSessions(input.sessions).map((slot) => {
+    const date = new Date(`${slot.date}T00:00:00.000Z`);
+    const start = new Date(`${slot.date}T${slot.time}:00.000Z`);
+    if (
+      !Number.isFinite(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== slot.date ||
+      start.getTime() < now.getTime() + 30 * 60_000 ||
+      start.getTime() > now.getTime() + 366 * 86_400_000
+    )
+      throw new Error(
+        "Choisissez des dates futures, dans les douze prochains mois.",
+      );
+    return {
+      scheduledDate: date,
+      scheduledTime: slot.time,
+      durationMinutes: MANAGED_DURATION_MINUTES,
+    };
+  });
   return slots;
 }
 
@@ -207,26 +238,40 @@ const MANAGED_PARENT_TERMS_V2 = [
   "Le lien privé du dossier permet aussi de transmettre une demande d'annulation ou une réclamation. L'équipe examine la demande avec les parties. Une réclamation retient les sommes encore disponibles du dossier ; elle ne récupère pas automatiquement un versement déjà exécuté.",
   "Une séance non effectuée annulée par l'équipe est déduite des cours restant dus. Les fonds correspondants déjà reçus font l'objet d'un rapprochement puis, s'il y a lieu, d'un remboursement manuel vérifié. Une séance contestée déjà déclarée effectuée est traitée séparément, sans annulation rétroactive automatique ni pénalité non convenue.",
 ];
-export const MANAGED_PARENT_TERMS = [
+const MANAGED_PARENT_TERMS_V3 = [
   ...MANAGED_PARENT_TERMS_V2,
   "Le planning peut être répété sur un nombre défini de semaines ou composé de dates ponctuelles. Quatre semaines représentent une période de 28 jours, pas nécessairement un mois civil. Le total facturé est toujours le nombre exact de séances affichées multiplié par le tarif unitaire, sans abonnement ni renouvellement automatique.",
 ];
-export const MANAGED_TEACHER_TERMS =
+export const MANAGED_PARENT_TERMS = [
+  ...MANAGED_PARENT_TERMS_V3,
+  "Le parent peut confirmer qu’une séance déclarée effectuée a bien eu lieu depuis son lien privé ou son compte rattaché. Cette confirmation est conservée comme élément de suivi ; elle ne crée pas un paiement et ne remplace pas la vérification de Compétence. Un dossier transmis sans connexion peut être rattaché à un compte client sur présentation de son lien privé valide. Ne partagez pas ce lien.",
+];
+const MANAGED_TEACHER_TERMS_LEGACY =
   "La commission Compétence est fixée entre 20 % et 30 % pour chaque mission avant son acceptation ; le professeur reçoit la part restante, entre 70 % et 80 %. Le taux exact affiché est conservé pour les séances attribuées. La rémunération est payable après encaissement du parent et validation des séances. Le professeur s'engage à la ponctualité, à la qualité pédagogique, à la confidentialité, au respect de la vie privée de la famille et à la sécurité de l'élève. Il signale immédiatement tout empêchement à Compétence et ne sous-traite pas la mission sans autorisation.";
+export const MANAGED_TEACHER_TERMS =
+  "Le professeur prend connaissance des horaires et du montant qui lui est attribué avant d’accepter sa mission. Sa rémunération est payable après réalisation et validation des séances et réception du règlement du parent. Il s’engage à la ponctualité, à la qualité pédagogique, à la confidentialité, au respect de la vie privée de la famille et à la sécurité de l’élève. Il signale immédiatement tout empêchement à Compétence et ne sous-traite pas la mission sans autorisation.";
 // Retain past versions when adding conditions. Accepted evidence stores its
 // own verbatim snapshot and must never be silently rewritten.
 const parentTermsHistory: Record<string, readonly string[]> = {
   "managed-2026-11-24-v1": MANAGED_PARENT_TERMS_V2.slice(0, 6),
   "managed-2026-11-24-v2": MANAGED_PARENT_TERMS_V2,
-  "managed-2026-11-25-v3": MANAGED_PARENT_TERMS,
+  "managed-2026-11-25-v3": MANAGED_PARENT_TERMS_V3,
+  "managed-2026-11-25-v4": MANAGED_PARENT_TERMS,
 };
 export function managedParentTermsForVersion(version: string) {
   const terms = parentTermsHistory[version];
-  if (!terms) throw new Error("Version des conditions indisponible. Contactez Compétence.");
+  if (!terms)
+    throw new Error(
+      "Version des conditions indisponible. Contactez Compétence.",
+    );
   return [...terms];
 }
-export function managedTeacherTerms(commissionRateBps: number, version = MANAGED_TERMS_VERSION) {
-  if (!parentTermsHistory[version]) throw new Error("Version des engagements professeur indisponible.");
+export function managedTeacherTerms(
+  commissionRateBps: number,
+  version = MANAGED_TERMS_VERSION,
+) {
+  if (!parentTermsHistory[version])
+    throw new Error("Version des engagements professeur indisponible.");
   managedSplit(0, commissionRateBps);
-  return `J'accepte les séances proposées et la commission Compétence de ${commissionRateBps / 100} %, soit une part professeur de ${100 - commissionRateBps / 100} %. ${MANAGED_TEACHER_TERMS}`;
+  return `J'accepte les séances proposées et la commission Compétence de ${commissionRateBps / 100} %, soit une part professeur de ${100 - commissionRateBps / 100} %. ${MANAGED_TEACHER_TERMS_LEGACY}`;
 }

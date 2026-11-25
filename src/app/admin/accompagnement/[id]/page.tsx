@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { managedInstallments } from "@/lib/managed-courses-core";
 import { ManagedAction } from "@/components/managed/action";
 import { ManagedAdminOperations } from "@/components/managed/admin-operations";
+import { ManagedAssignment } from "@/components/managed/assignment";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
 import {
   managedAvailableBalance,
@@ -26,15 +27,19 @@ export default async function ManagedAdminDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ prof?: string }>;
+  searchParams: Promise<{ prof?: string; partenaire?: string }>;
 }) {
   const admin = await requireAdmin("BOOKINGS_VIEW");
   const { id } = await params;
-  const { prof = "" } = await searchParams;
+  const { prof = "", partenaire = "" } = await searchParams;
   const dossier = await db.managedCourseDossier.findUnique({
     where: { id },
     include: {
-      sessions: { orderBy: { sequence: "asc" } },
+      partner: { select: { name: true, phone: true } },
+      sessions: {
+        orderBy: { sequence: "asc" },
+        include: { teacher: { select: { fullName: true } } },
+      },
       offers: {
         orderBy: { offeredAt: "desc" },
         take: 50,
@@ -117,6 +122,30 @@ export default async function ManagedAdminDetail({
           },
           select: { id: true, fullName: true },
           orderBy: { fullName: "asc" },
+          take: 30,
+        })
+      : [];
+  const partners =
+    canManage && canFinance
+      ? await db.managedPartner.findMany({
+          where: {
+            active: true,
+            ...(partenaire.trim()
+              ? {
+                  OR: [
+                    {
+                      name: {
+                        contains: partenaire.trim().slice(0, 80),
+                        mode: "insensitive",
+                      },
+                    },
+                    { phone: { contains: partenaire.trim().slice(0, 32) } },
+                  ],
+                }
+              : {}),
+          },
+          select: { id: true, name: true, phone: true },
+          orderBy: [{ name: "asc" }, { id: "asc" }],
           take: 30,
         })
       : [];
@@ -204,6 +233,89 @@ export default async function ManagedAdminDetail({
           </div>
         ))}
       </div>
+      <section className={styles.card}>
+        <h2>Tarif et partenariat · interne</h2>
+        <p className={styles.muted}>
+          Base initiale :{" "}
+          {dossier.initialTotalPrice
+            ? money(dossier.initialTotalPrice)
+            : "Non renseignée (dossier historique)"}{" "}
+          · Prix final : {money(dossier.totalPrice)}
+        </p>
+        <p>
+          {dossier.partner
+            ? `${dossier.partner.name} · ${dossier.partner.phone} · ${dossier.partnerRateBps / 100} % du cours`
+            : "Aucun partenaire"}
+        </p>
+        {canManage &&
+          canFinance &&
+          !dossier.receivedAmount &&
+          !dossier.onHold &&
+          !dossier.sessions.some(
+            (s) => s.teacherId || s.status !== "PLANNED",
+          ) &&
+          !dossier.offers.some((o) =>
+            [
+              "OFFERED",
+              "ACCEPTED",
+              "CANCEL_REQUESTED",
+              "PARTIAL_CANCELLED",
+            ].includes(o.status),
+          ) && (
+            <details className={styles.disclosure}>
+              <summary>Définir ou modifier le partenaire</summary>
+              <form className="flex gap-2">
+                <input
+                  name="partenaire"
+                  aria-label="Chercher un partenaire"
+                  defaultValue={partenaire}
+                  placeholder="Nom ou numéro"
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border px-3"
+                />
+                <button className={styles.button}>Chercher</button>
+              </form>
+              <p className={styles.muted}>
+                30 résultats maximum.{" "}
+                <Link
+                  href="/admin/accompagnement/partenaires"
+                  className="underline"
+                >
+                  Enregistrer un partenaire
+                </Link>
+              </p>
+              <ManagedAction
+                endpoint={endpoint}
+                payload={{ action: "SET_PARTNER" }}
+                label="Enregistrer le partenariat"
+                fields={[
+                  {
+                    name: "partnerId",
+                    label: "Partenaire",
+                    required: false,
+                    value: dossier.partnerId ?? "",
+                    options: [
+                      { value: "", label: "Sans partenaire" },
+                      ...partners.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} · ${p.phone}`,
+                      })),
+                    ],
+                  },
+                  {
+                    name: "partnerRatePercent",
+                    label: "Pourcentage sur le prix final du cours",
+                    type: "number",
+                    value: String(dossier.partnerRateBps / 100),
+                    min: 0,
+                    max: 100,
+                    step: 0.01,
+                  },
+                ]}
+                confirmText="Ce partenariat sera interne à Compétence. La part partenaire sera calculée sur les encaissements des séances validées, sans diminuer la rémunération attribuée au professeur."
+              />
+            </details>
+          )}
+      </section>
       {expiredUnassigned > 0 && (
         <p className={styles.notice}>
           {expiredUnassigned} horaire(s) non attribué(s) sont déjà passés.
@@ -270,6 +382,11 @@ export default async function ManagedAdminDetail({
                 {session.scheduledDate.toISOString().slice(0, 10)} ·{" "}
                 {session.scheduledTime}
               </p>
+              <p className={styles.muted}>
+                {session.parentConfirmedAt
+                  ? `Parent : séance confirmée le ${session.parentConfirmedAt.toLocaleDateString("fr-FR", { timeZone: "Africa/Abidjan" })}`
+                  : "Confirmation parent non encore reçue"}
+              </p>
               {canManage && !dossier.onHold ? (
                 <ManagedAction
                   endpoint={endpoint}
@@ -300,6 +417,13 @@ export default async function ManagedAdminDetail({
                 {session.sequence}.{" "}
                 {session.scheduledDate.toISOString().slice(0, 10)} ·{" "}
                 {session.scheduledTime} · {managedStatusLabel(session.status)}
+              </p>
+              <p className={styles.muted}>
+                {session.teacher?.fullName ?? "Non attribué"}
+                {session.completedAt
+                  ? ` · déclarée effectuée le ${session.completedAt.toLocaleString("fr-FR", { timeZone: "Africa/Abidjan" })}`
+                  : ""}
+                {session.parentConfirmedAt ? " · confirmée par le parent" : ""}
               </p>
               <p className="mt-2 text-sm">
                 Cours {money(session.amount)} · Financé{" "}
@@ -344,29 +468,19 @@ export default async function ManagedAdminDetail({
             </p>
           )}
           {teachers.length > 0 && (
-            <ManagedAction
+            <ManagedAssignment
               endpoint={endpoint}
-              payload={{ action: "OFFER" }}
-              label="Proposer la mission"
-              fields={[
-                {
-                  name: "teacherId",
-                  label: "Professeur",
-                  options: teachers.map((teacher) => ({
-                    value: teacher.id,
-                    label: teacher.fullName,
-                  })),
-                },
-                {
-                  name: "commissionPercent",
-                  label: "Commission Compétence (%) · de 20 à 30",
-                  type: "number",
-                  value: "20",
-                  min: 20,
-                  max: 30,
-                },
-              ]}
-              confirmText="Cette proposition sera envoyée au professeur pour acceptation. Les horaires et les habilitations seront revérifiés."
+              teachers={teachers}
+              amounts={dossier.sessions
+                .filter(
+                  (s) =>
+                    s.status === "PLANNED" &&
+                    !s.teacherId &&
+                    !s.offerId &&
+                    managedStartsInFuture(s),
+                )
+                .map((s) => s.amount)}
+              partnerRateBps={dossier.partnerRateBps}
             />
           )}
         </section>
@@ -526,19 +640,19 @@ export default async function ManagedAdminDetail({
           <p className="my-3 text-sm">
             Tout changement annule l'accord parent et les offres non acceptées.
             Impossible après encaissement ou attribution acceptée. La commission
-            sera fixée entre 20 % et 30 % lors de la nouvelle proposition au
-            professeur.
+            sera fixée lors de la nouvelle proposition au professeur, qui ne
+            verra que sa rémunération.
           </p>
           <ManagedAction
             endpoint={endpoint}
-            payload={{ action: "REPRICE" }}
+            payload={{ action: "REPRICE_TOTAL" }}
             label="Créer une nouvelle proposition tarifaire"
             fields={[
               {
-                name: "unitPrice",
-                label: "Nouveau prix par séance de 2 h",
+                name: "totalPrice",
+                label: "Montant total négocié (F CFA)",
                 type: "number",
-                value: String(dossier.unitPrice),
+                value: String(dossier.totalPrice),
               },
               { name: "note", label: "Motif de l'exception" },
             ]}
@@ -569,9 +683,9 @@ export default async function ManagedAdminDetail({
         ))}
       </details>
       <p className="text-xs text-slate-600">
-        Commission fixée par attribution entre 20 % et 30 %. Les séances non
-        attribuées n’ont pas encore de répartition définitive. Les taux acceptés
-        et rémunérations déjà acquis sont conservés.
+        Répartition fixée librement par l’administration avant attribution. Les
+        séances non attribuées n’ont pas encore de répartition définitive. Les
+        taux acceptés et rémunérations déjà acquis sont conservés.
       </p>
     </div>
   );

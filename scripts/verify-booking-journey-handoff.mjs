@@ -17,113 +17,165 @@ const safeReturnPath = read("src/lib/safe-return-path.ts");
 const checks = [
   [
     "Homepage starts with three explicit mini-app choices",
-    home.includes('ivoirien: "/professeurs?journey=ivoirien"')
-      && home.includes('francais: "/professeurs?journey=francais"')
-      && home.includes('professionnel: "/professeurs?journey=professionnel"')
-      && home.includes('id="parcours"')
-      && home.includes('data-home-journey-tabs')
-      && home.includes('<JourneySwitcher')
-      && journeySwitcher.includes('"data-journey-tab": journey')
-      && journeySwitcher.includes('data-mini-app-tablist')
-      && journeySwitcher.includes('data-mini-app-system-switcher')
-      && journeySwitcher.includes('data-mini-app-active-pill')
-      && journeySwitcher.includes('role="tablist"')
-      && journeySwitcher.includes('role: "tab" as const')
-      && journeySwitcher.includes('"aria-selected": active')
-      && journeySwitcher.includes('data-journey-tab-meta')
-      && home.includes('showMeta')
-      && journeyModel.includes('priceLabel: "Dès 15 000 F"')
-      && journeyModel.includes('priceLabel: "Dès 37 500 F"')
-      && journeySwitcher.includes('const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;')
-      && !home.includes('Réserver une séance'),
+    home.includes('ivoirien: "/professeurs?journey=ivoirien"') &&
+      home.includes('francais: "/professeurs?journey=francais"') &&
+      home.includes('professionnel: "/professeurs?journey=professionnel"') &&
+      home.includes('id="parcours"') &&
+      home.includes("data-home-journey-tabs") &&
+      home.includes("<JourneySwitcher") &&
+      journeySwitcher.includes('"data-journey-tab": journey') &&
+      journeySwitcher.includes("data-mini-app-tablist") &&
+      journeySwitcher.includes("data-mini-app-system-switcher") &&
+      journeySwitcher.includes("data-mini-app-active-pill") &&
+      journeySwitcher.includes('role="tablist"') &&
+      journeySwitcher.includes('role: "tab" as const') &&
+      journeySwitcher.includes('"aria-selected": active') &&
+      journeySwitcher.includes("data-journey-tab-meta") &&
+      home.includes("showMeta") &&
+      journeyModel.includes('priceLabel: "Dès 15 000 F"') &&
+      journeyModel.includes('priceLabel: "Dès 37 500 F"') &&
+      journeySwitcher.includes(
+        'const tabMeta = journey === "professionnel" ? "40 000 F" : config.priceLabel;',
+      ) &&
+      !home.includes("Réserver une séance"),
   ],
   [
     "Homepage exposes one premium three-system switcher before lightweight desktop guidance",
-    home.includes('data-home-centered-entry')
-      && home.includes('className="flex items-center border-b border-[#E3E8F2] bg-white"')
-      && !home.includes('bg-[radial-gradient')
-      && home.includes('max-w-5xl px-4 py-8 text-center')
-      && home.includes('Choisissez. Payez. Commencez.')
-      && home.includes('Un parcours. Un prix clair. Un professeur vérifié.')
-      && home.includes('Prix clair · Paiement sécurisé')
-      && home.includes('max-w-4xl scroll-mt-20 text-left')
-      && home.includes('showLabel')
-      && home.includes('size="hero"')
-      && journeySwitcher.includes('journey-switcher__indicator')
-      && journeySwitcher.includes('data-journey-count={journeys.length}')
-      && !home.includes('grid-cols-[auto_minmax(0,1fr)_auto]')
-      && !home.includes('Votre parcours')
-      && !home.includes('sm:block sm:min-h-0')
-      && home.includes('hidden border-y border-[#E3E8F2] bg-white sm:block')
-      && home.includes('hidden bg-[#111B4D] text-white sm:block')
-      && !home.includes('hidden bg-white sm:block')
-      && !home.includes('TeacherCard')
-      && !home.includes('featuredCards'),
+    home.includes("data-home-centered-entry") &&
+      home.includes(
+        'className="flex items-center border-b border-[#E3E8F2] bg-white"',
+      ) &&
+      !home.includes("bg-[radial-gradient") &&
+      home.includes("max-w-5xl px-4 py-8 text-center") &&
+      home.includes("Choisissez. Payez. Commencez.") &&
+      home.includes("Un parcours. Un prix clair. Un professeur vérifié.") &&
+      home.includes("Prix clair · Paiement sécurisé") &&
+      home.includes("max-w-4xl scroll-mt-20 text-left") &&
+      home.includes("showLabel") &&
+      home.includes('size="hero"') &&
+      journeySwitcher.includes("journey-switcher__indicator") &&
+      journeySwitcher.includes("data-journey-count={journeys.length}") &&
+      !home.includes("grid-cols-[auto_minmax(0,1fr)_auto]") &&
+      !home.includes("Votre parcours") &&
+      !home.includes("sm:block sm:min-h-0") &&
+      home.includes("hidden border-y border-[#E3E8F2] bg-white sm:block") &&
+      home.includes("hidden bg-[#111B4D] text-white sm:block") &&
+      !home.includes("hidden bg-white sm:block") &&
+      !home.includes("TeacherCard") &&
+      !home.includes("featuredCards"),
   ],
   [
     "Public navigation resolves client, admin and teacher sessions without blocking first render",
-    publicLayout.includes('const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null)')
-      && publicLayout.includes('const controller = new AbortController()')
-      && publicLayout.includes('readPublicSessionRole(controller.signal)')
-      && publicLayout.includes('CLIENT: { href: "/client"')
-      && publicLayout.includes('ADMIN: { href: "/admin"')
-      && publicLayout.includes('TEACHER: { href: "/professeur"')
-      && publicLayout.includes('fetch("/api/auth/me", { cache: "no-store", signal })'),
+    /const \[sessionRole, setSessionRole\] = useState<PublicSessionRole \| null>\(\s*null,?\s*\)/.test(
+      publicLayout,
+    ) &&
+      publicLayout.includes("const controller = new AbortController()") &&
+      publicLayout.includes("readPublicSessionRole(controller.signal)") &&
+      /CLIENT: \{\s*href: "\/client"/.test(publicLayout) &&
+      /ADMIN: \{\s*href: "\/admin"/.test(publicLayout) &&
+      /TEACHER: \{\s*href: "\/professeur"/.test(publicLayout) &&
+      publicLayout.includes(
+        'fetch("/api/auth/me", { cache: "no-store", signal })',
+      ),
   ],
   [
     "Public teacher search preserves the selected journey through search, filters, pagination and cards",
-    publicTeachers.includes('const journey = parseBookingJourney')
-      && publicTeachers.includes('params.set("journey", journey)')
-      && publicTeachers.includes('name="journey" value={journey}')
-      && (publicTeachers.includes('&journey=${journey}') || publicTeachers.includes('buildBookingHref(t.id, journey, referralCode)'))
-      && (publicTeachers.includes('profileHref={journey ?') || publicTeachers.includes('profileHref={buildTeacherProfileHref(t.id, journey, referralCode)}')),
+    publicTeachers.includes("const journey = parseBookingJourney") &&
+      publicTeachers.includes('params.set("journey", journey)') &&
+      publicTeachers.includes('name="journey" value={journey}') &&
+      (publicTeachers.includes("&journey=${journey}") ||
+        publicTeachers.includes(
+          "buildBookingHref(t.id, journey, referralCode)",
+        )) &&
+      (publicTeachers.includes("profileHref={journey ?") ||
+        publicTeachers.includes(
+          "profileHref={buildTeacherProfileHref(t.id, journey, referralCode)}",
+        )),
   ],
   [
     "Teacher detail keeps the journey in back and booking destinations",
-    teacherDetail.includes("teacherCatalogEligibleJourneys")
-      && teacherDetail.includes("eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))")
-      && teacherDetail.includes("const activeJourney = journey || eligibleJourneys[0]!")
-      && (teacherDetail.includes('const teachersHref = `/professeurs?journey=${activeJourney}`') || teacherDetail.includes('const teachersHref = buildTeachersHref(activeJourney, referralCode)'))
-      && (teacherDetail.includes('const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`') || teacherDetail.includes('let bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`'))
-      && teacherDetail.includes('const tariffsHref = `/tarifs?journey=${activeJourney}`')
-      && teacherDetail.includes('<PublicLayout backFallbackHref={teachersHref} activeJourney={activeJourney}>')
-      && teacherDetail.includes('href={reserveHref}')
-      && teacherDetail.includes('href={tariffsHref}')
-      && teacherDetail.includes('data-public-teacher-journey-tabs'),
+    teacherDetail.includes("teacherCatalogEligibleJourneys") &&
+      teacherDetail.includes(
+        "eligibleJourneys.length === 0 || (journey && !eligibleJourneys.includes(journey))",
+      ) &&
+      teacherDetail.includes(
+        "const activeJourney = journey || eligibleJourneys[0]!",
+      ) &&
+      (teacherDetail.includes(
+        "const teachersHref = `/professeurs?journey=${activeJourney}`",
+      ) ||
+        teacherDetail.includes(
+          "const teachersHref = buildTeachersHref(activeJourney, referralCode)",
+        )) &&
+      (teacherDetail.includes(
+        "const bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`",
+      ) ||
+        teacherDetail.includes(
+          "let bookingDestination = `/client/reserver?teacherId=${teacher.id}&journey=${activeJourney}`",
+        )) &&
+      teacherDetail.includes(
+        "const tariffsHref = `/tarifs?journey=${activeJourney}`",
+      ) &&
+      teacherDetail.includes(
+        "<PublicLayout backFallbackHref={teachersHref} activeJourney={activeJourney}>",
+      ) &&
+      teacherDetail.includes("href={reserveHref}") &&
+      teacherDetail.includes("href={tariffsHref}") &&
+      teacherDetail.includes("data-public-teacher-journey-tabs"),
   ],
   [
     "Public teacher cards preserve the exact booking destination across authentication",
-    teacherCard.includes('`/connexion?from=${encodeURIComponent(directBookingHref)}`')
-      && (publicTeachers.includes('`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}') || publicTeachers.includes('`/connexion?from=${encodeURIComponent(buildBookingHref(t.id, journey, referralCode))}`'))
-      && login.includes('window.location.replace(loginDestination(expectedRole, from, user.passwordMustChange))'),
+    teacherCard.includes(
+      "`/connexion?from=${encodeURIComponent(directBookingHref)}`",
+    ) &&
+      (publicTeachers.includes(
+        "`/connexion?from=${encodeURIComponent(`/client/reserver?teacherId=${t.id}",
+      ) ||
+        publicTeachers.includes(
+          "`/connexion?from=${encodeURIComponent(buildBookingHref(t.id, journey, referralCode))}`",
+        )) &&
+      login.includes(
+        "window.location.replace(loginDestination(expectedRole, from, user.passwordMustChange))",
+      ),
   ],
   [
     "Booking page redirects a teacherless entry and passes a validated initial journey",
-    bookingPage.includes('if (!teacherId) redirect("/client/rechercher")')
-      && bookingPage.includes('initialJourney={initialJourney}')
-      && bookingPage.includes('parseTeacherJourney(requestedJourney)')
-      && bookingPage.includes('!eligibleJourneys.includes(initialJourney)')
-      && bookingPage.includes("teacherCatalogEligibleJourneys")
-      && bookingPage.includes("teacherCatalogSubjects")
-      && bookingPage.includes("teacherCatalogLevels"),
+    bookingPage.includes('if (!teacherId) redirect("/client/rechercher")') &&
+      bookingPage.includes("initialJourney={initialJourney}") &&
+      bookingPage.includes("parseTeacherJourney(requestedJourney)") &&
+      bookingPage.includes("!eligibleJourneys.includes(initialJourney)") &&
+      bookingPage.includes("teacherCatalogEligibleJourneys") &&
+      bookingPage.includes("teacherCatalogSubjects") &&
+      bookingPage.includes("teacherCatalogLevels"),
   ],
   [
     "Booking form seeds the chosen journey and never displays a fabricated price before selection",
-    bookingForm.includes('initialJourney?: BookingJourney')
-      && bookingForm.includes('schoolSystem: initialJourney && initialJourney !== "professionnel" ? initialJourney : ""')
-      && bookingForm.includes('const hasResolvedPricing = bookingJourney !== ""')
-      && bookingForm.includes('data-booking-journey-switcher')
-      && bookingForm.includes('role="tablist"')
-      && bookingForm.includes('role="tab"')
-      && count(bookingForm, 'hasResolvedPricing ? formatFCFA(totalPrice) : "À calculer"') >= 2,
+    bookingForm.includes("initialJourney?: BookingJourney") &&
+      bookingForm.includes(
+        'schoolSystem: initialJourney && initialJourney !== "professionnel" ? initialJourney : ""',
+      ) &&
+      bookingForm.includes(
+        'const hasResolvedPricing = bookingJourney !== ""',
+      ) &&
+      bookingForm.includes("data-booking-journey-switcher") &&
+      bookingForm.includes('role="tablist"') &&
+      bookingForm.includes('role="tab"') &&
+      count(
+        bookingForm,
+        'hasResolvedPricing ? formatFCFA(totalPrice) : "À calculer"',
+      ) >= 2,
   ],
   [
     "Login and registration return paths are internal-only and survive account creation",
-    safeReturnPath.includes('!value.startsWith("/") || value.startsWith("//")')
-      && safeReturnPath.includes('url.origin !== LOCAL_ORIGIN')
-      && login.includes('getSafeInternalReturnPath(searchParams.get("from"))')
-      && registrationPage.includes('returnTo={getSafeInternalReturnPath(from)}')
-      && registrationForm.includes('window.location.replace(loginDestination("CLIENT", returnTo))'),
+    safeReturnPath.includes(
+      '!value.startsWith("/") || value.startsWith("//")',
+    ) &&
+      safeReturnPath.includes("url.origin !== LOCAL_ORIGIN") &&
+      login.includes('getSafeInternalReturnPath(searchParams.get("from"))') &&
+      registrationPage.includes("returnTo={getSafeInternalReturnPath(from)}") &&
+      registrationForm.includes(
+        'window.location.replace(loginDestination("CLIENT", returnTo))',
+      ),
   ],
 ];
 
@@ -133,7 +185,9 @@ for (const [label, ok] of checks) {
 
 const failed = checks.filter(([, ok]) => !ok);
 if (failed.length > 0) {
-  console.error(`FAIL Booking journey handoff verification: ${failed.length} issue(s).`);
+  console.error(
+    `FAIL Booking journey handoff verification: ${failed.length} issue(s).`,
+  );
   process.exitCode = 1;
 } else {
   console.log("OK Booking journey handoff verification passed.");

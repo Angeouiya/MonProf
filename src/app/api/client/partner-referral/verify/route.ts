@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { resolveClientPromotionBenefits } from "@/lib/loyalty-program";
+import { CUSTOMER_PROMOTIONS_CLOSED } from "@/lib/customer-promotions";
 
 export async function POST(request: NextRequest) {
+  if (CUSTOMER_PROMOTIONS_CLOSED)
+    return NextResponse.json(
+      { error: "Ce programme client est fermé." },
+      { status: 410 },
+    );
   const session = await getServerSession(authOptions);
   if (!session?.user || (session.user as { role?: string }).role !== "CLIENT") {
-    return NextResponse.json({ error: "Accès client requis." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Accès client requis." },
+      { status: 401 },
+    );
   }
   const clientId = (session.user as { id: string }).id;
   const body = await request.json();
@@ -18,7 +27,10 @@ export async function POST(request: NextRequest) {
       referralPhone: body.phone,
     });
     if (!benefits.attribution) {
-      return NextResponse.json({ error: "Aucun partenaire vérifié avec ces informations." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Aucun partenaire vérifié avec ces informations." },
+        { status: 404 },
+      );
     }
     return NextResponse.json({
       ok: true,
@@ -31,18 +43,28 @@ export async function POST(request: NextRequest) {
       },
       benefits: {
         partnerDiscountPercent: benefits.partnerDiscountPercent,
-        reward: benefits.reward ? { ...benefits.reward, expiresAt: benefits.reward.expiresAt.toISOString() } : null,
+        reward: benefits.reward
+          ? {
+              ...benefits.reward,
+              expiresAt: benefits.reward.expiresAt.toISOString(),
+            }
+          : null,
       },
     });
   } catch (error) {
-    const code = error instanceof Error ? error.message : "PARTNER_NOT_VERIFIED";
-    return NextResponse.json({
-      code,
-      error: code === "PARTNER_ATTRIBUTION_LOCKED"
-        ? "Votre compte est déjà rattaché à un autre partenaire pour six mois."
-        : code === "PARTNER_SELF_REFERRAL_FORBIDDEN"
-          ? "Vous ne pouvez pas utiliser votre propre numéro comme partenaire."
-        : "Partenaire non vérifié. Vérifiez le code, le nom et le numéro.",
-    }, { status: 409 });
+    const code =
+      error instanceof Error ? error.message : "PARTNER_NOT_VERIFIED";
+    return NextResponse.json(
+      {
+        code,
+        error:
+          code === "PARTNER_ATTRIBUTION_LOCKED"
+            ? "Votre compte est déjà rattaché à un autre partenaire pour six mois."
+            : code === "PARTNER_SELF_REFERRAL_FORBIDDEN"
+              ? "Vous ne pouvez pas utiliser votre propre numéro comme partenaire."
+              : "Partenaire non vérifié. Vérifiez le code, le nom et le numéro.",
+      },
+      { status: 409 },
+    );
   }
 }

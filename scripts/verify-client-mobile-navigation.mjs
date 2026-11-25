@@ -3,7 +3,11 @@ import path from "node:path";
 
 const checks = [];
 const clientPrimitivesPath = "src/components/shared/client-page-primitives.tsx";
-const clientSourceRoots = ["src/app/client", "src/components/layouts/client-layout.tsx", clientPrimitivesPath];
+const clientSourceRoots = [
+  "src/app/client",
+  "src/components/layouts/client-layout.tsx",
+  clientPrimitivesPath,
+];
 
 const layoutPath = "src/components/layouts/client-layout.tsx";
 const clientDashboardPath = "src/app/client/page.tsx";
@@ -13,24 +17,31 @@ const publicTeachersPath = "src/app/professeurs/page.tsx";
 const publicTeacherDetailPath = "src/app/professeurs/[id]/page.tsx";
 const publicTariffsPath = "src/app/tarifs/page.tsx";
 const mobileFilterSheetPath = "src/components/shared/mobile-filter-sheet.tsx";
-const teacherResponsiveFiltersPath = "src/components/shared/teacher-responsive-filters.tsx";
+const teacherResponsiveFiltersPath =
+  "src/components/shared/teacher-responsive-filters.tsx";
 const clientReservationDetailPath = "src/app/client/reservations/[id]/page.tsx";
 const clientBookingActionsPath = "src/app/client/reservations/[id]/actions.tsx";
-const clientNotificationActionsPath = "src/app/client/notifications/actions-client.tsx";
-const clientReschedulePanelPath = "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
+const clientNotificationActionsPath =
+  "src/app/client/notifications/actions-client.tsx";
+const clientReschedulePanelPath =
+  "src/app/client/reservations/[id]/reschedule-request-panel.tsx";
 const clientLoadingPath = "src/app/client/loading.tsx";
 const clientErrorPath = "src/app/client/error.tsx";
 const clientNotFoundPath = "src/app/client/not-found.tsx";
 const backButtonPath = "src/components/shared/back-button.tsx";
 const teacherCardPath = "src/components/shared/teacher-card.tsx";
-const courseFormatControlPath = "src/components/shared/course-format-segmented-control.tsx";
+const courseFormatControlPath =
+  "src/components/shared/course-format-segmented-control.tsx";
 const journeySwitcherPath = "src/components/shared/journey-switcher.tsx";
 const professorImagePath = "src/components/shared/professor-image.tsx";
-const professorMediaPath = "src/components/professor/teacher-profile-media-form.tsx";
+const professorMediaPath =
+  "src/components/professor/teacher-profile-media-form.tsx";
 const professorMediaApiPath = "src/app/api/professor/profile-media/route.ts";
 const teacherImageUploadPath = "src/lib/client/teacher-image-upload.ts";
-const pricingBreakdownPath = "src/components/shared/booking-pricing-breakdown.tsx";
-const bookingSessionLedgerPath = "src/components/shared/booking-session-ledger.tsx";
+const pricingBreakdownPath =
+  "src/components/shared/booking-pricing-breakdown.tsx";
+const bookingSessionLedgerPath =
+  "src/components/shared/booking-session-ledger.tsx";
 const alertDialogPath = "src/components/ui/alert-dialog.tsx";
 const clientPricingCopyPaths = [
   "src/app/client/page.tsx",
@@ -62,10 +73,14 @@ const clientRootTabPaths = [
 
 const clientPrimitives = read(clientPrimitivesPath);
 const layout = read(layoutPath);
-const primaryNavSource = layout.match(/const primaryNavItem:[\s\S]*?=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
-const desktopNavSource = layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
-const accountNavSource = layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
-const mobileNavSource = layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const primaryNavSource =
+  layout.match(/const primaryNavItem:[\s\S]*?=\s*\{([\s\S]*?)\};/)?.[1] ?? "";
+const desktopNavSource =
+  layout.match(/const navItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const accountNavSource =
+  layout.match(/const accountNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
+const mobileNavSource =
+  layout.match(/const mobileNavItems:[\s\S]*?=\s*\[([\s\S]*?)\];/)?.[1] ?? "";
 const clientDashboard = read(clientDashboardPath);
 const publicLayout = read(publicLayoutPath);
 const publicHome = read(publicHomePath);
@@ -93,7 +108,9 @@ const pricingBreakdown = read(pricingBreakdownPath);
 const bookingSessionLedger = read(bookingSessionLedgerPath);
 const alertDialog = read(alertDialogPath);
 const clientReservationsPage = read("src/app/client/reservations/page.tsx");
-const clientReservationList = read("src/app/client/reservations/reservation-list-client.tsx");
+const clientReservationList = read(
+  "src/app/client/reservations/reservation-list-client.tsx",
+);
 const clientPaymentsPage = read("src/app/client/paiements/page.tsx");
 const clientReviewsPage = read("src/app/client/avis/page.tsx");
 const clientProfilePage = read("src/app/client/profil/profile-client.tsx");
@@ -102,82 +119,117 @@ const reschedulePolicy = read(reschedulePolicyPath);
 const bookingApi = read(bookingApiPath);
 const providers = read(providersPath);
 const css = read(cssPath);
-const journeyRailCss = css.match(/\.journey-switcher__rail\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
-const journeyIndicatorCss = css.match(/\.journey-switcher__indicator\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
-const journeyLinkCss = css.match(/\.journey-switcher__link\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+const journeyRailCss =
+  css.match(/\.journey-switcher__rail\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+const journeyIndicatorCss =
+  css.match(/\.journey-switcher__indicator\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+const journeyLinkCss =
+  css.match(/\.journey-switcher__link\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
 const clientSupportPage = read("src/app/client/service-client/page.tsx");
-const clientSupportHistory = read("src/app/client/support/support-history-client.tsx");
+const clientSupportHistory = read(
+  "src/app/client/support/support-history-client.tsx",
+);
 const clientUiSources = readClientUiSources(clientSourceRoots);
 const clientRootTabSources = clientRootTabPaths.map(read).join("\n");
 
 record(
   "Client bottom nav is guarded while mobile drawer is open",
-  /const shouldRenderMobileBottomNav\s*=\s*!hideMobileBottomNav\s*&&\s*!open\s*;/.test(layout)
-    && /{shouldRenderMobileBottomNav\s*&&\s*\(\s*<MobileBottomNav/.test(layout),
+  /const shouldRenderMobileBottomNav\s*=\s*!hideMobileBottomNav\s*&&\s*!open\s*;/.test(
+    layout,
+  ) && /{shouldRenderMobileBottomNav\s*&&\s*\(\s*<MobileBottomNav/.test(layout),
 );
 
 record(
   "Client mobile drawer owns the full screen area below the topbar",
-  /data-client-mobile-layer[\s\S]*?style=\{\{\s*bottom:\s*"0px"\s*\}\}/.test(layout),
+  /data-client-mobile-layer[\s\S]*?style=\{\{\s*bottom:\s*"0px"\s*\}\}/.test(
+    layout,
+  ),
 );
 
 record(
   "Client mobile drawer is an app-like side sheet, not a centered blocking card",
-  /data-client-mobile-drawer[\s\S]*?className="[^"]*absolute bottom-2 left-2 top-2[\s\S]*?w-\[min\(22\.5rem,calc\(100vw-1rem\)\)\]/.test(layout)
-    && /\.client-shell\s*\[data-client-mobile-drawer\]\.client-mobile-menu-panel\s*\{[\s\S]*?right:\s*auto\s*!important;[\s\S]*?width:\s*min\(22\.5rem,\s*calc\(100vw - 1rem\)\)\s*!important;[\s\S]*?\}/.test(css),
+  /data-client-mobile-drawer[\s\S]*?className="[^"]*absolute bottom-2 left-2 top-2[\s\S]*?w-\[min\(22\.5rem,calc\(100vw-1rem\)\)\]/.test(
+    layout,
+  ) &&
+    /\.client-shell\s*\[data-client-mobile-drawer\]\.client-mobile-menu-panel\s*\{[\s\S]*?right:\s*auto\s*!important;[\s\S]*?width:\s*min\(22\.5rem,\s*calc\(100vw - 1rem\)\)\s*!important;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Client topbar stays fixed and every panel is offset below it",
-  /data-client-topbar[\s\S]*?className="[^"]*fixed inset-x-0 top-0/.test(layout)
-    && /app-topbar-spacer/.test(layout)
-    && /id="client-main-content"/.test(layout)
-    && /data-client-main/.test(layout)
-    && /app-sidebar-below-topbar fixed left-0/.test(layout)
-    && /app-topbar-offset fixed inset-x-0/.test(layout)
-    && /style=\{\{\s*top:\s*"var\(--app-topbar-height,\s*4rem\)"\s*\}\}/.test(layout)
-    && /\.app-topbar\s*\{[\s\S]*?position:\s*fixed\s*!important;[\s\S]*?top:\s*0\s*!important;[\s\S]*?\}/.test(css)
-    && /\.app-topbar-spacer\s*\{[\s\S]*?height:\s*var\(--app-topbar-height\);[\s\S]*?\}/.test(css)
-    && /\.app-sidebar-below-topbar\s*\{[\s\S]*?top:\s*var\(--app-topbar-height\)\s*!important;[\s\S]*?height:\s*calc\(100dvh - var\(--app-topbar-height\)\)\s*!important;[\s\S]*?\}/.test(css),
+  /data-client-topbar[\s\S]*?className="[^"]*fixed inset-x-0 top-0/.test(
+    layout,
+  ) &&
+    /app-topbar-spacer/.test(layout) &&
+    /id="client-main-content"/.test(layout) &&
+    /data-client-main/.test(layout) &&
+    /app-sidebar-below-topbar fixed left-0/.test(layout) &&
+    /app-topbar-offset fixed inset-x-0/.test(layout) &&
+    /style=\{\{\s*top:\s*"var\(--app-topbar-height,\s*4rem\)"\s*\}\}/.test(
+      layout,
+    ) &&
+    /\.app-topbar\s*\{[\s\S]*?position:\s*fixed\s*!important;[\s\S]*?top:\s*0\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.app-topbar-spacer\s*\{[\s\S]*?height:\s*var\(--app-topbar-height\);[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.app-sidebar-below-topbar\s*\{[\s\S]*?top:\s*var\(--app-topbar-height\)\s*!important;[\s\S]*?height:\s*calc\(100dvh - var\(--app-topbar-height\)\)\s*!important;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "CSS also disables bottom nav when the mobile menu is open",
-  /\.client-shell\[data-mobile-menu-open="true"\]\s*\[data-client-mobile-nav\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?pointer-events:\s*none\s*!important;[\s\S]*?\}/.test(css),
+  /\.client-shell\[data-mobile-menu-open="true"\]\s*\[data-client-mobile-nav\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?pointer-events:\s*none\s*!important;[\s\S]*?\}/.test(
+    css,
+  ),
 );
 
 record(
   "Client mobile overlay is dimmed without turning the app into a black screen",
-  /\.client-shell\s*\[data-client-mobile-layer\]\s*>\s*button\s*\{[\s\S]*?opacity:\s*0\.46\s*!important;[\s\S]*?\}/.test(css),
+  /\.client-shell\s*\[data-client-mobile-layer\]\s*>\s*button\s*\{[\s\S]*?opacity:\s*0\.46\s*!important;[\s\S]*?\}/.test(
+    css,
+  ),
 );
 
 record(
   "Route progress indicator is a short settled animation, not an infinite spinner",
-  /@keyframes client-route-progress-settle/.test(css)
-    && /animation:\s*client-route-progress-slide\s+95ms/.test(css)
-    && /animation:\s*client-route-progress-settle\s+110ms[\s\S]*?both\s*!important;/.test(css)
-    && css.lastIndexOf("client-route-progress-settle 110ms") > css.lastIndexOf("client-route-progress-slide"),
+  /@keyframes client-route-progress-settle/.test(css) &&
+    /animation:\s*client-route-progress-slide\s+95ms/.test(css) &&
+    /animation:\s*client-route-progress-settle\s+110ms[\s\S]*?both\s*!important;/.test(
+      css,
+    ) &&
+    css.lastIndexOf("client-route-progress-settle 110ms") >
+      css.lastIndexOf("client-route-progress-slide"),
 );
 
 record(
   "Client navigation prefetch follows user intent without startup fan-out",
-  /const CLIENT_NAV_PREFETCH\s*=\s*false\s*;/.test(layout)
-    && !/CLIENT_PRIMARY_PREFETCH_ROUTES|CLIENT_SECONDARY_PREFETCH_ROUTES|CLIENT_PRIORITY_PREFETCH_ROUTES/.test(layout)
-    && /function maybePrefetchClientNavigation/.test(layout)
-    && /onMouseOverCapture=\{handleClientPrefetchCapture\}/.test(layout)
-    && /onFocusCapture=\{handleClientFocusPrefetch\}/.test(layout)
-    && /onPointerDownCapture=\{handleClientNavigationIntent\}/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*18\s*;/.test(layout)
-    && /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*340\s*;/.test(layout)
-    && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(layout)
-    && /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(layout),
+  /const CLIENT_NAV_PREFETCH\s*=\s*false\s*;/.test(layout) &&
+    !/CLIENT_PRIMARY_PREFETCH_ROUTES|CLIENT_SECONDARY_PREFETCH_ROUTES|CLIENT_PRIORITY_PREFETCH_ROUTES/.test(
+      layout,
+    ) &&
+    /function maybePrefetchClientNavigation/.test(layout) &&
+    /onMouseOverCapture=\{handleClientPrefetchCapture\}/.test(layout) &&
+    /onFocusCapture=\{handleClientFocusPrefetch\}/.test(layout) &&
+    /onPointerDownCapture=\{handleClientNavigationIntent\}/.test(layout) &&
+    /const CLIENT_NAV_FEEDBACK_DELAY_MS\s*=\s*18\s*;/.test(layout) &&
+    /const CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*340\s*;/.test(layout) &&
+    /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(true\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_DELAY_MS\s*\)/.test(
+      layout,
+    ) &&
+    /setTimeout\(\(\)\s*=>\s*\{\s*setNavigating\(false\);[\s\S]*?\},\s*CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*\)/.test(
+      layout,
+    ),
 );
 
 record(
   "Client shell synchronizes its notification count without blocking initial navigation",
-  /competence:notification-count/.test(layout)
-    && /WebPushRealtime/.test(layout)
-    && !/fetch\("\/api\/client\/notifications"/.test(layout),
+  /competence:notification-count/.test(layout) &&
+    /WebPushRealtime/.test(layout) &&
+    !/fetch\("\/api\/client\/notifications"/.test(layout),
 );
 
 record(
@@ -198,364 +250,522 @@ record(
 
 record(
   "Client quick search uses precise filter-aware shortcuts",
-  /Maths Cocody[\s\S]*?\/client\/rechercher\?q=math&commune=Cocody/.test(layout)
-    && /Anglais ligne[\s\S]*?\/client\/rechercher\?q=anglais&format=ONLINE/.test(layout)
-    && countMatches(layout, /enterKeyHint="search"/g) >= 2
-    && countMatches(layout, /autoComplete="off"/g) >= 2
-    && countMatches(layout, /spellCheck=\{false\}/g) >= 2
-    && /data-client-mobile-search-panel/.test(layout),
+  /Maths Cocody[\s\S]*?\/client\/rechercher\?q=math&commune=Cocody/.test(
+    layout,
+  ) &&
+    /Anglais ligne[\s\S]*?\/client\/rechercher\?q=anglais&format=ONLINE/.test(
+      layout,
+    ) &&
+    countMatches(layout, /enterKeyHint="search"/g) >= 2 &&
+    countMatches(layout, /autoComplete="off"/g) >= 2 &&
+    countMatches(layout, /spellCheck=\{false\}/g) >= 2 &&
+    /data-client-mobile-search-panel/.test(layout),
 );
 
 record(
   "Client navigation exposes a stable active state on sidebar and bottom tabs",
-  /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/.test(layout)
-    && countMatches(layout, /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/g) >= 2
-    && /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/.test(layout)
-    && countMatches(layout, /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/g) >= 2
-    && /data-client-sidebar-link/.test(layout)
-    && /data-client-mobile-nav/.test(layout),
+  /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/.test(layout) &&
+    countMatches(
+      layout,
+      /aria-current=\{active\s*\?\s*"page"\s*:\s*undefined\}/g,
+    ) >= 2 &&
+    /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/.test(layout) &&
+    countMatches(
+      layout,
+      /data-active=\{active\s*\?\s*"true"\s*:\s*"false"\}/g,
+    ) >= 2 &&
+    /data-client-sidebar-link/.test(layout) &&
+    /data-client-mobile-nav/.test(layout),
 );
 
 record(
   "Client mobile navigation dismisses transient panels before route changes",
-  /<Link href="\/client"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(layout)
-    && /href="\/client\/notifications"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(layout)
-    && /onClick=\{closeMobileSurfaces\}[\s\S]*?className="inline-flex min-h-9/.test(layout)
-    && /<MobileBottomNav[\s\S]*?onNavigate=\{closeMobileSurfaces\}/.test(layout)
-    && /function MobileBottomNav\([\s\S]*?onNavigate,[\s\S]*?onClick=\{onNavigate\}/.test(layout),
+  /<Link\s+href="\/client"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(layout) &&
+    /href="\/client\/notifications"[\s\S]*?onClick=\{closeMobileSurfaces\}/.test(
+      layout,
+    ) &&
+    /onClick=\{closeMobileSurfaces\}[\s\S]*?className="inline-flex min-h-9/.test(
+      layout,
+    ) &&
+    /<MobileBottomNav[\s\S]*?onNavigate=\{closeMobileSurfaces\}/.test(layout) &&
+    /function MobileBottomNav\([\s\S]*?onNavigate,[\s\S]*?onClick=\{onNavigate\}/.test(
+      layout,
+    ),
 );
 
 record(
   "Client shell warns cleanly when the mobile network drops",
-  /const\s+\[isOffline,\s*setIsOffline\]\s*=\s*useState\(false\)/.test(layout)
-    && /window\.addEventListener\("online",\s*syncNetworkState\)/.test(layout)
-    && /window\.addEventListener\("offline",\s*syncNetworkState\)/.test(layout)
-    && /data-client-offline-banner/.test(layout)
-    && /role="status"/.test(layout)
-    && /aria-live="polite"/.test(layout)
-    && /Connexion interrompue/.test(layout)
-    && /bg-\[#111B4D\]/.test(layout)
-    && /WifiOff/.test(layout),
+  /const\s+\[isOffline,\s*setIsOffline\]\s*=\s*useState\(false\)/.test(
+    layout,
+  ) &&
+    /window\.addEventListener\("online",\s*syncNetworkState\)/.test(layout) &&
+    /window\.addEventListener\("offline",\s*syncNetworkState\)/.test(layout) &&
+    /data-client-offline-banner/.test(layout) &&
+    /role="status"/.test(layout) &&
+    /aria-live="polite"/.test(layout) &&
+    /Connexion interrompue/.test(layout) &&
+    /bg-\[#111B4D\]/.test(layout) &&
+    /WifiOff/.test(layout),
 );
 
 record(
   "Client shell exposes a keyboard skip link to the main content",
-  /data-client-skip-link/.test(layout)
-    && /href="#client-main-content"/.test(layout)
-    && /id="client-main-content"/.test(layout)
-    && /tabIndex=\{-1\}/.test(layout)
-    && /focus:translate-y-0/.test(layout)
-    && /bg-\[#111B4D\]/.test(layout),
+  /data-client-skip-link/.test(layout) &&
+    /href="#client-main-content"/.test(layout) &&
+    /id="client-main-content"/.test(layout) &&
+    /tabIndex=\{-1\}/.test(layout) &&
+    /focus:translate-y-0/.test(layout) &&
+    /bg-\[#111B4D\]/.test(layout),
 );
 
 record(
   "Client back affordance never sends users back to PayDunya or another platform space",
-  /canSafelyGoBack\(pathname\)/.test(backButton)
-    && /document\.referrer/.test(backButton)
-    && /referrerUrl\.origin\s*!==\s*window\.location\.origin/.test(backButton)
-    && /getNavigationSpace\(pathname\)/.test(backButton)
-    && /currentSpace\s*===\s*referrerSpace/.test(backButton)
-    && /pathname\s*===\s*"\/client"\s*\|\|\s*pathname\.startsWith\("\/client\/"\)/.test(backButton)
-    && /router\.push\(fallback\)/.test(backButton),
+  /canSafelyGoBack\(pathname\)/.test(backButton) &&
+    /document\.referrer/.test(backButton) &&
+    /referrerUrl\.origin\s*!==\s*window\.location\.origin/.test(backButton) &&
+    /getNavigationSpace\(pathname\)/.test(backButton) &&
+    /currentSpace\s*===\s*referrerSpace/.test(backButton) &&
+    /pathname\s*===\s*"\/client"\s*\|\|\s*pathname\.startsWith\("\/client\/"\)/.test(
+      backButton,
+    ) &&
+    /router\.push\(fallback\)/.test(backButton),
 );
 
 record(
   "Client shell exposes one clear booking action in its sidebar",
-  /label:\s*"Réserver un cours"/.test(primaryNavSource)
-    && countMatches(primaryNavSource, /href:/g) === 1
-    && !/Trouver un professeur/.test(desktopNavSource),
+  /label:\s*"Réserver un cours"/.test(primaryNavSource) &&
+    countMatches(primaryNavSource, /href:/g) === 1 &&
+    !/Trouver un professeur/.test(desktopNavSource),
 );
 
 record(
   "Client navigation keeps partnership outside the primary desktop navigation",
-  countMatches(primaryNavSource, /href:/g) === 1
-    && countMatches(desktopNavSource, /href:/g) === 4
-    && countMatches(accountNavSource, /href:/g) === 2
-    && /label:\s*"Mon compte"/.test(accountNavSource)
-    && /label:\s*"Cadeaux"/.test(desktopNavSource)
-    && /href:\s*"\/client\/cadeaux"/.test(desktopNavSource)
-    && !/data-client-partnership-link/.test(layout)
-    && !/label:\s*"Partenariat"/.test(desktopNavSource)
-    && !/label:\s*"Paramètres"/.test(accountNavSource),
+  countMatches(primaryNavSource, /href:/g) === 1 &&
+    countMatches(desktopNavSource, /href:/g) === 4 &&
+    countMatches(accountNavSource, /href:/g) === 2 &&
+    /label:\s*"Mon compte"/.test(accountNavSource) &&
+    /label:\s*"Cadeaux"/.test(desktopNavSource) &&
+    /href:\s*"\/client\/cadeaux"/.test(desktopNavSource) &&
+    !/data-client-partnership-link/.test(layout) &&
+    !/label:\s*"Partenariat"/.test(desktopNavSource) &&
+    !/label:\s*"Paramètres"/.test(accountNavSource),
 );
 
 record(
   "Client mobile navigation contains four essential actions without partnership",
-  countMatches(mobileNavSource, /href:/g) === 4
-    && /grid grid-cols-4 gap-1/.test(layout)
-    && /label:\s*"Accueil"/.test(mobileNavSource)
-    && /label:\s*"Réserver"/.test(mobileNavSource)
-    && /label:\s*"Cours"/.test(mobileNavSource)
-    && /label:\s*"Paiements"/.test(mobileNavSource)
-    && !/label:\s*"Partenariat"/.test(mobileNavSource),
+  countMatches(mobileNavSource, /href:/g) === 4 &&
+    /grid grid-cols-4 gap-1/.test(layout) &&
+    /label:\s*"Accueil"/.test(mobileNavSource) &&
+    /label:\s*"Réserver"/.test(mobileNavSource) &&
+    /label:\s*"Cours"/.test(mobileNavSource) &&
+    /label:\s*"Paiements"/.test(mobileNavSource) &&
+    !/label:\s*"Partenariat"/.test(mobileNavSource),
 );
 
 record(
-  "Partnership remains immediately visible at the top of the client home",
-  /data-client-partnership-entry/.test(clientDashboard)
-    && /href="\/client\/partenariat"/.test(clientDashboard)
-    && clientDashboard.indexOf("data-client-partnership-entry") < clientDashboard.indexOf("data-client-dashboard-journeys"),
+  "Retired customer partnership entry is guarded while its historical source is preserved",
+  /!CUSTOMER_PROMOTIONS_CLOSED\s*&&\s*\(?\s*<Link/.test(clientDashboard) &&
+    /data-client-partnership-entry/.test(clientDashboard) &&
+    /href="\/client\/partenariat"/.test(clientDashboard) &&
+    clientDashboard.indexOf("data-client-partnership-entry") <
+      clientDashboard.indexOf("data-client-dashboard-journeys"),
 );
 
 record(
   "Client root tabs avoid redundant back buttons while deep flows keep them",
-  clientRootTabPaths.every((filePath) => /showBack=\{false\}/.test(read(filePath)))
-    && /<ClientPageHeader[\s\S]*?title=\{`Réservation/.test(clientReservationDetail)
-    && !/<ClientPageHeader[\s\S]*?title=\{`Réservation[\s\S]*?showBack=\{false\}/.test(clientReservationDetail)
-    && /<BackButton\s+fallbackHref="\/client\/rechercher"/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && countMatches(clientRootTabSources, /showBack=\{false\}/g) >= clientRootTabPaths.length,
+  clientRootTabPaths.every((filePath) =>
+    /showBack=\{false\}/.test(read(filePath)),
+  ) &&
+    /<ClientPageHeader[\s\S]*?title=\{`Réservation/.test(
+      clientReservationDetail,
+    ) &&
+    !/<ClientPageHeader[\s\S]*?title=\{`Réservation[\s\S]*?showBack=\{false\}/.test(
+      clientReservationDetail,
+    ) &&
+    /<BackButton\s+fallbackHref="\/client\/rechercher"/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    countMatches(clientRootTabSources, /showBack=\{false\}/g) >=
+      clientRootTabPaths.length,
 );
 
 record(
   "Client reservation tabs stay readable without a second filter rail",
-  /Final client readability guard/.test(css)
-    && /\[data-client-tab-item\][\s\S]*?white-space:\s*nowrap\s*!important;[\s\S]*?word-break:\s*normal\s*!important;/.test(css)
-    && !/data-client-reservation-filter-rail/.test(clientReservationList),
+  /Final client readability guard/.test(css) &&
+    /\[data-client-tab-item\][\s\S]*?white-space:\s*nowrap\s*!important;[\s\S]*?word-break:\s*normal\s*!important;/.test(
+      css,
+    ) &&
+    !/data-client-reservation-filter-rail/.test(clientReservationList),
 );
 
 record(
   "Client short tab rails stay balanced on small phones",
-  /data-item-count=\{items\.length\}/.test(clientPrimitives)
-    && /\[data-client-tab-bar\]\[data-item-count="3"\][\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(css)
-    && /\[data-client-tab-bar\]\s*>\s*:last-child:nth-child\(odd\)[\s\S]*?grid-column:\s*1\s*\/\s*-1/.test(css)
-    && /@media\s*\(max-width:\s*359px\)[\s\S]*?\[data-client-tab-bar\][\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(css),
+  /data-item-count=\{items\.length\}/.test(clientPrimitives) &&
+    /\[data-client-tab-bar\]\[data-item-count="3"\][\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(
+      css,
+    ) &&
+    /\[data-client-tab-bar\]\s*>\s*:last-child:nth-child\(odd\)[\s\S]*?grid-column:\s*1\s*\/\s*-1/.test(
+      css,
+    ) &&
+    /@media\s*\(max-width:\s*359px\)[\s\S]*?\[data-client-tab-bar\][\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)\s*!important/.test(
+      css,
+    ),
 );
 
 record(
   "Client deep-page back action remains compact on mobile",
-  /data-client-back-button/.test(backButton)
-    && /\[data-client-page-header\]\s*\[data-client-back-button\][\s\S]*?width:\s*fit-content\s*!important/.test(css),
+  /data-client-back-button/.test(backButton) &&
+    /\[data-client-page-header\]\s*\[data-client-back-button\][\s\S]*?width:\s*fit-content\s*!important/.test(
+      css,
+    ),
 );
 
 record(
   "Client reservations present one priority action without competing KPI cards",
-  /data-client-reservation-priority/.test(clientReservationsPage)
-    && !/ClientMetricStrip|ReservationCommandCenter|ReservationMobilePriorityCard/.test(clientReservationsPage),
+  /data-client-reservation-priority/.test(clientReservationsPage) &&
+    !/ClientMetricStrip|ReservationCommandCenter|ReservationMobilePriorityCard/.test(
+      clientReservationsPage,
+    ),
 );
 
 record(
   "Client reservation cards show course, date, amount and one clear action",
-  /data-client-reservation-card/.test(clientReservationList)
-    && /reservation\.stepLabel/.test(clientReservationList)
-    && /reservation\.dateLabel/.test(clientReservationList)
-    && /reservation\.amountLabel/.test(clientReservationList)
-    && /href=\{`\/client\/reservations\/\$\{reservation\.id\}`\}/.test(clientReservationList)
-    && !/data-client-reservation-mobile-details/.test(clientReservationList),
+  /data-client-reservation-card/.test(clientReservationList) &&
+    /reservation\.stepLabel/.test(clientReservationList) &&
+    /reservation\.dateLabel/.test(clientReservationList) &&
+    /reservation\.amountLabel/.test(clientReservationList) &&
+    /href=\{`\/client\/reservations\/\$\{reservation\.id\}`\}/.test(
+      clientReservationList,
+    ) &&
+    !/data-client-reservation-mobile-details/.test(clientReservationList),
 );
 
 record(
   "Client reviews avoid repeating the same empty pending state",
-  /\{primaryReviewBooking\s*&&\s*\([\s\S]*?id="avis-a-evaluer"/.test(clientReviewsPage)
-    && !/title="Aucun avis en attente"/.test(clientReviewsPage),
+  /\{primaryReviewBooking\s*&&\s*\([\s\S]*?id="avis-a-evaluer"/.test(
+    clientReviewsPage,
+  ) && !/title="Aucun avis en attente"/.test(clientReviewsPage),
 );
 
 record(
   "Client profile header contains commands instead of static button-like labels",
-  !/Compte sécurisé/.test(clientProfilePage)
-    && /Trouver un professeur/.test(clientProfilePage),
+  !/Compte sécurisé/.test(clientProfilePage) &&
+    /Trouver un professeur/.test(clientProfilePage),
 );
 
 record(
   "Client profile saves with inline state instead of a routine success toast",
-  /data-client-profile-saved-state/.test(clientProfilePage)
-    && /role="status"\s+aria-live="polite"/.test(clientProfilePage)
-    && /Vos prochaines réservations utiliseront ces informations/.test(clientProfilePage)
-    && !/toast\.success\("Profil mis à jour"\)/.test(clientProfilePage),
+  /data-client-profile-saved-state/.test(clientProfilePage) &&
+    /role="status"\s+aria-live="polite"/.test(clientProfilePage) &&
+    /Vos prochaines réservations utiliseront ces informations/.test(
+      clientProfilePage,
+    ) &&
+    !/toast\.success\("Profil mis à jour"\)/.test(clientProfilePage),
 );
 
 record(
   "Client notifications confirm routine actions inline instead of floating success toasts",
-  /data-client-notification-inline-status/.test(clientNotificationActions)
-    && /role="status"\s+aria-live="polite"/.test(clientNotificationActions)
-    && /setNotice\(success\)/.test(clientNotificationActions)
-    && /Notifications marquées comme lues/.test(clientNotificationActions)
-    && /Notification confirmée/.test(clientNotificationActions)
-    && !/toast\.success/.test(clientNotificationActions),
+  /data-client-notification-inline-status/.test(clientNotificationActions) &&
+    /role="status"\s+aria-live="polite"/.test(clientNotificationActions) &&
+    /setNotice\(success\)/.test(clientNotificationActions) &&
+    /Notifications marquées comme lues/.test(clientNotificationActions) &&
+    /Notification confirmée/.test(clientNotificationActions) &&
+    !/toast\.success/.test(clientNotificationActions),
 );
 
 record(
   "Client mobile pages keep app-like compact copy",
-  /data-client-page-header-description/.test(clientPrimitives)
-    && /data-client-root-tab-header/.test(clientPrimitives)
-    && /data-client-page-header-eyebrow/.test(clientPrimitives)
-    && /data-client-section-description/.test(clientPrimitives)
-    && /data-client-focus-description/.test(clientPrimitives)
-    && /\[data-client-root-tab-header="true"\]\)\s*\{[\s\S]*?padding-bottom:\s*0\.45rem\s*!important;[\s\S]*?\}/.test(css)
-    && /\[data-client-root-tab-header="true"\]\s+\[data-client-page-header-eyebrow\]\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
-    && /\[data-client-page-header-description\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css)
-    && /\[data-client-section-description\],[\s\S]*?\[data-client-focus-description\]\s*\{[\s\S]*?-webkit-line-clamp:\s*1;[\s\S]*?\}/.test(css),
+  /data-client-page-header-description/.test(clientPrimitives) &&
+    /data-client-root-tab-header/.test(clientPrimitives) &&
+    /data-client-page-header-eyebrow/.test(clientPrimitives) &&
+    /data-client-section-description/.test(clientPrimitives) &&
+    /data-client-focus-description/.test(clientPrimitives) &&
+    /\[data-client-root-tab-header="true"\]\)\s*\{[\s\S]*?padding-bottom:\s*0\.45rem\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\[data-client-root-tab-header="true"\]\s+\[data-client-page-header-eyebrow\]\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\[data-client-page-header-description\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\[data-client-section-description\],[\s\S]*?\[data-client-focus-description\]\s*\{[\s\S]*?-webkit-line-clamp:\s*1;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Client dashboard launches exactly three journey-aware mini-apps without duplicate quick actions",
-  /data-client-dashboard-journeys/.test(read("src/app/client/page.tsx"))
-    && /CLIENT_JOURNEY_HREFS/.test(read("src/app/client/page.tsx"))
-    && /<JourneySwitcher/.test(read("src/app/client/page.tsx"))
-    && countOccurrences(read("src/app/client/page.tsx"), "/client/rechercher?journey=") === 3
-    && /journey-switcher__indicator/.test(journeySwitcher)
-    && !/Professeurs recommandés/.test(read("src/app/client/page.tsx"))
-    && !/data-client-dashboard-action-rail/.test(read("src/app/client/page.tsx"))
-    && /\{actionHref && \(/.test(read("src/app/client/page.tsx")),
+  /data-client-dashboard-journeys/.test(read("src/app/client/page.tsx")) &&
+    /CLIENT_JOURNEY_HREFS/.test(read("src/app/client/page.tsx")) &&
+    /<JourneySwitcher/.test(read("src/app/client/page.tsx")) &&
+    countOccurrences(
+      read("src/app/client/page.tsx"),
+      "/client/rechercher?journey=",
+    ) === 3 &&
+    /journey-switcher__indicator/.test(journeySwitcher) &&
+    !/Professeurs recommandés/.test(read("src/app/client/page.tsx")) &&
+    !/data-client-dashboard-action-rail/.test(
+      read("src/app/client/page.tsx"),
+    ) &&
+    /\{actionHref && \(/.test(read("src/app/client/page.tsx")),
 );
 
 record(
   "Client booking keeps one progress control and a viewport-fixed mobile action",
-  !/data-client-booking-mobile-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && countMatches(read("src/app/client/reserver/reserver-form.tsx"), /data-client-booking-progress/g) === 1
-    && !/data-client-booking-desktop-progress/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/\.client-content\s*\{[^}]*contain\s*:/.test(css)
-    && !/\[data-client-content\][^}]*container-type/.test(css)
-    && /client-booking-mobile-action fixed/.test(read("src/app/client/reserver/reserver-form.tsx")),
+  !/data-client-booking-mobile-progress/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    countMatches(
+      read("src/app/client/reserver/reserver-form.tsx"),
+      /data-client-booking-progress/g,
+    ) === 1 &&
+    !/data-client-booking-desktop-progress/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    !/\.client-content\s*\{[^}]*contain\s*:/.test(css) &&
+    !/\[data-client-content\][^}]*container-type/.test(css) &&
+    /client-booking-mobile-action fixed/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ),
 );
 
 record(
   "Client booking reveals optional need details only on demand",
-  /<details className="rounded-lg[\s\S]*?Ajouter des précisions \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /journeySubjects\.length\s*===\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/Cours catalogue conseillé/.test(read("src/app/client/reserver/reserver-form.tsx")),
+  /<details className="rounded-lg[\s\S]*?Ajouter des précisions \(optionnel\)/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    /journeySubjects\.length\s*===\s*1/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    !/Cours catalogue conseillé/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ),
 );
 
 record(
   "Client booking shows only relevant format and selected-day availability",
-  /\{teacher\.offersGroup\s*&&\s*\(/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /scheduleRows\.map/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /const availableSlots = rowDay \? TWO_HOUR_SLOTS\.filter/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/grid-cols-\[92px_repeat\(7/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Autre horaire/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Ajouter un message \(optionnel\)/.test(read("src/app/client/reserver/reserver-form.tsx")),
+  /\{teacher\.offersGroup\s*&&\s*\(/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    /scheduleRows\.map/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /const availableSlots = rowDay \? TWO_HOUR_SLOTS\.filter/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    !/grid-cols-\[92px_repeat\(7/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /Autre horaire/.test(read("src/app/client/reserver/reserver-form.tsx")) &&
+    /Ajouter un message \(optionnel\)/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ),
 );
 
 record(
   "Client booking restrictions open as centered cards with travel context",
-  /RestrictionNoticeDialog/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /data-booking-travel-buffer-explanation/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Le calcul se fait entre le dernier cours confirmé du professeur et votre cours demandé, pas depuis son domicile/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /showScheduleConflictNotice/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Choisir une autre heure/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /data-restriction-notice-card/.test(read("src/components/shared/restriction-notice-dialog.tsx")),
+  /RestrictionNoticeDialog/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    /data-booking-travel-buffer-explanation/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /Le calcul se fait entre le dernier cours confirmé du professeur et votre cours demandé, pas depuis son domicile/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /showScheduleConflictNotice/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /Choisir une autre heure/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /data-restriction-notice-card/.test(
+      read("src/components/shared/restriction-notice-dialog.tsx"),
+    ),
 );
 
 record(
   "Client booking keeps transport compact and exposes every pack without a click",
-  /pricing\.transportFee\s*===\s*0\s*\?\s*"Gratuit"/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Choisissez votre commune pour obtenir le montant exact/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/InfoMini label="Base professeur"/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /selectedPackLabel/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Tous les packs, leurs montants et leurs économies sont visibles immédiatement/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/Comparer les formules/.test(read("src/app/client/reserver/reserver-form.tsx")),
+  /pricing\.transportFee\s*===\s*0\s*\?\s*"Gratuit"/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    /Choisissez votre commune pour obtenir le montant exact/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    !/InfoMini label="Base professeur"/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /selectedPackLabel/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /Tous les packs, leurs montants et leurs économies sont visibles immédiatement/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    !/Comparer les formules/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ),
 );
 
 record(
   "Client booking recap leads with five decisions and reveals audit detail on demand",
-  /label="Besoin"[\s\S]*?label="Format"[\s\S]*?label="Lieu"[\s\S]*?label="Planning"[\s\S]*?label="Formule"/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Voir toutes les informations/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /sessionPreview\.length\s*>\s*1/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /Voir le planning des \{sessionPreview\.length\} séances/.test(read("src/app/client/reserver/reserver-form.tsx")),
+  /label="Besoin"[\s\S]*?label="Format"[\s\S]*?label="Lieu"[\s\S]*?label="Planning"[\s\S]*?label="Formule"/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    /Voir toutes les informations/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /sessionPreview\.length\s*>\s*1/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ) &&
+    /Voir le planning des \{sessionPreview\.length\} séances/.test(
+      read("src/app/client/reserver/reserver-form.tsx"),
+    ),
 );
 
 record(
   "Client checkout exposes essential amounts once and keeps the equation on demand",
-  /presentation="checkout"/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && !/Montant Jèko/.test(read("src/app/client/reserver/reserver-form.tsx"))
-    && /data-client-checkout-pricing-summary/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
-    && /label="Cours"[\s\S]*?label="Déplacement"[\s\S]*?label=\{paymentServiceFeeLabel\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
-    && /Comprendre le calcul/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
-    && /Voir le détail du calcul/.test(read("src/components/shared/booking-pricing-breakdown.tsx"))
-    && /open=\{audience === "admin" \? true : undefined\}/.test(read("src/components/shared/booking-pricing-breakdown.tsx")),
+  /presentation="checkout"/.test(
+    read("src/app/client/reserver/reserver-form.tsx"),
+  ) &&
+    !/Montant Jèko/.test(read("src/app/client/reserver/reserver-form.tsx")) &&
+    /data-client-checkout-pricing-summary/.test(
+      read("src/components/shared/booking-pricing-breakdown.tsx"),
+    ) &&
+    /label="Cours"[\s\S]*?label="Déplacement"[\s\S]*?label=\{paymentServiceFeeLabel\}/.test(
+      read("src/components/shared/booking-pricing-breakdown.tsx"),
+    ) &&
+    /Comprendre le calcul/.test(
+      read("src/components/shared/booking-pricing-breakdown.tsx"),
+    ) &&
+    /Voir le détail du calcul/.test(
+      read("src/components/shared/booking-pricing-breakdown.tsx"),
+    ) &&
+    /open=\{audience === "admin" \? true : undefined\}/.test(
+      read("src/components/shared/booking-pricing-breakdown.tsx"),
+    ),
 );
 
 record(
   "Client reservation detail progressively reveals secondary information",
-  countOccurrences(clientReservationDetail, "<ReservationDisclosure") >= 3
-    && /data-client-reservation-disclosure/.test(clientReservationDetail)
-    && /title="Détails du cours"/.test(clientReservationDetail)
-    && /title="Suivi de la réservation"/.test(clientReservationDetail)
-    && /title="Historique des transactions"/.test(clientReservationDetail),
+  countOccurrences(clientReservationDetail, "<ReservationDisclosure") >= 3 &&
+    /data-client-reservation-disclosure/.test(clientReservationDetail) &&
+    /title="Détails du cours"/.test(clientReservationDetail) &&
+    /title="Suivi de la réservation"/.test(clientReservationDetail) &&
+    /title="Historique des transactions"/.test(clientReservationDetail),
 );
 
 record(
   "Client reservation keeps one payment command and folds secondary options",
-  /data-client-booking-options/.test(clientBookingActions)
-    && /const shouldOpenActions = Boolean\(foregroundNotice\)/.test(clientBookingActions)
-    && /status === "PENDING_CLIENT_VALIDATION"/.test(clientBookingActions)
-    && countOccurrences(clientBookingActions, "if (canResumePayment)") === 1
-    && countOccurrences(clientBookingActions, "onConfirm={onConfirmCourse}") === 1,
+  /data-client-booking-options/.test(clientBookingActions) &&
+    /const shouldOpenActions = Boolean\(foregroundNotice\)/.test(
+      clientBookingActions,
+    ) &&
+    /status === "PENDING_CLIENT_VALIDATION"/.test(clientBookingActions) &&
+    countOccurrences(clientBookingActions, "if (canResumePayment)") === 1 &&
+    countOccurrences(clientBookingActions, "onConfirm={onConfirmCourse}") === 1,
 );
 
 record(
   "Client session history stays folded unless a session needs attention",
-  /data-client-session-disclosure/.test(bookingSessionLedger)
-    && /const hasClientSessionAction = audience === "client"/.test(bookingSessionLedger)
-    && /AWAITING_CLIENT_CONFIRMATION/.test(bookingSessionLedger)
-    && /RESCHEDULE_PROPOSED/.test(bookingSessionLedger)
-    && /REPLACEMENT_PROPOSED/.test(bookingSessionLedger)
-    && /defaultOpen=\{hasClientSessionAction\}/.test(bookingSessionLedger),
+  /data-client-session-disclosure/.test(bookingSessionLedger) &&
+    /const hasClientSessionAction = audience === "client"/.test(
+      bookingSessionLedger,
+    ) &&
+    /AWAITING_CLIENT_CONFIRMATION/.test(bookingSessionLedger) &&
+    /RESCHEDULE_PROPOSED/.test(bookingSessionLedger) &&
+    /REPLACEMENT_PROPOSED/.test(bookingSessionLedger) &&
+    /defaultOpen=\{hasClientSessionAction\}/.test(bookingSessionLedger),
 );
 
 record(
   "Client payments open as one Jèko cashier before history and audit details",
-  /data-client-payment-app-hero/.test(clientPaymentsPage)
-    && /data-client-payment-hero-amount/.test(clientPaymentsPage)
-    && /Boutique Compétence sur Jèko/.test(clientPaymentsPage)
-    && /Aucun professeur n'est notifié avant confirmation serveur\./.test(clientPaymentsPage)
-    && /data-client-payment-method-rail/.test(clientPaymentsPage)
-    && /merchantName="Boutique Compétence"/.test(clientPaymentsPage)
-    && /Payer via Jèko/.test(clientPaymentsPage)
-    && !/ClientMetricStrip/.test(clientPaymentsPage)
-    && !/PaymentTrustPanel/.test(clientPaymentsPage),
+  /data-client-payment-app-hero/.test(clientPaymentsPage) &&
+    /data-client-payment-hero-amount/.test(clientPaymentsPage) &&
+    /Boutique Compétence sur Jèko/.test(clientPaymentsPage) &&
+    /Aucun professeur n'est notifié avant confirmation serveur\./.test(
+      clientPaymentsPage,
+    ) &&
+    /data-client-payment-method-rail/.test(clientPaymentsPage) &&
+    /merchantName="Boutique Compétence"/.test(clientPaymentsPage) &&
+    /Payer via Jèko/.test(clientPaymentsPage) &&
+    !/ClientMetricStrip/.test(clientPaymentsPage) &&
+    !/PaymentTrustPanel/.test(clientPaymentsPage),
 );
 
 record(
   "Client reservation search is optional instead of an always-visible filter wall",
-  /data-client-reservation-search-panel/.test(clientReservationsPage)
-    && /type="search"/.test(clientReservationsPage)
-    && !/data-client-reservation-filter-rail/.test(clientReservationList)
-    && /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(css),
+  /data-client-reservation-search-panel/.test(clientReservationsPage) &&
+    /type="search"/.test(clientReservationsPage) &&
+    !/data-client-reservation-filter-rail/.test(clientReservationList) &&
+    /\[data-client-payment-method-rail\][\s\S]*?::-webkit-scrollbar[\s\S]*?display:\s*none\s*!important;/.test(
+      css,
+    ),
 );
 
 record(
   "Client long lists use browser rendering containment for faster mobile scrolling",
-  /@supports\s*\(content-visibility:\s*auto\)/.test(css)
-    && /\[data-client-record-card\][\s\S]*?\[data-client-empty-state\][\s\S]*?content-visibility:\s*auto;[\s\S]*?contain-intrinsic-size:\s*auto\s+12rem;/.test(css)
-    && /\[data-client-payment-history\]\s+article/.test(css)
-    && /\[data-client-review-history\]\s+article/.test(css),
+  /@supports\s*\(content-visibility:\s*auto\)/.test(css) &&
+    /\[data-client-record-card\][\s\S]*?\[data-client-empty-state\][\s\S]*?content-visibility:\s*auto;[\s\S]*?contain-intrinsic-size:\s*auto\s+12rem;/.test(
+      css,
+    ) &&
+    /\[data-client-payment-history\]\s+article/.test(css) &&
+    /\[data-client-review-history\]\s+article/.test(css),
 );
 
 record(
   "Client mobile controls keep comfortable app touch targets",
-  /@media\s*\(max-width:\s*719px\)\s*\{[\s\S]*?\.client-shell\s*:where\([\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?a\[data-client-tab-item\],[\s\S]*?\[data-client-mobile-nav\]\s+a,[\s\S]*?a\[class\*="rounded"\][\s\S]*?\)\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?\}/.test(css),
+  /@media\s*\(max-width:\s*719px\)\s*\{[\s\S]*?\.client-shell\s*:where\([\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?a\[data-client-tab-item\],[\s\S]*?\[data-client-mobile-nav\]\s+a,[\s\S]*?a\[class\*="rounded"\][\s\S]*?\)\s*\{[\s\S]*?min-height:\s*44px;[\s\S]*?\}/.test(
+    css,
+  ),
 );
 
 record(
   "Client motion budget stays fast and app-like",
-  /CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*340/.test(layout)
-    && /transition-duration:\s*75ms\s*!important/.test(css)
-    && /\[data-client-loading\]\s+\.animate-pulse\s*\{[\s\S]*?animation-duration:\s*680ms\s*!important;[\s\S]*?\}/.test(css)
-    && !/CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*(?:[5-9]\d\d|[1-9]\d{3,})/.test(layout)
-    && !/transition-duration:\s*(?:2\d\d|[3-9]\d\d|\d{4,})ms\s*!important/.test(css),
+  /CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*340/.test(layout) &&
+    /transition-duration:\s*75ms\s*!important/.test(css) &&
+    /\[data-client-loading\]\s+\.animate-pulse\s*\{[\s\S]*?animation-duration:\s*680ms\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    !/CLIENT_NAV_FEEDBACK_TIMEOUT_MS\s*=\s*(?:[5-9]\d\d|[1-9]\d{3,})/.test(
+      layout,
+    ) &&
+    !/transition-duration:\s*(?:2\d\d|[3-9]\d\d|\d{4,})ms\s*!important/.test(
+      css,
+    ),
 );
 
 record(
   "Client focus state is visible and consistent across app controls",
-  /\.client-shell\s*:where\([\s\S]*?a,[\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?\[data-slot="button"\],[\s\S]*?\[data-slot="select-trigger"\][\s\S]*?\):focus-visible\s*\{[\s\S]*?outline:\s*2px\s+solid\s+#111B4D\s*!important;[\s\S]*?outline-offset:\s*3px\s*!important;[\s\S]*?box-shadow:\s*none\s*!important;[\s\S]*?\}/.test(css),
+  /\.client-shell\s*:where\([\s\S]*?a,[\s\S]*?button,[\s\S]*?input,[\s\S]*?select,[\s\S]*?textarea,[\s\S]*?\[role="button"\],[\s\S]*?\[data-slot="button"\],[\s\S]*?\[data-slot="select-trigger"\][\s\S]*?\):focus-visible\s*\{[\s\S]*?outline:\s*2px\s+solid\s+#111B4D\s*!important;[\s\S]*?outline-offset:\s*3px\s*!important;[\s\S]*?box-shadow:\s*none\s*!important;[\s\S]*?\}/.test(
+    css,
+  ),
 );
 
 record(
   "Client reduced-motion mode disables decorative transitions and route progress",
-  /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css)
-    && /\.client-shell,[\s\S]*?\.client-shell\s+\*\s*\{[\s\S]*?scroll-behavior:\s*auto\s*!important;[\s\S]*?transition-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-iteration-count:\s*1\s*!important;[\s\S]*?\}/.test(css)
-    && /\.client-shell\s+\[data-client-route-progress\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+  /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css) &&
+    /\.client-shell,[\s\S]*?\.client-shell\s+\*\s*\{[\s\S]*?scroll-behavior:\s*auto\s*!important;[\s\S]*?transition-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-duration:\s*0\.01ms\s*!important;[\s\S]*?animation-iteration-count:\s*1\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.client-shell\s+\[data-client-route-progress\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Client action buttons stay solid navy, never gradient-led",
-  !/bg-gradient|from-|to-|via-/.test(layout)
-    && /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(css),
+  !/bg-gradient|from-|to-|via-/.test(layout) &&
+    /\.client-shell\s*:where\(button,\s*a\)\[class\*="bg-\[#111B4D\]"\][\s\S]*?background-color:\s*#111B4D\s*!important;[\s\S]*?color:\s*#FFFFFF\s*!important;/.test(
+      css,
+    ),
 );
 
 record(
   "Client platform source avoids gradient-led UI",
-  !/\b(?:bg-gradient(?:-[a-z]+)?|from-(?:\[[^\]]+\]|[a-z]+-\d+)|via-(?:\[[^\]]+\]|[a-z]+-\d+)|to-(?:\[[^\]]+\]|[a-z]+-\d+))\b/.test(clientUiSources),
+  !/\b(?:bg-gradient(?:-[a-z]+)?|from-(?:\[[^\]]+\]|[a-z]+-\d+)|via-(?:\[[^\]]+\]|[a-z]+-\d+)|to-(?:\[[^\]]+\]|[a-z]+-\d+))\b/.test(
+    clientUiSources,
+  ),
 );
 
 record(
@@ -565,10 +775,15 @@ record(
 
 record(
   "Client command centers are suppressed to avoid repeated UI blocks",
-  /\[data-client-course-command-center\][\s\S]*?\[data-client-support-command-center\][\s\S]*?\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+  /\[data-client-course-command-center\][\s\S]*?\[data-client-support-command-center\][\s\S]*?\)\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(
+    css,
+  ),
 );
 
-const commandCenterRenderCount = countMatches(clientUiSources, /<[A-Za-z]+CommandCenter\b/g);
+const commandCenterRenderCount = countMatches(
+  clientUiSources,
+  /<[A-Za-z]+CommandCenter\b/g,
+);
 const gatedCommandCenterRenderCount = countMatches(
   clientUiSources,
   /CLIENT_COMMAND_CENTERS_ENABLED\s*&&\s*\([\s\S]{0,300}?<[A-Za-z]+CommandCenter\b/g,
@@ -576,439 +791,567 @@ const gatedCommandCenterRenderCount = countMatches(
 
 record(
   "Client command centers are disabled before render",
-  /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(clientPrimitives)
-    && commandCenterRenderCount > 0
-    && gatedCommandCenterRenderCount === commandCenterRenderCount,
+  /export const CLIENT_COMMAND_CENTERS_ENABLED\s*=\s*false\s*;/.test(
+    clientPrimitives,
+  ) &&
+    commandCenterRenderCount > 0 &&
+    gatedCommandCenterRenderCount === commandCenterRenderCount,
 );
 
 record(
   "Client support stays action-first and hides secondary details on mobile",
-  /title="Aide"/.test(clientSupportPage)
-    && !/data-client-support-action-rail/.test(clientSupportPage)
-    && /data-client-support-mobile-priority/.test(clientSupportPage)
-    && /data-client-support-filter-toggle/.test(clientSupportHistory)
-    && /data-client-support-filter-panel/.test(clientSupportHistory)
-    && !/data-client-support-filter-rail/.test(clientSupportHistory)
-    && /data-client-support-case-detail/.test(clientSupportHistory)
-    && /Voir le détail/.test(clientSupportHistory)
-    && /Vos dossiers de support/.test(clientSupportHistory),
+  /title="Aide"/.test(clientSupportPage) &&
+    !/data-client-support-action-rail/.test(clientSupportPage) &&
+    /data-client-support-mobile-priority/.test(clientSupportPage) &&
+    /data-client-support-filter-toggle/.test(clientSupportHistory) &&
+    /data-client-support-filter-panel/.test(clientSupportHistory) &&
+    !/data-client-support-filter-rail/.test(clientSupportHistory) &&
+    /data-client-support-case-detail/.test(clientSupportHistory) &&
+    /Voir le détail/.test(clientSupportHistory) &&
+    /Vos dossiers de support/.test(clientSupportHistory),
 );
 
 record(
   "Public mobile menu avoids duplicated professor search entries",
-  !/useSession/.test(publicLayout)
-    && !/SessionProvider/.test(providers)
-    && /journeyAwareNavLinks\.filter\(\(link\)\s*=>\s*link\.baseHref\s*!==\s*"\/professeurs"\)\.map/.test(publicLayout)
-    && /!\s*hideMobileNav\s*&&\s*!\s*mobileOpen\s*&&\s*\(\s*<PublicMobileNav/.test(publicLayout),
+  !/useSession/.test(publicLayout) &&
+    !/SessionProvider/.test(providers) &&
+    /journeyAwareNavLinks\s*\.filter\(\(link\)\s*=>\s*link\.baseHref\s*!==\s*"\/professeurs"\)\s*\.map/.test(
+      publicLayout,
+    ) &&
+    /!\s*hideMobileNav\s*&&\s*!\s*mobileOpen\s*&&\s*\(\s*<PublicMobileNav/.test(
+      publicLayout,
+    ),
 );
 
 record(
   "Public home opens as a centered three-system launcher without search clutter",
-  /data-home-centered-entry/.test(publicHome)
-    && /data-home-journey-tabs/.test(publicHome)
-    && /<JourneySwitcher/.test(publicHome)
-    && /size="hero"/.test(publicHome)
-    && countOccurrences(publicHome, "/professeurs?journey=") === 3
-    && !/HomeSearchBar|data-home-search-form|featuredCards|TeacherCard|db\.teacher\.findMany/.test(publicHome),
+  /data-home-centered-entry/.test(publicHome) &&
+    /data-home-journey-tabs/.test(publicHome) &&
+    /<JourneySwitcher/.test(publicHome) &&
+    /size="hero"/.test(publicHome) &&
+    countOccurrences(publicHome, "/professeurs?journey=") === 3 &&
+    !/HomeSearchBar|data-home-search-form|featuredCards|TeacherCard|db\.teacher\.findMany/.test(
+      publicHome,
+    ),
 );
 
 record(
   "Public navigation preserves the selected mini-application between Profs, Tarifs and Réserver",
-  /activeJourney\?: TeacherJourney \| ""/.test(publicLayout)
-    && /const professorListHref = marketplaceMode\s*\? buildMarketplaceJourneyHref\(activeJourney\)\s*: buildPublicJourneyHref\("\/professeurs", activeJourney\)/.test(publicLayout)
-    && /const tariffsHref = buildPublicJourneyHref\("\/tarifs", activeJourney\)/.test(publicLayout)
-    && /function buildPublicJourneyHref\(href: string, activeJourney\?: TeacherJourney \| ""\)/.test(publicLayout)
-    && /params\.set\("journey", activeJourney\)/.test(publicLayout)
-    && /<PublicMobileNav pathname=\{pathname\} sessionRole=\{sessionRole\} activeJourney=\{activeJourney\} marketplaceMode=\{marketplaceMode\} \/>/.test(publicLayout)
-    && /function buildMarketplaceJourneyHref\(activeJourney\?: TeacherJourney \| ""\)/.test(publicLayout)
-    && /href=\{professorListHref\}/.test(publicLayout)
-    && /href=\{tariffsHref\}/.test(publicLayout)
-    && /pathname\?\.startsWith\(link\.baseHref\)/.test(publicLayout)
-    && /pathname\?\.startsWith\(item\.baseHref\)/.test(publicLayout)
-    && /<PublicLayout activeJourney="ivoirien" marketplaceMode=\{marketplaceMode\}>/.test(publicHome)
-    && /<PublicLayout activeJourney=\{journey\}>/.test(publicTeachersPage)
-    && /<PublicLayout activeJourney=\{activeJourney\} marketplaceMode=\{false\}>/.test(publicTariffs)
-    && /<PublicLayout activeJourney=\{activeJourney\} marketplaceMode>/.test(publicTariffs)
-    && /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(publicTeacherDetail)
-    && /const tariffsHref = `\/tarifs\?journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
-    && /<Link href=\{tariffsHref\}[\s\S]*?>\s*Voir la grille officielle/.test(publicTeacherDetail),
+  /activeJourney\?: TeacherJourney \| ""/.test(publicLayout) &&
+    /const professorListHref = marketplaceMode\s*\? buildMarketplaceJourneyHref\(activeJourney\)\s*: buildPublicJourneyHref\("\/professeurs", activeJourney\)/.test(
+      publicLayout,
+    ) &&
+    /const tariffsHref = buildPublicJourneyHref\("\/tarifs", activeJourney\)/.test(
+      publicLayout,
+    ) &&
+    /function buildPublicJourneyHref\(\s*href: string,\s*activeJourney\?: TeacherJourney \| "",?\s*\)/.test(
+      publicLayout,
+    ) &&
+    /params\.set\("journey", activeJourney\)/.test(publicLayout) &&
+    /<PublicMobileNav\s+pathname=\{pathname\}\s+sessionRole=\{sessionRole\}\s+activeJourney=\{activeJourney\}\s+marketplaceMode=\{marketplaceMode\}\s+\/>/.test(
+      publicLayout,
+    ) &&
+    /function buildMarketplaceJourneyHref\(activeJourney\?: TeacherJourney \| ""\)/.test(
+      publicLayout,
+    ) &&
+    /href=\{professorListHref\}/.test(publicLayout) &&
+    /href=\{tariffsHref\}/.test(publicLayout) &&
+    /pathname\?\.startsWith\(link\.baseHref\)/.test(publicLayout) &&
+    /pathname\?\.startsWith\(item\.baseHref\)/.test(publicLayout) &&
+    /<PublicLayout activeJourney="ivoirien" marketplaceMode=\{marketplaceMode\}>/.test(
+      publicHome,
+    ) &&
+    /<PublicLayout activeJourney=\{journey\}>/.test(publicTeachersPage) &&
+    /<PublicLayout activeJourney=\{activeJourney\} marketplaceMode=\{false\}>/.test(
+      publicTariffs,
+    ) &&
+    /<PublicLayout activeJourney=\{activeJourney\} marketplaceMode>/.test(
+      publicTariffs,
+    ) &&
+    /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(
+      publicTeacherDetail,
+    ) &&
+    /const tariffsHref = `\/tarifs\?journey=\$\{activeJourney\}`/.test(
+      publicTeacherDetail,
+    ) &&
+    /<Link href=\{tariffsHref\}[\s\S]*?>\s*Voir la grille officielle/.test(
+      publicTeacherDetail,
+    ),
 );
 
 record(
   "Public mobile menu dims and blocks the page behind its navigation panel",
-  /aria-label="Fermer le menu"/.test(publicLayout)
-    && /bg-\[#111827\]\/25/.test(publicLayout)
-    && /backdrop-blur-\[1px\]/.test(publicLayout)
-    && /z-\[60\]/.test(publicLayout),
+  /aria-label="Fermer le menu"/.test(publicLayout) &&
+    /bg-\[#111827\]\/25/.test(publicLayout) &&
+    /backdrop-blur-\[1px\]/.test(publicLayout) &&
+    /z-\[60\]/.test(publicLayout),
 );
 
 record(
   "Public mobile shell avoids a footer that duplicates the bottom navigation",
-  /mt-auto hidden border-t border-\[#E3E8F2\] bg-white sm:block/.test(publicLayout),
+  /mt-auto hidden border-t border-\[#E3E8F2\] bg-white sm:block/.test(
+    publicLayout,
+  ),
 );
 
 record(
   "Public mobile bottom navigation never masks page content",
-  /data-public-main/.test(publicLayout)
-    && /public-main-with-mobile-nav/.test(publicLayout)
-    && /data-public-mobile-nav/.test(publicLayout)
-    && /public-mobile-nav fixed inset-x-0/.test(publicLayout)
-    && !/public-mobile-nav fixed inset-x-3/.test(publicLayout)
-    && /Mobile app safe area: bottom navigation never covers page content/.test(css)
-    && /\.public-shell\.public-shell--mobile-nav-visible main\.public-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
-    && /\.public-shell\s*\[data-public-mobile-nav\],[\s\S]*?\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?\}/.test(css)
-    && /\.public-shell\s*\[data-public-mobile-nav\]\s*>\s*div,[\s\S]*?\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css),
+  /data-public-main/.test(publicLayout) &&
+    /public-main-with-mobile-nav/.test(publicLayout) &&
+    /data-public-mobile-nav/.test(publicLayout) &&
+    /public-mobile-nav fixed inset-x-0/.test(publicLayout) &&
+    !/public-mobile-nav fixed inset-x-3/.test(publicLayout) &&
+    /Mobile app safe area: bottom navigation never covers page content/.test(
+      css,
+    ) &&
+    /\.public-shell\.public-shell--mobile-nav-visible main\.public-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.25rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.public-shell\s*\[data-public-mobile-nav\],[\s\S]*?\{[\s\S]*?bottom:\s*0\s*!important;[\s\S]*?left:\s*0\s*!important;[\s\S]*?right:\s*0\s*!important;[\s\S]*?width:\s*100%\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.public-shell\s*\[data-public-mobile-nav\]\s*>\s*div,[\s\S]*?\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Public root tabs suppress the redundant back strip",
-  /const publicRootPaths = new Set\(\["\/", "\/professeurs", "\/tarifs", "\/partenariat", "\/contact"\]\)/.test(publicLayout)
-    && /shouldShowPublicBack\(pathname\)/.test(publicLayout)
-    && /!publicRootPaths\.has\(pathname\)/.test(publicLayout),
+  /const publicRootPaths = new Set\(\[\s*"\/",\s*"\/professeurs",\s*"\/tarifs",\s*"\/partenariat",\s*"\/contact",?\s*\]\)/.test(
+    publicLayout,
+  ) &&
+    /shouldShowPublicBack\(pathname\)/.test(publicLayout) &&
+    /!publicRootPaths\.has\(pathname\)/.test(publicLayout),
 );
 
 record(
   "Public teacher search uses one app-like mobile filter sheet before profiles",
-  /data-public-teacher-search-controls/.test(mobileFilterSheet)
-    && /<TeacherResponsiveFilters/.test(publicTeachersPage)
-    && /<MobileFilterSheet/.test(teacherResponsiveFilters)
-    && /resultLabel=\{props\.resultLabel\}/.test(teacherResponsiveFilters)
-    && /activeFiltersCount=\{props\.activeFiltersCount\}/.test(teacherResponsiveFilters)
-    && /data-public-teacher-app-header/.test(publicTeachersPage)
-    && /data-public-teacher-system-pill/.test(publicTeachersPage)
-    && /data-public-teacher-count/.test(publicTeachersPage)
-    && /data-public-teacher-quick-search/.test(publicTeachersPage)
-    && /const activeFilterLabel = activeFiltersCount > 0/.test(publicTeachersPage)
-    && /variant: "mobile" \| "desktop"/.test(publicTeachersPage)
-    && /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage)
-    && /placeholder=\{journeyConfig\.searchPlaceholder\}/.test(publicTeachersPage)
-    && /aria-label="Rechercher"/.test(publicTeachersPage)
-    && /data-mobile-filter-trigger/.test(mobileFilterSheet)
-    && /Résultats/.test(mobileFilterSheet)
-    && /Filtres\{activeLabel\}/.test(mobileFilterSheet)
-    && /data-mobile-filter-backdrop/.test(mobileFilterSheet)
-    && /data-mobile-filter-panel/.test(mobileFilterSheet)
-    && /document\.body\.style\.overflow = "hidden"/.test(mobileFilterSheet)
-    && /aria-label="Fermer les filtres"/.test(mobileFilterSheet)
-    && /bg-\[#111827\]\/30/.test(mobileFilterSheet)
-    && /backdrop-blur-\[2px\]/.test(mobileFilterSheet)
-    && !/mt-4 flex flex-col gap-2/.test(publicTeachersPage),
+  /data-public-teacher-search-controls/.test(mobileFilterSheet) &&
+    /<TeacherResponsiveFilters/.test(publicTeachersPage) &&
+    /<MobileFilterSheet/.test(teacherResponsiveFilters) &&
+    /resultLabel=\{props\.resultLabel\}/.test(teacherResponsiveFilters) &&
+    /activeFiltersCount=\{props\.activeFiltersCount\}/.test(
+      teacherResponsiveFilters,
+    ) &&
+    /data-public-teacher-app-header/.test(publicTeachersPage) &&
+    /data-public-teacher-system-pill/.test(publicTeachersPage) &&
+    /data-public-teacher-count/.test(publicTeachersPage) &&
+    /data-public-teacher-quick-search/.test(publicTeachersPage) &&
+    /const activeFilterLabel = activeFiltersCount > 0/.test(
+      publicTeachersPage,
+    ) &&
+    /variant: "mobile" \| "desktop"/.test(publicTeachersPage) &&
+    /hidden grid-cols-2 gap-2 lg:grid/.test(publicTeachersPage) &&
+    /placeholder=\{journeyConfig\.searchPlaceholder\}/.test(
+      publicTeachersPage,
+    ) &&
+    /aria-label="Rechercher"/.test(publicTeachersPage) &&
+    /data-mobile-filter-trigger/.test(mobileFilterSheet) &&
+    /Résultats/.test(mobileFilterSheet) &&
+    /Filtres\{activeLabel\}/.test(mobileFilterSheet) &&
+    /data-mobile-filter-backdrop/.test(mobileFilterSheet) &&
+    /data-mobile-filter-panel/.test(mobileFilterSheet) &&
+    /document\.body\.style\.overflow = "hidden"/.test(mobileFilterSheet) &&
+    /aria-label="Fermer les filtres"/.test(mobileFilterSheet) &&
+    /bg-\[#111827\]\/30/.test(mobileFilterSheet) &&
+    /backdrop-blur-\[2px\]/.test(mobileFilterSheet) &&
+    !/mt-4 flex flex-col gap-2/.test(publicTeachersPage),
 );
 
 record(
   "Public teacher search clear action removes the text query",
-  /function buildPaginationUrl\(p: number, includeQuery = true\)/.test(publicTeachersPage)
-    && /if \(includeQuery && q\) params\.set\("q", q\)/.test(publicTeachersPage)
-    && /resetSearchHref=\{buildPaginationUrl\(1, false\)\}/.test(publicTeachersPage)
-    && /href=\{resetSearchHref\}/.test(publicTeachersPage)
-    && /aria-label="Effacer la recherche"/.test(publicTeachersPage),
+  /function buildPaginationUrl\(p: number, includeQuery = true\)/.test(
+    publicTeachersPage,
+  ) &&
+    /if \(includeQuery && q\) params\.set\("q", q\)/.test(publicTeachersPage) &&
+    /resetSearchHref=\{buildPaginationUrl\(1, false\)\}/.test(
+      publicTeachersPage,
+    ) &&
+    /href=\{resetSearchHref\}/.test(publicTeachersPage) &&
+    /aria-label="Effacer la recherche"/.test(publicTeachersPage),
 );
 
 record(
   "Public teacher search exposes three real journey tabs in one mobile row",
-  /parseBookingJourney\(sp\.journey\?\.trim\(\)\) \|\| "ivoirien"/.test(publicTeachersPage)
-    && /data-public-journey-tabs/.test(publicTeachersPage)
-    && /TEACHER_JOURNEYS\.map/.test(publicTeachersPage)
-    && /<JourneySwitcher/.test(publicTeachersPage)
-    && /"data-journey-tab": journey/.test(journeySwitcher)
-    && /data-mini-app-tablist/.test(journeySwitcher)
-    && /data-mini-app-system-switcher/.test(journeySwitcher)
-    && /data-mini-app-active-pill/.test(journeySwitcher)
-    && /role="tablist"/.test(journeySwitcher)
-    && /role: "tab" as const/.test(journeySwitcher)
-    && /"aria-selected": active/.test(journeySwitcher)
-    && /"aria-current": active \? "page" as const : undefined/.test(journeySwitcher)
-    && /grid-template-columns: repeat\(var\(--journey-count\), minmax\(0, 1fr\)\)/.test(css)
-    && /white-space: nowrap/.test(css)
-    && /journey-switcher\[data-size="hero"\][\s\S]*?journey-switcher__meta[\s\S]*?display:\s*none/.test(css)
-    && /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(publicTeachersPage)
-    && /teacherJourneyWhere\(journey\)/.test(publicTeachersPage)
-    && /params\.set\("commune", commune\)/.test(publicTeachersPage),
+  /parseBookingJourney\(sp\.journey\?\.trim\(\)\) \|\| "ivoirien"/.test(
+    publicTeachersPage,
+  ) &&
+    /data-public-journey-tabs/.test(publicTeachersPage) &&
+    /TEACHER_JOURNEYS\.map/.test(publicTeachersPage) &&
+    /<JourneySwitcher/.test(publicTeachersPage) &&
+    /"data-journey-tab": journey/.test(journeySwitcher) &&
+    /data-mini-app-tablist/.test(journeySwitcher) &&
+    /data-mini-app-system-switcher/.test(journeySwitcher) &&
+    /data-mini-app-active-pill/.test(journeySwitcher) &&
+    /role="tablist"/.test(journeySwitcher) &&
+    /role: "tab" as const/.test(journeySwitcher) &&
+    /"aria-selected": active/.test(journeySwitcher) &&
+    /"aria-current": active \? "page" as const : undefined/.test(
+      journeySwitcher,
+    ) &&
+    /grid-template-columns: repeat\(var\(--journey-count\), minmax\(0, 1fr\)\)/.test(
+      css,
+    ) &&
+    /white-space: nowrap/.test(css) &&
+    /journey-switcher\[data-size="hero"\][\s\S]*?journey-switcher__meta[\s\S]*?display:\s*none/.test(
+      css,
+    ) &&
+    /function buildJourneyUrl\(nextJourney: BookingJourney\)/.test(
+      publicTeachersPage,
+    ) &&
+    /teacherJourneyWhere\(journey\)/.test(publicTeachersPage) &&
+    /params\.set\("commune", commune\)/.test(publicTeachersPage),
 );
 
 record(
   "Mini-application system tabs stay white and readable without gradients",
-  /background:\s*#ffffff;/.test(journeyRailCss)
-    && /background-image:\s*none;/.test(journeyRailCss)
-    && /background:\s*#ffffff;/.test(journeyIndicatorCss)
-    && /background-image:\s*none;/.test(journeyIndicatorCss)
-    && /background-image:\s*none;/.test(journeyLinkCss)
-    && !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(journeyRailCss)
-    && !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(journeyIndicatorCss)
-    && !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(journeyLinkCss)
-    && /\.journey-switcher__link\s*\{[\s\S]*?color:\s*#475569;/.test(css)
-    && /\.journey-switcher__link\[data-active="true"\]\s*\{[\s\S]*?color:\s*#111827;/.test(css)
-    && /\.journey-switcher__link\[data-active="true"\]\s+\.journey-switcher__meta\s*\{[\s\S]*?color:\s*#111b4d;/.test(css),
+  /background:\s*#ffffff;/.test(journeyRailCss) &&
+    /background-image:\s*none;/.test(journeyRailCss) &&
+    /background:\s*#ffffff;/.test(journeyIndicatorCss) &&
+    /background-image:\s*none;/.test(journeyIndicatorCss) &&
+    /background-image:\s*none;/.test(journeyLinkCss) &&
+    !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(
+      journeyRailCss,
+    ) &&
+    !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(
+      journeyIndicatorCss,
+    ) &&
+    !/linear-gradient|radial-gradient|bg-gradient|text-white/.test(
+      journeyLinkCss,
+    ) &&
+    /\.journey-switcher__link\s*\{[\s\S]*?color:\s*#475569;/.test(css) &&
+    /\.journey-switcher__link\[data-active="true"\]\s*\{[\s\S]*?color:\s*#111827;/.test(
+      css,
+    ) &&
+    /\.journey-switcher__link\[data-active="true"\]\s+\.journey-switcher__meta\s*\{[\s\S]*?color:\s*#111b4d;/.test(
+      css,
+    ),
 );
 
 record(
   "Public teacher detail has one journey-aware back action",
-  /backFallbackHref = "\/"/.test(publicLayout)
-    && /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout)
-    && /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(publicTeacherDetail)
-    && !/Retour à la liste/.test(publicTeacherDetail),
+  /backFallbackHref = "\/"/.test(publicLayout) &&
+    /<BackButton fallbackHref=\{backFallbackHref\}/.test(publicLayout) &&
+    /<PublicLayout backFallbackHref=\{teachersHref\} activeJourney=\{activeJourney\}>/.test(
+      publicTeacherDetail,
+    ) &&
+    !/Retour à la liste/.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail keeps each multi-system offer clear and journey-scoped",
-  /data-public-teacher-journey-tabs/.test(publicTeacherDetail)
-    && /teacherCatalogEligibleJourneys/.test(publicTeacherDetail)
-    && /teacherCatalogSubjects/.test(publicTeacherDetail)
-    && /teacherCatalogLevels/.test(publicTeacherDetail)
-    && /eligibleJourneys\.length === 0 \|\| \(journey && !eligibleJourneys\.includes\(journey\)\)/.test(publicTeacherDetail)
-    && /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/.test(publicTeacherDetail)
-    && /teacherJourneyPriceLabel\(/.test(publicTeacherDetail)
-    && /journeyLevels\.map/.test(publicTeacherDetail),
+  /data-public-teacher-journey-tabs/.test(publicTeacherDetail) &&
+    /teacherCatalogEligibleJourneys/.test(publicTeacherDetail) &&
+    /teacherCatalogSubjects/.test(publicTeacherDetail) &&
+    /teacherCatalogLevels/.test(publicTeacherDetail) &&
+    /eligibleJourneys\.length === 0 \|\| \(journey && !eligibleJourneys\.includes\(journey\)\)/.test(
+      publicTeacherDetail,
+    ) &&
+    /bookingDestination = `\/client\/reserver\?teacherId=\$\{teacher\.id\}&journey=\$\{activeJourney\}`/.test(
+      publicTeacherDetail,
+    ) &&
+    /teacherJourneyPriceLabel\(/.test(publicTeacherDetail) &&
+    /journeyLevels\.map/.test(publicTeacherDetail),
 );
 
 record(
   "Public and client format controls persist through native radio form submission",
-  /data-course-format-control/.test(courseFormatControl)
-    && /type="radio"/.test(courseFormatControl)
-    && /name=\{name\}/.test(courseFormatControl)
-    && /defaultChecked=\{checked\}/.test(courseFormatControl)
-    && /normalizeCourseFormat\(requestedFormat\)/.test(publicTeachersPage)
-    && /normalizeCourseFormat\(requestedFormat\)/.test(read("src/app/client/rechercher/page.tsx"))
-    && /<CourseFormatSegmentedControl/.test(teacherResponsiveFilters)
-    && /<CourseFormatSegmentedControl/.test(read("src/app/client/rechercher/page.tsx"))
-    && !/<button[\s\S]{0,220}name="format"/.test(teacherResponsiveFilters)
-    && !/<button[\s\S]{0,220}name="format"/.test(read("src/app/client/rechercher/page.tsx")),
+  /data-course-format-control/.test(courseFormatControl) &&
+    /type="radio"/.test(courseFormatControl) &&
+    /name=\{name\}/.test(courseFormatControl) &&
+    /defaultChecked=\{checked\}/.test(courseFormatControl) &&
+    /normalizeCourseFormat\(requestedFormat\)/.test(publicTeachersPage) &&
+    /normalizeCourseFormat\(requestedFormat\)/.test(
+      read("src/app/client/rechercher/page.tsx"),
+    ) &&
+    /<CourseFormatSegmentedControl/.test(teacherResponsiveFilters) &&
+    /<CourseFormatSegmentedControl/.test(
+      read("src/app/client/rechercher/page.tsx"),
+    ) &&
+    !/<button[\s\S]{0,220}name="format"/.test(teacherResponsiveFilters) &&
+    !/<button[\s\S]{0,220}name="format"/.test(
+      read("src/app/client/rechercher/page.tsx"),
+    ),
 );
 
 record(
   "Logout confirmation renders above every mobile drawer",
-  /data-slot="alert-dialog-overlay"[\s\S]*?z-\[120\]/.test(alertDialog)
-    && /data-slot="alert-dialog-content"[\s\S]*?z-\[130\]/.test(alertDialog)
-    && countOccurrences(layout, "<ImportantActionConfirm") >= 2
-    && /confirmLabel="Me déconnecter"/.test(layout),
+  /data-slot="alert-dialog-overlay"[\s\S]*?z-\[120\]/.test(alertDialog) &&
+    /data-slot="alert-dialog-content"[\s\S]*?z-\[130\]/.test(alertDialog) &&
+    countOccurrences(layout, "<ImportantActionConfirm") >= 2 &&
+    /confirmLabel="Me déconnecter"/.test(layout),
 );
 
 record(
   "Public teacher cover and portrait stay premium and responsive on every viewport",
-  /data-public-teacher-photo-layout/.test(publicTeacherDetail)
-    && /data-public-teacher-cover/.test(publicTeacherDetail)
-    && /aspect-\[3\/1\]/.test(publicTeacherDetail)
-    && /className="object-contain"/.test(publicTeacherDetail)
-    && /grid-cols-\[100px_minmax\(0,1fr\)\]/.test(publicTeacherDetail)
-    && /items-start/.test(publicTeacherDetail)
-    && /size=\{96\}/.test(publicTeacherDetail)
-    && /style=\{\{ transform: "translateY\(-50%\)" \}\}/.test(publicTeacherDetail)
-    && !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail)
-    && !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
+  /data-public-teacher-photo-layout/.test(publicTeacherDetail) &&
+    /data-public-teacher-cover/.test(publicTeacherDetail) &&
+    /aspect-\[3\/1\]/.test(publicTeacherDetail) &&
+    /className="object-contain"/.test(publicTeacherDetail) &&
+    /grid-cols-\[100px_minmax\(0,1fr\)\]/.test(publicTeacherDetail) &&
+    /items-start/.test(publicTeacherDetail) &&
+    /size=\{96\}/.test(publicTeacherDetail) &&
+    /style=\{\{ transform: "translateY\(-50%\)" \}\}/.test(
+      publicTeacherDetail,
+    ) &&
+    !/data-public-teacher-cover[^>]*min-h-/.test(publicTeacherDetail) &&
+    !/left-1\/2 -translate-x-1\/2/.test(publicTeacherDetail),
 );
 
 record(
   "Verified badge overlays the portrait without changing its measured size",
-  /data-professor-image-badge/.test(professorImage)
-    && /style=\{\{ width: px, height: px \}\}/.test(professorImage)
-    && !/reservedBadgeOffset/.test(professorImage),
+  /data-professor-image-badge/.test(professorImage) &&
+    /style=\{\{ width: px, height: px \}\}/.test(professorImage) &&
+    !/reservedBadgeOffset/.test(professorImage),
 );
 
 record(
   "Professor can choose a full image, a premium color, or import an uncropped cover",
-  /data-professor-cover-preview/.test(professorMedia)
-    && /data-professor-cover-colors/.test(professorMedia)
-    && /data-professor-cover-images/.test(professorMedia)
-    && /Importer une couverture/.test(professorMedia)
-    && /className="object-contain"/.test(professorMedia)
-    && /action === "custom-cover" \? 900 : 300/.test(professorMediaApi)
-    && /function coverGeometry/.test(teacherImageUpload)
-    && /Math\.min\(canvasWidth \/ sourceWidth, canvasHeight \/ sourceHeight\)/.test(teacherImageUpload)
-    && /x: Math\.round\(\(canvasWidth - width\) \/ 2\)/.test(teacherImageUpload),
+  /data-professor-cover-preview/.test(professorMedia) &&
+    /data-professor-cover-colors/.test(professorMedia) &&
+    /data-professor-cover-images/.test(professorMedia) &&
+    /Importer une couverture/.test(professorMedia) &&
+    /className="object-contain"/.test(professorMedia) &&
+    /action === "custom-cover" \? 900 : 300/.test(professorMediaApi) &&
+    /function coverGeometry/.test(teacherImageUpload) &&
+    /Math\.min\(canvasWidth \/ sourceWidth, canvasHeight \/ sourceHeight\)/.test(
+      teacherImageUpload,
+    ) &&
+    /x: Math\.round\(\(canvasWidth - width\) \/ 2\)/.test(teacherImageUpload),
 );
 
 record(
   "Public teacher detail keeps one primary reservation action per viewport",
-  /data-public-teacher-hero/.test(publicTeacherDetail)
-    && /data-public-teacher-primary-action/.test(publicTeacherDetail)
-    && /const hideGlobalBookingAction = isPublicTeacherDetail\(pathname\)/.test(publicLayout)
-    && /!isAuthenticated && !hideGlobalBookingAction/.test(publicLayout)
-    && /data-public-teacher-primary-action/.test(publicTeacherDetail)
-    && /hidden rounded-\[1\.5rem\][\s\S]*?lg:flex lg:flex-col/.test(publicTeacherDetail)
-    && /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail)
-    && /data-public-teacher-tablet-action/.test(publicTeacherDetail)
-    && /sm:inline-flex lg:hidden/.test(publicTeacherDetail)
-    && !/Réserver ce professeur/.test(publicTeacherDetail),
+  /data-public-teacher-hero/.test(publicTeacherDetail) &&
+    /data-public-teacher-primary-action/.test(publicTeacherDetail) &&
+    /const hideGlobalBookingAction = isPublicTeacherDetail\(pathname\)/.test(
+      publicLayout,
+    ) &&
+    /!isAuthenticated && !hideGlobalBookingAction/.test(publicLayout) &&
+    /data-public-teacher-primary-action/.test(publicTeacherDetail) &&
+    /hidden rounded-\[1\.5rem\][\s\S]*?lg:flex lg:flex-col/.test(
+      publicTeacherDetail,
+    ) &&
+    /fixed inset-x-3[\s\S]*?sm:hidden/.test(publicTeacherDetail) &&
+    /data-public-teacher-tablet-action/.test(publicTeacherDetail) &&
+    /sm:inline-flex lg:hidden/.test(publicTeacherDetail) &&
+    !/Réserver ce professeur/.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail opens with a simple price cashier before long details",
-  /data-public-teacher-decision-cashier/.test(publicTeacherDetail)
-    && /Prix officiel/.test(publicTeacherDetail)
-    && /total exact avant paiement/.test(publicTeacherDetail)
-    && publicTeacherDetail.includes('data-public-teacher-fees-disclosure={marker === "pricing" ? "true" : undefined}')
-    && /title="Prix et frais"/.test(publicTeacherDetail)
-    && publicTeacherDetail.includes('summary={`${sessionPriceLabel} · total affiché avant Jèko`}')
-    && !/>\s*Tarifs\s*</.test(publicTeacherDetail),
+  /data-public-teacher-decision-cashier/.test(publicTeacherDetail) &&
+    /Prix officiel/.test(publicTeacherDetail) &&
+    /total exact avant paiement/.test(publicTeacherDetail) &&
+    publicTeacherDetail.includes(
+      'data-public-teacher-fees-disclosure={marker === "pricing" ? "true" : undefined}',
+    ) &&
+    /title="Prix et frais"/.test(publicTeacherDetail) &&
+    publicTeacherDetail.includes(
+      "summary={`${sessionPriceLabel} · total affiché avant Jèko`}",
+    ) &&
+    !/>\s*Tarifs\s*</.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail reveals long evidence progressively",
-  countOccurrences(publicTeacherDetail, "<DisclosureCard") >= 3
-    && /data-public-teacher-disclosure/.test(publicTeacherDetail)
-    && /<TeacherMiniCv/.test(publicTeacherDetail)
-    && /data-public-teacher-availability/.test(publicTeacherDetail)
-    && /Voir le planning détaillé/.test(publicTeacherDetail),
+  countOccurrences(publicTeacherDetail, "<DisclosureCard") >= 3 &&
+    /data-public-teacher-disclosure/.test(publicTeacherDetail) &&
+    /<TeacherMiniCv/.test(publicTeacherDetail) &&
+    /data-public-teacher-availability/.test(publicTeacherDetail) &&
+    /Voir le planning détaillé/.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail keeps the biography compact before full reading",
-  /compactTeacherBio\(profileBio\)/.test(publicTeacherDetail)
-    && /data-public-teacher-compact-bio/.test(publicTeacherDetail)
-    && /data-public-teacher-about/.test(publicTeacherDetail)
-    && /Lire le portrait complet/.test(publicTeacherDetail)
-    && !/À propos de \{displayName\}/.test(publicTeacherDetail),
+  /compactTeacherBio\(profileBio\)/.test(publicTeacherDetail) &&
+    /data-public-teacher-compact-bio/.test(publicTeacherDetail) &&
+    /data-public-teacher-about/.test(publicTeacherDetail) &&
+    /Lire le portrait complet/.test(publicTeacherDetail) &&
+    !/À propos de \{displayName\}/.test(publicTeacherDetail),
 );
 
 record(
   "Public teacher detail explains transport and payment fees before booking",
-  /value="0 même quartier"/.test(publicTeacherDetail)
-    && /value="Service 3 %"/.test(publicTeacherDetail)
-    && /sub="Frais opérateur séparés"/.test(publicTeacherDetail)
-    && /Le moteur calcule le cours officiel, le déplacement éventuel et chaque frais séparément avant le paiement/.test(publicTeacherDetail),
+  /value="0 même quartier"/.test(publicTeacherDetail) &&
+    /value="Service 3 %"/.test(publicTeacherDetail) &&
+    /sub="Frais opérateur séparés"/.test(publicTeacherDetail) &&
+    /Le moteur calcule le cours officiel, le déplacement éventuel et chaque frais séparément avant le paiement/.test(
+      publicTeacherDetail,
+    ),
 );
 
 record(
   "Public teacher empty state keeps one primary action",
-  /Professeurs en cours de publication/.test(publicTeachersPage)
-    && /Transmettre mon besoin/.test(publicTeachersPage)
-    && !/Retour accueil/.test(publicTeachersPage),
+  /Professeurs en cours de publication/.test(publicTeachersPage) &&
+    /Transmettre mon besoin/.test(publicTeachersPage) &&
+    !/Retour accueil/.test(publicTeachersPage),
 );
 
 record(
   "Client teacher cards expose real star ratings without fake zero-rating trust signals",
-  /getTeacherDisplayRating\(teacher\)/.test(teacherCard)
-    && /data-client-teacher-card-rating="scored"/.test(teacherCard)
-    && /data-client-teacher-card-rating="empty"/.test(teacherCard)
-    && /data-client-teacher-card-stars/.test(teacherCard)
-    && /Nouveau · aucun avis/.test(teacherCard)
-    && !/Profil suivi|const trustLabel/.test(teacherCard)
-    && !/0\.0\/5/.test(teacherCard),
+  /getTeacherDisplayRating\(teacher\)/.test(teacherCard) &&
+    /data-client-teacher-card-rating="scored"/.test(teacherCard) &&
+    /data-client-teacher-card-rating="empty"/.test(teacherCard) &&
+    /data-client-teacher-card-stars/.test(teacherCard) &&
+    /Nouveau · aucun avis/.test(teacherCard) &&
+    !/Profil suivi|const trustLabel/.test(teacherCard) &&
+    !/0\.0\/5/.test(teacherCard),
 );
 
 record(
   "Teacher list cards mirror the premium cover and overlapping portrait identity",
-  /data-client-teacher-cover/.test(teacherCard)
-    && /resolveTeacherCover\(\{ teacherId: teacher\.id, coverUrl: teacher\.coverUrl \}\)/.test(teacherCard)
-    && /aspect-\[3\/1\]/.test(teacherCard)
-    && /className="object-contain"/.test(teacherCard)
-    && /style=\{\{ marginTop: "-40px" \}\}/.test(teacherCard)
-    && /grid-cols-\[80px_minmax\(0,1fr\)\]/.test(teacherCard),
+  /data-client-teacher-cover/.test(teacherCard) &&
+    /resolveTeacherCover\(\{ teacherId: teacher\.id, coverUrl: teacher\.coverUrl \}\)/.test(
+      teacherCard,
+    ) &&
+    /aspect-\[3\/1\]/.test(teacherCard) &&
+    /className="object-contain"/.test(teacherCard) &&
+    /style=\{\{ marginTop: "-40px" \}\}/.test(teacherCard) &&
+    /grid-cols-\[80px_minmax\(0,1fr\)\]/.test(teacherCard),
 );
 
 record(
   "Public teacher cards stay focused on booking decisions",
-  !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(teacherCard)
-    && /priceLabel = "Tarif officiel selon le parcours"/.test(teacherCard)
-    && /journeyLabel\?: string/.test(teacherCard)
-    && /data-client-teacher-journey-chip/.test(teacherCard)
-    && /data-client-teacher-price/.test(teacherCard)
-    && /Prix officiel\{journeyLabel \? ` · \$\{journeyLabel\}` : ""\}/.test(teacherCard),
+  !/TeacherMiniCv|careerSummary|workHistory|teachingAchievements|learnersCoached/.test(
+    teacherCard,
+  ) &&
+    /priceLabel = "Tarif officiel selon le parcours"/.test(teacherCard) &&
+    /journeyLabel\?: string/.test(teacherCard) &&
+    /data-client-teacher-journey-chip/.test(teacherCard) &&
+    /data-client-teacher-price/.test(teacherCard) &&
+    /Prix officiel\{journeyLabel \? ` · \$\{journeyLabel\}` : ""\}/.test(
+      teacherCard,
+    ),
 );
 
 record(
   "Public teacher cards keep a one-row mobile decision area",
-  /data-client-teacher-card-essentials/.test(teacherCard)
-    && /data-client-teacher-card-action-row/.test(teacherCard)
-    && /grid-cols-\[minmax\(0,1fr\)_112px\]/.test(teacherCard)
-    && !/mx-4 border-t border-\[#E3E8F2\] pt-3/.test(teacherCard)
-    && /data-client-teacher-card-rating/.test(teacherCard)
-    && /sm:inline-flex">\{teacher\.experienceYears\} ans exp\./.test(teacherCard),
+  /data-client-teacher-card-essentials/.test(teacherCard) &&
+    /data-client-teacher-card-action-row/.test(teacherCard) &&
+    /grid-cols-\[minmax\(0,1fr\)_112px\]/.test(teacherCard) &&
+    !/mx-4 border-t border-\[#E3E8F2\] pt-3/.test(teacherCard) &&
+    /data-client-teacher-card-rating/.test(teacherCard) &&
+    /sm:inline-flex">\{teacher\.experienceYears\} ans exp\./.test(teacherCard),
 );
 
 record(
   "Public teacher cards expose one dominant action",
-    /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard)
-    && !/>Voir profil</.test(teacherCard)
-    && /w-full rounded-xl bg-\[#111B4D\]/.test(teacherCard)
-    && />Choisir</.test(teacherCard),
+  /aria-label={`Voir le profil de \${displayName}`}/.test(teacherCard) &&
+    !/>Voir profil</.test(teacherCard) &&
+    /w-full rounded-xl bg-\[#111B4D\]/.test(teacherCard) &&
+    />Choisir</.test(teacherCard),
 );
 
 record(
   "Client pricing copy avoids manual quote language",
-  !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(clientPricingCopySources)
-    && /Montant à recalculer/.test(clientPricingCopySources)
-    && /Calcul à reprendre/.test(clientPricingCopySources)
-    && /Tarif officiel calculé selon le parcours/.test(clientPricingCopySources),
+  !/Prix à finaliser|Prix en préparation|Prix en validation|Prix à confirmer|Tarif à finaliser|Forfait à finaliser|estimation manuelle|\bdevis\b|\bDevis\b/.test(
+    clientPricingCopySources,
+  ) &&
+    /Montant à recalculer/.test(clientPricingCopySources) &&
+    /Calcul à reprendre/.test(clientPricingCopySources) &&
+    /Tarif officiel calculé selon le parcours/.test(clientPricingCopySources),
 );
 
 record(
   "Client pricing adapts to its panel width instead of the viewport",
-  /containerType:\s*"inline-size"/.test(pricingBreakdown)
-    && /data-client-pricing-header/.test(pricingBreakdown)
-    && /data-client-pricing-line/.test(pricingBreakdown)
-    && /@container\s*\(min-width:\s*520px\)/.test(css)
-    && /@container\s*\(min-width:\s*620px\)/.test(css)
-    && !/min-\[620px\]:grid-cols-\[minmax\(0,1fr\)_minmax\(13rem,auto\)\]/.test(pricingBreakdown),
+  /containerType:\s*"inline-size"/.test(pricingBreakdown) &&
+    /data-client-pricing-header/.test(pricingBreakdown) &&
+    /data-client-pricing-line/.test(pricingBreakdown) &&
+    /@container\s*\(min-width:\s*520px\)/.test(css) &&
+    /@container\s*\(min-width:\s*620px\)/.test(css) &&
+    !/min-\[620px\]:grid-cols-\[minmax\(0,1fr\)_minmax\(13rem,auto\)\]/.test(
+      pricingBreakdown,
+    ),
 );
 
 record(
   "Client can resume and verify paid reschedule supplements from the booking detail",
-  /paymentProvider:\s*request\.paymentProvider/.test(clientReservationDetail)
-    && /paydunyaCheckoutUrl:\s*request\.paydunyaCheckoutUrl/.test(clientReservationDetail)
-    && /<ClientRescheduleRequestPanel\s+bookingId=\{booking\.id\}\s+requests=\{rescheduleRequests\}\s*\/>/.test(clientReservationDetail)
-    && /action:\s*"reschedule_fee_checkout"/.test(clientReschedulePanel)
-    && /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel)
-    && /latest\.paymentProvider\s*===\s*"JEKO"/.test(clientReschedulePanel)
-    && /case\s+"reschedule_fee_checkout"/.test(bookingApi)
-    && /createJekoRescheduleCheckout/.test(bookingApi)
-    && /reconcileJekoReschedulePaymentAttempt/.test(bookingApi),
+  /paymentProvider:\s*request\.paymentProvider/.test(clientReservationDetail) &&
+    /paydunyaCheckoutUrl:\s*request\.paydunyaCheckoutUrl/.test(
+      clientReservationDetail,
+    ) &&
+    /<ClientRescheduleRequestPanel\s+bookingId=\{booking\.id\}\s+requests=\{rescheduleRequests\}\s*\/>/.test(
+      clientReservationDetail,
+    ) &&
+    /action:\s*"reschedule_fee_checkout"/.test(clientReschedulePanel) &&
+    /action:\s*"reschedule_fee_verify"/.test(clientReschedulePanel) &&
+    /latest\.paymentProvider\s*===\s*"JEKO"/.test(clientReschedulePanel) &&
+    /case\s+"reschedule_fee_checkout"/.test(bookingApi) &&
+    /createJekoRescheduleCheckout/.test(bookingApi) &&
+    /reconcileJekoReschedulePaymentAttempt/.test(bookingApi),
 );
 
 record(
   "Client reschedule fees use the approved visible policy grid",
-  /RESCHEDULE_POLICY_WINDOWS/.test(reschedulePolicy)
-    && /title:\s*"Plus de 24h"[\s\S]*?feeRate:\s*0/.test(reschedulePolicy)
-    && /title:\s*"Entre 24h et 6h"[\s\S]*?feeRate:\s*25[\s\S]*?teacherRate:\s*60/.test(reschedulePolicy)
-    && /title:\s*"Moins de 6h"[\s\S]*?feeRate:\s*50[\s\S]*?teacherRate:\s*70/.test(reschedulePolicy)
-    && /title:\s*"Cours commencé"[\s\S]*?feeRate:\s*100[\s\S]*?teacherRate:\s*70/.test(reschedulePolicy)
-    && /data-client-reschedule-fee-grid/.test(clientBookingActions)
-    && /Calcul automatique sur une séance de 2h/.test(clientBookingActions)
-    && /Le professeur n'est notifié qu'après confirmation serveur/.test(clientBookingActions)
-    && !/Part plateforme/.test(clientBookingActions),
+  /RESCHEDULE_POLICY_WINDOWS/.test(reschedulePolicy) &&
+    /title:\s*"Plus de 24h"[\s\S]*?feeRate:\s*0/.test(reschedulePolicy) &&
+    /title:\s*"Entre 24h et 6h"[\s\S]*?feeRate:\s*25[\s\S]*?teacherRate:\s*60/.test(
+      reschedulePolicy,
+    ) &&
+    /title:\s*"Moins de 6h"[\s\S]*?feeRate:\s*50[\s\S]*?teacherRate:\s*70/.test(
+      reschedulePolicy,
+    ) &&
+    /title:\s*"Cours commencé"[\s\S]*?feeRate:\s*100[\s\S]*?teacherRate:\s*70/.test(
+      reschedulePolicy,
+    ) &&
+    /data-client-reschedule-fee-grid/.test(clientBookingActions) &&
+    /Calcul automatique sur une séance de 2h/.test(clientBookingActions) &&
+    /Le professeur n'est notifié qu'après confirmation serveur/.test(
+      clientBookingActions,
+    ) &&
+    !/Part plateforme/.test(clientBookingActions),
 );
 
 record(
   "Client route loading is an app-like responsive skeleton",
-  /data-client-loading/.test(clientLoading)
-    && /role="status"/.test(clientLoading)
-    && /aria-live="polite"/.test(clientLoading)
-    && /motion-safe:animate-pulse/.test(clientLoading)
-    && /data-client-loading-primary-panel/.test(clientLoading)
-    && /data-client-loading-secondary-panel/.test(clientLoading)
-    && /lg:grid-cols-\[1\.2fr_0\.8fr\]/.test(clientLoading)
-    && /lg:grid-cols-\[0\.9fr_1\.1fr\]/.test(clientLoading)
-    && /bg-gradient|from-|to-|via-/.test(clientLoading) === false
-    && /rounded-lg border border-\[#E3E8F2\] bg-white/.test(clientLoading)
-    && /bg-\[#111B4D\]/.test(clientLoading),
+  /data-client-loading/.test(clientLoading) &&
+    /role="status"/.test(clientLoading) &&
+    /aria-live="polite"/.test(clientLoading) &&
+    /motion-safe:animate-pulse/.test(clientLoading) &&
+    /data-client-loading-primary-panel/.test(clientLoading) &&
+    /data-client-loading-secondary-panel/.test(clientLoading) &&
+    /lg:grid-cols-\[1\.2fr_0\.8fr\]/.test(clientLoading) &&
+    /lg:grid-cols-\[0\.9fr_1\.1fr\]/.test(clientLoading) &&
+    /bg-gradient|from-|to-|via-/.test(clientLoading) === false &&
+    /rounded-lg border border-\[#E3E8F2\] bg-white/.test(clientLoading) &&
+    /bg-\[#111B4D\]/.test(clientLoading),
 );
 
 record(
   "Client route loading stays compact on very small phones",
-  /\[data-client-loading\]\s*\{[\s\S]*?min-height:\s*calc\(100dvh - var\(--app-topbar-height\) - 2rem\);[\s\S]*?\}/.test(css)
-    && /\[data-client-loading-secondary-panel\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(css),
+  /\[data-client-loading\]\s*\{[\s\S]*?min-height:\s*calc\(100dvh - var\(--app-topbar-height\) - 2rem\);[\s\S]*?\}/.test(
+    css,
+  ) &&
+    /\[data-client-loading-secondary-panel\]\s*\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Client route errors render a professional recoverable app screen",
-  /"use client";/.test(clientError)
-    && /data-client-error/.test(clientError)
-    && /aria-live="polite"/.test(clientError)
-    && /onClick=\{reset\}/.test(clientError)
-    && /href="\/client"/.test(clientError)
-    && /Référence incident/.test(clientError)
-    && /bg-\[#111B4D\]/.test(clientError)
-    && !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(clientError),
+  /"use client";/.test(clientError) &&
+    /data-client-error/.test(clientError) &&
+    /aria-live="polite"/.test(clientError) &&
+    /onClick=\{reset\}/.test(clientError) &&
+    /href="\/client"/.test(clientError) &&
+    /Référence incident/.test(clientError) &&
+    /bg-\[#111B4D\]/.test(clientError) &&
+    !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(
+      clientError,
+    ),
 );
 
 record(
   "Client missing routes render a professional recoverable app screen",
-  /data-client-not-found/.test(clientNotFound)
-    && /href="\/client"/.test(clientNotFound)
-    && /href="\/client\/rechercher"/.test(clientNotFound)
-    && /Cette page client est introuvable/.test(clientNotFound)
-    && /bg-\[#111B4D\]/.test(clientNotFound)
-    && !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(clientNotFound),
+  /data-client-not-found/.test(clientNotFound) &&
+    /href="\/client"/.test(clientNotFound) &&
+    /href="\/client\/rechercher"/.test(clientNotFound) &&
+    /Cette page client est introuvable/.test(clientNotFound) &&
+    /bg-\[#111B4D\]/.test(clientNotFound) &&
+    !/bg-gradient|from-|to-|via-|rounded-(?:2xl|3xl|\[2rem\])/.test(
+      clientNotFound,
+    ),
 );
 
 for (const check of checks) {
@@ -1017,7 +1360,9 @@ for (const check of checks) {
 
 const failed = checks.filter((check) => !check.ok);
 if (failed.length > 0) {
-  console.log(`FAIL Client mobile navigation verification failed: ${failed.length} issue(s).`);
+  console.log(
+    `FAIL Client mobile navigation verification failed: ${failed.length} issue(s).`,
+  );
   process.exitCode = 1;
 }
 
@@ -1038,14 +1383,16 @@ function countMatches(source, pattern) {
 }
 
 function readClientUiSources(entries) {
-  return entries.flatMap((entry) => {
-    if (!fs.existsSync(entry)) return [];
-    const stat = fs.statSync(entry);
-    if (stat.isFile()) return [read(entry)];
-    return walk(entry)
-      .filter((filePath) => /\.(tsx|ts|css)$/.test(filePath))
-      .map(read);
-  }).join("\n");
+  return entries
+    .flatMap((entry) => {
+      if (!fs.existsSync(entry)) return [];
+      const stat = fs.statSync(entry);
+      if (stat.isFile()) return [read(entry)];
+      return walk(entry)
+        .filter((filePath) => /\.(tsx|ts|css)$/.test(filePath))
+        .map(read);
+    })
+    .join("\n");
 }
 
 function walk(dirPath) {

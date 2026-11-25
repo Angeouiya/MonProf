@@ -4,14 +4,22 @@ import { ClientLayout } from "@/components/layouts/client-layout";
 import { isOwnerAdminAccount } from "@/lib/owner-account";
 import { getSessionUser } from "@/lib/session";
 import { marketplaceEnabled } from "@/lib/marketplace-core";
+import { managedCoursesEnabled } from "@/lib/managed-courses-core";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientRootLayout({ children }: { children: React.ReactNode }) {
+export default async function ClientRootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const sessionUser = await getSessionUser();
   if (!sessionUser) redirect("/connexion?from=/client");
   const role = sessionUser.role;
-  const ownerAdmin = isOwnerAdminAccount({ role, adminTeamRole: sessionUser.adminTeamRole });
+  const ownerAdmin = isOwnerAdminAccount({
+    role,
+    adminTeamRole: sessionUser.adminTeamRole,
+  });
   if (role === "TEACHER") redirect("/professeur");
   if (role !== "CLIENT" && !ownerAdmin) redirect("/admin");
 
@@ -19,5 +27,13 @@ export default async function ClientRootLayout({ children }: { children: React.R
     return <ClientTemporaryPasswordGate clientName={sessionUser.name} />;
   }
 
-  return <ClientLayout userName={sessionUser.name} marketplaceV2={marketplaceEnabled()}>{children}</ClientLayout>;
+  return (
+    <ClientLayout
+      userName={sessionUser.name}
+      marketplaceV2={marketplaceEnabled()}
+      managedMode={managedCoursesEnabled()}
+    >
+      {children}
+    </ClientLayout>
+  );
 }

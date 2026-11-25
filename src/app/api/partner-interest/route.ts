@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { CUSTOMER_PROMOTIONS_CLOSED } from "@/lib/customer-promotions";
 import { absoluteAppUrl } from "@/lib/public-url";
 import {
   buildPartnerReferralSharePath,
@@ -8,6 +9,11 @@ import {
 } from "@/lib/partner-referrals";
 
 export async function POST(req: NextRequest) {
+  if (CUSTOMER_PROMOTIONS_CLOSED)
+    return NextResponse.json(
+      { error: "Les partenariats sont gérés par Compétence." },
+      { status: 410 },
+    );
   const body = await req.json();
   const name = normalizeText(body.name, 120);
   const phone = normalizeText(body.phone, 32);
@@ -15,11 +21,16 @@ export async function POST(req: NextRequest) {
   const email = rawEmail || "partenariat@competence.ci";
   const referredClient = normalizeText(body.referredClient, 160);
   const referredClientPhone = normalizeText(body.referredClientPhone, 32);
-  const requestedJourney = normalizePartnerReferralJourney(body.requestedJourney);
+  const requestedJourney = normalizePartnerReferralJourney(
+    body.requestedJourney,
+  );
   const message = normalizeText(body.message, 1200);
 
   if (!name || !phone || !referredClient) {
-    return NextResponse.json({ error: "Nom, téléphone et client recommandé requis." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Nom, téléphone et client recommandé requis." },
+      { status: 400 },
+    );
   }
 
   const leadResult = await createPartnerReferralLead({
@@ -49,16 +60,22 @@ export async function POST(req: NextRequest) {
         referredClientPhone ? `Téléphone client : ${referredClientPhone}` : "",
         requestedJourney ? `Système conseillé : ${requestedJourney}` : "",
         message ? `Message : ${message}` : "",
-      ].filter(Boolean).join("\n"),
+      ]
+        .filter(Boolean)
+        .join("\n"),
     },
   });
 
-  const sharePath = buildPartnerReferralSharePath(leadResult.profile.code, requestedJourney);
+  const sharePath = buildPartnerReferralSharePath(
+    leadResult.profile.code,
+    requestedJourney,
+  );
   const shareUrl = absoluteAppUrl(sharePath, req);
 
   return NextResponse.json({
     ok: true,
-    message: "Profil partenaire vérifié. Ce code permanent attribue le client pendant six mois après son premier paiement Jèko confirmé.",
+    message:
+      "Profil partenaire vérifié. Ce code permanent attribue le client pendant six mois après son premier paiement Jèko confirmé.",
     code: leadResult.profile.code,
     shareUrl,
     sharePath,
@@ -67,5 +84,7 @@ export async function POST(req: NextRequest) {
 }
 
 function normalizeText(value: unknown, max: number) {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+  return typeof value === "string"
+    ? value.replace(/\s+/g, " ").trim().slice(0, max)
+    : "";
 }

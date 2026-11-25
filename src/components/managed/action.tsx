@@ -18,6 +18,7 @@ type Field = {
   value?: string;
   min?: number;
   max?: number;
+  step?: number;
   minLength?: number;
   options?: { value: string; label: string }[];
   required?: boolean;
@@ -60,7 +61,9 @@ export function ManagedAction({
         ["RECEIPT", "REFUND", "REVERSE_RECEIPT"].includes(
           String(payload.action),
         ) ||
-        endpoint === "/api/admin/managed-teacher-payments"
+        endpoint === "/api/admin/managed-teacher-payments" ||
+        (endpoint === "/api/admin/managed-partners" &&
+          payload.action === "PAYMENT")
       ) {
         body.idempotencyKey = key;
         if (payload.action === "RECEIPT") {
@@ -152,7 +155,10 @@ export function ManagedAction({
                 required={field.required !== false}
                 defaultValue={field.value ?? ""}
               >
-                {!field.value && <option value="">Choisir</option>}
+                {!field.value &&
+                  !field.options.some((option) => option.value === "") && (
+                    <option value="">Choisir</option>
+                  )}
                 {field.options.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -172,7 +178,7 @@ export function ManagedAction({
                 min={field.type === "number" ? (field.min ?? 1) : undefined}
                 max={field.max}
                 minLength={field.minLength}
-                step={field.type === "number" ? 1 : undefined}
+                step={field.type === "number" ? (field.step ?? 1) : undefined}
                 required={field.required !== false}
               />
             )}

@@ -21,17 +21,18 @@ import {
   managedRequestSchema,
   managedSlots,
   managedSplit,
-  managedTeacherTerms,
 } from "@/lib/managed-courses-core";
+import {
+  MANAGED_TEACHER_NET_TERMS_VERSION,
+  managedTeacherNetTerms,
+} from "@/lib/managed-teacher-view";
 
-export class ManagedCourseError extends Error {
-  constructor(
-    message: string,
-    readonly status = 409,
-  ) {
-    super(message);
-  }
-}
+import { ManagedCourseError } from "@/lib/managed-course-error";
+import {
+  lockManagedPartner,
+  managedPartnerBalance,
+} from "@/lib/managed-partners";
+export { ManagedCourseError } from "@/lib/managed-course-error";
 type Tx = Prisma.TransactionClient;
 const managedTransaction = <T>(run: (tx: Tx) => Promise<T>) =>
   db.$transaction(run, { maxWait: 5_000, timeout: 30_000 });
@@ -77,7 +78,11 @@ async function notifyAdmin(
     tx,
   );
 }
-export async function createManagedDossier(raw: unknown, actorId?: string) {
+export async function createManagedDossier(
+  raw: unknown,
+  actorId?: string,
+  clientId?: string,
+) {
   const input = managedRequestSchema.parse(raw);
   if (!actorId && !input.accepted)
     throw new ManagedCourseError(
@@ -107,6 +112,14 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
     where: { id: input.subjectId },
   });
   if (!subject) throw new ManagedCourseError("Matière introuvable.", 400);
+  if (
+    clientId &&
+    !(await db.user.findFirst({
+      where: { id: clientId, role: "CLIENT", passwordMustChange: false },
+      select: { id: true },
+    }))
+  )
+    throw new ManagedCourseError("Accès client invalide.", 403);
   const result = await managedTransaction(async (tx) => {
     // Public intake is bounded per phone even when submissions race.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`managed-intake:${phone}`}))`;
@@ -127,6 +140,7 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
         existing.phone !== `+225${phone}` ||
         existing.parentName !== input.parentName ||
         existing.source !== (actorId ? "ADMIN" : "PUBLIC") ||
+        existing.clientId !== (clientId ?? null) ||
         existing.journey !== input.journey ||
         existing.className !== input.className ||
         existing.subjectId !== input.subjectId ||
@@ -146,7 +160,10 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
       return { id: existing.id, reference: existing.reference };
     }
     if (!isManagedSchoolSubject(subject.name, input.journey, input.className))
-      throw new ManagedCourseError("Choisissez une matière du système et de la classe sélectionnés.", 400);
+      throw new ManagedCourseError(
+        "Choisissez une matière du système et de la classe sélectionnés.",
+        400,
+      );
     if (
       !actorId &&
       (await tx.managedCourseDossier.count({
@@ -181,6 +198,8 @@ export async function createManagedDossier(raw: unknown, actorId?: string) {
         cadence: input.cadence,
         unitPrice: price.perSession,
         totalPrice: price.total,
+        initialTotalPrice: price.total,
+        clientId: clientId ?? null,
         termsVersion: MANAGED_TERMS_VERSION,
         contractTokenHash: hashToken(parentToken),
         contractTokenExpiresAt: new Date(Date.now() + 7 * 86_400_000),
@@ -280,10 +299,34 @@ export async function offerManagedDossier(
   commissionPercent: number,
   adminId: string,
 ) {
-  const commissionRateBps = commissionPercent * 100;
+  const commissionRateBps = Math.round(commissionPercent * 100);
+  if (
+    !Number.isFinite(commissionPercent) ||
+    Math.abs(commissionPercent * 100 - commissionRateBps) > 0.00001
+  )
+    throw new ManagedCourseError(
+      "Utilisez au maximum deux décimales pour la répartition.",
+      400,
+    );
   managedSplit(0, commissionRateBps);
   const result = await managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
+    if (dossier.partnerRateBps > commissionRateBps)
+      throw new ManagedCourseError(
+        "Les parts professeur et partenaire dépassent 100 %. Ajustez la répartition avant l’envoi.",
+      );
+    if (
+      dossier.partnerId &&
+      !(
+        await tx.managedPartner.findUnique({
+          where: { id: dossier.partnerId },
+          select: { active: true },
+        })
+      )?.active
+    )
+      throw new ManagedCourseError(
+        "Le partenaire est désactivé. Corrigez le partenariat avant une nouvelle attribution.",
+      );
     if (dossier.onHold)
       throw new ManagedCourseError(
         "Ce dossier est en litige. L'équipe doit lever la retenue avant attribution.",
@@ -319,7 +362,7 @@ export async function offerManagedDossier(
         teacherId,
         revision: dossier.revision,
         commissionRateBps,
-        termsVersion: MANAGED_TERMS_VERSION,
+        termsVersion: MANAGED_TEACHER_NET_TERMS_VERSION,
       },
     });
     await tx.managedCourseSession.updateMany({
@@ -424,6 +467,7 @@ export async function respondManagedOffer(
       where: { id },
       data: {
         status: accept ? "ACCEPTED" : "DECLINED",
+        ...(accept ? { termsVersion: MANAGED_TEACHER_NET_TERMS_VERSION } : {}),
         respondedAt: new Date(),
         reason: reason.slice(0, 500),
       },
@@ -439,9 +483,20 @@ export async function respondManagedOffer(
       accept ? "TEACHER_ACCEPTED" : "TEACHER_DECLINED",
       {
         offerId: id,
-        terms: accept ? managedTeacherTerms(offer.commissionRateBps, offer.termsVersion) : "",
+        terms: accept
+          ? managedTeacherNetTerms(
+              sessions.reduce(
+                (sum, session) =>
+                  sum +
+                  managedSplit(session.amount, offer.commissionRateBps).teacher,
+                0,
+              ),
+            )
+          : "",
         commissionRateBps: offer.commissionRateBps,
-        version: offer.termsVersion,
+        version: accept
+          ? MANAGED_TEACHER_NET_TERMS_VERSION
+          : offer.termsVersion,
         reason,
       },
     );
@@ -474,7 +529,7 @@ async function creditSession(tx: Tx, sessionId: string, actorId: string) {
       // The dossier lock and payable delta prevent replay. A later reversal and
       // real re-collection may legitimately fund this same amount again.
       idempotencyKey: `managed-credit:${sessionId}:${randomUUID()}`,
-      note: `Séance validée et encaissement parent enregistré · part professeur ${100 - session.commissionRateBps! / 100} % · taux de la mission accepté`,
+      note: "Séance validée et règlement parent enregistré · rémunération de la mission",
     },
   });
   await tx.managedCourseSession.update({
@@ -506,6 +561,7 @@ export async function recordManagedReceipt(
 ) {
   const result = await managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
+    if (dossier.partnerId) await lockManagedPartner(tx, dossier.partnerId);
     const existing = await tx.managedParentReceipt.findUnique({
       where: { idempotencyKey: data.idempotencyKey },
     });
@@ -594,6 +650,8 @@ export async function completeManagedSession(
 ) {
   const result = await managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
+    if (adminValidation && dossier.partnerId)
+      await lockManagedPartner(tx, dossier.partnerId);
     if (dossier.onHold)
       throw new ManagedCourseError("Validation bloquée pendant le litige.");
     const session = dossier.sessions.find((item) => item.id === sessionId);
@@ -824,6 +882,7 @@ export async function reviseManagedPrice(
   unitPrice: number,
   note: string,
   actorId: string,
+  exactTotal = false,
 ) {
   return managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
@@ -842,15 +901,25 @@ export async function reviseManagedPrice(
       where: { dossierId: id, status: "OFFERED" },
       data: { status: "REVOKED", reason: "Nouvelle proposition tarifaire" },
     });
-    await tx.managedCourseSession.updateMany({
-      where: { dossierId: id },
-      data: { amount: unitPrice, offerId: null },
-    });
+    const total = exactTotal ? unitPrice : unitPrice * dossier.sessions.length;
+    if (
+      !Number.isSafeInteger(total) ||
+      total < dossier.sessions.length ||
+      total > 24_000_000
+    )
+      throw new ManagedCourseError("Vérifiez le montant négocié.", 400);
+    const base = Math.floor(total / dossier.sessions.length);
+    const remainder = total % dossier.sessions.length;
+    for (const [index, session] of dossier.sessions.entries())
+      await tx.managedCourseSession.update({
+        where: { id: session.id },
+        data: { amount: base + (index < remainder ? 1 : 0), offerId: null },
+      });
     await tx.managedCourseDossier.update({
       where: { id },
       data: {
-        unitPrice,
-        totalPrice: unitPrice * dossier.sessions.length,
+        unitPrice: base,
+        totalPrice: total,
         revision: { increment: 1 },
         acceptedAt: null,
         acceptedRevision: null,
@@ -862,7 +931,9 @@ export async function reviseManagedPrice(
     });
     await event(tx, id, actorId, "PRICE_REVISED", {
       oldUnitPrice: dossier.unitPrice,
-      unitPrice,
+      oldTotalPrice: dossier.totalPrice,
+      totalPrice: total,
+      unitPrice: base,
       note,
       previousRevision: dossier.revision,
       previousAcceptedAt: dossier.acceptedAt?.toISOString() ?? null,
@@ -881,6 +952,7 @@ export async function setManagedHold(
 ) {
   const result = await managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
+    if (dossier.partnerId) await lockManagedPartner(tx, dossier.partnerId);
     for (const teacherId of [
       ...new Set(
         dossier.sessions.flatMap((session) =>
@@ -936,14 +1008,16 @@ export async function rescheduleManagedSession(
       );
     const requestedStart = new Date(`${date}T${time}:00Z`).getTime();
     if (
-      dossier.sessions.some(
-        (item) => {
-          if (item.id === sessionId || item.status === "CANCELLED") return false;
-          const existingStart = new Date(`${item.scheduledDate.toISOString().slice(0, 10)}T${item.scheduledTime}:00Z`).getTime();
-          return requestedStart < existingStart + item.durationMinutes * 60_000
-            && existingStart < requestedStart + slot.durationMinutes * 60_000;
-        },
-      )
+      dossier.sessions.some((item) => {
+        if (item.id === sessionId || item.status === "CANCELLED") return false;
+        const existingStart = new Date(
+          `${item.scheduledDate.toISOString().slice(0, 10)}T${item.scheduledTime}:00Z`,
+        ).getTime();
+        return (
+          requestedStart < existingStart + item.durationMinutes * 60_000 &&
+          existingStart < requestedStart + slot.durationMinutes * 60_000
+        );
+      })
     )
       throw new ManagedCourseError(
         "Cet horaire chevauche une autre séance du dossier.",
@@ -1192,6 +1266,7 @@ export async function reverseManagedReceipt(
 ) {
   return managedTransaction(async (tx) => {
     const dossier = await lockDossier(tx, id);
+    if (dossier.partnerId) await lockManagedPartner(tx, dossier.partnerId);
     const original = await tx.managedParentReceipt.findFirst({
       where: { id: receiptId, dossierId: id, kind: "RECEIPT" },
     });
@@ -1260,6 +1335,13 @@ export async function reverseManagedReceipt(
           "Le professeur a déjà été réglé. Récupérez/rapprochez ce versement avant d'annuler l'encaissement. Aucune dette n'est créée automatiquement.",
         );
     }
+    if (
+      dossier.partnerId &&
+      (await managedPartnerBalance(tx, dossier.partnerId)).remaining < 0
+    )
+      throw new ManagedCourseError(
+        "Le partenaire a déjà été réglé. Rapprochez ce versement avant d’annuler l’encaissement.",
+      );
     await tx.managedParentReceipt.create({
       data: {
         ...data,
@@ -1369,8 +1451,15 @@ export async function managedContract(token: string, acceptRevision?: number) {
       dossier.contractTokenExpiresAt.getTime() < Date.now()
     )
       throw new ManagedCourseError("Lien expiré.", 410);
-    const recordedTerms = (dossier.acceptanceEvidence as { terms?: unknown } | null)?.terms;
-    const parentTerms = dossier.acceptedRevision === dossier.revision && Array.isArray(recordedTerms) && recordedTerms.every((term) => typeof term === "string") ? recordedTerms as string[] : managedParentTermsForVersion(dossier.termsVersion);
+    const recordedTerms = (
+      dossier.acceptanceEvidence as { terms?: unknown } | null
+    )?.terms;
+    const parentTerms =
+      dossier.acceptedRevision === dossier.revision &&
+      Array.isArray(recordedTerms) &&
+      recordedTerms.every((term) => typeof term === "string")
+        ? (recordedTerms as string[])
+        : managedParentTermsForVersion(dossier.termsVersion);
     if (acceptRevision !== undefined) {
       if (acceptRevision !== dossier.revision)
         throw new ManagedCourseError(
@@ -1424,10 +1513,12 @@ export async function managedContract(token: string, acceptRevision?: number) {
         acceptRevision === dossier.revision ||
         dossier.acceptedRevision === dossier.revision,
       sessions: dossier.sessions.map((session) => ({
+        id: session.id,
         date: session.scheduledDate.toISOString().slice(0, 10),
         time: session.scheduledTime,
         amount: session.amount,
         status: session.status,
+        parentConfirmed: Boolean(session.parentConfirmedAt),
       })),
     };
   });
@@ -1467,6 +1558,7 @@ export async function requestManagedParentAction(
         429,
       );
     if (action === "DISPUTE") {
+      if (dossier.partnerId) await lockManagedPartner(tx, dossier.partnerId);
       for (const teacherId of [
         ...new Set(
           dossier.sessions.flatMap((session) =>

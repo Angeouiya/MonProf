@@ -1,8 +1,6 @@
 "use client";
 import { useState } from "react";
-import {
-  managedInstallments,
-} from "@/lib/managed-courses-core";
+import { managedInstallments } from "@/lib/managed-courses-core";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,7 +27,14 @@ type Contract = {
   receivedAmount: number;
   onHold: boolean;
   cadence: string;
-  sessions: { date: string; time: string; amount: number; status: string }[];
+  sessions: {
+    id: string;
+    date: string;
+    time: string;
+    amount: number;
+    status: string;
+    parentConfirmed: boolean;
+  }[];
 };
 const money = (value: number) => `${value.toLocaleString("fr-FR")} F CFA`;
 const statuses: Record<string, string> = {
@@ -46,6 +51,7 @@ export function ManagedContract() {
   const [agree, setAgree] = useState(false);
   const [reason, setReason] = useState("");
   const [action, setAction] = useState<"CANCELLATION" | "DISPUTE" | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
   async function request(body: Record<string, unknown>) {
     const token = window.location.hash.slice(1);
     const response = await fetch("/api/managed-courses/accord", {
@@ -71,6 +77,40 @@ export function ManagedContract() {
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : "Chargement impossible.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function confirmSession() {
+    if (!confirmation || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await request({ action: "CONFIRM_SESSION", sessionId: confirmation });
+      setConfirmation(null);
+      setMessage("Votre confirmation a été enregistrée.");
+      setContract(await request({}));
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Confirmation impossible.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function linkAccount() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await request({ action: "LINK_ACCOUNT" });
+      setMessage(
+        "Dossier rattaché. Vous pouvez le retrouver dans votre espace client.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Rattachement impossible.",
       );
     } finally {
       setBusy(false);
@@ -166,6 +206,22 @@ export function ManagedContract() {
                   {money(session.amount)} ·{" "}
                   {statuses[session.status] || session.status}
                 </p>
+                {session.parentConfirmed ? (
+                  <p className="mt-2 text-sm font-semibold">
+                    Séance confirmée par vous.
+                  </p>
+                ) : session.status === "DONE" &&
+                  contract.accepted &&
+                  !contract.onHold ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="mt-3 min-h-11 rounded-xl border px-4 font-semibold"
+                    onClick={() => setConfirmation(session.id)}
+                  >
+                    Confirmer la séance effectuée
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -223,6 +279,38 @@ export function ManagedContract() {
           </button>
           <details className="rounded-xl border p-4 print:hidden">
             <summary className="cursor-pointer font-semibold">
+              Retrouver ce dossier dans mon espace client
+            </summary>
+            <p className="mt-3 text-sm">
+              Connectez-vous à votre compte client, puis rattachez ce dossier.
+              Ne partagez pas ce lien privé.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <a
+                className="min-h-11 rounded-xl border px-4 py-3 text-sm"
+                href="/connexion"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Se connecter dans un autre onglet
+              </a>
+              <button
+                className="min-h-11 rounded-xl border px-4 py-3 text-sm font-semibold"
+                disabled={busy}
+                onClick={() => void linkAccount()}
+              >
+                Rattacher à mon compte
+              </button>
+              <a
+                className="min-h-11 rounded-xl border px-4 py-3 text-sm"
+                href="/client/accompagnement"
+              >
+                Mes cours
+              </a>
+            </div>
+          </details>
+          <details className="rounded-xl border p-4 print:hidden">
+            <summary className="cursor-pointer font-semibold">
               Une annulation ou une réclamation ?
             </summary>
             <p className="my-3 text-sm leading-6">
@@ -274,6 +362,35 @@ export function ManagedContract() {
           {error}
         </p>
       )}
+      <AlertDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setConfirmation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            Confirmer que cette séance a eu lieu ?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Votre confirmation sera conservée dans le suivi de cette séance.
+            Compétence vérifiera les conditions de règlement ; aucun paiement
+            parent n’est créé par cette action.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Retour</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmSession();
+              }}
+            >
+              {busy ? "Enregistrement…" : "Confirmer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={action !== null}
         onOpenChange={(open) => {

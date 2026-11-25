@@ -2,7 +2,10 @@ import Link from "next/link";
 import { CalendarDays, Phone, ArrowUpRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireTeacher } from "@/lib/teacher-auth";
-import { managedSplit, managedTeacherTerms } from "@/lib/managed-courses-core";
+import {
+  managedTeacherNetTerms,
+  managedTeacherOfferView,
+} from "@/lib/managed-teacher-view";
 import { ManagedAction } from "@/components/managed/action";
 import { WebPushControl } from "@/components/shared/web-push-control";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
@@ -36,7 +39,10 @@ export default async function ManagedProfessorPage({
         select: { offeredAt: true, id: true },
       })
     : null;
-  const [offers, total, ledger, held] = await Promise.all([
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  const yesterday = new Date(today.getTime() - 86_400_000);
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const [offers, total, ledger, held, activity] = await Promise.all([
     db.managedCourseOffer.findMany({
       where: {
         AND: [
@@ -70,13 +76,18 @@ export default async function ManagedProfessorPage({
       where: { teacherId: teacher.id, dossier: { onHold: true } },
       _sum: { creditedTeacherAmount: true },
     }),
+    db.$queryRaw<{ today: number; yesterday: number; total: number }[]>`
+      SELECT count(*) FILTER (WHERE "scheduledDate" >= ${today} AND "scheduledDate" < ${tomorrow})::integer AS today,
+        count(*) FILTER (WHERE "scheduledDate" >= ${yesterday} AND "scheduledDate" < ${today})::integer AS yesterday,
+        count(*)::integer AS total
+      FROM "ManagedCourseSession" WHERE "teacherId" = ${teacher.id} AND status IN ('DONE', 'VALIDATED')`,
   ]);
   const balance = total._sum.amountDelta ?? 0;
   const retained = Math.min(
     Math.max(0, balance),
     held._sum.creditedTeacherAmount ?? 0,
   );
-  const page = offers.slice(0, 20);
+  const page = offers.slice(0, 20).map(managedTeacherOfferView);
   const endpoint = "/api/professor/managed-courses";
   return (
     <div className={styles.page}>
@@ -92,6 +103,21 @@ export default async function ManagedProfessorPage({
           <CalendarDays size={17} /> Mon planning
         </Link>
       </header>
+      <section
+        className={styles.activityStats}
+        aria-label="Vos séances déclarées effectuées ou validées"
+      >
+        {[
+          ["Aujourd’hui", activity[0]?.today ?? 0],
+          ["Hier", activity[0]?.yesterday ?? 0],
+          ["Au total", activity[0]?.total ?? 0],
+        ].map(([label, count]) => (
+          <div key={label}>
+            <strong>{count}</strong>
+            <span>{label}</span>
+          </div>
+        ))}
+      </section>
       <section className={styles.stats} aria-label="Votre rémunération">
         <div className={styles.stat}>
           <p>Disponible après retenues</p>
@@ -154,17 +180,7 @@ export default async function ManagedProfessorPage({
           (session) =>
             session.status === "PLANNED" || session.status === "DONE",
         );
-        const expected = offer.sessions
-          .filter((s) => s.status !== "CANCELLED")
-          .reduce(
-            (sum, session) =>
-              sum +
-              managedSplit(
-                session.amount,
-                session.commissionRateBps ?? offer.commissionRateBps,
-              ).teacher,
-            0,
-          );
+        const expected = offer.remuneration;
         return (
           <article className={styles.card} key={offer.id}>
             <header className={styles.cardHeader}>
@@ -202,7 +218,7 @@ export default async function ManagedProfessorPage({
               </p>
               <div className={styles.amount}>
                 <strong>{money(expected)}</strong>
-                <p className={styles.muted}>Votre part prévue</p>
+                <p className={styles.muted}>Votre rémunération</p>
               </div>
             </div>
             {offer.dossier.onHold && (
@@ -250,15 +266,8 @@ export default async function ManagedProfessorPage({
                     </span>
                   </div>
                   <p className={styles.muted}>
-                    Part prévue :{" "}
-                    {money(
-                      managedSplit(
-                        session.amount,
-                        session.commissionRateBps ?? offer.commissionRateBps,
-                      ).teacher,
-                    )}{" "}
-                    · Rémunération acquise :{" "}
-                    {money(session.creditedTeacherAmount)}
+                    Rémunération : {money(session.remuneration)} · Rémunération
+                    acquise : {money(session.creditedTeacherAmount)}
                   </p>
                   {accepted &&
                   managedCanDeclareDone(session, offer.dossier.onHold) ? (
@@ -291,15 +300,9 @@ export default async function ManagedProfessorPage({
             {offer.status === "OFFERED" && !offer.dossier.onHold && (
               <div className={styles.actions}>
                 <details className={styles.disclosure}>
-                  <summary>
-                    Engagements et rémunération · votre part{" "}
-                    {100 - offer.commissionRateBps / 100} %
-                  </summary>
+                  <summary>Engagements de la mission</summary>
                   <p className={styles.muted}>
-                    {managedTeacherTerms(
-                      offer.commissionRateBps,
-                      offer.termsVersion,
-                    )}
+                    {managedTeacherNetTerms(expected)}
                   </p>
                 </details>
                 {canAccept ? (
@@ -400,7 +403,8 @@ export default async function ManagedProfessorPage({
                 <strong className="text-sm">{money(entry.amountDelta)}</strong>
               </div>
               <p className={styles.muted}>
-                {dateLabel(entry.createdAt)} · {entry.reference || entry.note}
+                {dateLabel(entry.createdAt)} · Réf.{" "}
+                {entry.id.slice(-8).toUpperCase()}
               </p>
             </div>
           ))

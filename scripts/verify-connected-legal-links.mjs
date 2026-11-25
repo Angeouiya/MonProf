@@ -2,18 +2,20 @@ import { readFileSync } from "node:fs";
 
 const checks = [
   {
-    label: "Client connected shell exposes CGU and privacy links on desktop and mobile drawer",
+    label:
+      "Client connected shell exposes CGU and privacy links on desktop and mobile drawer",
     file: "src/components/layouts/client-layout.tsx",
     patterns: [
       /data-client-connected-legal-links/,
       /href: "\/conditions-utilisation", label: "CGU"/,
       /href: "\/politique-confidentialite", label: "Confidentialité"/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} marketplaceV2=\{marketplaceV2\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount marketplaceV2=\{marketplaceV2\} \/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{notificationCount\}\s+marketplaceV2=\{marketplaceV2\}\s+managedMode=\{managedMode\}\s+\/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{notificationCount\}\s+onNavigate=\{closeMobileSurfaces\}\s+compactAccount\s+marketplaceV2=\{marketplaceV2\}\s+managedMode=\{managedMode\}\s+\/>/,
     ],
   },
   {
-    label: "Professor connected shell exposes CGU and privacy links on desktop and mobile drawer",
+    label:
+      "Professor connected shell exposes CGU and privacy links on desktop and mobile drawer",
     file: "src/components/layouts/professor-layout.tsx",
     patterns: [
       /data-professor-connected-legal-links/,
@@ -23,14 +25,15 @@ const checks = [
     ],
   },
   {
-    label: "Admin connected shell exposes CGU and privacy links on desktop and mobile drawer",
+    label:
+      "Admin connected shell exposes CGU and privacy links on desktop and mobile drawer",
     file: "src/components/layouts/admin-layout.tsx",
     patterns: [
       /data-admin-connected-legal-links/,
       /href: "\/conditions-utilisation", label: "CGU"/,
       /href: "\/politique-confidentialite", label: "Confidentialité"/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} managedMode=\{managedMode\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{summary\.total\} notificationSummary=\{summary\} permissions=\{permissions\} teamRole=\{teamRole\} managedMode=\{managedMode\} onNavigate=\{\(\) => setOpen\(false\)\} \/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{summary\.total\}\s+notificationSummary=\{summary\}\s+permissions=\{permissions\}\s+teamRole=\{teamRole\}\s+managedMode=\{managedMode\}\s+\/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{summary\.total\}\s+notificationSummary=\{summary\}\s+permissions=\{permissions\}\s+teamRole=\{teamRole\}\s+managedMode=\{managedMode\}\s+onNavigate=\{\(\) => setOpen\(false\)\}\s+\/>/,
     ],
   },
 ];

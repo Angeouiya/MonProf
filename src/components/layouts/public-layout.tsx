@@ -24,7 +24,6 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/professeurs", label: "Trouver un professeur" },
   { href: "/tarifs", label: "Tarifs" },
-  { href: "/partenariat", label: "Partenariat" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -52,13 +51,26 @@ const mobileNavBase = [
   { href: "/tarifs", label: "Tarifs", icon: WalletCards },
 ];
 
-const publicRootPaths = new Set(["/", "/professeurs", "/tarifs", "/partenariat", "/contact"]);
+const publicRootPaths = new Set([
+  "/",
+  "/professeurs",
+  "/tarifs",
+  "/partenariat",
+  "/contact",
+]);
 
 type PublicSessionRole = "CLIENT" | "ADMIN" | "TEACHER";
 
-const sessionDestinations: Record<PublicSessionRole, { href: string; label: string; navLabel: string }> = {
+const sessionDestinations: Record<
+  PublicSessionRole,
+  { href: string; label: string; navLabel: string }
+> = {
   CLIENT: { href: "/client", label: "Mon espace", navLabel: "Espace" },
-  ADMIN: { href: "/admin", label: "Service client", navLabel: "Service client" },
+  ADMIN: {
+    href: "/admin",
+    label: "Service client",
+    navLabel: "Service client",
+  },
   TEACHER: { href: "/professeur", label: "Mon espace", navLabel: "Espace" },
 };
 
@@ -82,22 +94,36 @@ export function PublicLayout({
     ? buildMarketplaceJourneyHref(activeJourney)
     : buildPublicJourneyHref("/professeurs", activeJourney);
   const tariffsHref = buildPublicJourneyHref("/tarifs", activeJourney);
-  const trustSignals = marketplaceMode === true ? marketplaceTrustSignals : marketplaceMode === false ? legacyTrustSignals : neutralTrustSignals;
-  const journeyAwareNavLinks = navLinks.filter((link) => !marketplaceMode || link.href !== "/partenariat").map((link) => ({
-    ...link,
-    href: marketplaceMode && link.href === "/professeurs" ? professorListHref : buildPublicJourneyHref(link.href, activeJourney),
-    baseHref: link.href,
-  }));
-  const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(null);
+  const trustSignals =
+    marketplaceMode === true
+      ? marketplaceTrustSignals
+      : marketplaceMode === false
+        ? legacyTrustSignals
+        : neutralTrustSignals;
+  const journeyAwareNavLinks = navLinks
+    .filter((link) => !marketplaceMode || link.href !== "/partenariat")
+    .map((link) => ({
+      ...link,
+      href:
+        marketplaceMode && link.href === "/professeurs"
+          ? professorListHref
+          : buildPublicJourneyHref(link.href, activeJourney),
+      baseHref: link.href,
+    }));
+  const [sessionRole, setSessionRole] = useState<PublicSessionRole | null>(
+    null,
+  );
 
   useEffect(() => {
     if (hideFooter) return;
     const controller = new AbortController();
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      void readPublicSessionRole(controller.signal).then((role) => {
-        if (!cancelled) setSessionRole(role);
-      }).catch(() => undefined);
+      void readPublicSessionRole(controller.signal)
+        .then((role) => {
+          if (!cancelled) setSessionRole(role);
+        })
+        .catch(() => undefined);
     }, 0);
 
     return () => {
@@ -106,14 +132,19 @@ export function PublicLayout({
       controller.abort();
     };
   }, [hideFooter]);
-  const sessionDestination = sessionRole ? sessionDestinations[sessionRole] : null;
+  const sessionDestination = sessionRole
+    ? sessionDestinations[sessionRole]
+    : null;
   const isAuthenticated = sessionDestination !== null;
 
   return (
-    <div className={cn(
-      "public-shell flex min-h-screen flex-col bg-white",
-      hideMobileNav ? "public-shell--mobile-nav-hidden" : "public-shell--mobile-nav-visible",
-    )}
+    <div
+      className={cn(
+        "public-shell flex min-h-screen flex-col bg-white",
+        hideMobileNav
+          ? "public-shell--mobile-nav-hidden"
+          : "public-shell--mobile-nav-visible",
+      )}
       data-public-mobile-menu-open={mobileOpen ? "true" : "false"}
     >
       <header className="app-topbar fixed inset-x-0 top-0 z-[70] w-full border-b border-[#E3E8F2] bg-white">
@@ -137,7 +168,7 @@ export function PublicLayout({
                   "inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors",
                   pathname?.startsWith(link.baseHref)
                     ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
-                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
+                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]",
                 )}
               >
                 {link.label}
@@ -147,19 +178,33 @@ export function PublicLayout({
 
           <div className="hidden items-center gap-2 lg:flex">
             {sessionDestination && (
-              <Button asChild variant="outline" className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
+              <Button
+                asChild
+                variant="outline"
+                className="min-h-11 rounded-lg border-[#CAD7F2] bg-white px-4 text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+              >
                 <Link href={sessionDestination.href} prefetch={false}>
-                  <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
+                  <LayoutDashboard className="mr-1.5 h-4 w-4" />{" "}
+                  {sessionDestination.label}
                 </Link>
               </Button>
             )}
             {!isAuthenticated && (
-              <Button asChild variant="ghost" className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]">
-                <Link href="/connexion" prefetch={false}>Connexion</Link>
+              <Button
+                asChild
+                variant="ghost"
+                className="min-h-11 rounded-lg px-4 text-[#111827] hover:bg-white hover:text-[#111B4D]"
+              >
+                <Link href="/connexion" prefetch={false}>
+                  Connexion
+                </Link>
               </Button>
             )}
             {!isAuthenticated && !hideGlobalBookingAction && (
-              <Button asChild className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]">
+              <Button
+                asChild
+                className="min-h-11 rounded-lg bg-[#111B4D] px-5 text-white hover:bg-[#1E2A78]"
+              >
                 <Link href={professorListHref} prefetch={false}>
                   Réserver
                   <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -174,7 +219,11 @@ export function PublicLayout({
             aria-label="Menu"
             aria-expanded={mobileOpen}
           >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </header>
@@ -193,68 +242,99 @@ export function PublicLayout({
               maxHeight: "calc(100dvh - var(--app-topbar-height))",
             }}
           >
-          <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
-            <Link
-              href={professorListHref}
-              prefetch={false}
-              onClick={() => setMobileOpen(false)}
-              className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Trouver un professeur
-              </span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            {journeyAwareNavLinks.filter((link) => link.baseHref !== "/professeurs").map((link) => (
+            <nav className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
               <Link
-                key={link.baseHref}
-                href={link.href}
+                href={professorListHref}
                 prefetch={false}
                 onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
-                  pathname?.startsWith(link.baseHref)
-                    ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
-                    : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]"
-                )}
+                className="flex min-h-14 items-center justify-between rounded-lg border border-[#CAD7F2] bg-[#111B4D] px-4 text-sm font-semibold text-white"
               >
-                {link.label}
+                <span className="inline-flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Trouver un professeur
+                </span>
+                <ArrowRight className="h-4 w-4" />
               </Link>
-            ))}
-            <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
-              {trustSignals.map((signal) => {
-                const Icon = signal.icon;
-                return (
-                  <div key={signal.label} className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#111B4D]">
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span>{signal.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
-              {sessionDestination && (
-                <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                  <Link href={sessionDestination.href} prefetch={false} onClick={() => setMobileOpen(false)}>
-                    <LayoutDashboard className="mr-1.5 h-4 w-4" /> {sessionDestination.label}
+              {journeyAwareNavLinks
+                .filter((link) => link.baseHref !== "/professeurs")
+                .map((link) => (
+                  <Link
+                    key={link.baseHref}
+                    href={link.href}
+                    prefetch={false}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "inline-flex min-h-12 items-center rounded-lg px-4 text-sm font-semibold transition",
+                      pathname?.startsWith(link.baseHref)
+                        ? "border border-[#DDE6F7] bg-white text-[#111B4D]"
+                        : "bg-white text-[#475569] hover:bg-white hover:text-[#111B4D]",
+                    )}
+                  >
+                    {link.label}
                   </Link>
-                </Button>
-              )}
-              {!isAuthenticated && (
-                <>
-                  <Button asChild variant="outline" className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white">
-                    <Link href="/connexion" prefetch={false} onClick={() => setMobileOpen(false)}>Connexion</Link>
-                  </Button>
-                  <Button asChild className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]">
-                    <Link href={professorListHref} prefetch={false} onClick={() => setMobileOpen(false)}>
-                      Réserver une séance
-                      <ArrowRight className="ml-1.5 h-4 w-4" />
+                ))}
+              <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg border border-[#E3E8F2] bg-white p-3 min-[430px]:grid-cols-3">
+                {trustSignals.map((signal) => {
+                  const Icon = signal.icon;
+                  return (
+                    <div
+                      key={signal.label}
+                      className="flex min-h-11 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#111B4D]"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{signal.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex flex-col gap-2 border-t border-[#E3E8F2] pt-3">
+                {sessionDestination && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+                  >
+                    <Link
+                      href={sessionDestination.href}
+                      prefetch={false}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <LayoutDashboard className="mr-1.5 h-4 w-4" />{" "}
+                      {sessionDestination.label}
                     </Link>
                   </Button>
-                </>
-              )}
-            </div>
+                )}
+                {!isAuthenticated && (
+                  <>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="min-h-12 w-full rounded-lg border-[#CAD7F2] bg-white text-[#111B4D] hover:border-[#111B4D] hover:bg-white"
+                    >
+                      <Link
+                        href="/connexion"
+                        prefetch={false}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        Connexion
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      className="min-h-12 w-full rounded-lg bg-[#111B4D] text-white hover:bg-[#1E2A78]"
+                    >
+                      <Link
+                        href={professorListHref}
+                        prefetch={false}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        Réserver une séance
+                        <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </>
+                )}
+              </div>
             </nav>
           </div>
         </>
@@ -271,29 +351,68 @@ export function PublicLayout({
 
       <main
         data-public-main
-        className={cn("flex-1", !hideMobileNav && "public-main-with-mobile-nav")}
+        className={cn(
+          "flex-1",
+          !hideMobileNav && "public-main-with-mobile-nav",
+        )}
       >
         {children}
       </main>
 
       {!hideFooter && (
-      <footer className={cn("mt-auto hidden border-t border-[#E3E8F2] bg-white sm:block lg:pb-0", hideMobileNav ? "pb-0" : "pb-24")}>
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-7 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <BrandLogo />
-            <p className="mt-2 text-xs font-medium text-[#64748B]">© {new Date().getFullYear()} Compétence · Cocody, Abidjan</p>
+        <footer
+          className={cn(
+            "mt-auto hidden border-t border-[#E3E8F2] bg-white sm:block lg:pb-0",
+            hideMobileNav ? "pb-0" : "pb-24",
+          )}
+        >
+          <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-7 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div>
+              <BrandLogo />
+              <p className="mt-2 text-xs font-medium text-[#64748B]">
+                © {new Date().getFullYear()} Compétence · Cocody, Abidjan
+              </p>
+            </div>
+            <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#64748B]">
+              <Link
+                href={tariffsHref}
+                prefetch={false}
+                className="min-h-10 content-center hover:text-[#111B4D]"
+              >
+                Tarifs
+              </Link>
+              <Link
+                href="/contact"
+                prefetch={false}
+                className="min-h-10 content-center hover:text-[#111B4D]"
+              >
+                Aide
+              </Link>
+              <Link
+                href="/conditions-utilisation"
+                prefetch={false}
+                className="min-h-10 content-center hover:text-[#111B4D]"
+              >
+                Conditions
+              </Link>
+              <Link
+                href="/politique-confidentialite"
+                prefetch={false}
+                className="min-h-10 content-center hover:text-[#111B4D]"
+              >
+                Confidentialité
+              </Link>
+            </nav>
           </div>
-          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#64748B]">
-            <Link href={tariffsHref} prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Tarifs</Link>
-            <Link href="/contact" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Aide</Link>
-            <Link href="/conditions-utilisation" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Conditions</Link>
-            <Link href="/politique-confidentialite" prefetch={false} className="min-h-10 content-center hover:text-[#111B4D]">Confidentialité</Link>
-          </nav>
-          </div>
-      </footer>
+        </footer>
       )}
       {!hideMobileNav && !mobileOpen && (
-        <PublicMobileNav pathname={pathname} sessionRole={sessionRole} activeJourney={activeJourney} marketplaceMode={marketplaceMode} />
+        <PublicMobileNav
+          pathname={pathname}
+          sessionRole={sessionRole}
+          activeJourney={activeJourney}
+          marketplaceMode={marketplaceMode}
+        />
       )}
     </div>
   );
@@ -312,10 +431,10 @@ function shouldHidePublicMobileNav(pathname: string | null) {
 function shouldHidePublicFooter(pathname: string | null) {
   if (!pathname) return false;
   return (
-    pathname.startsWith("/connexion")
-    || pathname.startsWith("/inscription")
-    || pathname.startsWith("/mot-de-passe-oublie")
-    || pathname.startsWith("/reinitialiser-mot-de-passe")
+    pathname.startsWith("/connexion") ||
+    pathname.startsWith("/inscription") ||
+    pathname.startsWith("/mot-de-passe-oublie") ||
+    pathname.startsWith("/reinitialiser-mot-de-passe")
   );
 }
 
@@ -340,7 +459,10 @@ function PublicMobileNav({
   const items = [
     ...mobileNavBase.map((item) => ({
       ...item,
-      href: marketplaceMode && item.href === "/professeurs" ? buildMarketplaceJourneyHref(activeJourney) : buildPublicJourneyHref(item.href, activeJourney),
+      href:
+        marketplaceMode && item.href === "/professeurs"
+          ? buildMarketplaceJourneyHref(activeJourney)
+          : buildPublicJourneyHref(item.href, activeJourney),
       baseHref: item.href,
     })),
     { ...accountLink, baseHref: accountLink.href },
@@ -355,9 +477,10 @@ function PublicMobileNav({
     >
       <div className="grid grid-cols-4 gap-1">
         {items.map((item) => {
-          const active = "exact" in item && item.exact
-            ? pathname === item.baseHref
-            : pathname?.startsWith(item.baseHref);
+          const active =
+            "exact" in item && item.exact
+              ? pathname === item.baseHref
+              : pathname?.startsWith(item.baseHref);
           const Icon = item.icon;
 
           return (
@@ -374,7 +497,9 @@ function PublicMobileNav({
               aria-current={active ? "page" : undefined}
             >
               <Icon className="h-4 w-4" />
-              <span className="max-w-full truncate leading-none">{item.label}</span>
+              <span className="max-w-full truncate leading-none">
+                {item.label}
+              </span>
             </Link>
           );
         })}
@@ -383,9 +508,13 @@ function PublicMobileNav({
   );
 }
 
-function buildPublicJourneyHref(href: string, activeJourney?: TeacherJourney | "") {
+function buildPublicJourneyHref(
+  href: string,
+  activeJourney?: TeacherJourney | "",
+) {
   if (!activeJourney) return href;
-  if (!href.startsWith("/professeurs") && !href.startsWith("/tarifs")) return href;
+  if (!href.startsWith("/professeurs") && !href.startsWith("/tarifs"))
+    return href;
 
   const [path, query = ""] = href.split("?");
   const params = new URLSearchParams(query);
@@ -406,11 +535,17 @@ function shouldShowPublicBack(pathname: string | null) {
   return Boolean(pathname && !publicRootPaths.has(pathname));
 }
 
-async function readPublicSessionRole(signal: AbortSignal): Promise<PublicSessionRole | null> {
+async function readPublicSessionRole(
+  signal: AbortSignal,
+): Promise<PublicSessionRole | null> {
   const response = await fetch("/api/auth/me", { cache: "no-store", signal });
   if (!response.ok) return null;
 
-  const payload = await response.json() as { user?: { role?: string } | null };
+  const payload = (await response.json()) as {
+    user?: { role?: string } | null;
+  };
   const role = payload.user?.role;
-  return role === "CLIENT" || role === "ADMIN" || role === "TEACHER" ? role : null;
+  return role === "CLIENT" || role === "ADMIN" || role === "TEACHER"
+    ? role
+    : null;
 }

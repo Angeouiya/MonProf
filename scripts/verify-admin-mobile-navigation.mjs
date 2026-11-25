@@ -52,185 +52,268 @@ const detailPagePaths = [
 
 record(
   "Every main admin tab opts into root page semantics",
-  rootPagePaths.every((filePath) => /<PageHeader[\s\S]*?rootPage/.test(read(filePath))),
+  rootPagePaths.every((filePath) =>
+    /<PageHeader[\s\S]*?rootPage/.test(read(filePath)),
+  ),
 );
 
 record(
   "Admin root pages suppress Back while operational detail pages retain it",
-  /const shouldShowBack = showBack \?\? !rootPage;/.test(header)
-    && /data-admin-root-header=\{rootPage \? "true" : "false"\}/.test(header)
-    && detailPagePaths.every((filePath) => /<PageHeader/.test(read(filePath)) && !/rootPage/.test(read(filePath))),
+  /const shouldShowBack = showBack \?\? !rootPage;/.test(header) &&
+    /data-admin-root-header=\{rootPage \? "true" : "false"\}/.test(header) &&
+    detailPagePaths.every(
+      (filePath) =>
+        /<PageHeader/.test(read(filePath)) && !/rootPage/.test(read(filePath)),
+    ),
 );
 
 record(
   "Admin root descriptions collapse on narrow mobile screens",
-  /data-admin-page-description/.test(header)
-    && /@media \(max-width: 639px\)[\s\S]*?\[data-admin-root-header="true"\][\s\S]*?\[data-admin-page-description\][\s\S]*?display: none !important/.test(css),
+  /data-admin-page-description/.test(header) &&
+    /@media \(max-width: 639px\)[\s\S]*?\[data-admin-root-header="true"\][\s\S]*?\[data-admin-page-description\][\s\S]*?display: none !important/.test(
+      css,
+    ),
 );
 
 record(
   "Admin statistic collections become two balanced columns on mobile",
-  /data-admin-stat-card/.test(statCard)
-    && /\.admin-shell \.grid:has\(> \[data-admin-stat-card\]\)[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/.test(css)
-    && /last-child:nth-child\(odd\)[\s\S]*?grid-column: 1 \/ -1/.test(css),
+  /data-admin-stat-card/.test(statCard) &&
+    /\.admin-shell \.grid:has\(> \[data-admin-stat-card\]\)[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important/.test(
+      css,
+    ) &&
+    /last-child:nth-child\(odd\)[\s\S]*?grid-column: 1 \/ -1/.test(css),
 );
 
 record(
   "Admin statistics remain legible on 320px-class devices",
-  /data-admin-stat-label/.test(statCard)
-    && /data-admin-stat-value/.test(statCard)
-    && /@media \(max-width: 359px\)[\s\S]*?\[data-admin-stat-icon\],[\s\S]*?\[data-admin-stat-trend\][\s\S]*?display: none !important/.test(css),
+  /data-admin-stat-label/.test(statCard) &&
+    /data-admin-stat-value/.test(statCard) &&
+    /@media \(max-width: 359px\)[\s\S]*?\[data-admin-stat-icon\],[\s\S]*?\[data-admin-stat-trend\][\s\S]*?display: none !important/.test(
+      css,
+    ),
 );
 
 record(
   "Admin dashboard opens with one app hero and no card wall",
-  /data-admin-dashboard-priority/.test(dashboard)
-    && /data-admin-dashboard-app-hero/.test(dashboard)
-    && /rounded-\[1\.35rem\]/.test(dashboard)
-    && /text-2xl font-black leading-\[1\.05\]/.test(dashboard)
-    && !/description="Une priorité\. Tous les montants\."/.test(dashboard)
-    && !/Tout voir|Une seule réservation à la fois/.test(dashboard)
-    && !/RevenueAreaChart|StatCard|ControlSpaceCard|FinancialOverview/.test(dashboard)
-    && /db\.booking\.findFirst/.test(dashboard)
-    && !/Dernières réservations payées|Notifications non lues|Espace professeur opérationnel complet/.test(dashboard),
+  /data-admin-dashboard-priority/.test(dashboard) &&
+    /data-admin-dashboard-app-hero/.test(dashboard) &&
+    /rounded-\[1\.35rem\]/.test(dashboard) &&
+    /text-2xl font-black leading-\[1\.05\]/.test(dashboard) &&
+    !/description="Une priorité\. Tous les montants\."/.test(dashboard) &&
+    !/Tout voir|Une seule réservation à la fois/.test(dashboard) &&
+    !/RevenueAreaChart|StatCard|ControlSpaceCard|FinancialOverview/.test(
+      dashboard,
+    ) &&
+    /db\.booking\.findFirst/.test(dashboard) &&
+    !/Dernières réservations payées|Notifications non lues|Espace professeur opérationnel complet/.test(
+      dashboard,
+    ),
 );
 
 record(
   "Admin dashboard keeps critical amounts visible behind the finance permission",
-  /\{canViewFinance\s*&&\s*\([\s\S]*?aria-labelledby="admin-finance-title"/.test(dashboard)
-    && /allAdminFinanceCards:[\s\S]*?key: "net"[\s\S]*?key: "commission"[\s\S]*?key: "service"[\s\S]*?key: "teacher"/.test(dashboard)
-    && /adminFinanceCards = allAdminFinanceCards\.filter\(\(card\) => card\.show\)/.test(dashboard)
-    && /adminFinanceRows = allAdminFinanceRows\.filter\(\(row\) => row\.required \|\| row\.showWhen \|\| row\.value !== 0\)/.test(dashboard)
-    && /Aucune opération financière confirmée/.test(dashboard)
-    && /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
+  /\{canViewFinance\s*&&\s*\([\s\S]*?aria-labelledby="admin-finance-title"/.test(
+    dashboard,
+  ) &&
+    /allAdminFinanceCards:[\s\S]*?key: "net"[\s\S]*?key: "commission"[\s\S]*?key: "service"[\s\S]*?key: "teacher"/.test(
+      dashboard,
+    ) &&
+    /adminFinanceCards = allAdminFinanceCards\.filter\(\(card\) => card\.show\)/.test(
+      dashboard,
+    ) &&
+    /adminFinanceRows = allAdminFinanceRows\.filter\(\(row\) => row\.required \|\| row\.showWhen \|\| row\.value !== 0\)/.test(
+      dashboard,
+    ) &&
+    /Aucune opération financière confirmée/.test(dashboard) &&
+    /href="\/admin\/paiements"[\s\S]*?Tableau complet/.test(dashboard),
 );
 
 record(
   "Admin payments open as one finance cashier before the audit details",
-  /data-admin-payment-app-hero/.test(adminPayments)
-    && /data-admin-payment-amount-strip/.test(adminPayments)
-    && /<FinancialOverview summary=\{financialSummary\}/.test(adminPayments)
-    && /paymentHeroMetrics = \[[\s\S]*?label: "Commission"[\s\S]*?label: "Service restant"[\s\S]*?label: "Frais Jèko réels"[\s\S]*?label: "Reste profs"/.test(adminPayments)
-    && /paymentHeroMetrics\.map\(\(metric\) =>/.test(adminPayments)
-    && /Aucun montant à traiter/.test(adminPayments)
-    && /hideZero/.test(adminPayments)
-    && /providerFeesTotal = financialSummary\.providerCollectionFees/.test(adminPayments)
-    && /Moy\. \{formatFCFA\(averageAmount\)\}/.test(adminPayments)
-    && !/<StatCard/.test(adminPayments)
-    && !/Commission réelle filtrée/.test(adminPayments),
+  /data-admin-payment-app-hero/.test(adminPayments) &&
+    /data-admin-payment-amount-strip/.test(adminPayments) &&
+    /<FinancialOverview summary=\{financialSummary\}/.test(adminPayments) &&
+    /paymentHeroMetrics = \[[\s\S]*?label: "Commission"[\s\S]*?label: "Service restant"[\s\S]*?label: "Frais Jèko réels"[\s\S]*?label: "Reste profs"/.test(
+      adminPayments,
+    ) &&
+    /paymentHeroMetrics\.map\(\(metric\) =>/.test(adminPayments) &&
+    /Aucun montant à traiter/.test(adminPayments) &&
+    /hideZero/.test(adminPayments) &&
+    /providerFeesTotal = financialSummary\.providerCollectionFees/.test(
+      adminPayments,
+    ) &&
+    /Moy\. \{formatFCFA\(averageAmount\)\}/.test(adminPayments) &&
+    !/<StatCard/.test(adminPayments) &&
+    !/Commission réelle filtrée/.test(adminPayments),
 );
 
 record(
   "Admin finance dark panels keep readable contrast after global surface cleanup",
-  /data-admin-finance-surface="light"/.test(dashboard)
-    && /data-admin-finance-card="light"/.test(dashboard)
-    && /data-admin-payment-hero-total/.test(adminPayments)
-    && /data-admin-payment-hero-metric/.test(adminPayments)
-    && !/text-white\/55|text-white\/60|text-white\/65|text-white\/72|text-white\/75/.test(adminPayments)
-    && /data-admin-financial-overview-hero/.test(financialOverview)
-    && /data-admin-financial-header-amount/.test(financialOverview)
-    && /data-admin-payment-app-hero[\s\S]*data-admin-financial-overview-hero[\s\S]*background-color: #111B4D !important/.test(css)
-    && /\[data-admin-payment-hero-metric\][\s\S]*\[data-admin-financial-header-amount\][\s\S]*background-color: rgba\(255, 255, 255, 0\.12\) !important/.test(css)
-    && /\[data-admin-finance-card="light"\][\s\S]*color: #111827 !important/.test(css),
+  /data-admin-finance-surface="light"/.test(dashboard) &&
+    /data-admin-finance-card="light"/.test(dashboard) &&
+    /data-admin-payment-hero-total/.test(adminPayments) &&
+    /data-admin-payment-hero-metric/.test(adminPayments) &&
+    !/text-white\/55|text-white\/60|text-white\/65|text-white\/72|text-white\/75/.test(
+      adminPayments,
+    ) &&
+    /data-admin-financial-overview-hero/.test(financialOverview) &&
+    /data-admin-financial-header-amount/.test(financialOverview) &&
+    /data-admin-payment-app-hero[\s\S]*data-admin-financial-overview-hero[\s\S]*background-color: #111B4D !important/.test(
+      css,
+    ) &&
+    /\[data-admin-payment-hero-metric\][\s\S]*\[data-admin-financial-header-amount\][\s\S]*background-color: rgba\(255, 255, 255, 0\.12\) !important/.test(
+      css,
+    ) &&
+    /\[data-admin-finance-card="light"\][\s\S]*color: #111827 !important/.test(
+      css,
+    ),
 );
 
 record(
   "Admin navigation exposes essentials first and progressively reveals secondary tools",
-  /title: "Essentiel"[\s\S]*?label: "Accueil"[\s\S]*?label: "Opérations"[\s\S]*?label: "Réservations"/.test(layout)
-    && /title: "Personnes"[\s\S]*?label: "Professeurs"[\s\S]*?label: "Clients"/.test(layout)
-    && /title: "Argent & support"[\s\S]*?label: "Finances"[\s\S]*?label: "Messages"[\s\S]*?label: "Réglages"[\s\S]*?label: "Mon compte"/.test(layout)
-    && /const secondaryNavItems:[\s\S]*?<details open=\{secondaryActive \|\| undefined\}[\s\S]*?<span className="flex-1">Plus<\/span>/.test(layout)
-    && /navigation\.secondary\.filter\(\(item\) => hasAdminPermission\(permissions, item\.permission\)\)/.test(layout)
-    && /function adminNavigation\(managedMode: boolean\)/.test(layout)
-    && /secondary: \[\.\.\.additional, \.\.\.history, \.\.\.secondaryNavItems\]/.test(layout)
-    && /managedMode \? \["\/admin\/accompagnement", "\/admin\/professeurs", "\/admin\/accompagnement\/comptabilite"/.test(layout),
+  /title: "Essentiel"[\s\S]*?label: "Accueil"[\s\S]*?label: "Opérations"[\s\S]*?label: "Réservations"/.test(
+    layout,
+  ) &&
+    /title: "Personnes"[\s\S]*?label: "Professeurs"[\s\S]*?label: "Clients"/.test(
+      layout,
+    ) &&
+    /title: "Argent & support"[\s\S]*?label: "Finances"[\s\S]*?label: "Messages"[\s\S]*?label: "Réglages"[\s\S]*?label: "Mon compte"/.test(
+      layout,
+    ) &&
+    /const secondaryNavItems:[\s\S]*?<details\s+open=\{secondaryActive \|\| undefined\}[\s\S]*?<span className="flex-1">Plus<\/span>/.test(
+      layout,
+    ) &&
+    /navigation\.secondary\.filter\(\s*\(item\) =>\s*hasAdminPermission\(permissions, item\.permission\),?\s*\)/.test(
+      layout,
+    ) &&
+    /function adminNavigation\(managedMode: boolean\)/.test(layout) &&
+    /secondary: \[\.\.\.additional, \.\.\.history, \.\.\.secondaryNavItems\]/.test(
+      layout,
+    ) &&
+    /managedMode\s*\?\s*\[\s*"\/admin\/accompagnement",\s*"\/admin\/professeurs",\s*"\/admin\/accompagnement\/comptabilite"/.test(
+      layout,
+    ),
 );
 
 record(
   "Admin mobile app exposes four thumb-reachable essentials without covering content",
-  /const mobileNavPriorityHrefs = \[[\s\S]*?"\/admin"[\s\S]*?"\/admin\/centre-operationnel"[\s\S]*?"\/admin\/reservations"[\s\S]*?"\/admin\/paiements"/.test(layout)
-    && /return \[\.\.\.priorityItems, \.\.\.fallbackItems\]\.slice\(0, 4\)/.test(layout)
-    && /data-admin-mobile-nav/.test(layout)
-    && /data-admin-mobile-item/.test(layout)
-    && /data-admin-mobile-icon-shell/.test(layout)
-    && /data-admin-mobile-label/.test(layout)
-    && /className="admin-main-with-mobile-nav/.test(layout)
-    && /\.admin-shell main\.admin-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.75rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(css)
-    && /\.admin-shell \[data-admin-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*max\(0\.75rem, env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?left:\s*0\.75rem\s*!important;[\s\S]*?right:\s*0\.75rem\s*!important;[\s\S]*?width:\s*auto\s*!important;[\s\S]*?border-radius:\s*1\.25rem\s*!important;[\s\S]*?\}/.test(css)
-    && /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(css)
-    && /\.admin-shell \[data-admin-mobile-icon-shell\] svg[^{]*\{[\s\S]*?width:\s*1\.22rem\s*!important;[\s\S]*?height:\s*1\.22rem\s*!important;[\s\S]*?\}/.test(css),
+  /const mobileNavPriorityHrefs = \[[\s\S]*?"\/admin"[\s\S]*?"\/admin\/centre-operationnel"[\s\S]*?"\/admin\/reservations"[\s\S]*?"\/admin\/paiements"/.test(
+    layout,
+  ) &&
+    /return \[\.\.\.priorityItems, \.\.\.fallbackItems\]\.slice\(0, 4\)/.test(
+      layout,
+    ) &&
+    /data-admin-mobile-nav/.test(layout) &&
+    /data-admin-mobile-item/.test(layout) &&
+    /data-admin-mobile-icon-shell/.test(layout) &&
+    /data-admin-mobile-label/.test(layout) &&
+    /className="admin-main-with-mobile-nav/.test(layout) &&
+    /\.admin-shell main\.admin-main-with-mobile-nav\s*\{[\s\S]*?padding-bottom:\s*calc\(7\.75rem \+ env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.admin-shell \[data-admin-mobile-nav\][^{]*\{[\s\S]*?bottom:\s*max\(0\.75rem, env\(safe-area-inset-bottom\)\)\s*!important;[\s\S]*?left:\s*0\.75rem\s*!important;[\s\S]*?right:\s*0\.75rem\s*!important;[\s\S]*?width:\s*auto\s*!important;[\s\S]*?border-radius:\s*1\.25rem\s*!important;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.admin-shell \[data-admin-mobile-nav\] > div[^{]*\{[\s\S]*?max-width:\s*28rem;[\s\S]*?margin-inline:\s*auto;[\s\S]*?\}/.test(
+      css,
+    ) &&
+    /\.admin-shell \[data-admin-mobile-icon-shell\] svg[^{]*\{[\s\S]*?width:\s*1\.22rem\s*!important;[\s\S]*?height:\s*1\.22rem\s*!important;[\s\S]*?\}/.test(
+      css,
+    ),
 );
 
 record(
   "Admin reservation mobile cards expose one decision and fold secondary dossier details",
-  /data-admin-reservation-mobile-card/.test(reservations)
-    && /data-admin-reservation-decision/.test(reservations)
-    && /data-admin-reservation-snapshot/.test(reservations)
-    && /data-admin-reservation-secondary/.test(reservations)
-    && /Infos dossier/.test(reservations)
-    && /data-admin-reservation-compact-actions/.test(reservations)
-    && /Calcul à reprendre/.test(reservations)
-    && !/space-y-2 rounded-lg border border-blue-100 bg-blue-50\/70 p-3/.test(reservations),
+  /data-admin-reservation-mobile-card/.test(reservations) &&
+    /data-admin-reservation-decision/.test(reservations) &&
+    /data-admin-reservation-snapshot/.test(reservations) &&
+    /data-admin-reservation-secondary/.test(reservations) &&
+    /Infos dossier/.test(reservations) &&
+    /data-admin-reservation-compact-actions/.test(reservations) &&
+    /Calcul à reprendre/.test(reservations) &&
+    !/space-y-2 rounded-lg border border-blue-100 bg-blue-50\/70 p-3/.test(
+      reservations,
+    ),
 );
 
 record(
   "Admin notifications open as one priority screen and fold operational history",
-  /data-admin-notification-priority/.test(notifications)
-    && /À traiter maintenant/.test(notifications)
-    && /data-admin-notification-mini/.test(notifications)
-    && /data-admin-notification-campaign-composer/.test(notifications)
-    && /data-admin-notification-campaigns/.test(notifications)
-    && /data-admin-notification-radar-details/.test(notifications)
-    && /data-admin-notification-live-list/.test(notifications)
-    && /open=\{Boolean\(filter\)\}/.test(notifications)
-    && /data-admin-notification-history-table/.test(notifications)
-    && /Tableau d’audit disponible sans occuper l’écran principal/.test(notifications)
-    && !/AdminUrgentAlertCard/.test(notifications)
-    && !/Radar opérationnel des notifications/.test(notifications),
+  /data-admin-notification-priority/.test(notifications) &&
+    /À traiter maintenant/.test(notifications) &&
+    /data-admin-notification-mini/.test(notifications) &&
+    /data-admin-notification-campaign-composer/.test(notifications) &&
+    /data-admin-notification-campaigns/.test(notifications) &&
+    /data-admin-notification-radar-details/.test(notifications) &&
+    /data-admin-notification-live-list/.test(notifications) &&
+    /open=\{Boolean\(filter\)\}/.test(notifications) &&
+    /data-admin-notification-history-table/.test(notifications) &&
+    /Tableau d’audit disponible sans occuper l’écran principal/.test(
+      notifications,
+    ) &&
+    !/AdminUrgentAlertCard/.test(notifications) &&
+    !/Radar opérationnel des notifications/.test(notifications),
 );
 
 record(
   "Admin messages open on one support priority and fold every history stream",
-  /data-admin-message-priority/.test(messages)
-    && /const primaryTeacherMessage = teacherAdminMessages\.find/.test(messages)
-    && /const primaryContactMessage = messages\.find/.test(messages)
-    && /À traiter maintenant/.test(messages)
-    && /data-admin-message-contact-history/.test(messages)
-    && /data-admin-message-teacher-history/.test(messages)
-    && /data-admin-message-client-history/.test(messages)
-    && /Les autres échanges restent accessibles dans les historiques ci-dessous\./.test(messages)
-    && /data-admin-message-filter/.test(messagesClient)
-    && /À traiter/.test(messagesClient)
-    && !/toast\.success/.test(messagesClient),
+  /data-admin-message-priority/.test(messages) &&
+    /const primaryTeacherMessage = teacherAdminMessages\.find/.test(messages) &&
+    /const primaryContactMessage = messages\.find/.test(messages) &&
+    /À traiter maintenant/.test(messages) &&
+    /data-admin-message-contact-history/.test(messages) &&
+    /data-admin-message-teacher-history/.test(messages) &&
+    /data-admin-message-client-history/.test(messages) &&
+    /Les autres échanges restent accessibles dans les historiques ci-dessous\./.test(
+      messages,
+    ) &&
+    /data-admin-message-filter/.test(messagesClient) &&
+    /À traiter/.test(messagesClient) &&
+    !/toast\.success/.test(messagesClient),
 );
 
 record(
   "Admin catalogs confirm routine saves inline instead of floating success toasts",
-  /data-admin-catalog-inline-status/.test(subjectsClient)
-    && /data-admin-catalog-inline-status/.test(levelsClient)
-    && /confirmDeleteOpen/.test(subjectsClient)
-    && /confirmDeleteOpen/.test(levelsClient)
-    && /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(subjectsClient)
-    && /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(levelsClient)
-    && /setNotice\(subject \? "Matière modifiée\." : "Matière créée\."\)/.test(subjectsClient)
-    && /setNotice\(`\$\{data\.imported\} matière\(s\) importée\(s\), \$\{data\.skipped\} déjà présente\(s\)\.`\)/.test(subjectsClient)
-    && /setNotice\(level \? "Niveau modifié\." : "Niveau créé\."\)/.test(levelsClient)
-    && !/toast\.success\(subject \?/.test(subjectsClient)
-    && !/toast\.success\(`\$\{data\.imported\}/.test(subjectsClient)
-    && !/toast\.success\(level \?/.test(levelsClient),
+  /data-admin-catalog-inline-status/.test(subjectsClient) &&
+    /data-admin-catalog-inline-status/.test(levelsClient) &&
+    /confirmDeleteOpen/.test(subjectsClient) &&
+    /confirmDeleteOpen/.test(levelsClient) &&
+    /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(subjectsClient) &&
+    /onClick=\{\(\) => setConfirmDeleteOpen\(true\)\}/.test(levelsClient) &&
+    /setNotice\(subject \? "Matière modifiée\." : "Matière créée\."\)/.test(
+      subjectsClient,
+    ) &&
+    /setNotice\(`\$\{data\.imported\} matière\(s\) importée\(s\), \$\{data\.skipped\} déjà présente\(s\)\.`\)/.test(
+      subjectsClient,
+    ) &&
+    /setNotice\(level \? "Niveau modifié\." : "Niveau créé\."\)/.test(
+      levelsClient,
+    ) &&
+    !/toast\.success\(subject \?/.test(subjectsClient) &&
+    !/toast\.success\(`\$\{data\.imported\}/.test(subjectsClient) &&
+    !/toast\.success\(level \?/.test(levelsClient),
 );
 
 record(
   "Admin team confirms routine access changes inline instead of floating toasts",
-  /const \[createStatus, setCreateStatus\] = useState<TeamInlineStatus>\(null\)/.test(teamClient)
-    && /const \[statusMessage, setStatusMessage\] = useState<TeamInlineStatus>\(null\)/.test(teamClient)
-    && /function TeamInlineStatusBanner/.test(teamClient)
-    && /data-admin-team-inline-status=\{status\.tone\}/.test(teamClient)
-    && /role=\{status\.tone === "error" \? "alert" : "status"\}/.test(teamClient)
-    && /Administrateur ajouté\. Transmettez le mot de passe par canal sécurisé\./.test(teamClient)
-    && /Mot de passe remplacé\. Email Compétence pris en charge automatiquement\./.test(teamClient)
-    && /Accès retiré\. Historique conservé\./.test(teamClient)
-    && !/toast\./.test(teamClient),
+  /const \[createStatus, setCreateStatus\] = useState<TeamInlineStatus>\(null\)/.test(
+    teamClient,
+  ) &&
+    /const \[statusMessage, setStatusMessage\] = useState<TeamInlineStatus>\(null\)/.test(
+      teamClient,
+    ) &&
+    /function TeamInlineStatusBanner/.test(teamClient) &&
+    /data-admin-team-inline-status=\{status\.tone\}/.test(teamClient) &&
+    /role=\{status\.tone === "error" \? "alert" : "status"\}/.test(
+      teamClient,
+    ) &&
+    /Administrateur ajouté\. Transmettez le mot de passe par canal sécurisé\./.test(
+      teamClient,
+    ) &&
+    /Mot de passe remplacé\. Email Compétence pris en charge automatiquement\./.test(
+      teamClient,
+    ) &&
+    /Accès retiré\. Historique conservé\./.test(teamClient) &&
+    !/toast\./.test(teamClient),
 );
 
 const failed = checks.filter((check) => !check.passed);
@@ -239,7 +322,9 @@ for (const check of checks) {
 }
 
 if (failed.length > 0) {
-  console.error(`\n${failed.length} admin mobile verification check(s) failed.`);
+  console.error(
+    `\n${failed.length} admin mobile verification check(s) failed.`,
+  );
   process.exit(1);
 }
 

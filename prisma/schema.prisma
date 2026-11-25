@@ -71,6 +71,7 @@ model User {
   marketplaceRequests           MarketplaceRequest[]
   marketplaceSeries             MarketplaceSeries[]
   marketplaceReviews            MarketplaceReview[]
+  managedDossiers               ManagedCourseDossier[]
 
   @@index([role])
   @@index([adminTeamRole, adminAccountStatus])
@@ -742,6 +743,10 @@ model ManagedCourseDossier {
   cadence                 String
   unitPrice               Int
   totalPrice              Int
+  initialTotalPrice       Int?
+  clientId                String?
+  partnerId               String?
+  partnerRateBps          Int      @default(0)
   receivedAmount          Int      @default(0)
   cancelledAmount         Int      @default(0)
   onHold                  Boolean  @default(false)
@@ -759,8 +764,44 @@ model ManagedCourseDossier {
   offers                  ManagedCourseOffer[]
   receipts                ManagedParentReceipt[]
   events                  ManagedCourseEvent[]
+  client                  User? @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  partner                 ManagedPartner? @relation(fields: [partnerId], references: [id], onDelete: Restrict)
   @@index([status, createdAt, id])
   @@index([phone, createdAt])
+  @@index([clientId, createdAt, id])
+  @@index([partnerId, createdAt, id])
+}
+
+model ManagedPartner {
+  id        String @id @default(cuid())
+  name      String
+  phone     String @unique
+  active    Boolean @default(true)
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dossiers  ManagedCourseDossier[]
+  payments  ManagedPartnerPayment[]
+  @@index([active, name, id])
+}
+
+model ManagedPartnerPayment {
+  id             String @id @default(cuid())
+  partnerId      String
+  kind           String
+  amountDelta    Int
+  reversesId     String? @unique
+  method         String
+  reference      String
+  note           String
+  actorId        String
+  idempotencyKey String @unique
+  createdAt      DateTime @default(now())
+  partner        ManagedPartner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  original       ManagedPartnerPayment? @relation("ManagedPartnerPaymentCorrection", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal       ManagedPartnerPayment? @relation("ManagedPartnerPaymentCorrection")
+  @@unique([method, reference])
+  @@index([partnerId, createdAt, id])
 }
 
 model ManagedCourseOffer {
@@ -798,6 +839,8 @@ model ManagedCourseSession {
   completedAt            DateTime?
   validatedAt            DateTime?
   validatedBy            String?
+  parentConfirmedAt      DateTime?
+  parentConfirmationMethod String?
   dossier                ManagedCourseDossier @relation(fields: [dossierId], references: [id])
   teacher                Teacher? @relation(fields: [teacherId], references: [id])
   offer                  ManagedCourseOffer? @relation(fields: [offerId], references: [id])

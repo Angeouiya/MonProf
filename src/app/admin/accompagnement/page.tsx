@@ -15,7 +15,9 @@ export default async function ManagedAdminPage({
 }) {
   const admin = await requireAdmin("BOOKINGS_VIEW");
   const { after, filtre } = await searchParams;
-  const filter = ["nouveaux", "en-cours"].includes(filtre ?? "")
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const filter = ["nouveaux", "en-cours", "effectuees"].includes(filtre ?? "")
     ? filtre
     : "tous";
   const where: Prisma.ManagedCourseDossierWhereInput =
@@ -23,7 +25,16 @@ export default async function ManagedAdminPage({
       ? { status: "NEW" }
       : filter === "en-cours"
         ? { status: { in: ["OFFERED", "ACTIVE"] } }
-        : {};
+        : filter === "effectuees"
+          ? {
+              sessions: {
+                some: {
+                  scheduledDate: { gte: today, lt: tomorrow },
+                  status: { in: ["DONE", "VALIDATED"] },
+                },
+              },
+            }
+          : {};
   const canManage = hasAdminPermission(
     admin.adminPermissions,
     "BOOKINGS_MANAGE",
@@ -45,6 +56,9 @@ export default async function ManagedAdminPage({
           where: { status: "VALIDATED" },
           _sum: { fundedAmount: true, creditedTeacherAmount: true },
         }),
+        db.$queryRaw<
+          { earned: bigint; paid: bigint }[]
+        >`SELECT COALESCE((SELECT sum(round(s."fundedAmount"::numeric*d."partnerRateBps"/10000)) FROM "ManagedCourseSession" s JOIN "ManagedCourseDossier" d ON d.id=s."dossierId" WHERE s.status='VALIDATED' AND d."partnerId" IS NOT NULL),0)::bigint AS earned, -COALESCE((SELECT sum("amountDelta") FROM "ManagedPartnerPayment"),0)::bigint AS paid`,
       ])
     : null;
   const [rows, count, finance] = await Promise.all([
@@ -103,7 +117,13 @@ export default async function ManagedAdminPage({
             [
               "Part Compétence acquise",
               (finance[2]._sum.fundedAmount ?? 0) -
-                (finance[2]._sum.creditedTeacherAmount ?? 0),
+                (finance[2]._sum.creditedTeacherAmount ?? 0) -
+                Number(finance[3][0]?.earned ?? 0),
+            ],
+            [
+              "Reste à payer aux partenaires",
+              Number(finance[3][0]?.earned ?? 0) -
+                Number(finance[3][0]?.paid ?? 0),
             ],
           ].map(([label, value]) => (
             <div key={label} className={styles.stat}>
@@ -119,6 +139,7 @@ export default async function ManagedAdminPage({
             ["tous", "Toutes"],
             ["nouveaux", "À attribuer"],
             ["en-cours", "En cours"],
+            ["effectuees", "Réalisées aujourd’hui"],
           ].map(([value, label]) => (
             <Link
               key={value}

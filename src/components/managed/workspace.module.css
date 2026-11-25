@@ -76,6 +76,32 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
+.activityStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 0;
+  background: #fff;
+}
+.activityStats > div {
+  display: grid;
+  gap: 4px;
+  padding: 0 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.activityStats > div + div {
+  border-left: 1px solid var(--line);
+}
+.activityStats strong {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.activityStats span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
 .stat {
   border: 1px solid var(--line);
   border-radius: 18px;

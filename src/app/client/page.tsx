@@ -22,12 +22,21 @@ import { WebPushControl } from "@/components/shared/web-push-control";
 import { formatDate } from "@/lib/format";
 import { verifiedClientPaymentBookingWhere } from "@/lib/payment-security";
 import {
-  CalendarCheck, CheckCircle2, ArrowRight, AlertTriangle, Search,
-  ShieldCheck, BookOpen, Bell, Gift, Handshake,
+  CalendarCheck,
+  CheckCircle2,
+  ArrowRight,
+  AlertTriangle,
+  Search,
+  ShieldCheck,
+  BookOpen,
+  Bell,
+  Gift,
+  Handshake,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { CLIENT_DELETED_DRAFT_REASON } from "@/lib/booking-draft-deletion";
 import { getClientLoyaltyOverview } from "@/lib/loyalty-program";
+import { CUSTOMER_PROMOTIONS_CLOSED } from "@/lib/customer-promotions";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +76,10 @@ const NEXT_COURSE_STATUSES: BookingStatus[] = [
   "ASSIGNED",
   "IN_PROGRESS",
 ];
-const COMPLETED_BOOKING_STATUSES: BookingStatus[] = ["TEACHER_PAID", "VALIDATED_BY_CLIENT"];
+const COMPLETED_BOOKING_STATUSES: BookingStatus[] = [
+  "TEACHER_PAID",
+  "VALIDATED_BY_CLIENT",
+];
 
 const dashboardTeacherSelect = {
   id: true,
@@ -99,7 +111,7 @@ const dashboardBookingSelect = {
 } as const;
 
 export default async function ClientDashboardPage() {
-  if (managedCoursesEnabled()) redirect("/demande-cours");
+  if (managedCoursesEnabled()) redirect("/client/accompagnement");
   if (marketplaceEnabled()) redirect("/client/trouver");
   const user = await getSessionUser();
   if (!user) return null;
@@ -113,7 +125,8 @@ export default async function ClientDashboardPage() {
       { paymentStatus: { not: "FAILED" } },
     ],
   } satisfies Prisma.BookingWhereInput;
-  const verifiedBookingWhere = verifiedClientPaymentBookingWhere(visibleBookingWhere);
+  const verifiedBookingWhere =
+    verifiedClientPaymentBookingWhere(visibleBookingWhere);
 
   const [
     totalBookings,
@@ -161,7 +174,11 @@ export default async function ClientDashboardPage() {
       where: {
         AND: [
           verifiedBookingWhere,
-          { status: { in: NEXT_COURSE_STATUSES }, scheduledDate: null, startDate: { gte: now } },
+          {
+            status: { in: NEXT_COURSE_STATUSES },
+            scheduledDate: null,
+            startDate: { gte: now },
+          },
         ],
       },
       orderBy: { startDate: "asc" },
@@ -182,11 +199,20 @@ export default async function ClientDashboardPage() {
       _sum: { amount: true },
     }),
   ]);
-  const nextCourseCandidates = [nextScheduledCourse, nextRequestedCourse].filter(
-    (booking): booking is NonNullable<typeof nextScheduledCourse> => booking !== null,
+  const nextCourseCandidates = [
+    nextScheduledCourse,
+    nextRequestedCourse,
+  ].filter(
+    (booking): booking is NonNullable<typeof nextScheduledCourse> =>
+      booking !== null,
   );
-  const nextCourse = nextCourseCandidates
-    .sort((a, b) => compareDateAsc(a.scheduledDate ?? a.startDate, b.scheduledDate ?? b.startDate))[0] ?? null;
+  const nextCourse =
+    nextCourseCandidates.sort((a, b) =>
+      compareDateAsc(
+        a.scheduledDate ?? a.startDate,
+        b.scheduledDate ?? b.startDate,
+      ),
+    )[0] ?? null;
   const nextCourseDate = nextCourse
     ? nextCourse.scheduledDate
       ? formatDate(nextCourse.scheduledDate)
@@ -196,8 +222,12 @@ export default async function ClientDashboardPage() {
     : null;
   const blockedFundsAmount = blockedFunds._sum.amount ?? 0;
   const clientFirstName = getFirstName(user.name ?? "Client");
-  const nextCourseTeacherName = nextCourse ? nextCourse.teacher.professionalName || nextCourse.teacher.fullName : "";
-  const heroTitle = nextCourse ? "Votre prochain cours est prêt" : `Bonjour ${clientFirstName}`;
+  const nextCourseTeacherName = nextCourse
+    ? nextCourse.teacher.professionalName || nextCourse.teacher.fullName
+    : "";
+  const heroTitle = nextCourse
+    ? "Votre prochain cours est prêt"
+    : `Bonjour ${clientFirstName}`;
 
   return (
     <div className="space-y-5">
@@ -212,36 +242,48 @@ export default async function ClientDashboardPage() {
         }
       />
 
-      <Link
-        href="/client/partenariat"
-        prefetch={false}
-        className="group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-[#DDE6F7] bg-white p-4 transition hover:border-[#111B4D]"
-        data-client-partnership-entry
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
-            <Handshake className="h-5 w-5" />
+      {!CUSTOMER_PROMOTIONS_CLOSED && (
+        <Link
+          href="/client/partenariat"
+          prefetch={false}
+          className="group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-[#DDE6F7] bg-white p-4 transition hover:border-[#111B4D]"
+          data-client-partnership-entry
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#111B4D] text-white">
+              <Handshake className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <strong className="block text-sm font-black text-[#111827]">
+                Partenariat · Gagnez 10 %
+              </strong>
+              <span className="mt-1 block text-xs font-semibold text-[#64748B]">
+                Créez votre lien et recommandez Compétence.CI.
+              </span>
+            </span>
           </span>
-          <span className="min-w-0">
-            <strong className="block text-sm font-black text-[#111827]">Partenariat · Gagnez 10 %</strong>
-            <span className="mt-1 block text-xs font-semibold text-[#64748B]">Créez votre lien et recommandez Compétence.CI.</span>
-          </span>
-        </span>
-        <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
-      </Link>
+          <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
+        </Link>
+      )}
 
       <WebPushControl audienceLabel="client" />
 
-      <Suspense fallback={<ClientLoyaltyTeaserFallback />}>
-        <ClientLoyaltyTeaser clientId={user.id} now={now} />
-      </Suspense>
+      {!CUSTOMER_PROMOTIONS_CLOSED && (
+        <Suspense fallback={<ClientLoyaltyTeaserFallback />}>
+          <ClientLoyaltyTeaser clientId={user.id} now={now} />
+        </Suspense>
+      )}
 
       <nav
         aria-label="Choisir une mini-application"
         data-client-dashboard-journeys
         className="max-w-3xl"
       >
-        <JourneySwitcher activeJourney="ivoirien" hrefs={CLIENT_JOURNEY_HREFS} size="regular" />
+        <JourneySwitcher
+          activeJourney="ivoirien"
+          hrefs={CLIENT_JOURNEY_HREFS}
+          size="regular"
+        />
       </nav>
       <p className="text-center text-xs font-medium text-[#64748B]">
         Tarif officiel calculé selon le parcours.
@@ -258,9 +300,24 @@ export default async function ClientDashboardPage() {
       <ClientMetricStrip
         className="max-md:hidden"
         metrics={[
-          { icon: ShieldCheck, label: "Sécurisés", value: <Money amount={blockedFundsAmount} /> },
-          { icon: BookOpen, label: "Cours", value: `${upcomingBookings} à venir` },
-          { icon: Bell, label: "Action", value: pendingValidation.length ? formatCount(pendingValidation.length, "attente") : "À jour", attention: pendingValidation.length > 0 },
+          {
+            icon: ShieldCheck,
+            label: "Sécurisés",
+            value: <Money amount={blockedFundsAmount} />,
+          },
+          {
+            icon: BookOpen,
+            label: "Cours",
+            value: `${upcomingBookings} à venir`,
+          },
+          {
+            icon: Bell,
+            label: "Action",
+            value: pendingValidation.length
+              ? formatCount(pendingValidation.length, "attente")
+              : "À jour",
+            attention: pendingValidation.length > 0,
+          },
           { icon: CheckCircle2, label: "Terminés", value: completedBookings },
         ]}
       />
@@ -269,12 +326,18 @@ export default async function ClientDashboardPage() {
         <ClientSurface className="max-md:hidden">
           <ClientSectionTitle
             title={nextCourse ? "Dossier prioritaire" : "Démarrer"}
-            description={nextCourse ? "Le cours le plus proche à suivre." : `${totalBookings} demande${totalBookings > 1 ? "s" : ""} dans votre historique.`}
-            action={(
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/client/cours">Tous mes cours <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
-            </Button>
-            )}
+            description={
+              nextCourse
+                ? "Le cours le plus proche à suivre."
+                : `${totalBookings} demande${totalBookings > 1 ? "s" : ""} dans votre historique.`
+            }
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/client/cours">
+                  Tous mes cours <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            }
           />
           <div className="mt-4">
             {nextCourse ? (
@@ -282,14 +345,21 @@ export default async function ClientDashboardPage() {
                 <div className="flex items-start gap-4 rounded-lg border border-[#E3E8F2] bg-white p-3">
                   <ProfessorImage
                     photoUrl={nextCourse.teacher.photoUrl}
-                    name={nextCourse.teacher.professionalName || nextCourse.teacher.fullName}
+                    name={
+                      nextCourse.teacher.professionalName ||
+                      nextCourse.teacher.fullName
+                    }
                     size={60}
                     shape="circle"
                     verified={nextCourse.teacher.badgeVerified}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[#111827]">{nextCourseTeacherName}</p>
-                    <p className="text-sm text-[#64748B]">{nextCourse.teacher.jobTitle || "Professeur Compétence"}</p>
+                    <p className="font-semibold text-[#111827]">
+                      {nextCourseTeacherName}
+                    </p>
+                    <p className="text-sm text-[#64748B]">
+                      {nextCourse.teacher.jobTitle || "Professeur Compétence"}
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-[#111827]">
                       {nextCourse.subjectName} · {nextCourse.levelName}
                     </p>
@@ -297,17 +367,60 @@ export default async function ClientDashboardPage() {
                 </div>
                 <div className="grid gap-2 text-sm min-[560px]:grid-cols-2">
                   <ClientInfoPill
-                    label={nextCourse.scheduledDate ? "Date prévue" : "Date souhaitée"}
-                    value={nextCourse.scheduledDate ? formatDate(nextCourse.scheduledDate) : nextCourse.startDate ? formatDate(nextCourse.startDate) : "À planifier"}
+                    label={
+                      nextCourse.scheduledDate
+                        ? "Date prévue"
+                        : "Date souhaitée"
+                    }
+                    value={
+                      nextCourse.scheduledDate
+                        ? formatDate(nextCourse.scheduledDate)
+                        : nextCourse.startDate
+                          ? formatDate(nextCourse.startDate)
+                          : "À planifier"
+                    }
                   />
-                  <ClientInfoPill label="Créneau" value={nextCourse.scheduledTime || nextCourse.preferredTime || "—"} />
-                  <ClientInfoPill label="Format" value={nextCourse.courseFormat === "HOME" ? "À domicile" : "En ligne"} />
-                  <ClientInfoPill label="Montant" value={<Money amount={nextCourse.totalClientPays || nextCourse.totalPrice} />} strong />
+                  <ClientInfoPill
+                    label="Créneau"
+                    value={
+                      nextCourse.scheduledTime ||
+                      nextCourse.preferredTime ||
+                      "—"
+                    }
+                  />
+                  <ClientInfoPill
+                    label="Format"
+                    value={
+                      nextCourse.courseFormat === "HOME"
+                        ? "À domicile"
+                        : "En ligne"
+                    }
+                  />
+                  <ClientInfoPill
+                    label="Montant"
+                    value={
+                      <Money
+                        amount={
+                          nextCourse.totalClientPays || nextCourse.totalPrice
+                        }
+                      />
+                    }
+                    strong
+                  />
                 </div>
                 <div className="flex flex-col gap-3 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
-                  <p className="text-sm font-semibold text-[#111B4D]">Statut : {formatClientBookingStatus(nextCourse.status)}</p>
-                  <Button asChild variant="outline" size="sm" className="min-h-11 w-full rounded-lg min-[640px]:w-auto">
-                    <Link href={`/client/reservations/${nextCourse.id}`}>Voir détails</Link>
+                  <p className="text-sm font-semibold text-[#111B4D]">
+                    Statut : {formatClientBookingStatus(nextCourse.status)}
+                  </p>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11 w-full rounded-lg min-[640px]:w-auto"
+                  >
+                    <Link href={`/client/reservations/${nextCourse.id}`}>
+                      Voir détails
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -319,8 +432,13 @@ export default async function ClientDashboardPage() {
                       <CalendarCheck className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-base font-semibold leading-6 text-[#111827]">Aucun cours planifié</p>
-                      <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">Choisissez un professeur, une date et un créneau. Le paiement est sécurisé et confirmé côté serveur.</p>
+                      <p className="text-base font-semibold leading-6 text-[#111827]">
+                        Aucun cours planifié
+                      </p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-[#64748B]">
+                        Choisissez un professeur, une date et un créneau. Le
+                        paiement est sécurisé et confirmé côté serveur.
+                      </p>
                     </div>
                   </div>
                   {recentBookings.length > 0 && (
@@ -339,15 +457,21 @@ export default async function ClientDashboardPage() {
         {/* Actions requises */}
         <ClientSurface>
           <ClientSectionTitle
-            title={(
+            title={
               <span className="flex items-center gap-2">
-              {pendingValidation.length > 0
-                ? <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
-                : <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />}
-              {pendingValidation.length > 0 ? "Actions requises" : "À suivre"}
+                {pendingValidation.length > 0 ? (
+                  <AlertTriangle className="h-4 w-4 text-[#111B4D]" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-[#111B4D]" />
+                )}
+                {pendingValidation.length > 0 ? "Actions requises" : "À suivre"}
               </span>
-            )}
-            description={pendingValidation.length > 0 ? "Ce qui mérite votre attention maintenant." : "Aucune action requise."}
+            }
+            description={
+              pendingValidation.length > 0
+                ? "Ce qui mérite votre attention maintenant."
+                : "Aucune action requise."
+            }
           />
           <div className="mt-4 space-y-3">
             {pendingValidation.length === 0 ? (
@@ -357,8 +481,12 @@ export default async function ClientDashboardPage() {
                     <CheckCircle2 className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-[#111827]">Tout est à jour</p>
-                    <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">Les confirmations après cours apparaîtront ici.</p>
+                    <p className="text-sm font-semibold text-[#111827]">
+                      Tout est à jour
+                    </p>
+                    <p className="mt-1 text-xs font-medium leading-5 text-[#64748B]">
+                      Les confirmations après cours apparaîtront ici.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -375,20 +503,39 @@ export default async function ClientDashboardPage() {
                         verified={b.teacher.badgeVerified}
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[#111827]">{b.subjectName} • {b.levelName}</p>
+                        <p className="truncate text-sm font-semibold text-[#111827]">
+                          {b.subjectName} • {b.levelName}
+                        </p>
                         <p className="truncate text-xs text-[#64748B]">
                           {b.teacher.professionalName || b.teacher.fullName}
                         </p>
                       </div>
                     </div>
-                    <p className="shrink-0 text-xs font-semibold text-[#111B4D]">À confirmer</p>
+                    <p className="shrink-0 text-xs font-semibold text-[#111B4D]">
+                      À confirmer
+                    </p>
                   </div>
                   <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-                    <Button asChild size="sm" className="min-h-11 rounded-lg text-xs">
-                      <Link href={`/client/reservations/${b.id}?action=confirm`}>Confirmer</Link>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="min-h-11 rounded-lg text-xs"
+                    >
+                      <Link
+                        href={`/client/reservations/${b.id}?action=confirm`}
+                      >
+                        Confirmer
+                      </Link>
                     </Button>
-                    <Button asChild size="sm" variant="outline" className="min-h-11 rounded-lg text-xs">
-                      <Link href={`/client/reservations/${b.id}?action=report`}>Signaler</Link>
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="min-h-11 rounded-lg text-xs"
+                    >
+                      <Link href={`/client/reservations/${b.id}?action=report`}>
+                        Signaler
+                      </Link>
                     </Button>
                   </div>
                 </ClientRecordCard>
@@ -397,7 +544,6 @@ export default async function ClientDashboardPage() {
           </div>
         </ClientSurface>
       </div>
-
     </div>
   );
 }
@@ -411,7 +557,13 @@ type DashboardTeacher = {
   jobTitle?: string | null;
 };
 
-async function ClientLoyaltyTeaser({ clientId, now }: { clientId: string; now: Date }) {
+async function ClientLoyaltyTeaser({
+  clientId,
+  now,
+}: {
+  clientId: string;
+  now: Date;
+}) {
   const loyaltyOverview = await getClientLoyaltyOverview(clientId, now);
   return (
     <Link
@@ -421,7 +573,9 @@ async function ClientLoyaltyTeaser({ clientId, now }: { clientId: string; now: D
       data-client-gift-teaser
     >
       <span className="flex min-w-0 items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF9E8] text-[#9A6A00]"><Gift className="h-5 w-5" /></span>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFF9E8] text-[#9A6A00]">
+          <Gift className="h-5 w-5" />
+        </span>
         <span className="min-w-0">
           <strong className="block text-sm font-black text-[#111827]">
             {loyaltyOverview.activeReward
@@ -430,7 +584,9 @@ async function ClientLoyaltyTeaser({ clientId, now }: { clientId: string; now: D
                 ? "Votre route cadeaux est complète"
                 : `Encore ${loyaltyOverview.paymentsUntilNextGift} paiement${loyaltyOverview.paymentsUntilNextGift > 1 ? "s" : ""} avant votre prochain cadeau`}
           </strong>
-          <span className="mt-1 block text-xs font-semibold text-[#64748B]">Suivez votre route animée et vos dates d’utilisation.</span>
+          <span className="mt-1 block text-xs font-semibold text-[#64748B]">
+            Suivez votre route animée et vos dates d’utilisation.
+          </span>
         </span>
       </span>
       <ArrowRight className="h-5 w-5 shrink-0 text-[#111B4D] transition group-hover:translate-x-1" />
@@ -488,8 +644,11 @@ function ClientDashboardMobileSummary({
   upcomingBookings: number;
   completedBookings: number;
 }) {
-  const focusTeacher = pendingValidation?.teacher ?? nextCourse?.teacher ?? null;
-  const focusTeacherName = focusTeacher ? focusTeacher.professionalName || focusTeacher.fullName : "";
+  const focusTeacher =
+    pendingValidation?.teacher ?? nextCourse?.teacher ?? null;
+  const focusTeacherName = focusTeacher
+    ? focusTeacher.professionalName || focusTeacher.fullName
+    : "";
   const isConfirmation = Boolean(pendingValidation);
   const actionHref = pendingValidation
     ? `/client/reservations/${pendingValidation.id}?action=confirm`
@@ -509,7 +668,11 @@ function ClientDashboardMobileSummary({
       : "Choisissez l'un des trois parcours ci-dessus. Le moteur calcule le reste.";
 
   return (
-    <ClientSurface compact className="rounded-lg border border-[#DDE3EE] p-3 md:hidden" data-client-dashboard-mobile-summary>
+    <ClientSurface
+      compact
+      className="rounded-lg border border-[#DDE3EE] p-3 md:hidden"
+      data-client-dashboard-mobile-summary
+    >
       <div className="flex min-w-0 items-start gap-3">
         {focusTeacher ? (
           <ProfessorImage
@@ -526,24 +689,47 @@ function ClientDashboardMobileSummary({
         )}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">
-            {isConfirmation ? "Action requise" : nextCourse ? "Prochain cours" : "Démarrage"}
+            {isConfirmation
+              ? "Action requise"
+              : nextCourse
+                ? "Prochain cours"
+                : "Démarrage"}
           </p>
-          <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">{title}</h2>
-          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">{hint}</p>
+          <h2 className="mt-0.5 line-clamp-2 text-sm font-semibold leading-5 text-[#111827]">
+            {title}
+          </h2>
+          <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-[#64748B]">
+            {hint}
+          </p>
         </div>
         {actionHref && (
-          <Button asChild size="sm" className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]">
+          <Button
+            asChild
+            size="sm"
+            className="min-h-10 shrink-0 rounded-lg bg-[#111B4D] px-3 text-white hover:bg-[#1E2A78]"
+          >
             <Link href={actionHref}>{actionLabel}</Link>
           </Button>
         )}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <ClientInfoPill label="Fonds" value={formatFCFACompact(blockedFundsAmount)} strong={blockedFundsAmount > 0} />
-        <ClientInfoPill label="À venir" value={upcomingBookings} strong={upcomingBookings > 0} />
-        <ClientInfoPill label="Terminés" value={completedBookings} strong={completedBookings > 0} />
+        <ClientInfoPill
+          label="Fonds"
+          value={formatFCFACompact(blockedFundsAmount)}
+          strong={blockedFundsAmount > 0}
+        />
+        <ClientInfoPill
+          label="À venir"
+          value={upcomingBookings}
+          strong={upcomingBookings > 0}
+        />
+        <ClientInfoPill
+          label="Terminés"
+          value={completedBookings}
+          strong={completedBookings > 0}
+        />
       </div>
-
     </ClientSurface>
   );
 }
@@ -570,13 +756,28 @@ type DashboardBookingLine = {
 };
 
 function RecentBookingLine({ booking }: { booking: DashboardBookingLine }) {
-  const teacherName = booking.teacher.professionalName || booking.teacher.fullName;
+  const teacherName =
+    booking.teacher.professionalName || booking.teacher.fullName;
   return (
-    <Link href={`/client/reservations/${booking.id}`} className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 transition hover:border-[#111B4D]">
-      <ProfessorImage photoUrl={booking.teacher.photoUrl} name={teacherName} size="sm" shape="circle" verified={booking.teacher.badgeVerified} />
+    <Link
+      href={`/client/reservations/${booking.id}`}
+      className="flex items-center gap-3 rounded-lg border border-[#E3E8F2] bg-white px-3 py-2 transition hover:border-[#111B4D]"
+    >
+      <ProfessorImage
+        photoUrl={booking.teacher.photoUrl}
+        name={teacherName}
+        size="sm"
+        shape="circle"
+        verified={booking.teacher.badgeVerified}
+      />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-[#111827]">{booking.subjectName} · {booking.levelName}</span>
-        <span className="block truncate text-xs font-medium text-[#64748B]">{formatClientBookingStatus(booking.status)} · {formatDate(booking.createdAt)}</span>
+        <span className="block truncate text-sm font-semibold text-[#111827]">
+          {booking.subjectName} · {booking.levelName}
+        </span>
+        <span className="block truncate text-xs font-medium text-[#64748B]">
+          {formatClientBookingStatus(booking.status)} ·{" "}
+          {formatDate(booking.createdAt)}
+        </span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-[#64748B]" />
     </Link>
@@ -587,13 +788,19 @@ function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-function compareDateAsc(a: Date | null | undefined, b: Date | null | undefined) {
+function compareDateAsc(
+  a: Date | null | undefined,
+  b: Date | null | undefined,
+) {
   const left = a?.getTime() ?? Number.POSITIVE_INFINITY;
   const right = b?.getTime() ?? Number.POSITIVE_INFINITY;
   return left - right;
 }
 
-function compareDateDesc(a: Date | null | undefined, b: Date | null | undefined) {
+function compareDateDesc(
+  a: Date | null | undefined,
+  b: Date | null | undefined,
+) {
   const left = a?.getTime() ?? 0;
   const right = b?.getTime() ?? 0;
   return right - left;
@@ -607,7 +814,10 @@ function getFirstName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "Client";
   const first = parts[0].toLowerCase().replace(/\./g, "");
-  if (["m", "mr", "mme", "mlle", "monsieur", "madame"].includes(first) && parts[1]) {
+  if (
+    ["m", "mr", "mme", "mlle", "monsieur", "madame"].includes(first) &&
+    parts[1]
+  ) {
     return `${parts[0]} ${parts[1]}`;
   }
   return parts[0];

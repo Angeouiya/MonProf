@@ -208,8 +208,8 @@ const checks = [
     file: "src/components/layouts/client-layout.tsx",
     patterns: [
       /const mobileNavItems/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} marketplaceV2=\{marketplaceV2\} \/>/,
-      /<SidebarContent userName=\{userName\} isActive=\{isActive\} notificationCount=\{notificationCount\} onNavigate=\{closeMobileSurfaces\} compactAccount marketplaceV2=\{marketplaceV2\} \/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{notificationCount\}\s+marketplaceV2=\{marketplaceV2\}\s+managedMode=\{managedMode\}\s+\/>/,
+      /<SidebarContent\s+userName=\{userName\}\s+isActive=\{isActive\}\s+notificationCount=\{notificationCount\}\s+onNavigate=\{closeMobileSurfaces\}\s+compactAccount\s+marketplaceV2=\{marketplaceV2\}\s+managedMode=\{managedMode\}\s+\/>/,
     ],
     forbiddenPatterns: [
       /data-client-partnership-link/,
@@ -229,16 +229,11 @@ const checks = [
   },
   {
     file: "src/app/api/cron/partner-referrals/route.ts",
-    patterns: [
-      /CRON_SECRET/,
-      /expirePartnerReferrals/,
-    ],
+    patterns: [/CRON_SECRET/, /expirePartnerReferrals/],
   },
   {
     file: "vercel.json",
-    patterns: [
-      /\/api\/cron\/partner-referrals/,
-    ],
+    patterns: [/\/api\/cron\/partner-referrals/],
   },
   {
     file: "src/app/conditions-utilisation/page.tsx",
@@ -287,7 +282,8 @@ for (const check of checks) {
     }
   }
   for (const pattern of check.forbiddenPatterns ?? []) {
-    if (pattern.test(content)) failures.push(`${check.file} unexpectedly contains ${pattern}`);
+    if (pattern.test(content))
+      failures.push(`${check.file} unexpectedly contains ${pattern}`);
   }
 }
 

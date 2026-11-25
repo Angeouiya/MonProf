@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { CUSTOMER_PROMOTIONS_CLOSED } from "@/lib/customer-promotions";
 import {
   normalizePartnerReferralCode,
   normalizePartnerReferralName,
@@ -14,7 +15,10 @@ import {
   type LoyaltyGiftStep,
 } from "@/lib/loyalty-constants";
 
-export { DEFAULT_LOYALTY_GIFT_STEPS, PARTNER_ATTRIBUTION_MONTHS } from "@/lib/loyalty-constants";
+export {
+  DEFAULT_LOYALTY_GIFT_STEPS,
+  PARTNER_ATTRIBUTION_MONTHS,
+} from "@/lib/loyalty-constants";
 export type { LoyaltyGiftStep } from "@/lib/loyalty-constants";
 
 type LoyaltyTx = Prisma.TransactionClient;
@@ -39,9 +43,16 @@ export async function getLoyaltyProgramConfig() {
   });
   const values = new Map(rows.map((row) => [row.key, row.value]));
   return {
-    enabled: parseBoolean(values.get("loyalty_gifts_enabled"), true),
+    enabled:
+      !CUSTOMER_PROMOTIONS_CLOSED &&
+      parseBoolean(values.get("loyalty_gifts_enabled"), true),
     cycleEnabled: parseBoolean(values.get("loyalty_gifts_cycle_enabled"), true),
-    minimumMarginPercent: clampInt(values.get("loyalty_minimum_margin_percent"), 5, 0, 20),
+    minimumMarginPercent: clampInt(
+      values.get("loyalty_minimum_margin_percent"),
+      5,
+      0,
+      20,
+    ),
     steps: giftStepsFromSettings(values),
   };
 }
@@ -78,10 +89,22 @@ export async function resolveClientPromotionBenefits(input: {
   bookingId?: string | null;
   now?: Date;
 }): Promise<ClientPromotionBenefits> {
+  if (CUSTOMER_PROMOTIONS_CLOSED)
+    return {
+      attribution: null,
+      partnerDiscountPercent: 0,
+      partnerCommissionPercent: 0,
+      reward: null,
+      minimumMarginPercent: 0,
+    };
   const now = input.now ?? new Date();
   const config = await getLoyaltyProgramConfig();
   await db.clientReward.updateMany({
-    where: { clientId: input.clientId, status: { in: ["AVAILABLE", "RESERVED"] }, expiresAt: { lt: now } },
+    where: {
+      clientId: input.clientId,
+      status: { in: ["AVAILABLE", "RESERVED"] },
+      expiresAt: { lt: now },
+    },
     data: { status: "EXPIRED" },
   });
 
@@ -101,16 +124,26 @@ export async function resolveClientPromotionBenefits(input: {
   const requestedPhone = normalizePartnerReferralPhone(input.referralPhone);
   const requestedName = normalizePartnerReferralName(input.referralName);
   let requestedProfile = requestedCode
-    ? await db.partnerProfile.findFirst({ where: { code: requestedCode, status: "ACTIVE" } })
+    ? await db.partnerProfile.findFirst({
+        where: { code: requestedCode, status: "ACTIVE" },
+      })
     : requestedPhone
-      ? await db.partnerProfile.findFirst({ where: { promoterPhone: requestedPhone, status: "ACTIVE" } })
+      ? await db.partnerProfile.findFirst({
+          where: { promoterPhone: requestedPhone, status: "ACTIVE" },
+        })
       : null;
 
   // Compatibilité production : les anciens liens à usage unique deviennent
   // un profil permanent au premier contrôle, sans perdre l'apporteur existant.
   if (!requestedProfile && requestedCode) {
-    const legacyLead = await db.partnerReferralLead.findUnique({ where: { code: requestedCode } });
-    if (legacyLead && !["REJECTED", "EXPIRED"].includes(legacyLead.status) && legacyLead.promotionEndsAt >= now) {
+    const legacyLead = await db.partnerReferralLead.findUnique({
+      where: { code: requestedCode },
+    });
+    if (
+      legacyLead &&
+      !["REJECTED", "EXPIRED"].includes(legacyLead.status) &&
+      legacyLead.promotionEndsAt >= now
+    ) {
       requestedProfile = await db.partnerProfile.upsert({
         where: { promoterPhone: legacyLead.promoterPhone },
         create: {
@@ -124,17 +157,28 @@ export async function resolveClientPromotionBenefits(input: {
     }
   }
 
-  if (requestedProfile && requestedName && !namesAreCompatible(requestedName, requestedProfile.promoterName)) {
+  if (
+    requestedProfile &&
+    requestedName &&
+    !namesAreCompatible(requestedName, requestedProfile.promoterName)
+  ) {
     requestedProfile = null;
   }
 
-  const usableCurrent = current && ["PENDING", "ACTIVE"].includes(current.status) && current.partnerProfile.status === "ACTIVE"
-    ? current
-    : null;
+  const usableCurrent =
+    current &&
+    ["PENDING", "ACTIVE"].includes(current.status) &&
+    current.partnerProfile.status === "ACTIVE"
+      ? current
+      : null;
   if (requestedCode || requestedPhone) {
     if (!requestedProfile) throw new Error("PARTNER_NOT_VERIFIED");
-    if (!usableCurrent && !isPartnerPromotionActive(now)) throw new Error("PARTNER_PROMOTION_INACTIVE");
-    if (usableCurrent && usableCurrent.partnerProfileId !== requestedProfile.id) {
+    if (!usableCurrent && !isPartnerPromotionActive(now))
+      throw new Error("PARTNER_PROMOTION_INACTIVE");
+    if (
+      usableCurrent &&
+      usableCurrent.partnerProfileId !== requestedProfile.id
+    ) {
       throw new Error("PARTNER_ATTRIBUTION_LOCKED");
     }
   }
@@ -145,39 +189,53 @@ export async function resolveClientPromotionBenefits(input: {
   }
   const attribution = profile
     ? {
-        id: usableCurrent?.id ?? (current && requestedProfile ? current.id : null),
+        id:
+          usableCurrent?.id ??
+          (current && requestedProfile ? current.id : null),
         profileId: profile.id,
         code: profile.code,
         promoterName: profile.promoterName,
         promoterPhone: profile.promoterPhone,
-        status: (usableCurrent?.status === "ACTIVE" ? "ACTIVE" : "PENDING") as "PENDING" | "ACTIVE",
+        status: (usableCurrent?.status === "ACTIVE" ? "ACTIVE" : "PENDING") as
+          | "PENDING"
+          | "ACTIVE",
         startsAt: usableCurrent?.startsAt ?? null,
         endsAt: usableCurrent?.endsAt ?? null,
         isNew: !usableCurrent,
       }
     : null;
 
-  const getsInitialDiscount = Boolean(attribution) && (
-    !usableCurrent?.initialDiscountBookingId
-    || usableCurrent.initialDiscountBookingId === input.bookingId
-  );
-  const reward = config.enabled && !getsInitialDiscount
-    ? await db.clientReward.findFirst({
-        where: {
-          clientId: input.clientId,
-          expiresAt: { gte: now },
-          OR: [
-            { status: "AVAILABLE" },
-            ...(input.bookingId ? [{ status: "RESERVED" as const, usedBookingId: input.bookingId }] : []),
-          ],
-        },
-        orderBy: [{ expiresAt: "asc" }, { unlockedAt: "asc" }],
-      })
-    : null;
+  const getsInitialDiscount =
+    Boolean(attribution) &&
+    (!usableCurrent?.initialDiscountBookingId ||
+      usableCurrent.initialDiscountBookingId === input.bookingId);
+  const reward =
+    config.enabled && !getsInitialDiscount
+      ? await db.clientReward.findFirst({
+          where: {
+            clientId: input.clientId,
+            expiresAt: { gte: now },
+            OR: [
+              { status: "AVAILABLE" },
+              ...(input.bookingId
+                ? [
+                    {
+                      status: "RESERVED" as const,
+                      usedBookingId: input.bookingId,
+                    },
+                  ]
+                : []),
+            ],
+          },
+          orderBy: [{ expiresAt: "asc" }, { unlockedAt: "asc" }],
+        })
+      : null;
 
   return {
     attribution,
-    partnerDiscountPercent: getsInitialDiscount ? PARTNER_REFERRAL_RATE_PERCENT : 0,
+    partnerDiscountPercent: getsInitialDiscount
+      ? PARTNER_REFERRAL_RATE_PERCENT
+      : 0,
     partnerCommissionPercent: attribution ? PARTNER_REFERRAL_RATE_PERCENT : 0,
     reward: reward
       ? {
@@ -211,11 +269,15 @@ export async function attachPromotionToBookingInTransaction(
   });
 
   if (benefit.attribution) {
-    await assertPartnerIsNotClient(tx, input.clientId, benefit.attribution.profileId);
+    await assertPartnerIsNotClient(
+      tx,
+      input.clientId,
+      benefit.attribution.profileId,
+    );
     if (
-      currentAttribution
-      && ["PENDING", "ACTIVE"].includes(currentAttribution.status)
-      && currentAttribution.partnerProfileId !== benefit.attribution.profileId
+      currentAttribution &&
+      ["PENDING", "ACTIVE"].includes(currentAttribution.status) &&
+      currentAttribution.partnerProfileId !== benefit.attribution.profileId
     ) {
       throw new Error("PARTNER_ATTRIBUTION_LOCKED");
     }
@@ -255,10 +317,17 @@ export async function attachPromotionToBookingInTransaction(
 
   if (attributionId && benefit.partnerDiscountPercent > 0) {
     const reserved = await tx.clientPartnerAttribution.updateMany({
-      where: { id: attributionId, OR: [{ initialDiscountBookingId: null }, { initialDiscountBookingId: input.bookingId }] },
+      where: {
+        id: attributionId,
+        OR: [
+          { initialDiscountBookingId: null },
+          { initialDiscountBookingId: input.bookingId },
+        ],
+      },
       data: { initialDiscountBookingId: input.bookingId },
     });
-    if (reserved.count !== 1) throw new Error("PARTNER_DISCOUNT_ALREADY_RESERVED");
+    if (reserved.count !== 1)
+      throw new Error("PARTNER_DISCOUNT_ALREADY_RESERVED");
   }
 
   if (benefit.reward) {
@@ -267,11 +336,19 @@ export async function attachPromotionToBookingInTransaction(
         id: benefit.reward.id,
         clientId: input.clientId,
         expiresAt: { gte: now },
-        OR: [{ status: "AVAILABLE" }, { status: "RESERVED", usedBookingId: input.bookingId }],
+        OR: [
+          { status: "AVAILABLE" },
+          { status: "RESERVED", usedBookingId: input.bookingId },
+        ],
       },
-      data: { status: "RESERVED", usedBookingId: input.bookingId, reservedAt: now },
+      data: {
+        status: "RESERVED",
+        usedBookingId: input.bookingId,
+        reservedAt: now,
+      },
     });
-    if (reserved.count !== 1) throw new Error("LOYALTY_REWARD_ALREADY_RESERVED");
+    if (reserved.count !== 1)
+      throw new Error("LOYALTY_REWARD_ALREADY_RESERVED");
   }
 
   return attributionId;
@@ -285,12 +362,18 @@ export async function confirmPromotionPaymentInTransaction(
   await lockClientLoyaltyLedger(tx, input.clientId);
   const booking = await tx.booking.findUnique({
     where: { id: input.bookingId },
-    select: { id: true, partnerAttributionId: true, rewardDiscountAmount: true },
+    select: {
+      id: true,
+      partnerAttributionId: true,
+      rewardDiscountAmount: true,
+    },
   });
   if (!booking) return null;
 
   if (booking.partnerAttributionId) {
-    const attribution = await tx.clientPartnerAttribution.findUnique({ where: { id: booking.partnerAttributionId } });
+    const attribution = await tx.clientPartnerAttribution.findUnique({
+      where: { id: booking.partnerAttributionId },
+    });
     if (attribution?.status === "PENDING") {
       const endsAt = addMonths(now, PARTNER_ATTRIBUTION_MONTHS);
       await tx.clientPartnerAttribution.update({
@@ -299,11 +382,17 @@ export async function confirmPromotionPaymentInTransaction(
           status: "ACTIVE",
           startsAt: now,
           endsAt,
-          initialDiscountUsedAt: attribution.initialDiscountBookingId === booking.id ? now : attribution.initialDiscountUsedAt,
+          initialDiscountUsedAt:
+            attribution.initialDiscountBookingId === booking.id
+              ? now
+              : attribution.initialDiscountUsedAt,
         },
       });
       await tx.partnerReferral.updateMany({
-        where: { attributionId: attribution.id, status: { in: ["DECLARED", "PAYMENT_CONFIRMED"] } },
+        where: {
+          attributionId: attribution.id,
+          status: { in: ["DECLARED", "PAYMENT_CONFIRMED"] },
+        },
         data: { promotionStartsAt: now, promotionEndsAt: endsAt },
       });
       await tx.notification.create({
@@ -332,43 +421,73 @@ export async function confirmPromotionPaymentInTransaction(
     });
   }
 
-  return qualifyLoyaltyPurchaseInTransaction(tx, { bookingId: booking.id, clientId: input.clientId, now });
+  return qualifyLoyaltyPurchaseInTransaction(tx, {
+    bookingId: booking.id,
+    clientId: input.clientId,
+    now,
+  });
 }
 
 export async function qualifyLoyaltyPurchaseInTransaction(
   tx: LoyaltyTx,
   input: { bookingId: string; clientId: string; now?: Date },
 ) {
+  if (CUSTOMER_PROMOTIONS_CLOSED) return null;
   const now = input.now ?? new Date();
   await lockClientLoyaltyLedger(tx, input.clientId);
-  const existing = await tx.clientLoyaltyPurchase.findUnique({ where: { bookingId: input.bookingId } });
+  const existing = await tx.clientLoyaltyPurchase.findUnique({
+    where: { bookingId: input.bookingId },
+  });
   if (existing) return existing;
-  const attribution = await tx.clientPartnerAttribution.findUnique({ where: { clientId: input.clientId } });
-  if (!attribution || attribution.status !== "ACTIVE" || !attribution.endsAt || attribution.endsAt < now) return null;
+  const attribution = await tx.clientPartnerAttribution.findUnique({
+    where: { clientId: input.clientId },
+  });
+  if (
+    !attribution ||
+    attribution.status !== "ACTIVE" ||
+    !attribution.endsAt ||
+    attribution.endsAt < now
+  )
+    return null;
 
   const configRows = await tx.setting.findMany({
-    where: { key: { in: [
-      "loyalty_gifts_enabled",
-      "loyalty_gifts_cycle_enabled",
-      "loyalty_gift_steps_json",
-      ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [
-        `loyalty_gift_${step.milestone}_rate`,
-        `loyalty_gift_${step.milestone}_days`,
-        `loyalty_gift_${step.milestone}_gap_payments`,
-      ]),
-    ] } },
+    where: {
+      key: {
+        in: [
+          "loyalty_gifts_enabled",
+          "loyalty_gifts_cycle_enabled",
+          "loyalty_gift_steps_json",
+          ...DEFAULT_LOYALTY_GIFT_STEPS.flatMap((step) => [
+            `loyalty_gift_${step.milestone}_rate`,
+            `loyalty_gift_${step.milestone}_days`,
+            `loyalty_gift_${step.milestone}_gap_payments`,
+          ]),
+        ],
+      },
+    },
   });
   const values = new Map(configRows.map((row) => [row.key, row.value]));
   const enabled = parseBoolean(values.get("loyalty_gifts_enabled"), true);
-  const cycleEnabled = parseBoolean(values.get("loyalty_gifts_cycle_enabled"), true);
+  const cycleEnabled = parseBoolean(
+    values.get("loyalty_gifts_cycle_enabled"),
+    true,
+  );
   const steps = giftStepsFromSettings(values);
-  const purchaseCount = await tx.clientLoyaltyPurchase.count({ where: { clientId: input.clientId, reversedAt: null } });
+  const purchaseCount = await tx.clientLoyaltyPurchase.count({
+    where: { clientId: input.clientId, reversedAt: null },
+  });
   const absoluteSequence = purchaseCount + 1;
   const cycle = Math.floor((absoluteSequence - 1) / 7) + 1;
   const sequence = ((absoluteSequence - 1) % 7) + 1;
 
   const purchase = await tx.clientLoyaltyPurchase.create({
-    data: { clientId: input.clientId, bookingId: input.bookingId, sequence, cycle, qualifiedAt: now },
+    data: {
+      clientId: input.clientId,
+      bookingId: input.bookingId,
+      sequence,
+      cycle,
+      qualifiedAt: now,
+    },
   });
   const rewardCount = await tx.clientReward.count({
     where: { clientId: input.clientId, status: { not: "CANCELLED" } },
@@ -378,16 +497,28 @@ export async function qualifyLoyaltyPurchaseInTransaction(
     orderBy: [{ unlockedAt: "desc" }, { id: "desc" }],
     select: { unlockPaymentNumber: true, unlockedByBookingId: true },
   });
-  const legacyUnlockPurchase = lastReward && !lastReward.unlockPaymentNumber
-    ? await tx.clientLoyaltyPurchase.findUnique({
-        where: { bookingId: lastReward.unlockedByBookingId },
-        select: { cycle: true, sequence: true },
-      })
-    : null;
-  const lastUnlockPaymentNumber = lastReward?.unlockPaymentNumber
-    ?? (legacyUnlockPurchase ? ((legacyUnlockPurchase.cycle - 1) * 7) + legacyUnlockPurchase.sequence : 1);
-  const paymentsSinceLastGift = Math.max(0, absoluteSequence - lastUnlockPaymentNumber);
-  const cadence = resolveLoyaltyGiftCadence({ steps, rewardCount, paymentsSinceLastGift, cycleEnabled });
+  const legacyUnlockPurchase =
+    lastReward && !lastReward.unlockPaymentNumber
+      ? await tx.clientLoyaltyPurchase.findUnique({
+          where: { bookingId: lastReward.unlockedByBookingId },
+          select: { cycle: true, sequence: true },
+        })
+      : null;
+  const lastUnlockPaymentNumber =
+    lastReward?.unlockPaymentNumber ??
+    (legacyUnlockPurchase
+      ? (legacyUnlockPurchase.cycle - 1) * 7 + legacyUnlockPurchase.sequence
+      : 1);
+  const paymentsSinceLastGift = Math.max(
+    0,
+    absoluteSequence - lastUnlockPaymentNumber,
+  );
+  const cadence = resolveLoyaltyGiftCadence({
+    steps,
+    rewardCount,
+    paymentsSinceLastGift,
+    cycleEnabled,
+  });
   const gift = enabled ? cadence.nextGift : null;
 
   if (gift && cadence.shouldUnlock) {
@@ -424,7 +555,10 @@ export async function qualifyLoyaltyPurchaseInTransaction(
   return purchase;
 }
 
-export async function releaseBookingPromotionReservationsInTransaction(tx: LoyaltyTx, bookingId: string) {
+export async function releaseBookingPromotionReservationsInTransaction(
+  tx: LoyaltyTx,
+  bookingId: string,
+) {
   await tx.clientReward.updateMany({
     where: { usedBookingId: bookingId, status: "RESERVED" },
     data: { status: "AVAILABLE", usedBookingId: null, reservedAt: null },
@@ -442,7 +576,11 @@ export async function reverseBookingPromotionsForRefundInTransaction(
   const now = input.now ?? new Date();
   const reason = input.reason ?? "Remboursement intégral confirmé";
   await tx.clientLoyaltyPurchase.updateMany({
-    where: { bookingId: input.bookingId, clientId: input.clientId, reversedAt: null },
+    where: {
+      bookingId: input.bookingId,
+      clientId: input.clientId,
+      reversedAt: null,
+    },
     data: { reversedAt: now, reversalReason: reason },
   });
   await tx.clientReward.updateMany({
@@ -485,15 +623,23 @@ export async function reverseBookingPromotionsForRefundInTransaction(
     },
   });
   await tx.partnerReferral.updateMany({
-    where: { bookingId: input.bookingId, status: { in: ["DECLARED", "PAYMENT_CONFIRMED", "PAYABLE"] } },
+    where: {
+      bookingId: input.bookingId,
+      status: { in: ["DECLARED", "PAYMENT_CONFIRMED", "PAYABLE"] },
+    },
     data: { status: "REJECTED", rejectedAt: now, adminNote: reason },
   });
-  const paidReferral = await tx.partnerReferral.findFirst({ where: { bookingId: input.bookingId, status: "PAID" } });
+  const paidReferral = await tx.partnerReferral.findFirst({
+    where: { bookingId: input.bookingId, status: "PAID" },
+  });
   if (paidReferral) {
     await tx.partnerReferral.update({
       where: { id: paidReferral.id },
       data: {
-        adminNote: [paidReferral.adminNote, `${reason} : commission déjà versée, régularisation comptable requise.`]
+        adminNote: [
+          paidReferral.adminNote,
+          `${reason} : commission déjà versée, régularisation comptable requise.`,
+        ]
           .filter(Boolean)
           .join("\n"),
       },
@@ -510,21 +656,48 @@ export async function adjustPartnerCommissionForPartialRefundInTransaction(
     now?: Date;
   },
 ) {
-  const referral = await tx.partnerReferral.findUnique({ where: { bookingId: input.bookingId } });
+  const referral = await tx.partnerReferral.findUnique({
+    where: { bookingId: input.bookingId },
+  });
   if (!referral) return;
-  const eligibleBase = Math.max(0, referral.eligibleCourseAmount || referral.courseAmount);
-  const refundablePaymentAmount = Math.max(0, input.refundablePaymentAmount ?? eligibleBase);
-  const refundedShare = refundablePaymentAmount > 0
-    ? Math.min(1, Math.max(0, input.totalRefundedAmount) / refundablePaymentAmount)
-    : 1;
-  const refundedEligibleBase = Math.min(eligibleBase, Math.round(eligibleBase * refundedShare));
-  const remainingEligibleBase = Math.max(0, eligibleBase - refundedEligibleBase);
-  const adjustedCommission = Math.round((remainingEligibleBase * referral.commissionRate) / 100);
+  const eligibleBase = Math.max(
+    0,
+    referral.eligibleCourseAmount || referral.courseAmount,
+  );
+  const refundablePaymentAmount = Math.max(
+    0,
+    input.refundablePaymentAmount ?? eligibleBase,
+  );
+  const refundedShare =
+    refundablePaymentAmount > 0
+      ? Math.min(
+          1,
+          Math.max(0, input.totalRefundedAmount) / refundablePaymentAmount,
+        )
+      : 1;
+  const refundedEligibleBase = Math.min(
+    eligibleBase,
+    Math.round(eligibleBase * refundedShare),
+  );
+  const remainingEligibleBase = Math.max(
+    0,
+    eligibleBase - refundedEligibleBase,
+  );
+  const adjustedCommission = Math.round(
+    (remainingEligibleBase * referral.commissionRate) / 100,
+  );
   const note = `Remboursement partiel : base partenaire ramenée à ${remainingEligibleBase} FCFA, commission à ${adjustedCommission} FCFA.`;
   if (referral.status === "PAID") {
     await tx.partnerReferral.update({
       where: { id: referral.id },
-      data: { adminNote: [referral.adminNote, `${note} Régularisation comptable requise.`].filter(Boolean).join("\n") },
+      data: {
+        adminNote: [
+          referral.adminNote,
+          `${note} Régularisation comptable requise.`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
     });
     return;
   }
@@ -535,38 +708,70 @@ export async function adjustPartnerCommissionForPartialRefundInTransaction(
       eligibleCourseAmount: remainingEligibleBase,
       commissionAmount: adjustedCommission,
       adminNote: [referral.adminNote, note].filter(Boolean).join("\n"),
-      ...(adjustedCommission === 0 ? { status: "REJECTED" as const, rejectedAt: input.now ?? new Date() } : {}),
+      ...(adjustedCommission === 0
+        ? { status: "REJECTED" as const, rejectedAt: input.now ?? new Date() }
+        : {}),
     },
   });
 }
 
-export async function getClientLoyaltyOverview(clientId: string, now = new Date()) {
+export async function getClientLoyaltyOverview(
+  clientId: string,
+  now = new Date(),
+) {
   await db.clientReward.updateMany({
-    where: { clientId, status: { in: ["AVAILABLE", "RESERVED"] }, expiresAt: { lt: now } },
+    where: {
+      clientId,
+      status: { in: ["AVAILABLE", "RESERVED"] },
+      expiresAt: { lt: now },
+    },
     data: { status: "EXPIRED" },
   });
-  const [config, attribution, purchases, rewards, qualifiedPaymentCount, rewardCount] = await Promise.all([
+  const [
+    config,
+    attribution,
+    purchases,
+    rewards,
+    qualifiedPaymentCount,
+    rewardCount,
+  ] = await Promise.all([
     getLoyaltyProgramConfig(),
-    db.clientPartnerAttribution.findUnique({ where: { clientId }, include: { partnerProfile: true } }),
-    db.clientLoyaltyPurchase.findMany({ where: { clientId, reversedAt: null }, orderBy: { qualifiedAt: "desc" }, take: 14 }),
+    db.clientPartnerAttribution.findUnique({
+      where: { clientId },
+      include: { partnerProfile: true },
+    }),
+    db.clientLoyaltyPurchase.findMany({
+      where: { clientId, reversedAt: null },
+      orderBy: { qualifiedAt: "desc" },
+      take: 14,
+    }),
     db.clientReward.findMany({
       where: { clientId, status: { not: "CANCELLED" } },
       orderBy: { unlockedAt: "desc" },
       take: 14,
     }),
     db.clientLoyaltyPurchase.count({ where: { clientId, reversedAt: null } }),
-    db.clientReward.count({ where: { clientId, status: { not: "CANCELLED" } } }),
+    db.clientReward.count({
+      where: { clientId, status: { not: "CANCELLED" } },
+    }),
   ]);
   const lastReward = rewards[0];
-  const legacyUnlockPurchase = lastReward && !lastReward.unlockPaymentNumber
-    ? await db.clientLoyaltyPurchase.findUnique({
-        where: { bookingId: lastReward.unlockedByBookingId },
-        select: { cycle: true, sequence: true },
-      })
-    : null;
-  const lastUnlockPaymentNumber = lastReward?.unlockPaymentNumber
-    ?? (legacyUnlockPurchase ? ((legacyUnlockPurchase.cycle - 1) * 7) + legacyUnlockPurchase.sequence : 1);
-  const paymentsSinceLastGift = Math.max(0, qualifiedPaymentCount - lastUnlockPaymentNumber);
+  const legacyUnlockPurchase =
+    lastReward && !lastReward.unlockPaymentNumber
+      ? await db.clientLoyaltyPurchase.findUnique({
+          where: { bookingId: lastReward.unlockedByBookingId },
+          select: { cycle: true, sequence: true },
+        })
+      : null;
+  const lastUnlockPaymentNumber =
+    lastReward?.unlockPaymentNumber ??
+    (legacyUnlockPurchase
+      ? (legacyUnlockPurchase.cycle - 1) * 7 + legacyUnlockPurchase.sequence
+      : 1);
+  const paymentsSinceLastGift = Math.max(
+    0,
+    qualifiedPaymentCount - lastUnlockPaymentNumber,
+  );
   const cadence = resolveLoyaltyGiftCadence({
     steps: config.steps,
     rewardCount,
@@ -583,7 +788,9 @@ export async function getClientLoyaltyOverview(clientId: string, now = new Date(
     attribution,
     purchases,
     rewards,
-    cycle: cadence.programCompleted ? Math.max(1, cadence.nextRewardCycle - 1) : cadence.nextRewardCycle,
+    cycle: cadence.programCompleted
+      ? Math.max(1, cadence.nextRewardCycle - 1)
+      : cadence.nextRewardCycle,
     currentStep: roadStep,
     qualifiedPaymentCount,
     completedGiftsInCycle: cadence.completedGiftsInCycle,
@@ -591,7 +798,10 @@ export async function getClientLoyaltyOverview(clientId: string, now = new Date(
     paymentsUntilNextGift: cadence.paymentsUntilNextGift,
     nextGift: cadence.nextGift,
     programCompleted: cadence.programCompleted,
-    activeReward: rewards.find((reward) => reward.status === "AVAILABLE" && reward.expiresAt >= now) ?? null,
+    activeReward:
+      rewards.find(
+        (reward) => reward.status === "AVAILABLE" && reward.expiresAt >= now,
+      ) ?? null,
   };
 }
 
@@ -619,13 +829,17 @@ function parseGiftSteps(value?: string) {
         validityDays: clampInt(row?.validityDays, 7, 7, 14),
         paymentGap: clampInt(
           row?.paymentGap,
-          DEFAULT_LOYALTY_GIFT_STEPS.find((step) => step.milestone === milestone)?.paymentGap ?? 1,
+          DEFAULT_LOYALTY_GIFT_STEPS.find(
+            (step) => step.milestone === milestone,
+          )?.paymentGap ?? 1,
           1,
           3,
         ),
       });
     }
-    return DEFAULT_LOYALTY_GIFT_STEPS.map((fallback) => byMilestone.get(fallback.milestone) ?? fallback);
+    return DEFAULT_LOYALTY_GIFT_STEPS.map(
+      (fallback) => byMilestone.get(fallback.milestone) ?? fallback,
+    );
   } catch {
     return DEFAULT_LOYALTY_GIFT_STEPS;
   }
@@ -635,24 +849,48 @@ function giftStepsFromSettings(values: Map<string, string>) {
   const jsonSteps = parseGiftSteps(values.get("loyalty_gift_steps_json"));
   return jsonSteps.map((step) => ({
     milestone: step.milestone,
-    discountRate: clampInt(values.get(`loyalty_gift_${step.milestone}_rate`), step.discountRate, 8, 15),
-    validityDays: clampInt(values.get(`loyalty_gift_${step.milestone}_days`), step.validityDays, 7, 14),
-    paymentGap: clampInt(values.get(`loyalty_gift_${step.milestone}_gap_payments`), step.paymentGap, 1, 3),
+    discountRate: clampInt(
+      values.get(`loyalty_gift_${step.milestone}_rate`),
+      step.discountRate,
+      8,
+      15,
+    ),
+    validityDays: clampInt(
+      values.get(`loyalty_gift_${step.milestone}_days`),
+      step.validityDays,
+      7,
+      14,
+    ),
+    paymentGap: clampInt(
+      values.get(`loyalty_gift_${step.milestone}_gap_payments`),
+      step.paymentGap,
+      1,
+      3,
+    ),
   }));
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean) {
   if (value === undefined) return fallback;
-  return !["0", "false", "no", "off", "disabled"].includes(value.trim().toLowerCase());
+  return !["0", "false", "no", "off", "disabled"].includes(
+    value.trim().toLowerCase(),
+  );
 }
 
 function clampInt(value: unknown, fallback: number, min: number, max: number) {
   const number = Number(value);
-  return Number.isFinite(number) ? Math.max(min, Math.min(max, Math.round(number))) : fallback;
+  return Number.isFinite(number)
+    ? Math.max(min, Math.min(max, Math.round(number)))
+    : fallback;
 }
 
 function namesAreCompatible(left: string, right: string) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
   const a = normalize(left);
   const b = normalize(right);
   return a === b || a.includes(b) || b.includes(a);
@@ -683,7 +921,8 @@ async function assertPartnerIsNotClient(
       select: { promoterPhone: true, status: true },
     }),
   ]);
-  if (!partner || partner.status !== "ACTIVE") throw new Error("PARTNER_NOT_VERIFIED");
+  if (!partner || partner.status !== "ACTIVE")
+    throw new Error("PARTNER_NOT_VERIFIED");
   const clientPhone = phoneIdentityKey(user?.phoneNormalized ?? user?.phone);
   const partnerPhone = phoneIdentityKey(partner.promoterPhone);
   if (clientPhone && partnerPhone && clientPhone === partnerPhone) {

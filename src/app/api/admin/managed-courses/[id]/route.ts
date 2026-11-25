@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api";
 import { hasAdminPermission } from "@/lib/admin-permissions";
+import { setManagedDossierPartner } from "@/lib/managed-partners";
 import {
   cancelManagedOffer,
   cancelManagedSessions,
@@ -27,10 +28,30 @@ const schema = z.discriminatedUnion("action", [
     .object({
       action: z.literal("OFFER"),
       teacherId: z.string().min(1).max(100),
-      commissionPercent: z.number().int().min(20).max(30),
+      commissionPercent: z.number().min(0).max(100).multipleOf(0.01).optional(),
+      teacherSharePercent: z
+        .number()
+        .min(0)
+        .max(100)
+        .multipleOf(0.01)
+        .optional(),
     })
     .strict(),
   z.object({ action: z.literal("CONTRACT_LINK") }).strict(),
+  z
+    .object({
+      action: z.literal("SET_PARTNER"),
+      partnerId: z.string().max(100),
+      partnerRatePercent: z.number().min(0).max(100).multipleOf(0.01),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("REPRICE_TOTAL"),
+      totalPrice: z.number().int().min(1).max(24_000_000),
+      note: z.string().trim().min(10).max(500),
+    })
+    .strict(),
   z
     .object({
       action: z.literal("VALIDATE"),
@@ -122,7 +143,7 @@ export async function POST(
     );
     if (!admin) throw new ManagedCourseError("Accès refusé.", 403);
     if (
-      body.action === "REPRICE" &&
+      ["REPRICE", "REPRICE_TOTAL", "SET_PARTNER"].includes(body.action) &&
       !hasAdminPermission(admin.permissions, "FINANCE_MANAGE")
     )
       throw new ManagedCourseError(
@@ -138,12 +159,39 @@ export async function POST(
         403,
       );
     const { id } = await context.params;
+    if (
+      body.action === "OFFER" &&
+      (body.teacherSharePercent === undefined) ===
+        (body.commissionPercent === undefined)
+    )
+      throw new ManagedCourseError("Indiquez une seule part professeur.", 400);
+    if (body.action === "SET_PARTNER")
+      return managedResponse(
+        await setManagedDossierPartner(
+          id,
+          body.partnerId || null,
+          body.partnerRatePercent,
+          admin.id,
+        ),
+      );
+    if (body.action === "REPRICE_TOTAL")
+      return managedResponse(
+        await reviseManagedPrice(
+          id,
+          body.totalPrice,
+          body.note,
+          admin.id,
+          true,
+        ),
+      );
     const result =
       body.action === "OFFER"
         ? await offerManagedDossier(
             id,
             body.teacherId,
-            body.commissionPercent,
+            body.teacherSharePercent === undefined
+              ? body.commissionPercent!
+              : 100 - body.teacherSharePercent,
             admin.id,
           )
         : body.action === "CONTRACT_LINK"

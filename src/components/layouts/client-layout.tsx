@@ -2,11 +2,30 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FocusEvent, type FormEvent, type MouseEvent, type PointerEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  LayoutDashboard, Search, BookOpen, WalletCards,
-  LifeBuoy, User, LogOut, Menu, X, Bell,
-  ArrowRight, WifiOff, Gift
+  type FocusEvent,
+  type FormEvent,
+  type MouseEvent,
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  LayoutDashboard,
+  Search,
+  BookOpen,
+  WalletCards,
+  LifeBuoy,
+  User,
+  LogOut,
+  Menu,
+  X,
+  Bell,
+  ArrowRight,
+  WifiOff,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -14,6 +33,7 @@ import { ImportantActionConfirm } from "@/components/shared/important-action-con
 import { WebPushRealtime } from "@/components/shared/web-push-realtime";
 import { cn } from "@/lib/utils";
 import { secureSignOut } from "@/lib/client-sign-out";
+import { CUSTOMER_PROMOTIONS_CLOSED } from "@/lib/customer-promotions";
 
 type ClientNavItem = {
   href: string;
@@ -28,7 +48,26 @@ const primaryNavItem: ClientNavItem = {
   label: "Réserver un cours",
   icon: Search,
 };
-const marketplacePrimaryNavItem: ClientNavItem = { href: "/client/trouver", label: "Trouver un professeur", icon: Search };
+const marketplacePrimaryNavItem: ClientNavItem = {
+  href: "/client/trouver",
+  label: "Trouver un professeur",
+  icon: Search,
+};
+const managedPrimaryNavItem: ClientNavItem = {
+  href: "/demande-cours",
+  label: "Demander un cours",
+  icon: Search,
+};
+const managedNavItems: ClientNavItem[] = [
+  { href: "/client/accompagnement", label: "Mes cours", icon: BookOpen },
+  { href: "/client/reservations", label: "Anciens cours", icon: WalletCards },
+];
+const managedMobileNavItems: ClientNavItem[] = [
+  { href: "/client/accompagnement", label: "Mes cours", icon: BookOpen },
+  { ...managedPrimaryNavItem, label: "Demander" },
+  { href: "/client/profil", label: "Compte", icon: User },
+  { href: "/client/service-client", label: "Aide", icon: LifeBuoy },
+];
 const marketplaceNavItems: ClientNavItem[] = [
   { href: "/client/demandes", label: "Mes demandes", icon: BookOpen },
   { href: "/client/historique", label: "Historique", icon: WalletCards },
@@ -36,20 +75,42 @@ const marketplaceNavItems: ClientNavItem[] = [
 
 const navItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
-  { href: "/client/cours", label: "Mes cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
+  {
+    href: "/client/cours",
+    label: "Mes cours",
+    icon: BookOpen,
+    matchPrefixes: ["/client/cours", "/client/reservations"],
+  },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
-  { href: "/client/cadeaux", label: "Cadeaux", icon: Gift },
+  ...(!CUSTOMER_PROMOTIONS_CLOSED
+    ? [{ href: "/client/cadeaux", label: "Cadeaux", icon: Gift }]
+    : []),
 ];
 
 const accountNavItems: ClientNavItem[] = [
-  { href: "/client/service-client", label: "Aide", icon: LifeBuoy, matchPrefixes: ["/client/service-client", "/client/support"] },
-  { href: "/client/profil", label: "Mon compte", icon: User, matchPrefixes: ["/client/profil", "/client/parametres", "/client/avis"] },
+  {
+    href: "/client/service-client",
+    label: "Aide",
+    icon: LifeBuoy,
+    matchPrefixes: ["/client/service-client", "/client/support"],
+  },
+  {
+    href: "/client/profil",
+    label: "Mon compte",
+    icon: User,
+    matchPrefixes: ["/client/profil", "/client/parametres", "/client/avis"],
+  },
 ];
 
 const mobileNavItems: ClientNavItem[] = [
   { href: "/client", label: "Accueil", icon: LayoutDashboard, exact: true },
   { href: "/client/rechercher", label: "Réserver", icon: Search },
-  { href: "/client/cours", label: "Cours", icon: BookOpen, matchPrefixes: ["/client/cours", "/client/reservations"] },
+  {
+    href: "/client/cours",
+    label: "Cours",
+    icon: BookOpen,
+    matchPrefixes: ["/client/cours", "/client/reservations"],
+  },
   { href: "/client/paiements", label: "Paiements", icon: WalletCards },
 ];
 const marketplaceMobileNavItems: ClientNavItem[] = [
@@ -61,7 +122,10 @@ const marketplaceMobileNavItems: ClientNavItem[] = [
 
 const quickSearchItems = [
   { label: "Maths Cocody", href: "/client/rechercher?q=math&commune=Cocody" },
-  { label: "Anglais ligne", href: "/client/rechercher?q=anglais&format=ONLINE" },
+  {
+    label: "Anglais ligne",
+    href: "/client/rechercher?q=anglais&format=ONLINE",
+  },
   { label: "Concours", href: "/client/rechercher?q=concours" },
   { label: "Adultes", href: "/client/rechercher?q=professionnel" },
 ];
@@ -78,25 +142,42 @@ const CLIENT_NAV_PREFETCH = false;
 const CLIENT_NAV_FEEDBACK_DELAY_MS = 18;
 const CLIENT_NAV_FEEDBACK_TIMEOUT_MS = 340;
 
-export function ClientLayout({ children, userName, notificationCount: initialNotificationCount = 0, marketplaceV2 = false }: { children: React.ReactNode; userName?: string | null; notificationCount?: number; marketplaceV2?: boolean }) {
+export function ClientLayout({
+  children,
+  userName,
+  notificationCount: initialNotificationCount = 0,
+  marketplaceV2 = false,
+  managedMode = false,
+}: {
+  children: React.ReactNode;
+  userName?: string | null;
+  notificationCount?: number;
+  marketplaceV2?: boolean;
+  managedMode?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [navigating, setNavigating] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(initialNotificationCount);
+  const [notificationCount, setNotificationCount] = useState(
+    initialNotificationCount,
+  );
   const [isOffline, setIsOffline] = useState(false);
   const navigationResetRef = useRef<number | null>(null);
   const navigationDelayRef = useRef<number | null>(null);
-  const navigationIntentRef = useRef<{ target: string; timestamp: number } | null>(null);
+  const navigationIntentRef = useRef<{
+    target: string;
+    timestamp: number;
+  } | null>(null);
   const prefetchedRoutesRef = useRef<Set<string>>(new Set());
   const searchKey = searchParams.toString();
   const currentSection = getCurrentSection(pathname);
   const mobileSectionLabel = currentSection.mobileLabel ?? currentSection.label;
   const hideMobileBottomNav = Boolean(
-    pathname?.startsWith("/client/reserver")
-    || /^\/client\/reservations\/[^/]+/.test(pathname ?? "")
+    pathname?.startsWith("/client/reserver") ||
+      /^\/client\/reservations\/[^/]+/.test(pathname ?? ""),
   );
   const shouldRenderMobileBottomNav = !hideMobileBottomNav && !open;
 
@@ -107,15 +188,20 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
 
   const isActive = (item: ClientNavItem) => {
     if (item.exact) return pathname === item.href;
-    return (item.matchPrefixes ?? [item.href]).some((prefix) => pathname?.startsWith(prefix));
+    return (item.matchPrefixes ?? [item.href]).some((prefix) =>
+      pathname?.startsWith(prefix),
+    );
   };
 
-  const prefetchClientRoute = useCallback((href: string) => {
-    if (!href.startsWith("/client")) return;
-    if (prefetchedRoutesRef.current.has(href)) return;
-    prefetchedRoutesRef.current.add(href);
-    router.prefetch(href);
-  }, [router]);
+  const prefetchClientRoute = useCallback(
+    (href: string) => {
+      if (!href.startsWith("/client")) return;
+      if (prefetchedRoutesRef.current.has(href)) return;
+      prefetchedRoutesRef.current.add(href);
+      router.prefetch(href);
+    },
+    [router],
+  );
 
   useEffect(() => {
     const closeTimer = window.setTimeout(closeMobileSurfaces, 0);
@@ -192,11 +278,20 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
 
   useEffect(() => {
     const updateNotificationCount = (event: Event) => {
-      const count = Number((event as CustomEvent<{ count?: number }>).detail?.count ?? 0);
+      const count = Number(
+        (event as CustomEvent<{ count?: number }>).detail?.count ?? 0,
+      );
       setNotificationCount(Number.isFinite(count) ? Math.max(0, count) : 0);
     };
-    window.addEventListener("competence:notification-count", updateNotificationCount);
-    return () => window.removeEventListener("competence:notification-count", updateNotificationCount);
+    window.addEventListener(
+      "competence:notification-count",
+      updateNotificationCount,
+    );
+    return () =>
+      window.removeEventListener(
+        "competence:notification-count",
+        updateNotificationCount,
+      );
   }, []);
 
   useEffect(() => {
@@ -229,8 +324,15 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     }, CLIENT_NAV_FEEDBACK_TIMEOUT_MS);
   }
 
-  function getClientNavigationTarget(event: MouseEvent<HTMLElement> | PointerEvent<HTMLElement> | FocusEvent<HTMLElement>) {
-    const hasModifier = "metaKey" in event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
+  function getClientNavigationTarget(
+    event:
+      | MouseEvent<HTMLElement>
+      | PointerEvent<HTMLElement>
+      | FocusEvent<HTMLElement>,
+  ) {
+    const hasModifier =
+      "metaKey" in event &&
+      (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
     if (event.defaultPrevented || hasModifier) {
       return null;
     }
@@ -245,7 +347,10 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     }
     try {
       const nextUrl = new URL(rawHref, window.location.origin);
-      if (nextUrl.origin !== window.location.origin || !nextUrl.pathname.startsWith("/client")) {
+      if (
+        nextUrl.origin !== window.location.origin ||
+        !nextUrl.pathname.startsWith("/client")
+      ) {
         return null;
       }
       return `${nextUrl.pathname}${nextUrl.search}`;
@@ -266,7 +371,11 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     if (nextPath !== currentPath) {
       const now = window.performance.now();
       const previousIntent = navigationIntentRef.current;
-      if (source === "click" && previousIntent?.target === nextPath && now - previousIntent.timestamp < 700) {
+      if (
+        source === "click" &&
+        previousIntent?.target === nextPath &&
+        now - previousIntent.timestamp < 700
+      ) {
         return;
       }
       navigationIntentRef.current = { target: nextPath, timestamp: now };
@@ -274,7 +383,9 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     }
   }
 
-  function maybePrefetchClientNavigation(event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>) {
+  function maybePrefetchClientNavigation(
+    event: MouseEvent<HTMLElement> | FocusEvent<HTMLElement>,
+  ) {
     const nextPath = getClientNavigationTarget(event);
     if (nextPath) prefetchClientRoute(nextPath);
   }
@@ -300,10 +411,15 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const query = String(formData.get("q") ?? "").trim();
-    const nextPath = query ? `/client/rechercher?q=${encodeURIComponent(query)}` : "/client/rechercher";
+    const nextPath = query
+      ? `/client/rechercher?q=${encodeURIComponent(query)}`
+      : "/client/rechercher";
     const currentPath = `${window.location.pathname}${window.location.search}`;
     if (nextPath !== currentPath) {
-      navigationIntentRef.current = { target: nextPath, timestamp: window.performance.now() };
+      navigationIntentRef.current = {
+        target: nextPath,
+        timestamp: window.performance.now(),
+      };
       startNavigationFeedback();
     }
     router.push(nextPath);
@@ -332,7 +448,10 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
         Aller au contenu
       </a>
       {/* Top bar (mobile + desktop) */}
-      <header data-client-topbar className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6">
+      <header
+        data-client-topbar
+        className="app-topbar client-app-topbar fixed inset-x-0 top-0 z-[70] flex min-h-16 items-center justify-between border-b border-[#E6EAF3] bg-white px-3 py-2 sm:px-4 lg:px-6"
+      >
         <div className="flex min-w-0 items-center gap-2 min-[380px]:gap-3">
           <button
             className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] bg-white text-[#111827] transition hover:border-[#111B4D] hover:bg-white lg:hidden"
@@ -345,13 +464,22 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link href="/client" prefetch={CLIENT_NAV_PREFETCH} onClick={closeMobileSurfaces} className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5">
+          <Link
+            href="/client"
+            prefetch={CLIENT_NAV_PREFETCH}
+            onClick={closeMobileSurfaces}
+            className="flex min-h-11 shrink-0 items-center rounded-lg bg-white px-1 transition hover:bg-white lg:px-1.5"
+          >
             <BrandLogo size="sm" compact priority className="lg:hidden" />
             <BrandLogo size="sm" priority className="hidden lg:inline-flex" />
           </Link>
           <div className="flex min-w-0 flex-col lg:hidden">
-            <span className="truncate text-sm font-semibold leading-4 text-[#111827]">{mobileSectionLabel}</span>
-            <span className="hidden truncate text-[11px] font-medium leading-4 text-[#64748B] min-[360px]:block">{currentSection.hint}</span>
+            <span className="truncate text-sm font-semibold leading-4 text-[#111827]">
+              {mobileSectionLabel}
+            </span>
+            <span className="hidden truncate text-[11px] font-medium leading-4 text-[#64748B] min-[360px]:block">
+              {currentSection.hint}
+            </span>
           </div>
           <span className="hidden rounded-lg border border-[#E3E8F2] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#111B4D] lg:inline-flex">
             {currentSection.label}
@@ -387,7 +515,11 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
             type="button"
             variant="ghost"
             className="h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white lg:hidden"
-            aria-label={mobileSearchOpen ? "Fermer la recherche" : "Rechercher un professeur"}
+            aria-label={
+              mobileSearchOpen
+                ? "Fermer la recherche"
+                : "Rechercher un professeur"
+            }
             aria-expanded={mobileSearchOpen}
             aria-controls="client-mobile-search-panel"
             onClick={() => {
@@ -395,10 +527,23 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
               setMobileSearchOpen((value) => !value);
             }}
           >
-            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            {mobileSearchOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Search className="h-5 w-5" />
+            )}
           </Button>
-          <Button asChild variant="ghost" className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white" aria-label="Notifications client">
-            <Link href="/client/notifications" prefetch={CLIENT_NAV_PREFETCH} onClick={closeMobileSurfaces}>
+          <Button
+            asChild
+            variant="ghost"
+            className="relative h-11 w-11 rounded-lg text-[#111B4D] hover:bg-white"
+            aria-label="Notifications client"
+          >
+            <Link
+              href="/client/notifications"
+              prefetch={CLIENT_NAV_PREFETCH}
+              onClick={closeMobileSurfaces}
+            >
               <Bell className="h-5 w-5" />
               {!!notificationCount && (
                 <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111B4D] px-1 text-xs font-semibold text-white">
@@ -412,7 +557,9 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
             description="Avant de vous déconnecter, vérifiez que vos paiements, confirmations de cours, demandes de report, litiges ou remboursements sont bien terminés."
             badge="Déconnexion"
             notices={[
-              notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
+              notificationCount > 0
+                ? `${notificationCount} notification(s) client restent à consulter.`
+                : "Aucune information sensible ne sera validée automatiquement après la sortie.",
               "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
               "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
             ]}
@@ -438,7 +585,10 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
           style={{ top: "var(--app-topbar-height, 4rem)" }}
           aria-hidden="true"
         >
-          <div data-client-route-progress-bar className="h-full w-2/3 rounded-r-full bg-[#111B4D]" />
+          <div
+            data-client-route-progress-bar
+            className="h-full w-2/3 rounded-r-full bg-[#111B4D]"
+          />
         </div>
       )}
       {isOffline && (
@@ -451,12 +601,17 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
         >
           <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="min-w-0">
-            Connexion interrompue. Les actions seront reprises au retour du réseau.
+            Connexion interrompue. Les actions seront reprises au retour du
+            réseau.
           </span>
         </div>
       )}
       {mobileSearchOpen && !open && (
-        <div id="client-mobile-search-panel" data-client-mobile-search-panel className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden">
+        <div
+          id="client-mobile-search-panel"
+          data-client-mobile-search-panel
+          className="app-topbar-offset fixed inset-x-0 z-30 border-b border-[#E6EAF3] bg-white px-3 py-3 lg:hidden"
+        >
           <form
             key={`mobile-${searchParams.get("q") ?? "empty-search"}`}
             onSubmit={submitQuickSearch}
@@ -483,7 +638,10 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
               OK
             </button>
           </form>
-          <div className="mt-2 grid grid-cols-2 gap-2 min-[430px]:grid-cols-4" aria-label="Recherches rapides">
+          <div
+            className="mt-2 grid grid-cols-2 gap-2 min-[430px]:grid-cols-4"
+            aria-label="Recherches rapides"
+          >
             {quickSearchItems.map((item) => (
               <Link
                 key={item.href}
@@ -502,8 +660,17 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
 
       <div className="flex flex-1">
         {/* Sidebar desktop */}
-        <aside data-client-sidebar className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block">
-          <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} marketplaceV2={marketplaceV2} />
+        <aside
+          data-client-sidebar
+          className="app-sidebar-below-topbar fixed left-0 z-30 hidden w-72 shrink-0 overflow-hidden border-r border-[#E6EAF3] bg-white lg:block"
+        >
+          <SidebarContent
+            userName={userName}
+            isActive={isActive}
+            notificationCount={notificationCount}
+            marketplaceV2={marketplaceV2}
+            managedMode={managedMode}
+          />
         </aside>
 
         {/* Sidebar mobile (drawer) */}
@@ -529,16 +696,26 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
             >
               <div className="flex min-h-14 items-center justify-between border-b border-[#E6EAF3] px-4 py-2">
                 <BrandLogo size="sm" />
-                <button onClick={closeMobileSurfaces} className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white" aria-label="Fermer le menu">
+                <button
+                  onClick={closeMobileSurfaces}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#E1E7F2] transition hover:border-[#111B4D] hover:bg-white"
+                  aria-label="Fermer le menu"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="border-b border-[#E6EAF3] bg-white px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">Vous êtes dans</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#64748B]">
+                  Vous êtes dans
+                </p>
                 <div className="mt-1 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-base font-semibold leading-5 text-[#111827]">{currentSection.label}</p>
-                    <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">{currentSection.hint}</p>
+                    <p className="truncate text-base font-semibold leading-5 text-[#111827]">
+                      {currentSection.label}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs font-medium text-[#64748B]">
+                      {currentSection.hint}
+                    </p>
                   </div>
                   {!!notificationCount && (
                     <Link
@@ -552,7 +729,15 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
                   )}
                 </div>
               </div>
-              <SidebarContent userName={userName} isActive={isActive} notificationCount={notificationCount} onNavigate={closeMobileSurfaces} compactAccount marketplaceV2={marketplaceV2} />
+              <SidebarContent
+                userName={userName}
+                isActive={isActive}
+                notificationCount={notificationCount}
+                onNavigate={closeMobileSurfaces}
+                compactAccount
+                marketplaceV2={marketplaceV2}
+                managedMode={managedMode}
+              />
             </aside>
           </div>
         )}
@@ -562,18 +747,26 @@ export function ClientLayout({ children, userName, notificationCount: initialNot
           data-client-main
           className={cn(
             "min-w-0 flex-1 overflow-x-hidden lg:ml-72 lg:pb-0",
-            hideMobileBottomNav
-              ? "pb-8"
-              : "client-main-with-mobile-nav pb-40"
+            hideMobileBottomNav ? "pb-8" : "client-main-with-mobile-nav pb-40",
           )}
         >
-          <div id="client-main-content" tabIndex={-1} data-client-content className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6">
+          <div
+            id="client-main-content"
+            tabIndex={-1}
+            data-client-content
+            className="client-content mx-auto w-full max-w-[86rem] px-3 py-4 min-[380px]:px-4 sm:px-5 lg:px-7 lg:py-6"
+          >
             {children}
           </div>
         </main>
       </div>
       {shouldRenderMobileBottomNav && (
-        <MobileBottomNav isActive={isActive} onNavigate={closeMobileSurfaces} marketplaceV2={marketplaceV2} />
+        <MobileBottomNav
+          isActive={isActive}
+          onNavigate={closeMobileSurfaces}
+          marketplaceV2={marketplaceV2}
+          managedMode={managedMode}
+        />
       )}
     </div>
   );
@@ -586,6 +779,7 @@ function SidebarContent({
   notificationCount = 0,
   compactAccount = false,
   marketplaceV2 = false,
+  managedMode = false,
 }: {
   userName?: string | null;
   isActive: (item: ClientNavItem) => boolean;
@@ -593,12 +787,21 @@ function SidebarContent({
   notificationCount?: number;
   compactAccount?: boolean;
   marketplaceV2?: boolean;
+  managedMode?: boolean;
 }) {
-  const selectedPrimaryNavItem = marketplaceV2 ? marketplacePrimaryNavItem : primaryNavItem;
+  const selectedPrimaryNavItem = managedMode
+    ? managedPrimaryNavItem
+    : marketplaceV2
+      ? marketplacePrimaryNavItem
+      : primaryNavItem;
   const primaryActive = isActive(selectedPrimaryNavItem);
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav data-client-sidebar-nav className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation principale client">
+      <nav
+        data-client-sidebar-nav
+        className="client-sidebar-main-nav scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-3"
+        aria-label="Navigation principale client"
+      >
         <p className="px-3 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">
           Espace client
         </p>
@@ -617,7 +820,12 @@ function SidebarContent({
           </span>
           <ArrowRight className="h-4 w-4" />
         </Link>
-        {(marketplaceV2 ? marketplaceNavItems : navItems).map((item) => {
+        {(managedMode
+          ? managedNavItems
+          : marketplaceV2
+            ? marketplaceNavItems
+            : navItems
+        ).map((item) => {
           const active = isActive(item);
           return (
             <Link
@@ -630,7 +838,9 @@ function SidebarContent({
               data-client-sidebar-link
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
+                active
+                  ? "bg-[#111B4D] text-white"
+                  : "bg-white text-[#475569] hover:text-[#111B4D]",
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -652,7 +862,9 @@ function SidebarContent({
               data-client-sidebar-link
               className={cn(
                 "flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                active ? "bg-[#111B4D] text-white" : "bg-white text-[#475569] hover:text-[#111B4D]"
+                active
+                  ? "bg-[#111B4D] text-white"
+                  : "bg-white text-[#475569] hover:text-[#111B4D]",
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -661,22 +873,34 @@ function SidebarContent({
           );
         })}
       </nav>
-      <div data-client-sidebar-account className={cn("client-sidebar-account shrink-0 border-t border-[#E6EAF3]", compactAccount ? "p-2" : "p-2.5")}>
+      <div
+        data-client-sidebar-account
+        className={cn(
+          "client-sidebar-account shrink-0 border-t border-[#E6EAF3]",
+          compactAccount ? "p-2" : "p-2.5",
+        )}
+      >
         <div className="bg-white">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111B4D] text-sm font-semibold text-white">
               {getInitials(userName ?? "Client")}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[#111827]">{userName ?? "Client"}</p>
-              <p className="truncate text-xs font-medium text-[#64748B]">Compte client</p>
+              <p className="truncate text-sm font-semibold text-[#111827]">
+                {userName ?? "Client"}
+              </p>
+              <p className="truncate text-xs font-medium text-[#64748B]">
+                Compte client
+              </p>
             </div>
             <ImportantActionConfirm
               title="Quitter l'espace client ?"
               description="Avant de vous déconnecter, vérifiez que vos paiements, confirmations de cours, demandes de report, litiges ou remboursements sont bien terminés."
               badge="Déconnexion"
               notices={[
-                notificationCount > 0 ? `${notificationCount} notification(s) client restent à consulter.` : "Aucune information sensible ne sera validée automatiquement après la sortie.",
+                notificationCount > 0
+                  ? `${notificationCount} notification(s) client restent à consulter.`
+                  : "Aucune information sensible ne sera validée automatiquement après la sortie.",
                 "Une réservation non payée, une annulation ou un remboursement incomplet devra être repris à la prochaine connexion.",
                 "Restez sur la page si vous devez encore confirmer un cours, payer via Jèko ou renseigner un numéro de remboursement.",
               ]}
@@ -723,10 +947,12 @@ function MobileBottomNav({
   isActive,
   onNavigate,
   marketplaceV2 = false,
+  managedMode = false,
 }: {
   isActive: (item: ClientNavItem) => boolean;
   onNavigate: () => void;
   marketplaceV2?: boolean;
+  managedMode?: boolean;
 }) {
   return (
     <nav
@@ -736,7 +962,12 @@ function MobileBottomNav({
       aria-label="Navigation client mobile"
     >
       <div className="grid grid-cols-4 gap-1">
-        {(marketplaceV2 ? marketplaceMobileNavItems : mobileNavItems).map((item) => {
+        {(managedMode
+          ? managedMobileNavItems
+          : marketplaceV2
+            ? marketplaceMobileNavItems
+            : mobileNavItems
+        ).map((item) => {
           const active = isActive(item);
           return (
             <Link
@@ -746,7 +977,9 @@ function MobileBottomNav({
               onClick={onNavigate}
               className={cn(
                 "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-[0.64rem] font-semibold transition-colors min-[390px]:px-1 min-[390px]:text-[0.7rem]",
-                active ? "bg-[#111B4D] text-white" : "bg-white text-[#64748B] hover:text-[#111B4D]"
+                active
+                  ? "bg-[#111B4D] text-white"
+                  : "bg-white text-[#64748B] hover:text-[#111B4D]",
               )}
               aria-current={active ? "page" : undefined}
               data-active={active ? "true" : "false"}
@@ -764,29 +997,44 @@ function MobileBottomNav({
 }
 
 function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "C";
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "C"
+  );
 }
 
 function getCurrentSection(pathname: string | null) {
+  if (pathname?.startsWith("/client/accompagnement"))
+    return { label: "Mes cours", hint: "Séances et confirmations" };
   if (!pathname || pathname === "/client") {
-    return { label: "Tableau de bord", mobileLabel: "Accueil", hint: "Suivi des cours" };
+    return {
+      label: "Tableau de bord",
+      mobileLabel: "Accueil",
+      hint: "Suivi des cours",
+    };
   }
   if (pathname.startsWith("/client/reserver")) {
     return { label: "Réserver", hint: "Parcours sécurisé" };
   }
-  if (pathname.startsWith("/client/trouver")) return { label: "Trouver", hint: "Professeurs disponibles" };
-  if (pathname.startsWith("/client/demandes")) return { label: "Mes demandes", hint: "Suivi de vos cours" };
-  if (pathname.startsWith("/client/historique")) return { label: "Historique", hint: "Cours et demandes passés" };
+  if (pathname.startsWith("/client/trouver"))
+    return { label: "Trouver", hint: "Professeurs disponibles" };
+  if (pathname.startsWith("/client/demandes"))
+    return { label: "Mes demandes", hint: "Suivi de vos cours" };
+  if (pathname.startsWith("/client/historique"))
+    return { label: "Historique", hint: "Cours et demandes passés" };
   if (pathname.startsWith("/client/rechercher")) {
     return { label: "Professeurs", hint: "Recherche rapide" };
   }
   if (pathname.startsWith("/client/reservations")) {
-    return { label: "Réservations", mobileLabel: "Dossiers", hint: "Dossiers et paiements" };
+    return {
+      label: "Réservations",
+      mobileLabel: "Dossiers",
+      hint: "Dossiers et paiements",
+    };
   }
   if (pathname.startsWith("/client/cours")) {
     return { label: "Cours", hint: "Séances à suivre" };
@@ -801,13 +1049,24 @@ function getCurrentSection(pathname: string | null) {
     return { label: "Partenariat", hint: "Gagnez 10 %" };
   }
   if (pathname.startsWith("/client/notifications")) {
-    return { label: "Notifications", mobileLabel: "Alertes", hint: "Actions importantes" };
+    return {
+      label: "Notifications",
+      mobileLabel: "Alertes",
+      hint: "Actions importantes",
+    };
   }
   if (pathname.startsWith("/client/avis")) {
     return { label: "Avis", hint: "Qualité des cours" };
   }
-  if (pathname.startsWith("/client/service-client") || pathname.startsWith("/client/support")) {
-    return { label: "Service client", mobileLabel: "Aide", hint: "Aide et litiges" };
+  if (
+    pathname.startsWith("/client/service-client") ||
+    pathname.startsWith("/client/support")
+  ) {
+    return {
+      label: "Service client",
+      mobileLabel: "Aide",
+      hint: "Aide et litiges",
+    };
   }
   if (pathname.startsWith("/client/profil")) {
     return { label: "Profil", hint: "Coordonnées client" };
