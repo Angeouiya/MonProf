@@ -1,0 +1,47 @@
+name: Compétence isolated cloud 100k
+on:
+  push:
+    branches: [codex/cloud-capacity-100k]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: competence-cloud-capacity
+  cancel-in-progress: false
+jobs:
+  cloud-capacity:
+    if: github.repository == 'Angeouiya/MonProf' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      DATABASE_URL: postgresql://not-used:fake@127.0.0.1:1/postgres?schema=competence
+      DIRECT_URL: postgresql://not-used:fake@127.0.0.1:1/postgres?schema=competence
+      NEXTAUTH_URL: http://127.0.0.1:3334
+      NEXTAUTH_SECRET: synthetic-build-only-never-a-production-secret
+      MANAGED_LESSONS_ENABLED: 'true'
+      WEB_PUSH_QUEUE_DISABLED: 'true'
+      CAPACITY_PUBLIC_REPOSITORY: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/verify-cloud-capacity-safety.mjs
+      - run: npx eslint load/cloud-actors.mjs scripts/lib/capacity-cloud-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-managed-postgres.mjs
+      - run: npm run build
+      - name: Install pinned ephemeral PostgreSQL
+        run: npm install --prefix "$RUNNER_TEMP/competence-pg" --no-audit --no-fund embedded-postgres@17.12.0-beta.19
+      - name: Real isolated SQL and cloud HTTP capacity
+        env:
+          MANAGED_QA_CLOUD_LOAD: 'true'
+        run: |
+          export MANAGED_QA_PG_MODULE="$RUNNER_TEMP/competence-pg/node_modules/embedded-postgres/dist/index.js"
+          npm run verify:managed-postgres
+      # No upload-artifact/cache actions: reports stay in free workflow logs and
+      # the job summary. No production secrets, paid runners, or deployments.

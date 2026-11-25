@@ -42,7 +42,7 @@ const cluster = new EmbeddedPostgres({
   persistent: true,
   createPostgresUser: false,
   initdbFlags: ["--encoding=UTF8", "--locale=C"],
-  postgresFlags: ["-h", "127.0.0.1"],
+  postgresFlags: ["-h", "127.0.0.1", ...(process.env.MANAGED_QA_CLOUD_LOAD === "true" ? ["-c", "max_connections=60"] : [])],
   onLog: () => {},
   onError: () => {},
 });
@@ -829,6 +829,10 @@ try {
   if (process.env.MANAGED_QA_LOAD === "true") {
     const capacityQa = await import("./lib/capacity-local-qa.mjs");
     await capacityQa.verifyLocalCapacity({ client, check });
+  }
+  if (process.env.MANAGED_QA_CLOUD_LOAD === "true") {
+    const cloudCapacityQa = await import("./lib/capacity-cloud-qa.mjs");
+    await cloudCapacityQa.verifyCloudCapacity({ client, check });
   }
   mkdirSync("output/managed-qa", { recursive: true });
   writeFileSync(
