@@ -1,6 +1,8 @@
-# Ancien objectif 100 000 — remplacé par la cible 500 000
+# Objectif actuel : essai cloud de 100 000 sessions
 
-Voir [le protocole actuel 500 000](SCALE_500K.md). Ce document décrit l'ancien objectif, pas une certification de capacité. Les instructions Vercel ci-dessous sont historiques ; la production utilise désormais Cloudflare et Hyperdrive. Le profil 100k exige maintenant une preuve d'isolation et ne permet plus l'option `ALLOW_PRODUCTION`.
+Le propriétaire a ramené la cible de 500 000 à **100 000**, avec exécution dans le cloud et sans coût supplémentaire. Voir [le protocole et les résultats cloud actuels](SCALE_100K_CLOUD.md). Les essais échoués sont conservés ; aucun build ne vaut une certification de capacité.
+
+Les éléments ci-dessous sont historiques. Les instructions Vercel ne décrivent plus la production, qui utilise Cloudflare et Hyperdrive. Le profil 100k exige une preuve d'isolation et ne permet plus l'option `ALLOW_PRODUCTION`. Le [protocole 500 000](SCALE_500K.md) reste archivé, pas validé.
 
 ## Architecture verrouillée dans le code
 
