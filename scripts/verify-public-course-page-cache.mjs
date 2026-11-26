@@ -98,6 +98,10 @@ for (const file of ["src/app/demande-cours/page.tsx", "src/components/managed/pu
 const worker = readFileSync("cloudflare-worker.ts", "utf8");
 assert.match(worker, /publicCoursePageCache\(request/);
 assert.match(worker, /version: env\.CF_VERSION_METADATA\?\.id/);
+assert.match(worker, /readCachedPublicHome\(request, env\.CF_VERSION_METADATA\?\.id\)/);
+assert.match(worker, /readCachedPublicTeacherJourney\(request, env\.CF_VERSION_METADATA\?\.id\)/);
+assert.match(worker, /PUBLIC_HOME_CACHE_PATH\}\/\$\{encodeURIComponent\(version\)\}/);
+assert.match(worker, /PUBLIC_TEACHER_JOURNEY_CACHE_PATH\}\/\$\{encodeURIComponent\(version\)\}/);
 const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
 assert.equal(config.env.production.version_metadata.binding, "CF_VERSION_METADATA");
 assert.equal(config.env.staging.version_metadata.binding, "CF_VERSION_METADATA");

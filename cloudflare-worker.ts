@@ -123,10 +123,10 @@ const competenceWorker = {
       return withSecurityHeaders(response, request);
     }
 
-    const cachedPublicHome = await readCachedPublicHome(request);
+    const cachedPublicHome = await readCachedPublicHome(request, env.CF_VERSION_METADATA?.id);
     if (cachedPublicHome) return withSecurityHeaders(cachedPublicHome, request);
 
-    const cachedTeacherJourney = await readCachedPublicTeacherJourney(request);
+    const cachedTeacherJourney = await readCachedPublicTeacherJourney(request, env.CF_VERSION_METADATA?.id);
     if (cachedTeacherJourney) return withSecurityHeaders(cachedTeacherJourney, request);
 
     const storedTeacherMedia = await serveTeacherMediaFromKv(request, env);
@@ -136,8 +136,8 @@ const competenceWorker = {
     scheduleTeacherMediaBackfill(request, response, env, ctx);
     scheduleImmediateWebPushWake(request, response, env, ctx);
     const securedResponse = withSecurityHeaders(response, request);
-    const homeCachedResponse = schedulePublicHomeCache(request, securedResponse, ctx);
-    return schedulePublicTeacherJourneyCache(request, homeCachedResponse, ctx);
+    const homeCachedResponse = schedulePublicHomeCache(request, securedResponse, ctx, env.CF_VERSION_METADATA?.id);
+    return schedulePublicTeacherJourneyCache(request, homeCachedResponse, ctx, env.CF_VERSION_METADATA?.id);
   },
 
   async scheduled(
@@ -315,8 +315,8 @@ function respondToAnonymousSessionProbe(request: Request) {
   });
 }
 
-async function readCachedPublicTeacherJourney(request: Request) {
-  const cacheKey = publicTeacherJourneyCacheKey(request);
+async function readCachedPublicTeacherJourney(request: Request, version?: string) {
+  const cacheKey = publicTeacherJourneyCacheKey(request, version);
   if (!cacheKey) return null;
 
   try {
@@ -343,8 +343,9 @@ function schedulePublicTeacherJourneyCache(
   request: Request,
   response: Response,
   ctx: WorkerExecutionContext,
+  version?: string,
 ) {
-  const cacheKey = publicTeacherJourneyCacheKey(request);
+  const cacheKey = publicTeacherJourneyCacheKey(request, version);
   const contentType = response.headers.get("content-type") || "";
   if (
     !cacheKey
@@ -381,8 +382,8 @@ function schedulePublicTeacherJourneyCache(
   });
 }
 
-function publicTeacherJourneyCacheKey(request: Request) {
-  if (request.method !== "GET" || readSessionCookie(request.headers.get("cookie"))) return null;
+function publicTeacherJourneyCacheKey(request: Request, version?: string) {
+  if (!version || request.method !== "GET" || readSessionCookie(request.headers.get("cookie"))) return null;
 
   const url = new URL(request.url);
   if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/professeurs") return null;
@@ -398,11 +399,11 @@ function publicTeacherJourneyCacheKey(request: Request) {
   const navigation = request.headers.get("sec-fetch-mode") === "navigate";
   if (!acceptsHtml && !navigation) return null;
 
-  return new Request(`${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${journey}/html`, { method: "GET" });
+  return new Request(`${url.origin}${PUBLIC_TEACHER_JOURNEY_CACHE_PATH}/${encodeURIComponent(version)}/${journey}/html`, { method: "GET" });
 }
 
-async function readCachedPublicHome(request: Request) {
-  const cacheKey = publicHomeCacheKey(request);
+async function readCachedPublicHome(request: Request, version?: string) {
+  const cacheKey = publicHomeCacheKey(request, version);
   if (!cacheKey) return null;
 
   try {
@@ -429,8 +430,9 @@ function schedulePublicHomeCache(
   request: Request,
   response: Response,
   ctx: WorkerExecutionContext,
+  version?: string,
 ) {
-  const cacheKey = publicHomeCacheKey(request);
+  const cacheKey = publicHomeCacheKey(request, version);
   const contentType = response.headers.get("content-type") || "";
   if (
     !cacheKey
@@ -468,15 +470,15 @@ function schedulePublicHomeCache(
   });
 }
 
-function publicHomeCacheKey(request: Request) {
-  if (request.method !== "GET") return null;
+function publicHomeCacheKey(request: Request, version?: string) {
+  if (!version || request.method !== "GET" || request.headers.has("rsc") || request.headers.has("next-router-state-tree")) return null;
   const url = new URL(request.url);
   if (url.hostname.toLowerCase() !== "www.competence.ci" || url.pathname !== "/" || url.search) return null;
   const acceptsHtml = request.headers.get("accept")?.includes("text/html") ?? false;
   const navigation = request.headers.get("sec-fetch-mode") === "navigate";
   if (!acceptsHtml && !navigation) return null;
 
-  return new Request(`${url.origin}${PUBLIC_HOME_CACHE_PATH}`, { method: "GET" });
+  return new Request(`${url.origin}${PUBLIC_HOME_CACHE_PATH}/${encodeURIComponent(version)}`, { method: "GET" });
 }
 
 async function protectPublicRequest(request: Request, env: AppEnvironment) {
