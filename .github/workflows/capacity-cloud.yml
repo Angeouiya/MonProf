@@ -1,4 +1,4 @@
-name: ${{ contains(github.event.head_commit.message, '[cloud-smoke]') && 'Compétence UI regression - no capacity verdict' || 'Compétence isolated cloud 100k' }}
+name: Compétence isolated cloud 100k
 on:
   push:
     branches: [codex/cloud-capacity-100k]
@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   cloud-capacity:
+    name: ${{ contains(github.event.head_commit.message, '[cloud-smoke]') && 'UI regression - NO capacity verdict' || 'Full 100k cloud capacity' }}
     if: github.repository == 'Angeouiya/MonProf' && github.event.repository.private == false
     runs-on: ubuntu-24.04
     timeout-minutes: 60
