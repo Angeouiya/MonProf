@@ -69,8 +69,14 @@ export async function verifyCloudCapacity({ client, check }) {
     }
     const notification=await fetch(origin+"/api/client/notifications",{headers:{Cookie:users[0].cookie}});assert.equal(notification.status,200);assert.equal((await notification.json()).unreadCount,1);
     const course=await fetch(origin+"/client/accompagnement",{headers:{Cookie:users[0].cookie}});assert.equal(course.status,200);const html=await course.text();assert.ok(html.includes("QA-CAPACITY-1"));assert.equal(html.includes("QA-CAPACITY-100000"),false);
+    for(const user of users.slice(0,2)){const r=await fetch(origin+"/demande-cours",{headers:{accept:"text/html",cookie:user.cookie}});assert.equal(r.status,200);const document=await r.text();assert.equal(/QA-CAPACITY-|capacity-user-|Synthetic cloud account/.test(document),false);assert.ok(r.headers.get("x-competence-intake-cache"));}
     for(const port of ports)for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){const r=await fetch("http://127.0.0.1:"+port+route,{headers:{Cookie:users[0].cookie,Host:"127.0.0.1:3334"}});assert.equal(r.status,200);await r.arrayBuffer();}
     if(process.env.CAPACITY_PLAYWRIGHT_MODULE){const {verifyManagedFormBrowser}=await import("./managed-form-browser-qa.mjs");await verifyManagedFormBrowser({port:ports[0],check});}
+    for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){
+      const before=cpuTicks(servers[0].pid),started=performance.now(),requests=500;
+      for(let index=0;index<requests;index++){const r=await fetch("http://127.0.0.1:"+ports[0]+route,{headers:{Cookie:users[index%100].cookie,accept:route.startsWith("/api/")?"application/json":"text/html"}});assert.equal(r.status,200);await r.arrayBuffer();}
+      console.log("CLOUD_ROUTE_CPU "+JSON.stringify({route,requests,serverCpuMsPerRequest:(cpuTicks(servers[0].pid)-before)*1000/ticksPerSecond/requests,elapsedMs:performance.now()-started,cacheBypassed:true}));
+    }
     console.log("CLOUD_CAPACITY_READY: 100000 distinct authenticated owners, 100000 course dossiers, read-only PostgreSQL, three warmed production-build processes; no production credentials.");
     if(diagnosticOnly){await Promise.all(servers.map(server=>control(server,"profile-start")));profileTimer=setTimeout(()=>Promise.all(servers.map(server=>control(server,"profile-stop"))).then(results=>{cpuProfiles.push(...results);for(const result of results)console.log("CLOUD_CPU_PROFILE "+JSON.stringify(result));}).catch(error=>console.log("CLOUD_CPU_PROFILE_ERROR "+error.message)),90000);}
     let previousCpu=[process.pid,...servers.map(server=>server.pid)].map(cpuTicks),previousAt=performance.now();
@@ -83,10 +89,10 @@ export async function verifyCloudCapacity({ client, check }) {
     generator.stdout.pipe(process.stdout);generator.stderr.pipe(process.stderr);
     const exitCode=await new Promise((resolve,reject)=>{generator.on("error",reject);generator.on("close",resolve);});
     const report=JSON.parse(readFileSync(reportFile,"utf8"));
-    clearInterval(telemetryTimer);report.infrastructure=infrastructure;report.backendProcesses=ports.length;report.cpuProfiles=cpuProfiles;
+    clearInterval(telemetryTimer);report.infrastructure=infrastructure;report.backendProcesses=ports.length;report.cpuProfiles=cpuProfiles;report.publicCache={...gateway.cacheStats,policy:"same production helper; Node Cache adapter, not the Cloudflare cache network"};
     report.databaseTables=(await client.query("SELECT relname,seq_scan,idx_scan FROM pg_stat_user_tables WHERE schemaname='competence' AND relname IN ('User','Notification','ManagedCourseDossier','ManagedCourseSession')")).rows;
     writeFileSync(reportFile,JSON.stringify(report,null,2));
-    console.log("CLOUD_CAPACITY_SERVER_SUMMARY "+JSON.stringify({backendProcesses:ports.length,infrastructure,databaseTables:report.databaseTables}));
+    console.log("CLOUD_CAPACITY_SERVER_SUMMARY "+JSON.stringify({backendProcesses:ports.length,infrastructure,databaseTables:report.databaseTables,publicCache:report.publicCache}));
     if(!report.passed)for(const port of ports){const lines=readFileSync(path.join(directory,"application-"+port+".log"),"utf8").split(/\r?\n/).filter(line=>/prisma:error|Error:|timed out|P2024|P2037/.test(line));console.log("CLOUD_SERVER_ERRORS "+port+" "+JSON.stringify(lines.slice(-15).map(line=>line.replace(/postgres(?:ql)?:\/\/\S+/g,"[synthetic-db-url]"))));}
     if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Compétence — cloud 100k\n\nStatus: **"+(diagnosticOnly?"CPU DIAGNOSTIC ONLY — NOT A CAPACITY PASS":report.passed?"PASS":"FAIL")+"**\n\n```json\n"+JSON.stringify(report,null,2)+"\n```\n\nThis is a read-only Node/PostgreSQL cloud CI experiment, not Cloudflare production certification. No artifacts/caches or paid runners are provisioned.\n");
     if(diagnosticOnly){assert.equal(cpuProfiles.length,3,"All three CPU profiles must be captured");check("Cloud CPU diagnosis captured; not a capacity validation");return;}

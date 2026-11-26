@@ -117,7 +117,7 @@ export async function runCloudActors({ origin, users, runId, rampSeconds = 120, 
       const ms = Math.min(60000, Math.ceil(performance.now() - actor.at));
       histogram[ms]++; route.histogram[ms]++;
       if (!valid) { errors++; route.errors++; route.errorsByCause[cause] = (route.errorsByCause[cause] || 0) + 1; }
-      else if (!successful[actor.index]) { successful[actor.index] = 1; uniqueSuccessful++; }
+      else if (choice < 8 && !successful[actor.index]) { successful[actor.index] = 1; uniqueSuccessful++; }
       actor.iteration++;
       const jitter = 0.8 + ((actor.index * 31 + actor.iteration * 7919) % 1000) / 2500;
       actor.at += thinkSeconds * 1000 * jitter;
@@ -126,11 +126,15 @@ export async function runCloudActors({ origin, users, runId, rampSeconds = 120, 
     const req = http.get(origin + route.path, {
       agent, headers: { Cookie: users[actor.index].cookie, Accept: choice < 5 ? "application/json" : "text/html" },
     }, res => {
-      res.on("data", chunk => { if (choice < 5 && body.length < 4096) body += chunk.toString(); });
+      res.on("data", chunk => { if (choice < 8 && body.length < (choice < 5 ? 4096 : 262144)) body += chunk.toString(); });
       res.on("error", error => finish(false, error.code || "response-stream"));
       res.on("end", () => {
         let valid = res.statusCode === 200;
         if (valid && choice < 5) { try { valid = JSON.parse(body).unreadCount === 1; } catch { valid = false; } }
+        if (valid && choice >= 5 && choice < 8) {
+          const references = [...body.matchAll(/QA-CAPACITY-(\d+)/g)];
+          valid = references.length > 0 && references.every(match => Number(match[1]) === actor.index + 1);
+        }
         finish(valid, res.statusCode === 200 ? "invalid-authenticated-body" : "HTTP-" + res.statusCode);
       });
     });

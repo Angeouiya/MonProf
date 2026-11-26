@@ -33,10 +33,13 @@ jobs:
           package-manager-cache: false
       - run: npm ci --no-audit --no-fund
       - run: node scripts/verify-cloud-capacity-safety.mjs
+      - run: node scripts/verify-public-course-page-cache.mjs
       - run: node scripts/verify-cloud-gateway.mjs
       - run: npx tsx scripts/verify-managed-display-format.ts
       - run: npm run build:quality
-      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/profile-cloud-server.mjs scripts/lib/capacity-cloud-qa.mjs scripts/lib/managed-form-browser-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-managed-postgres.mjs
+      - run: npx eslint load/cloud-actors.mjs load/cloud-read-gateway.mjs load/cloud-public-cache.mjs load/profile-cloud-server.mjs scripts/lib/capacity-cloud-qa.mjs scripts/lib/managed-form-browser-qa.mjs scripts/verify-cloud-capacity-safety.mjs scripts/verify-cloud-gateway.mjs scripts/verify-public-course-page-cache.mjs scripts/verify-managed-postgres.mjs
+      - name: Verify the Cloudflare bundle without deployment
+        run: npm run build:cloudflare
       - run: npm run build
       - name: Install pinned ephemeral PostgreSQL
         run: npm install --prefix "$RUNNER_TEMP/competence-pg" --no-audit --no-fund embedded-postgres@17.12.0-beta.19
