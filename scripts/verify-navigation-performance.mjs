@@ -133,7 +133,7 @@ check("Public home uses a short isolated Cloudflare edge cache", /PUBLIC_HOME_CA
 check(
   "Three standard teacher journeys use an anonymous edge cache without filter explosion",
   /PUBLIC_TEACHER_JOURNEY_CACHE_SECONDS\s*=\s*60/.test(cloudflareWorker)
-    && /readCachedPublicTeacherJourney\(request\)/.test(cloudflareWorker)
+    && /readCachedPublicTeacherJourney\(request, env\.CF_VERSION_METADATA\?\.id\)/.test(cloudflareWorker)
     && /schedulePublicTeacherJourneyCache\(request/.test(cloudflareWorker)
     && /key !== "journey" && key !== "_rsc"/.test(cloudflareWorker)
     && /url\.searchParams\.has\("_rsc"\) \|\| request\.headers\.get\("rsc"\) === "1"/.test(cloudflareWorker)
