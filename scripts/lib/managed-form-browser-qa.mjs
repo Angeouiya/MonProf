@@ -14,14 +14,21 @@ export async function verifyManagedFormBrowser({ port, check }) {
   const { chromium } = await import(pathToFileURL(modulePath).href);
   const browser = await chromium.launch({ headless: true });
   const origin = `http://127.0.0.1:${port}`;
+  const submissionKeys = new Set();
   mkdirSync("output/playwright", { recursive: true });
   try {
     for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 1000 }]) {
       const context = await browser.newContext({ viewport, serviceWorkers: "block" });
       try {
-        await context.route("**/*", (route) => {
+        await context.route("**/*", async (route) => {
           const request = route.request();
           if (new URL(request.url()).origin !== origin || !["GET", "HEAD"].includes(request.method())) return route.abort();
+          if (request.resourceType() === "document" && new URL(request.url()).pathname === "/demande-cours") {
+            const document = await fetch("http://127.0.0.1:3334/demande-cours", { headers: { accept: "text/html" } });
+            assert.equal(document.status, 200);
+            assert.equal(document.headers.get("x-competence-intake-cache"), "HIT");
+            return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: Buffer.from(await document.arrayBuffer()) });
+          }
           return route.continue();
         });
         const page = await context.newPage();
@@ -74,8 +81,23 @@ export async function verifyManagedFormBrowser({ port, check }) {
         assert.equal(values.phone, "0700000000");
         assert.equal(values.commune, "Cocody");
         assert.equal(await form.locator('[data-form-step]').count(), 3);
+        await form.locator('input[name="accepted"]').check();
+        const pending = page.waitForRequest((request) => request.method() === "POST" && request.url() === origin + "/api/managed-courses");
+        await form.getByRole("button", { name: "Envoyer ma demande", exact: true }).click();
+        const payload = (await pending).postDataJSON();
+        assert.match(payload.clientKey, /^[0-9a-f-]{36}$/);
+        assert.equal(submissionKeys.has(payload.clientKey), false, "A cached document must still generate a fresh client idempotency key");
+        submissionKeys.add(payload.clientKey);
+        assert.equal(payload.parentName, "Parent fictif QA");
+        assert.equal(payload.phone, "0700000000");
+        assert.equal(payload.quotedTotal, 200_000);
+        assert.equal(payload.sessions.length, 16);
+        assert.equal(payload.accepted, true);
+        // The context aborts this POST before it reaches the read-only server:
+        // this checks UI serialization, not a simulated successful transaction.
+        await form.getByRole("alert").waitFor();
         assert.deepEqual(pageErrors, [], "No browser runtime/hydration errors");
-        check(`Cloud Chromium ${viewport.width}px: deferred steps, validation, 16-session price, back navigation and FormData preserved`);
+        check(`Cloud Chromium ${viewport.width}px: cached HTML hydrates, deferred steps/16-session price/fields preserved, unique submission key, serialized POST safely aborted`);
       } finally { await context.close(); }
     }
   } finally { await browser.close(); }

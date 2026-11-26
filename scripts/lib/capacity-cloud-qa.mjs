@@ -15,7 +15,8 @@ export async function verifyCloudCapacity({ client, check }) {
   assert.equal(target.hostname, "127.0.0.1");
   assert.equal(target.username, "competence_runtime");
   assert.equal(process.env.WEB_PUSH_QUEUE_DISABLED, "true");
-  const count = 100_000, runId = randomUUID(), origin = "http://127.0.0.1:3334";
+  const smokeOnly=process.env.CAPACITY_SMOKE_ONLY === "true";
+  const count = smokeOnly ? 1000 : 100_000, runId = randomUUID(), origin = "http://127.0.0.1:3334";
   const directory = path.resolve("output/capacity-cloud"); mkdirSync(directory, { recursive: true });
   for (let start = 1; start <= count; start += 10000) {
     const end = Math.min(count, start + 9999);
@@ -26,12 +27,12 @@ export async function verifyCloudCapacity({ client, check }) {
     INSERT INTO competence."ManagedCourseDossier" SELECT (jsonb_populate_record(NULL::competence."ManagedCourseDossier",to_jsonb(t)||jsonb_build_object(
       'id','capacity-dossier-'||i,'reference','QA-CAPACITY-'||i,'clientKey','capacity-key-'||i,'clientId','capacity-user-'||i,
       'contractTokenHash',NULL,'contractTokenExpiresAt',NULL,'partnerId',NULL,'partnerRateBps',0,'receivedAmount',0,'cancelledAmount',0,'onHold',false,'status','NEW'
-    ))).* FROM template t CROSS JOIN generate_series(1,100000) i`);
+    ))).* FROM template t CROSS JOIN generate_series(1,$1::int) i`,[count]);
   await client.query(`WITH template AS (SELECT s.* FROM competence."ManagedCourseSession" s WHERE s."dossierId"=(SELECT id FROM competence."ManagedCourseDossier" WHERE "clientId" IS NOT NULL AND "receivedAmount">0 AND "cancelledAmount"=0 AND NOT "onHold" ORDER BY id LIMIT 1))
     INSERT INTO competence."ManagedCourseSession" SELECT (jsonb_populate_record(NULL::competence."ManagedCourseSession",to_jsonb(t)||jsonb_build_object(
       'id','capacity-session-'||i||'-'||t.sequence,'dossierId','capacity-dossier-'||i,'teacherId',NULL,'offerId',NULL,'commissionRateBps',NULL,
       'fundedAmount',0,'creditedTeacherAmount',0,'status','PLANNED','completedAt',NULL,'validatedAt',NULL,'validatedBy',NULL,'parentConfirmedAt',NULL,'parentConfirmationMethod',NULL
-    ))).* FROM template t CROSS JOIN generate_series(1,100000) i`);
+    ))).* FROM template t CROSS JOIN generate_series(1,$1::int) i`,[count]);
   await client.query('ANALYZE competence."User"; ANALYZE competence."Notification"; ANALYZE competence."ManagedCourseDossier"; ANALYZE competence."ManagedCourseSession"');
   const secret = randomBytes(32).toString("hex"), users = [];
   for (let start = 1; start <= count; start += 1000) {
@@ -72,6 +73,12 @@ export async function verifyCloudCapacity({ client, check }) {
     for(const user of users.slice(0,2)){const r=await fetch(origin+"/demande-cours",{headers:{accept:"text/html",cookie:user.cookie}});assert.equal(r.status,200);const document=await r.text();assert.equal(/QA-CAPACITY-|capacity-user-|Synthetic cloud account/.test(document),false);assert.ok(r.headers.get("x-competence-intake-cache"));}
     for(const port of ports)for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){const r=await fetch("http://127.0.0.1:"+port+route,{headers:{Cookie:users[0].cookie,Host:"127.0.0.1:3334"}});assert.equal(r.status,200);await r.arrayBuffer();}
     if(process.env.CAPACITY_PLAYWRIGHT_MODULE){const {verifyManagedFormBrowser}=await import("./managed-form-browser-qa.mjs");await verifyManagedFormBrowser({port:ports[0],check});}
+    if(smokeOnly){
+      assert.ok(process.env.CAPACITY_PLAYWRIGHT_MODULE,"UI-only mode requires the real browser regression");
+      console.log("CLOUD_UI_SMOKE_RESULT "+JSON.stringify({passed:true,capacityVerdict:false,accounts:count,productionTraffic:false,publicCache:gateway.cacheStats}));
+      if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,"## Cached intake UI regression only\n\nMobile + desktop, retained fields, unique submission keys; POSTs intercepted before the server.\n\n**NO 100K CAPACITY VERDICT: load was deliberately not executed in this UI-only job.**\n");
+      check("Cached public form UI regression only; no capacity verdict");return;
+    }
     for(const route of ["/api/client/notifications","/client/accompagnement","/demande-cours"]){
       const before=cpuTicks(servers[0].pid),started=performance.now(),requests=500;
       for(let index=0;index<requests;index++){const r=await fetch("http://127.0.0.1:"+ports[0]+route,{headers:{Cookie:users[index%100].cookie,accept:route.startsWith("/api/")?"application/json":"text/html"}});assert.equal(r.status,200);await r.arrayBuffer();}

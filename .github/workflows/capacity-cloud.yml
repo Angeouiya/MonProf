@@ -1,4 +1,4 @@
-name: Compétence isolated cloud 100k
+name: ${{ contains(github.event.head_commit.message, '[cloud-smoke]') && 'Compétence UI regression - no capacity verdict' || 'Compétence isolated cloud 100k' }}
 on:
   push:
     branches: [codex/cloud-capacity-100k]
@@ -22,6 +22,7 @@ jobs:
       MANAGED_LESSONS_ENABLED: 'true'
       WEB_PUSH_QUEUE_DISABLED: 'true'
       CAPACITY_PUBLIC_REPOSITORY: 'true'
+      CAPACITY_SMOKE_ONLY: ${{ contains(github.event.head_commit.message, '[cloud-smoke]') && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
