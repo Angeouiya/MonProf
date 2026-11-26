@@ -9,7 +9,7 @@ import { encode } from "next-auth/jwt";
 import { assertHostedCloud, cpuCorePercent } from "../../load/cloud-actors.mjs";
 import { createCloudReadGateway } from "../../load/cloud-read-gateway.mjs";
 
-export async function verifyCloudCapacity({ client, check }) {
+export async function verifyCloudCapacity({ client, check, jiti }) {
   assertHostedCloud();
   const target = new URL(process.env.DATABASE_URL);
   assert.equal(target.hostname, "127.0.0.1");
@@ -34,6 +34,12 @@ export async function verifyCloudCapacity({ client, check }) {
       'fundedAmount',0,'creditedTeacherAmount',0,'status','PLANNED','completedAt',NULL,'validatedAt',NULL,'validatedBy',NULL,'parentConfirmedAt',NULL,'parentConfirmationMethod',NULL
     ))).* FROM template t CROSS JOIN generate_series(1,$1::int) i`,[count]);
   await client.query('ANALYZE competence."User"; ANALYZE competence."Notification"; ANALYZE competence."ManagedCourseDossier"; ANALYZE competence."ManagedCourseSession"');
+  const {managedClientCourseQuery}=await jiti.import("../src/lib/managed-client-courses.ts");
+  const readQuery=managedClientCourseQuery("capacity-user-1");
+  const explain=(await client.query("EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+readQuery.text,readQuery.values)).rows[0]["QUERY PLAN"][0];
+  const nodes=[];const walk=node=>{nodes.push({type:node["Node Type"],relation:node["Relation Name"],index:node["Index Name"],rows:node["Actual Rows"]});for(const child of node.Plans||[])walk(child);};walk(explain.Plan);
+  if(!smokeOnly)for(const table of ["ManagedCourseDossier","ManagedCourseSession"])assert.ok(nodes.some(node=>node.relation===table&&/Index|Bitmap/.test(node.type)),"Indexed private read required on "+table);
+  console.log("CLOUD_PRIVATE_READ_PLAN "+JSON.stringify({executionMs:explain["Execution Time"],nodes}));
   const secret = randomBytes(32).toString("hex"), users = [];
   for (let start = 1; start <= count; start += 1000) {
     users.push(...await Promise.all(Array.from({ length: 1000 }, async (_, offset) => {

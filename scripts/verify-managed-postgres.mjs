@@ -826,13 +826,15 @@ try {
     futureDate,
     check,
   });
+  const clientReadQa = await import("./lib/managed-client-read-qa.mjs");
+  await clientReadQa.verifyManagedClientRead({ db, client, jiti, check });
   if (process.env.MANAGED_QA_LOAD === "true") {
     const capacityQa = await import("./lib/capacity-local-qa.mjs");
     await capacityQa.verifyLocalCapacity({ client, check });
   }
   if (process.env.MANAGED_QA_CLOUD_LOAD === "true") {
     const cloudCapacityQa = await import("./lib/capacity-cloud-qa.mjs");
-    await cloudCapacityQa.verifyCloudCapacity({ client, check });
+    await cloudCapacityQa.verifyCloudCapacity({ client, check, jiti });
   }
   mkdirSync("output/managed-qa", { recursive: true });
   writeFileSync(

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
 import { requireClient } from "@/lib/session";
+import { getManagedClientCourses } from "@/lib/managed-client-courses";
 import { ManagedAction } from "@/components/managed/action";
 import { managedStatusLabel } from "@/lib/managed-courses-labels";
 import { managedMoney as money, managedSessionDate } from "@/lib/managed-display-format";
@@ -13,50 +13,7 @@ export default async function ManagedClientCourses({
 }) {
   const client = await requireClient();
   const { after } = await searchParams;
-  const where = { clientId: client.id };
-  const cursor = after
-    ? await db.managedCourseDossier.findFirst({
-        where: { ...where, id: after },
-        select: { id: true, createdAt: true },
-      })
-    : null;
-  const dossiers = await db.managedCourseDossier.findMany({
-    where: {
-      ...where,
-      ...(cursor
-        ? {
-            OR: [
-              { createdAt: { lt: cursor.createdAt } },
-              { createdAt: cursor.createdAt, id: { lt: cursor.id } },
-            ],
-          }
-        : {}),
-    },
-    select: {
-      id: true,
-      reference: true,
-      subjectName: true,
-      className: true,
-      totalPrice: true,
-      cancelledAmount: true,
-      receivedAmount: true,
-      onHold: true,
-      sessions: {
-        orderBy: { sequence: "asc" },
-        select: {
-          id: true,
-          sequence: true,
-          scheduledDate: true,
-          scheduledTime: true,
-          status: true,
-          parentConfirmedAt: true,
-          teacher: { select: { fullName: true, phone: true } },
-        },
-      },
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: 21,
-  });
+  const dossiers = await getManagedClientCourses(client.id, after);
   return (
     <div className={styles.page}>
       <header className={styles.heading}>
